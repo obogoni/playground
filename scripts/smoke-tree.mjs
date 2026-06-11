@@ -62,7 +62,10 @@ const tree = await evaluate(ws, `window.api.invoke('tree:get')`)
 const wsNode = tree.find((w) => w.displayName.startsWith('wtm-smoke-'))
 check('tree:get returns seeded workspace', Boolean(wsNode))
 const api = wsNode?.repos.find((r) => r.name === 'api')
-check('repo api discovered (worktree sibling not a repo)', wsNode?.repos.length === 1 && Boolean(api))
+check(
+  'repo api discovered (worktree sibling not a repo)',
+  wsNode?.repos.length === 1 && Boolean(api)
+)
 check(
   'two worktrees listed: main (default) + feature/42',
   api?.worktrees.length === 2 &&
@@ -73,7 +76,9 @@ check(
 )
 check(
   'dirty status: primary dirty (1 change), sibling clean',
-  api?.worktrees[0].dirty === true && api.worktrees[0].changes === 1 && api.worktrees[1].dirty === false
+  api?.worktrees[0].dirty === true &&
+    api.worktrees[0].changes === 1 &&
+    api.worktrees[1].dirty === false
 )
 
 // 2. Sidebar rendered the tree (give React a moment after initial load)
@@ -99,7 +104,9 @@ check('row selection applied', detail.selected === 1)
 check('detail title shows branch', detail.title === 'main', String(detail.title))
 check(
   'pills: dirty + primary',
-  detail.pills.length === 2 && detail.pills[0].includes('1 uncommitted change') && detail.pills[1] === 'primary',
+  detail.pills.length === 2 &&
+    detail.pills[0].includes('1 uncommitted change') &&
+    detail.pills[1] === 'primary',
   JSON.stringify(detail.pills)
 )
 check('location row shows worktree path', Boolean(detail.path?.includes('wtm-smoke-')))

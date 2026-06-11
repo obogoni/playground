@@ -19,6 +19,13 @@ export default defineConfig(
     }
   },
   {
+    // Plain Node scripts (CDP smoke checks etc.) — no TS annotations to demand
+    files: ['**/*.mjs'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off'
+    }
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     plugins: {
       'react-hooks': eslintPluginReactHooks,

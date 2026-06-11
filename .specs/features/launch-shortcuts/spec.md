@@ -16,13 +16,13 @@ The tree shows every worktree but the user still has to copy the path and open t
 
 ## Out of Scope
 
-| Feature | Reason |
-| ------- | ------ |
-| Per-workspace IDE/terminal overrides | PRD §Out of Scope — v1 targets are hard-coded |
-| Board-card launcher icon buttons (§2 footer) | M4 — Board Direction |
-| Success toasts on launch | The launched window is its own feedback; prototype toasts were stand-ins (handoff §Interactions) |
-| Launching `claude` / agent tooling | PRD §Out of Scope (v2) |
-| Non-Windows targets | PRD: v1 is Windows-only by virtue of the hard-coded shortcuts |
+| Feature                                      | Reason                                                                                           |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Per-workspace IDE/terminal overrides         | PRD §Out of Scope — v1 targets are hard-coded                                                    |
+| Board-card launcher icon buttons (§2 footer) | M4 — Board Direction                                                                             |
+| Success toasts on launch                     | The launched window is its own feedback; prototype toasts were stand-ins (handoff §Interactions) |
+| Launching `claude` / agent tooling           | PRD §Out of Scope (v2)                                                                           |
+| Non-Windows targets                          | PRD: v1 is Windows-only by virtue of the hard-coded shortcuts                                    |
 
 ---
 
@@ -110,13 +110,13 @@ The tree shows every worktree but the user still has to copy the path and open t
 
 ## Requirement Traceability
 
-| Requirement ID | Story | Phase | Status |
-| -------------- | ----- | ----- | ------ |
-| LNCH-01 | P1: "Open with" launcher cards | Execute | Pending |
-| LNCH-02 | P1: Open File Explorer | Execute | Pending |
-| LNCH-03 | P1: Open Windows Terminal | Execute | Pending |
-| LNCH-04 | P1: Open VS Code | Execute | Pending |
-| LNCH-05 | P2: Launch failure feedback | Execute | Pending |
+| Requirement ID | Story                          | Phase   | Status  |
+| -------------- | ------------------------------ | ------- | ------- |
+| LNCH-01        | P1: "Open with" launcher cards | Execute | Pending |
+| LNCH-02        | P1: Open File Explorer         | Execute | Pending |
+| LNCH-03        | P1: Open Windows Terminal      | Execute | Pending |
+| LNCH-04        | P1: Open VS Code               | Execute | Pending |
+| LNCH-05        | P2: Launch failure feedback    | Execute | Pending |
 
 **Coverage:** 5 total, 0 mapped to tasks (tasks implicit — Medium scope), 5 pending
 

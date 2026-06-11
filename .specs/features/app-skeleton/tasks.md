@@ -4,6 +4,7 @@
 **Status**: Done — T1..T7 complete, one commit each (683eec8..1042090). All gates passed: build, 6/6 Vitest behavior tests, CDP end-to-end smoke (7/7 checks).
 
 Gate commands (greenfield baseline, defined in design.md):
+
 - **quick** = `npm test` (vitest run)
 - **build** = `npm run typecheck && npm run build`
 - **full** = build + quick + manual `npm run dev` smoke check
@@ -33,6 +34,7 @@ Phase 4 (Sequential):   T5,T6 ─→ T7
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
+
 - [ ] `npm run dev` opens a window; `npm run build` succeeds
 - [ ] `name`/`appId` = playground (drives `%APPDATA%/playground/`)
 - [ ] BrowserWindow: contextIsolation on, nodeIntegration off, min width 1100
@@ -51,6 +53,7 @@ Phase 4 (Sequential):   T5,T6 ─→ T7
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
+
 - [ ] All 15 tokens × 2 themes present, values exactly per handoff tables
 - [ ] Fonts bundled (no network request for fonts)
 - [ ] Gate check passes: `npm run typecheck && npm run build`
@@ -69,6 +72,7 @@ Phase 4 (Sequential):   T5,T6 ─→ T7
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
+
 - [ ] Channel names/types flow end-to-end with no `any` at call sites
 - [ ] Invoke on unregistered channel rejects with a clear typed error
 - [ ] Gate check passes: `npm run typecheck && npm run build`
@@ -88,6 +92,7 @@ Phase 4 (Sequential):   T5,T6 ─→ T7
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
+
 - [ ] Behaviors: missing→defaults · patch round-trip · corrupt→`.bak-<ts>` + defaults · atomic write (no partial file) · merge preserves unknown keys
 - [ ] Gate check passes: `npm test`
 - [ ] Test count: ≥5 tests pass (no silent deletions)
@@ -106,6 +111,7 @@ Phase 4 (Sequential):   T5,T6 ─→ T7
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
+
 - [ ] Renderer devtools: `window.api.invoke('config:get')` returns config; `config:patch` persists to disk
 - [ ] Gate check passes: `npm run typecheck && npm run build`
 
@@ -123,6 +129,7 @@ Phase 4 (Sequential):   T5,T6 ─→ T7
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
+
 - [ ] Matches handoff: 54px bar, 30×30 brand tile + glow, segmented control specs, 34×34 icon buttons with hover states
 - [ ] Purely presentational (all behavior via props)
 - [ ] Gate check passes: `npm run typecheck && npm run build`
@@ -141,6 +148,7 @@ Phase 4 (Sequential):   T5,T6 ─→ T7
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
+
 - [ ] Theme toggle recolors instantly (incl. moon/sun swap); direction switch swaps placeholder + active segment
 - [ ] Quit + relaunch restores theme/direction; deleting config restores defaults
 - [ ] Gate check passes: build + `npm test` (T4 count still ≥5) + dev smoke check
@@ -153,15 +161,15 @@ Phase 4 (Sequential):   T5,T6 ─→ T7
 
 ## Diagram-Definition Cross-Check
 
-| Task | Depends On (body) | Diagram Shows | Status |
-| ---- | ----------------- | ------------- | ------ |
-| T1 | None | start | ✅ Match |
-| T2 | T1 | T1→T2 | ✅ Match |
-| T3 | T1 | T1→T3 | ✅ Match |
-| T4 | T1 | T1→T4 | ✅ Match |
-| T5 | T3, T4 | T3,T4→T5 | ✅ Match |
-| T6 | T2 | T2→T6 | ✅ Match |
-| T7 | T5, T6 | T5,T6→T7 | ✅ Match |
+| Task | Depends On (body) | Diagram Shows | Status   |
+| ---- | ----------------- | ------------- | -------- |
+| T1   | None              | start         | ✅ Match |
+| T2   | T1                | T1→T2         | ✅ Match |
+| T3   | T1                | T1→T3         | ✅ Match |
+| T4   | T1                | T1→T4         | ✅ Match |
+| T5   | T3, T4            | T3,T4→T5      | ✅ Match |
+| T6   | T2                | T2→T6         | ✅ Match |
+| T7   | T5, T6            | T5,T6→T7      | ✅ Match |
 
 Parallel groups contain no intra-group dependencies (T2/T3/T4 independent; T5/T6 independent). ✅
 
@@ -169,12 +177,12 @@ Parallel groups contain no intra-group dependencies (T2/T3/T4 independent; T5/T6
 
 No TESTING.md exists yet (greenfield); the coverage baseline is design.md §Testing, derived from the PRD's Testing Decisions.
 
-| Task | Code Layer | Baseline Requires | Task Says | Status |
-| ---- | ---------- | ----------------- | --------- | ------ |
-| T1 | scaffold/config | none | none | ✅ OK |
-| T2 | CSS/assets | none | none | ✅ OK |
-| T3 | types + thin IPC wrapper | none (PRD: thin wrappers untested) | none | ✅ OK |
-| T4 | deep module (persistence) | unit/behavior | unit | ✅ OK |
-| T5 | wiring | none | none | ✅ OK |
-| T6 | React view | none (PRD: views untested) | none | ✅ OK |
-| T7 | React view + wiring | none | none | ✅ OK |
+| Task | Code Layer                | Baseline Requires                  | Task Says | Status |
+| ---- | ------------------------- | ---------------------------------- | --------- | ------ |
+| T1   | scaffold/config           | none                               | none      | ✅ OK  |
+| T2   | CSS/assets                | none                               | none      | ✅ OK  |
+| T3   | types + thin IPC wrapper  | none (PRD: thin wrappers untested) | none      | ✅ OK  |
+| T4   | deep module (persistence) | unit/behavior                      | unit      | ✅ OK  |
+| T5   | wiring                    | none                               | none      | ✅ OK  |
+| T6   | React view                | none (PRD: views untested)         | none      | ✅ OK  |
+| T7   | React view + wiring       | none                               | none      | ✅ OK  |

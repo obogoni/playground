@@ -32,12 +32,12 @@ Startup flow: main creates BrowserWindow → renderer mounts → renderer invoke
 
 Greenfield — nothing to reuse yet. This feature CREATES the patterns later features reuse:
 
-| Pattern created here | Reused by |
-| -------------------- | --------- |
-| `src/shared/ipc-contract.ts` channel map | Every M1–M4 feature adds channels here |
-| `ConfigStore` (atomic JSON persistence) | Workspaces (M1), pinned tasks (M3), settings (M4) |
-| Design tokens + pill/tint conventions | Every pane/dialog in the handoff |
-| Behavior tests in temp dirs (Vitest) | `WorktreeManager`, `TaskBoard`, `RepoScanner` tests |
+| Pattern created here                     | Reused by                                           |
+| ---------------------------------------- | --------------------------------------------------- |
+| `src/shared/ipc-contract.ts` channel map | Every M1–M4 feature adds channels here              |
+| `ConfigStore` (atomic JSON persistence)  | Workspaces (M1), pinned tasks (M3), settings (M4)   |
+| Design tokens + pill/tint conventions    | Every pane/dialog in the handoff                    |
+| Behavior tests in temp dirs (Vitest)     | `WorktreeManager`, `TaskBoard`, `RepoScanner` tests |
 
 ## Components
 
@@ -91,7 +91,7 @@ Greenfield — nothing to reuse yet. This feature CREATES the patterns later fea
 // src/shared/config.ts
 interface AppConfig {
   ui: {
-    theme: 'dark' | 'light'    // default 'dark'
+    theme: 'dark' | 'light' // default 'dark'
     direction: 'tree' | 'board' // default 'tree'
   }
   // M1+: workspaces[]; M3: pinnedTasks[], defaultOrg/Project; M4: branchTemplate
@@ -100,12 +100,12 @@ interface AppConfig {
 
 ## Error Handling Strategy
 
-| Error Scenario | Handling | User Impact |
-| -------------- | -------- | ----------- |
-| Config file missing | Defaults, file created on first patch | None — first-run behavior |
-| Config file corrupt | Rename to `.bak-<ts>`, log, defaults | App opens with defaults; bad file preserved |
-| Config write fails | Log, keep in-memory state | UI works this session; persistence silently degraded (logged) |
-| IPC to unregistered channel | Native rejection, normalized typed error | Dev-time signal; never hangs |
+| Error Scenario              | Handling                                 | User Impact                                                   |
+| --------------------------- | ---------------------------------------- | ------------------------------------------------------------- |
+| Config file missing         | Defaults, file created on first patch    | None — first-run behavior                                     |
+| Config file corrupt         | Rename to `.bak-<ts>`, log, defaults     | App opens with defaults; bad file preserved                   |
+| Config write fails          | Log, keep in-memory state                | UI works this session; persistence silently degraded (logged) |
+| IPC to unregistered channel | Native rejection, normalized typed error | Dev-time signal; never hangs                                  |
 
 ## Testing (greenfield baseline — future TESTING.md seed)
 
@@ -116,11 +116,11 @@ interface AppConfig {
 
 ## Tech Decisions (non-obvious only)
 
-| Decision | Choice | Rationale |
-| -------- | ------ | --------- |
-| Build tooling | electron-vite 5 (`react-ts` template) | Fast HMR, native TS across all three targets, secure defaults; Forge's webpack template is slower and heavier |
-| Config format | JSON (`config.json`) | PRD allows YAML/JSON; global config is machine-managed (no human editing expected) → zero extra deps. Per-workspace `.app/` files (M4, human-readable/committed) may choose YAML there |
-| Fonts | @fontsource packages | Self-hosting requirement from handoff §Assets with zero manual font management |
-| Theme switching | `data-theme` attr + two variable blocks | Matches handoff "swap the variable set"; trivially testable in devtools |
-| Test runner | Vitest 4 | Native Vite integration with the chosen build tool; PRD's real-FS philosophy works unchanged |
-| App id / dir name | `playground` | Sets `%APPDATA%/playground/`; matches the repo name |
+| Decision          | Choice                                  | Rationale                                                                                                                                                                              |
+| ----------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build tooling     | electron-vite 5 (`react-ts` template)   | Fast HMR, native TS across all three targets, secure defaults; Forge's webpack template is slower and heavier                                                                          |
+| Config format     | JSON (`config.json`)                    | PRD allows YAML/JSON; global config is machine-managed (no human editing expected) → zero extra deps. Per-workspace `.app/` files (M4, human-readable/committed) may choose YAML there |
+| Fonts             | @fontsource packages                    | Self-hosting requirement from handoff §Assets with zero manual font management                                                                                                         |
+| Theme switching   | `data-theme` attr + two variable blocks | Matches handoff "swap the variable set"; trivially testable in devtools                                                                                                                |
+| Test runner       | Vitest 4                                | Native Vite integration with the chosen build tool; PRD's real-FS philosophy works unchanged                                                                                           |
+| App id / dir name | `playground`                            | Sets `%APPDATA%/playground/`; matches the repo name                                                                                                                                    |

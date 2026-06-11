@@ -35,7 +35,5 @@ export async function scanRepos(workspacePath: string): Promise<RepoRef[]> {
     })
   )
 
-  return repos
-    .filter((r): r is RepoRef => r !== null)
-    .sort((a, b) => a.name.localeCompare(b.name))
+  return repos.filter((r): r is RepoRef => r !== null).sort((a, b) => a.name.localeCompare(b.name))
 }

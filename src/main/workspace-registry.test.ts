@@ -76,7 +76,11 @@ describe('WorkspaceRegistry', () => {
     reg.add(a)
     reg.add(b)
 
-    expect(registry().list().map((ws) => ws.displayName)).toEqual(['zeta', 'alpha'])
+    expect(
+      registry()
+        .list()
+        .map((ws) => ws.displayName)
+    ).toEqual(['zeta', 'alpha'])
   })
 
   it('removing an unknown id is a harmless no-op', () => {
