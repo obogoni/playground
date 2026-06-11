@@ -139,7 +139,7 @@ The app manages worktrees end-to-end but knows nothing about the tasks that moti
 | PNTK-04        | P1: "run `az login`" empty state             | Done  | Verified |
 | PNTK-05        | P2: Live refresh + sync status               | Done  | Verified |
 
-**Coverage:** 5 total, 5 verified ✅ — 23 new Vitest cases (parsing + persistence round-trips on temp config dirs; 76 total green) + 11-check CDP smoke (`scripts/smoke-tasks.mjs`) pinning a real work item (`triadesolucoes/MultiClubes#21211`) through a live `az` token + auth-failure pass (app relaunched with `az` hidden from PATH: prompt block, id-only card, "az · not signed in") + screenshot fidelity pass of resolved-card and auth-failed states vs `.dc.html` §1c
+**Coverage:** 5 total, 5 verified ✅ — 23 new Vitest cases (parsing + persistence round-trips on temp config dirs; 76 total green) + 11-check CDP smoke (`scripts/smoke-tasks.mjs`) pinning a real work item (via `SMOKE_TASK_URL`) through a live `az` token + auth-failure pass (app relaunched with `az` hidden from PATH: prompt block, id-only card, "az · not signed in") + screenshot fidelity pass of resolved-card and auth-failed states vs `.dc.html` §1c
 
 ---
 

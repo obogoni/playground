@@ -1,18 +1,21 @@
 /* CDP smoke for the pinned-tasks-pane feature (PNTK-01..05). Assumes the app
  * is running with --remote-debugging-port=9222 against a swapped config with
  * no ado defaults and no pins, and an az CLI that is logged in to an org
- * containing the work item in SMOKE_TASK_URL (default: triadesolucoes /
- * MultiClubes #21211).
- * Run: node scripts/smoke-tasks.mjs
+ * containing the work item in SMOKE_TASK_URL (required).
+ * Run: SMOKE_TASK_URL=<work item URL> node scripts/smoke-tasks.mjs
  */
 
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
 const PORT = 9222
-const TASK_URL =
-  process.env.SMOKE_TASK_URL ??
-  'https://dev.azure.com/triadesolucoes/MultiClubes/_workitems/edit/21211'
+const TASK_URL = process.env.SMOKE_TASK_URL
+if (!TASK_URL) {
+  console.error(
+    'SMOKE_TASK_URL is required (a dev.azure.com work item URL, e.g. https://dev.azure.com/<org>/<project>/_workitems/edit/<id>)',
+  )
+  process.exit(1)
+}
 const TASK_ID = Number(TASK_URL.match(/\/edit\/(\d+)/)[1])
 const CONFIG_PATH = join(process.env.APPDATA, 'playground', 'config.json')
 
