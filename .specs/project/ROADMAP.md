@@ -1,7 +1,7 @@
 # Roadmap
 
 **Current Milestone:** M1 — Walking Skeleton & Worktree Navigation
-**Status:** Planning
+**Status:** In Progress
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
 
@@ -14,7 +14,7 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 
 ### Features
 
-**App Skeleton & Design System** - PLANNED
+**App Skeleton & Design System** - COMPLETE
 
 - Electron + React + TypeScript scaffold; main/renderer split with plain request/response IPC layer
 - Design tokens (dark + light theme CSS variables), top bar shell (brand, segmented control, refresh, theme toggle)

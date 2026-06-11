@@ -104,12 +104,12 @@ Every M1–M4 feature needs a foundation that does not exist yet: an Electron + 
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| SKEL-01 | P1: Runnable app shell | Design | Pending |
-| SKEL-02 | P1: Design tokens & theme toggle | Design | Pending |
-| SKEL-03 | P1: Global config persistence | Design | Pending |
-| SKEL-04 | P2: Direction switch | Design | Pending |
+| SKEL-01 | P1: Runnable app shell | Done (T1, T3, T6, T7) | Verified |
+| SKEL-02 | P1: Design tokens & theme toggle | Done (T2, T6, T7) | Verified |
+| SKEL-03 | P1: Global config persistence | Done (T3, T4, T5, T7) | Verified |
+| SKEL-04 | P2: Direction switch | Done (T6, T7) | Verified |
 
-**Coverage:** 4 total, 0 mapped to tasks, 4 unmapped ⚠️
+**Coverage:** 4 total, 4 mapped to tasks, 0 unmapped ✅ (verified via 6 ConfigStore behavior tests + CDP end-to-end smoke: defaults → patch → disk → relaunch round-trip)
 
 ---
 

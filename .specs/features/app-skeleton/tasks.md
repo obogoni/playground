@@ -1,7 +1,7 @@
 # App Skeleton & Design System — Tasks
 
 **Design**: `.specs/features/app-skeleton/design.md`
-**Status**: In Progress
+**Status**: Done — T1..T7 complete, one commit each (683eec8..1042090). All gates passed: build, 6/6 Vitest behavior tests, CDP end-to-end smoke (7/7 checks).
 
 Gate commands (greenfield baseline, defined in design.md):
 - **quick** = `npm test` (vitest run)

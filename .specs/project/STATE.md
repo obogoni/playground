@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-11
-**Current Work:** app-skeleton (M1) — spec drafted, awaiting user approval before Design
+**Current Work:** app-skeleton COMPLETE — next: specify M1 feature "Workspace Registration & Sidebar Tree"
 
 ---
 
@@ -20,6 +20,13 @@
 **Reason:** PRD explicitly notes the app is daily-usable after slice 3 (end of M1); honoring that maximizes early value.
 **Trade-off:** ADO integration (the headline feature) lands third, not first.
 **Impact:** M1 must ship a polished tree+detail UI since it's used daily before ADO exists.
+
+### AD-003: Skeleton toolchain choices (2026-06-11)
+
+**Decision:** electron-vite 5 via @quick-start/create-electron 1.0.30 template (Electron 39 as pinned by template, React 19, TS 5.9, Vitest 4); JSON config (`%APPDATA%/worktree-manager/config.json`); @fontsource for self-hosted fonts; theme via `data-theme` attr.
+**Reason:** Template-pinned majors over bleeding edge (registry had Electron 42/TS 6) — stability of a known-good combination.
+**Trade-off:** Not on latest Electron; upgrade later if a feature needs it.
+**Impact:** `src/shared/ipc-contract.ts` is the IPC growth point; `ConfigStore` takes an injected dir (Electron-free, testable). New features: add channel to contract + `handle()` in main.
 
 ---
 
@@ -50,7 +57,7 @@
 
 ## Todos
 
-- [ ] Get spec approval for app-skeleton, then Design (build tooling choice: Electron Forge vs electron-vite — decide there)
+- [ ] Specify next M1 feature: "Workspace Registration & Sidebar Tree" (WorkspaceRegistry + RepoScanner + worktree listing)
 
 ---
 
