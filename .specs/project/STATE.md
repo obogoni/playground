@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-11
-**Current Work:** app-skeleton COMPLETE — next: specify M1 feature "Workspace Registration & Sidebar Tree"
+**Current Work:** workspace-sidebar-tree (M1) — spec drafted on branch `feature/workspace-sidebar-tree`, awaiting review → design phase
 
 ---
 
@@ -57,7 +57,9 @@
 
 ## Todos
 
-- [ ] Specify next M1 feature: "Workspace Registration & Sidebar Tree" (WorkspaceRegistry + RepoScanner + worktree listing)
+- [x] Specify next M1 feature: "Workspace Registration & Sidebar Tree" — `.specs/features/workspace-sidebar-tree/spec.md` (TREE-01..06)
+- [ ] Design workspace-sidebar-tree (architecture: WorkspaceRegistry, RepoScanner, WorktreeManager.list, IPC channels, pane components)
+- [ ] Break workspace-sidebar-tree into tasks, then execute
 
 ---
 

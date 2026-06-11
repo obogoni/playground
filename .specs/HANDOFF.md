@@ -1,25 +1,23 @@
 # Handoff
 
 **Date:** 2026-06-11
-**Feature:** app-skeleton (M1) — COMPLETE
-**Task:** T1–T7 all done, gates passed, traceability verified
+**Feature:** workspace-sidebar-tree (M1)
+**Task:** Spec drafted — awaiting user review before Design phase
 
 ## Completed ✓
 
-- Project init: `.specs/project/` (PROJECT, ROADMAP, STATE)
-- app-skeleton feature: spec → design → tasks → executed in 7 commits (`680af56..1042090`)
-- Electron + React + TS shell runs (`npm run dev`); typed IPC layer in `src/shared/ipc-contract.ts`; ConfigStore (6 behavior tests, `npm test`); design tokens + dark/light themes; top bar; theme/direction persisted to `%APPDATA%/playground/config.json`
-- Verified end-to-end via CDP smoke (defaults → patch → disk → relaunch)
+- New branch `feature/workspace-sidebar-tree` created from `feature/project-setup` (main is still pre-skeleton; PR for project-setup not yet merged)
+- Spec written: `.specs/features/workspace-sidebar-tree/spec.md` — 6 requirements (TREE-01..06), grounded in PRD stories 1–4/16/20 and handoff §1a/§1b
 
 ## In Progress
 
-- Nothing mid-flight; clean checkpoint
+- Spec review gate — user has not yet approved the spec
 
 ## Pending
 
-- Specify next M1 feature: **Workspace Registration & Sidebar Tree** (`WorkspaceRegistry` + `RepoScanner` + `git worktree list`, sidebar + detail panes per handoff §1a/§1b)
-- Then: Launch Shortcuts (completes M1, app becomes daily-usable)
-- PR for `feature/project-setup` → `main` opened at end of session
+- Design phase: WorkspaceRegistry, RepoScanner, WorktreeManager.list (list-only in M1), IPC channels in `src/shared/ipc-contract.ts`, Sidebar + Detail components
+- Tasks breakdown, then execute
+- Then: Launch Shortcuts feature (completes M1)
 
 ## Blockers
 
@@ -27,7 +25,6 @@
 
 ## Context
 
-- Branch: `feature/project-setup`
-- Uncommitted: none (design_handoff_worktree_manager/ committed with this checkpoint)
-- Related decisions: STATE.md AD-001 (sources of truth), AD-002 (milestone ordering), AD-003 (toolchain: electron-vite 5, Electron 39 template-pinned, JSON config, @fontsource)
-- Resume with: "resume work" → loads this file + STATE.md, then specify the sidebar feature
+- Branch: `feature/workspace-sidebar-tree` (based on `feature/project-setup`)
+- Uncommitted: none after spec checkpoint commit
+- Related decisions: AD-001 (PRD + design handoff are sources of truth), AD-002 (milestone ordering), AD-003 (toolchain; `src/shared/ipc-contract.ts` is the IPC growth point, ConfigStore pattern = injected dir, Electron-free)
