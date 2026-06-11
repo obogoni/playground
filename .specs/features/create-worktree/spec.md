@@ -10,10 +10,10 @@ The app shows every worktree and opens tools on them, but creating a worktree st
 
 ## Goals
 
-- [ ] From the sidebar, open a dialog and create a worktree on a new branch in ≤4 interactions (open → branch name → create)
-- [ ] Placement is always the PRD convention `<workspace>/<repo>-<sanitized-branch>` — shown live in the dialog before creating
-- [ ] The sidebar refreshes and selects the new worktree (no auto-open — the launcher cards are right there)
-- [ ] `WorktreeManager.create`/`pathFor` are unit-tested against real temp git repos per PRD §Testing Decisions
+- [x] From the sidebar, open a dialog and create a worktree on a new branch in ≤4 interactions (open → branch name → create)
+- [x] Placement is always the PRD convention `<workspace>/<repo>-<sanitized-branch>` — shown live in the dialog before creating
+- [x] The sidebar refreshes and selects the new worktree (no auto-open — the launcher cards are right there)
+- [x] `WorktreeManager.create`/`pathFor` are unit-tested against real temp git repos per PRD §Testing Decisions
 
 ## Out of Scope
 
@@ -31,7 +31,7 @@ The app shows every worktree and opens tools on them, but creating a worktree st
 
 - **Entry point** *(not in PRD or handoff — handoff §3 only shows the task-triggered dialog)*: a "+" icon button on each **repo row** in the sidebar, revealed on hover (pattern matches the existing hover affordances). It opens the dialog with that repo pre-selected; the dialog's repo picker (handoff §3) still allows switching. ⚠️ Flagged for user review.
 - **Dialog header (taskless)**: handoff §3 header shows "START WORK" + task id/title; the taskless variant shows uppercase "NEW WORKTREE" + the selected repo name (mono). Everything else (panel, body, footer, popIn) follows §3 verbatim.
-- **Always a new branch**: the dialog has Base branch + New branch inputs (§3), so it always runs `git worktree add <path> -b <branch> <base>`. `WorktreeManager.create(repoPath, branch, baseBranch?)` still supports the existing-branch form per PRD (used by M3, covered by tests now).
+- **Always a new branch**: the dialog has Base branch + New branch inputs (§3), so it runs `git worktree add <path> -b <branch> <base>`. `WorktreeManager.create(repoPath, branch, baseBranch?)` still supports the existing-branch form per PRD (used by M3, covered by tests now). *Execute note:* clearing the Base field falls back to that existing-branch form instead of erroring — useful and degrades gracefully via the inline git error.
 - **Error surface**: creation failures render **inline in the dialog** (footer area), keeping it open for correction — the transient Toast is wrong for errors the user must act on. Toast stays for fire-and-forget ops only.
 
 ---
@@ -108,14 +108,14 @@ The app shows every worktree and opens tools on them, but creating a worktree st
 
 ## Requirement Traceability
 
-| Requirement ID | Story                                   | Phase   | Status  |
-| -------------- | --------------------------------------- | ------- | ------- |
-| CRWT-01        | P1: New-worktree dialog                 | Execute | Pending |
-| CRWT-02        | P1: Flat-sibling placement & sanitization | Execute | Pending |
-| CRWT-03        | P1: Tree refresh + selection            | Execute | Pending |
-| CRWT-04        | P2: Creation error messaging            | Execute | Pending |
+| Requirement ID | Story                                   | Phase | Status   |
+| -------------- | --------------------------------------- | ----- | -------- |
+| CRWT-01        | P1: New-worktree dialog                 | Done  | Verified |
+| CRWT-02        | P1: Flat-sibling placement & sanitization | Done  | Verified |
+| CRWT-03        | P1: Tree refresh + selection            | Done  | Verified |
+| CRWT-04        | P2: Creation error messaging            | Done  | Verified |
 
-**Coverage:** 4 total, 0 verified
+**Coverage:** 4 total, 4 verified ✅ — 16 new Vitest cases on real temp git repos (45 total green) + 10-check CDP smoke (`scripts/smoke-create.mjs`) against a live seeded workspace + dialog screenshot fidelity pass vs `.dc.html`
 
 ---
 
@@ -127,6 +127,6 @@ The app shows every worktree and opens tools on them, but creating a worktree st
 
 ## Success Criteria
 
-- [ ] From a fresh app start: hover a repo, click "+", type a branch, create — new worktree on disk at the sibling path, selected in the tree, tools launchable on it immediately
-- [ ] All PRD `WorktreeManager` create/pathFor test cases green in Vitest
-- [ ] Visual fidelity pass of the dialog against the `.dc.html` prototype (taskless header noted as a deliberate deviation)
+- [x] From a fresh app start: hover a repo, click "+", type a branch, create — new worktree on disk at the sibling path, selected in the tree, tools launchable on it immediately (smoke-verified)
+- [x] All PRD `WorktreeManager` create/pathFor test cases green in Vitest
+- [x] Visual fidelity pass of the dialog against the `.dc.html` prototype (taskless header noted as a deliberate deviation)

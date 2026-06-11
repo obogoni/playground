@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-11
-**Current Work:** create-worktree (M2) specified on `feature/create-worktree` — CRWT-01..04 Pending. Next: Execute (WorktreeManager.create + dialog). PR #12 (launch-shortcuts) merged; M1 complete
+**Current Work:** create-worktree (M2) COMPLETE on `feature/create-worktree` — CRWT-01..04 Verified (45 Vitest + 10/10 CDP smoke). Next: PR → main, then specify M2 "Delete Worktree (guarded)"
 
 ---
 
@@ -62,8 +62,9 @@
 - [x] Execute Launch Shortcuts: `ShortcutLauncher` + IPC + open-with cards + failure toast — LNCH-01..05 Verified (8/8 CDP smoke)
 - [x] Open PR `feature/launch-shortcuts` → main (PR #12, merged 2026-06-11)
 - [x] Specify M2 "Create Worktree (taskless)" (`.specs/features/create-worktree/spec.md`, CRWT-01..04)
-- [ ] Execute create-worktree: `WorktreeManager.create`/`pathFor` + tests, `worktrees:create` IPC, dialog + repo-row "+" entry, refresh+select
-- [ ] ⚠️ Confirm with user: dialog entry point chosen as hover "+" on sidebar repo rows (not in PRD/handoff — see spec §Decisions)
+- [x] Execute create-worktree: `WorktreeManager.create`/`pathFor` + tests, `worktrees:create` IPC, dialog + repo-row "+" entry, refresh+select — CRWT-01..04 Verified
+- [x] Entry-point decision (hover "+" on repo rows) approved by user with the spec ("go ahead")
+- [ ] Open PR `feature/create-worktree` → main; after merge, specify M2 "Delete Worktree (guarded)"
 
 ---
 

@@ -1,32 +1,30 @@
 # Handoff
 
 **Date:** 2026-06-11
-**Feature:** create-worktree (M2, first feature) — SPECIFIED, execute not started
+**Feature:** create-worktree (M2, first feature) — COMPLETE; CRWT-01..04 Verified
 
 ## Completed ✓
 
-- PR #12 (`feature/launch-shortcuts`) merged; main fast-forwarded to `bf40da2`; M1 closed out
-- New branch `feature/create-worktree` from main
-- Spec written: `.specs/features/create-worktree/spec.md` (CRWT-01..04, Medium scope — no design/tasks docs)
-- Gray areas resolved in spec §Decisions: repo-row hover "+" entry point (⚠️ flag for user), taskless dialog header, always `-b` from dialog, inline dialog errors (not Toast)
+- Spec → execute on branch `feature/create-worktree` (Medium scope: no design/tasks docs)
+- `sanitizeBranch`/`worktreePathFor` in `src/shared/worktrees.ts` (shared so renderer preview and main-process create can't drift); `createWorktree` in `worktree-manager.ts` (`-b <branch> <base>` or existing-branch form, path-exists pre-check, git stderr first line as error); `worktrees:create` IPC channel
+- UI: `NewWorktreeDialog` per handoff §3 (taskless "NEW WORKTREE" header, inline footer errors, busy-guarded Create), hover "+" on sidebar repo rows (user-approved entry point), App refresh+select of the new worktree (no auto-open)
+- Verified: typecheck/lint/45 Vitest green (16 new cases on real temp git repos); CDP smoke 10/10 (`scripts/smoke-create.mjs`); dialog screenshot fidelity pass vs `.dc.html`
 
 ## In Progress
 
-- Nothing — clean checkpoint between Specify and Execute
+- PR `feature/create-worktree` → main being opened (last step of this session)
 
 ## Pending
 
-- Execute CRWT-01..04: extend `src/main/worktree-manager.ts` with `create`/`pathFor` + sanitization (Vitest on temp git repos per PRD §Testing Decisions), add `worktrees:create` to `ipc-contract.ts` + main handler, dialog component per handoff §3 (taskless header), repo-row "+" in `Sidebar.tsx`, refresh+select wiring in `App.tsx`
-- CDP smoke per `scripts/smoke-shortcuts.mjs` pattern
-- After this: second M2 feature "Delete Worktree (guarded)"
+- After PR merges: specify second M2 feature **Delete Worktree (guarded)** (`WorktreeManager.remove` with dirty/primary-checkout refusal; Danger section in detail pane with disabled-look + inline reason, per handoff §1b/§Interactions)
 
 ## Blockers
 
-- None (one user-review flag: dialog entry point decision, spec §Decisions)
+- None
 
 ## Context
 
-- Branch: `feature/create-worktree` (from main @ `bf40da2`)
-- Uncommitted: none after spec checkpoint commit
-- Related decisions: AD-001..003; spec §Decisions for this feature's gray areas
-- Smoke runbook: seed temp workspace + repo/worktrees, swap `%APPDATA%/playground/config.json` (back up the real one!), `npx electron-vite dev -- --remote-debugging-port=9222`, run `scripts/smoke-*.mjs`, restore config
+- Branch: `feature/create-worktree` (from main @ `bf40da2`, PR #12 merge)
+- Uncommitted: none after docs checkpoint commit
+- Related decisions: AD-001..003; spec §Decisions (entry point, taskless header, base-branch fallback, inline errors)
+- Smoke runbook: seed temp workspace + repo/worktrees, swap `%APPDATA%/playground/config.json` (back up the real one!), `npx electron-vite dev -- --remote-debugging-port=9222`, run `scripts/smoke-*.mjs`, restore config. Note: first smoke run right after app start can race the renderer load — re-run once the app settles
