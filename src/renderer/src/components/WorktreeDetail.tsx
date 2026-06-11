@@ -1,19 +1,49 @@
 import { useEffect, useState } from 'react'
 import type { JSX } from 'react'
+import type { ShortcutTool } from '../../../shared/shortcuts'
 import type { WorktreeNode } from '../../../shared/tree'
+import { api } from '../lib/api'
 import { Icon } from './Icon'
+import type { IconName } from './Icon'
 import './WorktreeDetail.css'
 
 interface WorktreeDetailProps {
   workspaceName: string
   repoName: string
   worktree: WorktreeNode
+  onToast: (message: string) => void
 }
+
+/** §1b launcher cards: tile color + label + mono command per tool. */
+const LAUNCHERS: {
+  tool: ShortcutTool
+  label: string
+  command: string
+  icon: IconName
+  tile: string
+}[] = [
+  {
+    tool: 'explorer',
+    label: 'File Explorer',
+    command: 'explorer.exe',
+    icon: 'folder',
+    tile: 'blue'
+  },
+  {
+    tool: 'terminal',
+    label: 'Windows Terminal',
+    command: 'wt.exe',
+    icon: 'terminal',
+    tile: 'green'
+  },
+  { tool: 'vscode', label: 'VS Code', command: 'code', icon: 'code', tile: 'accent' }
+]
 
 export function WorktreeDetail({
   workspaceName,
   repoName,
-  worktree
+  worktree,
+  onToast
 }: WorktreeDetailProps): JSX.Element {
   // App keys this component by worktree id, so selection change remounts it:
   // copy feedback resets and the §1b fadeIn entrance replays for free.
@@ -30,6 +60,15 @@ export function WorktreeDetail({
       .writeText(worktree.path)
       .then(() => setCopied(true))
       .catch(console.error)
+  }
+
+  const launch = (tool: ShortcutTool): void => {
+    api
+      .invoke('shortcuts:launch', { tool, path: worktree.path })
+      .then((result) => {
+        if (!result.ok) onToast(result.error ?? 'Launch failed')
+      })
+      .catch((err) => onToast(err instanceof Error ? err.message : String(err)))
   }
 
   return (
@@ -63,8 +102,28 @@ export function WorktreeDetail({
             </button>
           </div>
         </section>
-        {/* M2 adds the danger section here; M3 the linked-task card; Launch
-            Shortcuts the open-with grid — §1b section order preserved. */}
+
+        <section className="detail-section">
+          <h2 className="detail-section-label">Open with</h2>
+          <div className="detail-openwith">
+            {LAUNCHERS.map((launcher) => (
+              <button
+                key={launcher.tool}
+                type="button"
+                className="detail-launcher"
+                onClick={() => launch(launcher.tool)}
+              >
+                <span className={`detail-launcher-tile ${launcher.tile}`}>
+                  <Icon name={launcher.icon} size={17} />
+                </span>
+                <span className="detail-launcher-label">{launcher.label}</span>
+                <span className="detail-launcher-command">{launcher.command}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+        {/* M2 adds the danger section here; M3 the linked-task card above
+            Location — §1b section order preserved. */}
       </div>
     </div>
   )

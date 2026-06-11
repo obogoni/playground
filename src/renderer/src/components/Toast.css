@@ -1,0 +1,20 @@
+/* Transient toast — handoff §Interactions (bottom-center, ~2.2s) */
+
+.toast {
+  position: fixed;
+  bottom: 26px;
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+  width: fit-content;
+  max-width: 70vw;
+  padding: 10px 18px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--panel);
+  box-shadow: 0 12px 34px var(--shadow);
+  font-size: 13px;
+  font-weight: 600;
+  animation: toastIn 0.22s ease;
+  z-index: 100;
+}

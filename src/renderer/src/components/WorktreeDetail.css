@@ -130,3 +130,66 @@
   background: var(--panel-2);
   color: var(--text);
 }
+
+/* Open with — §1b launcher cards */
+
+.detail-openwith {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.detail-launcher {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  text-align: left;
+  transition:
+    border-color 0.12s,
+    transform 0.12s;
+}
+
+.detail-launcher:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.detail-launcher-tile {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 8px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+}
+
+.detail-launcher-tile.blue {
+  background: color-mix(in oklab, var(--blue) 16%, transparent);
+  color: var(--blue);
+}
+
+.detail-launcher-tile.green {
+  background: color-mix(in oklab, var(--green) 16%, transparent);
+  color: var(--green);
+}
+
+.detail-launcher-tile.accent {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.detail-launcher-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.detail-launcher-command {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
