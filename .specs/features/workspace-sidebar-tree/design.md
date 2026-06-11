@@ -31,14 +31,14 @@ graph LR
 
 ## Code Reuse Analysis
 
-| Component | Location | How to Use |
-| --------- | -------- | ---------- |
-| `IpcContract` + `handle()` | `src/shared/ipc-contract.ts`, `src/main/ipc.ts` | Add 3 channels; register handlers in `main/index.ts` (AD-003 growth point) |
-| `ConfigStore` | `src/main/config-store.ts` | `WorkspaceRegistry` wraps it — workspaces become a new `AppConfig` section; atomic write + corrupt-file recovery for free |
-| `api` client | `src/renderer/src/lib/api.ts` | Renderer calls new channels; no changes needed |
-| `Icon` | `src/renderer/src/components/Icon.tsx` | Extend with the §1a/§1b glyphs not yet present (folder, chevron, fork, copy, trash) |
-| Injected-dir test pattern | `src/main/config-store.test.ts` | Same colocated Vitest pattern; real FS/git in temp dirs per PRD §Testing |
-| Token CSS (`data-theme`) | renderer CSS | All new panes styled exclusively with existing `--*` tokens + `color-mix` tints |
+| Component                  | Location                                        | How to Use                                                                                                                |
+| -------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `IpcContract` + `handle()` | `src/shared/ipc-contract.ts`, `src/main/ipc.ts` | Add 3 channels; register handlers in `main/index.ts` (AD-003 growth point)                                                |
+| `ConfigStore`              | `src/main/config-store.ts`                      | `WorkspaceRegistry` wraps it — workspaces become a new `AppConfig` section; atomic write + corrupt-file recovery for free |
+| `api` client               | `src/renderer/src/lib/api.ts`                   | Renderer calls new channels; no changes needed                                                                            |
+| `Icon`                     | `src/renderer/src/components/Icon.tsx`          | Extend with the §1a/§1b glyphs not yet present (folder, chevron, fork, copy, trash)                                       |
+| Injected-dir test pattern  | `src/main/config-store.test.ts`                 | Same colocated Vitest pattern; real FS/git in temp dirs per PRD §Testing                                                  |
+| Token CSS (`data-theme`)   | renderer CSS                                    | All new panes styled exclusively with existing `--*` tokens + `color-mix` tints                                           |
 
 ---
 
@@ -112,15 +112,16 @@ graph LR
 `src/shared/tree.ts` (shared types, used by contract + renderer):
 
 ```typescript
-export interface WorkspaceEntry {            // persisted in AppConfig.workspaces
-  id: string                                 // normalized lowercased absolute path
-  path: string                               // as picked
-  displayName: string                        // folder basename
+export interface WorkspaceEntry {
+  // persisted in AppConfig.workspaces
+  id: string // normalized lowercased absolute path
+  path: string // as picked
+  displayName: string // folder basename
 }
 
 export interface WorktreeNode {
-  id: string                                 // worktree absolute path
-  branch: string                             // or '(detached <sha>)'
+  id: string // worktree absolute path
+  branch: string // or '(detached <sha>)'
   path: string
   isDefault: boolean
   dirty: boolean
@@ -131,11 +132,11 @@ export interface RepoNode {
   name: string
   path: string
   worktrees: WorktreeNode[]
-  error?: string                             // git failed for this repo
+  error?: string // git failed for this repo
 }
 
 export interface WorkspaceNode extends WorkspaceEntry {
-  missing?: boolean                          // path no longer exists
+  missing?: boolean // path no longer exists
   repos: RepoNode[]
 }
 ```
@@ -146,24 +147,24 @@ export interface WorkspaceNode extends WorkspaceEntry {
 
 ## Error Handling Strategy
 
-| Error Scenario | Handling | User Impact |
-| -------------- | -------- | ----------- |
-| Workspace path missing | `scanRepos` ENOENT → `missing: true` on node | Row renders with error note, still removable (spec edge case) |
-| `git` not on PATH / repo corrupt | caught per repo → `RepoNode.error` | Repo row shows inline error text; rest of tree unaffected |
-| Folder picker cancelled | `workspaces:add` → `null` | Nothing changes (TREE-01 AC4) |
-| Duplicate registration | registry dedupe → `null` | No duplicate row (TREE-01 AC3) |
-| Selected worktree vanished after refresh | App clears `selectedId` | Detail pane empty state (TREE-06 AC2) |
-| Clipboard write fails | caught; console.error | Copy feedback not shown |
+| Error Scenario                           | Handling                                     | User Impact                                                   |
+| ---------------------------------------- | -------------------------------------------- | ------------------------------------------------------------- |
+| Workspace path missing                   | `scanRepos` ENOENT → `missing: true` on node | Row renders with error note, still removable (spec edge case) |
+| `git` not on PATH / repo corrupt         | caught per repo → `RepoNode.error`           | Repo row shows inline error text; rest of tree unaffected     |
+| Folder picker cancelled                  | `workspaces:add` → `null`                    | Nothing changes (TREE-01 AC4)                                 |
+| Duplicate registration                   | registry dedupe → `null`                     | No duplicate row (TREE-01 AC3)                                |
+| Selected worktree vanished after refresh | App clears `selectedId`                      | Detail pane empty state (TREE-06 AC2)                         |
+| Clipboard write fails                    | caught; console.error                        | Copy feedback not shown                                       |
 
 ---
 
 ## Tech Decisions (non-obvious only)
 
-| Decision | Choice | Rationale |
-| -------- | ------ | --------- |
-| Worktree parse source | `--porcelain` block format | Stable, documented; whitespace-safe vs. the columnar default |
-| `isDefault` detection | First porcelain block | Git guarantees the main working tree is listed first |
-| Workspace id | Normalized path, not uuid | PRD: identified by absolute path; stable, dedupe falls out naturally |
-| Workspaces persisted in `AppConfig` | New section via existing ConfigStore | One config file (PRD: global config holds workspaces); atomic writes + corrupt recovery reused |
-| One coarse `tree:get` | Full snapshot per call | Request/response IPC per PRD; tree is small (human-scale workspaces); avoids cache-invalidation machinery |
-| Dirty check cost | `git status --porcelain` per worktree, parallel | Correct count needed for §1b pill text; parallelism keeps total ≈ slowest repo |
+| Decision                            | Choice                                          | Rationale                                                                                                 |
+| ----------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Worktree parse source               | `--porcelain` block format                      | Stable, documented; whitespace-safe vs. the columnar default                                              |
+| `isDefault` detection               | First porcelain block                           | Git guarantees the main working tree is listed first                                                      |
+| Workspace id                        | Normalized path, not uuid                       | PRD: identified by absolute path; stable, dedupe falls out naturally                                      |
+| Workspaces persisted in `AppConfig` | New section via existing ConfigStore            | One config file (PRD: global config holds workspaces); atomic writes + corrupt recovery reused            |
+| One coarse `tree:get`               | Full snapshot per call                          | Request/response IPC per PRD; tree is small (human-scale workspaces); avoids cache-invalidation machinery |
+| Dirty check cost                    | `git status --porcelain` per worktree, parallel | Correct count needed for §1b pill text; parallelism keeps total ≈ slowest repo                            |

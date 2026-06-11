@@ -6,7 +6,8 @@ import eslintPluginReactHooks from 'eslint-plugin-react-hooks'
 import eslintPluginReactRefresh from 'eslint-plugin-react-refresh'
 
 export default defineConfig(
-  { ignores: ['**/node_modules', '**/dist', '**/out'] },
+  // design_handoff_worktree_manager is a reference-only design bundle (AD-001), never shipped
+  { ignores: ['**/node_modules', '**/dist', '**/out', 'design_handoff_worktree_manager'] },
   tseslint.configs.recommended,
   eslintPluginReact.configs.flat.recommended,
   eslintPluginReact.configs.flat['jsx-runtime'],
@@ -15,6 +16,13 @@ export default defineConfig(
       react: {
         version: 'detect'
       }
+    }
+  },
+  {
+    // Plain Node scripts (CDP smoke checks etc.) — no TS annotations to demand
+    files: ['**/*.mjs'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off'
     }
   },
   {

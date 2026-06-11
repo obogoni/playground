@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 import type { AppConfig } from '../../shared/config'
 import type { WorkspaceNode, WorktreeNode } from '../../shared/tree'
 import { Sidebar } from './components/Sidebar'
+import { Toast } from './components/Toast'
 import { TopBar } from './components/TopBar'
 import { WorktreeDetail, WorktreeDetailEmpty } from './components/WorktreeDetail'
 import { api } from './lib/api'
@@ -33,6 +34,8 @@ function App(): JSX.Element {
   const [ui, setUi] = useState<UiState | null>(null)
   const [tree, setTree] = useState<WorkspaceNode[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+  const dismissToast = useCallback(() => setToast(null), [])
 
   const refreshTree = useCallback((): void => {
     api
@@ -75,10 +78,7 @@ function App(): JSX.Element {
   }
 
   const removeWorkspace = (id: string): void => {
-    api
-      .invoke('workspaces:remove', { id })
-      .then(refreshTree)
-      .catch(console.error)
+    api.invoke('workspaces:remove', { id }).then(refreshTree).catch(console.error)
   }
 
   if (!ui) {
@@ -109,18 +109,23 @@ function App(): JSX.Element {
             />
             {selected ? (
               <WorktreeDetail
+                key={selected.worktree.id}
                 workspaceName={selected.workspaceName}
                 repoName={selected.repoName}
                 worktree={selected.worktree}
+                onToast={setToast}
               />
             ) : (
               <WorktreeDetailEmpty />
             )}
           </>
         ) : (
-          <div className="content-placeholder">Board view — task-centric canvas lands here (M4)</div>
+          <div className="content-placeholder">
+            Board view — task-centric canvas lands here (M4)
+          </div>
         )}
       </main>
+      {toast && <Toast message={toast} onDismiss={dismissToast} />}
     </>
   )
 }

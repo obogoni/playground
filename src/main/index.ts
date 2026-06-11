@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { ConfigStore } from './config-store'
 import { handle } from './ipc'
+import { ShortcutLauncher } from './shortcut-launcher'
 import { buildTree } from './tree'
 import { WorkspaceRegistry } from './workspace-registry'
 
@@ -70,6 +71,9 @@ app.whenReady().then(() => {
   })
   handle('workspaces:remove', ({ id }) => registry.remove(id))
   handle('tree:get', () => buildTree(registry))
+
+  const launcher = new ShortcutLauncher()
+  handle('shortcuts:launch', ({ tool, path }) => launcher.launch(tool, path))
 
   createWindow()
 

@@ -4,12 +4,12 @@
 
 ## Changes
 
-<!-- Bullet list of the main changes -->
--
+## <!-- Bullet list of the main changes -->
 
 ## Testing
 
 <!-- How did you verify this works? -->
+
 - [ ] Manual test
 - [ ] Automated tests added/updated
 - [ ] N/A

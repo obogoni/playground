@@ -16,13 +16,13 @@ Every M1–M4 feature needs a foundation that does not exist yet: an Electron + 
 
 ## Out of Scope
 
-| Feature | Reason |
-| ------- | ------ |
-| Sidebar tree, detail pane, tasks pane content | Separate M1/M3 features |
-| Board direction content | M4 — only the Tree/Board segmented control (persisted state) ships here |
-| Any `git`/`az`/launcher functionality | M1 launch shortcuts / M2 / M3 features |
-| Per-workspace `.app/` config | M4 |
-| Auto-update, packaging/installer polish | Out of v1 per PRD; dev-run is enough for now |
+| Feature                                       | Reason                                                                  |
+| --------------------------------------------- | ----------------------------------------------------------------------- |
+| Sidebar tree, detail pane, tasks pane content | Separate M1/M3 features                                                 |
+| Board direction content                       | M4 — only the Tree/Board segmented control (persisted state) ships here |
+| Any `git`/`az`/launcher functionality         | M1 launch shortcuts / M2 / M3 features                                  |
+| Per-workspace `.app/` config                  | M4                                                                      |
+| Auto-update, packaging/installer polish       | Out of v1 per PRD; dev-run is enough for now                            |
 
 ---
 
@@ -102,12 +102,12 @@ Every M1–M4 feature needs a foundation that does not exist yet: an Electron + 
 
 ## Requirement Traceability
 
-| Requirement ID | Story | Phase | Status |
-| -------------- | ----- | ----- | ------ |
-| SKEL-01 | P1: Runnable app shell | Done (T1, T3, T6, T7) | Verified |
-| SKEL-02 | P1: Design tokens & theme toggle | Done (T2, T6, T7) | Verified |
-| SKEL-03 | P1: Global config persistence | Done (T3, T4, T5, T7) | Verified |
-| SKEL-04 | P2: Direction switch | Done (T6, T7) | Verified |
+| Requirement ID | Story                            | Phase                 | Status   |
+| -------------- | -------------------------------- | --------------------- | -------- |
+| SKEL-01        | P1: Runnable app shell           | Done (T1, T3, T6, T7) | Verified |
+| SKEL-02        | P1: Design tokens & theme toggle | Done (T2, T6, T7)     | Verified |
+| SKEL-03        | P1: Global config persistence    | Done (T3, T4, T5, T7) | Verified |
+| SKEL-04        | P2: Direction switch             | Done (T6, T7)         | Verified |
 
 **Coverage:** 4 total, 4 mapped to tasks, 0 unmapped ✅ (verified via 6 ConfigStore behavior tests + CDP end-to-end smoke: defaults → patch → disk → relaunch round-trip)
 

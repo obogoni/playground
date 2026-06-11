@@ -4,6 +4,7 @@
 **Status**: Done — T1..T8 complete, one commit each (63f69d9..4aac9c4). Gates: build, 29/29 Vitest behavior tests, CDP smoke 12/12 (`scripts/smoke-tree.mjs` + `smoke-refresh.mjs`).
 
 Gate commands (unchanged from app-skeleton):
+
 - **quick** = `npm test` (vitest run)
 - **build** = `npm run typecheck && npm run build`
 - **full** = build + quick + manual `npm run dev` smoke check
@@ -34,6 +35,7 @@ Phase 4 (Sequential):   T5,T6,T7 ─→ T8  (App wiring)
 **Depends on**: None · **Reuses**: contract/channel pattern (AD-003 growth point) · **Requirement**: TREE-01..06 (foundation)
 
 **Done when**:
+
 - [ ] Types compile and flow through `RendererApi` with no `any`
 - [ ] Gate check passes: build (handlers not yet registered — contract only)
 
@@ -49,6 +51,7 @@ Phase 4 (Sequential):   T5,T6,T7 ─→ T8  (App wiring)
 **Depends on**: T1 · **Reuses**: ConfigStore (injected temp dir in tests, per config-store.test.ts pattern) · **Requirement**: TREE-01, TREE-05
 
 **Done when**:
+
 - [ ] Behaviors: add persists round-trip (new ConfigStore on same dir sees it) · dedupe same path with different case/trailing slash → null · remove unregisters and persists · list order stable · remove never touches the workspace folder itself
 - [ ] Gate check passes: `npm test` (≥5 new tests)
 
@@ -64,6 +67,7 @@ Phase 4 (Sequential):   T5,T6,T7 ─→ T8  (App wiring)
 **Depends on**: T1 · **Reuses**: temp-dir test pattern · **Requirement**: TREE-02
 
 **Done when**:
+
 - [ ] Behaviors (PRD §Testing): finds repos at depth 1 only · ignores `node_modules`/dot-dirs · `.git`-file child not listed as repo · stable ordering · missing path throws ENOENT · empty workspace → []
 - [ ] Gate check passes: `npm test` (≥6 new tests)
 
@@ -79,6 +83,7 @@ Phase 4 (Sequential):   T5,T6,T7 ─→ T8  (App wiring)
 **Depends on**: T1 · **Reuses**: temp-dir pattern · **Requirement**: TREE-02
 
 **Done when**:
+
 - [ ] Behaviors (PRD §Testing, list subset): single primary checkout · primary + linked worktree (flat sibling) · dirty counts (modified + untracked) · clean → 0 · detached HEAD labeled, no crash · non-repo path → typed error
 - [ ] Tests init real git repos in temp dirs (`git init`, commits, `git worktree add`)
 - [ ] Gate check passes: `npm test` (≥6 new tests)
@@ -95,6 +100,7 @@ Phase 4 (Sequential):   T5,T6,T7 ─→ T8  (App wiring)
 **Depends on**: T2, T3, T4 · **Reuses**: `handle()` wrapper; registry/scanner/manager · **Requirement**: TREE-01, TREE-02, TREE-05, TREE-06
 
 **Done when**:
+
 - [ ] buildTree behaviors: workspace with repos+worktrees snapshots correctly · missing workspace path → `missing: true`, others unaffected · failing repo → `error` on that node only
 - [ ] Devtools: `window.api.invoke('tree:get')` returns real tree; `workspaces:add` opens picker, cancel → null
 - [ ] Gate check passes: `npm test` + build
@@ -111,6 +117,7 @@ Phase 4 (Sequential):   T5,T6,T7 ─→ T8  (App wiring)
 **Depends on**: T1 · **Reuses**: tokens, Icon, §1a measurements verbatim · **Requirement**: TREE-03, TREE-05
 
 **Done when**:
+
 - [ ] Fully controlled via props (`tree, selectedId, onSelect, onAddWorkspace, onRemoveWorkspace`); no IPC inside
 - [ ] Visual fidelity vs. `.dc.html` §1a (row paddings, type sizes, selection tint + inset bar)
 - [ ] Gate check passes: build
@@ -127,6 +134,7 @@ Phase 4 (Sequential):   T5,T6,T7 ─→ T8  (App wiring)
 **Depends on**: T1 · **Reuses**: tokens; §1b measurements · **Requirement**: TREE-04
 
 **Done when**:
+
 - [ ] Props-only; clipboard via `navigator.clipboard` (only renderer-side effect)
 - [ ] Pills match §1b spec (color-mix tints, radius 20, 12.5px/600); layout leaves insertion room for M2/M3 sections
 - [ ] Gate check passes: build
@@ -143,6 +151,7 @@ Phase 4 (Sequential):   T5,T6,T7 ─→ T8  (App wiring)
 **Depends on**: T5, T6, T7 · **Reuses**: api client, all prior tasks · **Requirement**: TREE-01..06
 
 **Done when**:
+
 - [ ] Spec Independent Tests pass by hand: register/dedupe/cancel · real repos + dirty dots · selection + detail pills · copy path · remove workspace · external worktree add/remove + refresh round-trip
 - [ ] Restart persistence: workspaces survive relaunch
 - [ ] Gate check passes: full (build + all tests + dev smoke)
@@ -154,28 +163,28 @@ Phase 4 (Sequential):   T5,T6,T7 ─→ T8  (App wiring)
 
 ## Diagram-Definition Cross-Check
 
-| Task | Depends On (body) | Diagram Shows | Status |
-| ---- | ----------------- | ------------- | ------ |
-| T1 | None | start | ✅ Match |
-| T2 | T1 | T1→T2 | ✅ Match |
-| T3 | T1 | T1→T3 | ✅ Match |
-| T4 | T1 | T1→T4 | ✅ Match |
-| T5 | T2, T3, T4 | T2,T3,T4→T5 | ✅ Match |
-| T6 | T1 | T1→T6 | ✅ Match |
-| T7 | T1 | T1→T7 | ✅ Match |
-| T8 | T5, T6, T7 | T5,T6,T7→T8 | ✅ Match |
+| Task | Depends On (body) | Diagram Shows | Status   |
+| ---- | ----------------- | ------------- | -------- |
+| T1   | None              | start         | ✅ Match |
+| T2   | T1                | T1→T2         | ✅ Match |
+| T3   | T1                | T1→T3         | ✅ Match |
+| T4   | T1                | T1→T4         | ✅ Match |
+| T5   | T2, T3, T4        | T2,T3,T4→T5   | ✅ Match |
+| T6   | T1                | T1→T6         | ✅ Match |
+| T7   | T1                | T1→T7         | ✅ Match |
+| T8   | T5, T6, T7        | T5,T6,T7→T8   | ✅ Match |
 
 Parallel group T2/T3/T4/T6/T7: no intra-group dependencies. ✅
 
 ## Test Co-location Validation
 
-| Task | Code Layer | Baseline Requires (PRD §Testing) | Task Says | Status |
-| ---- | ---------- | -------------------------------- | --------- | ------ |
-| T1 | types/contract | none | none | ✅ OK |
-| T2 | deep module (persistence) | behavior | unit | ✅ OK |
-| T3 | deep module (FS) | behavior | unit | ✅ OK |
-| T4 | deep module (git) | behavior, real git | integration | ✅ OK |
-| T5 | orchestration + wiring | behavior for compose logic | integration | ✅ OK |
-| T6 | React view | none (PRD: views untested) | none | ✅ OK |
-| T7 | React view | none | none | ✅ OK |
-| T8 | React view + wiring | none | none | ✅ OK |
+| Task | Code Layer                | Baseline Requires (PRD §Testing) | Task Says   | Status |
+| ---- | ------------------------- | -------------------------------- | ----------- | ------ |
+| T1   | types/contract            | none                             | none        | ✅ OK  |
+| T2   | deep module (persistence) | behavior                         | unit        | ✅ OK  |
+| T3   | deep module (FS)          | behavior                         | unit        | ✅ OK  |
+| T4   | deep module (git)         | behavior, real git               | integration | ✅ OK  |
+| T5   | orchestration + wiring    | behavior for compose logic       | integration | ✅ OK  |
+| T6   | React view                | none (PRD: views untested)       | none        | ✅ OK  |
+| T7   | React view                | none                             | none        | ✅ OK  |
+| T8   | React view + wiring       | none                             | none        | ✅ OK  |

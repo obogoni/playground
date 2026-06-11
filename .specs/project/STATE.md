@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-11
-**Current Work:** workspace-sidebar-tree COMPLETE — next: specify M1 feature "Launch Shortcuts" (last M1 feature; app becomes daily-usable)
+**Current Work:** launch-shortcuts COMPLETE (LNCH-01..05 Verified) — M1 done, app daily-usable. Next: PR `feature/launch-shortcuts` → main, then specify M2 "Create Worktree (taskless)"
 
 ---
 
@@ -38,7 +38,7 @@
 
 ## Lessons Learned
 
-(none yet)
+- **LF must be enforced by the repo, not the clone (2026-06-11):** a fast-forward pull with global `core.autocrlf=true` rewrote the whole working tree as CRLF, exploding `npm run lint` (1781 prettier warnings) on a cold eslint cache. Fixed with `.gitattributes` (`* text=auto eol=lf`) + working-tree renormalization. Gates that rely on `eslint --cache` can hide debt — new lint errors surfaced only when the cache went cold.
 
 ---
 
@@ -57,8 +57,10 @@
 
 ## Todos
 
-- [x] workspace-sidebar-tree: specified, designed, executed (T1–T8), verified — TREE-01..06 all Verified
-- [ ] Specify next M1 feature: "Launch Shortcuts" (`ShortcutLauncher` + open-with cards in detail pane, handoff §1b)
+- [x] workspace-sidebar-tree: specified, designed, executed (T1–T8), verified — TREE-01..06 all Verified (PR #11 merged)
+- [x] Specify Launch Shortcuts (`.specs/features/launch-shortcuts/spec.md`, LNCH-01..05)
+- [x] Execute Launch Shortcuts: `ShortcutLauncher` + IPC + open-with cards + failure toast — LNCH-01..05 Verified (8/8 CDP smoke)
+- [ ] Open PR `feature/launch-shortcuts` → main; after merge, specify M2 "Create Worktree (taskless)"
 
 ---
 

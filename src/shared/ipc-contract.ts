@@ -1,4 +1,5 @@
 import type { AppConfig, ConfigPatch } from './config'
+import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'
 
 /**
@@ -14,6 +15,8 @@ export interface IpcContract {
   'workspaces:remove': { req: { id: string }; res: void }
   /** Full disk-truth snapshot: registry → repos → worktrees with dirty status. */
   'tree:get': { req: void; res: WorkspaceNode[] }
+  /** Opens the external tool rooted at the path; failures are returned, never thrown. */
+  'shortcuts:launch': { req: { tool: ShortcutTool; path: string }; res: LaunchResult }
 }
 
 export type IpcChannel = keyof IpcContract
