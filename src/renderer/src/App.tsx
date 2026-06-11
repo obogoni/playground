@@ -75,10 +75,7 @@ function App(): JSX.Element {
   }
 
   const removeWorkspace = (id: string): void => {
-    api
-      .invoke('workspaces:remove', { id })
-      .then(refreshTree)
-      .catch(console.error)
+    api.invoke('workspaces:remove', { id }).then(refreshTree).catch(console.error)
   }
 
   if (!ui) {
@@ -109,6 +106,7 @@ function App(): JSX.Element {
             />
             {selected ? (
               <WorktreeDetail
+                key={selected.worktree.id}
                 workspaceName={selected.workspaceName}
                 repoName={selected.repoName}
                 worktree={selected.worktree}
@@ -118,7 +116,9 @@ function App(): JSX.Element {
             )}
           </>
         ) : (
-          <div className="content-placeholder">Board view — task-centric canvas lands here (M4)</div>
+          <div className="content-placeholder">
+            Board view — task-centric canvas lands here (M4)
+          </div>
         )}
       </main>
     </>

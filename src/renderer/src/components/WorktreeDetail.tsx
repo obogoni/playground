@@ -15,10 +15,9 @@ export function WorktreeDetail({
   repoName,
   worktree
 }: WorktreeDetailProps): JSX.Element {
+  // App keys this component by worktree id, so selection change remounts it:
+  // copy feedback resets and the §1b fadeIn entrance replays for free.
   const [copied, setCopied] = useState(false)
-
-  // Reset feedback when another worktree is selected.
-  useEffect(() => setCopied(false), [worktree.id])
 
   useEffect(() => {
     if (!copied) return
@@ -34,8 +33,7 @@ export function WorktreeDetail({
   }
 
   return (
-    // key remounts on selection change so the §1b fadeIn entrance replays
-    <div className="detail" key={worktree.id}>
+    <div className="detail">
       <div className="detail-inner">
         <nav className="detail-breadcrumb">
           {workspaceName} / <span className="detail-breadcrumb-repo">{repoName}</span>
@@ -60,12 +58,7 @@ export function WorktreeDetail({
           <h2 className="detail-section-label">Location</h2>
           <div className="detail-location">
             <span className="detail-location-path">{worktree.path}</span>
-            <button
-              type="button"
-              className="detail-copy-btn"
-              title="Copy path"
-              onClick={copyPath}
-            >
+            <button type="button" className="detail-copy-btn" title="Copy path" onClick={copyPath}>
               <Icon name={copied ? 'check' : 'copy'} size={14} />
             </button>
           </div>
