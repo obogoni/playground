@@ -9,6 +9,7 @@ interface SidebarProps {
   onSelect: (id: string) => void
   onAddWorkspace: () => void
   onRemoveWorkspace: (id: string) => void
+  onNewWorktree: (repoPath: string) => void
 }
 
 export function Sidebar({
@@ -16,7 +17,8 @@ export function Sidebar({
   selectedId,
   onSelect,
   onAddWorkspace,
-  onRemoveWorkspace
+  onRemoveWorkspace,
+  onNewWorktree
 }: SidebarProps): JSX.Element {
   return (
     <aside className="sidebar">
@@ -47,6 +49,7 @@ export function Sidebar({
               selectedId={selectedId}
               onSelect={onSelect}
               onRemove={() => onRemoveWorkspace(workspace.id)}
+              onNewWorktree={onNewWorktree}
             />
           ))
         )}
@@ -60,9 +63,16 @@ interface WorkspaceProps {
   selectedId: string | null
   onSelect: (id: string) => void
   onRemove: () => void
+  onNewWorktree: (repoPath: string) => void
 }
 
-function Workspace({ workspace, selectedId, onSelect, onRemove }: WorkspaceProps): JSX.Element {
+function Workspace({
+  workspace,
+  selectedId,
+  onSelect,
+  onRemove,
+  onNewWorktree
+}: WorkspaceProps): JSX.Element {
   return (
     <section className="sidebar-workspace">
       <div className="sidebar-workspace-row">
@@ -88,7 +98,13 @@ function Workspace({ workspace, selectedId, onSelect, onRemove }: WorkspaceProps
         <div className="sidebar-note">no git repos in this folder</div>
       ) : (
         workspace.repos.map((repo) => (
-          <Repo key={repo.path} repo={repo} selectedId={selectedId} onSelect={onSelect} />
+          <Repo
+            key={repo.path}
+            repo={repo}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            onNewWorktree={() => onNewWorktree(repo.path)}
+          />
         ))
       )}
     </section>
@@ -99,15 +115,24 @@ interface RepoProps {
   repo: RepoNode
   selectedId: string | null
   onSelect: (id: string) => void
+  onNewWorktree: () => void
 }
 
-function Repo({ repo, selectedId, onSelect }: RepoProps): JSX.Element {
+function Repo({ repo, selectedId, onSelect, onNewWorktree }: RepoProps): JSX.Element {
   return (
     <div className="sidebar-repo">
       <div className="sidebar-repo-row">
         <Icon name="git-branch" size={13} />
         <span className="sidebar-repo-name">{repo.name}</span>
         <span className="sidebar-repo-count">{repo.worktrees.length}</span>
+        <button
+          type="button"
+          className="sidebar-new-worktree-btn"
+          title={`New worktree in ${repo.name}`}
+          onClick={onNewWorktree}
+        >
+          <Icon name="plus" size={12} />
+        </button>
       </div>
       {repo.error ? (
         <div className="sidebar-note error">
