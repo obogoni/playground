@@ -1,12 +1,13 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import type { RendererApi } from '../shared/ipc-contract'
 
-// Custom APIs for renderer
-const api = {}
+// The runtime bridge is untyped pass-through; type safety lives in the
+// IpcContract map enforced at both call sites (renderer) and handlers (main).
+const api = {
+  invoke: (channel: string, ...args: unknown[]) => ipcRenderer.invoke(channel, ...args)
+} as RendererApi
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
