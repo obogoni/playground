@@ -1,7 +1,7 @@
 # Roadmap
 
-**Current Milestone:** M2 — Worktree Lifecycle
-**Status:** Not Started (M1 complete — app is daily-usable)
+**Current Milestone:** M3 — ADO Tasks & Start-Work Flow
+**Status:** Not Started (M1 + M2 complete — full worktree lifecycle in-app)
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
 
@@ -40,13 +40,13 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 
 ### Features
 
-**Create Worktree (taskless)** - PLANNED
+**Create Worktree (taskless)** - COMPLETE
 
 - New-worktree dialog: repo picker, base branch, branch name; live path preview
 - `WorktreeManager.create`: flat-sibling placement `<workspace>/<repo>-<sanitized-branch>`, branch sanitization rules per PRD
 - Sidebar refreshes and selects the new worktree (no auto-open)
 
-**Delete Worktree (guarded)** - PLANNED
+**Delete Worktree (guarded)** - COMPLETE
 
 - `WorktreeManager.remove` with dirty-check: refuse when uncommitted changes or primary checkout
 - Danger section in detail pane with disabled-look + inline reason

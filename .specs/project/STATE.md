@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-11
-**Current Work:** create-worktree (M2) COMPLETE on `feature/create-worktree` — CRWT-01..04 Verified (45 Vitest + 10/10 CDP smoke). Next: PR → main, then specify M2 "Delete Worktree (guarded)"
+**Current Work:** delete-worktree (M2, final feature) COMPLETE on `feature/delete-worktree` — DLWT-01..04 Verified (53 Vitest + 10/10 CDP smoke). M2 done. Next: PR → main, then start M3 with "Pinned Tasks Pane" (`AdoGateway` + `TaskBoard`)
 
 ---
 
@@ -64,7 +64,10 @@
 - [x] Specify M2 "Create Worktree (taskless)" (`.specs/features/create-worktree/spec.md`, CRWT-01..04)
 - [x] Execute create-worktree: `WorktreeManager.create`/`pathFor` + tests, `worktrees:create` IPC, dialog + repo-row "+" entry, refresh+select — CRWT-01..04 Verified
 - [x] Entry-point decision (hover "+" on repo rows) approved by user with the spec ("go ahead")
-- [ ] Open PR `feature/create-worktree` → main; after merge, specify M2 "Delete Worktree (guarded)"
+- [x] Open PR `feature/create-worktree` → main (PR #13, merged 2026-06-11)
+- [x] Specify M2 "Delete Worktree (guarded)" (`.specs/features/delete-worktree/spec.md`, DLWT-01..04)
+- [x] Execute delete-worktree: guarded `removeWorktree` + tests, `worktrees:remove` IPC, §1b Danger section, refresh+reselect-primary — DLWT-01..04 Verified
+- [ ] Open PR `feature/delete-worktree` → main; after merge, specify M3 "Pinned Tasks Pane"
 
 ---
 

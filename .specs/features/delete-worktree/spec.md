@@ -10,10 +10,10 @@ Worktrees can now be created from the app but still die at the terminal: finishi
 
 ## Goals
 
-- [ ] Remove a clean, non-primary worktree from its detail pane in one click — folder gone from disk, row gone from the tree
-- [ ] The app refuses to remove a dirty worktree or a repo's primary checkout, with the reason shown inline (handoff §1b disabled-look + note)
-- [ ] `WorktreeManager.remove` is unit-tested against real temp git repos per PRD §Testing Decisions (clean remove, dirty refusal, primary refusal, force)
-- [ ] After removal the sidebar refreshes and the repo's primary checkout is selected (UI never lands on a vanished worktree)
+- [x] Remove a clean, non-primary worktree from its detail pane in one click — folder gone from disk, row gone from the tree
+- [x] The app refuses to remove a dirty worktree or a repo's primary checkout, with the reason shown inline (handoff §1b disabled-look + note)
+- [x] `WorktreeManager.remove` is unit-tested against real temp git repos per PRD §Testing Decisions (clean remove, dirty refusal, primary refusal, force)
+- [x] After removal the sidebar refreshes and the repo's primary checkout is selected (UI never lands on a vanished worktree)
 
 ## Out of Scope
 
@@ -108,14 +108,14 @@ Worktrees can now be created from the app but still die at the terminal: finishi
 
 ## Requirement Traceability
 
-| Requirement ID | Story                                      | Phase | Status  |
-| -------------- | ------------------------------------------ | ----- | ------- |
-| DLWT-01        | P1: Guarded remove in WorktreeManager      | Spec  | Pending |
-| DLWT-02        | P1: Danger section in detail pane          | Spec  | Pending |
-| DLWT-03        | P1: Tree refresh + reselection             | Spec  | Pending |
-| DLWT-04        | P2: Removal error messaging                | Spec  | Pending |
+| Requirement ID | Story                                      | Phase | Status   |
+| -------------- | ------------------------------------------ | ----- | -------- |
+| DLWT-01        | P1: Guarded remove in WorktreeManager      | Done  | Verified |
+| DLWT-02        | P1: Danger section in detail pane          | Done  | Verified |
+| DLWT-03        | P1: Tree refresh + reselection             | Done  | Verified |
+| DLWT-04        | P2: Removal error messaging                | Done  | Verified |
 
-**Coverage:** 4 total, 0 verified
+**Coverage:** 4 total, 4 verified ✅ — 8 new Vitest cases on real temp git repos (53 total green) + 10-check CDP smoke (`scripts/smoke-remove.mjs`) against a live seeded workspace + Danger-section screenshot fidelity pass vs `.dc.html` (armed / dirty / primary states)
 
 ---
 
@@ -127,7 +127,7 @@ Worktrees can now be created from the app but still die at the terminal: finishi
 
 ## Success Criteria
 
-- [ ] From a fresh app start: select a clean sibling worktree, click Remove — folder gone, tree updated, primary selected, toast shown (smoke-verified)
-- [ ] Dirty and primary worktrees show the §1b disabled-look with the exact inline reasons; no path exists to remove them from the UI
-- [ ] All PRD `WorktreeManager` remove test cases green in Vitest
-- [ ] Visual fidelity pass of the Danger section against the `.dc.html` prototype
+- [x] From a fresh app start: select a clean sibling worktree, click Remove — folder gone, tree updated, primary selected, toast shown (smoke-verified)
+- [x] Dirty and primary worktrees show the §1b disabled-look with the exact inline reasons; no path exists to remove them from the UI (button is `disabled`; main re-checks regardless)
+- [x] All PRD `WorktreeManager` remove test cases green in Vitest
+- [x] Visual fidelity pass of the Danger section against the `.dc.html` prototype
