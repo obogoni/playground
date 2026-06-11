@@ -10,9 +10,9 @@ The tree shows every worktree but the user still has to copy the path and open t
 
 ## Goals
 
-- [ ] One click opens File Explorer, Windows Terminal, or VS Code rooted at the selected worktree's path
-- [ ] "Open with" cards render in the detail pane per handoff §1b (between Location and the future Danger section)
-- [ ] Launch failures surface a clear, transient message instead of failing silently
+- [x] One click opens File Explorer, Windows Terminal, or VS Code rooted at the selected worktree's path
+- [x] "Open with" cards render in the detail pane per handoff §1b (between Location and the future Danger section)
+- [x] Launch failures surface a clear, transient message instead of failing silently
 
 ## Out of Scope
 
@@ -110,15 +110,15 @@ The tree shows every worktree but the user still has to copy the path and open t
 
 ## Requirement Traceability
 
-| Requirement ID | Story                          | Phase   | Status  |
-| -------------- | ------------------------------ | ------- | ------- |
-| LNCH-01        | P1: "Open with" launcher cards | Execute | Pending |
-| LNCH-02        | P1: Open File Explorer         | Execute | Pending |
-| LNCH-03        | P1: Open Windows Terminal      | Execute | Pending |
-| LNCH-04        | P1: Open VS Code               | Execute | Pending |
-| LNCH-05        | P2: Launch failure feedback    | Execute | Pending |
+| Requirement ID | Story                          | Phase | Status   |
+| -------------- | ------------------------------ | ----- | -------- |
+| LNCH-01        | P1: "Open with" launcher cards | Done  | Verified |
+| LNCH-02        | P1: Open File Explorer         | Done  | Verified |
+| LNCH-03        | P1: Open Windows Terminal      | Done  | Verified |
+| LNCH-04        | P1: Open VS Code               | Done  | Verified |
+| LNCH-05        | P2: Launch failure feedback    | Done  | Verified |
 
-**Coverage:** 5 total, 0 mapped to tasks (tasks implicit — Medium scope), 5 pending
+**Coverage:** 5 total, 5 verified ✅ via 8-check CDP smoke (`scripts/smoke-shortcuts.mjs`) against a live seeded workspace — cards per §1b, real explorer/wt/code launches, missing-path failure message, vanished-worktree toast end-to-end — plus a visual screenshot pass against the `.dc.html` prototype
 
 ---
 
@@ -130,6 +130,6 @@ The tree shows every worktree but the user still has to copy the path and open t
 
 ## Success Criteria
 
-- [ ] From a fresh app start: select any real worktree and open Explorer, Terminal, and VS Code on it — each lands in the right directory
-- [ ] M1 exit: the app is daily-usable (register once → navigate tree → launch tools), matching the PRD's "daily-usable after slice 3" milestone
-- [ ] Visual fidelity pass of the "Open with" section against the `.dc.html` prototype
+- [x] From a fresh app start: select any real worktree and open Explorer, Terminal, and VS Code on it — each lands in the right directory (smoke-verified on a seeded workspace)
+- [x] M1 exit: the app is daily-usable (register once → navigate tree → launch tools), matching the PRD's "daily-usable after slice 3" milestone
+- [x] Visual fidelity pass of the "Open with" section against the `.dc.html` prototype (screenshot pass)

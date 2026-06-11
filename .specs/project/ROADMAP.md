@@ -1,7 +1,7 @@
 # Roadmap
 
-**Current Milestone:** M1 — Walking Skeleton & Worktree Navigation
-**Status:** In Progress
+**Current Milestone:** M2 — Worktree Lifecycle
+**Status:** Not Started (M1 complete — app is daily-usable)
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
 
@@ -27,7 +27,7 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - List worktrees per repo via `git worktree list`; sidebar tree: workspace → repo → worktree rows
 - Worktree selection + detail pane (breadcrumb, branch title, status pills, location row with copy)
 
-**Launch Shortcuts** - IN PROGRESS (specified)
+**Launch Shortcuts** - COMPLETE
 
 - `ShortcutLauncher`: open File Explorer, Windows Terminal, VS Code at the selected worktree path
 - "Open with" launcher cards in the detail pane (per design handoff)
