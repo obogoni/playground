@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-11
-**Current Work:** launch-shortcuts COMPLETE (LNCH-01..05 Verified) — M1 done, app daily-usable. Next: PR `feature/launch-shortcuts` → main, then specify M2 "Create Worktree (taskless)"
+**Current Work:** create-worktree (M2) specified on `feature/create-worktree` — CRWT-01..04 Pending. Next: Execute (WorktreeManager.create + dialog). PR #12 (launch-shortcuts) merged; M1 complete
 
 ---
 
@@ -60,7 +60,10 @@
 - [x] workspace-sidebar-tree: specified, designed, executed (T1–T8), verified — TREE-01..06 all Verified (PR #11 merged)
 - [x] Specify Launch Shortcuts (`.specs/features/launch-shortcuts/spec.md`, LNCH-01..05)
 - [x] Execute Launch Shortcuts: `ShortcutLauncher` + IPC + open-with cards + failure toast — LNCH-01..05 Verified (8/8 CDP smoke)
-- [ ] Open PR `feature/launch-shortcuts` → main; after merge, specify M2 "Create Worktree (taskless)"
+- [x] Open PR `feature/launch-shortcuts` → main (PR #12, merged 2026-06-11)
+- [x] Specify M2 "Create Worktree (taskless)" (`.specs/features/create-worktree/spec.md`, CRWT-01..04)
+- [ ] Execute create-worktree: `WorktreeManager.create`/`pathFor` + tests, `worktrees:create` IPC, dialog + repo-row "+" entry, refresh+select
+- [ ] ⚠️ Confirm with user: dialog entry point chosen as hover "+" on sidebar repo rows (not in PRD/handoff — see spec §Decisions)
 
 ---
 
