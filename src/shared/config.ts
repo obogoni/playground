@@ -1,3 +1,4 @@
+import type { PinnedTask } from './tasks'
 import type { WorkspaceEntry } from './tree'
 
 export interface AppConfig {
@@ -6,6 +7,12 @@ export interface AppConfig {
     direction: 'tree' | 'board'
   }
   workspaces: WorkspaceEntry[]
+  /** Defaults for resolving bare work-item IDs; hand-edited until the M4 settings UI. */
+  ado: {
+    defaultOrg: string | null
+    defaultProject: string | null
+  }
+  pinnedTasks: PinnedTask[]
 }
 
 export type ConfigPatch = {
@@ -17,5 +24,10 @@ export const DEFAULT_CONFIG: AppConfig = {
     theme: 'dark',
     direction: 'tree'
   },
-  workspaces: []
+  workspaces: [],
+  ado: {
+    defaultOrg: null,
+    defaultProject: null
+  },
+  pinnedTasks: []
 }
