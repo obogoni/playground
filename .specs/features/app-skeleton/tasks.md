@@ -27,14 +27,14 @@ Phase 4 (Sequential):   T5,T6 ─→ T7
 
 ### T1: Scaffold electron-vite project
 
-**What**: Generate the electron-vite `react-ts` project at repo root; set app/product name `worktree-manager`; window defaults (1320×860, min-width 1100); confirm secure defaults (contextIsolation on, nodeIntegration off).
+**What**: Generate the electron-vite `react-ts` project at repo root; set app/product name `playground`; window defaults (1320×860, min-width 1100); confirm secure defaults (contextIsolation on, nodeIntegration off).
 **Where**: repo root (`package.json`, `electron.vite.config.ts`, `src/main/`, `src/preload/`, `src/renderer/`)
 **Depends on**: None · **Reuses**: — · **Requirement**: SKEL-01
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
 - [ ] `npm run dev` opens a window; `npm run build` succeeds
-- [ ] `name`/`appId` = worktree-manager (drives `%APPDATA%/worktree-manager/`)
+- [ ] `name`/`appId` = playground (drives `%APPDATA%/playground/`)
 - [ ] BrowserWindow: contextIsolation on, nodeIntegration off, min width 1100
 
 **Tests**: none · **Gate**: build
@@ -110,7 +110,7 @@ Phase 4 (Sequential):   T5,T6 ─→ T7
 - [ ] Gate check passes: `npm run typecheck && npm run build`
 
 **Tests**: none (wiring; store behavior covered in T4) · **Gate**: build
-**Verify**: patch theme via devtools, inspect `%APPDATA%/worktree-manager/config.json`.
+**Verify**: patch theme via devtools, inspect `%APPDATA%/playground/config.json`.
 **Commit**: `feat(skeleton): config IPC handlers`
 
 ---

@@ -1,5 +1,5 @@
-appId: com.worktree-manager
-productName: Worktree Manager
+appId: com.playground
+productName: Playground
 directories:
   buildResources: build
 files:
@@ -12,7 +12,7 @@ files:
 asarUnpack:
   - 'resources/**'
 win:
-  executableName: worktree-manager
+  executableName: playground
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

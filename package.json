@@ -1,7 +1,7 @@
 {
-  "name": "worktree-manager",
+  "name": "playground",
   "version": "0.1.0",
-  "description": "ADO Task & Worktree Manager — bridges Azure DevOps work items to git worktrees",
+  "description": "Playground — bridges Azure DevOps work items to git worktrees",
   "main": "./out/main/index.js",
   "author": "Otávio Bogoni",
   "scripts": {

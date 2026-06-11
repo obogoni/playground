@@ -8,7 +8,7 @@
 
 - Project init: `.specs/project/` (PROJECT, ROADMAP, STATE)
 - app-skeleton feature: spec → design → tasks → executed in 7 commits (`680af56..1042090`)
-- Electron + React + TS shell runs (`npm run dev`); typed IPC layer in `src/shared/ipc-contract.ts`; ConfigStore (6 behavior tests, `npm test`); design tokens + dark/light themes; top bar; theme/direction persisted to `%APPDATA%/worktree-manager/config.json`
+- Electron + React + TS shell runs (`npm run dev`); typed IPC layer in `src/shared/ipc-contract.ts`; ConfigStore (6 behavior tests, `npm test`); design tokens + dark/light themes; top bar; theme/direction persisted to `%APPDATA%/playground/config.json`
 - Verified end-to-end via CDP smoke (defaults → patch → disk → relaunch)
 
 ## In Progress

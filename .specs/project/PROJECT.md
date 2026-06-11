@@ -1,4 +1,4 @@
-# ADO Task & Worktree Manager (Skinny MVP)
+# Playground — ADO Task & Worktree Manager (Skinny MVP)
 
 **Vision:** A Windows desktop dashboard that bridges Azure DevOps work items to git worktrees — one place to see every worktree across registered workspaces, pin the ADO tasks being worked on, spin up task-linked worktrees, and launch Explorer / Windows Terminal / VS Code rooted at any worktree.
 **For:** A solo developer juggling multiple (multi-repo) projects with several AI coding agents running in parallel on different branches.

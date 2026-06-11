@@ -28,7 +28,7 @@ export function TopBar({
           <Icon name="git-branch" size={17} strokeWidth={2} />
         </div>
         <div className="topbar-brand-labels">
-          <span className="topbar-brand-name">Worktree</span>
+          <span className="topbar-brand-name">Playground</span>
           <span className="topbar-brand-sub">tasks &amp; worktrees</span>
         </div>
       </div>

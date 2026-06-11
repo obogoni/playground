@@ -14,7 +14,7 @@ graph TD
     UI[Renderer: React shell + TopBar] -->|window.api.invoke| PRE[Preload: contextBridge]
     PRE -->|ipcRenderer.invoke| IPC[Main: ipc/router]
     IPC --> CFG[Main: ConfigStore]
-    CFG --> FS["%APPDATA%/worktree-manager/config.json"]
+    CFG --> FS["%APPDATA%/playground/config.json"]
     SHARED[src/shared/ipc-contract.ts] -.types.- UI
     SHARED -.types.- PRE
     SHARED -.types.- IPC
@@ -123,4 +123,4 @@ interface AppConfig {
 | Fonts | @fontsource packages | Self-hosting requirement from handoff §Assets with zero manual font management |
 | Theme switching | `data-theme` attr + two variable blocks | Matches handoff "swap the variable set"; trivially testable in devtools |
 | Test runner | Vitest 4 | Native Vite integration with the chosen build tool; PRD's real-FS philosophy works unchanged |
-| App id / dir name | `worktree-manager` | Sets `%APPDATA%/worktree-manager/`; matches repo naming in design examples |
+| App id / dir name | `playground` | Sets `%APPDATA%/playground/`; matches the repo name |
