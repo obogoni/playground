@@ -12,7 +12,7 @@
 
 ## In Progress
 
-- PR `feature/create-worktree` → main being opened (last step of this session)
+- PR #13 `feature/create-worktree` → main open, awaiting review/merge
 
 ## Pending
 
