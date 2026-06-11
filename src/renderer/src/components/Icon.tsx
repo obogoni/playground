@@ -17,6 +17,7 @@ export type IconName =
   | 'alert'
   | 'terminal'
   | 'code'
+  | 'x'
 
 const PATHS: Record<IconName, JSX.Element> = {
   'git-branch': (
@@ -113,6 +114,12 @@ const PATHS: Record<IconName, JSX.Element> = {
     <>
       <path d="m16 18 6-6-6-6" />
       <path d="m8 6-6 6 6 6" />
+    </>
+  ),
+  x: (
+    <>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
     </>
   )
 }
