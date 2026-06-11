@@ -1,4 +1,5 @@
 import type { AppConfig, ConfigPatch } from './config'
+import type { WorkspaceEntry, WorkspaceNode } from './tree'
 
 /**
  * Single request/response channel map shared by main, preload, and renderer.
@@ -8,6 +9,11 @@ import type { AppConfig, ConfigPatch } from './config'
 export interface IpcContract {
   'config:get': { req: void; res: AppConfig }
   'config:patch': { req: ConfigPatch; res: AppConfig }
+  /** Opens a native folder picker in main; null when cancelled or already registered. */
+  'workspaces:add': { req: void; res: WorkspaceEntry | null }
+  'workspaces:remove': { req: { id: string }; res: void }
+  /** Full disk-truth snapshot: registry → repos → worktrees with dirty status. */
+  'tree:get': { req: void; res: WorkspaceNode[] }
 }
 
 export type IpcChannel = keyof IpcContract

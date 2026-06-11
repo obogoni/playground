@@ -1,0 +1,132 @@
+/* Worktree detail pane — handoff §1b (subset: breadcrumb, title, status, location) */
+
+.detail {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.detail-inner {
+  max-width: 720px;
+  padding: 28px 34px 48px;
+  animation: fadeIn 0.22s ease;
+}
+
+.detail-empty {
+  margin: auto;
+  padding-top: 120px;
+  text-align: center;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.detail-breadcrumb {
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+.detail-breadcrumb-repo {
+  font-family: var(--font-mono);
+}
+
+.detail-title {
+  margin: 10px 0 16px;
+  font-family: var(--font-mono);
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.32;
+  overflow-wrap: anywhere;
+}
+
+.detail-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.detail-pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.detail-pill.amber {
+  background: color-mix(in oklab, var(--amber) 16%, transparent);
+  color: var(--amber);
+}
+
+.detail-pill.green {
+  background: color-mix(in oklab, var(--green) 16%, transparent);
+  color: var(--green);
+}
+
+.detail-pill.neutral {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.detail-section {
+  margin-top: 30px;
+}
+
+.detail-section-label {
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.detail-location {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--panel);
+}
+
+.detail-location-path {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-copy-btn {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.detail-copy-btn:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}

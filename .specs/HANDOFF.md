@@ -1,15 +1,15 @@
 # Handoff
 
 **Date:** 2026-06-11
-**Feature:** app-skeleton (M1) — COMPLETE
-**Task:** T1–T7 all done, gates passed, traceability verified
+**Feature:** workspace-sidebar-tree (M1) — COMPLETE
+**Task:** T1–T8 all done, gates passed, traceability verified
 
 ## Completed ✓
 
-- Project init: `.specs/project/` (PROJECT, ROADMAP, STATE)
-- app-skeleton feature: spec → design → tasks → executed in 7 commits (`680af56..1042090`)
-- Electron + React + TS shell runs (`npm run dev`); typed IPC layer in `src/shared/ipc-contract.ts`; ConfigStore (6 behavior tests, `npm test`); design tokens + dark/light themes; top bar; theme/direction persisted to `%APPDATA%/playground/config.json`
-- Verified end-to-end via CDP smoke (defaults → patch → disk → relaunch)
+- Full pipeline on branch `feature/workspace-sidebar-tree`: spec → design → tasks → executed in 8 commits (`63f69d9..4aac9c4`)
+- Modules: `WorkspaceRegistry` (persistence + dedupe), `RepoScanner` (single-level, worktree-sibling-aware), `WorktreeManager.listWorktrees` (porcelain parse + dirty status), `buildTree` orchestration; IPC: `workspaces:add` (native picker), `workspaces:remove`, `tree:get`
+- UI: `Sidebar` (§1a — rows, selection, dirty dots, empty/missing/error states, hover remove), `WorktreeDetail` (§1b subset — breadcrumb, mono h1, status pills, location + copy)
+- Verified: 29/29 Vitest behavior tests (23 new); CDP smoke 12/12 (`scripts/smoke-tree.mjs`, `smoke-refresh.mjs`) incl. external-removal refresh reconciliation
 
 ## In Progress
 
@@ -17,9 +17,8 @@
 
 ## Pending
 
-- Specify next M1 feature: **Workspace Registration & Sidebar Tree** (`WorkspaceRegistry` + `RepoScanner` + `git worktree list`, sidebar + detail panes per handoff §1a/§1b)
-- Then: Launch Shortcuts (completes M1, app becomes daily-usable)
-- PR for `feature/project-setup` → `main` opened at end of session
+- Specify last M1 feature: **Launch Shortcuts** (`ShortcutLauncher`: explorer.exe / wt.exe / code; open-with cards in detail pane per handoff §1b) — completes M1, app becomes daily-usable
+- PR #11 open: `feature/workspace-sidebar-tree` → `main` (skeleton PR #10 was merged; next feature branches from main after #11 merges)
 
 ## Blockers
 
@@ -27,7 +26,6 @@
 
 ## Context
 
-- Branch: `feature/project-setup`
-- Uncommitted: none (design_handoff_worktree_manager/ committed with this checkpoint)
-- Related decisions: STATE.md AD-001 (sources of truth), AD-002 (milestone ordering), AD-003 (toolchain: electron-vite 5, Electron 39 template-pinned, JSON config, @fontsource)
-- Resume with: "resume work" → loads this file + STATE.md, then specify the sidebar feature
+- Branch: `feature/workspace-sidebar-tree` (PR #11 → main; sits exactly on the merged skeleton commit)
+- Uncommitted: none after docs checkpoint commit
+- Related decisions: AD-001..003 in STATE.md; smoke scripts reusable for future pane features

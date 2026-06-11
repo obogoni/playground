@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-11
-**Current Work:** app-skeleton COMPLETE — next: specify M1 feature "Workspace Registration & Sidebar Tree"
+**Current Work:** workspace-sidebar-tree COMPLETE — next: specify M1 feature "Launch Shortcuts" (last M1 feature; app becomes daily-usable)
 
 ---
 
@@ -57,7 +57,8 @@
 
 ## Todos
 
-- [ ] Specify next M1 feature: "Workspace Registration & Sidebar Tree" (WorkspaceRegistry + RepoScanner + worktree listing)
+- [x] workspace-sidebar-tree: specified, designed, executed (T1–T8), verified — TREE-01..06 all Verified
+- [ ] Specify next M1 feature: "Launch Shortcuts" (`ShortcutLauncher` + open-with cards in detail pane, handoff §1b)
 
 ---
 

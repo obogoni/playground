@@ -1,9 +1,11 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, dialog, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { ConfigStore } from './config-store'
 import { handle } from './ipc'
+import { buildTree } from './tree'
+import { WorkspaceRegistry } from './workspace-registry'
 
 function createWindow(): void {
   // Create the browser window.
@@ -56,6 +58,18 @@ app.whenReady().then(() => {
   const configStore = new ConfigStore(app.getPath('userData'))
   handle('config:get', () => configStore.get())
   handle('config:patch', (patch) => configStore.patch(patch))
+
+  const registry = new WorkspaceRegistry(configStore)
+  handle('workspaces:add', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: 'Register workspace folder',
+      properties: ['openDirectory']
+    })
+    if (canceled || filePaths.length === 0) return null
+    return registry.add(filePaths[0])
+  })
+  handle('workspaces:remove', ({ id }) => registry.remove(id))
+  handle('tree:get', () => buildTree(registry))
 
   createWindow()
 

@@ -1,14 +1,49 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { JSX } from 'react'
 import type { AppConfig } from '../../shared/config'
+import type { WorkspaceNode, WorktreeNode } from '../../shared/tree'
+import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
+import { WorktreeDetail, WorktreeDetailEmpty } from './components/WorktreeDetail'
 import { api } from './lib/api'
 import './App.css'
 
 type UiState = AppConfig['ui']
 
+interface SelectedWorktree {
+  workspaceName: string
+  repoName: string
+  worktree: WorktreeNode
+}
+
+function findWorktree(tree: WorkspaceNode[], id: string | null): SelectedWorktree | null {
+  if (!id) return null
+  for (const workspace of tree) {
+    for (const repo of workspace.repos) {
+      const worktree = repo.worktrees.find((w) => w.id === id)
+      if (worktree) {
+        return { workspaceName: workspace.displayName, repoName: repo.name, worktree }
+      }
+    }
+  }
+  return null
+}
+
 function App(): JSX.Element {
   const [ui, setUi] = useState<UiState | null>(null)
+  const [tree, setTree] = useState<WorkspaceNode[]>([])
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  const refreshTree = useCallback((): void => {
+    api
+      .invoke('tree:get')
+      .then((next) => {
+        setTree(next)
+        // Preserve selection only while the worktree still exists on disk.
+        setSelectedId((id) => (findWorktree(next, id) ? id : null))
+      })
+      .catch(console.error)
+  }, [])
 
   useEffect(() => {
     api
@@ -18,7 +53,8 @@ function App(): JSX.Element {
         console.error(err)
         setUi({ theme: 'dark', direction: 'tree' })
       })
-  }, [])
+    refreshTree()
+  }, [refreshTree])
 
   useEffect(() => {
     if (ui) document.documentElement.dataset.theme = ui.theme
@@ -29,10 +65,28 @@ function App(): JSX.Element {
     api.invoke('config:patch', { ui: patch }).catch(console.error)
   }
 
+  const addWorkspace = (): void => {
+    api
+      .invoke('workspaces:add')
+      .then((entry) => {
+        if (entry) refreshTree()
+      })
+      .catch(console.error)
+  }
+
+  const removeWorkspace = (id: string): void => {
+    api
+      .invoke('workspaces:remove', { id })
+      .then(refreshTree)
+      .catch(console.error)
+  }
+
   if (!ui) {
     // One frame at most; avoids a default-theme flash before hydration.
     return <></>
   }
+
+  const selected = findWorktree(tree, selectedId)
 
   return (
     <>
@@ -41,13 +95,28 @@ function App(): JSX.Element {
         direction={ui.direction}
         onThemeToggle={() => update({ theme: ui.theme === 'dark' ? 'light' : 'dark' })}
         onDirectionChange={(direction) => update({ direction })}
-        onRefresh={() => {
-          /* wired to ADO sync in M3 */
-        }}
+        onRefresh={refreshTree}
       />
       <main className="content">
         {ui.direction === 'tree' ? (
-          <div className="content-placeholder">Tree view — workspaces &amp; worktrees land here</div>
+          <>
+            <Sidebar
+              tree={tree}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              onAddWorkspace={addWorkspace}
+              onRemoveWorkspace={removeWorkspace}
+            />
+            {selected ? (
+              <WorktreeDetail
+                workspaceName={selected.workspaceName}
+                repoName={selected.repoName}
+                worktree={selected.worktree}
+              />
+            ) : (
+              <WorktreeDetailEmpty />
+            )}
+          </>
         ) : (
           <div className="content-placeholder">Board view — task-centric canvas lands here (M4)</div>
         )}
