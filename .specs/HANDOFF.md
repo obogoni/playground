@@ -1,23 +1,23 @@
 # Handoff
 
 **Date:** 2026-06-11
-**Feature:** delete-worktree (M2, final feature) — COMPLETE; DLWT-01..04 Verified. M2 milestone done.
+**Feature:** pinned-tasks-pane (M3, first feature) — COMPLETE; PNTK-01..05 Verified.
 
 ## Completed ✓
 
-- Spec → execute on branch `feature/delete-worktree` (Medium scope: no design/tasks docs), from main @ `19572f4` (PR #13 merge)
-- `removeWorktree(repoPath, worktreePath, { force? })` in `worktree-manager.ts`: refuses primary checkout (path identity with repo, case/separator-insensitive), re-checks dirtiness fresh via `git status` (tree snapshot not trusted), force skips dirty guard only; `worktrees:remove` IPC channel (no force path from UI in v1)
-- UI: §1b Danger section in `WorktreeDetail` — armed red-outline button when clean+non-primary, disabled-look + exact inline reasons (primary outranks dirty), inline red error on failure, success toast; App reselects the repo's primary checkout after refresh
-- Verified: typecheck/lint/53 Vitest green (8 new cases incl. force, casing, vanished-folder cleanup); CDP smoke 10/10 (`scripts/smoke-remove.mjs`); screenshot fidelity pass of armed/dirty/primary states vs `.dc.html`
-- Learned: current git's `worktree remove` on an externally-deleted folder *succeeds* (cleans stale bookkeeping) rather than erroring — spec edge case updated to match
+- Resumed from PR #14 merge (`b36183d`); spec → user review ("go ahead") → execute on `feature/pinned-tasks-pane` (Medium scope: no design/tasks docs)
+- `AdoGateway` (`ado-gateway.ts`): az token via execFile+shell (az is a .cmd shim), cached to `expires_on`/`expiresOn` minus 2min; batch GET per org/project group with `errorPolicy=omit`; only token failures/401/403 are `auth` errors — network/404 leave items unresolved
+- `TaskBoard` (`task-board.ts`): `parseTaskInput` (URL slugs/query/encoded names, bare IDs need `ado.defaultOrg/defaultProject`), validate-before-persist pin, duplicate guard, unpin, details cache replaced wholesale on refresh (deleted items degrade to id-only); 4 `tasks:*` IPC channels
+- UI: `TasksPane` per §1c (no card footer — deferred to start-work), hover-✕ unpin, inline add-row errors, az-login prompt block + id-only cards; focus-debounced + manual refresh; top-bar sync status wired (`adoOrg ?? first pin's org`)
+- Verified: typecheck/lint/76 Vitest green (23 new); CDP smoke 11/11 (`scripts/smoke-tasks.mjs`) vs live ADO `triadesolucoes/MultiClubes#21211`; auth-failure pass by relaunching with az stripped from PATH (NOT `az logout` — preserves the real session); screenshot fidelity pass vs `.dc.html`
 
 ## In Progress
 
-- PR #14 `feature/delete-worktree` → main open, awaiting review/merge
+- PR #15 `feature/pinned-tasks-pane` → main open, awaiting review/merge
 
 ## Pending
 
-- After PR merges: start M3 — specify **Pinned Tasks Pane** (`AdoGateway` token via `az account get-access-token` + work item GET; `TaskBoard` pin/unpin/URL-parsing/persistence; tasks pane UI per handoff §1c with "run `az login`" empty state)
+- After PR merges: specify M3 **Start Work from Task** (branch template `{type}/{id}-{slug}` rendering in `TaskBoard.branchNameFor`, `taskIdFromBranch` extraction, start-work dialog per handoff §3, task tags on sidebar rows, linked-task card in detail pane §1b, card footer worktree counts + Start work button in §1c)
 
 ## Blockers
 
@@ -25,7 +25,8 @@
 
 ## Context
 
-- Branch: `feature/delete-worktree`
+- Branch: `feature/pinned-tasks-pane`
 - Uncommitted: none after docs checkpoint commit
-- Related decisions: AD-001..003; spec §Decisions (no confirmation dialog — flagged ⚠️ for user review; reselect primary after removal; inline Danger errors; guard enforced in main)
-- Smoke runbook: seed temp workspace + repo/worktrees, swap `%APPDATA%/playground/config.json` (back up the real one!), `npx electron-vite dev -- --remote-debugging-port=9222`, run `scripts/smoke-*.mjs`, restore config. Tip: after seeding mid-session, click the top-bar refresh (`.topbar-icon-btn`) before driving sidebar rows
+- Related decisions: spec §Decisions (hover-✕ unpin ⚠️ approved; bare-ID needs hand-edited config defaults until M4 ⚠️ approved; auth prompt is a block above id-only cards, never hides pins; validate-before-persist)
+- Live ADO for smoke: org `triadesolucoes`, project `MultiClubes`, work item #21211; az login active on this machine
+- Smoke runbook unchanged (seed config swap + `--remote-debugging-port=9222`), but `smoke-tasks.mjs` needs no seeded workspaces — minimal config with null ado defaults; script polls for `.tasks-pane` before driving (first run failed evaluating too early)
