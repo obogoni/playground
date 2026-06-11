@@ -1,0 +1,14 @@
+.content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  background: var(--bg);
+  animation: fadeIn 0.22s ease;
+}
+
+.content-placeholder {
+  margin: auto;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-faint);
+}

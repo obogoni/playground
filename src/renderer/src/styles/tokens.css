@@ -1,0 +1,47 @@
+/*
+ * Design tokens — source of truth: design_handoff_worktree_manager/README.md §Design Tokens.
+ * Theme is switched by setting data-theme on <html>; tinted surfaces must use
+ * color-mix(in oklab, var(--token) N%, transparent) so they recolor with the theme.
+ */
+
+:root,
+:root[data-theme='dark'] {
+  --bg: #1a1815;
+  --panel: #221f1b;
+  --panel-2: #2a2621;
+  --border: #36312a;
+  --border-strong: #48413a;
+  --text: #efe9e0;
+  --text-muted: #a59c8e;
+  --text-faint: #6f685c;
+  --accent: #a78bfa;
+  --accent-text: #c4b0ff;
+  --green: #5cbd86;
+  --amber: #dca35e;
+  --red: #e08068;
+  --blue: #71a8e6;
+  --shadow: rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme='light'] {
+  --bg: #f6f2eb;
+  --panel: #ffffff;
+  --panel-2: #faf6ef;
+  --border: #e9e1d4;
+  --border-strong: #d7ccbb;
+  --text: #2c2823;
+  --text-muted: #897f72;
+  --text-faint: #b3aa9a;
+  --accent: #7c54e0;
+  --accent-text: #6a40d4;
+  --green: #3f9d6b;
+  --amber: #bd823c;
+  --red: #cf6149;
+  --blue: #3b7fc4;
+  --shadow: rgba(70, 52, 28, 0.13);
+}
+
+:root {
+  --font-ui: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
