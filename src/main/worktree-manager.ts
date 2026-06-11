@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { promisify } from 'node:util'
 import type { WorktreeNode } from '../shared/tree'
-import type { CreateWorktreeResult } from '../shared/worktrees'
+import type { CreateWorktreeResult, RemoveWorktreeResult } from '../shared/worktrees'
 import { sanitizeBranch, worktreePathFor } from '../shared/worktrees'
 
 const run = promisify(execFile)
@@ -72,6 +72,46 @@ export async function createWorktree(
   } catch (err) {
     return { ok: false, error: gitFailureLine(err) }
   }
+}
+
+/**
+ * `git worktree remove` with the PRD guards (DLWT-01): refuses the repo's
+ * primary checkout, and refuses a dirty worktree unless force — dirtiness is
+ * re-checked fresh here, not trusted from the renderer's tree snapshot.
+ * Failures (guards included) are returned, never thrown.
+ */
+export async function removeWorktree(
+  repoPath: string,
+  worktreePath: string,
+  opts: { force?: boolean } = {}
+): Promise<RemoveWorktreeResult> {
+  if (samePath(repoPath, worktreePath)) {
+    return { ok: false, error: "This is the repo's primary checkout — it can't be removed here." }
+  }
+  if (!opts.force) {
+    const { dirty, changes } = await statusOf(worktreePath)
+    if (dirty) {
+      return {
+        ok: false,
+        error: `${changes} uncommitted change${changes === 1 ? '' : 's'} — commit or stash before removing.`
+      }
+    }
+  }
+  const args = opts.force
+    ? ['worktree', 'remove', '--force', worktreePath]
+    : ['worktree', 'remove', worktreePath]
+  try {
+    await git(repoPath, args)
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: gitFailureLine(err) }
+  }
+}
+
+/** Paths from the tree snapshot and the registry may differ in case/separators. */
+function samePath(a: string, b: string): boolean {
+  const norm = (p: string): string => p.replaceAll('/', '\\').replace(/\\+$/, '').toLowerCase()
+  return norm(a) === norm(b)
 }
 
 /** Git's own first stderr line (e.g. "fatal: …") reads better than execFile's wrapper message. */

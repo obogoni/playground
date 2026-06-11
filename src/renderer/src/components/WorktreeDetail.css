@@ -193,3 +193,56 @@
   font-size: 11.5px;
   color: var(--text-faint);
 }
+
+/* Danger — §1b remove-worktree row (no section label in the prototype) */
+
+.detail-danger {
+  margin-top: 30px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.detail-remove-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-faint);
+  opacity: 0.7;
+}
+
+.detail-remove-btn.armed {
+  border-color: color-mix(in oklab, var(--red) 50%, transparent);
+  color: var(--red);
+  opacity: 1;
+}
+
+.detail-remove-btn.armed:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--red) 10%, transparent);
+}
+
+.detail-remove-btn.armed:disabled {
+  /* In-flight: keep the red identity but signal busy. */
+  opacity: 0.6;
+  cursor: default;
+}
+
+.detail-danger-note {
+  font-size: 12.5px;
+  color: var(--text-faint);
+  max-width: 340px;
+}
+
+.detail-danger-note.error {
+  color: var(--red);
+}

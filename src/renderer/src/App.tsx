@@ -15,6 +15,7 @@ type UiState = AppConfig['ui']
 interface SelectedWorktree {
   workspaceName: string
   repoName: string
+  repoPath: string
   worktree: WorktreeNode
 }
 
@@ -24,7 +25,12 @@ function findWorktree(tree: WorkspaceNode[], id: string | null): SelectedWorktre
     for (const repo of workspace.repos) {
       const worktree = repo.worktrees.find((w) => w.id === id)
       if (worktree) {
-        return { workspaceName: workspace.displayName, repoName: repo.name, worktree }
+        return {
+          workspaceName: workspace.displayName,
+          repoName: repo.name,
+          repoPath: repo.path,
+          worktree
+        }
       }
     }
   }
@@ -84,6 +90,19 @@ function App(): JSX.Element {
     api.invoke('workspaces:remove', { id }).then(refreshTree).catch(console.error)
   }
 
+  // After a removal the selected row is gone — land on the repo's primary
+  // checkout instead of the empty state (spec §Decisions).
+  const worktreeRemoved = (repoPath: string): void => {
+    api
+      .invoke('tree:get')
+      .then((next) => {
+        setTree(next)
+        const repo = next.flatMap((ws) => ws.repos).find((r) => r.path === repoPath)
+        setSelectedId(repo?.worktrees.find((w) => w.isDefault)?.id ?? null)
+      })
+      .catch(console.error)
+  }
+
   // PRD start-work flow: refresh and select the new worktree, no auto-open.
   const worktreeCreated = (worktreePath: string): void => {
     setDialogRepoPath(null)
@@ -128,8 +147,10 @@ function App(): JSX.Element {
                 key={selected.worktree.id}
                 workspaceName={selected.workspaceName}
                 repoName={selected.repoName}
+                repoPath={selected.repoPath}
                 worktree={selected.worktree}
                 onToast={setToast}
+                onRemoved={worktreeRemoved}
               />
             ) : (
               <WorktreeDetailEmpty />

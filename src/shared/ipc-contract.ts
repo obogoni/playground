@@ -1,7 +1,7 @@
 import type { AppConfig, ConfigPatch } from './config'
 import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'
-import type { CreateWorktreeResult } from './worktrees'
+import type { CreateWorktreeResult, RemoveWorktreeResult } from './worktrees'
 
 /**
  * Single request/response channel map shared by main, preload, and renderer.
@@ -22,6 +22,11 @@ export interface IpcContract {
   'worktrees:create': {
     req: { repoPath: string; branch: string; baseBranch?: string }
     res: CreateWorktreeResult
+  }
+  /** git worktree remove with dirty/primary guards; failures are returned, never thrown. */
+  'worktrees:remove': {
+    req: { repoPath: string; worktreePath: string }
+    res: RemoveWorktreeResult
   }
 }
 
