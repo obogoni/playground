@@ -1,7 +1,9 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { ConfigStore } from './config-store'
+import { handle } from './ipc'
 
 function createWindow(): void {
   // Create the browser window.
@@ -51,8 +53,9 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  const configStore = new ConfigStore(app.getPath('userData'))
+  handle('config:get', () => configStore.get())
+  handle('config:patch', (patch) => configStore.patch(patch))
 
   createWindow()
 
