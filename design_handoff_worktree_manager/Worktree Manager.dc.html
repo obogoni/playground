@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Hanken Grotesk',system-ui,sans-serif;}
+  button{font-family:inherit;}
+  input{font-family:inherit;}
+  ::-webkit-scrollbar{width:11px;height:11px;}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong,#48413a);border-radius:8px;border:3px solid transparent;background-clip:content-box;}
+  ::-webkit-scrollbar-thumb:hover{background:var(--text-faint,#6f685c);background-clip:content-box;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+  @keyframes popIn{from{opacity:0;transform:translateY(14px) scale(.985);}to{opacity:1;transform:none;}}
+  @keyframes toastIn{from{opacity:0;transform:translateY(10px) translateX(-50%);}to{opacity:1;transform:translateY(0) translateX(-50%);}}
+</style>
+</helmet>
+
+<div ref="{{ setRoot }}" style="height:100vh;width:100vw;overflow:hidden;background:var(--bg,#1a1815);-webkit-font-smoothing:antialiased;">
+  <div style="{{ appStyle }}">
+
+  <!-- ============ TOP BAR ============ -->
+  <header style="height:54px;flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:0 16px;border-bottom:1px solid var(--border,#36312a);background:var(--panel,#221f1b);z-index:5;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:30px;height:30px;border-radius:9px;background:var(--accent,#a78bfa);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px color-mix(in oklab, var(--accent) 45%, transparent);flex:0 0 auto;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.2"/><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="8" r="2.2"/><path d="M6 8.2v7.6"/><path d="M8.2 6.4h5.6a4 4 0 0 1 4 4"/></svg>
+      </div>
+      <div style="display:flex;flex-direction:column;line-height:1.05;">
+        <span style="font-weight:800;font-size:15.5px;letter-spacing:-.015em;white-space:nowrap;">Worktree</span>
+        <span style="font-size:10.5px;color:var(--text-faint);font-weight:500;letter-spacing:.02em;white-space:nowrap;">tasks &amp; worktrees</span>
+      </div>
+    </div>
+
+    <div style="margin-left:8px;display:flex;background:var(--panel-2,#2a2621);border:1px solid var(--border,#36312a);border-radius:9px;padding:3px;gap:2px;flex:0 0 auto;">
+      <button onClick="{{ setA }}" style="{{ segA }}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h6M4 12h10M4 18h7"/><circle cx="18" cy="6" r="1.6" fill="currentColor" stroke="none"/></svg>
+        Tree
+      </button>
+      <button onClick="{{ setB }}" style="{{ segB }}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="6" rx="1.5"/><rect x="14" y="14" width="7" height="6" rx="1.5"/></svg>
+        Board
+      </button>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-faint);white-space:nowrap;">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px color-mix(in oklab, var(--green) 22%, transparent);"></span>
+      az · acme · synced 2m ago
+    </div>
+    <button title="Refresh tasks" style="width:34px;height:34px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;border:1px solid var(--border,#36312a);background:transparent;color:var(--text-muted);border-radius:9px;cursor:pointer;" style-hover="background:var(--panel-2);color:var(--text);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg>
+    </button>
+    <button onClick="{{ toggleTheme }}" title="Toggle theme" style="width:34px;height:34px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;border:1px solid var(--border,#36312a);background:transparent;color:var(--text-muted);border-radius:9px;cursor:pointer;" style-hover="background:var(--panel-2);color:var(--text);">
+      <sc-if value="{{ isDark }}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A8 8 0 1 1 11.2 3a6 6 0 0 0 9.8 9.8z"/></svg></sc-if>
+      <sc-if value="{{ isLight }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg></sc-if>
+    </button>
+  </header>
+
+  <!-- ============ DIRECTION A : TREE 3-PANE ============ -->
+  <sc-if value="{{ isA }}" hint-placeholder-val="{{ true }}">
+  <div style="flex:1;display:flex;min-height:0;">
+
+    <!-- SIDEBAR TREE -->
+    <aside style="width:286px;flex:0 0 auto;border-right:1px solid var(--border,#36312a);background:var(--panel,#221f1b);display:flex;flex-direction:column;min-height:0;">
+      <div style="height:46px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 16px;border-bottom:1px solid var(--border);">
+        <span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;">Workspaces</span>
+        <button title="Add workspace" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;color:var(--text-muted);border-radius:7px;cursor:pointer;" style-hover="background:var(--panel-2);color:var(--text);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <div style="flex:1;min-height:0;overflow-y:auto;padding:8px 8px 16px;">
+        <sc-for list="{{ viewWorkspaces }}" as="ws" hint-placeholder-count="2">
+          <div style="margin-bottom:6px;">
+            <div style="display:flex;align-items:center;gap:7px;padding:6px 6px 6px 4px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><path d="M6 9l6 6 6-6"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><path d="M3 7a2 2 0 0 1 2-2h3.5l1.8 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              <span style="font-weight:700;font-size:13.5px;white-space:nowrap;">{{ ws.name }}</span>
+            </div>
+            <sc-for list="{{ ws.repos }}" as="repo" hint-placeholder-count="2">
+              <div style="margin:2px 0 4px;padding-left:10px;">
+                <div style="display:flex;align-items:center;gap:7px;padding:4px 6px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 8v8"/><path d="M8 6h4a4 4 0 0 1 4 4"/></svg>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;color:var(--text-muted);white-space:nowrap;">{{ repo.name }}</span>
+                  <span style="font-size:10.5px;color:var(--text-faint);background:var(--panel-2);padding:1px 6px;border-radius:20px;flex:0 0 auto;">{{ repo.count }}</span>
+                </div>
+                <div style="padding-left:8px;border-left:1px solid var(--border);margin-left:6px;">
+                  <sc-for list="{{ repo.worktrees }}" as="wt" hint-placeholder-count="3">
+                    <button onClick="{{ wt.onSelect }}" style="{{ wt.rowStyle }}">
+                      <div style="display:flex;align-items:center;gap:7px;min-width:0;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6 8v3a4 4 0 0 0 4 4h6"/></svg>
+                        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ wt.branch }}</span>
+                        <sc-if value="{{ wt.dirty }}" hint-placeholder-val="{{ false }}"><span title="uncommitted changes" style="flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--amber);"></span></sc-if>
+                      </div>
+                      <sc-if value="{{ wt.hasTask }}" hint-placeholder-val="{{ true }}">
+                        <div style="display:flex;align-items:center;gap:6px;margin-top:6px;min-width:0;">
+                          <span style="{{ wt.typePillStyle }}">{{ wt.typePill.label }}</span>
+                          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--text-muted);flex:0 0 auto;">#{{ wt.task.id }}</span>
+                          <span style="font-size:11.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;">{{ wt.task.title }}</span>
+                          <span title="{{ wt.statePill.label }}" style="{{ wt.stateDotStyle }}"></span>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ wt.untagged }}" hint-placeholder-val="{{ false }}">
+                        <div style="margin-top:5px;font-size:11px;color:var(--text-faint);font-style:italic;">{{ wt.titleShort }}</div>
+                      </sc-if>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </aside>
+
+    <!-- DETAIL -->
+    <main style="flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg);min-height:0;">
+      <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;min-height:0;overflow-y:auto;padding:28px 34px 48px;animation:fadeIn .22s ease;">
+        <div style="max-width:720px;">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-faint);margin-bottom:10px;">
+            <span style="white-space:nowrap;">{{ sel.wsName }}</span>
+            <span>/</span>
+            <span style="font-family:'JetBrains Mono',monospace;color:var(--text-muted);white-space:nowrap;">{{ sel.repoName }}</span>
+          </div>
+          <h1 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:600;letter-spacing:-.01em;line-height:1.32;overflow-wrap:anywhere;">{{ sel.branch }}</h1>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap;">
+            <sc-if value="{{ sel.dirty }}" hint-placeholder-val="{{ false }}">
+              <span style="display:inline-flex;align-items:center;gap:7px;white-space:nowrap;padding:5px 12px;border-radius:20px;font-size:12.5px;font-weight:600;background:color-mix(in oklab, var(--amber) 16%, transparent);color:var(--amber);">
+                <span style="width:7px;height:7px;border-radius:50%;background:var(--amber);"></span>{{ sel.changes }} uncommitted change{{ sel.changesPlural }}
+              </span>
+            </sc-if>
+            <sc-if value="{{ sel.clean }}" hint-placeholder-val="{{ true }}">
+              <span style="display:inline-flex;align-items:center;gap:7px;white-space:nowrap;padding:5px 12px;border-radius:20px;font-size:12.5px;font-weight:600;background:color-mix(in oklab, var(--green) 16%, transparent);color:var(--green);">
+                <span style="width:7px;height:7px;border-radius:50%;background:var(--green);"></span>Working tree clean
+              </span>
+            </sc-if>
+            <sc-if value="{{ sel.isDefault }}" hint-placeholder-val="{{ false }}">
+              <span style="white-space:nowrap;padding:5px 12px;border-radius:20px;font-size:12.5px;font-weight:600;background:var(--panel-2);color:var(--text-muted);border:1px solid var(--border);">primary</span>
+            </sc-if>
+          </div>
+
+          <!-- linked task -->
+          <div style="margin-top:28px;font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;">Linked task</div>
+          <sc-if value="{{ sel.hasTask }}" hint-placeholder-val="{{ true }}">
+            <a href="{{ sel.adoUrl }}" target="_blank" style="display:block;margin-top:10px;text-decoration:none;color:inherit;border:1px solid var(--border);background:var(--panel);border-radius:14px;padding:18px 20px;" style-hover="border-color:var(--accent);">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                <span style="{{ sel.typePillStyle }}"><span style="{{ sel.typeDotStyle }}"></span>{{ sel.task.type }}</span>
+                <span style="{{ sel.statePillStyle }}">{{ sel.statePill.label }}</span>
+                <span style="flex:1;min-width:10px;"></span>
+                <span style="font-size:12px;color:var(--text-faint);display:inline-flex;align-items:center;gap:5px;white-space:nowrap;">Open in Azure DevOps<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5"/><path d="M19 5l-8 8"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></span>
+              </div>
+              <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--accent-text);">#{{ sel.task.id }}</span>
+                <span style="font-size:17px;font-weight:600;letter-spacing:-.01em;">{{ sel.task.title }}</span>
+              </div>
+            </a>
+          </sc-if>
+          <sc-if value="{{ sel.noTask }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:10px;border:1px dashed var(--border-strong);border-radius:14px;padding:16px 20px;color:var(--text-faint);font-size:13.5px;">No task ID found in this branch name — this worktree is untagged.</div>
+          </sc-if>
+
+          <!-- location -->
+          <div style="margin-top:26px;font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;">Location</div>
+          <div style="margin-top:10px;display:flex;align-items:center;gap:10px;border:1px solid var(--border);background:var(--panel);border-radius:11px;padding:11px 14px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">{{ sel.path }}</span>
+            <button onClick="{{ sel.onCopy }}" title="Copy path" style="flex:0 0 auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;color:var(--text-muted);border-radius:8px;cursor:pointer;" style-hover="background:var(--panel-2);color:var(--text);">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>
+            </button>
+          </div>
+
+          <!-- shortcuts -->
+          <div style="margin-top:26px;font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;">Open with</div>
+          <div style="margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+            <button onClick="{{ sel.onExplorer }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:11px;border:1px solid var(--border);background:var(--panel);border-radius:14px;padding:15px;cursor:pointer;color:inherit;text-align:left;transition:border-color .12s,transform .12s;" style-hover="border-color:var(--accent);transform:translateY(-2px);">
+              <span style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, var(--blue) 16%, transparent);color:var(--blue);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h3.5l1.8 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
+              <div><div style="font-weight:700;font-size:13px;">File Explorer</div><div style="font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">explorer.exe</div></div>
+            </button>
+            <button onClick="{{ sel.onTerminal }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:11px;border:1px solid var(--border);background:var(--panel);border-radius:14px;padding:15px;cursor:pointer;color:inherit;text-align:left;transition:border-color .12s,transform .12s;" style-hover="border-color:var(--accent);transform:translateY(-2px);">
+              <span style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, var(--green) 16%, transparent);color:var(--green);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7l4 4-4 4"/><path d="M12 16h7"/></svg></span>
+              <div><div style="font-weight:700;font-size:13px;">Windows Terminal</div><div style="font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">wt.exe</div></div>
+            </button>
+            <button onClick="{{ sel.onCode }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:11px;border:1px solid var(--border);background:var(--panel);border-radius:14px;padding:15px;cursor:pointer;color:inherit;text-align:left;transition:border-color .12s,transform .12s;" style-hover="border-color:var(--accent);transform:translateY(-2px);">
+              <span style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, var(--accent) 18%, transparent);color:var(--accent);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8l-4 4 4 4"/><path d="M15 8l4 4-4 4"/></svg></span>
+              <div><div style="font-weight:700;font-size:13px;">VS Code</div><div style="font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">code</div></div>
+            </button>
+          </div>
+
+          <!-- danger -->
+          <div style="margin-top:30px;padding-top:22px;border-top:1px solid var(--border);display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <button onClick="{{ sel.onDelete }}" style="{{ sel.deleteStyle }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg>
+              Remove worktree
+            </button>
+            <sc-if value="{{ sel.hasDeleteNote }}" hint-placeholder-val="{{ false }}">
+              <span style="font-size:12.5px;color:var(--text-faint);max-width:340px;">{{ sel.deleteNote }}</span>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ noSel }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:14px;">Select a worktree from the sidebar</div>
+      </sc-if>
+    </main>
+
+    <!-- TASKS PANE -->
+    <aside style="width:322px;flex:0 0 auto;border-left:1px solid var(--border,#36312a);background:var(--panel,#221f1b);display:flex;flex-direction:column;min-height:0;">
+      <div style="height:46px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 16px;border-bottom:1px solid var(--border);">
+        <span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;">Pinned tasks</span>
+        <span style="font-size:11px;color:var(--text-faint);">{{ taskCount }} items</span>
+      </div>
+      <div style="flex:0 0 auto;padding:12px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px;">
+        <input placeholder="Paste ID or ADO URL…" style="flex:1;min-width:0;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:9px;padding:9px 12px;font-size:13px;outline:none;" style-focus="border-color:var(--accent);" />
+        <button onClick="{{ onAddTask }}" style="flex:0 0 auto;border:none;background:var(--accent);color:#fff;border-radius:9px;padding:0 13px;font-weight:600;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Pin</button>
+      </div>
+      <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 14px 16px;display:flex;flex-direction:column;gap:10px;">
+        <sc-for list="{{ tasksView }}" as="t" hint-placeholder-count="4">
+          <div style="border:1px solid var(--border);background:var(--bg);border-radius:13px;padding:13px 14px;">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;">
+              <span style="{{ t.typePillStyle }}"><span style="{{ t.typeDotStyle }}"></span>{{ t.type }}</span>
+              <span style="{{ t.statePillStyle }}">{{ t.statePill.label }}</span>
+              <span style="flex:1;"></span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;color:var(--text-faint);">#{{ t.id }}</span>
+            </div>
+            <div style="font-size:14px;font-weight:600;line-height:1.35;letter-spacing:-.005em;">{{ t.title }}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:11px;">
+              <sc-if value="{{ t.hasWt }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:12px;color:var(--text-muted);"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);"></span>{{ t.wtCount }} worktree{{ t.plural }}</span></sc-if>
+              <sc-if value="{{ t.noWt }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--text-faint);font-style:italic;white-space:nowrap;">No worktree yet</span></sc-if>
+              <button onClick="{{ t.onStart }}" style="{{ t.startStyle }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6 8v3a4 4 0 0 0 4 4h6"/></svg>{{ t.startLabel }}</button>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </aside>
+
+  </div>
+  </sc-if>
+
+  <!-- ============ DIRECTION B : BOARD ============ -->
+  <sc-if value="{{ isB }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;min-height:0;background:var(--bg);">
+    <div style="flex:0 0 auto;border-bottom:1px solid var(--border);background:var(--panel);padding:13px 22px;display:flex;align-items:center;gap:11px;overflow-x:auto;">
+      <span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;flex:0 0 auto;">Pinned</span>
+      <sc-for list="{{ tasksView }}" as="t" hint-placeholder-count="4">
+        <button onClick="{{ t.onChip }}" style="{{ t.chipStyle }}">
+          <span style="{{ t.chipDotStyle }}"></span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;color:var(--text-muted);">#{{ t.id }}</span>
+          <span style="font-size:12.5px;font-weight:600;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ t.title }}</span>
+          <span style="font-size:10.5px;font-weight:700;color:var(--text-faint);background:var(--panel-2);border-radius:20px;padding:1px 7px;flex:0 0 auto;">{{ t.wtCount }}</span>
+        </button>
+      </sc-for>
+      <button onClick="{{ onAddTask }}" style="flex:0 0 auto;display:flex;align-items:center;gap:5px;white-space:nowrap;border:1px dashed var(--border-strong);background:transparent;color:var(--text-muted);border-radius:10px;padding:7px 12px;font-size:12.5px;font-weight:600;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Pin task</button>
+    </div>
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:24px 26px 48px;">
+      <sc-if value="{{ hasHighlight }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-bottom:18px;display:inline-flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text-muted);background:color-mix(in oklab, var(--accent) 12%, transparent);border:1px solid color-mix(in oklab, var(--accent) 40%, transparent);border-radius:20px;padding:6px 14px;">
+          Showing worktrees for <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--accent-text);">#{{ highlightId }}</span>
+          <button onClick="{{ clearHighlight }}" style="border:none;background:transparent;color:var(--text-muted);cursor:pointer;font-weight:700;padding:0 2px;">✕</button>
+        </div>
+      </sc-if>
+      <sc-for list="{{ viewWorkspaces }}" as="ws" hint-placeholder-count="2">
+        <div style="margin-bottom:30px;">
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:4px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><path d="M3 7a2 2 0 0 1 2-2h3.5l1.8 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            <span style="font-weight:800;font-size:16px;letter-spacing:-.01em;white-space:nowrap;flex:0 0 auto;">{{ ws.name }}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ ws.path }}</span>
+          </div>
+          <sc-for list="{{ ws.repos }}" as="repo" hint-placeholder-count="2">
+            <div style="margin-top:14px;">
+              <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 8v8"/><path d="M8 6h4a4 4 0 0 1 4 4"/></svg>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--text-muted);white-space:nowrap;">{{ repo.name }}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(264px,1fr));gap:14px;">
+                <sc-for list="{{ repo.worktrees }}" as="wt" hint-placeholder-count="3">
+                  <div style="{{ wt.cardStyle }}">
+                    <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6 8v3a4 4 0 0 0 4 4h6"/></svg>
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">{{ wt.branch }}</span>
+                      <sc-if value="{{ wt.dirty }}" hint-placeholder-val="{{ false }}"><span title="uncommitted changes" style="flex:0 0 auto;width:7px;height:7px;border-radius:50%;background:var(--amber);"></span></sc-if>
+                    </div>
+                    <sc-if value="{{ wt.hasTask }}" hint-placeholder-val="{{ true }}">
+                      <div style="border-radius:10px;padding:10px 11px;background:var(--panel-2);">
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                          <span style="{{ wt.typePillStyle }}">{{ wt.typePill.label }}</span>
+                          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--text-faint);">#{{ wt.task.id }}</span>
+                          <span style="flex:1;"></span>
+                          <span style="{{ wt.stateTextStyle }}"><span style="{{ wt.stateDotStyle }}"></span>{{ wt.statePill.label }}</span>
+                        </div>
+                        <div style="font-size:13px;font-weight:600;line-height:1.35;">{{ wt.task.title }}</div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ wt.untagged }}" hint-placeholder-val="{{ false }}">
+                      <div style="border-radius:10px;padding:10px 11px;background:var(--panel-2);font-size:12px;color:var(--text-faint);font-style:italic;">{{ wt.titleShort }}</div>
+                    </sc-if>
+                    <div style="display:flex;align-items:center;gap:7px;">
+                      <button onClick="{{ wt.onExplorer }}" title="File Explorer" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;color:var(--blue);border-radius:8px;cursor:pointer;" style-hover="background:color-mix(in oklab, var(--blue) 14%, transparent);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h3.5l1.8 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>
+                      <button onClick="{{ wt.onTerminal }}" title="Windows Terminal" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;color:var(--green);border-radius:8px;cursor:pointer;" style-hover="background:color-mix(in oklab, var(--green) 14%, transparent);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7l4 4-4 4"/><path d="M12 16h7"/></svg></button>
+                      <button onClick="{{ wt.onCode }}" title="VS Code" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;color:var(--accent);border-radius:8px;cursor:pointer;" style-hover="background:color-mix(in oklab, var(--accent) 16%, transparent);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8l-4 4 4 4"/><path d="M15 8l4 4-4 4"/></svg></button>
+                      <span style="flex:1;"></span>
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px;">{{ wt.repoName }}</span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ START-WORK DIALOG ============ -->
+  <sc-if value="{{ showDialog }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ onCancelDialog }}" style="position:fixed;inset:0;z-index:50;background:rgba(15,11,8,.55);display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px);">
+    <div onClick="{{ stop }}" style="width:560px;max-width:100%;max-height:90vh;overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 70px var(--shadow);animation:popIn .2s ease;">
+      <div style="padding:22px 24px 18px;border-bottom:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;">Start work</div>
+        <div style="display:flex;align-items:baseline;gap:9px;margin-top:7px;flex-wrap:wrap;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--accent-text);">#{{ dialogTask.id }}</span>
+          <span style="font-size:17px;font-weight:700;letter-spacing:-.01em;">{{ dialogTask.title }}</span>
+        </div>
+      </div>
+      <div style="padding:22px 24px;display:flex;flex-direction:column;gap:20px;">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:9px;">Repository</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
+            <sc-for list="{{ repoOpts }}" as="ro" hint-placeholder-count="3">
+              <button onClick="{{ ro.onPick }}" style="{{ ro.chipStyle }}">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;">{{ ro.repoName }}</span>
+                <span style="font-size:11px;color:var(--text-faint);">{{ ro.wsName }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:14px;">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:9px;">Base branch</div>
+            <input value="{{ baseBranch }}" onChange="{{ onBaseInput }}" style="width:100%;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:10px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;" style-focus="border-color:var(--accent);" />
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:9px;">New branch <span style="color:var(--text-faint);font-weight:500;">· from template</span></div>
+            <input value="{{ dialogBranch }}" onChange="{{ onBranchInput }}" style="width:100%;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:10px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;" style-focus="border-color:var(--accent);" />
+          </div>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:12px 14px;">
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--text-faint);text-transform:uppercase;margin-bottom:6px;">Worktree will be created at</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);word-break:break-all;line-height:1.5;">{{ dialogPath }}</div>
+        </div>
+      </div>
+      <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;">
+        <button onClick="{{ onCancelDialog }}" style="border:1px solid var(--border);background:transparent;color:var(--text-muted);border-radius:10px;padding:10px 18px;font-weight:600;font-size:13.5px;cursor:pointer;" style-hover="color:var(--text);">Cancel</button>
+        <button onClick="{{ onCreate }}" style="border:none;background:var(--accent);color:#fff;border-radius:10px;padding:10px 20px;font-weight:700;font-size:13.5px;cursor:pointer;display:flex;align-items:center;gap:7px;white-space:nowrap;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Create worktree</button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ TOAST ============ -->
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:26px;left:50%;z-index:60;background:var(--text);color:var(--bg);padding:11px 20px;border-radius:11px;font-size:13.5px;font-weight:600;box-shadow:0 12px 34px var(--shadow);animation:toastIn .22s ease;display:flex;align-items:center;gap:9px;white-space:nowrap;">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--accent);"></span>{{ toast }}
+    </div>
+  </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { theme:'dark', dir:'A', selectedId:'wt2', dialogTaskId:null, dialogBranch:'', baseBranch:'main', dialogRepo:'acme-platform/api', highlightTaskId:null, toast:null };
+
+  get themes(){ return {
+    dark:{'--bg':'#1a1815','--panel':'#221f1b','--panel-2':'#2a2621','--border':'#36312a','--border-strong':'#48413a','--text':'#efe9e0','--text-muted':'#a59c8e','--text-faint':'#6f685c','--accent':'#a78bfa','--accent-text':'#c4b0ff','--green':'#5cbd86','--amber':'#dca35e','--red':'#e08068','--blue':'#71a8e6','--shadow':'rgba(0,0,0,.45)'},
+    light:{'--bg':'#f6f2eb','--panel':'#ffffff','--panel-2':'#faf6ef','--border':'#e9e1d4','--border-strong':'#d7ccbb','--text':'#2c2823','--text-muted':'#897f72','--text-faint':'#b3aa9a','--accent':'#7c54e0','--accent-text':'#6a40d4','--green':'#3f9d6b','--amber':'#bd823c','--red':'#cf6149','--blue':'#3b7fc4','--shadow':'rgba(70,52,28,.13)'}
+  };}
+
+  get tasks(){ return [
+    {id:'4821',title:'Add OAuth refresh-token rotation',type:'User Story',branchType:'feature',state:'Active',org:'acme',project:'Platform'},
+    {id:'4910',title:'Login redirect loops on SSO sign-in',type:'Bug',branchType:'bugfix',state:'Active',org:'acme',project:'Platform'},
+    {id:'5012',title:'Dashboard charts slow on large datasets',type:'Task',branchType:'feature',state:'New',org:'acme',project:'Platform'},
+    {id:'5077',title:'Export reports to CSV',type:'Feature',branchType:'feature',state:'Resolved',org:'acme',project:'Platform'}
+  ];}
+
+  get workspaces(){ return [
+    {id:'ws1',name:'acme-platform',path:'C:\\dev\\acme-platform',repos:[
+      {name:'api',worktrees:[
+        {id:'wt1',branch:'main',path:'C:\\dev\\acme-platform\\api',isDefault:true,taskId:null},
+        {id:'wt2',branch:'feature/4821-add-oauth-refresh-token-rotation',path:'C:\\dev\\acme-platform\\api-feature-4821-add-oauth-refresh-token-rotation',taskId:'4821',dirty:true,changes:7},
+        {id:'wt3',branch:'bugfix/4910-login-redirect-loops-on-sso',path:'C:\\dev\\acme-platform\\api-bugfix-4910-login-redirect-loops-on-sso',taskId:'4910',dirty:false}
+      ]},
+      {name:'web',worktrees:[
+        {id:'wt4',branch:'main',path:'C:\\dev\\acme-platform\\web',isDefault:true,taskId:null},
+        {id:'wt5',branch:'feature/5077-export-reports-to-csv',path:'C:\\dev\\acme-platform\\web-feature-5077-export-reports-to-csv',taskId:'5077',dirty:false}
+      ]}
+    ]},
+    {id:'ws2',name:'tools',path:'C:\\dev\\tools',repos:[
+      {name:'worktree-manager',worktrees:[
+        {id:'wt6',branch:'main',path:'C:\\dev\\tools\\worktree-manager',isDefault:true,taskId:null},
+        {id:'wt7',branch:'chore/tidy-readme-and-scripts',path:'C:\\dev\\tools\\worktree-manager-chore-tidy-readme-and-scripts',taskId:null,dirty:false}
+      ]}
+    ]}
+  ];}
+
+  componentDidMount(){ this._apply(); this._rz=()=>this.forceUpdate(); window.addEventListener('resize',this._rz); }
+  componentWillUnmount(){ if(this._rz) window.removeEventListener('resize',this._rz); clearTimeout(this._tt); }
+  componentDidUpdate(){ this._apply(); }
+  _apply(){ const r=this._root; if(!r) return; const t=this.themes[this.state.theme]; for(const k in t) r.style.setProperty(k,t[k]); }
+  _toast(m){ this.setState({toast:m}); clearTimeout(this._tt); this._tt=setTimeout(()=>this.setState({toast:null}),2200); }
+  _task(id){ return this.tasks.find(t=>t.id===id)||null; }
+  _slug(t){ return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+  _sanitize(b){ return b.replace(/[\/\\]/g,'-').replace(/[^A-Za-z0-9._-]/g,'-').replace(/-+/g,'-').replace(/^-+|-+$/g,''); }
+  _typePill(bt){ const m={bugfix:['var(--red)','Bug'],feature:['var(--accent)','Feature'],chore:['var(--amber)','Chore']}; const x=m[bt]||['var(--text-muted)','Branch']; return {color:x[0],label:x[1],bg:'color-mix(in oklab, '+x[0]+' 16%, transparent)'}; }
+  _statePill(s){ const m={Active:'var(--green)',New:'var(--blue)','In Progress':'var(--amber)',Resolved:'var(--accent)',Closed:'var(--text-faint)'}; const c=m[s]||'var(--text-muted)'; return {color:c,label:s,bg:'color-mix(in oklab, '+c+' 16%, transparent)'}; }
+  _st(s){ const o={}; (s||'').split(';').forEach(p=>{ p=p.trim(); if(!p) return; const i=p.indexOf(':'); if(i<0) return; let k=p.slice(0,i).trim(); const v=p.slice(i+1).trim(); if(k.indexOf('--')===0){ o[k]=v; } else { k=k.replace(/-([a-z])/g,(m,c)=>c.toUpperCase()); o[k]=v; } }); return o; }
+  _openDialog(t){ this.setState({dialogTaskId:t.id,dialogBranch:t.branchType+'/'+t.id+'-'+this._slug(t.title),baseBranch:'main',dialogRepo:'acme-platform/api'}); }
+
+  renderVals(){
+    const S=this.state; const isA=S.dir==='A'; const isB=S.dir==='B'; const isDark=S.theme==='dark'; const hl=S.highlightTaskId;
+    const st=(s)=>this._st(s);
+    const pill=(p,fs,pad,gap)=>st('display:inline-flex;align-items:center;gap:'+(gap||'5px')+';white-space:nowrap;line-height:1.4;padding:'+pad+';border-radius:20px;font-size:'+fs+';font-weight:700;background:'+p.bg+';color:'+p.color+';');
+    const dotS=(c,sz)=>st('flex:0 0 auto;display:inline-block;width:'+sz+';height:'+sz+';border-radius:50%;background:'+c+';');
+    const stateText=(c)=>st('display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-size:11px;font-weight:700;color:'+c+';');
+
+    const DW=1320; const vw=(typeof window!=='undefined'?window.innerWidth:DW); const vh=(typeof window!=='undefined'?window.innerHeight:820);
+    const scale=Math.min(1, vw/DW); const appW=Math.round(vw/Math.max(scale,0.05)); const appH=Math.round(vh/Math.max(scale,0.05));
+    const appStyle=st('width:'+appW+'px;height:'+appH+'px;transform:scale('+scale+');transform-origin:top left;display:flex;flex-direction:column;overflow:hidden;background:var(--bg,#1a1815);color:var(--text,#efe9e0);font-family:\'Hanken Grotesk\',system-ui,sans-serif;font-size:14px;');
+
+    const segBase='border:none;cursor:pointer;font:inherit;font-size:13px;font-weight:600;padding:6px 15px;border-radius:7px;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:all .12s;';
+    const segOn=segBase+'background:var(--accent);color:#fff;';
+    const segOff=segBase+'background:transparent;color:var(--text-muted);';
+    const rowBase='box-sizing:border-box;border:none;font:inherit;color:inherit;display:block;width:100%;text-align:left;cursor:pointer;border-radius:9px;padding:8px 10px;margin:1px 0;transition:background .12s;';
+
+    const viewWorkspaces=this.workspaces.map(ws=>({ id:ws.id,name:ws.name,path:ws.path,
+      repos:ws.repos.map(repo=>({ name:repo.name,count:repo.worktrees.length,
+        worktrees:repo.worktrees.map(wt=>{
+          const task=wt.taskId?this._task(wt.taskId):null; const selected=wt.id===S.selectedId;
+          const matchesHl=!!hl&&wt.taskId===hl; const dimmed=!!hl&&wt.taskId!==hl;
+          const tp=task?this._typePill(task.branchType):null; const sp=task?this._statePill(task.state):null;
+          let rowStyle=rowBase+(selected?'background:color-mix(in oklab, var(--accent) 14%, transparent);box-shadow:inset 2px 0 0 var(--accent);':'background:transparent;');
+          let cardStyle='box-sizing:border-box;border:1px solid var(--border);background:var(--panel);border-radius:14px;padding:14px 15px;display:flex;flex-direction:column;gap:11px;transition:opacity .15s,box-shadow .15s,border-color .15s,transform .15s;';
+          if(matchesHl) cardStyle+='border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in oklab, var(--accent) 20%, transparent);transform:translateY(-1px);';
+          else if(dimmed) cardStyle+='opacity:.34;';
+          return {id:wt.id,branch:wt.branch,path:wt.path,isDefault:!!wt.isDefault,dirty:!!wt.dirty,changes:wt.changes||0,
+            task,hasTask:!!task,untagged:!task,taskId:wt.taskId,repoName:repo.name,
+            typePill:tp, statePill:sp,
+            typePillStyle: tp?pill(tp,'10.5px','2px 8px','4px'):null,
+            stateDotStyle: sp?dotS(sp.color,'7px'):null,
+            stateTextStyle: sp?stateText(sp.color):null,
+            titleShort: wt.isDefault?'primary checkout — no task':'no task ID in branch',
+            selected,rowStyle:st(rowStyle),cardStyle:st(cardStyle),
+            onSelect:()=>this.setState({selectedId:wt.id}),
+            onExplorer:(e)=>{if(e&&e.stopPropagation)e.stopPropagation();this._toast('Opening File Explorer…');},
+            onTerminal:(e)=>{if(e&&e.stopPropagation)e.stopPropagation();this._toast('Opening Windows Terminal…');},
+            onCode:(e)=>{if(e&&e.stopPropagation)e.stopPropagation();this._toast('Opening VS Code…');}
+          };
+        })
+      }))
+    }));
+
+    const startPrimary='border:none;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;gap:6px;white-space:nowrap;flex:0 0 auto;';
+    const startGhost='cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:8px;background:transparent;color:var(--text-muted);border:1px solid var(--border);display:flex;align-items:center;gap:6px;white-space:nowrap;flex:0 0 auto;';
+    const tasksView=this.tasks.map(t=>{ let cnt=0; this.workspaces.forEach(w=>w.repos.forEach(r=>r.worktrees.forEach(x=>{if(x.taskId===t.id)cnt++;})));
+      const noWt=cnt===0; const tp=this._typePill(t.branchType); const sp=this._statePill(t.state);
+      return {id:t.id,title:t.title,type:t.type,state:t.state, typePill:tp, statePill:sp, wtCount:cnt, hasWt:cnt>0, noWt, plural:cnt===1?'':'s',
+        typePillStyle: pill(tp,'11px','2px 9px','5px'), typeDotStyle: dotS(tp.color,'5px'),
+        statePillStyle: pill(sp,'11px','2px 9px','0px'), chipDotStyle: dotS(sp.color,'8px'),
+        startStyle: st(noWt?startPrimary:startGhost), startLabel: noWt?'Start work':'New branch',
+        chipStyle: st('box-sizing:border-box;border:1px solid '+(hl===t.id?'var(--accent)':'var(--border)')+';background:'+(hl===t.id?'color-mix(in oklab, var(--accent) 14%, transparent)':'var(--panel-2)')+';border-radius:11px;padding:7px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;font:inherit;color:inherit;flex:0 0 auto;transition:all .12s;'),
+        onStart:()=>this._openDialog(t),
+        onChip:()=>this.setState(s=>({highlightTaskId:s.highlightTaskId===t.id?null:t.id}))
+      };
+    });
+
+    let raw=null; this.workspaces.forEach(w=>w.repos.forEach(r=>r.worktrees.forEach(x=>{ if(x.id===S.selectedId) raw=Object.assign({},x,{wsName:w.name,wsPath:w.path,repoName:r.name}); })));
+    let sel=null;
+    if(raw){ const task=raw.taskId?this._task(raw.taskId):null;
+      const tp=task?this._typePill(task.branchType):null; const sp=task?this._statePill(task.state):null;
+      const dangerBase='cursor:pointer;font:inherit;font-size:13px;font-weight:600;padding:9px 16px;border-radius:10px;display:flex;align-items:center;gap:8px;white-space:nowrap;';
+      const canDelete=!raw.dirty&&!raw.isDefault;
+      sel={ branch:raw.branch,path:raw.path,wsName:raw.wsName,repoName:raw.repoName,isDefault:!!raw.isDefault,
+        dirty:!!raw.dirty, clean:!raw.dirty, changes:raw.changes||0, changesPlural:(raw.changes===1?'':'s'),
+        task,hasTask:!!task, noTask:!task, typePill:tp, statePill:sp,
+        typePillStyle: tp?pill(tp,'12px','3px 11px','5px'):null, typeDotStyle: tp?dotS(tp.color,'6px'):null,
+        statePillStyle: sp?pill(sp,'12px','3px 11px','0px'):null,
+        adoUrl: task?('https://dev.azure.com/'+task.org+'/'+task.project+'/_workitems/edit/'+task.id):'#',
+        deleteStyle: st(canDelete? dangerBase+'border:1px solid color-mix(in oklab, var(--red) 50%, transparent);background:transparent;color:var(--red);' : dangerBase+'border:1px solid var(--border);background:transparent;color:var(--text-faint);opacity:.7;'),
+        deleteNote: raw.isDefault?'This is the repo\u2019s primary checkout — it can\u2019t be removed here.':(raw.dirty?(raw.changes+' uncommitted change'+(raw.changes===1?'':'s')+' — commit or stash before removing.'):''),
+        hasDeleteNote: raw.isDefault||raw.dirty,
+        onExplorer:()=>this._toast('Opening File Explorer…'),
+        onTerminal:()=>this._toast('Opening Windows Terminal…'),
+        onCode:()=>this._toast('Opening VS Code…'),
+        onCopy:()=>this._toast('Path copied to clipboard'),
+        onDelete:()=> raw.dirty?this._toast('Refused — worktree has uncommitted changes'):(raw.isDefault?this._toast('Can\u2019t remove the primary worktree'):this._toast('Worktree removed'))
+      };
+    }
+
+    const repoOptions=[]; this.workspaces.forEach(w=>w.repos.forEach(r=>repoOptions.push({key:w.name+'/'+r.name,repoName:r.name,wsName:w.name,wsPath:w.path})));
+    const dlgRepo=repoOptions.find(r=>r.key===S.dialogRepo)||repoOptions[0];
+    const dialogTask=S.dialogTaskId?this._task(S.dialogTaskId):null;
+    const dialogPath=dlgRepo?(dlgRepo.wsPath+'\\'+dlgRepo.repoName+'-'+this._sanitize(S.dialogBranch)):'';
+    const repoOpts=repoOptions.map(r=>({repoName:r.repoName,wsName:r.wsName, selected:r.key===S.dialogRepo, onPick:()=>this.setState({dialogRepo:r.key}),
+      chipStyle:st('box-sizing:border-box;cursor:pointer;border:1px solid '+(r.key===S.dialogRepo?'var(--accent)':'var(--border)')+';background:'+(r.key===S.dialogRepo?'color-mix(in oklab, var(--accent) 12%, transparent)':'transparent')+';border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;text-align:left;font:inherit;color:inherit;')}));
+
+    return {
+      appStyle,
+      isA,isB,isDark,isLight:!isDark,
+      segA:st(isA?segOn:segOff), segB:st(isB?segOn:segOff),
+      setA:()=>this.setState({dir:'A'}), setB:()=>this.setState({dir:'B'}),
+      toggleTheme:()=>this.setState(s=>({theme:s.theme==='dark'?'light':'dark'})),
+      setRoot:(el)=>{this._root=el; if(el){const t=this.themes[this.state.theme];for(const k in t)el.style.setProperty(k,t[k]);}},
+      viewWorkspaces, tasksView, taskCount:this.tasks.length,
+      sel, hasSel:!!sel, noSel:!sel,
+      hasHighlight:!!hl, highlightId:hl||'', clearHighlight:()=>this.setState({highlightTaskId:null}),
+      showDialog:!!dialogTask, dialogTask:dialogTask||{id:'',title:''}, dialogBranch:S.dialogBranch, baseBranch:S.baseBranch, dialogPath, repoOpts,
+      onBranchInput:(e)=>this.setState({dialogBranch:e.target.value}),
+      onBaseInput:(e)=>this.setState({baseBranch:e.target.value}),
+      onCancelDialog:()=>this.setState({dialogTaskId:null}),
+      stop:(e)=>{if(e&&e.stopPropagation)e.stopPropagation();},
+      onCreate:()=>{const r=dlgRepo;this.setState({dialogTaskId:null});this._toast('Created '+(r?r.repoName:'')+'-'+this._sanitize(S.dialogBranch));},
+      onAddTask:()=>this._toast('Paste a work item ID or ADO URL to pin it'),
+      toast:S.toast, hasToast:!!S.toast
+    };
+  }
+}
+</script>
+</body>
+</html>
