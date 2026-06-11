@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { AppConfig } from '../../shared/config'
+import type { TasksSnapshot } from '../../shared/tasks'
 import type { WorkspaceNode, WorktreeNode } from '../../shared/tree'
 import { NewWorktreeDialog } from './components/NewWorktreeDialog'
 import { Sidebar } from './components/Sidebar'
+import { TasksPane } from './components/TasksPane'
 import { Toast } from './components/Toast'
 import { TopBar } from './components/TopBar'
 import { WorktreeDetail, WorktreeDetailEmpty } from './components/WorktreeDetail'
@@ -45,6 +47,12 @@ function App(): JSX.Element {
   const dismissToast = useCallback(() => setToast(null), [])
   /** Repo path the new-worktree dialog was opened for; null = closed. */
   const [dialogRepoPath, setDialogRepoPath] = useState<string | null>(null)
+  const [tasks, setTasks] = useState<TasksSnapshot>({
+    tasks: [],
+    auth: 'unknown',
+    lastSyncAt: null
+  })
+  const [adoOrg, setAdoOrg] = useState<string | null>(null)
 
   const refreshTree = useCallback((): void => {
     api
@@ -57,16 +65,38 @@ function App(): JSX.Element {
       .catch(console.error)
   }, [])
 
+  const refreshTasks = useCallback((): void => {
+    api.invoke('tasks:refresh').then(setTasks).catch(console.error)
+  }, [])
+
   useEffect(() => {
     api
       .invoke('config:get')
-      .then((config) => setUi(config.ui))
+      .then((config) => {
+        setUi(config.ui)
+        setAdoOrg(config.ado.defaultOrg)
+      })
       .catch((err) => {
         console.error(err)
         setUi({ theme: 'dark', direction: 'tree' })
       })
     refreshTree()
-  }, [refreshTree])
+    // Cached pins paint immediately; the live fetch fills details in.
+    api.invoke('tasks:list').then(setTasks).catch(console.error)
+    refreshTasks()
+  }, [refreshTree, refreshTasks])
+
+  // PRD story 7: details re-fetch on app focus, debounced against focus flapping.
+  const lastFocusRefresh = useRef(0)
+  useEffect(() => {
+    const onFocus = (): void => {
+      if (Date.now() - lastFocusRefresh.current < 5_000) return
+      lastFocusRefresh.current = Date.now()
+      refreshTasks()
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [refreshTasks])
 
   useEffect(() => {
     if (ui) document.documentElement.dataset.theme = ui.theme
@@ -127,9 +157,17 @@ function App(): JSX.Element {
       <TopBar
         theme={ui.theme}
         direction={ui.direction}
+        sync={{
+          auth: tasks.auth,
+          lastSyncAt: tasks.lastSyncAt,
+          org: adoOrg ?? tasks.tasks[0]?.org ?? null
+        }}
         onThemeToggle={() => update({ theme: ui.theme === 'dark' ? 'light' : 'dark' })}
         onDirectionChange={(direction) => update({ direction })}
-        onRefresh={refreshTree}
+        onRefresh={() => {
+          refreshTree()
+          refreshTasks()
+        }}
       />
       <main className="content">
         {ui.direction === 'tree' ? (
@@ -155,6 +193,7 @@ function App(): JSX.Element {
             ) : (
               <WorktreeDetailEmpty />
             )}
+            <TasksPane snapshot={tasks} onSnapshot={setTasks} />
           </>
         ) : (
           <div className="content-placeholder">

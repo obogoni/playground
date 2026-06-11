@@ -1,5 +1,6 @@
 import type { AppConfig, ConfigPatch } from './config'
 import type { LaunchResult, ShortcutTool } from './shortcuts'
+import type { PinTaskResult, TasksSnapshot } from './tasks'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'
 import type { CreateWorktreeResult, RemoveWorktreeResult } from './worktrees'
 
@@ -28,6 +29,13 @@ export interface IpcContract {
     req: { repoPath: string; worktreePath: string }
     res: RemoveWorktreeResult
   }
+  /** Pinned tasks merged with this session's cached details; no network. */
+  'tasks:list': { req: void; res: TasksSnapshot }
+  /** Parses ID/URL, validates against ADO, persists; failures are returned, never thrown. */
+  'tasks:pin': { req: { input: string }; res: PinTaskResult }
+  'tasks:unpin': { req: { id: number; org: string; project: string }; res: TasksSnapshot }
+  /** Re-fetches live details for every pin (app focus + manual refresh). */
+  'tasks:refresh': { req: void; res: TasksSnapshot }
 }
 
 export type IpcChannel = keyof IpcContract

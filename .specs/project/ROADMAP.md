@@ -1,7 +1,7 @@
 # Roadmap
 
 **Current Milestone:** M3 — ADO Tasks & Start-Work Flow
-**Status:** Not Started (M1 + M2 complete — full worktree lifecycle in-app)
+**Status:** In Progress (M1 + M2 complete — full worktree lifecycle in-app; Pinned Tasks Pane specified)
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
 
@@ -60,7 +60,7 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 
 ### Features
 
-**Pinned Tasks Pane** - PLANNED
+**Pinned Tasks Pane** - COMPLETE
 
 - `AdoGateway`: token via `az account get-access-token`, work item GET by IDs; "run `az login`" empty state on auth failure
 - `TaskBoard`: pin by ID or URL (URL parsing, defaults from global config), unpin, persistence

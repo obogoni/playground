@@ -2,9 +2,11 @@ import { app, shell, dialog, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { AdoGateway } from './ado-gateway'
 import { ConfigStore } from './config-store'
 import { handle } from './ipc'
 import { ShortcutLauncher } from './shortcut-launcher'
+import { TaskBoard } from './task-board'
 import { buildTree } from './tree'
 import { createWorktree, removeWorktree } from './worktree-manager'
 import { WorkspaceRegistry } from './workspace-registry'
@@ -80,6 +82,12 @@ app.whenReady().then(() => {
 
   const launcher = new ShortcutLauncher()
   handle('shortcuts:launch', ({ tool, path }) => launcher.launch(tool, path))
+
+  const taskBoard = new TaskBoard(configStore, new AdoGateway())
+  handle('tasks:list', () => taskBoard.list())
+  handle('tasks:pin', ({ input }) => taskBoard.pin(input))
+  handle('tasks:unpin', (ref) => taskBoard.unpin(ref))
+  handle('tasks:refresh', () => taskBoard.refresh())
 
   createWindow()
 
