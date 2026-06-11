@@ -6,7 +6,7 @@ import { ConfigStore } from './config-store'
 import { handle } from './ipc'
 import { ShortcutLauncher } from './shortcut-launcher'
 import { buildTree } from './tree'
-import { createWorktree } from './worktree-manager'
+import { createWorktree, removeWorktree } from './worktree-manager'
 import { WorkspaceRegistry } from './workspace-registry'
 
 function createWindow(): void {
@@ -74,6 +74,10 @@ app.whenReady().then(() => {
   handle('tree:get', () => buildTree(registry))
   handle('worktrees:create', ({ repoPath, branch, baseBranch }) =>
     createWorktree(repoPath, branch, baseBranch)
+  )
+  // No force path from the UI in v1 — the dirty guard is not overridable here.
+  handle('worktrees:remove', ({ repoPath, worktreePath }) =>
+    removeWorktree(repoPath, worktreePath)
   )
 
   const launcher = new ShortcutLauncher()

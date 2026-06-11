@@ -31,3 +31,10 @@ export interface CreateWorktreeResult {
   /** Human-readable failure message, present when ok is false. */
   error?: string
 }
+
+/** Result of worktrees:remove — failures (guards included) are returned, never thrown. */
+export interface RemoveWorktreeResult {
+  ok: boolean
+  /** Human-readable refusal/failure message, present when ok is false. */
+  error?: string
+}

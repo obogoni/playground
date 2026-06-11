@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { sanitizeBranch, worktreePathFor } from '../shared/worktrees'
-import { createWorktree, GitError, listWorktrees } from './worktree-manager'
+import { createWorktree, GitError, listWorktrees, removeWorktree } from './worktree-manager'
 
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync('git', args, { cwd, encoding: 'utf8' })
@@ -199,5 +199,100 @@ describe('createWorktree', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error).toBeTruthy()
+  })
+})
+
+describe('removeWorktree', () => {
+  let root: string
+  let repo: string
+  let sibling: string
+
+  beforeEach(() => {
+    root = realpathSync(mkdtempSync(join(tmpdir(), 'wtm-remove-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+    sibling = join(root, 'repo-feature-x')
+    git(repo, 'worktree', 'add', sibling, '-b', 'feature/x')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('removes a clean non-primary worktree and deletes its folder', async () => {
+    const result = await removeWorktree(repo, sibling)
+
+    expect(result).toEqual({ ok: true })
+    expect(existsSync(sibling)).toBe(false)
+    expect(await listWorktrees(repo)).toHaveLength(1)
+  })
+
+  it('refuses a dirty worktree and leaves it intact', async () => {
+    writeFileSync(join(sibling, 'a.txt'), 'edited', 'utf8')
+
+    const result = await removeWorktree(repo, sibling)
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('1 uncommitted change')
+    expect(existsSync(sibling)).toBe(true)
+    expect(await listWorktrees(repo)).toHaveLength(2)
+  })
+
+  it('counts untracked files as dirty', async () => {
+    writeFileSync(join(sibling, 'untracked.txt'), 'wip', 'utf8')
+
+    const result = await removeWorktree(repo, sibling)
+
+    expect(result.ok).toBe(false)
+    expect(existsSync(sibling)).toBe(true)
+  })
+
+  it("refuses the repo's primary checkout", async () => {
+    const result = await removeWorktree(repo, repo)
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/primary checkout/i)
+    expect(existsSync(repo)).toBe(true)
+  })
+
+  it('refuses the primary checkout regardless of path casing/separators', async () => {
+    const result = await removeWorktree(repo, repo.toUpperCase().replaceAll('\\', '/'))
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/primary checkout/i)
+  })
+
+  it('force-removes a dirty worktree', async () => {
+    writeFileSync(join(sibling, 'a.txt'), 'edited', 'utf8')
+
+    const result = await removeWorktree(repo, sibling, { force: true })
+
+    expect(result).toEqual({ ok: true })
+    expect(existsSync(sibling)).toBe(false)
+  })
+
+  it('returns the git error for a path that is not a worktree of the repo', async () => {
+    const stranger = join(root, 'not-a-worktree')
+    mkdirSync(stranger)
+
+    const result = await removeWorktree(repo, stranger)
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toBeTruthy()
+  })
+
+  it('cleans up the stale entry when the worktree folder vanished externally', async () => {
+    rmSync(sibling, { recursive: true, force: true })
+
+    const result = await removeWorktree(repo, sibling)
+
+    expect(result).toEqual({ ok: true })
+    expect(await listWorktrees(repo)).toHaveLength(1)
   })
 })
