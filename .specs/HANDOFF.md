@@ -13,7 +13,7 @@
 
 ## In Progress
 
-- PR `feature/delete-worktree` → main being opened (see git log / gh for number)
+- PR #14 `feature/delete-worktree` → main open, awaiting review/merge
 
 ## Pending
 
