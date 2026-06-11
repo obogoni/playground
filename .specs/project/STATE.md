@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-11
-**Current Work:** pinned-tasks-pane (M3, first feature) SPECIFIED on `feature/pinned-tasks-pane` (from main @ `b36183d`, PR #14 merge) — PNTK-01..05 pending; two spec decisions ⚠️ awaiting user review (unpin affordance, bare-ID defaults via hand-edited config). Next: user reviews spec → Execute
+**Current Work:** pinned-tasks-pane (M3, first feature) COMPLETE on `feature/pinned-tasks-pane` — PNTK-01..05 Verified (76 Vitest + 11/11 CDP smoke vs live ADO + auth-failure pass). Next: PR → main, then specify M3 "Start Work from Task"
 
 ---
 
@@ -69,8 +69,9 @@
 - [x] Execute delete-worktree: guarded `removeWorktree` + tests, `worktrees:remove` IPC, §1b Danger section, refresh+reselect-primary — DLWT-01..04 Verified
 - [x] Open PR `feature/delete-worktree` → main (PR #14, merged 2026-06-11)
 - [x] Specify M3 "Pinned Tasks Pane" (`.specs/features/pinned-tasks-pane/spec.md`, PNTK-01..05)
-- [ ] User review of pinned-tasks-pane spec decisions (unpin ✕ on hover; bare-ID requires hand-edited config defaults until M4)
-- [ ] Execute pinned-tasks-pane: `AdoGateway` + `TaskBoard` + `tasks:*` IPC + §1c pane + az-login empty state + focus/manual refresh
+- [x] User approved pinned-tasks-pane spec decisions ("go ahead": unpin ✕ on hover; bare-ID requires hand-edited config defaults until M4)
+- [x] Execute pinned-tasks-pane: `AdoGateway` + `TaskBoard` + `tasks:*` IPC + §1c pane + az-login empty state + focus/manual refresh — PNTK-01..05 Verified
+- [ ] Open PR `feature/pinned-tasks-pane` → main; after merge, specify M3 "Start Work from Task"
 
 ---
 

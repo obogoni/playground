@@ -60,7 +60,7 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 
 ### Features
 
-**Pinned Tasks Pane** - PLANNED
+**Pinned Tasks Pane** - COMPLETE
 
 - `AdoGateway`: token via `az account get-access-token`, work item GET by IDs; "run `az login`" empty state on auth failure
 - `TaskBoard`: pin by ID or URL (URL parsing, defaults from global config), unpin, persistence

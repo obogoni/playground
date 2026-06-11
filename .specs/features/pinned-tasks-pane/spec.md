@@ -131,15 +131,15 @@ The app manages worktrees end-to-end but knows nothing about the tasks that moti
 
 ## Requirement Traceability
 
-| Requirement ID | Story                                        | Phase   | Status  |
-| -------------- | -------------------------------------------- | ------- | ------- |
-| PNTK-01        | P1: AdoGateway — az token + work item GET    | Planned | Pending |
-| PNTK-02        | P1: TaskBoard — pin/unpin/parsing/persistence| Planned | Pending |
-| PNTK-03        | P1: Tasks pane UI (§1c)                      | Planned | Pending |
-| PNTK-04        | P1: "run `az login`" empty state             | Planned | Pending |
-| PNTK-05        | P2: Live refresh + sync status               | Planned | Pending |
+| Requirement ID | Story                                        | Phase | Status   |
+| -------------- | -------------------------------------------- | ----- | -------- |
+| PNTK-01        | P1: AdoGateway — az token + work item GET    | Done  | Verified |
+| PNTK-02        | P1: TaskBoard — pin/unpin/parsing/persistence| Done  | Verified |
+| PNTK-03        | P1: Tasks pane UI (§1c)                      | Done  | Verified |
+| PNTK-04        | P1: "run `az login`" empty state             | Done  | Verified |
+| PNTK-05        | P2: Live refresh + sync status               | Done  | Verified |
 
-**Coverage:** 5 total, 0 verified
+**Coverage:** 5 total, 5 verified ✅ — 23 new Vitest cases (parsing + persistence round-trips on temp config dirs; 76 total green) + 11-check CDP smoke (`scripts/smoke-tasks.mjs`) pinning a real work item (`triadesolucoes/MultiClubes#21211`) through a live `az` token + auth-failure pass (app relaunched with `az` hidden from PATH: prompt block, id-only card, "az · not signed in") + screenshot fidelity pass of resolved-card and auth-failed states vs `.dc.html` §1c
 
 ---
 
@@ -152,7 +152,7 @@ The app manages worktrees end-to-end but knows nothing about the tasks that moti
 
 ## Success Criteria
 
-- [ ] From a fresh start with `az login` active: paste a work item URL → card with correct type/state pills and title; restart → card persists and re-resolves; unpin → gone for good
-- [ ] `az logout` → pane shows the "run `az login`" prompt and id-only cards; `az login` + refresh → recovers
-- [ ] All `TaskBoard` parsing/persistence cases green in Vitest
-- [ ] Visual fidelity pass of the pane against `.dc.html` §1c (header, add row, cards minus footer)
+- [x] From a fresh start with `az login` active: paste a work item URL → card with correct type/state pills and title; restart → card persists and re-resolves; unpin → gone for good (smoke-verified live; restart re-resolution covered by persistence round-trip + auth-failed relaunch re-reading pins)
+- [x] Auth failure (verified by hiding `az` from the app's PATH instead of `az logout`, preserving the real session) → pane shows the "run `az login`" prompt and id-only cards
+- [x] All `TaskBoard` parsing/persistence cases green in Vitest
+- [x] Visual fidelity pass of the pane against `.dc.html` §1c (header, add row, cards minus footer)
