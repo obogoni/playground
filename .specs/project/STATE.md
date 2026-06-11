@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-11
-**Current Work:** workspace-sidebar-tree COMPLETE — next: specify M1 feature "Launch Shortcuts" (last M1 feature; app becomes daily-usable)
+**Current Work:** launch-shortcuts (M1, final feature) — specified (LNCH-01..05, Medium scope: no design/tasks docs) on branch `feature/launch-shortcuts`; next: execute
 
 ---
 
@@ -57,8 +57,9 @@
 
 ## Todos
 
-- [x] workspace-sidebar-tree: specified, designed, executed (T1–T8), verified — TREE-01..06 all Verified
-- [ ] Specify next M1 feature: "Launch Shortcuts" (`ShortcutLauncher` + open-with cards in detail pane, handoff §1b)
+- [x] workspace-sidebar-tree: specified, designed, executed (T1–T8), verified — TREE-01..06 all Verified (PR #11 merged)
+- [x] Specify Launch Shortcuts (`.specs/features/launch-shortcuts/spec.md`, LNCH-01..05)
+- [ ] Execute Launch Shortcuts: `ShortcutLauncher` + IPC channel + open-with cards + failure toast; verify LNCH-01..05
 
 ---
 

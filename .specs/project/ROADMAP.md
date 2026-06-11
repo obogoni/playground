@@ -27,7 +27,7 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - List worktrees per repo via `git worktree list`; sidebar tree: workspace → repo → worktree rows
 - Worktree selection + detail pane (breadcrumb, branch title, status pills, location row with copy)
 
-**Launch Shortcuts** - PLANNED
+**Launch Shortcuts** - IN PROGRESS (specified)
 
 - `ShortcutLauncher`: open File Explorer, Windows Terminal, VS Code at the selected worktree path
 - "Open with" launcher cards in the detail pane (per design handoff)
