@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-11
-**Current Work:** launch-shortcuts COMPLETE (LNCH-01..05 Verified) — M1 done, app daily-usable. Next: PR `feature/launch-shortcuts` → main, then specify M2 "Create Worktree (taskless)"
+**Current Work:** create-worktree (M2) COMPLETE on `feature/create-worktree` — CRWT-01..04 Verified (45 Vitest + 10/10 CDP smoke). Next: PR → main, then specify M2 "Delete Worktree (guarded)"
 
 ---
 
@@ -60,7 +60,11 @@
 - [x] workspace-sidebar-tree: specified, designed, executed (T1–T8), verified — TREE-01..06 all Verified (PR #11 merged)
 - [x] Specify Launch Shortcuts (`.specs/features/launch-shortcuts/spec.md`, LNCH-01..05)
 - [x] Execute Launch Shortcuts: `ShortcutLauncher` + IPC + open-with cards + failure toast — LNCH-01..05 Verified (8/8 CDP smoke)
-- [ ] Open PR `feature/launch-shortcuts` → main; after merge, specify M2 "Create Worktree (taskless)"
+- [x] Open PR `feature/launch-shortcuts` → main (PR #12, merged 2026-06-11)
+- [x] Specify M2 "Create Worktree (taskless)" (`.specs/features/create-worktree/spec.md`, CRWT-01..04)
+- [x] Execute create-worktree: `WorktreeManager.create`/`pathFor` + tests, `worktrees:create` IPC, dialog + repo-row "+" entry, refresh+select — CRWT-01..04 Verified
+- [x] Entry-point decision (hover "+" on repo rows) approved by user with the spec ("go ahead")
+- [ ] Open PR `feature/create-worktree` → main; after merge, specify M2 "Delete Worktree (guarded)"
 
 ---
 

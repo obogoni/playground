@@ -6,6 +6,7 @@ import { ConfigStore } from './config-store'
 import { handle } from './ipc'
 import { ShortcutLauncher } from './shortcut-launcher'
 import { buildTree } from './tree'
+import { createWorktree } from './worktree-manager'
 import { WorkspaceRegistry } from './workspace-registry'
 
 function createWindow(): void {
@@ -71,6 +72,9 @@ app.whenReady().then(() => {
   })
   handle('workspaces:remove', ({ id }) => registry.remove(id))
   handle('tree:get', () => buildTree(registry))
+  handle('worktrees:create', ({ repoPath, branch, baseBranch }) =>
+    createWorktree(repoPath, branch, baseBranch)
+  )
 
   const launcher = new ShortcutLauncher()
   handle('shortcuts:launch', ({ tool, path }) => launcher.launch(tool, path))

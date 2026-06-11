@@ -140,6 +140,31 @@
   color: var(--text-muted);
 }
 
+/* Hover-revealed like .sidebar-remove-btn, accent-tinted like .sidebar-add-btn */
+.sidebar-new-worktree-btn {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: var(--text-faint);
+  opacity: 0;
+  transition:
+    opacity 0.12s,
+    background 0.12s,
+    color 0.12s;
+}
+
+.sidebar-repo-row:hover .sidebar-new-worktree-btn {
+  opacity: 1;
+}
+
+.sidebar-new-worktree-btn:hover {
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  color: var(--text);
+}
+
 .sidebar-worktrees {
   margin-left: 10px;
   padding-left: 8px;

@@ -1,6 +1,9 @@
 import { execFile } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { promisify } from 'node:util'
 import type { WorktreeNode } from '../shared/tree'
+import type { CreateWorktreeResult } from '../shared/worktrees'
+import { sanitizeBranch, worktreePathFor } from '../shared/worktrees'
 
 const run = promisify(execFile)
 
@@ -41,6 +44,42 @@ export async function listWorktrees(repoPath: string): Promise<WorktreeNode[]> {
       }
     })
   )
+}
+
+/**
+ * `git worktree add` at the PRD flat-sibling path (CRWT-02). With a base:
+ * `-b <branch> <base>`; without: checks out the existing branch. Failures are
+ * returned (dialog shows them inline), never thrown.
+ */
+export async function createWorktree(
+  repoPath: string,
+  branch: string,
+  baseBranch?: string
+): Promise<CreateWorktreeResult> {
+  if (sanitizeBranch(branch) === '') {
+    return { ok: false, error: `Branch name "${branch}" sanitizes to an empty path segment` }
+  }
+  const target = worktreePathFor(repoPath, branch)
+  if (existsSync(target)) {
+    return { ok: false, error: `Target path already exists: ${target}` }
+  }
+  const args = baseBranch
+    ? ['worktree', 'add', target, '-b', branch, baseBranch]
+    : ['worktree', 'add', target, branch]
+  try {
+    await git(repoPath, args)
+    return { ok: true, path: target }
+  } catch (err) {
+    return { ok: false, error: gitFailureLine(err) }
+  }
+}
+
+/** Git's own first stderr line (e.g. "fatal: …") reads better than execFile's wrapper message. */
+function gitFailureLine(err: unknown): string {
+  const stderr = (err as { stderr?: string }).stderr
+  const line = stderr?.split(/\r?\n/).find((l) => l.trim() !== '')
+  if (line) return line.trim()
+  return err instanceof Error ? err.message.split('\n')[0] : String(err)
 }
 
 interface PorcelainBlock {

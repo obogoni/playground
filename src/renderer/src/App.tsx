@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { JSX } from 'react'
 import type { AppConfig } from '../../shared/config'
 import type { WorkspaceNode, WorktreeNode } from '../../shared/tree'
+import { NewWorktreeDialog } from './components/NewWorktreeDialog'
 import { Sidebar } from './components/Sidebar'
 import { Toast } from './components/Toast'
 import { TopBar } from './components/TopBar'
@@ -36,6 +37,8 @@ function App(): JSX.Element {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const dismissToast = useCallback(() => setToast(null), [])
+  /** Repo path the new-worktree dialog was opened for; null = closed. */
+  const [dialogRepoPath, setDialogRepoPath] = useState<string | null>(null)
 
   const refreshTree = useCallback((): void => {
     api
@@ -81,6 +84,18 @@ function App(): JSX.Element {
     api.invoke('workspaces:remove', { id }).then(refreshTree).catch(console.error)
   }
 
+  // PRD start-work flow: refresh and select the new worktree, no auto-open.
+  const worktreeCreated = (worktreePath: string): void => {
+    setDialogRepoPath(null)
+    api
+      .invoke('tree:get')
+      .then((next) => {
+        setTree(next)
+        setSelectedId(worktreePath)
+      })
+      .catch(console.error)
+  }
+
   if (!ui) {
     // One frame at most; avoids a default-theme flash before hydration.
     return <></>
@@ -106,6 +121,7 @@ function App(): JSX.Element {
               onSelect={setSelectedId}
               onAddWorkspace={addWorkspace}
               onRemoveWorkspace={removeWorkspace}
+              onNewWorktree={setDialogRepoPath}
             />
             {selected ? (
               <WorktreeDetail
@@ -125,6 +141,14 @@ function App(): JSX.Element {
           </div>
         )}
       </main>
+      {dialogRepoPath && (
+        <NewWorktreeDialog
+          tree={tree}
+          initialRepoPath={dialogRepoPath}
+          onClose={() => setDialogRepoPath(null)}
+          onCreated={worktreeCreated}
+        />
+      )}
       {toast && <Toast message={toast} onDismiss={dismissToast} />}
     </>
   )

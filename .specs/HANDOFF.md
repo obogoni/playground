@@ -1,23 +1,22 @@
 # Handoff
 
 **Date:** 2026-06-11
-**Feature:** launch-shortcuts (M1, final feature) — COMPLETE; **M1 milestone done, app is daily-usable**
+**Feature:** create-worktree (M2, first feature) — COMPLETE; CRWT-01..04 Verified
 
 ## Completed ✓
 
-- Spec → execute on branch `feature/launch-shortcuts` (Medium scope: no design/tasks docs); LNCH-01..05 all Verified
-- `ShortcutLauncher` (main): explorer.exe / wt.exe -d detached spawns with ENOENT detection; `code` via shell (.cmd shim) with exit-code check; missing-path pre-check with readable error. One typed IPC channel `shortcuts:launch`
-- UI: "Open with" §1b card grid in `WorktreeDetail` (tinted tiles, labels, mono commands, hover lift) + transient bottom-center `Toast` (failures only, 2.2s)
-- Repo hygiene unblocked along the way: `.gitattributes` LF enforcement + tree renormalization; eslint ignores for the design handoff bundle; `.mjs` return-type rule off; `WorktreeDetail` keyed from `App` (react-hooks error fix)
-- Verified: typecheck/lint/29 Vitest green; CDP smoke 8/8 (`scripts/smoke-shortcuts.mjs`); screenshot fidelity pass vs `.dc.html`
+- Spec → execute on branch `feature/create-worktree` (Medium scope: no design/tasks docs)
+- `sanitizeBranch`/`worktreePathFor` in `src/shared/worktrees.ts` (shared so renderer preview and main-process create can't drift); `createWorktree` in `worktree-manager.ts` (`-b <branch> <base>` or existing-branch form, path-exists pre-check, git stderr first line as error); `worktrees:create` IPC channel
+- UI: `NewWorktreeDialog` per handoff §3 (taskless "NEW WORKTREE" header, inline footer errors, busy-guarded Create), hover "+" on sidebar repo rows (user-approved entry point), App refresh+select of the new worktree (no auto-open)
+- Verified: typecheck/lint/45 Vitest green (16 new cases on real temp git repos); CDP smoke 10/10 (`scripts/smoke-create.mjs`); dialog screenshot fidelity pass vs `.dc.html`
 
 ## In Progress
 
-- PR `feature/launch-shortcuts` → main being opened (last step of this session)
+- PR #13 `feature/create-worktree` → main open, awaiting review/merge
 
 ## Pending
 
-- After PR merges: specify first M2 feature **Create Worktree (taskless)** (dialog: repo picker, base branch, branch name, live path preview; `WorktreeManager.create` with flat-sibling placement + sanitization per PRD)
+- After PR merges: specify second M2 feature **Delete Worktree (guarded)** (`WorktreeManager.remove` with dirty/primary-checkout refusal; Danger section in detail pane with disabled-look + inline reason, per handoff §1b/§Interactions)
 
 ## Blockers
 
@@ -25,7 +24,7 @@
 
 ## Context
 
-- Branch: `feature/launch-shortcuts` (from main @ `ca8b40f`, PR #11 merge)
+- Branch: `feature/create-worktree` (from main @ `bf40da2`, PR #12 merge)
 - Uncommitted: none after docs checkpoint commit
-- Related decisions: AD-001..003; new Lesson Learned in STATE.md re: LF/`.gitattributes` and cold eslint caches
-- Smoke runbook: seed temp workspace + repo/worktrees, swap `%APPDATA%/playground/config.json` (back up the real one!), `npx electron-vite dev -- --remote-debugging-port=9222`, run `scripts/smoke-*.mjs`, restore config
+- Related decisions: AD-001..003; spec §Decisions (entry point, taskless header, base-branch fallback, inline errors)
+- Smoke runbook: seed temp workspace + repo/worktrees, swap `%APPDATA%/playground/config.json` (back up the real one!), `npx electron-vite dev -- --remote-debugging-port=9222`, run `scripts/smoke-*.mjs`, restore config. Note: first smoke run right after app start can race the renderer load — re-run once the app settles

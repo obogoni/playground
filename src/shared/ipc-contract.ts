@@ -1,6 +1,7 @@
 import type { AppConfig, ConfigPatch } from './config'
 import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'
+import type { CreateWorktreeResult } from './worktrees'
 
 /**
  * Single request/response channel map shared by main, preload, and renderer.
@@ -17,6 +18,11 @@ export interface IpcContract {
   'tree:get': { req: void; res: WorkspaceNode[] }
   /** Opens the external tool rooted at the path; failures are returned, never thrown. */
   'shortcuts:launch': { req: { tool: ShortcutTool; path: string }; res: LaunchResult }
+  /** git worktree add at the flat-sibling path; failures are returned, never thrown. */
+  'worktrees:create': {
+    req: { repoPath: string; branch: string; baseBranch?: string }
+    res: CreateWorktreeResult
+  }
 }
 
 export type IpcChannel = keyof IpcContract

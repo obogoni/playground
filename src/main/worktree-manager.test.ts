@@ -1,9 +1,10 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { GitError, listWorktrees } from './worktree-manager'
+import { sanitizeBranch, worktreePathFor } from '../shared/worktrees'
+import { createWorktree, GitError, listWorktrees } from './worktree-manager'
 
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync('git', args, { cwd, encoding: 'utf8' })
@@ -94,5 +95,109 @@ describe('listWorktrees', () => {
     mkdirSync(plain)
 
     await expect(listWorktrees(plain)).rejects.toBeInstanceOf(GitError)
+  })
+})
+
+describe('sanitizeBranch', () => {
+  it.each([
+    ['feature/123', 'feature-123'],
+    ['a\\b', 'a-b'],
+    ['fix: crash on load!', 'fix-crash-on-load'],
+    ['a/-b', 'a-b'],
+    ['/feat/', 'feat'],
+    ['release_1.2-rc', 'release_1.2-rc'],
+    ['///', '']
+  ])('sanitizes %j to %j', (input, expected) => {
+    expect(sanitizeBranch(input)).toBe(expected)
+  })
+})
+
+describe('worktreePathFor', () => {
+  it('computes the flat-sibling path next to the repo', () => {
+    expect(worktreePathFor('C:\\ws\\api', 'feature/123')).toBe('C:\\ws\\api-feature-123')
+  })
+
+  it('is deterministic and idempotent', () => {
+    const first = worktreePathFor('C:\\ws\\api', 'fix/a b')
+    expect(worktreePathFor('C:\\ws\\api', 'fix/a b')).toBe(first)
+    expect(first).toBe('C:\\ws\\api-fix-a-b')
+  })
+
+  it('handles forward-slash repo paths', () => {
+    expect(worktreePathFor('/ws/api', 'x')).toBe('/ws/api-x')
+  })
+})
+
+describe('createWorktree', () => {
+  let root: string
+  let repo: string
+
+  beforeEach(() => {
+    root = realpathSync(mkdtempSync(join(tmpdir(), 'wtm-create-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('creates a worktree on a new branch from a base branch', async () => {
+    const result = await createWorktree(repo, 'feature/abc', 'main')
+
+    expect(result).toMatchObject({ ok: true, path: join(root, 'repo-feature-abc') })
+    expect(existsSync(result.path!)).toBe(true)
+    const worktrees = await listWorktrees(repo)
+    expect(worktrees).toContainEqual(
+      expect.objectContaining({ path: result.path, branch: 'feature/abc' })
+    )
+  })
+
+  it('creates a worktree from an existing branch when no base is given', async () => {
+    git(repo, 'branch', 'chore-x')
+
+    const result = await createWorktree(repo, 'chore-x')
+
+    expect(result).toMatchObject({ ok: true, path: join(root, 'repo-chore-x') })
+    const worktrees = await listWorktrees(repo)
+    expect(worktrees).toContainEqual(expect.objectContaining({ branch: 'chore-x' }))
+  })
+
+  it('refuses when the target path already exists and creates nothing', async () => {
+    mkdirSync(join(root, 'repo-taken'))
+
+    const result = await createWorktree(repo, 'taken', 'main')
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/exists/i)
+    expect((await listWorktrees(repo)).length).toBe(1)
+  })
+
+  it('returns the git error when the branch already exists', async () => {
+    const result = await createWorktree(repo, 'main', 'main')
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('main')
+  })
+
+  it('returns the git error for an unknown base branch', async () => {
+    const result = await createWorktree(repo, 'fix/x', 'does-not-exist')
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toBeTruthy()
+    expect(existsSync(join(root, 'repo-fix-x'))).toBe(false)
+  })
+
+  it('refuses a branch that sanitizes to an empty path segment', async () => {
+    const result = await createWorktree(repo, '///', 'main')
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toBeTruthy()
   })
 })
