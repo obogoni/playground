@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-11
-**Current Work:** workspace-sidebar-tree (M1) — spec drafted on branch `feature/workspace-sidebar-tree`, awaiting review → design phase
+**Current Work:** workspace-sidebar-tree COMPLETE — next: specify M1 feature "Launch Shortcuts" (last M1 feature; app becomes daily-usable)
 
 ---
 
@@ -57,9 +57,8 @@
 
 ## Todos
 
-- [x] Specify next M1 feature: "Workspace Registration & Sidebar Tree" — `.specs/features/workspace-sidebar-tree/spec.md` (TREE-01..06)
-- [ ] Design workspace-sidebar-tree (architecture: WorkspaceRegistry, RepoScanner, WorktreeManager.list, IPC channels, pane components)
-- [ ] Break workspace-sidebar-tree into tasks, then execute
+- [x] workspace-sidebar-tree: specified, designed, executed (T1–T8), verified — TREE-01..06 all Verified
+- [ ] Specify next M1 feature: "Launch Shortcuts" (`ShortcutLauncher` + open-with cards in detail pane, handoff §1b)
 
 ---
 

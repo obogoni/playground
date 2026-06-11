@@ -20,7 +20,7 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - Design tokens (dark + light theme CSS variables), top bar shell (brand, segmented control, refresh, theme toggle)
 - Global config persistence scaffold (`%APPDATA%/<app>/`, last-session UI state incl. theme)
 
-**Workspace Registration & Sidebar Tree** - PLANNED
+**Workspace Registration & Sidebar Tree** - COMPLETE
 
 - Register/remove a workspace folder (`WorkspaceRegistry`, persisted)
 - Auto-discover git repos in a workspace (`RepoScanner`, single-level scan, ignore rules)

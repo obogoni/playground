@@ -1,7 +1,7 @@
 # Workspace Registration & Sidebar Tree — Tasks
 
 **Design**: `.specs/features/workspace-sidebar-tree/design.md`
-**Status**: In Progress
+**Status**: Done — T1..T8 complete, one commit each (63f69d9..4aac9c4). Gates: build, 29/29 Vitest behavior tests, CDP smoke 12/12 (`scripts/smoke-tree.mjs` + `smoke-refresh.mjs`).
 
 Gate commands (unchanged from app-skeleton):
 - **quick** = `npm test` (vitest run)

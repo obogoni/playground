@@ -1,23 +1,24 @@
 # Handoff
 
 **Date:** 2026-06-11
-**Feature:** workspace-sidebar-tree (M1)
-**Task:** Spec drafted — awaiting user review before Design phase
+**Feature:** workspace-sidebar-tree (M1) — COMPLETE
+**Task:** T1–T8 all done, gates passed, traceability verified
 
 ## Completed ✓
 
-- New branch `feature/workspace-sidebar-tree` created from `feature/project-setup` (main is still pre-skeleton; PR for project-setup not yet merged)
-- Spec written: `.specs/features/workspace-sidebar-tree/spec.md` — 6 requirements (TREE-01..06), grounded in PRD stories 1–4/16/20 and handoff §1a/§1b
+- Full pipeline on branch `feature/workspace-sidebar-tree`: spec → design → tasks → executed in 8 commits (`63f69d9..4aac9c4`)
+- Modules: `WorkspaceRegistry` (persistence + dedupe), `RepoScanner` (single-level, worktree-sibling-aware), `WorktreeManager.listWorktrees` (porcelain parse + dirty status), `buildTree` orchestration; IPC: `workspaces:add` (native picker), `workspaces:remove`, `tree:get`
+- UI: `Sidebar` (§1a — rows, selection, dirty dots, empty/missing/error states, hover remove), `WorktreeDetail` (§1b subset — breadcrumb, mono h1, status pills, location + copy)
+- Verified: 29/29 Vitest behavior tests (23 new); CDP smoke 12/12 (`scripts/smoke-tree.mjs`, `smoke-refresh.mjs`) incl. external-removal refresh reconciliation
 
 ## In Progress
 
-- Spec review gate — user has not yet approved the spec
+- Nothing mid-flight; clean checkpoint
 
 ## Pending
 
-- Design phase: WorkspaceRegistry, RepoScanner, WorktreeManager.list (list-only in M1), IPC channels in `src/shared/ipc-contract.ts`, Sidebar + Detail components
-- Tasks breakdown, then execute
-- Then: Launch Shortcuts feature (completes M1)
+- Specify last M1 feature: **Launch Shortcuts** (`ShortcutLauncher`: explorer.exe / wt.exe / code; open-with cards in detail pane per handoff §1b) — completes M1, app becomes daily-usable
+- PR for `feature/workspace-sidebar-tree` not yet opened (base: `feature/project-setup`, whose PR to `main` is still open)
 
 ## Blockers
 
@@ -25,6 +26,6 @@
 
 ## Context
 
-- Branch: `feature/workspace-sidebar-tree` (based on `feature/project-setup`)
-- Uncommitted: none after spec checkpoint commit
-- Related decisions: AD-001 (PRD + design handoff are sources of truth), AD-002 (milestone ordering), AD-003 (toolchain; `src/shared/ipc-contract.ts` is the IPC growth point, ConfigStore pattern = injected dir, Electron-free)
+- Branch: `feature/workspace-sidebar-tree` (based on `feature/project-setup` — main still pre-skeleton)
+- Uncommitted: none after docs checkpoint commit
+- Related decisions: AD-001..003 in STATE.md; smoke scripts reusable for future pane features

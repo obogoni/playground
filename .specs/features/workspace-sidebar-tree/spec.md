@@ -141,14 +141,14 @@ The shell exists but shows nothing. The daily-use value of M1 is seeing every wo
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| TREE-01 | P1: Register a workspace | Design | Pending |
-| TREE-02 | P1: Discover repos and worktrees | Design | Pending |
-| TREE-03 | P1: Sidebar tree | Design | Pending |
-| TREE-04 | P1: Worktree detail pane | Design | Pending |
-| TREE-05 | P2: Remove a workspace | Design | Pending |
-| TREE-06 | P2: Manual refresh | Design | Pending |
+| TREE-01 | P1: Register a workspace | Done (T1, T2, T5, T8) | Verified |
+| TREE-02 | P1: Discover repos and worktrees | Done (T1, T3, T4, T5) | Verified |
+| TREE-03 | P1: Sidebar tree | Done (T6, T8) | Verified |
+| TREE-04 | P1: Worktree detail pane | Done (T7, T8) | Verified |
+| TREE-05 | P2: Remove a workspace | Done (T2, T5, T6, T8) | Verified |
+| TREE-06 | P2: Manual refresh | Done (T5, T8) | Verified |
 
-**Coverage:** 6 total, 0 mapped to tasks, 6 unmapped ⚠️ (pre-design)
+**Coverage:** 6 total, 6 mapped to tasks, 0 unmapped ✅ (verified via 23 new module behavior tests — 29 total — + 12-check CDP smoke against a live seeded workspace, incl. external-removal refresh reconciliation)
 
 ---
 
