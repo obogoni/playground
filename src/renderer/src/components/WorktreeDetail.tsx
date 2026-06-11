@@ -10,8 +10,10 @@ import './WorktreeDetail.css'
 interface WorktreeDetailProps {
   workspaceName: string
   repoName: string
+  repoPath: string
   worktree: WorktreeNode
   onToast: (message: string) => void
+  onRemoved: (repoPath: string) => void
 }
 
 /** §1b launcher cards: tile color + label + mono command per tool. */
@@ -42,12 +44,16 @@ const LAUNCHERS: {
 export function WorktreeDetail({
   workspaceName,
   repoName,
+  repoPath,
   worktree,
-  onToast
+  onToast,
+  onRemoved
 }: WorktreeDetailProps): JSX.Element {
   // App keys this component by worktree id, so selection change remounts it:
   // copy feedback resets and the §1b fadeIn entrance replays for free.
   const [copied, setCopied] = useState(false)
+  const [removing, setRemoving] = useState(false)
+  const [removeError, setRemoveError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!copied) return
@@ -60,6 +66,34 @@ export function WorktreeDetail({
       .writeText(worktree.path)
       .then(() => setCopied(true))
       .catch(console.error)
+  }
+
+  // §1b/§Interactions remove guard: primary checkout outranks dirty in the note.
+  const removable = !worktree.dirty && !worktree.isDefault
+  const guardNote = worktree.isDefault
+    ? 'This is the repo’s primary checkout — it can’t be removed here.'
+    : worktree.dirty
+      ? `${worktree.changes} uncommitted change${worktree.changes === 1 ? '' : 's'} — commit or stash before removing.`
+      : null
+
+  const remove = (): void => {
+    setRemoving(true)
+    setRemoveError(null)
+    api
+      .invoke('worktrees:remove', { repoPath, worktreePath: worktree.path })
+      .then((result) => {
+        if (result.ok) {
+          onToast(`Removed ${worktree.branch}`)
+          onRemoved(repoPath)
+        } else {
+          setRemoving(false)
+          setRemoveError(result.error ?? 'Removal failed')
+        }
+      })
+      .catch((err) => {
+        setRemoving(false)
+        setRemoveError(err instanceof Error ? err.message : String(err))
+      })
   }
 
   const launch = (tool: ShortcutTool): void => {
@@ -122,8 +156,20 @@ export function WorktreeDetail({
             ))}
           </div>
         </section>
-        {/* M2 adds the danger section here; M3 the linked-task card above
-            Location — §1b section order preserved. */}
+        <div className="detail-danger">
+          <button
+            type="button"
+            className={`detail-remove-btn ${removable ? 'armed' : ''}`}
+            disabled={!removable || removing}
+            onClick={remove}
+          >
+            <Icon name="trash" size={15} />
+            Remove worktree
+          </button>
+          {guardNote && <span className="detail-danger-note">{guardNote}</span>}
+          {removeError && <span className="detail-danger-note error">{removeError}</span>}
+        </div>
+        {/* M3 adds the linked-task card above Location — §1b section order preserved. */}
       </div>
     </div>
   )

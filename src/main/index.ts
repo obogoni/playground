@@ -76,9 +76,7 @@ app.whenReady().then(() => {
     createWorktree(repoPath, branch, baseBranch)
   )
   // No force path from the UI in v1 — the dirty guard is not overridable here.
-  handle('worktrees:remove', ({ repoPath, worktreePath }) =>
-    removeWorktree(repoPath, worktreePath)
-  )
+  handle('worktrees:remove', ({ repoPath, worktreePath }) => removeWorktree(repoPath, worktreePath))
 
   const launcher = new ShortcutLauncher()
   handle('shortcuts:launch', ({ tool, path }) => launcher.launch(tool, path))
