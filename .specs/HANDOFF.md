@@ -18,7 +18,7 @@
 ## Pending
 
 - Specify last M1 feature: **Launch Shortcuts** (`ShortcutLauncher`: explorer.exe / wt.exe / code; open-with cards in detail pane per handoff §1b) — completes M1, app becomes daily-usable
-- PR for `feature/workspace-sidebar-tree` not yet opened (base: `feature/project-setup`, whose PR to `main` is still open)
+- PR #11 open: `feature/workspace-sidebar-tree` → `main` (skeleton PR #10 was merged; next feature branches from main after #11 merges)
 
 ## Blockers
 
@@ -26,6 +26,6 @@
 
 ## Context
 
-- Branch: `feature/workspace-sidebar-tree` (based on `feature/project-setup` — main still pre-skeleton)
+- Branch: `feature/workspace-sidebar-tree` (PR #11 → main; sits exactly on the merged skeleton commit)
 - Uncommitted: none after docs checkpoint commit
 - Related decisions: AD-001..003 in STATE.md; smoke scripts reusable for future pane features
