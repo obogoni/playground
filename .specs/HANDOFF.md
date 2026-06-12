@@ -11,7 +11,7 @@
 
 ## In Progress
 
-- PR `feature/board-direction` → main (open after this checkpoint)
+- PR #26 `feature/board-direction` → main open, awaiting review/merge
 
 ## Pending
 
