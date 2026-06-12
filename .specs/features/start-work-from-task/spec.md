@@ -134,15 +134,15 @@ The app now has both halves of its headline loop — pinned ADO tasks and full w
 
 ## Requirement Traceability
 
-| Requirement ID | Story                                          | Phase | Status  |
-| -------------- | ---------------------------------------------- | ----- | ------- |
-| STWK-01        | P1: `branchNameFor` + `taskIdFromBranch`       | -     | Pending |
-| STWK-02        | P1: Start-work dialog (§3)                     | -     | Pending |
-| STWK-03        | P1: Sidebar task tags (§1a)                    | -     | Pending |
-| STWK-04        | P1: Task card footer (§1c)                     | -     | Pending |
-| STWK-05        | P2: Linked-task card in detail pane (§1b)      | -     | Pending |
+| Requirement ID | Story                                          | Phase | Status   |
+| -------------- | ---------------------------------------------- | ----- | -------- |
+| STWK-01        | P1: `branchNameFor` + `taskIdFromBranch`       | Done  | Verified |
+| STWK-02        | P1: Start-work dialog (§3)                     | Done  | Verified |
+| STWK-03        | P1: Sidebar task tags (§1a)                    | Done  | Verified |
+| STWK-04        | P1: Task card footer (§1c)                     | Done  | Verified |
+| STWK-05        | P2: Linked-task card in detail pane (§1b)      | Done  | Verified |
 
-**Coverage:** 5 total, 0 mapped to tasks (tasks implicit — Medium scope), 0 verified
+**Coverage:** 5 total, 5 verified ✅ — 14 new Vitest cases (template rendering: type mapping, slug/unicode/empty-slug, custom/blank templates, literal passthrough; extraction: templated/hand-typed/multi-number/adjacent-digit/single-digit/no-number; 90 total green) + 12-check CDP smoke (`scripts/smoke-start-work.mjs`) driving the full loop against a live ADO work item (via `SMOKE_TASK_URL`): pin → footer → dialog prefill → live preview edit → create → sidebar tag → linked card → footer flip → unpin "not pinned" degradation → guarded cleanup. Screenshot fidelity pass of the §3 dialog and the §1a/§1b/§1c linked view vs `.dc.html`. The branch-collision edge case surfaced its inline dialog error live during the fidelity pass (stale branch from the prior run).
 
 ---
 
@@ -155,6 +155,6 @@ The app now has both halves of its headline loop — pinned ADO tasks and full w
 
 ## Success Criteria
 
-- [ ] From a pinned task with `az login` active: Start work → accept defaults → worktree exists at `<workspace>/<repo>-<sanitized-branch>` with branch `feature/<id>-<slug>`, selected in the sidebar with its task tag, linked card in the detail pane, and the task card footer reading "● 1 worktree" with a ghost "New branch" button
-- [ ] All `branchNameFor`/`taskIdFromBranch` cases green in Vitest
-- [ ] Visual fidelity pass vs `.dc.html`: §3 dialog, §1a tag line, §1b linked card, §1c footer
+- [x] From a pinned task with `az login` active: Start work → accept defaults → worktree exists at `<workspace>/<repo>-<sanitized-branch>` with branch `feature/<id>-<slug>`, selected in the sidebar with its task tag, linked card in the detail pane, and the task card footer reading "● 1 worktree" with a ghost "New branch" button (smoke-verified live, no restart needed for the footer flip)
+- [x] All `branchNameFor`/`taskIdFromBranch` cases green in Vitest
+- [x] Visual fidelity pass vs `.dc.html`: §3 dialog, §1a tag line, §1b linked card, §1c footer

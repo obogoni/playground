@@ -1,7 +1,7 @@
 # Roadmap
 
 **Current Milestone:** M3 — ADO Tasks & Start-Work Flow
-**Status:** In Progress (M1 + M2 complete — full worktree lifecycle in-app; Pinned Tasks Pane specified)
+**Status:** Complete pending PR merge (M1 + M2 done; both M3 features verified — next: M4 Board View & Configurability)
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
 
@@ -66,7 +66,7 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - `TaskBoard`: pin by ID or URL (URL parsing, defaults from global config), unpin, persistence
 - Tasks pane UI: add row, task cards with type/state pills, live refresh on app focus + manual
 
-**Start Work from Task** - PLANNED
+**Start Work from Task** - COMPLETE
 
 - Branch template rendering `{type}/{id}-{slug}` (Bug → `bugfix`, else `feature`; slug sanitization), editable in dialog
 - Start-work dialog per design handoff (repo chips, base branch, live path preview)
