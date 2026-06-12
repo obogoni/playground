@@ -21,7 +21,14 @@ if (!TASK_URL) {
   )
   process.exit(1)
 }
-const TASK_ID = Number(TASK_URL.match(/\/edit\/(\d+)/)[1])
+const taskIdMatch = TASK_URL.match(/\/edit\/(\d+)/)
+if (!taskIdMatch) {
+  console.error(
+    `SMOKE_TASK_URL does not look like a work item URL (expected .../_workitems/edit/<id>): ${TASK_URL}`
+  )
+  process.exit(1)
+}
+const TASK_ID = Number(taskIdMatch[1])
 const CONFIG_PATH = join(process.env.APPDATA, 'playground', 'config.json')
 
 async function pageTarget() {

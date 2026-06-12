@@ -8,10 +8,22 @@ import { join } from 'path'
 
 const PORT = 9222
 const TASK_URL = process.env.SMOKE_TASK_URL
+if (!TASK_URL) {
+  console.error(
+    'SMOKE_TASK_URL is required (a dev.azure.com work item URL, e.g. https://dev.azure.com/<org>/<project>/_workitems/edit/<id>)'
+  )
+  process.exit(1)
+}
 const OUT = process.argv[2] ?? '.'
 
 const targets = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json()
 const page = targets.find((t) => t.type === 'page')
+if (!page) {
+  console.error(
+    `No CDP page target on port ${PORT} — is the app running with --remote-debugging-port=${PORT}?`
+  )
+  process.exit(1)
+}
 const ws = new WebSocket(page.webSocketDebuggerUrl)
 await new Promise((resolve, reject) => {
   ws.addEventListener('open', resolve)
