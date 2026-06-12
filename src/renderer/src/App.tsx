@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { AppConfig } from '../../shared/config'
-import type { TasksSnapshot } from '../../shared/tasks'
+import type { PinnedTaskView, TasksSnapshot } from '../../shared/tasks'
+import { taskIdFromBranch } from '../../shared/tasks'
 import type { WorkspaceNode, WorktreeNode } from '../../shared/tree'
 import { NewWorktreeDialog } from './components/NewWorktreeDialog'
 import { Sidebar } from './components/Sidebar'
+import { StartWorkDialog } from './components/StartWorkDialog'
 import { TasksPane } from './components/TasksPane'
 import { Toast } from './components/Toast'
 import { TopBar } from './components/TopBar'
@@ -39,6 +41,20 @@ function findWorktree(tree: WorkspaceNode[], id: string | null): SelectedWorktre
   return null
 }
 
+/** Worktrees per extracted task ID across all workspaces (STWK-04, spec §Edge Cases). */
+function countWorktreesByTask(tree: WorkspaceNode[]): Map<number, number> {
+  const counts = new Map<number, number>()
+  for (const workspace of tree) {
+    for (const repo of workspace.repos) {
+      for (const worktree of repo.worktrees) {
+        const id = taskIdFromBranch(worktree.branch)
+        if (id !== null) counts.set(id, (counts.get(id) ?? 0) + 1)
+      }
+    }
+  }
+  return counts
+}
+
 function App(): JSX.Element {
   const [ui, setUi] = useState<UiState | null>(null)
   const [tree, setTree] = useState<WorkspaceNode[]>([])
@@ -47,12 +63,15 @@ function App(): JSX.Element {
   const dismissToast = useCallback(() => setToast(null), [])
   /** Repo path the new-worktree dialog was opened for; null = closed. */
   const [dialogRepoPath, setDialogRepoPath] = useState<string | null>(null)
+  /** Task the start-work dialog was opened for; null = closed. */
+  const [startWorkTask, setStartWorkTask] = useState<PinnedTaskView | null>(null)
   const [tasks, setTasks] = useState<TasksSnapshot>({
     tasks: [],
     auth: 'unknown',
     lastSyncAt: null
   })
   const [adoOrg, setAdoOrg] = useState<string | null>(null)
+  const [branchTemplate, setBranchTemplate] = useState('')
 
   const refreshTree = useCallback((): void => {
     api
@@ -75,6 +94,7 @@ function App(): JSX.Element {
       .then((config) => {
         setUi(config.ui)
         setAdoOrg(config.ado.defaultOrg)
+        setBranchTemplate(config.ado.branchTemplate)
       })
       .catch((err) => {
         console.error(err)
@@ -136,6 +156,7 @@ function App(): JSX.Element {
   // PRD start-work flow: refresh and select the new worktree, no auto-open.
   const worktreeCreated = (worktreePath: string): void => {
     setDialogRepoPath(null)
+    setStartWorkTask(null)
     api
       .invoke('tree:get')
       .then((next) => {
@@ -151,6 +172,11 @@ function App(): JSX.Element {
   }
 
   const selected = findWorktree(tree, selectedId)
+  const worktreeCounts = countWorktreesByTask(tree)
+  const linkedTaskId = selected ? taskIdFromBranch(selected.worktree.branch) : null
+  // First pin in config order wins when IDs collide across orgs (spec §Edge Cases).
+  const linkedPin =
+    linkedTaskId === null ? null : (tasks.tasks.find((task) => task.id === linkedTaskId) ?? null)
 
   return (
     <>
@@ -174,6 +200,7 @@ function App(): JSX.Element {
           <>
             <Sidebar
               tree={tree}
+              tasks={tasks.tasks}
               selectedId={selectedId}
               onSelect={setSelectedId}
               onAddWorkspace={addWorkspace}
@@ -187,13 +214,20 @@ function App(): JSX.Element {
                 repoName={selected.repoName}
                 repoPath={selected.repoPath}
                 worktree={selected.worktree}
+                linkedTaskId={linkedTaskId}
+                linkedPin={linkedPin}
                 onToast={setToast}
                 onRemoved={worktreeRemoved}
               />
             ) : (
               <WorktreeDetailEmpty />
             )}
-            <TasksPane snapshot={tasks} onSnapshot={setTasks} />
+            <TasksPane
+              snapshot={tasks}
+              worktreeCounts={worktreeCounts}
+              onSnapshot={setTasks}
+              onStartWork={setStartWorkTask}
+            />
           </>
         ) : (
           <div className="content-placeholder">
@@ -206,6 +240,15 @@ function App(): JSX.Element {
           tree={tree}
           initialRepoPath={dialogRepoPath}
           onClose={() => setDialogRepoPath(null)}
+          onCreated={worktreeCreated}
+        />
+      )}
+      {startWorkTask && (
+        <StartWorkDialog
+          tree={tree}
+          task={startWorkTask}
+          branchTemplate={branchTemplate}
+          onClose={() => setStartWorkTask(null)}
           onCreated={worktreeCreated}
         />
       )}

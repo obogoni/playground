@@ -1,4 +1,4 @@
-/* Worktree detail pane — handoff §1b (subset: breadcrumb, title, status, location) */
+/* Worktree detail pane — handoff §1b */
 
 .detail {
   flex: 1;
@@ -77,6 +77,94 @@
   background: var(--panel-2);
   border: 1px solid var(--border);
   color: var(--text-muted);
+}
+
+/* §1b linked-task card (M3 start-work) */
+.detail-task-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 14px;
+  padding: 18px 20px;
+  transition: border-color 0.12s;
+}
+
+.detail-task-card:hover,
+.detail-task-card:focus-visible {
+  border-color: var(--accent);
+}
+
+.detail-task-card:focus-visible {
+  outline: none;
+}
+
+.detail-task-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+/* Prototype §1b: bigger pills than the tasks-pane cards (12px, 3px 11px, 6px dot) */
+.detail-task-header .task-pill {
+  font-size: 12px;
+  padding: 3px 11px;
+}
+
+.detail-task-header .task-pill-dot {
+  width: 6px;
+  height: 6px;
+}
+
+.detail-task-spacer {
+  flex: 1;
+  min-width: 10px;
+}
+
+.detail-task-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.detail-task-body {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.detail-task-id {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.detail-task-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.detail-task-unavailable {
+  font-size: 13.5px;
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.detail-task-note {
+  border: 1px dashed var(--border-strong);
+  border-radius: 14px;
+  padding: 16px 20px;
+  font-size: 13.5px;
+  color: var(--text-faint);
 }
 
 .detail-section {

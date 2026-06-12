@@ -2,47 +2,24 @@ import { useState } from 'react'
 import type { JSX } from 'react'
 import type { PinnedTaskView, TasksSnapshot } from '../../../shared/tasks'
 import { api } from '../lib/api'
+import { stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import './TasksPane.css'
 
 interface TasksPaneProps {
   snapshot: TasksSnapshot
+  /** Worktree count per extracted task ID, from the current tree snapshot. */
+  worktreeCounts: Map<number, number>
   onSnapshot: (snapshot: TasksSnapshot) => void
+  onStartWork: (task: PinnedTaskView) => void
 }
 
-/** Handoff §Semantic color usage — type pills. */
-function typeClass(type: string): string {
-  switch (type.toLowerCase()) {
-    case 'bug':
-      return 'red'
-    case 'feature':
-      return 'accent'
-    case 'chore':
-      return 'amber'
-    default:
-      return 'muted'
-  }
-}
-
-/** Handoff §Semantic color usage — state pills/dots. */
-function stateClass(state: string): string {
-  switch (state.toLowerCase()) {
-    case 'active':
-      return 'green'
-    case 'new':
-      return 'blue'
-    case 'in progress':
-      return 'amber'
-    case 'resolved':
-      return 'accent'
-    case 'closed':
-      return 'faint'
-    default:
-      return 'muted'
-  }
-}
-
-export function TasksPane({ snapshot, onSnapshot }: TasksPaneProps): JSX.Element {
+export function TasksPane({
+  snapshot,
+  worktreeCounts,
+  onSnapshot,
+  onStartWork
+}: TasksPaneProps): JSX.Element {
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pinning, setPinning] = useState(false)
@@ -112,7 +89,9 @@ export function TasksPane({ snapshot, onSnapshot }: TasksPaneProps): JSX.Element
           <TaskCard
             key={`${task.org}/${task.project}/${task.id}`}
             task={task}
+            worktreeCount={worktreeCounts.get(task.id) ?? 0}
             onUnpin={() => unpin(task)}
+            onStartWork={() => onStartWork(task)}
           />
         ))}
       </div>
@@ -120,7 +99,14 @@ export function TasksPane({ snapshot, onSnapshot }: TasksPaneProps): JSX.Element
   )
 }
 
-function TaskCard({ task, onUnpin }: { task: PinnedTaskView; onUnpin: () => void }): JSX.Element {
+interface TaskCardProps {
+  task: PinnedTaskView
+  worktreeCount: number
+  onUnpin: () => void
+  onStartWork: () => void
+}
+
+function TaskCard({ task, worktreeCount, onUnpin, onStartWork }: TaskCardProps): JSX.Element {
   return (
     <article className="task-card">
       <div className="task-card-header">
@@ -146,6 +132,30 @@ function TaskCard({ task, onUnpin }: { task: PinnedTaskView; onUnpin: () => void
       ) : (
         <div className="task-card-unavailable">details unavailable</div>
       )}
+      <div className="task-card-footer">
+        {worktreeCount > 0 ? (
+          <span className="task-card-wt">
+            <span className="task-card-wt-dot" />
+            {worktreeCount} worktree{worktreeCount === 1 ? '' : 's'}
+          </span>
+        ) : (
+          <span className="task-card-wt none">No worktree yet</span>
+        )}
+        <button
+          type="button"
+          className={`task-start-btn ${worktreeCount > 0 ? 'ghost' : 'primary'}`}
+          disabled={!task.details}
+          title={
+            task.details
+              ? undefined
+              : 'Details unavailable — the branch template needs the task type and title'
+          }
+          onClick={onStartWork}
+        >
+          <Icon name="git-fork" size={13} strokeWidth={2} />
+          {worktreeCount > 0 ? 'New branch' : 'Start work'}
+        </button>
+      </div>
     </article>
   )
 }

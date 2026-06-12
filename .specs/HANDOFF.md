@@ -1,23 +1,23 @@
 # Handoff
 
-**Date:** 2026-06-11
-**Feature:** pinned-tasks-pane (M3, first feature) — COMPLETE; PNTK-01..05 Verified.
+**Date:** 2026-06-12
+**Feature:** start-work-from-task (M3, final feature) — COMPLETE; STWK-01..05 Verified.
 
 ## Completed ✓
 
-- Resumed from PR #14 merge (`b36183d`); spec → user review ("go ahead") → execute on `feature/pinned-tasks-pane` (Medium scope: no design/tasks docs)
-- `AdoGateway` (`ado-gateway.ts`): az token via execFile+shell (az is a .cmd shim), cached to `expires_on`/`expiresOn` minus 2min; batch GET per org/project group with `errorPolicy=omit`; only token failures/401/403 are `auth` errors — network/404 leave items unresolved
-- `TaskBoard` (`task-board.ts`): `parseTaskInput` (URL slugs/query/encoded names, bare IDs need `ado.defaultOrg/defaultProject`), validate-before-persist pin, duplicate guard, unpin, details cache replaced wholesale on refresh (deleted items degrade to id-only); 4 `tasks:*` IPC channels
-- UI: `TasksPane` per §1c (no card footer — deferred to start-work), hover-✕ unpin, inline add-row errors, az-login prompt block + id-only cards; focus-debounced + manual refresh; top-bar sync status wired (`adoOrg ?? first pin's org`)
-- Verified: typecheck/lint/76 Vitest green (23 new); CDP smoke 11/11 (`scripts/smoke-tasks.mjs`) vs a live ADO work item (via `SMOKE_TASK_URL`); auth-failure pass by relaunching with az stripped from PATH (NOT `az logout` — preserves the real session); screenshot fidelity pass vs `.dc.html`
+- Resumed from PR #15 merge (`9889df6`); spec → user review ("go ahead") → execute on `feature/start-work-from-task` (Medium scope: no design/tasks docs)
+- Shared pure core (`src/shared/tasks.ts`): `branchNameFor` ({type}/{id}-{slug}; Bug→bugfix else feature; slug lowercase + non-alnum runs→`-`; empty slug trims dangling segment separators; blank template falls back) and `taskIdFromBranch` (first 2+-digit run not adjacent to letters/digits — `oauth2`/sha-likes never tag); config grows `ado.branchTemplate` (ConfigStore default-merge covers existing files)
+- No new IPC: start-work reuses `worktrees:create`; §1b card is a plain `<a target="_blank">` (setWindowOpenHandler → shell.openExternal already in place)
+- UI: `StartWorkDialog` (§3, NewWorktreeDialog chassis; helpers extracted to `lib/repo-options.ts` for react-refresh); sidebar §1a tag line (pill+#id+title+state dot; `#id — not pinned` third state; `details unavailable` degradation); §1c card footer (count spans all workspaces via `countWorktreesByTask`, primary "Start work"/ghost "New branch", disabled when details null); §1b linked-task card; pill helpers moved to `lib/task-pills.ts`
+- Verified: typecheck/lint/90 Vitest green (14 new in `src/shared/tasks.test.ts`); CDP smoke 12/12 (`scripts/smoke-start-work.mjs`) vs a live ADO work item (via `SMOKE_TASK_URL`); screenshot fidelity pass (§3 dialog + linked 3-pane view) vs `.dc.html`
 
 ## In Progress
 
-- PR #15 `feature/pinned-tasks-pane` → main open, awaiting review/merge
+- PR #16 `feature/start-work-from-task` → main open, awaiting review/merge
 
 ## Pending
 
-- After PR merges: specify M3 **Start Work from Task** (branch template `{type}/{id}-{slug}` rendering in `TaskBoard.branchNameFor`, `taskIdFromBranch` extraction, start-work dialog per handoff §3, task tags on sidebar rows, linked-task card in detail pane §1b, card footer worktree counts + Start work button in §1c)
+- After PR merges: M3 done. Specify M4 **Board Direction** (pinned-task chip strip + workspace/repo-grouped worktree card grid, chip highlight/dim, per-card launchers, direction persistence — handoff §2) or **Per-Workspace Config** (`.app/` branch template override + settings UI for org/project/template)
 
 ## Blockers
 
@@ -25,8 +25,9 @@
 
 ## Context
 
-- Branch: `feature/pinned-tasks-pane`
+- Branch: `feature/start-work-from-task`
 - Uncommitted: none after docs checkpoint commit
-- Related decisions: spec §Decisions (hover-✕ unpin ⚠️ approved; bare-ID needs hand-edited config defaults until M4 ⚠️ approved; auth prompt is a block above id-only cards, never hides pins; validate-before-persist)
-- Live ADO work item for smoke comes from the `SMOKE_TASK_URL` env var (kept local, never committed); az login active on this machine
-- Smoke runbook unchanged (seed config swap + `--remote-debugging-port=9222`), but `smoke-tasks.mjs` needs no seeded workspaces — minimal config with null ado defaults; script polls for `.tasks-pane` before driving (first run failed evaluating too early)
+- Related decisions: spec §Decisions (extraction boundary rule ⚠️ approved; `#id — not pinned` third state ⚠️ approved; Start-work disabled without details ⚠️ approved; pure linking logic in `src/shared` per `sanitizeBranch` precedent; counts/joins renderer-side off the existing TasksSnapshot — no new fetch path)
+- Smoke runbook: seed config now needs one workspace containing a clean temp git repo (script registers nothing itself); re-runs need a fresh repo or `git branch -D` of the templated branch — `git worktree remove` keeps the branch, and the collision surfaces as the dialog's inline error (that's the spec's edge case working)
+- `scripts/smoke-screenshot.mjs` re-stages pin+worktree and captures §3 dialog + linked view PNGs for fidelity passes (not part of the gate)
+- Live ADO work item URL comes from `SMOKE_TASK_URL` env var (kept local, never committed); az login active on this machine; a valid URL can be rediscovered via the azure-devops MCP (`wit_my_work_items`)

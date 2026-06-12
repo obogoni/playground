@@ -1,4 +1,5 @@
 import type { PinnedTask } from './tasks'
+import { DEFAULT_BRANCH_TEMPLATE } from './tasks'
 import type { WorkspaceEntry } from './tree'
 
 export interface AppConfig {
@@ -11,6 +12,8 @@ export interface AppConfig {
   ado: {
     defaultOrg: string | null
     defaultProject: string | null
+    /** Start-work branch template; blank falls back to the default at render time. */
+    branchTemplate: string
   }
   pinnedTasks: PinnedTask[]
 }
@@ -27,7 +30,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   workspaces: [],
   ado: {
     defaultOrg: null,
-    defaultProject: null
+    defaultProject: null,
+    branchTemplate: DEFAULT_BRANCH_TEMPLATE
   },
   pinnedTasks: []
 }

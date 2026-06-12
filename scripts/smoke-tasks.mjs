@@ -12,7 +12,7 @@ const PORT = 9222
 const TASK_URL = process.env.SMOKE_TASK_URL
 if (!TASK_URL) {
   console.error(
-    'SMOKE_TASK_URL is required (a dev.azure.com work item URL, e.g. https://dev.azure.com/<org>/<project>/_workitems/edit/<id>)',
+    'SMOKE_TASK_URL is required (a dev.azure.com work item URL, e.g. https://dev.azure.com/<org>/<project>/_workitems/edit/<id>)'
   )
   process.exit(1)
 }

@@ -1,10 +1,14 @@
 import type { JSX } from 'react'
+import type { PinnedTaskView } from '../../../shared/tasks'
+import { taskIdFromBranch } from '../../../shared/tasks'
 import type { RepoNode, WorkspaceNode, WorktreeNode } from '../../../shared/tree'
+import { stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import './Sidebar.css'
 
 interface SidebarProps {
   tree: WorkspaceNode[]
+  tasks: PinnedTaskView[]
   selectedId: string | null
   onSelect: (id: string) => void
   onAddWorkspace: () => void
@@ -14,6 +18,7 @@ interface SidebarProps {
 
 export function Sidebar({
   tree,
+  tasks,
   selectedId,
   onSelect,
   onAddWorkspace,
@@ -46,6 +51,7 @@ export function Sidebar({
             <Workspace
               key={workspace.id}
               workspace={workspace}
+              tasks={tasks}
               selectedId={selectedId}
               onSelect={onSelect}
               onRemove={() => onRemoveWorkspace(workspace.id)}
@@ -60,6 +66,7 @@ export function Sidebar({
 
 interface WorkspaceProps {
   workspace: WorkspaceNode
+  tasks: PinnedTaskView[]
   selectedId: string | null
   onSelect: (id: string) => void
   onRemove: () => void
@@ -68,6 +75,7 @@ interface WorkspaceProps {
 
 function Workspace({
   workspace,
+  tasks,
   selectedId,
   onSelect,
   onRemove,
@@ -101,6 +109,7 @@ function Workspace({
           <Repo
             key={repo.path}
             repo={repo}
+            tasks={tasks}
             selectedId={selectedId}
             onSelect={onSelect}
             onNewWorktree={() => onNewWorktree(repo.path)}
@@ -113,12 +122,13 @@ function Workspace({
 
 interface RepoProps {
   repo: RepoNode
+  tasks: PinnedTaskView[]
   selectedId: string | null
   onSelect: (id: string) => void
   onNewWorktree: () => void
 }
 
-function Repo({ repo, selectedId, onSelect, onNewWorktree }: RepoProps): JSX.Element {
+function Repo({ repo, tasks, selectedId, onSelect, onNewWorktree }: RepoProps): JSX.Element {
   return (
     <div className="sidebar-repo">
       <div className="sidebar-repo-row">
@@ -144,6 +154,7 @@ function Repo({ repo, selectedId, onSelect, onNewWorktree }: RepoProps): JSX.Ele
             <WorktreeRow
               key={worktree.id}
               worktree={worktree}
+              tasks={tasks}
               selected={worktree.id === selectedId}
               onSelect={() => onSelect(worktree.id)}
             />
@@ -156,11 +167,16 @@ function Repo({ repo, selectedId, onSelect, onNewWorktree }: RepoProps): JSX.Ele
 
 interface WorktreeRowProps {
   worktree: WorktreeNode
+  tasks: PinnedTaskView[]
   selected: boolean
   onSelect: () => void
 }
 
-function WorktreeRow({ worktree, selected, onSelect }: WorktreeRowProps): JSX.Element {
+function WorktreeRow({ worktree, tasks, selected, onSelect }: WorktreeRowProps): JSX.Element {
+  const taskId = taskIdFromBranch(worktree.branch)
+  // First pin in config order wins when IDs collide across orgs (spec §Edge Cases).
+  const pin = taskId === null ? null : (tasks.find((task) => task.id === taskId) ?? null)
+
   return (
     <button
       type="button"
@@ -172,9 +188,32 @@ function WorktreeRow({ worktree, selected, onSelect }: WorktreeRowProps): JSX.El
         <span className="sidebar-worktree-branch">{worktree.branch}</span>
         {worktree.dirty && <span className="sidebar-dirty-dot" title="uncommitted changes" />}
       </span>
-      {/* Task tags land in M3; until then every row carries the §1a untagged text. */}
       <span className="sidebar-worktree-line2">
-        {worktree.isDefault ? 'primary checkout — no task' : 'no task ID in branch'}
+        {taskId === null ? (
+          <span className="sidebar-task-note">
+            {worktree.isDefault ? 'primary checkout — no task' : 'no task ID in branch'}
+          </span>
+        ) : pin === null ? (
+          <span className="sidebar-task-note">#{taskId} — not pinned</span>
+        ) : pin.details === null ? (
+          <>
+            <span className="sidebar-task-id">#{taskId}</span>
+            <span className="sidebar-task-note">details unavailable</span>
+          </>
+        ) : (
+          <>
+            <span className={`task-pill ${typeClass(pin.details.type)}`}>
+              <span className="task-pill-dot" />
+              {pin.details.type}
+            </span>
+            <span className="sidebar-task-id">#{taskId}</span>
+            <span className="sidebar-task-title">{pin.details.title}</span>
+            <span
+              className={`sidebar-state-dot ${stateClass(pin.details.state)}`}
+              title={pin.details.state}
+            />
+          </>
+        )}
       </span>
     </button>
   )
