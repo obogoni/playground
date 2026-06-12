@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-12
-**Current Work:** board-direction (M4, first feature) COMPLETE on `feature/board-direction` — BORD-01..04 Verified (90 Vitest + 10/10 CDP smoke vs live ADO + fidelity pass dark/light). Next: PR → main, then specify M4 "Per-Workspace Config" (final feature)
+**Current Work:** per-workspace-config (M4, final feature) SPECIFIED on `feature/per-workspace-config` (PWCF-01..04) — awaiting user approval of spec decisions (settings entry point; repo-switch re-render rule) before execute
 
 ---
 
@@ -79,7 +79,9 @@
 - [x] Specify M4 "Board Direction" (`.specs/features/board-direction/spec.md`, BORD-01..04) on `feature/board-direction`
 - [x] User approved board-direction spec decisions ("go ahead": inline strip pin input; chip "details unavailable" degradation)
 - [x] Execute board-direction: `BoardView` (strip/chips/highlight/cards/inline pin) replacing the App.tsx placeholder — BORD-01..04 Verified
-- [ ] Open PR `feature/board-direction` → main; then specify M4 "Per-Workspace Config"
+- [x] Open PR `feature/board-direction` → main (PR #26, merged 2026-06-12)
+- [x] Specify M4 "Per-Workspace Config" (`.specs/features/per-workspace-config/spec.md`, PWCF-01..04) on `feature/per-workspace-config`
+- [ ] User approval of PWCF spec decisions (gear-button settings dialog; repo-switch re-render rule), then execute
 
 ---
 
