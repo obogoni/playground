@@ -8,7 +8,7 @@ export interface AppConfig {
     direction: 'tree' | 'board'
   }
   workspaces: WorkspaceEntry[]
-  /** Defaults for resolving bare work-item IDs; hand-edited until the M4 settings UI. */
+  /** Defaults for resolving bare work-item IDs; editable in the settings dialog. */
   ado: {
     defaultOrg: string | null
     defaultProject: string | null

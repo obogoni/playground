@@ -74,7 +74,9 @@ app.whenReady().then(() => {
     return registry.add(filePaths[0])
   })
   handle('workspaces:remove', ({ id }) => registry.remove(id))
-  handle('workspaces:branch-template', ({ workspacePath }) => workspaceBranchTemplate(workspacePath))
+  handle('workspaces:branch-template', ({ workspacePath }) =>
+    workspaceBranchTemplate(workspacePath)
+  )
   handle('tree:get', () => buildTree(registry))
   handle('worktrees:create', ({ repoPath, branch, baseBranch }) =>
     createWorktree(repoPath, branch, baseBranch)
