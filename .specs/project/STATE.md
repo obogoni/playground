@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-12
-**Current Work:** board-direction (M4, first feature) SPECIFIED on `feature/board-direction` (BORD-01..04, Medium scope — renderer-only, no new IPC). Awaiting user review of spec ⚠️ decisions (inline strip pin input; chip degradation), then Execute
+**Current Work:** board-direction (M4, first feature) COMPLETE on `feature/board-direction` — BORD-01..04 Verified (90 Vitest + 10/10 CDP smoke vs live ADO + fidelity pass dark/light). Next: PR → main, then specify M4 "Per-Workspace Config" (final feature)
 
 ---
 
@@ -77,7 +77,8 @@
 - [x] Execute start-work-from-task: shared `branchNameFor`/`taskIdFromBranch` + StartWorkDialog + sidebar tags + card footer + linked-task card — STWK-01..05 Verified
 - [x] Open PR `feature/start-work-from-task` → main (PR #16, merged 2026-06-12) — M3 done
 - [x] Specify M4 "Board Direction" (`.specs/features/board-direction/spec.md`, BORD-01..04) on `feature/board-direction`
-- [ ] User review of board-direction spec ⚠️ decisions (inline strip pin input; chip "details unavailable" degradation), then Execute
+- [x] User approved board-direction spec decisions ("go ahead": inline strip pin input; chip "details unavailable" degradation)
+- [x] Execute board-direction: `BoardView` (strip/chips/highlight/cards/inline pin) replacing the App.tsx placeholder — BORD-01..04 Verified
 - [ ] Open PR `feature/board-direction` → main; then specify M4 "Per-Workspace Config"
 
 ---

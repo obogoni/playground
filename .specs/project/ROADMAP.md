@@ -80,7 +80,7 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 
 ### Features
 
-**Board Direction** - IN PROGRESS (specified)
+**Board Direction** - COMPLETE
 
 - Pinned-task chip strip + workspace/repo-grouped worktree card grid
 - Chip highlight/dim behavior, per-card launcher buttons; direction choice persisted

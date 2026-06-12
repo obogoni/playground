@@ -1,23 +1,21 @@
 # Handoff
 
 **Date:** 2026-06-12
-**Feature:** start-work-from-task (M3, final feature) — COMPLETE; STWK-01..05 Verified.
+**Feature:** board-direction (M4, first feature) — COMPLETE; BORD-01..04 Verified.
 
 ## Completed ✓
 
-- Resumed from PR #15 merge (`9889df6`); spec → user review ("go ahead") → execute on `feature/start-work-from-task` (Medium scope: no design/tasks docs)
-- Shared pure core (`src/shared/tasks.ts`): `branchNameFor` ({type}/{id}-{slug}; Bug→bugfix else feature; slug lowercase + non-alnum runs→`-`; empty slug trims dangling segment separators; blank template falls back) and `taskIdFromBranch` (first 2+-digit run not adjacent to letters/digits — `oauth2`/sha-likes never tag); config grows `ado.branchTemplate` (ConfigStore default-merge covers existing files)
-- No new IPC: start-work reuses `worktrees:create`; §1b card is a plain `<a target="_blank">` (setWindowOpenHandler → shell.openExternal already in place)
-- UI: `StartWorkDialog` (§3, NewWorktreeDialog chassis; helpers extracted to `lib/repo-options.ts` for react-refresh); sidebar §1a tag line (pill+#id+title+state dot; `#id — not pinned` third state; `details unavailable` degradation); §1c card footer (count spans all workspaces via `countWorktreesByTask`, primary "Start work"/ghost "New branch", disabled when details null); §1b linked-task card; pill helpers moved to `lib/task-pills.ts`
-- Verified: typecheck/lint/90 Vitest green (14 new in `src/shared/tasks.test.ts`); CDP smoke 12/12 (`scripts/smoke-start-work.mjs`) vs a live ADO work item (via `SMOKE_TASK_URL`); screenshot fidelity pass (§3 dialog + linked 3-pane view) vs `.dc.html`
+- Resumed after PR #16 merge (M3 closed); spec → user review ("go ahead") → execute on `feature/board-direction` (Medium scope: no design/tasks docs)
+- `BoardView` component family replaces the App.tsx board placeholder (renderer-only, no new IPC, no new pure logic): §2 chip strip (state dot + `#id` + title + worktree count badge; "details unavailable" degradation keeps the chip clickable), workspace→repo-grouped card grid (cards reuse the STWK four-state task block; footer = 3 launcher buttons via `shortcuts:launch` + repo name), chip highlight/dim/banner (transient state inside `BoardView` — unmount on direction switch clears it; unpinning the active task clears via derived `activeId`), inline strip pin input (prototype's stubbed "Pin task" made real over `tasks:pin`; Enter pins, Esc/blur-empty collapses, error keeps it open)
+- Verified: typecheck/lint/90 Vitest green (no new units by design); CDP smoke 10/10 (`scripts/smoke-board.mjs`) vs live ADO work item; screenshot fidelity pass vs `.dc.html` §2 (dark, dark+highlight, light)
 
 ## In Progress
 
-- PR #16 `feature/start-work-from-task` → main open, awaiting review/merge
+- PR `feature/board-direction` → main (open after this checkpoint)
 
 ## Pending
 
-- After PR merges: M3 done. Specify M4 **Board Direction** (pinned-task chip strip + workspace/repo-grouped worktree card grid, chip highlight/dim, per-card launchers, direction persistence — handoff §2) or **Per-Workspace Config** (`.app/` branch template override + settings UI for org/project/template)
+- After PR merges: specify M4 **Per-Workspace Config** (final feature) — `.app/` directory branch-template override + settings UI for default org/project + global template (PRD §Persistence, story 20; roadmap M4)
 
 ## Blockers
 
@@ -25,9 +23,8 @@
 
 ## Context
 
-- Branch: `feature/start-work-from-task`
+- Branch: `feature/board-direction`
 - Uncommitted: none after docs checkpoint commit
-- Related decisions: spec §Decisions (extraction boundary rule ⚠️ approved; `#id — not pinned` third state ⚠️ approved; Start-work disabled without details ⚠️ approved; pure linking logic in `src/shared` per `sanitizeBranch` precedent; counts/joins renderer-side off the existing TasksSnapshot — no new fetch path)
-- Smoke runbook: seed config now needs one workspace containing a clean temp git repo (script registers nothing itself); re-runs need a fresh repo or `git branch -D` of the templated branch — `git worktree remove` keeps the branch, and the collision surfaces as the dialog's inline error (that's the spec's edge case working)
-- `scripts/smoke-screenshot.mjs` re-stages pin+worktree and captures §3 dialog + linked view PNGs for fidelity passes (not part of the gate)
-- Live ADO work item URL comes from `SMOKE_TASK_URL` env var (kept local, never committed); az login active on this machine; a valid URL can be rediscovered via the azure-devops MCP (`wit_my_work_items`)
+- Related decisions: spec §Decisions (inline strip pin input ⚠️ approved; chip degradation ⚠️ approved; highlight matches by extracted ID only; no card selection/lifecycle from Board in v1 — launchers only, per prototype)
+- Smoke runbook (same as start-work): seed config = one workspace with a clean temp git repo, no pins; app via `npm run dev -- -- --remote-debugging-port=9222`; work item URL from `SMOKE_TASK_URL` (kept local; rediscoverable via azure-devops MCP `wit_my_work_items` — org triadesolucoes, project MultiClubes). Re-runs need `git branch -D feature/<id>-board-smoke` in the seed repo (worktree removal keeps the branch — its collision error is the spec edge case working)
+- Board screenshots were captured with a throwaway CDP script (pin+worktree staging → Board → dark/highlight/light PNGs); `scripts/smoke-screenshot.mjs` remains start-work-specific

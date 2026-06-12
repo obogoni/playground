@@ -115,14 +115,14 @@ The top bar has offered a Tree/Board segmented control since M1, but the Board s
 
 ## Requirement Traceability
 
-| Requirement ID | Story                                   | Phase   | Status  |
-| -------------- | --------------------------------------- | ------- | ------- |
-| BORD-01        | P1: Pinned-task chip strip (§2)         | Execute | Pending |
-| BORD-02        | P1: Worktree card grid (§2 canvas)      | Execute | Pending |
-| BORD-03        | P1: Chip highlight & dim                | Execute | Pending |
-| BORD-04        | P2: Pin from the board (inline input)   | Execute | Pending |
+| Requirement ID | Story                                   | Phase | Status   |
+| -------------- | --------------------------------------- | ----- | -------- |
+| BORD-01        | P1: Pinned-task chip strip (§2)         | Done  | Verified |
+| BORD-02        | P1: Worktree card grid (§2 canvas)      | Done  | Verified |
+| BORD-03        | P1: Chip highlight & dim                | Done  | Verified |
+| BORD-04        | P2: Pin from the board (inline input)   | Done  | Verified |
 
-**Coverage:** 4 total, 0 mapped to tasks (tasks implicit — Medium scope), 0 verified
+**Coverage:** 4 total, 4 verified ✅ — 10-check CDP smoke (`scripts/smoke-board.mjs`) vs a live ADO work item (via `SMOKE_TASK_URL`): strip render → inline pin Esc/error/happy path → grouped grid with primary-checkout degradation → task-linked card + count flip → highlight/dim/banner → ✕/toggle clears → direction round-trip transience → guarded IPC cleanup. Screenshot fidelity pass vs `.dc.html` §2 in dark, dark+highlight, and light. The existing 90 Vitest stay green (no new pure logic by design).
 
 ---
 
@@ -134,7 +134,7 @@ The top bar has offered a Tree/Board segmented control since M1, but the Board s
 
 ## Success Criteria
 
-- [ ] Switching to Board shows every worktree from the sidebar as a card under the right workspace/repo, with correct task blocks and working launchers
-- [ ] Chip click → ring/dim/banner behavior matches the prototype interaction exactly; clears on re-click, ✕, unpin, and direction switch
-- [ ] A task can be pinned end-to-end without leaving the Board direction
-- [ ] Fidelity pass vs `.dc.html` §2 in dark and light themes
+- [x] Switching to Board shows every worktree from the sidebar as a card under the right workspace/repo, with correct task blocks and working launchers (smoke: launcher buttons asserted present/wired; actual launching is the already-verified M1 `shortcuts:launch` path)
+- [x] Chip click → ring/dim/banner behavior matches the prototype interaction exactly; clears on re-click, ✕, unpin, and direction switch
+- [x] A task can be pinned end-to-end without leaving the Board direction (smoke-verified against live ADO)
+- [x] Fidelity pass vs `.dc.html` §2 in dark and light themes
