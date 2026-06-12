@@ -13,7 +13,7 @@
 
 ## In Progress
 
-- PR `feature/start-work-from-task` → main (opening as session closes)
+- PR #16 `feature/start-work-from-task` → main open, awaiting review/merge
 
 ## Pending
 
