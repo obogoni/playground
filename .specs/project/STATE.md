@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-12
-**Current Work:** per-workspace-config (M4, final feature) SPECIFIED on `feature/per-workspace-config` (PWCF-01..04) — awaiting user approval of spec decisions (settings entry point; repo-switch re-render rule) before execute
+**Current Work:** per-workspace-config (M4, final feature) COMPLETE on `feature/per-workspace-config` — PWCF-01..04 Verified (99 Vitest + 11/11 CDP smoke vs live ADO). Next: PR → main; after merge the v1 roadmap is done (v2 ideas stay in PRD "Out of Scope")
 
 ---
 
@@ -52,6 +52,7 @@
 ## Deferred Ideas
 
 - [ ] All v2 items tracked in PRD "Out of Scope" (terminal hosting, agent management, ADO writes, query feeds) — Captured during: project init
+- [ ] Bare-ID pin guidance message (`task-board.ts`) still points at hand-editing `config.json`; could point at the settings dialog now — Captured during: per-workspace-config
 
 ---
 
@@ -81,7 +82,9 @@
 - [x] Execute board-direction: `BoardView` (strip/chips/highlight/cards/inline pin) replacing the App.tsx placeholder — BORD-01..04 Verified
 - [x] Open PR `feature/board-direction` → main (PR #26, merged 2026-06-12)
 - [x] Specify M4 "Per-Workspace Config" (`.specs/features/per-workspace-config/spec.md`, PWCF-01..04) on `feature/per-workspace-config`
-- [ ] User approval of PWCF spec decisions (gear-button settings dialog; repo-switch re-render rule), then execute
+- [x] User approved PWCF spec decisions (gear-button settings dialog; repo-switch re-render until edited)
+- [x] Execute per-workspace-config: `workspaceBranchTemplate` + `workspaces:branch-template` IPC + dialog override behavior + `SettingsDialog` — PWCF-01..04 Verified
+- [ ] Open PR `feature/per-workspace-config` → main — closes the v1 roadmap
 
 ---
 

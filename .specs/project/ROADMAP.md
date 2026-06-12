@@ -1,7 +1,7 @@
 # Roadmap
 
 **Current Milestone:** M4 — Board View & Configurability
-**Status:** In progress (M1–M3 done; Board Direction merged via PR #26; Per-Workspace Config specified on `feature/per-workspace-config`)
+**Status:** M1–M4 feature work complete (Per-Workspace Config verified on `feature/per-workspace-config`, awaiting PR merge) — v1 roadmap done after that merge
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
 
@@ -85,7 +85,7 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - Pinned-task chip strip + workspace/repo-grouped worktree card grid
 - Chip highlight/dim behavior, per-card launcher buttons; direction choice persisted
 
-**Per-Workspace Config** - SPECIFIED
+**Per-Workspace Config** - COMPLETE
 
 - `.app/` directory in workspace: branch template override
 - Settings for default org/project + global branch template (editable)

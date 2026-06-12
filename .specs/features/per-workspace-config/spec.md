@@ -68,14 +68,14 @@ The three `Settings` values from the PRD (`defaultOrg`, `defaultProject`, `branc
 
 ## Requirement Traceability
 
-| Requirement ID | Story                          | Phase | Status  |
-| -------------- | ------------------------------ | ----- | ------- |
-| PWCF-01        | P1: Edit global settings (org/project → bare-ID pin) | -     | Pending |
-| PWCF-02        | P1: Edit global settings (template edit + blank fallback + persistence) | -     | Pending |
-| PWCF-03        | P1: `.app/` override (prefill + repo-switch re-render rule) | -     | Pending |
-| PWCF-04        | P1: `.app/` override (graceful fallback: missing/malformed/blank) | -     | Pending |
+| Requirement ID | Story                          | Phase | Status   |
+| -------------- | ------------------------------ | ----- | -------- |
+| PWCF-01        | P1: Edit global settings (org/project → bare-ID pin) | -     | Verified |
+| PWCF-02        | P1: Edit global settings (template edit + blank fallback + persistence) | -     | Verified |
+| PWCF-03        | P1: `.app/` override (prefill + repo-switch re-render rule) | -     | Verified |
+| PWCF-04        | P1: `.app/` override (graceful fallback: missing/malformed/blank) | -     | Verified |
 
-**Coverage:** 4 total, tasks implicit (Medium scope — no tasks.md)
+**Coverage:** 4 total, tasks implicit (Medium scope — no tasks.md). Verified by 9 new unit tests (`workspace-config.test.ts`) + 11/11 CDP smoke (`scripts/smoke-config.mjs`) vs live ADO.
 
 ---
 
