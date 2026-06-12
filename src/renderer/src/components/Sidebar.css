@@ -221,13 +221,80 @@
   background: var(--amber);
 }
 
+/* §1a line 2 — task tag row when the branch resolves to a pinned task (M3) */
 .sidebar-worktree-line2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.sidebar-task-note {
   font-style: italic;
   color: var(--text-faint);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Prototype §1a: smaller pill than the tasks-pane cards (2px 8px, 4px dot) */
+.sidebar-worktree-line2 .task-pill {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+}
+
+.sidebar-worktree-line2 .task-pill-dot {
+  width: 4px;
+  height: 4px;
+}
+
+.sidebar-task-id {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.sidebar-task-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-state-dot {
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.sidebar-state-dot.green {
+  background: var(--green);
+}
+
+.sidebar-state-dot.blue {
+  background: var(--blue);
+}
+
+.sidebar-state-dot.amber {
+  background: var(--amber);
+}
+
+.sidebar-state-dot.accent {
+  background: var(--accent);
+}
+
+.sidebar-state-dot.faint {
+  background: var(--text-faint);
+}
+
+.sidebar-state-dot.muted {
+  background: var(--text-muted);
 }
 
 .sidebar-note {

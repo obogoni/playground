@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { JSX } from 'react'
 import type { ShortcutTool } from '../../../shared/shortcuts'
+import type { PinnedTaskView } from '../../../shared/tasks'
 import type { WorktreeNode } from '../../../shared/tree'
 import { api } from '../lib/api'
+import { stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import type { IconName } from './Icon'
 import './WorktreeDetail.css'
@@ -12,6 +14,10 @@ interface WorktreeDetailProps {
   repoName: string
   repoPath: string
   worktree: WorktreeNode
+  /** Task ID extracted from the branch name; null when the branch carries none. */
+  linkedTaskId: number | null
+  /** The matching pinned task, when the extracted ID is pinned. */
+  linkedPin: PinnedTaskView | null
   onToast: (message: string) => void
   onRemoved: (repoPath: string) => void
 }
@@ -46,6 +52,8 @@ export function WorktreeDetail({
   repoName,
   repoPath,
   worktree,
+  linkedTaskId,
+  linkedPin,
   onToast,
   onRemoved
 }: WorktreeDetailProps): JSX.Element {
@@ -128,6 +136,46 @@ export function WorktreeDetail({
         </div>
 
         <section className="detail-section">
+          <h2 className="detail-section-label">Linked task</h2>
+          {linkedTaskId === null ? (
+            <div className="detail-task-note">
+              No task ID found in this branch name — this worktree is untagged.
+            </div>
+          ) : linkedPin === null ? (
+            <div className="detail-task-note">#{linkedTaskId} — not pinned</div>
+          ) : (
+            <a className="detail-task-card" href={linkedPin.url} target="_blank" rel="noreferrer">
+              <div className="detail-task-header">
+                {linkedPin.details && (
+                  <>
+                    <span className={`task-pill ${typeClass(linkedPin.details.type)}`}>
+                      <span className="task-pill-dot" />
+                      {linkedPin.details.type}
+                    </span>
+                    <span className={`task-pill ${stateClass(linkedPin.details.state)}`}>
+                      {linkedPin.details.state}
+                    </span>
+                  </>
+                )}
+                <span className="detail-task-spacer" />
+                <span className="detail-task-open">
+                  Open in Azure DevOps
+                  <Icon name="external-link" size={13} strokeWidth={1.9} />
+                </span>
+              </div>
+              <div className="detail-task-body">
+                <span className="detail-task-id">#{linkedTaskId}</span>
+                {linkedPin.details ? (
+                  <span className="detail-task-title">{linkedPin.details.title}</span>
+                ) : (
+                  <span className="detail-task-unavailable">details unavailable</span>
+                )}
+              </div>
+            </a>
+          )}
+        </section>
+
+        <section className="detail-section">
           <h2 className="detail-section-label">Location</h2>
           <div className="detail-location">
             <span className="detail-location-path">{worktree.path}</span>
@@ -169,7 +217,6 @@ export function WorktreeDetail({
           {guardNote && <span className="detail-danger-note">{guardNote}</span>}
           {removeError && <span className="detail-danger-note error">{removeError}</span>}
         </div>
-        {/* M3 adds the linked-task card above Location — §1b section order preserved. */}
       </div>
     </div>
   )

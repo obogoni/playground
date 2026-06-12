@@ -22,7 +22,10 @@ type ParseResult = { ok: true; ref: PinnedTask } | { ok: false; error: string }
  * defaults) or a full `dev.azure.com/<org>/<project>/_workitems/edit/<id>`
  * URL, tolerating title slugs, query strings, and percent-encoded names.
  */
-export function parseTaskInput(input: string, defaults: AppConfig['ado']): ParseResult {
+export function parseTaskInput(
+  input: string,
+  defaults: Pick<AppConfig['ado'], 'defaultOrg' | 'defaultProject'>
+): ParseResult {
   const trimmed = input.trim()
   if (trimmed === '') return { ok: false, error: 'Paste a work item ID or ADO URL.' }
 

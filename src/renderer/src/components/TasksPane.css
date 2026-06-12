@@ -1,4 +1,4 @@
-/* Pinned tasks pane — handoff §1c (card footer lands with start-work) */
+/* Pinned tasks pane — handoff §1c */
 
 .tasks-pane {
   flex: 0 0 322px;
@@ -200,6 +200,76 @@
   font-size: 11.5px;
   font-style: italic;
   color: var(--text-faint);
+}
+
+/* §1c card footer — worktree count + start-work button (M3 start-work) */
+.task-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.task-card-wt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.task-card-wt.none {
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.task-card-wt-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.task-start-btn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  white-space: nowrap;
+  transition:
+    opacity 0.12s,
+    color 0.12s;
+}
+
+.task-start-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+.task-start-btn.primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.task-start-btn.ghost {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.task-start-btn.ghost:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.task-start-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 /* Hover-revealed unpin ✕ (spec §Decisions), pattern of .sidebar-remove-btn */
