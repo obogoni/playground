@@ -1,0 +1,494 @@
+/* Board direction — handoff §2 (Direction B, task-centric canvas) */
+
+.board {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+/* Pinned-task chip strip */
+
+.board-strip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 22px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.board-strip-label {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.board-chip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--panel-2);
+  color: var(--text);
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.board-chip.active {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+}
+
+.board-chip-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.board-chip-dot.green {
+  background: var(--green);
+}
+
+.board-chip-dot.blue {
+  background: var(--blue);
+}
+
+.board-chip-dot.amber {
+  background: var(--amber);
+}
+
+.board-chip-dot.accent {
+  background: var(--accent);
+}
+
+.board-chip-dot.faint {
+  background: var(--text-faint);
+}
+
+.board-chip-dot.muted {
+  background: var(--text-muted);
+}
+
+.board-chip-id {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.board-chip-title {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.board-chip-title.unavailable {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+.board-chip-count {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 20px;
+  background: var(--panel-2);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.board-chip.active .board-chip-count {
+  background: var(--panel);
+}
+
+.board-pin-btn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color 0.12s;
+}
+
+.board-pin-btn:hover {
+  color: var(--text);
+}
+
+.board-pin-form {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.board-pin-input {
+  width: 240px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+  font-size: 12.5px;
+  color: var(--text);
+  transition: border-color 0.12s;
+}
+
+.board-pin-input::placeholder {
+  color: var(--text-faint);
+}
+
+.board-pin-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.board-pin-error {
+  font-size: 11.5px;
+  color: var(--red);
+  white-space: nowrap;
+}
+
+/* Canvas */
+
+.board-canvas {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 26px 48px;
+}
+
+.board-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 18px;
+  padding: 6px 14px;
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+  border-radius: 20px;
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.board-banner-id {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.board-banner-clear {
+  display: grid;
+  place-items: center;
+  padding: 0 2px;
+  color: var(--text-muted);
+  transition: color 0.12s;
+}
+
+.board-banner-clear:hover {
+  color: var(--text);
+}
+
+.board-empty {
+  margin: auto;
+  padding-top: 80px;
+  max-width: 360px;
+  text-align: center;
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+.board-workspace {
+  margin-bottom: 30px;
+}
+
+.board-workspace-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 4px;
+  min-width: 0;
+}
+
+.board-workspace-folder {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}
+
+.board-workspace-name {
+  flex: 0 0 auto;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.board-workspace-path {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-repo {
+  margin-top: 14px;
+}
+
+.board-repo-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+  color: var(--text-faint);
+}
+
+.board-repo-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.board-note {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.board-note.error {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-style: normal;
+  color: var(--amber);
+}
+
+/* Worktree cards */
+
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(264px, 1fr));
+  gap: 14px;
+}
+
+.board-card {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 14px 15px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  transition:
+    opacity 0.18s,
+    box-shadow 0.18s,
+    border-color 0.18s,
+    transform 0.18s;
+}
+
+.board-card.highlighted {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 20%, transparent);
+  transform: translateY(-1px);
+}
+
+.board-card.dimmed {
+  opacity: 0.34;
+}
+
+.board-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-faint);
+}
+
+.board-card-branch {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.board-dirty-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+
+.board-card-task {
+  padding: 10px 11px;
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+
+.board-card-task.untagged {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.board-card-task-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.board-card-task-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.board-card-task-note {
+  font-size: 11.5px;
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.board-card-task-spacer {
+  flex: 1;
+}
+
+.board-card-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.board-card-state-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.board-card-state.green {
+  color: var(--green);
+}
+
+.board-card-state.blue {
+  color: var(--blue);
+}
+
+.board-card-state.amber {
+  color: var(--amber);
+}
+
+.board-card-state.accent {
+  color: var(--accent-text);
+}
+
+.board-card-state.faint {
+  color: var(--text-faint);
+}
+
+.board-card-state.muted {
+  color: var(--text-muted);
+}
+
+.board-card-task-title {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.board-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.board-launch-btn {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  transition: background 0.12s;
+}
+
+.board-launch-btn.blue {
+  color: var(--blue);
+}
+
+.board-launch-btn.blue:hover {
+  background: color-mix(in oklab, var(--blue) 14%, transparent);
+}
+
+.board-launch-btn.green {
+  color: var(--green);
+}
+
+.board-launch-btn.green:hover {
+  background: color-mix(in oklab, var(--green) 14%, transparent);
+}
+
+.board-launch-btn.accent {
+  color: var(--accent);
+}
+
+.board-launch-btn.accent:hover {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+.board-card-footer-spacer {
+  flex: 1;
+}
+
+.board-card-repo {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+}

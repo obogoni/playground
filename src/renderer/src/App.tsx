@@ -4,6 +4,7 @@ import type { AppConfig } from '../../shared/config'
 import type { PinnedTaskView, TasksSnapshot } from '../../shared/tasks'
 import { taskIdFromBranch } from '../../shared/tasks'
 import type { WorkspaceNode, WorktreeNode } from '../../shared/tree'
+import { BoardView } from './components/BoardView'
 import { NewWorktreeDialog } from './components/NewWorktreeDialog'
 import { Sidebar } from './components/Sidebar'
 import { StartWorkDialog } from './components/StartWorkDialog'
@@ -230,9 +231,13 @@ function App(): JSX.Element {
             />
           </>
         ) : (
-          <div className="content-placeholder">
-            Board view — task-centric canvas lands here (M4)
-          </div>
+          <BoardView
+            tree={tree}
+            snapshot={tasks}
+            worktreeCounts={worktreeCounts}
+            onSnapshot={setTasks}
+            onToast={setToast}
+          />
         )}
       </main>
       {dialogRepoPath && (

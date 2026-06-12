@@ -1,7 +1,7 @@
 # Roadmap
 
-**Current Milestone:** M3 — ADO Tasks & Start-Work Flow
-**Status:** Complete pending PR merge (M1 + M2 done; both M3 features verified — next: M4 Board View & Configurability)
+**Current Milestone:** M4 — Board View & Configurability
+**Status:** In progress (M1–M3 done; Board Direction specified on `feature/board-direction`, Per-Workspace Config planned)
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
 
@@ -80,7 +80,7 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 
 ### Features
 
-**Board Direction** - PLANNED
+**Board Direction** - COMPLETE
 
 - Pinned-task chip strip + workspace/repo-grouped worktree card grid
 - Chip highlight/dim behavior, per-card launcher buttons; direction choice persisted
