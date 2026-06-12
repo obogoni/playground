@@ -13,7 +13,7 @@
 
 ## In Progress
 
-- PR `feature/per-workspace-config` → main (opening as the last step of this session)
+- PR #27 `feature/per-workspace-config` → main open, awaiting review/merge
 
 ## Pending
 
