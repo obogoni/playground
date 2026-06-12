@@ -26,11 +26,14 @@ export function BoardView({
   onToast
 }: BoardViewProps): JSX.Element {
   const [highlightId, setHighlightId] = useState<number | null>(null)
-  // Unpinning the active task clears the highlight — a banner for a gone chip lies.
-  const activeId =
-    highlightId !== null && snapshot.tasks.some((task) => task.id === highlightId)
-      ? highlightId
-      : null
+  // Unpinning the active task clears the highlight — a banner for a gone chip lies,
+  // and the stored id must go with it so re-pinning the same task later doesn't
+  // resurrect an old highlight. Render-phase adjustment per react.dev's
+  // "adjusting state when a prop changes" pattern.
+  const activeId = snapshot.tasks.some((task) => task.id === highlightId) ? highlightId : null
+  if (highlightId !== null && activeId === null) {
+    setHighlightId(null)
+  }
 
   const toggleHighlight = (id: number): void => {
     setHighlightId((prev) => (prev === id ? null : id))
