@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-06-11
-**Current Work:** pinned-tasks-pane (M3, first feature) COMPLETE on `feature/pinned-tasks-pane` — PNTK-01..05 Verified (76 Vitest + 11/11 CDP smoke vs live ADO + auth-failure pass). Next: PR → main, then specify M3 "Start Work from Task"
+**Last Updated:** 2026-06-12
+**Current Work:** start-work-from-task (M3, final feature) SPECIFIED on `feature/start-work-from-task` (STWK-01..05, `.specs/features/start-work-from-task/spec.md`) — awaiting user review of 3 flagged decisions, then Execute
 
 ---
 
@@ -71,7 +71,9 @@
 - [x] Specify M3 "Pinned Tasks Pane" (`.specs/features/pinned-tasks-pane/spec.md`, PNTK-01..05)
 - [x] User approved pinned-tasks-pane spec decisions ("go ahead": unpin ✕ on hover; bare-ID requires hand-edited config defaults until M4)
 - [x] Execute pinned-tasks-pane: `AdoGateway` + `TaskBoard` + `tasks:*` IPC + §1c pane + az-login empty state + focus/manual refresh — PNTK-01..05 Verified
-- [ ] Open PR `feature/pinned-tasks-pane` → main; after merge, specify M3 "Start Work from Task"
+- [x] Open PR `feature/pinned-tasks-pane` → main (PR #15, merged 2026-06-11)
+- [x] Specify M3 "Start Work from Task" (`.specs/features/start-work-from-task/spec.md`, STWK-01..05) on `feature/start-work-from-task`
+- [ ] User review of STWK spec decisions (ID-extraction boundary rule; `#id — not pinned` presentation; disabled Start-work when details unavailable) → Execute
 
 ---
 
