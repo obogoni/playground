@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-12
-**Current Work:** start-work-from-task (M3, final feature) COMPLETE on `feature/start-work-from-task` — STWK-01..05 Verified (90 Vitest + 12/12 CDP smoke vs live ADO + fidelity pass). Next: PR → main, then M3 closes and M4 (Board Direction / Per-Workspace Config) opens
+**Current Work:** board-direction (M4, first feature) SPECIFIED on `feature/board-direction` (BORD-01..04, Medium scope — renderer-only, no new IPC). Awaiting user review of spec ⚠️ decisions (inline strip pin input; chip degradation), then Execute
 
 ---
 
@@ -75,7 +75,10 @@
 - [x] Specify M3 "Start Work from Task" (`.specs/features/start-work-from-task/spec.md`, STWK-01..05) on `feature/start-work-from-task`
 - [x] User approved STWK spec decisions ("go ahead": ID-extraction boundary rule; `#id — not pinned` third state; disabled Start-work when details unavailable)
 - [x] Execute start-work-from-task: shared `branchNameFor`/`taskIdFromBranch` + StartWorkDialog + sidebar tags + card footer + linked-task card — STWK-01..05 Verified
-- [ ] Open PR `feature/start-work-from-task` → main; after merge, M3 done — specify M4 "Board Direction"
+- [x] Open PR `feature/start-work-from-task` → main (PR #16, merged 2026-06-12) — M3 done
+- [x] Specify M4 "Board Direction" (`.specs/features/board-direction/spec.md`, BORD-01..04) on `feature/board-direction`
+- [ ] User review of board-direction spec ⚠️ decisions (inline strip pin input; chip "details unavailable" degradation), then Execute
+- [ ] Open PR `feature/board-direction` → main; then specify M4 "Per-Workspace Config"
 
 ---
 
