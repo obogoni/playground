@@ -4,6 +4,7 @@ export interface RepoOption {
   path: string
   name: string
   workspaceName: string
+  workspacePath: string
 }
 
 export function repoOptionsOf(tree: WorkspaceNode[]): RepoOption[] {
@@ -11,7 +12,8 @@ export function repoOptionsOf(tree: WorkspaceNode[]): RepoOption[] {
     workspace.repos.map((repo) => ({
       path: repo.path,
       name: repo.name,
-      workspaceName: workspace.displayName
+      workspaceName: workspace.displayName,
+      workspacePath: workspace.path
     }))
   )
 }
