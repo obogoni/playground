@@ -1,0 +1,21 @@
+{
+  "repo": "obogoni/playground",
+  "prd_issue": 1,
+  "milestones": {
+    "M1 — Walking Skeleton & Worktree Navigation": 1,
+    "M2 — Worktree Lifecycle": 2,
+    "M3 — ADO Tasks & Start-Work Flow": 3,
+    "M4 — Board View & Configurability": 4
+  },
+  "features": {
+    "app-skeleton": { "issue": 17, "milestone": "M1 — Walking Skeleton & Worktree Navigation" },
+    "workspace-sidebar-tree": { "issue": 18, "milestone": "M1 — Walking Skeleton & Worktree Navigation" },
+    "launch-shortcuts": { "issue": 19, "milestone": "M1 — Walking Skeleton & Worktree Navigation" },
+    "create-worktree": { "issue": 20, "milestone": "M2 — Worktree Lifecycle" },
+    "delete-worktree": { "issue": 21, "milestone": "M2 — Worktree Lifecycle" },
+    "pinned-tasks-pane": { "issue": 22, "milestone": "M3 — ADO Tasks & Start-Work Flow" },
+    "start-work-from-task": { "issue": 23, "milestone": "M3 — ADO Tasks & Start-Work Flow" },
+    "board-direction": { "issue": 24, "milestone": "M4 — Board View & Configurability" },
+    "per-workspace-config": { "issue": 25, "milestone": "M4 — Board View & Configurability" }
+  }
+}

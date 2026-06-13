@@ -1,21 +1,23 @@
 # Handoff
 
 **Date:** 2026-06-12
-**Feature:** board-direction (M4, first feature) — COMPLETE; BORD-01..04 Verified.
+**Feature:** per-workspace-config (M4, final feature) — COMPLETE; PWCF-01..04 Verified.
 
 ## Completed ✓
 
-- Resumed after PR #16 merge (M3 closed); spec → user review ("go ahead") → execute on `feature/board-direction` (Medium scope: no design/tasks docs)
-- `BoardView` component family replaces the App.tsx board placeholder (renderer-only, no new IPC, no new pure logic): §2 chip strip (state dot + `#id` + title + worktree count badge; "details unavailable" degradation keeps the chip clickable), workspace→repo-grouped card grid (cards reuse the STWK four-state task block; footer = 3 launcher buttons via `shortcuts:launch` + repo name), chip highlight/dim/banner (transient state inside `BoardView` — unmount on direction switch clears it; unpinning the active task clears via derived `activeId`), inline strip pin input (prototype's stubbed "Pin task" made real over `tasks:pin`; Enter pins, Esc/blur-empty collapses, error keeps it open)
-- Verified: typecheck/lint/90 Vitest green (no new units by design); CDP smoke 10/10 (`scripts/smoke-board.mjs`) vs live ADO work item; screenshot fidelity pass vs `.dc.html` §2 (dark, dark+highlight, light)
+- Resumed after PR #26 merge; spec → user approval (gear-button settings dialog; repo-switch re-render until edited) → execute on `feature/per-workspace-config` (Medium scope: no design/tasks docs)
+- `workspaceBranchTemplate` reader (`src/main/workspace-config.ts`, 9 unit tests with real temp dirs) + `workspaces:branch-template` IPC: `<workspace>/.app/config.json` override, read fresh on every call, silent fallback on missing/blank/non-string/malformed
+- Start-work dialog applies the effective template (override ?? global); prefill re-renders on repo switch only while the branch field is untouched (`branchEdited` ref) — manual edit sticky forever (PRD story 11); `RepoOption` gained `workspacePath`
+- `SettingsDialog` (gear in top bar, dialog chassis): default org/project + global branch template; save via `config:patch` (empty org/project → null), Esc/cancel discards; App refreshes `adoOrg`/`branchTemplate` from the patch response; stale "hand-edited until M4" comment in `shared/config.ts` updated
+- Verified: typecheck/lint/99 Vitest green; CDP smoke 11/11 (`scripts/smoke-config.mjs`) vs live ADO work item 20800
 
 ## In Progress
 
-- PR #26 `feature/board-direction` → main open, awaiting review/merge
+- PR #27 `feature/per-workspace-config` → main open, awaiting review/merge
 
 ## Pending
 
-- After PR merges: specify M4 **Per-Workspace Config** (final feature) — `.app/` directory branch-template override + settings UI for default org/project + global template (PRD §Persistence, story 20; roadmap M4)
+- After PR merges: **v1 roadmap is complete** (M1–M4). No next feature planned; v2 candidates live in PRD "Out of Scope" and STATE.md Deferred Ideas
 
 ## Blockers
 
@@ -23,8 +25,8 @@
 
 ## Context
 
-- Branch: `feature/board-direction`
+- Branch: `feature/per-workspace-config`
 - Uncommitted: none after docs checkpoint commit
-- Related decisions: spec §Decisions (inline strip pin input ⚠️ approved; chip degradation ⚠️ approved; highlight matches by extracted ID only; no card selection/lifecycle from Board in v1 — launchers only, per prototype)
-- Smoke runbook (same as start-work): seed config = one workspace with a clean temp git repo, no pins; app via `npm run dev -- -- --remote-debugging-port=9222`; work item URL from `SMOKE_TASK_URL` (kept local; rediscoverable via azure-devops MCP `wit_my_work_items` — org triadesolucoes, project MultiClubes). Re-runs need `git branch -D feature/<id>-board-smoke` in the seed repo (worktree removal keeps the branch — its collision error is the spec edge case working)
-- Board screenshots were captured with a throwaway CDP script (pin+worktree staging → Board → dark/highlight/light PNGs); `scripts/smoke-screenshot.mjs` remains start-work-specific
+- Related decisions: spec §Decisions (settings UI invented — no handoff section, gear+modal approved ⚠️; re-render-until-edited approved ⚠️; override read on use, never cached; settings UI edits global only — `.app/` stays hand-authored)
+- Smoke runbook (config flavor): back up `%APPDATA%/playground/config.json` to `.smokebak`, seed two temp workspaces (wsA/alpha, wsB/beta + `.app/config.json` with `task/{id}-{slug}`), no ado defaults, no pins; app via `npm run dev -- -- --remote-debugging-port=9222`; `SMOKE_TASK_URL` from azure-devops MCP `wit_my_work_items` (org triadesolucoes, project MultiClubes; used 20800). No worktrees are created — re-runs need no git cleanup. Restore config + delete temp dirs afterwards
+- Deferred: bare-ID pin guidance message still says "set ado.defaultOrg…in config.json" — could point at the settings dialog (STATE.md Deferred Ideas)

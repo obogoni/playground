@@ -15,6 +15,8 @@ export interface IpcContract {
   /** Opens a native folder picker in main; null when cancelled or already registered. */
   'workspaces:add': { req: void; res: WorkspaceEntry | null }
   'workspaces:remove': { req: { id: string }; res: void }
+  /** .app/config.json branch-template override; read fresh on every call, null when absent. */
+  'workspaces:branch-template': { req: { workspacePath: string }; res: string | null }
   /** Full disk-truth snapshot: registry → repos → worktrees with dirty status. */
   'tree:get': { req: void; res: WorkspaceNode[] }
   /** Opens the external tool rooted at the path; failures are returned, never thrown. */

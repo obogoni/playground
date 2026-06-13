@@ -85,7 +85,7 @@ describe('parseTaskInput', () => {
     const result = parseTaskInput('4821', noDefaults)
 
     expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.error).toContain('defaultOrg')
+    if (!result.ok) expect(result.error).toContain('Settings')
   })
 
   it.each([

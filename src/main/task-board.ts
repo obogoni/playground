@@ -37,7 +37,7 @@ export function parseTaskInput(
       return {
         ok: false,
         error:
-          'No default org/project configured — paste the full ADO URL, or set ado.defaultOrg and ado.defaultProject in config.json.'
+          'No default org/project configured — paste the full ADO URL, or set the default org and project in Settings.'
       }
     }
     return { ok: true, ref: makeRef(defaultOrg, defaultProject, id) }

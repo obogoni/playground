@@ -9,6 +9,7 @@ import { ShortcutLauncher } from './shortcut-launcher'
 import { TaskBoard } from './task-board'
 import { buildTree } from './tree'
 import { createWorktree, removeWorktree } from './worktree-manager'
+import { workspaceBranchTemplate } from './workspace-config'
 import { WorkspaceRegistry } from './workspace-registry'
 
 function createWindow(): void {
@@ -73,6 +74,9 @@ app.whenReady().then(() => {
     return registry.add(filePaths[0])
   })
   handle('workspaces:remove', ({ id }) => registry.remove(id))
+  handle('workspaces:branch-template', ({ workspacePath }) =>
+    workspaceBranchTemplate(workspacePath)
+  )
   handle('tree:get', () => buildTree(registry))
   handle('worktrees:create', ({ repoPath, branch, baseBranch }) =>
     createWorktree(repoPath, branch, baseBranch)

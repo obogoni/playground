@@ -6,6 +6,7 @@ import { taskIdFromBranch } from '../../shared/tasks'
 import type { WorkspaceNode, WorktreeNode } from '../../shared/tree'
 import { BoardView } from './components/BoardView'
 import { NewWorktreeDialog } from './components/NewWorktreeDialog'
+import { SettingsDialog } from './components/SettingsDialog'
 import { Sidebar } from './components/Sidebar'
 import { StartWorkDialog } from './components/StartWorkDialog'
 import { TasksPane } from './components/TasksPane'
@@ -73,6 +74,7 @@ function App(): JSX.Element {
   })
   const [adoOrg, setAdoOrg] = useState<string | null>(null)
   const [branchTemplate, setBranchTemplate] = useState('')
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const refreshTree = useCallback((): void => {
     api
@@ -195,6 +197,7 @@ function App(): JSX.Element {
           refreshTree()
           refreshTasks()
         }}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
       <main className="content">
         {ui.direction === 'tree' ? (
@@ -255,6 +258,16 @@ function App(): JSX.Element {
           branchTemplate={branchTemplate}
           onClose={() => setStartWorkTask(null)}
           onCreated={worktreeCreated}
+        />
+      )}
+      {settingsOpen && (
+        <SettingsDialog
+          onClose={() => setSettingsOpen(false)}
+          onSaved={(config) => {
+            setAdoOrg(config.ado.defaultOrg)
+            setBranchTemplate(config.ado.branchTemplate)
+            setSettingsOpen(false)
+          }}
         />
       )}
       {toast && <Toast message={toast} onDismiss={dismissToast} />}

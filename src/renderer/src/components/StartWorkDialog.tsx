@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { PinnedTaskView } from '../../../shared/tasks'
 import { branchNameFor } from '../../../shared/tasks'
@@ -20,8 +20,11 @@ interface StartWorkDialogProps {
 
 /**
  * Start-work dialog (handoff §3): same chassis as NewWorktreeDialog, plus the
- * task header line and a template-prefilled branch (STWK-02). The template is
- * rendered once at open — editing never re-applies it (PRD story 11).
+ * task header line and a template-prefilled branch (STWK-02). The effective
+ * template is the selected repo's workspace `.app/` override, falling back to
+ * the global one (PWCF-03); the prefill re-renders on repo switch only while
+ * the branch field is untouched — once edited it is never re-applied (PRD
+ * story 11).
  */
 export function StartWorkDialog({
   tree,
@@ -38,8 +41,26 @@ export function StartWorkDialog({
   )
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const branchEdited = useRef(false)
 
   const selectedRepo = repoOptions.find((r) => r.path === repoPath)
+
+  const details = task.details
+  const workspacePath = selectedRepo?.workspacePath
+  useEffect(() => {
+    if (!details || workspacePath === undefined) return
+    let stale = false
+    api
+      .invoke('workspaces:branch-template', { workspacePath })
+      .then((override) => {
+        if (stale || branchEdited.current) return
+        setBranch(branchNameFor({ id: task.id, details }, override ?? branchTemplate))
+      })
+      .catch(console.error)
+    return () => {
+      stale = true
+    }
+  }, [workspacePath, task.id, details, branchTemplate])
   const canCreate = selectedRepo !== undefined && sanitizeBranch(branch) !== '' && !busy
 
   const pickRepo = (path: string): void => {
@@ -127,6 +148,7 @@ export function StartWorkDialog({
                 value={branch}
                 autoFocus
                 onChange={(event) => {
+                  branchEdited.current = true
                   setBranch(event.target.value)
                   setError(null)
                 }}

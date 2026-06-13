@@ -23,6 +23,7 @@ interface TopBarProps {
   onThemeToggle: () => void
   onDirectionChange: (direction: Direction) => void
   onRefresh: () => void
+  onOpenSettings: () => void
 }
 
 function relativeTime(epochMs: number, now: number): string {
@@ -46,7 +47,8 @@ export function TopBar({
   sync,
   onThemeToggle,
   onDirectionChange,
-  onRefresh
+  onRefresh,
+  onOpenSettings
 }: TopBarProps): JSX.Element {
   // Keeps the "synced Nm ago" text ticking without any parent re-render.
   const [now, setNow] = useState(() => Date.now())
@@ -109,6 +111,9 @@ export function TopBar({
         onClick={onThemeToggle}
       >
         <Icon name={theme === 'dark' ? 'moon' : 'sun'} size={15} />
+      </button>
+      <button type="button" className="topbar-icon-btn" title="Settings" onClick={onOpenSettings}>
+        <Icon name="settings" size={15} />
       </button>
     </header>
   )
