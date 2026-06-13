@@ -52,7 +52,7 @@
 ## Deferred Ideas
 
 - [ ] All v2 items tracked in PRD "Out of Scope" (terminal hosting, agent management, ADO writes, query feeds) — Captured during: project init
-- [ ] Bare-ID pin guidance message (`task-board.ts`) still points at hand-editing `config.json`; could point at the settings dialog now — Captured during: per-workspace-config
+- [x] Bare-ID pin guidance message (`task-board.ts`) now points at the Settings dialog instead of hand-editing `config.json` — resolved while addressing PR #27 review
 
 ---
 

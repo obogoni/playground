@@ -8,7 +8,8 @@ import { join } from 'node:path'
  * take effect at the next dialog open.
  *
  * Returns the trimmed template, or null when the file/key is absent, blank,
- * not a string, or unreadable (malformed JSON degrades silently to global).
+ * not a string, or unreadable. Malformed JSON falls back to the global
+ * template silently from the UI's perspective, but is logged via console.error.
  */
 export function workspaceBranchTemplate(workspacePath: string): string | null {
   const filePath = join(workspacePath, '.app', 'config.json')
