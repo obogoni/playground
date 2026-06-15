@@ -1,0 +1,9 @@
+# Local update-flow testing only (RLCD-13). Activated when index.ts passes
+# forceDev: true (PLAYGROUND_FORCE_UPDATE=1) on an unpackaged build, so it can
+# be driven against the real GitHub feed. Already excluded from packaged output
+# via the electron-builder.yml `files` ignore list — never shipped.
+# Set channel to `alpha` to exercise the nightly feed instead of stable.
+provider: github
+owner: obogoni
+repo: playground
+channel: latest

@@ -1,6 +1,7 @@
 import { app, shell, dialog, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
 import { AdoGateway } from './ado-gateway'
 import { ConfigStore } from './config-store'
@@ -8,6 +9,7 @@ import { handle } from './ipc'
 import { ShortcutLauncher } from './shortcut-launcher'
 import { TaskBoard } from './task-board'
 import { buildTree } from './tree'
+import { UpdateService } from './update-service'
 import { createWorktree, removeWorktree } from './worktree-manager'
 import { workspaceBranchTemplate } from './workspace-config'
 import { WorkspaceRegistry } from './workspace-registry'
@@ -50,8 +52,16 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  // Set app user model id for windows
-  electronApp.setAppUserModelId('com.playground')
+  // Set app user model id for windows. Derive it from the packaged identity so the
+  // nightly build (a distinct app name) groups separately from stable on the taskbar.
+  // Normalize the name into a dot-separated, lowercase slug so a spaced/cased name
+  // (e.g. "Playground Nightly") can't yield an invalid AUMID like `com.Playground Nightly`.
+  const aumidSlug = app
+    .getName()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '')
+  electronApp.setAppUserModelId(`com.${aumidSlug}`)
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -92,6 +102,17 @@ app.whenReady().then(() => {
   handle('tasks:pin', ({ input }) => taskBoard.pin(input))
   handle('tasks:unpin', (ref) => taskBoard.unpin(ref))
   handle('tasks:refresh', () => taskBoard.refresh())
+
+  // Silent auto-update. Inert under `electron-vite dev` unless PLAYGROUND_FORCE_UPDATE=1
+  // opts into the real GitHub feed via dev-app-update.yml (local update-flow testing).
+  new UpdateService({
+    updater: autoUpdater,
+    isPackaged: app.isPackaged,
+    forceDev: process.env.PLAYGROUND_FORCE_UPDATE === '1',
+    // Keep the UX silent (no dialogs) but surface failures to the log so CI-shipped
+    // builds are diagnosable in the field.
+    log: (msg, err) => console.error(`[update] ${msg}`, err ?? '')
+  }).start()
 
   createWindow()
 

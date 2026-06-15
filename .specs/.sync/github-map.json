@@ -17,6 +17,7 @@
     "start-work-from-task": { "issue": 23, "milestone": "M3 — ADO Tasks & Start-Work Flow" },
     "board-direction": { "issue": 24, "milestone": "M4 — Board View & Configurability" },
     "per-workspace-config": { "issue": 25, "milestone": "M4 — Board View & Configurability" },
-    "vs2022-admin-shortcut": { "issue": 29, "milestone": null }
+    "vs2022-admin-shortcut": { "issue": 29, "milestone": null },
+    "release-cicd-autoupdate": { "issue": 32, "milestone": null, "prd_issue": 30 }
   }
 }

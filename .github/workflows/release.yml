@@ -1,0 +1,55 @@
+name: Release
+
+# Pushing a vX.Y.Z tag is the single act that gates, builds, and publishes an
+# installable stable Windows binary to GitHub Releases (RLCD-01).
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Quality gate runs before build so a red gate blocks publishing (RLCD-03).
+      - name: Quality gate
+        run: npm run typecheck && npm run lint && npm test
+
+      # Tag is the single source of truth: refs/tags/vX.Y.Z -> X.Y.Z (RLCD-02).
+      - name: Stamp version from tag
+        run: npx tsx scripts/stamp-version.ts --mode=stable
+
+      - name: Build and publish (stable, latest channel)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signing seam (RLCD-14): supply an OV cert + password via secrets to
+          # sign without restructuring. Unsigned builds still auto-update on Windows.
+          # CSC_LINK: ${{ secrets.CSC_LINK }}
+          # CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: npx electron-builder --win --publish always
+
+      # electron-builder uploads the installer + latest.yml to a draft release for
+      # the tag; publish it with auto-generated notes from merged PRs (RLCD-12).
+      - name: Publish release with generated notes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            -f tag_name="${GITHUB_REF_NAME}" --jq .body > notes.md
+          gh release edit "${GITHUB_REF_NAME}" --draft=false --latest --notes-file notes.md
