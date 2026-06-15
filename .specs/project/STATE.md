@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-06-12
-**Current Work:** per-workspace-config (M4, final feature) COMPLETE on `feature/per-workspace-config` — PWCF-01..04 Verified (99 Vitest + 11/11 CDP smoke vs live ADO). Next: PR → main; after merge the v1 roadmap is done (v2 ideas stay in PRD "Out of Scope")
+**Last Updated:** 2026-06-15
+**Current Work:** release-cicd-autoupdate — PRD issue #30 SPECIFIED + DESIGNED + TASKED (`.specs/features/release-cicd-autoupdate/{spec,design,tasks}.md`, RLCD-01..14, Large scope). Spec + design approved. tasks.md = T1–T10 (10 atomic, 5 phases) awaiting approval before Execute. Also created `.specs/codebase/TESTING.md` (baseline 105 tests / 9 files). Key facts: GitHub provider never auto-detects channel → nightly `-c.publish.channel=alpha`; `forceDevUpdateConfig` env-gated (dev inert); version helper `scripts/release-version.ts` via `tsx`; `electron-updater` added as runtime dep. (Prior: per-workspace-config M4 merged; v1 roadmap done.)
 
 ---
 
