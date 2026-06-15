@@ -54,7 +54,14 @@ function createWindow(): void {
 app.whenReady().then(() => {
   // Set app user model id for windows. Derive it from the packaged identity so the
   // nightly build (a distinct app name) groups separately from stable on the taskbar.
-  electronApp.setAppUserModelId(`com.${app.getName()}`)
+  // Normalize the name into a dot-separated, lowercase slug so a spaced/cased name
+  // (e.g. "Playground Nightly") can't yield an invalid AUMID like `com.Playground Nightly`.
+  const aumidSlug = app
+    .getName()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '')
+  electronApp.setAppUserModelId(`com.${aumidSlug}`)
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -101,7 +108,10 @@ app.whenReady().then(() => {
   new UpdateService({
     updater: autoUpdater,
     isPackaged: app.isPackaged,
-    forceDev: process.env.PLAYGROUND_FORCE_UPDATE === '1'
+    forceDev: process.env.PLAYGROUND_FORCE_UPDATE === '1',
+    // Keep the UX silent (no dialogs) but surface failures to the log so CI-shipped
+    // builds are diagnosable in the field.
+    log: (msg, err) => console.error(`[update] ${msg}`, err ?? '')
   }).start()
 
   createWindow()

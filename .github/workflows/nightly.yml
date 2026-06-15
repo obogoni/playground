@@ -36,6 +36,10 @@ jobs:
       # Nightly identity + alpha channel give a side-by-side install (RLCD-10) and
       # emit alpha.yml (RLCD-09). bash so the -c.* overrides parse on the runner.
       #
+      # extraMetadata.name overrides the packaged package.json#name, which drives
+      # app.getName() and thus app.getPath('userData'). Without it, nightly keeps
+      # name "playground" and shares %APPDATA% config/userData with stable (RLCD-10).
+      #
       # SPEC_DEVIATION: --publish never (the task said "always"). electron-builder's
       # GitHub publisher tags releases v{version}, which cannot target the reused
       # fixed `nightly` tag the rolling-single release requires (RLCD-11). We build
@@ -49,6 +53,7 @@ jobs:
           npx electron-builder --win --publish never \
             -c.appId=com.playground.nightly \
             -c.productName="Playground Nightly" \
+            -c.extraMetadata.name=playground-nightly \
             -c.publish.channel=alpha
 
       # Rolling single (RLCD-11 / D8): drop the previous nightly, then publish a

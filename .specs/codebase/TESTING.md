@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-**Last verified:** 2026-06-15 — `npx vitest run` ⇒ **105 tests / 9 files, all passing**.
+**Last verified:** 2026-06-15 — `npx vitest run` ⇒ **125 tests / 11 files, all passing**.
 
 ## Test Frameworks
 
@@ -11,9 +11,9 @@
 
 ## Test Organization
 
-**Location:** Co-located — `*.test.ts` sits next to the module it tests (all current tests live in `src/main/`).
+**Location:** Co-located — `*.test.ts` sits next to the module it tests (most tests live in `src/main/`; build-time helpers under `scripts/`).
 **Naming:** `<module>.test.ts` (e.g. `task-board.test.ts` ↔ `task-board.ts`).
-**Config:** `vitest.config.ts` → `include: ['src/**/*.test.ts']`. (This feature broadens it to also include `scripts/**/*.test.ts` for the build-time version helper.)
+**Config:** `vitest.config.ts` → `include: ['src/**/*.test.ts', 'scripts/**/*.test.ts']` (the `scripts/` glob covers the build-time version helper).
 **Structure:** `describe(<exported symbol>)` → `it(<behavior>)`, asserting observable behavior through the module's public surface.
 
 ## Testing Patterns
@@ -54,7 +54,7 @@ A hand-written stub implementing the collaborator's interface is passed into the
 
 ## Coverage Targets
 
-**Current:** 105 tests / 9 files (no line-coverage metric collected).
+**Current:** 125 tests / 11 files (no line-coverage metric collected).
 **Goals:** Every main-process deep module and every extracted pure helper carries co-located unit tests. Renderer + thin shells are intentionally uncovered by unit tests.
 **Enforcement:** The gate (`typecheck && lint && test`) is run locally per task and mirrored in CI by the release/nightly workflows; a red gate blocks publishing.
 
@@ -89,4 +89,4 @@ Vitest runs test files in parallel workers by default; all current unit tests ar
 | **Build** | After build-config changes / phase completion | `npm run build:win` |
 | **Manual** | User-facing or shell/CI behavior not unit-testable | `node scripts/smoke-<feature>.mjs` (live session) and/or cut a throwaway release |
 
-> Every expected-pass count in `tasks.md` is anchored to the **105** baseline above; a task that adds N unit tests must end at `105 + N` with zero deletions.
+> Every expected-pass count in `tasks.md` is anchored to the **125** baseline above; a task that adds N unit tests must end at `125 + N` with zero deletions.
