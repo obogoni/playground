@@ -34,6 +34,11 @@ jobs:
       - name: Stamp version from tag
         run: npx tsx scripts/stamp-version.ts --mode=stable
 
+      # Bundle main/preload/renderer into out/ before packaging; electron-builder
+      # only packages, it doesn't transpile (mirrors `npm run build:win`).
+      - name: Build app bundle
+        run: npx electron-vite build
+
       - name: Build and publish (stable, latest channel)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

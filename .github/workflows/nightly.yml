@@ -33,6 +33,11 @@ jobs:
       - name: Stamp nightly version from run number
         run: npx tsx scripts/stamp-version.ts --mode=nightly
 
+      # Bundle main/preload/renderer into out/ before packaging; electron-builder
+      # only packages, it doesn't transpile (mirrors `npm run build:win`).
+      - name: Build app bundle
+        run: npx electron-vite build
+
       # Nightly identity + alpha channel give a side-by-side install (RLCD-10) and
       # emit alpha.yml (RLCD-09). bash so the -c.* overrides parse on the runner.
       #
