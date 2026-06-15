@@ -14,8 +14,10 @@ describe('listWorktrees', () => {
   let repo: string
 
   beforeEach(() => {
-    // realpath: git resolves 8.3 short names / symlinked temp dirs in its output
-    root = realpathSync(mkdtempSync(join(tmpdir(), 'wtm-wt-')))
+    // realpathSync.native: git emits the long, canonical path; the OS realpath
+    // expands 8.3 short names (e.g. RUNNER~1 on CI) + resolves symlinked temp dirs
+    // to match it. The JS realpathSync resolves symlinks but NOT 8.3 names.
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-wt-')))
     repo = join(root, 'repo')
     mkdirSync(repo)
     git(repo, 'init', '-b', 'main')
@@ -133,7 +135,7 @@ describe('createWorktree', () => {
   let repo: string
 
   beforeEach(() => {
-    root = realpathSync(mkdtempSync(join(tmpdir(), 'wtm-create-')))
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-create-')))
     repo = join(root, 'repo')
     mkdirSync(repo)
     git(repo, 'init', '-b', 'main')
@@ -208,7 +210,7 @@ describe('removeWorktree', () => {
   let sibling: string
 
   beforeEach(() => {
-    root = realpathSync(mkdtempSync(join(tmpdir(), 'wtm-remove-')))
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-remove-')))
     repo = join(root, 'repo')
     mkdirSync(repo)
     git(repo, 'init', '-b', 'main')
