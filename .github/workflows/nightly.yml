@@ -1,0 +1,69 @@
+name: Nightly
+
+# Manually dispatched side-by-side "Playground Nightly" build on the alpha channel,
+# published as a rolling single pre-release (RLCD-09/10/11).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  nightly:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Same gate as stable; a red gate blocks the build/publish (RLCD-03).
+      - name: Quality gate
+        run: npm run typecheck && npm run lint && npm test
+
+      # X.Y.Z-nightly.<run#> — a pre-release id that keeps stable's latest.yml from
+      # ever listing it (RLCD-09).
+      - name: Stamp nightly version from run number
+        run: npx tsx scripts/stamp-version.ts --mode=nightly
+
+      # Nightly identity + alpha channel give a side-by-side install (RLCD-10) and
+      # emit alpha.yml (RLCD-09). bash so the -c.* overrides parse on the runner.
+      #
+      # SPEC_DEVIATION: --publish never (the task said "always"). electron-builder's
+      # GitHub publisher tags releases v{version}, which cannot target the reused
+      # fixed `nightly` tag the rolling-single release requires (RLCD-11). We build
+      # here and publish via gh below, so every nightly lives on one reused tag.
+      #
+      # Signing seam (RLCD-14): add CSC_LINK / CSC_KEY_PASSWORD (from secrets) as env
+      # here to sign without restructuring. Unsigned builds still auto-update on Windows.
+      - name: Build (nightly identity, alpha channel)
+        shell: bash
+        run: |
+          npx electron-builder --win --publish never \
+            -c.appId=com.playground.nightly \
+            -c.productName="Playground Nightly" \
+            -c.publish.channel=alpha
+
+      # Rolling single (RLCD-11 / D8): drop the previous nightly, then publish a
+      # pre-release on the reused `nightly` tag with a one-line commit-stamped body.
+      # electron-updater follows alpha.yml (asset), not the tag name.
+      - name: Publish rolling nightly pre-release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          gh release delete nightly --cleanup-tag --yes || true
+          gh release create nightly \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "Playground Nightly $VERSION" \
+            --notes "Nightly $VERSION — ${GITHUB_SHA::7} built $(date -u +%Y-%m-%dT%H:%MZ)" \
+            dist/*-setup.exe dist/*-setup.exe.blockmap dist/alpha.yml
