@@ -28,6 +28,16 @@
 **Trade-off:** Not on latest Electron; upgrade later if a feature needs it.
 **Impact:** `src/shared/ipc-contract.ts` is the IPC growth point; `ConfigStore` takes an injected dir (Electron-free, testable). New features: add channel to contract + `handle()` in main.
 
+### AD-004: Streaming IPC for agent sessions uses typed event + send maps (2026-06-15)
+
+**Decision:** The agent-management feature (PRD #37) introduces the app's first streaming IPC. Rather than a new ad-hoc mechanism, extend the existing typed-contract approach with **two new maps beside `IpcContract`**: `IpcEvents` (main→renderer push — `session:data`, `session:exit`, `session:status`) and `IpcSends` (renderer→main fire-and-forget — `session:input`, `session:resize`). Add typed `on()` / `send()` wrappers as peers to the existing typed `handle()`, and expose `on` + `send` on the preload bridge alongside `invoke`. Control verbs (`sessions:spawn`/`:list`/`:stop`/`:respawn`/`:remove`/`:rename`/`:attach`/`:detach`) stay on the request/response `invoke`/`handle` contract; only the high-frequency PTY byte stream + keystrokes/resize use the push/fire-and-forget channels.
+
+**Reason:** A PTY is a continuous bidirectional firehose — request/response can't model unsolicited output, and per-keystroke `invoke` round-trips are wasteful. Considered and rejected: a **single multiplexed channel** (`{id,type,payload}`) — loses strict per-channel typing, forcing manual union narrowing; and a **MessageChannel per session** — lowest overhead but real port lifecycle/teardown complexity, an over-fit for the throughput of a handful of agent terminals.
+
+**Trade-off:** A little extra typing boilerplate (two map declarations + the `on`/`send` wrappers) versus the multiplexed option's fewer channel names — accepted to keep the codebase's strict per-channel type safety.
+
+**Impact:** `src/shared/ipc-contract.ts` gains `IpcEvents`/`IpcSends` next to `IpcContract`; preload exposes `on`/`send`; main adds typed `on`/`send` helpers beside `handle()`. Per-session scrollback replay rides on `sessions:attach` (replay ring-buffer, then stream) / `sessions:detach` (stop streaming, PTY keeps running). To be promoted to a standalone ADR when `docs/adr/` is established.
+
 ---
 
 ## Active Blockers
@@ -67,6 +77,7 @@
 
 ## Deferred Ideas
 
+- [ ] **Agent-activity notifications (v3)** — desktop/in-app alerts on agent-specific events (e.g. "claude finished", "agent is awaiting input"). Pairs with the v3 task→agent auto-briefing. Technical hook: AD-004's PTY target is shell-hosted (the shell auto-runs the agent), so "the agent specifically finished" is not directly observable — completion must be inferred from output patterns or by wrapping the command with a sentinel. Captured during: agent-management grill (PRD #37).
 - [ ] All v2 items tracked in PRD "Out of Scope" (terminal hosting, agent management, ADO writes, query feeds) — Captured during: project init
 - [x] Bare-ID pin guidance message (`task-board.ts`) now points at the Settings dialog instead of hand-editing `config.json` — resolved while addressing PR #27 review
 
