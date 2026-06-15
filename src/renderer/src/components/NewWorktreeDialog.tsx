@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { JSX } from 'react'
 import type { WorkspaceNode } from '../../../shared/tree'
-import { sanitizeBranch, worktreePathFor } from '../../../shared/worktrees'
+import { worktreeNameFor, worktreePathFor } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { defaultBaseFor, repoOptionsOf } from '../lib/repo-options'
 import { Icon } from './Icon'
@@ -10,6 +10,7 @@ import './NewWorktreeDialog.css'
 interface NewWorktreeDialogProps {
   tree: WorkspaceNode[]
   initialRepoPath: string
+  worktreeTemplate: string
   onClose: () => void
   onCreated: (worktreePath: string) => void
 }
@@ -22,18 +23,39 @@ interface NewWorktreeDialogProps {
 export function NewWorktreeDialog({
   tree,
   initialRepoPath,
+  worktreeTemplate,
   onClose,
   onCreated
 }: NewWorktreeDialogProps): JSX.Element {
   const [repoPath, setRepoPath] = useState(initialRepoPath)
   const [baseBranch, setBaseBranch] = useState(() => defaultBaseFor(tree, initialRepoPath))
   const [branch, setBranch] = useState('')
+  // Workspace worktree-template override (null = use the global one).
+  const [worktreeOverride, setWorktreeOverride] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const repoOptions = repoOptionsOf(tree)
   const selectedRepo = repoOptions.find((r) => r.path === repoPath)
-  const canCreate = sanitizeBranch(branch) !== '' && !busy
+
+  // Read the selected workspace's worktree-template override on repo switch.
+  const workspacePath = selectedRepo?.workspacePath
+  useEffect(() => {
+    if (workspacePath === undefined) return
+    let stale = false
+    api
+      .invoke('workspaces:templates', { workspacePath })
+      .then(({ worktreeTemplate: wtOverride }) => {
+        if (!stale) setWorktreeOverride(wtOverride)
+      })
+      .catch(console.error)
+    return () => {
+      stale = true
+    }
+  }, [workspacePath])
+
+  const effectiveWorktreeTemplate = worktreeOverride ?? worktreeTemplate
+  const canCreate = worktreeNameFor(repoPath, branch, effectiveWorktreeTemplate) !== '' && !busy
 
   const pickRepo = (path: string): void => {
     setRepoPath(path)
@@ -48,7 +70,8 @@ export function NewWorktreeDialog({
         repoPath,
         branch,
         // Empty base falls back to checking out `branch` as an existing branch.
-        baseBranch: baseBranch.trim() || undefined
+        baseBranch: baseBranch.trim() || undefined,
+        worktreeTemplate: effectiveWorktreeTemplate
       })
       .then((result) => {
         if (result.ok && result.path) {
@@ -117,7 +140,9 @@ export function NewWorktreeDialog({
           </div>
           <div className="dialog-path-preview">
             <div className="dialog-path-label">Worktree will be created at</div>
-            <div className="dialog-path-value">{worktreePathFor(repoPath, branch)}</div>
+            <div className="dialog-path-value">
+              {worktreePathFor(repoPath, branch, effectiveWorktreeTemplate)}
+            </div>
           </div>
           {error && (
             <div className="dialog-error">

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { JSX } from 'react'
 import type { AppConfig } from '../../../shared/config'
 import { DEFAULT_BRANCH_TEMPLATE } from '../../../shared/tasks'
+import { DEFAULT_WORKTREE_TEMPLATE } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import './NewWorktreeDialog.css'
 
@@ -20,6 +21,7 @@ export function SettingsDialog({ onClose, onSaved }: SettingsDialogProps): JSX.E
   const [org, setOrg] = useState<string | null>(null)
   const [project, setProject] = useState('')
   const [template, setTemplate] = useState('')
+  const [worktreeTemplate, setWorktreeTemplate] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -29,6 +31,7 @@ export function SettingsDialog({ onClose, onSaved }: SettingsDialogProps): JSX.E
         setOrg(config.ado.defaultOrg ?? '')
         setProject(config.ado.defaultProject ?? '')
         setTemplate(config.ado.branchTemplate)
+        setWorktreeTemplate(config.ado.worktreeTemplate)
       })
       .catch(console.error)
   }, [])
@@ -40,7 +43,8 @@ export function SettingsDialog({ onClose, onSaved }: SettingsDialogProps): JSX.E
         ado: {
           defaultOrg: org?.trim() || null,
           defaultProject: project.trim() || null,
-          branchTemplate: template.trim()
+          branchTemplate: template.trim(),
+          worktreeTemplate: worktreeTemplate.trim()
         }
       })
       .then(onSaved)
@@ -106,6 +110,21 @@ export function SettingsDialog({ onClose, onSaved }: SettingsDialogProps): JSX.E
                 spellCheck={false}
                 placeholder={DEFAULT_BRANCH_TEMPLATE}
                 onChange={(event) => setTemplate(event.target.value)}
+              />
+            </div>
+            <div>
+              <div className="dialog-field-label">
+                Worktree folder template{' '}
+                <span className="dialog-label-note">
+                  · {'{repo}'} {'{branch}'} {'{id}'} · blank uses {DEFAULT_WORKTREE_TEMPLATE}
+                </span>
+              </div>
+              <input
+                className="dialog-input"
+                value={worktreeTemplate}
+                spellCheck={false}
+                placeholder={DEFAULT_WORKTREE_TEMPLATE}
+                onChange={(event) => setWorktreeTemplate(event.target.value)}
               />
             </div>
           </div>

@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { promisify } from 'node:util'
 import type { WorktreeNode } from '../shared/tree'
 import type { CreateWorktreeResult, RemoveWorktreeResult } from '../shared/worktrees'
-import { sanitizeBranch, worktreePathFor } from '../shared/worktrees'
+import { worktreeNameFor, worktreePathFor } from '../shared/worktrees'
 
 const run = promisify(execFile)
 
@@ -47,19 +47,24 @@ export async function listWorktrees(repoPath: string): Promise<WorktreeNode[]> {
 }
 
 /**
- * `git worktree add` at the PRD flat-sibling path (CRWT-02). With a base:
+ * `git worktree add` at the PRD flat-sibling path (CRWT-02), with the folder
+ * name rendered from the effective worktree template (WTNT-01). With a base:
  * `-b <branch> <base>`; without: checks out the existing branch. Failures are
  * returned (dialog shows them inline), never thrown.
  */
 export async function createWorktree(
   repoPath: string,
   branch: string,
-  baseBranch?: string
+  baseBranch?: string,
+  worktreeTemplate?: string
 ): Promise<CreateWorktreeResult> {
-  if (sanitizeBranch(branch) === '') {
-    return { ok: false, error: `Branch name "${branch}" sanitizes to an empty path segment` }
+  if (worktreeNameFor(repoPath, branch, worktreeTemplate) === '') {
+    return {
+      ok: false,
+      error: `The worktree template produced an empty folder name for branch "${branch}"`
+    }
   }
-  const target = worktreePathFor(repoPath, branch)
+  const target = worktreePathFor(repoPath, branch, worktreeTemplate)
   if (existsSync(target)) {
     return { ok: false, error: `Target path already exists: ${target}` }
   }
