@@ -92,6 +92,16 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 
 ---
 
+## Post-v1 Enhancements
+
+**Worktree Name Template** - COMPLETE
+
+- Configurable worktree folder name (`{repo}`/`{branch}`/`{id}`; default `{repo}-{branch}`), mirroring the branch template
+- Global `ado.worktreeTemplate` (Settings dialog) + per-workspace `.app/config.json` `worktreeTemplate` override
+- Empty-render guard blocks creation with a readable message (WTNT-01..04)
+
+---
+
 ## Future Considerations (v2+, per PRD)
 
 - Embedded terminal hosting (PTY tabs, xterm.js, node-pty)

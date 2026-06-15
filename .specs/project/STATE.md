@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-15
-**Current Work:** release-cicd-autoupdate — **EXECUTED T1–T9** (9 atomic commits on `feature/release-cicd-autoupdate`); gate green (typecheck + lint + **125** tests, was 105 → +20). **T10 (manual end-to-end release check) is the only remaining task — user-run after merge, no commit.** Files: `scripts/release-version.ts`(+test), `scripts/stamp-version.ts`, `src/main/update-service.ts`(+test), `src/main/index.ts` wiring, `electron-builder.yml` (win-only/github), `dev-app-update.yml`, `.github/workflows/{release,nightly}.yml`, `electron-updater`+`tsx` deps, vitest include widened. (Prior: PRD #30 spec+design+tasks approved; per-workspace-config M4 merged; v1 roadmap done.)
+**Current Work:** worktree-name-template — **EXECUTED T1–T9** on `feature/worktree-name-template`; gate green (typecheck + lint + **137** tests, was 125 → +12). Worktree folder name is now a configurable template (`{repo}`/`{branch}`/`{id}`; default `{repo}-{branch}`), mirroring the branch template: global `ado.worktreeTemplate` (Settings dialog) + per-workspace `.app/config.json` `worktreeTemplate`. Empty render blocks create. Key shape changes: `worktreeNameFor`/templated `worktreePathFor` (`src/shared/worktrees.ts`); `workspaceBranchTemplate`→`workspaceTemplates` (both overrides, one read); IPC `workspaces:branch-template`→`workspaces:templates`; `worktrees:create` gains `worktreeTemplate?`. **Remaining:** open PR (body `Closes #<n>` once the feature issue exists). (Prior: release-cicd T1–T9 executed, T10 manual check pending + PR; v1 roadmap done.)
 
 ---
 
@@ -105,6 +105,8 @@
 - [x] Execute release-cicd-autoupdate T1–T9 (9 commits; 125 tests green) on `feature/release-cicd-autoupdate`
 - [ ] **T10 manual end-to-end release check** (user-run): push throwaway `v0.0.1`/`v0.0.2`, install + observe silent auto-update; dispatch nightly twice, confirm side-by-side + single rolling pre-release; confirm stable never offered the nightly; clean up throwaway releases; record outcome here
 - [ ] Open PR `feature/release-cicd-autoupdate` → main (body: `Closes #30`)
+- [x] Specify + Execute worktree-name-template (WTNT-01..04) on `feature/worktree-name-template` — global `ado.worktreeTemplate` + `.app/` `worktreeTemplate` override, `{repo}`/`{branch}`/`{id}` placeholders, empty-render guard; gate green (137 tests)
+- [ ] Open PR `feature/worktree-name-template` → main (body: `Closes #<n>` once the feature issue is synced via tlc-to-issues)
 
 ---
 

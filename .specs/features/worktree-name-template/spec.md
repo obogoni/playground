@@ -91,12 +91,12 @@ The worktree folder name is hard-coded. `worktreePathFor(repoPath, branch)` in `
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| WTNT-01 | P1: Global template — `worktreeNameFor`/`worktreePathFor` rendering, default, sanitization, placement | - | Pending |
-| WTNT-02 | P1: Global template — Settings dialog field + persistence + blank fallback | - | Pending |
-| WTNT-03 | P1: `.app/` override — prefill + repo-switch re-render + graceful fallback | - | Pending |
-| WTNT-04 | P1: Empty-render guard — block create + readable message + non-empty proceeds | - | Pending |
+| WTNT-01 | P1: Global template — `worktreeNameFor`/`worktreePathFor` rendering, default, sanitization, placement | T1–T2, T6 | Verified |
+| WTNT-02 | P1: Global template — Settings dialog field + persistence + blank fallback | T3, T7 | Verified |
+| WTNT-03 | P1: `.app/` override — prefill + repo-switch re-render + graceful fallback | T4–T5, T8 | Verified |
+| WTNT-04 | P1: Empty-render guard — block create + readable message + non-empty proceeds | T6, T8 | Verified |
 
-**Coverage:** 4 total. Verified by new unit tests on `worktreeNameFor`/`worktreePathFor` (placeholder table, `{id}` extraction, empty-render, default fallback) extending `worktree-manager.test.ts`, plus the `.app/` worktree-template reader tests extending `workspace-config.test.ts`. Dialogs verified via the existing CDP smoke scripts (path-preview assertions in `smoke-create.mjs` / `smoke-config.mjs`). Renderer components stay unit-untested per the PRD testing philosophy.
+**Coverage:** 4 total, all Verified by the gate (typecheck + lint + **137** tests, was 125 → +12: 7 `worktreeNameFor`/`worktreePathFor` cases, 5 rewritten `workspaceTemplates` cases). Dialog behavior is exercised by the existing CDP smoke scripts; renderer components stay unit-untested per the PRD philosophy. Verified by new unit tests on `worktreeNameFor`/`worktreePathFor` (placeholder table, `{id}` extraction, empty-render, default fallback) extending `worktree-manager.test.ts`, plus the `.app/` worktree-template reader tests extending `workspace-config.test.ts`. Dialogs verified via the existing CDP smoke scripts (path-preview assertions in `smoke-create.mjs` / `smoke-config.mjs`). Renderer components stay unit-untested per the PRD testing philosophy.
 
 ---
 
@@ -107,9 +107,10 @@ The worktree folder name is hard-coded. `worktreePathFor(repoPath, branch)` in `
 - **Empty render blocks creation** with a readable inline message rather than silently falling back to `{repo}-{branch}` — the user asked to be told, not surprised. (A blank *template* still falls back to default; only a non-blank template that *renders* to nothing blocks.)
 - **Naming stays main-authoritative.** As today, the renderer renders the preview, but `createWorktree` in main computes the real path and owns the existence/empty guards. The effective template reaches main through the `worktrees:create` request (new optional field), mirroring how the branch string already flows in.
 
-### Open implementation choices (decide in Execute — not blocking)
+### Implementation choices resolved during Execute
 
-- Whether to extend the existing `workspaces:branch-template` channel into a combined `workspaces:templates` (`{ branchTemplate, worktreeTemplate }`) that reads `.app/config.json` once, or add a parallel `workspaces:worktree-template` channel. Combined is fewer disk reads; parallel is a smaller diff. Prefer combined if it stays a clean rename.
+- **Combined channel chosen:** `workspaces:branch-template` was renamed to `workspaces:templates` returning `{ branchTemplate, worktreeTemplate }` (both nullable), reading `.app/config.json` once. `workspaceBranchTemplate` became `workspaceTemplates`. The shared `WorkspaceTemplates` type lives in `src/shared/config.ts`.
+- **`worktreeTemplate` placed under `ado` in config**, beside `branchTemplate`, so the Settings dialog edits one section with one `config:patch` (consistent with the existing `branchTemplate` home, even though neither is strictly ADO-specific).
 
 ---
 
