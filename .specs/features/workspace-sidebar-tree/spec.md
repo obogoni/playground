@@ -1,7 +1,7 @@
 # Workspace Registration & Sidebar Tree Specification
 
 **Milestone:** M1 — Walking Skeleton & Worktree Navigation
-**Sources of truth:** PRD issue #1 (stories 1–4, 16 partial, 20 partial; §Data model, §Module decomposition), `design_handoff_worktree_manager/README.md` (§1a Sidebar tree, §1b Worktree detail)
+**Sources of truth:** PRD issue #1 (stories 1–4, 16 partial, 20 partial; §Data model, §Module decomposition), `design/handoff/README.md` (§1a Sidebar tree, §1b Worktree detail)
 
 ## Problem Statement
 

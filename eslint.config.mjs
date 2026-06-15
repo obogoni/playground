@@ -6,8 +6,8 @@ import eslintPluginReactHooks from 'eslint-plugin-react-hooks'
 import eslintPluginReactRefresh from 'eslint-plugin-react-refresh'
 
 export default defineConfig(
-  // design_handoff_worktree_manager is a reference-only design bundle (AD-001), never shipped
-  { ignores: ['**/node_modules', '**/dist', '**/out', 'design_handoff_worktree_manager'] },
+  // design/handoff is a reference-only design bundle (AD-001), never shipped
+  { ignores: ['**/node_modules', '**/dist', '**/out', 'design/handoff'] },
   tseslint.configs.recommended,
   eslintPluginReact.configs.flat.recommended,
   eslintPluginReact.configs.flat['jsx-runtime'],

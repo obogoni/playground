@@ -9,7 +9,7 @@
 
 ### AD-001: PRD issue #1 and design handoff are the dual sources of truth (2026-06-11)
 
-**Decision:** GitHub issue #1 governs behavior/architecture; `design_handoff_worktree_manager/` (README + `Worktree Manager.dc.html`) governs visual fidelity. The `.dc.html` prototype is reference-only, never shipped.
+**Decision:** GitHub issue #1 governs behavior/architecture; `design/handoff/` (README + `Worktree Manager.dc.html`) governs visual fidelity. The `.dc.html` prototype is reference-only, never shipped.
 **Reason:** Both artifacts are explicit and detailed; duplicating them into specs would drift.
 **Trade-off:** Feature specs stay thinner and reference these artifacts instead of restating them.
 **Impact:** Every feature spec links back to PRD user-story numbers and handoff sections.

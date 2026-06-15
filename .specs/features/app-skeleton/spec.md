@@ -1,7 +1,7 @@
 # App Skeleton & Design System Specification
 
 **Milestone:** M1 — Walking Skeleton & Worktree Navigation
-**Sources of truth:** PRD issue #1 (architecture), `design_handoff_worktree_manager/README.md` (visuals — Global Layout & Shell, Design Tokens)
+**Sources of truth:** PRD issue #1 (architecture), `design/handoff/README.md` (visuals — Global Layout & Shell, Design Tokens)
 
 ## Problem Statement
 

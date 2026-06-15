@@ -25,4 +25,4 @@ npm run build:win  # production build + Windows installer
 
 - `.specs/project/` — vision, roadmap, and decision log
 - `.specs/features/` — per-feature spec → design → tasks
-- `design_handoff_worktree_manager/` — visual design reference (tokens, prototype); reference-only, never shipped
+- `design/handoff/` — visual design reference (tokens, prototype); reference-only, never shipped

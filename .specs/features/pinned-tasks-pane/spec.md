@@ -1,7 +1,7 @@
 # Pinned Tasks Pane Specification
 
 **Milestone:** M3 — ADO Tasks & Start-Work Flow (first M3 feature)
-**Sources of truth:** PRD issue #1 (stories 6, 7, 8, 9, 20 partial; §ADO integration, §Data model `PinnedTask`/`Settings`, §Module decomposition `AdoGateway`/`TaskBoard`, §Testing Decisions), `design_handoff_worktree_manager/README.md` (§1c Pinned tasks, §Top bar sync status, §State Management ADO auth note)
+**Sources of truth:** PRD issue #1 (stories 6, 7, 8, 9, 20 partial; §ADO integration, §Data model `PinnedTask`/`Settings`, §Module decomposition `AdoGateway`/`TaskBoard`, §Testing Decisions), `design/handoff/README.md` (§1c Pinned tasks, §Top bar sync status, §State Management ADO auth note)
 **Scope size:** Medium — spec only; design inline (architecture fully dictated by PRD §Module decomposition), tasks implicit in Execute
 
 ## Problem Statement
