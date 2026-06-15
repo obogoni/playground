@@ -1,8 +1,10 @@
-/* CDP smoke for the launch-shortcuts feature (LNCH-01..05). Assumes the app
- * is running with --remote-debugging-port=9222 and a seeded workspace named
- * wtm-smoke-* containing repo `api` plus linked worktree `api-feature-42`.
- * Opens real tool windows (Explorer / Windows Terminal / VS Code) — run the
- * PowerShell wrapper that cleans them up afterwards.
+/* CDP smoke for the launch-shortcuts feature (LNCH-01..05) plus the VS 2022
+ * (admin) launcher rendering (VSAD-01/03). Assumes the app is running with
+ * --remote-debugging-port=9222 and a seeded workspace named wtm-smoke-*
+ * containing repo `api` plus linked worktree `api-feature-42`. Opens real tool
+ * windows (Explorer / Windows Terminal / VS Code) — run the PowerShell wrapper
+ * that cleans them up afterwards. The VS 2022 elevation path is never invoked
+ * here (it would pop UAC); it's hand-verified per the spec's Testing Notes.
  * Run: node scripts/smoke-shortcuts.mjs
  */
 
@@ -85,15 +87,33 @@ const cards = await evaluate(
      }))
    })()`
 )
-check('three launcher cards render', cards.length === 3, JSON.stringify(cards))
+check('four launcher cards render', cards.length === 4, JSON.stringify(cards))
 check(
-  'card labels and commands per §1b',
+  'card labels and commands per §1b + VS 2022 (VSAD-01)',
   cards[0]?.label === 'File Explorer' &&
     cards[0]?.command === 'explorer.exe' &&
     cards[1]?.label === 'Windows Terminal' &&
     cards[1]?.command === 'wt.exe' &&
     cards[2]?.label === 'VS Code' &&
-    cards[2]?.command === 'code'
+    cards[2]?.command === 'code' &&
+    cards[3]?.label === 'Visual Studio 2022' &&
+    cards[3]?.command === 'devenv.exe'
+)
+// VSAD-01: the VS card carries the elevation marker (shield tile + admin badge)
+const vsAdmin = await evaluate(
+  ws,
+  `(() => {
+     const card = document.querySelectorAll('.detail-launcher')[3]
+     return {
+       tile: Boolean(card?.querySelector('.detail-launcher-tile.amber')),
+       admin: card?.querySelector('.detail-launcher-admin')?.textContent
+     }
+   })()`
+)
+check(
+  'VS card marked elevated',
+  vsAdmin.tile === true && vsAdmin.admin === 'admin',
+  JSON.stringify(vsAdmin)
 )
 
 // LNCH-05: a launch against a vanished path fails with a clear message
@@ -147,6 +167,30 @@ check(
   'card click on vanished worktree shows toast',
   typeof toast === 'string' && /Couldn't launch Windows Terminal/.test(toast),
   String(toast)
+)
+
+// VSAD-03: each board card footer gains a VS 2022 (admin) button. Last, since
+// it leaves the app in the board direction. The button is never clicked here —
+// elevation/UAC is hand-verified (see spec Testing Notes).
+const boardVs = await evaluate(
+  ws,
+  `(async () => {
+     ;[...document.querySelectorAll('.topbar-segment')]
+       .find((b) => /board/i.test(b.textContent || ''))?.click()
+     await new Promise((r) => setTimeout(r, 600))
+     const cards = [...document.querySelectorAll('.board-card')]
+     return {
+       count: cards.length,
+       allHaveVs: cards.every((card) =>
+         Boolean(card.querySelector('.board-launch-btn.amber[title="Visual Studio 2022 (admin)"]'))
+       )
+     }
+   })()`
+)
+check(
+  'board cards expose VS 2022 (admin) button (VSAD-03)',
+  boardVs.count > 0 && boardVs.allHaveVs === true,
+  JSON.stringify(boardVs)
 )
 
 ws.close()
