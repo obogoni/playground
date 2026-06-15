@@ -3,10 +3,19 @@ import { UpdateService, type AutoUpdaterPort, type Scheduler } from './update-se
 
 /** A recording fake `autoUpdater`: a Proxy logs every field write so we can assert
  *  exactly what `start()` touched (including that `channel` is never assigned). */
-function recordingUpdater(checkImpl?: () => Promise<unknown>) {
-  const state = {
-    writes: [] as string[],
-    errorListeners: [] as Array<(e: unknown) => void>,
+interface UpdaterState {
+  writes: string[]
+  errorListeners: Array<(e: unknown) => void>
+  checkCount: number
+}
+
+function recordingUpdater(checkImpl?: () => Promise<unknown>): {
+  updater: AutoUpdaterPort
+  state: UpdaterState
+} {
+  const state: UpdaterState = {
+    writes: [],
+    errorListeners: [],
     checkCount: 0
   }
   const target = {
@@ -32,7 +41,11 @@ function recordingUpdater(checkImpl?: () => Promise<unknown>) {
 }
 
 /** A fake scheduler that records registered intervals; `tick(i)` fires one manually. */
-function recordingScheduler() {
+function recordingScheduler(): {
+  scheduler: Scheduler
+  tasks: Array<{ ms: number; fn: () => void }>
+  tick: (i?: number) => void
+} {
   const tasks: Array<{ ms: number; fn: () => void }> = []
   const scheduler: Scheduler = {
     every: (ms, fn) => {
