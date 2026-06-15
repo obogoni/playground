@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-06-15
-**Current Work:** release-cicd-autoupdate — PRD issue #30 SPECIFIED + DESIGNED + TASKED (`.specs/features/release-cicd-autoupdate/{spec,design,tasks}.md`, RLCD-01..14, Large scope). Spec + design approved. tasks.md = T1–T10 (10 atomic, 5 phases) awaiting approval before Execute. Also created `.specs/codebase/TESTING.md` (baseline 105 tests / 9 files). Key facts: GitHub provider never auto-detects channel → nightly `-c.publish.channel=alpha`; `forceDevUpdateConfig` env-gated (dev inert); version helper `scripts/release-version.ts` via `tsx`; `electron-updater` added as runtime dep. (Prior: per-workspace-config M4 merged; v1 roadmap done.)
+**Current Work:** release-cicd-autoupdate — **EXECUTED T1–T9** (9 atomic commits on `feature/release-cicd-autoupdate`); gate green (typecheck + lint + **125** tests, was 105 → +20). **T10 (manual end-to-end release check) is the only remaining task — user-run after merge, no commit.** Files: `scripts/release-version.ts`(+test), `scripts/stamp-version.ts`, `src/main/update-service.ts`(+test), `src/main/index.ts` wiring, `electron-builder.yml` (win-only/github), `dev-app-update.yml`, `.github/workflows/{release,nightly}.yml`, `electron-updater`+`tsx` deps, vitest include widened. (Prior: PRD #30 spec+design+tasks approved; per-workspace-config M4 merged; v1 roadmap done.)
 
 ---
 
@@ -38,6 +38,22 @@
 
 ## Lessons Learned
 
+- **electron-builder `-c.*` short overrides break under PowerShell (2026-06-15):** on
+  windows-latest (pwsh default) `npx electron-builder ... -c.publish.channel=alpha` is misread
+  as a config-file path (`ENOENT .publish.channel=alpha`). bash parses it correctly, so
+  `nightly.yml`'s build step pins `shell: bash`. Long form `--config.x=y` also works in pwsh.
+- **`gh release edit` has no `--generate-notes` (2026-06-15):** only `gh release create` does, and
+  the REST update-release API ignores `generate_release_notes`. So `release.yml` calls the
+  *generate-notes* API endpoint, writes the body to a file, then `gh release edit --draft=false
+  --notes-file` to publish the electron-builder-created draft with auto notes.
+- **electron-builder GitHub publisher always tags `v{version}` (2026-06-15):** it can't target a
+  fixed reused tag, so the rolling-single nightly builds with `--publish never` and publishes the
+  `nightly` tag via `gh` (SPEC_DEVIATION from the task's `--publish always`).
+- **Packaged asar `package.json` keeps source `name` + no `productName` (2026-06-15):** so
+  `app.getName()` returns `"playground"` in a packaged build; T6 AUMID is `com.${app.getName()}`.
+  Whether nightly gets a channel-distinct identity/userData is unconfirmed — verify in T10; if it
+  collides, add `productName`/`name` to source `package.json`. (Tip: `asar extract-file <archive>
+  package.json` writes to CWD and silently overwrote the repo's `package.json` — restore via git.)
 - **LF must be enforced by the repo, not the clone (2026-06-11):** a fast-forward pull with global `core.autocrlf=true` rewrote the whole working tree as CRLF, exploding `npm run lint` (1781 prettier warnings) on a cold eslint cache. Fixed with `.gitattributes` (`* text=auto eol=lf`) + working-tree renormalization. Gates that rely on `eslint --cache` can hide debt — new lint errors surfaced only when the cache went cold.
 
 ---
@@ -85,6 +101,10 @@
 - [x] User approved PWCF spec decisions (gear-button settings dialog; repo-switch re-render until edited)
 - [x] Execute per-workspace-config: `workspaceBranchTemplate` + `workspaces:branch-template` IPC + dialog override behavior + `SettingsDialog` — PWCF-01..04 Verified
 - [ ] Open PR `feature/per-workspace-config` → main — closes the v1 roadmap
+- [x] Specify + Design + Task release-cicd-autoupdate (PRD #30, RLCD-01..14)
+- [x] Execute release-cicd-autoupdate T1–T9 (9 commits; 125 tests green) on `feature/release-cicd-autoupdate`
+- [ ] **T10 manual end-to-end release check** (user-run): push throwaway `v0.0.1`/`v0.0.2`, install + observe silent auto-update; dispatch nightly twice, confirm side-by-side + single rolling pre-release; confirm stable never offered the nightly; clean up throwaway releases; record outcome here
+- [ ] Open PR `feature/release-cicd-autoupdate` → main (body: `Closes #30`)
 
 ---
 

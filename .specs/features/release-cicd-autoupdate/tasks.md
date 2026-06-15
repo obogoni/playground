@@ -2,8 +2,41 @@
 
 **Design**: `.specs/features/release-cicd-autoupdate/design.md`
 **Spec**: `.specs/features/release-cicd-autoupdate/spec.md`
-**Testing**: `.specs/codebase/TESTING.md` (baseline **105** tests / 9 files)
-**Status**: Draft
+**Testing**: `.specs/codebase/TESTING.md` (baseline **105** tests / 9 files → now **125**, +20)
+**Status**: T1–T9 implemented (gate green: typecheck + lint + 125 tests); **T10 manual verification pending** (user-run, no commit)
+
+## Execution Summary
+
+| Task | Commit | Status |
+| ---- | ------ | ------ |
+| T1 | `build(release): add electron-updater + tsx, widen vitest include` | ✅ Done |
+| T2 | `build(release): windows-only electron-builder config on github feed` | ✅ Done |
+| T3 | `feat(release): tag/run-number version-derivation helper` (+13 tests) | ✅ Done |
+| T4 | `feat(update): silent auto-update policy service (DI, dev-inert)` (+7 tests) | ✅ Done |
+| T5 | `build(release): package.json version-stamping entry` | ✅ Done |
+| T6 | `feat(update): start UpdateService on app ready; per-channel AUMID` | ✅ Done |
+| T7 | `build(update): dev-app-update.yml for local feed testing` | ✅ Done |
+| T8 | `ci(release): tag-driven windows release + auto notes` | ✅ Done |
+| T9 | `ci(release): dispatched alpha-channel nightly (rolling single)` | ✅ Done |
+| T10 | (manual; record outcome in STATE.md) | ⏳ Pending user run |
+
+**Deviations / decisions made during execution:**
+
+- **T8/T9 release-notes & rolling tag**: `gh release edit` has no `--generate-notes`, so stable
+  publishes via electron-builder (`--publish always` → draft) then the GitHub *generate-notes*
+  API + `gh release edit --draft=false` finalizes it with notes.
+- **T9 `--publish never` (SPEC_DEVIATION from "always")**: electron-builder's GitHub publisher
+  always tags releases `v{version}`, which cannot target the reused fixed `nightly` tag that
+  rolling-single requires. Nightly therefore builds with `--publish never` and publishes via `gh`.
+- **T9 `shell: bash` for electron-builder**: the `-c.*` short overrides fail to parse under
+  PowerShell (windows-latest default) — `-c.publish.channel=alpha` is read as a config-file path.
+  bash parses them correctly, matching the task's prescribed flags verbatim.
+- **T6 AUMID**: derived as `com.${app.getName()}`. Verified the packaged asar `package.json`
+  carries `name: "playground"` and **no** `productName`, so `app.getName()` returns `"playground"`
+  for stable. Whether nightly reports a channel-distinct name (and thus a distinct AUMID /
+  `userData`) must be confirmed in T10 — if it collides, add `productName`/`name` to the source
+  `package.json` as a follow-up. Low impact (taskbar grouping); side-by-side install dir is
+  driven by electron-builder's NSIS, not the AUMID.
 
 ---
 

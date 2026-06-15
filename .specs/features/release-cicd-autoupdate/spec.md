@@ -198,24 +198,26 @@ Playground is only runnable from source (`electron-vite dev`/`build`); there is 
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| RLCD-01 | P1: Tag-driven stable release pipeline (`release.yml`: gate → stamp → build → publish) | Design | Pending |
-| RLCD-02 | P1: Version-stamping helper — `vX.Y.Z` → `X.Y.Z` (tag = source of truth) | Design | Pending |
-| RLCD-03 | P1: Quality gate (typecheck/lint/test) blocks publish | Design | Pending |
-| RLCD-04 | P1: Windows-only `electron-builder.yml` + GitHub publish provider + icon/product name | Design | Pending |
-| RLCD-05 | P1: `UpdateService` — startup check, silent download, apply-on-quit, channel-from-config | Design | Pending |
-| RLCD-06 | P1: `UpdateService` inert when not packaged (dev) | Design | Pending |
-| RLCD-07 | P1: `index.ts` wiring of `UpdateService.start()` in `app.whenReady()` | Design | Pending |
-| RLCD-08 | P2: Periodic ~4h re-check (injected timer) | Design | Pending |
-| RLCD-09 | P2: Nightly dispatch workflow + nightly version stamping (`X.Y.Z-nightly.<run#>` → alpha) | Design | Pending |
-| RLCD-10 | P2: Nightly side-by-side identity (appId/productName/install dir/shortcut/user-data/channel) | Design | Pending |
-| RLCD-11 | P2: Rolling single nightly pre-release (replace previous; pre-release; never offered to stable) | Design | Pending |
-| RLCD-12 | P2: Auto-generated stable release notes | Design | Pending |
-| RLCD-13 | P2: `dev-app-update.yml` local update-flow testing | Design | Pending |
-| RLCD-14 | P3: Unsigned auto-update works + signing seam via secrets | Design | Pending |
+| RLCD-01 | P1: Tag-driven stable release pipeline (`release.yml`: gate → stamp → build → publish) | T8 | Implemented (T10) |
+| RLCD-02 | P1: Version-stamping helper — `vX.Y.Z` → `X.Y.Z` (tag = source of truth) | T3, T5 | Verified |
+| RLCD-03 | P1: Quality gate (typecheck/lint/test) blocks publish | T8, T9 | Implemented (T10) |
+| RLCD-04 | P1: Windows-only `electron-builder.yml` + GitHub publish provider + icon/product name | T2 | Verified (build) |
+| RLCD-05 | P1: `UpdateService` — startup check, silent download, apply-on-quit, channel-from-config | T4 | Verified |
+| RLCD-06 | P1: `UpdateService` inert when not packaged (dev) | T4, T6 | Verified |
+| RLCD-07 | P1: `index.ts` wiring of `UpdateService.start()` in `app.whenReady()` | T6 | Implemented (T10) |
+| RLCD-08 | P2: Periodic ~4h re-check (injected timer) | T4 | Verified |
+| RLCD-09 | P2: Nightly dispatch workflow + nightly version stamping (`X.Y.Z-nightly.<run#>` → alpha) | T3, T5, T9 | Implemented (T10) |
+| RLCD-10 | P2: Nightly side-by-side identity (appId/productName/install dir/shortcut/user-data/channel) | T6, T9 | Implemented (T10) |
+| RLCD-11 | P2: Rolling single nightly pre-release (replace previous; pre-release; never offered to stable) | T8, T9 | Implemented (T10) |
+| RLCD-12 | P2: Auto-generated stable release notes | T8 | Implemented (T10) |
+| RLCD-13 | P2: `dev-app-update.yml` local update-flow testing | T4, T7 | Implemented (T10) |
+| RLCD-14 | P3: Unsigned auto-update works + signing seam via secrets | T8, T9 | Implemented (T10) |
 
 **ID format:** `RLCD-[NUMBER]`
 **Status values:** Pending → In Design → In Tasks → Implementing → Verified
-**Coverage:** 14 total, 0 mapped to tasks yet (Tasks phase pending) ⚠️
+**Status note:** "Verified" = proven by unit tests or a local build; "Implemented (T10)" = code/config in
+place, live round-trip pending the manual T10 release check.
+**Coverage:** 14 total, all mapped + implemented; T10 manual verification pending. ✅
 
 ---
 
