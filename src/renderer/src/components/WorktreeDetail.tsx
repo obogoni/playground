@@ -29,6 +29,8 @@ const LAUNCHERS: {
   command: string
   icon: IconName
   tile: string
+  /** Marks an elevated launcher (UAC) — renders the shield tile + admin badge. */
+  admin?: boolean
 }[] = [
   {
     tool: 'explorer',
@@ -44,7 +46,15 @@ const LAUNCHERS: {
     icon: 'terminal',
     tile: 'green'
   },
-  { tool: 'vscode', label: 'VS Code', command: 'code', icon: 'code', tile: 'accent' }
+  { tool: 'vscode', label: 'VS Code', command: 'code', icon: 'code', tile: 'accent' },
+  {
+    tool: 'vs2022',
+    label: 'Visual Studio 2022',
+    command: 'devenv.exe',
+    icon: 'shield',
+    tile: 'amber',
+    admin: true
+  }
 ]
 
 export function WorktreeDetail({
@@ -198,7 +208,10 @@ export function WorktreeDetail({
                 <span className={`detail-launcher-tile ${launcher.tile}`}>
                   <Icon name={launcher.icon} size={17} />
                 </span>
-                <span className="detail-launcher-label">{launcher.label}</span>
+                <span className="detail-launcher-labelrow">
+                  <span className="detail-launcher-label">{launcher.label}</span>
+                  {launcher.admin && <span className="detail-launcher-admin">admin</span>}
+                </span>
                 <span className="detail-launcher-command">{launcher.command}</span>
               </button>
             ))}

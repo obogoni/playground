@@ -271,9 +271,32 @@
   color: var(--accent);
 }
 
+.detail-launcher-tile.amber {
+  background: color-mix(in oklab, var(--amber) 16%, transparent);
+  color: var(--amber);
+}
+
+.detail-launcher-labelrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .detail-launcher-label {
   font-size: 13px;
   font-weight: 600;
+}
+
+/* Elevation marker — pairs with the shield tile to read as the admin action */
+.detail-launcher-admin {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: color-mix(in oklab, var(--amber) 18%, transparent);
+  color: var(--amber);
 }
 
 .detail-launcher-command {

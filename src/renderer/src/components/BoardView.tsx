@@ -342,6 +342,14 @@ function BoardCard({ worktree, repoName, tasks, activeId, onToast }: BoardCardPr
         >
           <Icon name="code" size={15} strokeWidth={1.9} />
         </button>
+        <button
+          type="button"
+          className="board-launch-btn amber"
+          title="Visual Studio 2022 (admin)"
+          onClick={() => launch('vs2022')}
+        >
+          <Icon name="shield" size={15} strokeWidth={1.9} />
+        </button>
         <span className="board-card-footer-spacer" />
         <span className="board-card-repo">{repoName}</span>
       </div>
