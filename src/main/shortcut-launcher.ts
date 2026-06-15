@@ -73,7 +73,9 @@ function vswherePath(): string {
 
 /**
  * Resolves the newest VS 2022 `devenv.exe` via vswhere, or null when vswhere is
- * absent / errors / reports no install (treated as "not found", never thrown).
+ * absent / errors / reports no install — or when the reported path no longer
+ * exists on disk (stale vswhere output / partial uninstall). All treated as
+ * "not found", never thrown.
  */
 function resolveDevenv(): Promise<string | null> {
   const vswhere = vswherePath()
@@ -83,7 +85,10 @@ function resolveDevenv(): Promise<string | null> {
       vswhere,
       ['-latest', '-version', '[17.0,18.0)', '-property', 'productPath'],
       { windowsHide: true },
-      (error, stdout) => resolve(error ? null : parseVswhereProductPath(stdout))
+      (error, stdout) => {
+        const devenv = error ? null : parseVswhereProductPath(stdout)
+        resolve(devenv && existsSync(devenv) ? devenv : null)
+      }
     )
   })
 }
