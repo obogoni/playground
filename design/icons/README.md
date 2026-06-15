@@ -18,9 +18,9 @@ Point each channel at its icon set. electron-builder picks `.ico` on Windows and
 ```jsonc
 // package.json → "build"
 {
-  "win":   { "icon": "icons/playground.ico" },
-  "mac":   { "icon": "icons/playground.icns" },
-  "linux": { "icon": "icons/png/playground-512.png" }
+  "win":   { "icon": "design/icons/playground.ico" },
+  "mac":   { "icon": "design/icons/playground.icns" },
+  "linux": { "icon": "design/icons/png/playground-512.png" }
 }
 ```
 
@@ -28,7 +28,7 @@ For the nightly channel, swap to the `-nightly` files (e.g. a separate build con
 
 ## In-app window icon
 
-`new BrowserWindow({ icon: path.join(__dirname, 'icons/playground.png') })` — use a PNG (256 or 512) on Windows/Linux; macOS uses the bundle icon.
+`new BrowserWindow({ icon: path.join(__dirname, 'design/icons/png/playground-256.png') })` — use a PNG (256 or 512) on Windows/Linux; macOS uses the bundle icon.
 
 ## Tile color
 
