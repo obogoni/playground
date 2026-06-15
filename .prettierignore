@@ -1,6 +1,6 @@
 out
 dist
-design_handoff_worktree_manager
+design/handoff
 pnpm-lock.yaml
 LICENSE.md
 tsconfig.json

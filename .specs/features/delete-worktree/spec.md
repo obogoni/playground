@@ -1,7 +1,7 @@
 # Delete Worktree (guarded) Specification
 
 **Milestone:** M2 — Worktree Lifecycle (second M2 feature)
-**Sources of truth:** PRD issue #1 (stories 14, 15, 16 partial, 21 partial; §Worktree placement "Deletion uses `git worktree remove`; refuses on dirty worktree (no auto-preserve in v1)", §Module decomposition `WorktreeManager.remove(repoPath, worktreePath, { force? })`, §Testing Decisions), `design_handoff_worktree_manager/README.md` (§1b Danger section, §Interactions & Behavior "Remove worktree guard")
+**Sources of truth:** PRD issue #1 (stories 14, 15, 16 partial, 21 partial; §Worktree placement "Deletion uses `git worktree remove`; refuses on dirty worktree (no auto-preserve in v1)", §Module decomposition `WorktreeManager.remove(repoPath, worktreePath, { force? })`, §Testing Decisions), `design/handoff/README.md` (§1b Danger section, §Interactions & Behavior "Remove worktree guard")
 **Scope size:** Medium — spec only; design inline, tasks implicit in Execute
 
 ## Problem Statement

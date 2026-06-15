@@ -1,7 +1,7 @@
 # Create Worktree (taskless) Specification
 
 **Milestone:** M2 — Worktree Lifecycle (first M2 feature)
-**Sources of truth:** PRD issue #1 (stories 12, 13, 16, 21 partial; §Worktree placement, §Module decomposition `WorktreeManager`, §Testing Decisions), `design_handoff_worktree_manager/README.md` (§3 Start-work dialog — adapted taskless, §Interactions & Behavior)
+**Sources of truth:** PRD issue #1 (stories 12, 13, 16, 21 partial; §Worktree placement, §Module decomposition `WorktreeManager`, §Testing Decisions), `design/handoff/README.md` (§3 Start-work dialog — adapted taskless, §Interactions & Behavior)
 **Scope size:** Medium — spec only; design inline, tasks implicit in Execute
 
 ## Problem Statement

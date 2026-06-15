@@ -1,7 +1,7 @@
 # Board Direction Specification
 
 **Milestone:** M4 — Board View & Configurability (first M4 feature)
-**Sources of truth:** PRD issue #1 (stories 3, 5, 17–19; §Architecture — renderer owns view state), `design_handoff_worktree_manager/README.md` (§2 Direction B "Board", §Interactions — direction switch & task-chip highlight, §State Management)
+**Sources of truth:** PRD issue #1 (stories 3, 5, 17–19; §Architecture — renderer owns view state), `design/handoff/README.md` (§2 Direction B "Board", §Interactions — direction switch & task-chip highlight, §State Management)
 **Scope size:** Medium — spec only; design inline (renderer-only feature: one new component family consuming existing snapshots and IPC), tasks implicit in Execute
 
 ## Problem Statement

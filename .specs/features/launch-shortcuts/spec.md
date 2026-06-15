@@ -1,7 +1,7 @@
 # Launch Shortcuts Specification
 
 **Milestone:** M1 — Walking Skeleton & Worktree Navigation (final M1 feature — app becomes daily-usable)
-**Sources of truth:** PRD issue #1 (stories 17–19, 21 partial; §Module decomposition `ShortcutLauncher`, §What is hard-coded in v1), `design_handoff_worktree_manager/README.md` (§1b "Open with" section, §Interactions & Behavior)
+**Sources of truth:** PRD issue #1 (stories 17–19, 21 partial; §Module decomposition `ShortcutLauncher`, §What is hard-coded in v1), `design/handoff/README.md` (§1b "Open with" section, §Interactions & Behavior)
 **Scope size:** Medium — spec only; design inline, tasks implicit in Execute
 
 ## Problem Statement

@@ -1,5 +1,5 @@
 /*
- * Design tokens — source of truth: design_handoff_worktree_manager/README.md §Design Tokens.
+ * Design tokens — source of truth: design/handoff/README.md §Design Tokens.
  * Theme is switched by setting data-theme on <html>; tinted surfaces must use
  * color-mix(in oklab, var(--token) N%, transparent) so they recolor with the theme.
  */

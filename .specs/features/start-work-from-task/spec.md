@@ -1,7 +1,7 @@
 # Start Work from Task Specification
 
 **Milestone:** M3 — ADO Tasks & Start-Work Flow (second/final M3 feature)
-**Sources of truth:** PRD issue #1 (stories 5, 10, 11, 16; §Task ↔ worktree link, §Start-work flow, §What is hard-coded, §Testing Decisions), `design_handoff_worktree_manager/README.md` (§1a sidebar task tags, §1b Linked task, §1c card footer, §3 Start-work dialog, §Branch template & sanitization)
+**Sources of truth:** PRD issue #1 (stories 5, 10, 11, 16; §Task ↔ worktree link, §Start-work flow, §What is hard-coded, §Testing Decisions), `design/handoff/README.md` (§1a sidebar task tags, §1b Linked task, §1c card footer, §3 Start-work dialog, §Branch template & sanitization)
 **Scope size:** Medium — spec only; design inline (modules and flow fully dictated by PRD; dialog reuses `NewWorktreeDialog` patterns), tasks implicit in Execute
 
 ## Problem Statement

@@ -28,7 +28,7 @@
 **Key sources of truth:**
 
 - PRD: GitHub issue #1 (behavior + architecture)
-- Design handoff: `design_handoff_worktree_manager/` (visual fidelity — hifi tokens, layouts, interactions)
+- Design handoff: `design/handoff/` (visual fidelity — hifi tokens, layouts, interactions)
 
 ## Scope
 
