@@ -3,7 +3,7 @@ import type { JSX } from 'react'
 import type { PinnedTaskView } from '../../../shared/tasks'
 import { branchNameFor } from '../../../shared/tasks'
 import type { WorkspaceNode } from '../../../shared/tree'
-import { worktreeNameFor, worktreePathFor } from '../../../shared/worktrees'
+import { worktreePathFor } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { defaultBaseFor, repoOptionsOf } from '../lib/repo-options'
 import { Icon } from './Icon'
@@ -72,10 +72,10 @@ export function StartWorkDialog({
   }, [workspacePath, task.id, details, branchTemplate])
 
   const effectiveWorktreeTemplate = worktreeOverride ?? worktreeTemplate
-  const canCreate =
-    selectedRepo !== undefined &&
-    worktreeNameFor(repoPath, branch, effectiveWorktreeTemplate) !== '' &&
-    !busy
+  // Gate only on a selected repo and a non-empty branch; if the template renders
+  // an empty folder name, let main's empty-render guard return a readable error
+  // instead of silently disabling the button.
+  const canCreate = selectedRepo !== undefined && branch.trim() !== '' && !busy
 
   const pickRepo = (path: string): void => {
     setRepoPath(path)
