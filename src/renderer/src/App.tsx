@@ -74,6 +74,7 @@ function App(): JSX.Element {
   })
   const [adoOrg, setAdoOrg] = useState<string | null>(null)
   const [branchTemplate, setBranchTemplate] = useState('')
+  const [worktreeTemplate, setWorktreeTemplate] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const refreshTree = useCallback((): void => {
@@ -98,6 +99,7 @@ function App(): JSX.Element {
         setUi(config.ui)
         setAdoOrg(config.ado.defaultOrg)
         setBranchTemplate(config.ado.branchTemplate)
+        setWorktreeTemplate(config.ado.worktreeTemplate)
       })
       .catch((err) => {
         console.error(err)
@@ -247,6 +249,7 @@ function App(): JSX.Element {
         <NewWorktreeDialog
           tree={tree}
           initialRepoPath={dialogRepoPath}
+          worktreeTemplate={worktreeTemplate}
           onClose={() => setDialogRepoPath(null)}
           onCreated={worktreeCreated}
         />
@@ -256,6 +259,7 @@ function App(): JSX.Element {
           tree={tree}
           task={startWorkTask}
           branchTemplate={branchTemplate}
+          worktreeTemplate={worktreeTemplate}
           onClose={() => setStartWorkTask(null)}
           onCreated={worktreeCreated}
         />
@@ -266,6 +270,7 @@ function App(): JSX.Element {
           onSaved={(config) => {
             setAdoOrg(config.ado.defaultOrg)
             setBranchTemplate(config.ado.branchTemplate)
+            setWorktreeTemplate(config.ado.worktreeTemplate)
             setSettingsOpen(false)
           }}
         />

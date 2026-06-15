@@ -3,7 +3,7 @@ import type { JSX } from 'react'
 import type { PinnedTaskView } from '../../../shared/tasks'
 import { branchNameFor } from '../../../shared/tasks'
 import type { WorkspaceNode } from '../../../shared/tree'
-import { sanitizeBranch, worktreePathFor } from '../../../shared/worktrees'
+import { worktreePathFor } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { defaultBaseFor, repoOptionsOf } from '../lib/repo-options'
 import { Icon } from './Icon'
@@ -14,6 +14,7 @@ interface StartWorkDialogProps {
   tree: WorkspaceNode[]
   task: PinnedTaskView
   branchTemplate: string
+  worktreeTemplate: string
   onClose: () => void
   onCreated: (worktreePath: string) => void
 }
@@ -30,6 +31,7 @@ export function StartWorkDialog({
   tree,
   task,
   branchTemplate,
+  worktreeTemplate,
   onClose,
   onCreated
 }: StartWorkDialogProps): JSX.Element {
@@ -39,6 +41,8 @@ export function StartWorkDialog({
   const [branch, setBranch] = useState(() =>
     task.details ? branchNameFor({ id: task.id, details: task.details }, branchTemplate) : ''
   )
+  // Workspace worktree-template override (null = use the global one).
+  const [worktreeOverride, setWorktreeOverride] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const branchEdited = useRef(false)
@@ -47,21 +51,31 @@ export function StartWorkDialog({
 
   const details = task.details
   const workspacePath = selectedRepo?.workspacePath
+  // Read both .app/ overrides on repo switch: the branch override prefills the
+  // branch (until edited); the worktree override drives the always-derived path.
   useEffect(() => {
-    if (!details || workspacePath === undefined) return
+    if (workspacePath === undefined) return
     let stale = false
     api
-      .invoke('workspaces:branch-template', { workspacePath })
-      .then((override) => {
-        if (stale || branchEdited.current) return
-        setBranch(branchNameFor({ id: task.id, details }, override ?? branchTemplate))
+      .invoke('workspaces:templates', { workspacePath })
+      .then(({ branchTemplate: branchOverride, worktreeTemplate: wtOverride }) => {
+        if (stale) return
+        setWorktreeOverride(wtOverride)
+        if (details && !branchEdited.current) {
+          setBranch(branchNameFor({ id: task.id, details }, branchOverride ?? branchTemplate))
+        }
       })
       .catch(console.error)
     return () => {
       stale = true
     }
   }, [workspacePath, task.id, details, branchTemplate])
-  const canCreate = selectedRepo !== undefined && sanitizeBranch(branch) !== '' && !busy
+
+  const effectiveWorktreeTemplate = worktreeOverride ?? worktreeTemplate
+  // Gate only on a selected repo and a non-empty branch; if the template renders
+  // an empty folder name, let main's empty-render guard return a readable error
+  // instead of silently disabling the button.
+  const canCreate = selectedRepo !== undefined && branch.trim() !== '' && !busy
 
   const pickRepo = (path: string): void => {
     setRepoPath(path)
@@ -76,7 +90,8 @@ export function StartWorkDialog({
         repoPath,
         branch,
         // Empty base falls back to checking out `branch` as an existing branch.
-        baseBranch: baseBranch.trim() || undefined
+        baseBranch: baseBranch.trim() || undefined,
+        worktreeTemplate: effectiveWorktreeTemplate
       })
       .then((result) => {
         if (result.ok && result.path) {
@@ -158,7 +173,9 @@ export function StartWorkDialog({
           {selectedRepo && (
             <div className="dialog-path-preview">
               <div className="dialog-path-label">Worktree will be created at</div>
-              <div className="dialog-path-value">{worktreePathFor(repoPath, branch)}</div>
+              <div className="dialog-path-value">
+                {worktreePathFor(repoPath, branch, effectiveWorktreeTemplate)}
+              </div>
             </div>
           )}
           {error && (

@@ -11,7 +11,7 @@ import { TaskBoard } from './task-board'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
 import { createWorktree, removeWorktree } from './worktree-manager'
-import { workspaceBranchTemplate } from './workspace-config'
+import { workspaceTemplates } from './workspace-config'
 import { WorkspaceRegistry } from './workspace-registry'
 
 function createWindow(): void {
@@ -84,12 +84,10 @@ app.whenReady().then(() => {
     return registry.add(filePaths[0])
   })
   handle('workspaces:remove', ({ id }) => registry.remove(id))
-  handle('workspaces:branch-template', ({ workspacePath }) =>
-    workspaceBranchTemplate(workspacePath)
-  )
+  handle('workspaces:templates', ({ workspacePath }) => workspaceTemplates(workspacePath))
   handle('tree:get', () => buildTree(registry))
-  handle('worktrees:create', ({ repoPath, branch, baseBranch }) =>
-    createWorktree(repoPath, branch, baseBranch)
+  handle('worktrees:create', ({ repoPath, branch, baseBranch, worktreeTemplate }) =>
+    createWorktree(repoPath, branch, baseBranch, worktreeTemplate)
   )
   // No force path from the UI in v1 — the dirty guard is not overridable here.
   handle('worktrees:remove', ({ repoPath, worktreePath }) => removeWorktree(repoPath, worktreePath))

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { sanitizeBranch, worktreePathFor } from '../shared/worktrees'
+import { sanitizeBranch, worktreeNameFor, worktreePathFor } from '../shared/worktrees'
 import { createWorktree, GitError, listWorktrees, removeWorktree } from './worktree-manager'
 
 const git = (cwd: string, ...args: string[]): string =>
@@ -114,6 +114,40 @@ describe('sanitizeBranch', () => {
   })
 })
 
+describe('worktreeNameFor', () => {
+  it('defaults to {repo}-{branch}, reproducing the historical name', () => {
+    expect(worktreeNameFor('C:\\ws\\api', 'feature/123')).toBe('api-feature-123')
+  })
+
+  it('falls back to the default when the template is blank', () => {
+    expect(worktreeNameFor('C:\\ws\\api', 'feature/123', '   ')).toBe('api-feature-123')
+  })
+
+  it.each([
+    ['{id}', 'feature/42-add-login', '42'],
+    ['{repo}-{id}', 'feature/42-add-login', 'api-42'],
+    ['{id}-{branch}', 'fix/77-bug', '77-fix-77-bug'],
+    ['{repo}/{branch}', 'feature/123', 'api-feature-123'],
+    ['wt-{repo}', 'whatever', 'wt-api']
+  ])('renders template %j on branch %j to %j', (template, branch, expected) => {
+    expect(worktreeNameFor('C:\\ws\\api', branch, template)).toBe(expected)
+  })
+
+  it('renders {id} empty when the branch has no standalone number', () => {
+    expect(worktreeNameFor('C:\\ws\\api', 'chore/cleanup', '{id}')).toBe('')
+    expect(worktreeNameFor('C:\\ws\\api', 'chore/cleanup', '{repo}-{id}')).toBe('api')
+  })
+
+  it('passes unknown placeholders through literally', () => {
+    expect(worktreeNameFor('C:\\ws\\api', 'x', '{repo}-{unknown}')).toBe('api-unknown')
+  })
+
+  it('is deterministic and idempotent', () => {
+    const first = worktreeNameFor('C:\\ws\\api', 'fix/a b', '{id}')
+    expect(worktreeNameFor('C:\\ws\\api', 'fix/a b', '{id}')).toBe(first)
+  })
+})
+
 describe('worktreePathFor', () => {
   it('computes the flat-sibling path next to the repo', () => {
     expect(worktreePathFor('C:\\ws\\api', 'feature/123')).toBe('C:\\ws\\api-feature-123')
@@ -127,6 +161,11 @@ describe('worktreePathFor', () => {
 
   it('handles forward-slash repo paths', () => {
     expect(worktreePathFor('/ws/api', 'x')).toBe('/ws/api-x')
+  })
+
+  it('applies a custom template to the final segment only', () => {
+    expect(worktreePathFor('C:\\ws\\api', 'feature/42-x', '{id}')).toBe('C:\\ws\\42')
+    expect(worktreePathFor('/ws/api', 'feature/42-x', '{id}')).toBe('/ws/42')
   })
 })
 
