@@ -50,6 +50,35 @@
 
 ## Lessons Learned
 
+- **node-pty 1.1.0 ships N-API prebuilds — no Electron-ABI rebuild needed (2026-06-16, AM1):**
+  node-pty 1.1.0 is built on N-API (node-addon-api), so its bundled
+  `prebuilds/win32-x64/{pty,conpty,conpty_console_list}.node` are ABI-stable across Node *and*
+  Electron — they load unchanged under both. Its loader (`lib/utils.js`) probes `build/Release`,
+  `build/Debug`, then `prebuilds/<platform>-<arch>`. The packaged app loads from the prebuilds.
+  Consequence: the `postinstall: electron-builder install-app-deps` source rebuild is *unnecessary*
+  for node-pty and is the only thing that forces a native compile (and fails without a real
+  Python — see next lesson). `build:win` does **not** run postinstall, so packaging just reuses
+  the prebuilds (`npmRebuild: false` already skips the package-time rebuild).
+- **node-pty source rebuild needs real Python + cmd current-dir exec (2026-06-16, AM1):** if a
+  source rebuild *is* forced (`install-app-deps`), node-gyp needs a real Python (the Microsoft
+  Store `python.exe` stub fails; this machine has none on PATH — used Azure CLI's bundled
+  `C:\Program Files\Microsoft SDKs\Azure\CLI2\python.exe` via `$env:PYTHON`). It then fails again
+  inside winpty's `winpty.gyp` (`cmd /c "cd shared && GetCommitHash.bat"`) when the process env has
+  `NoDefaultCurrentDirectoryInExePath=1` (set in this shell) — cmd refuses to run a `.bat` from the
+  current directory ("not recognized"). Clearing that env var lets it build. Both are moot when
+  relying on the prebuilds (previous lesson).
+- **electron-builder auto-unpacks node-pty — no explicit `asarUnpack` needed (2026-06-16, AM1 / ASPK-05):**
+  the design flagged `asarUnpack: node_modules/node-pty/**` as a likely contingency; it was **not**
+  required. `electron-builder` smart-detection put the native module under
+  `dist/win-unpacked/resources/app.asar.unpacked/node_modules/node-pty/` (prebuilds `.node` +
+  `winpty.dll`/`winpty-agent.exe` + conpty `.dll`/`OpenConsole.exe`), and the **packaged** app loads
+  and runs the Claude PTY identically to `dev` (verified by `scripts/smoke-agent.mjs` against
+  `win-unpacked` on a CDP port — 3/3 checks, the real Claude banner rendered + keystrokes round-trip).
+  The whole AM1 scary stack (native module + AD-004 streaming IPC + xterm, rebuilt + packaged) is
+  **de-risked green**. Note: tested `win-unpacked` (byte-identical asar+unpacked layout to the NSIS
+  install, just not copied to Program Files); a full Program-Files install was not run to avoid the
+  invasive registry/shortcut side effects — loading a `.node` needs read+execute, not write, so the
+  read-only-location concern does not change the outcome.
 - **electron-builder `-c.*` short overrides break under PowerShell (2026-06-15):** on
   windows-latest (pwsh default) `npx electron-builder ... -c.publish.channel=alpha` is misread
   as a config-file path (`ENOENT .publish.channel=alpha`). bash parses it correctly, so

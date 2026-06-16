@@ -12,7 +12,7 @@
  *      node scripts/smoke-agent.mjs                       (in another)
  */
 
-const PORT = 9222
+const PORT = Number(process.env.SMOKE_PORT) || 9222
 
 async function pageTarget() {
   for (let i = 0; i < 30; i++) {
