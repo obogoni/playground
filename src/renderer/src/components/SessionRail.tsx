@@ -1,4 +1,4 @@
-import type { JSX, MouseEvent } from 'react'
+import type { JSX, KeyboardEvent, MouseEvent } from 'react'
 import type { SessionView } from '../../../shared/config'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { deriveAttribution } from '../lib/session-attribution'
@@ -90,10 +90,23 @@ function SessionCard({
     fn()
   }
 
+  // Footer buttons stay independent (act() stops propagation); the card itself
+  // is the selection control, so expose it as a keyboard-operable button.
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onSelect(session.id)
+    }
+  }
+
   return (
     <div
       className={`session-card${selected ? ' selected' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
       onClick={() => onSelect(session.id)}
+      onKeyDown={onKeyDown}
     >
       <div className="session-card-head">
         <div className="session-card-tile">{session.agent.charAt(0)}</div>

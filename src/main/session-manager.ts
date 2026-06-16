@@ -119,9 +119,11 @@ export class SessionManager {
 
   /** window-all-closed: leave no orphaned shell/agent process. */
   killAll(): void {
-    const handles = [...this.#running.values()].map((s) => s.handle)
-    this.#running.clear()
-    for (const handle of handles) handle.kill()
+    // stop() each session (not Map.clear()) so every status is finalized,
+    // persisted, and emitted — otherwise config stays stale until the next
+    // restart, observable on macOS where closing the last window doesn't quit.
+    for (const id of [...this.#running.keys()]) this.stop(id)
+    this.#activeId = null
   }
 
   #resolve(agentName: string): AgentDef {
@@ -146,9 +148,12 @@ export class SessionManager {
 
   /** Idempotent transition to stopped: drop the Map entry, persist, push status. */
   #finalize(id: string, exitCode?: number): void {
-    if (!this.#running.has(id)) return
-    this.#running.delete(id)
-    this.#setStatus(id, 'stopped')
+    // wasRunning is false when an explicit stop() already dropped the entry. We
+    // still emit session:exit on the real onExit so listeners (TerminalPane's
+    // "[shell exited with code …]") fire even after a stop() — only the
+    // redundant persist/status push is skipped.
+    const wasRunning = this.#running.delete(id)
+    if (wasRunning) this.#setStatus(id, 'stopped')
     if (exitCode !== undefined) this.deps.emit('session:exit', { id, exitCode })
   }
 

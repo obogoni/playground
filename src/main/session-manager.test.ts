@@ -145,6 +145,24 @@ describe('SessionManager', () => {
     expect(config.get().sessions[0].status).toBe('stopped')
   })
 
+  it('emits session:exit on the real onExit even after an explicit stop()', () => {
+    const { manager, port, emit } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.stop(view.id) // drops the Map entry synchronously; exit code unknown yet
+    expect(emit.events.some((e) => e.channel === 'session:exit')).toBe(false)
+    port.handles[0].emitExit(0) // node-pty fires onExit asynchronously after kill()
+    const exits = emit.events.filter((e) => e.channel === 'session:exit')
+    expect(exits.at(-1)).toEqual({ channel: 'session:exit', payload: { id: view.id, exitCode: 0 } })
+  })
+
+  it('killAll persists every session as stopped (status survives restart)', () => {
+    const { manager, config } = makeManager()
+    manager.spawn('Claude', CWD)
+    manager.spawn('Codex', 'C:\\work\\other')
+    manager.killAll()
+    expect(config.get().sessions.every((s) => s.status === 'stopped')).toBe(true)
+  })
+
   it('onExit transitions to stopped and emits session:status + session:exit', () => {
     const { manager, port, emit } = makeManager()
     const view = manager.spawn('Claude', CWD)
