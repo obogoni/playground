@@ -164,7 +164,7 @@
 - [x] **Tasks AM2** (`.specs/features/agent-sessions/tasks.md`) — 14 tasks, 6 phases; only T1 `SessionRingBuffer` (+6) + T4 `SessionManager` (+10) unit-tested → 142→158, rest `none` (shared types via typecheck; thin index.ts wiring + renderer hand-verified per TESTING.md). All 3 validation tables green. Integration deliverable = T10 (first dev run, hand-verify AGSN-01..05); P6 = the 4 contextual entry points. Awaiting approval to Execute.
 - [x] **Execute AM2 (T1–T14)** on `feature/agent-sessions` — `SessionRingBuffer`+`SessionManager`+`agents.ts`+AM2 control IPC, `AgentsView`/`SessionRail`/`NewSessionDialog`, spike removed, 4 entry points; gate green (typecheck+lint+166 tests+`electron-vite build`)
 - [x] **Hand-verify AM2 in dev** — `scripts/smoke-agents.mjs` CDP 12/12 (AGSN-01..05 + dialog); no orphan shells after stop/quit. AGSN-06 entry-point clicks still visually pending (need registered workspaces)
-- [ ] Open PR `feature/agent-sessions` → main (body `Closes #<n>` once the AM2 issue exists)
+- [x] Open PR `feature/agent-sessions` → main (PR #41, `Closes #40`)
 - [ ] Specify AM3 "Agent Config & Integration" (after AM2) — includes the deferred amber agent-exited sub-status, ad-hoc agents/Settings, rename/duplicate, default-shell, concurrency warning, last-output preview for stopped cards (no IPC for `tail` in AM2)
 
 ---
