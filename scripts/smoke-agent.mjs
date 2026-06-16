@@ -106,8 +106,14 @@ for (let i = 0; i < 30; i++) {
   text = await evaluate(ws, TERMINAL_TEXT)
   if (text && text.length > 0) break
 }
-check('embedded terminal renders PTY output', !!text && text.length > 0, `${text?.length ?? 0} chars`)
-console.log('\n--- terminal after spawn ---\n' + (text ?? '(empty)') + '\n----------------------------\n')
+check(
+  'embedded terminal renders PTY output',
+  !!text && text.length > 0,
+  `${text?.length ?? 0} chars`
+)
+console.log(
+  '\n--- terminal after spawn ---\n' + (text ?? '(empty)') + '\n----------------------------\n'
+)
 
 // 3. Type into the terminal and confirm the render changes (input round-trip).
 await evaluate(

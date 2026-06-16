@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { JSX } from 'react'
 import { FitAddon } from '@xterm/addon-fit'
-import { Terminal } from '@xterm/xterm'
+import { Terminal, type ITheme } from '@xterm/xterm'
 import { api } from '../lib/api'
 import '@xterm/xterm/css/xterm.css'
 import './TerminalPane.css'
@@ -14,6 +14,46 @@ interface TerminalPaneProps {
 function token(name: string, fallback: string): string {
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
   return value || fallback
+}
+
+/**
+ * Maps the active app token set to an xterm theme (handoff §Terminal theming):
+ * background/foreground/cursor + the ANSI palette to --green/--amber/--red/
+ * --blue/--accent/--text-muted. Re-read on theme toggle so the terminal
+ * recolors live with the rest of the app.
+ */
+function readTheme(): ITheme {
+  const bg = token('--bg', '#1a1815')
+  const text = token('--text', '#efe9e0')
+  const muted = token('--text-muted', '#a59c8e')
+  const green = token('--green', '#5cbd86')
+  const amber = token('--amber', '#dca35e')
+  const red = token('--red', '#e08068')
+  const blue = token('--blue', '#71a8e6')
+  const accent = token('--accent', '#a78bfa')
+  return {
+    background: bg,
+    foreground: text,
+    cursor: accent,
+    cursorAccent: bg,
+    selectionBackground: token('--border-strong', '#48413a'),
+    black: bg,
+    red,
+    green,
+    yellow: amber,
+    blue,
+    magenta: accent,
+    cyan: blue,
+    white: text,
+    brightBlack: muted,
+    brightRed: red,
+    brightGreen: green,
+    brightYellow: amber,
+    brightBlue: blue,
+    brightMagenta: accent,
+    brightCyan: blue,
+    brightWhite: text
+  }
 }
 
 /**
@@ -33,11 +73,7 @@ export function TerminalPane({ sessionId }: TerminalPaneProps): JSX.Element {
       cursorBlink: true,
       fontFamily: "'JetBrains Mono', monospace",
       fontSize: 13,
-      theme: {
-        background: token('--bg', '#1a1815'),
-        foreground: token('--text', '#efe9e0'),
-        cursor: token('--accent', '#a78bfa')
-      }
+      theme: readTheme()
     })
     const fit = new FitAddon()
     term.loadAddon(fit)
@@ -67,10 +103,21 @@ export function TerminalPane({ sessionId }: TerminalPaneProps): JSX.Element {
     const observer = new ResizeObserver(sendResize)
     observer.observe(container)
 
+    // Recolor the terminal live when the app theme toggles (handoff: re-emit
+    // the theme on toggle). data-theme flips on <html>.
+    const themeObserver = new MutationObserver(() => {
+      term.options.theme = readTheme()
+    })
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme']
+    })
+
     term.focus()
 
     return () => {
       observer.disconnect()
+      themeObserver.disconnect()
       offData()
       offExit()
       inputSub.dispose()
