@@ -1,7 +1,7 @@
 # Roadmap
 
 **Current Milestone:** M5 — Embedded Agent Sessions (v2). M1–M4 (v1) feature work complete + worktree-name-template (post-v1)
-**Status:** v1 roadmap done; M5 AM1 (Agent Spike) spec drafted, awaiting approval to Design
+**Status:** v1 roadmap done; M5 AM1 (Agent Spike) COMPLETE (merged PR #39); AM2 (Agent Sessions) planned (spec + design + tasks), ready to execute; AM3 (Agent Config) planned
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
 
@@ -109,7 +109,7 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 
 ### Features
 
-**Agent Spike (AM1 — de-risk)** - SPEC DRAFTED
+**Agent Spike (AM1 — de-risk)** - COMPLETE
 
 - Thinnest vertical slice proving the scary stack end-to-end: `node-pty` + `xterm.js` + typed streaming IPC, **rebuilt + packaged**
 - One hard-coded agent, one live embedded terminal; no rail, no persistence, no config

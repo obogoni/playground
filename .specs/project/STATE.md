@@ -1,7 +1,9 @@
 # State
 
 **Last Updated:** 2026-06-16
-**Current Work:** **M5 Agent Spike (AM1) — EXECUTED T1–T12** on `feature/agent-spike` (11 commits). The scary stack is **de-risked green**: `node-pty` (N-API prebuilds, no Electron-ABI rebuild needed) + AD-004 streaming IPC (`IpcEvents`/`IpcSends` + `on`/`send`) + `xterm.js` `TerminalPane`, **rebuilt + packaged**. The real Claude Code TUI spawns inside `pwsh` in both `dev` and the **packaged** `win-unpacked` build, streams to xterm, and accepts typed input (verified via `scripts/smoke-agent.mjs` CDP, 3/3); theme recolors live light/dark. electron-builder **auto-unpacked** node-pty — no explicit `asarUnpack` rule needed (design's flagged contingency did not bite). Gate: typecheck + lint (0 errors) + **142** tests (+5 spawn-plan) + `build:win`. Permanent plumbing (`buildSpawnPlan`/`PtyPort`/IPC maps+wrappers+bridge/`TerminalPane`/externalize config) is cleanly separated from the throwaway trigger + inline orchestrator (both annotated `AM1 spike — throwaway, replaced by SessionManager in AM2`). **Remaining:** open PR `feature/agent-spike` → main; then Specify AM2/AM3. (Prior: worktree-name-template)
+**Current Work:** **M5 AM2 "Agent Sessions" — PLANNED (spec + design + tasks done), ready to Execute.** AM1 spike merged (PR #39, 2026-06-16). Grounding: PRD #37 + `design/handoff/DESIGN_HANDOFF_AGENTS.md` + the AM1 plumbing now on `main` (`pty-port.ts`, `spawn-plan.ts`, AD-004 IPC maps, `TerminalPane.tsx`; throwaway = `sessions:spawn`/`sessions:kill` invoke channels + inline orchestrator, to be replaced by `SessionManager`). (Prior: AM1 agent spike.)
+
+**Prior Current Work:** **M5 Agent Spike (AM1) — EXECUTED T1–T12** on `feature/agent-spike` (11 commits). The scary stack is **de-risked green**: `node-pty` (N-API prebuilds, no Electron-ABI rebuild needed) + AD-004 streaming IPC (`IpcEvents`/`IpcSends` + `on`/`send`) + `xterm.js` `TerminalPane`, **rebuilt + packaged**. The real Claude Code TUI spawns inside `pwsh` in both `dev` and the **packaged** `win-unpacked` build, streams to xterm, and accepts typed input (verified via `scripts/smoke-agent.mjs` CDP, 3/3); theme recolors live light/dark. electron-builder **auto-unpacked** node-pty — no explicit `asarUnpack` rule needed (design's flagged contingency did not bite). Gate: typecheck + lint (0 errors) + **142** tests (+5 spawn-plan) + `build:win`. Permanent plumbing (`buildSpawnPlan`/`PtyPort`/IPC maps+wrappers+bridge/`TerminalPane`/externalize config) is cleanly separated from the throwaway trigger + inline orchestrator (both annotated `AM1 spike — throwaway, replaced by SessionManager in AM2`). **Remaining:** open PR `feature/agent-spike` → main; then Specify AM2/AM3. (Prior: worktree-name-template)
 
 **Prior Current Work:** worktree-name-template — **EXECUTED T1–T9** on `feature/worktree-name-template`; gate green (typecheck + lint + **137** tests, was 125 → +12). Worktree folder name is now a configurable template (`{repo}`/`{branch}`/`{id}`; default `{repo}-{branch}`), mirroring the branch template: global `ado.worktreeTemplate` (Settings dialog) + per-workspace `.app/config.json` `worktreeTemplate`. Empty render blocks create. Key shape changes: `worktreeNameFor`/templated `worktreePathFor` (`src/shared/worktrees.ts`); `workspaceBranchTemplate`→`workspaceTemplates` (both overrides, one read); IPC `workspaces:branch-template`→`workspaces:templates`; `worktrees:create` gains `worktreeTemplate?`. **Remaining:** open PR (body `Closes #<n>` once the feature issue exists). (Prior: release-cicd T1–T9 executed, T10 manual check pending + PR; v1 roadmap done.)
 
@@ -142,13 +144,13 @@
 - [x] Specify M4 "Per-Workspace Config" (`.specs/features/per-workspace-config/spec.md`, PWCF-01..04) on `feature/per-workspace-config`
 - [x] User approved PWCF spec decisions (gear-button settings dialog; repo-switch re-render until edited)
 - [x] Execute per-workspace-config: `workspaceBranchTemplate` + `workspaces:branch-template` IPC + dialog override behavior + `SettingsDialog` — PWCF-01..04 Verified
-- [ ] Open PR `feature/per-workspace-config` → main — closes the v1 roadmap
+- [x] Open PR `feature/per-workspace-config` → main (PR #27, merged 2026-06-12) — closed the v1 roadmap
 - [x] Specify + Design + Task release-cicd-autoupdate (PRD #30, RLCD-01..14)
 - [x] Execute release-cicd-autoupdate T1–T9 (9 commits; 125 tests green) on `feature/release-cicd-autoupdate`
 - [ ] **T10 manual end-to-end release check** (user-run): push throwaway `v0.0.1`/`v0.0.2`, install + observe silent auto-update; dispatch nightly twice, confirm side-by-side + single rolling pre-release; confirm stable never offered the nightly; clean up throwaway releases; record outcome here
-- [ ] Open PR `feature/release-cicd-autoupdate` → main (body: `Closes #30`)
+- [x] Open PR `feature/release-cicd-autoupdate` → main (PR #33, merged 2026-06-15)
 - [x] Specify + Execute worktree-name-template (WTNT-01..04) on `feature/worktree-name-template` — global `ado.worktreeTemplate` + `.app/` `worktreeTemplate` override, `{repo}`/`{branch}`/`{id}` placeholders, empty-render guard; gate green (137 tests)
-- [ ] Open PR `feature/worktree-name-template` → main (body: `Closes #<n>` once the feature issue is synced via tlc-to-issues)
+- [x] Open PR `feature/worktree-name-template` → main (PR #35, merged 2026-06-15)
 - [x] Structure M5 from PRD #37: added ROADMAP **M5 — Embedded Agent Sessions** (AM1 Agent Spike / AM2 Agent Sessions / AM3 Agent Config); user approved umbrella-PRD → 3-specs split, start with AM1
 - [x] Specify M5 AM1 "Agent Spike" (`.specs/features/agent-spike/spec.md`, ASPK-01..06) — de-risk `node-pty` + `xterm.js` + AD-004 streaming IPC, rebuilt + **packaged**; pure seam = spawn-plan builder; rest hand-verified
 - [x] User approved AM1 spec flagged decisions ("go ahead": throwaway dev trigger + permanent `TerminalPane`; hard-coded agent = Claude, one fixed cwd)
@@ -156,8 +158,11 @@
 - [x] User approved AM1 design ("go ahead to break down")
 - [x] Tasks AM1 (`.specs/features/agent-spike/tasks.md`) — 12 tasks, 6 phases; only T2 (buildSpawnPlan) is unit-tested, rest `none` (hand-verified OS/IPC/renderer per TESTING.md); all 3 validation tables green. De-risk deliverable = T11 (`build:win` packaged run)
 - [x] **Execute AM1 (T1–T12)** on `feature/agent-spike` — ASPK-01..06 all Verified; gate green (142 tests + `build:win`); de-risk findings recorded as STATE.md Lessons (N-API prebuilds; auto-unpack sufficed)
-- [ ] Open PR `feature/agent-spike` → main (body: `Closes #<n>` for the AM1 feature issue once synced via tlc-to-issues)
-- [ ] Specify AM2 "Agent Sessions" + AM3 "Agent Config" — the spike has de-risked the stack
+- [x] Open PR `feature/agent-spike` → main (PR #39, merged 2026-06-16)
+- [x] **Specify AM2 "Agent Sessions"** (`.specs/features/agent-sessions/spec.md`, AGSN-01..09) — user approved (all 5 entry points; fixed seeded agents Claude/Copilot/Codex, pwsh; ad-hoc/Settings/default-shell/rename/duplicate/concurrency-warn/full-ANSI deferred to AM3)
+- [x] **Design AM2** (`.specs/features/agent-sessions/design.md`) — promote-don't-rewrite: delete AM1 throwaway, reuse `PtyPort`/`buildSpawnPlan`/`emit`/`onSend`/`TerminalPane`. New: `SessionManager` (DI'd Map orchestrator, tested w/ mocks like `TaskBoard`) + `SessionRingBuffer` (pure, tested) + `src/shared/agents.ts`. Control IPC set replaces `sessions:spawn`/`:kill`; `session:status` added. **Key call: agent-exit (amber) sub-status DEFERRED to AM3** (user call) — otherwise invisible without a sentinel; AM2 status = running (shell alive) / stopped (shell exited) / path-missing, so `buildSpawnPlan` is reused unchanged. Only the attached session streams; replay rides the data channel; xterm stays the input surface. Design approved.
+- [x] **Tasks AM2** (`.specs/features/agent-sessions/tasks.md`) — 14 tasks, 6 phases; only T1 `SessionRingBuffer` (+6) + T4 `SessionManager` (+10) unit-tested → 142→158, rest `none` (shared types via typecheck; thin index.ts wiring + renderer hand-verified per TESTING.md). All 3 validation tables green. Integration deliverable = T10 (first dev run, hand-verify AGSN-01..05); P6 = the 4 contextual entry points. Awaiting approval to Execute.
+- [ ] Specify AM3 "Agent Config & Integration" (after AM2)
 
 ---
 
