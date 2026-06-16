@@ -24,6 +24,9 @@ interface TopBarProps {
   onDirectionChange: (direction: Direction) => void
   onRefresh: () => void
   onOpenSettings: () => void
+  /** AM1 spike — throwaway: toggles the embedded agent terminal. Removed in AM2. */
+  spikeActive: boolean
+  onToggleSpike: () => void
 }
 
 function relativeTime(epochMs: number, now: number): string {
@@ -48,7 +51,9 @@ export function TopBar({
   onThemeToggle,
   onDirectionChange,
   onRefresh,
-  onOpenSettings
+  onOpenSettings,
+  spikeActive,
+  onToggleSpike
 }: TopBarProps): JSX.Element {
   // Keeps the "synced Nm ago" text ticking without any parent re-render.
   const [now, setNow] = useState(() => Date.now())
@@ -101,6 +106,15 @@ export function TopBar({
         {syncText(sync, now)}
       </div>
 
+      {/* AM1 spike — throwaway agent-terminal toggle. Removed in AM2. */}
+      <button
+        type="button"
+        className={`topbar-icon-btn${spikeActive ? ' active' : ''}`}
+        title="Toggle agent terminal (spike)"
+        onClick={onToggleSpike}
+      >
+        <Icon name="terminal" size={15} />
+      </button>
       <button type="button" className="topbar-icon-btn" title="Refresh" onClick={onRefresh}>
         <Icon name="refresh" size={15} />
       </button>

@@ -115,3 +115,10 @@
   background: var(--panel-2);
   color: var(--text);
 }
+
+/* AM1 spike — throwaway: marks the agent-terminal toggle as on. */
+.topbar-icon-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
