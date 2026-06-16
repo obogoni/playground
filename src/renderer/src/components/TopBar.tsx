@@ -24,9 +24,6 @@ interface TopBarProps {
   onDirectionChange: (direction: Direction) => void
   onRefresh: () => void
   onOpenSettings: () => void
-  /** AM1 spike — throwaway: toggles the embedded agent terminal. Removed in AM2. */
-  spikeActive: boolean
-  onToggleSpike: () => void
 }
 
 function relativeTime(epochMs: number, now: number): string {
@@ -51,9 +48,7 @@ export function TopBar({
   onThemeToggle,
   onDirectionChange,
   onRefresh,
-  onOpenSettings,
-  spikeActive,
-  onToggleSpike
+  onOpenSettings
 }: TopBarProps): JSX.Element {
   // Keeps the "synced Nm ago" text ticking without any parent re-render.
   const [now, setNow] = useState(() => Date.now())
@@ -97,6 +92,16 @@ export function TopBar({
           <Icon name="board-grid" size={14} />
           Board
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={direction === 'agents'}
+          className={`topbar-segment${direction === 'agents' ? ' active' : ''}`}
+          onClick={() => onDirectionChange('agents')}
+        >
+          <Icon name="terminal" size={14} />
+          Agents
+        </button>
       </div>
 
       <div className="topbar-spacer" />
@@ -106,15 +111,6 @@ export function TopBar({
         {syncText(sync, now)}
       </div>
 
-      {/* AM1 spike — throwaway agent-terminal toggle. Removed in AM2. */}
-      <button
-        type="button"
-        className={`topbar-icon-btn${spikeActive ? ' active' : ''}`}
-        title="Toggle agent terminal (spike)"
-        onClick={onToggleSpike}
-      >
-        <Icon name="terminal" size={15} />
-      </button>
       <button type="button" className="topbar-icon-btn" title="Refresh" onClick={onRefresh}>
         <Icon name="refresh" size={15} />
       </button>

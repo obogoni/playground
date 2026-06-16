@@ -1,4 +1,5 @@
-import type { JSX } from 'react'
+import { useEffect, useState } from 'react'
+import type { JSX, MouseEvent } from 'react'
 import type { PinnedTaskView } from '../../../shared/tasks'
 import { taskIdFromBranch } from '../../../shared/tasks'
 import type { RepoNode, WorkspaceNode, WorktreeNode } from '../../../shared/tree'
@@ -14,6 +15,14 @@ interface SidebarProps {
   onAddWorkspace: () => void
   onRemoveWorkspace: (id: string) => void
   onNewWorktree: (repoPath: string) => void
+  /** Opens the New Session dialog pre-filled with a worktree-row cwd. */
+  onSpawnAgent: (cwd: string) => void
+}
+
+interface RowMenu {
+  x: number
+  y: number
+  cwd: string
 }
 
 export function Sidebar({
@@ -23,8 +32,31 @@ export function Sidebar({
   onSelect,
   onAddWorkspace,
   onRemoveWorkspace,
-  onNewWorktree
+  onNewWorktree,
+  onSpawnAgent
 }: SidebarProps): JSX.Element {
+  const [menu, setMenu] = useState<RowMenu | null>(null)
+
+  // Any click or Escape dismisses the row context menu.
+  useEffect(() => {
+    if (!menu) return
+    const close = (): void => setMenu(null)
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setMenu(null)
+    }
+    window.addEventListener('click', close)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('click', close)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [menu])
+
+  const openMenu = (event: MouseEvent, cwd: string): void => {
+    event.preventDefault()
+    setMenu({ x: event.clientX, y: event.clientY, cwd })
+  }
+
   return (
     <aside className="sidebar">
       <header className="pane-header">
@@ -56,10 +88,25 @@ export function Sidebar({
               onSelect={onSelect}
               onRemove={() => onRemoveWorkspace(workspace.id)}
               onNewWorktree={onNewWorktree}
+              onRowContextMenu={openMenu}
             />
           ))
         )}
       </div>
+      {menu && (
+        <div className="sidebar-ctx-menu" style={{ left: menu.x, top: menu.y }}>
+          <button
+            type="button"
+            className="sidebar-ctx-item"
+            onClick={() => {
+              onSpawnAgent(menu.cwd)
+              setMenu(null)
+            }}
+          >
+            <Icon name="terminal" size={13} /> Spawn agent here
+          </button>
+        </div>
+      )}
     </aside>
   )
 }
@@ -71,6 +118,7 @@ interface WorkspaceProps {
   onSelect: (id: string) => void
   onRemove: () => void
   onNewWorktree: (repoPath: string) => void
+  onRowContextMenu: (event: MouseEvent, cwd: string) => void
 }
 
 function Workspace({
@@ -79,7 +127,8 @@ function Workspace({
   selectedId,
   onSelect,
   onRemove,
-  onNewWorktree
+  onNewWorktree,
+  onRowContextMenu
 }: WorkspaceProps): JSX.Element {
   return (
     <section className="sidebar-workspace">
@@ -113,6 +162,7 @@ function Workspace({
             selectedId={selectedId}
             onSelect={onSelect}
             onNewWorktree={() => onNewWorktree(repo.path)}
+            onRowContextMenu={onRowContextMenu}
           />
         ))
       )}
@@ -126,9 +176,17 @@ interface RepoProps {
   selectedId: string | null
   onSelect: (id: string) => void
   onNewWorktree: () => void
+  onRowContextMenu: (event: MouseEvent, cwd: string) => void
 }
 
-function Repo({ repo, tasks, selectedId, onSelect, onNewWorktree }: RepoProps): JSX.Element {
+function Repo({
+  repo,
+  tasks,
+  selectedId,
+  onSelect,
+  onNewWorktree,
+  onRowContextMenu
+}: RepoProps): JSX.Element {
   return (
     <div className="sidebar-repo">
       <div className="sidebar-repo-row">
@@ -157,6 +215,7 @@ function Repo({ repo, tasks, selectedId, onSelect, onNewWorktree }: RepoProps): 
               tasks={tasks}
               selected={worktree.id === selectedId}
               onSelect={() => onSelect(worktree.id)}
+              onContextMenu={(e) => onRowContextMenu(e, worktree.path)}
             />
           ))}
         </div>
@@ -170,9 +229,16 @@ interface WorktreeRowProps {
   tasks: PinnedTaskView[]
   selected: boolean
   onSelect: () => void
+  onContextMenu: (event: MouseEvent) => void
 }
 
-function WorktreeRow({ worktree, tasks, selected, onSelect }: WorktreeRowProps): JSX.Element {
+function WorktreeRow({
+  worktree,
+  tasks,
+  selected,
+  onSelect,
+  onContextMenu
+}: WorktreeRowProps): JSX.Element {
   const taskId = taskIdFromBranch(worktree.branch)
   // First pin in config order wins when IDs collide across orgs (spec §Edge Cases).
   const pin = taskId === null ? null : (tasks.find((task) => task.id === taskId) ?? null)
@@ -182,6 +248,7 @@ function WorktreeRow({ worktree, tasks, selected, onSelect }: WorktreeRowProps):
       type="button"
       className={`sidebar-worktree${selected ? ' selected' : ''}`}
       onClick={onSelect}
+      onContextMenu={onContextMenu}
     >
       <span className="sidebar-worktree-line1">
         <Icon name="git-fork" size={12} />

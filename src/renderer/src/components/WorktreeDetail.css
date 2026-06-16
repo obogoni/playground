@@ -357,3 +357,67 @@
 .detail-danger-note.error {
   color: var(--red);
 }
+
+/* AGENTS section (AGSN-06): spawn button + existing-session chips. */
+.detail-agents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  align-items: center;
+}
+
+.detail-spawn-agent {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.detail-spawn-agent:hover {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+
+.detail-session-chip {
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text-muted);
+  border-radius: 9px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.detail-session-chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.detail-session-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.detail-session-dot.green {
+  background: var(--green);
+}
+
+.detail-session-dot.faint {
+  background: var(--text-faint);
+}

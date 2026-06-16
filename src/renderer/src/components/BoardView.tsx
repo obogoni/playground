@@ -16,6 +16,8 @@ interface BoardViewProps {
   worktreeCounts: Map<number, number>
   onSnapshot: (snapshot: TasksSnapshot) => void
   onToast: (message: string) => void
+  /** Opens the New Session dialog pre-filled with a card's worktree cwd. */
+  onSpawnAgent: (cwd: string) => void
 }
 
 export function BoardView({
@@ -23,7 +25,8 @@ export function BoardView({
   snapshot,
   worktreeCounts,
   onSnapshot,
-  onToast
+  onToast,
+  onSpawnAgent
 }: BoardViewProps): JSX.Element {
   const [highlightId, setHighlightId] = useState<number | null>(null)
   // Unpinning the active task clears the highlight — a banner for a gone chip lies,
@@ -81,6 +84,7 @@ export function BoardView({
               tasks={snapshot.tasks}
               activeId={activeId}
               onToast={onToast}
+              onSpawnAgent={onSpawnAgent}
             />
           ))
         )}
@@ -187,9 +191,16 @@ interface BoardWorkspaceProps {
   tasks: PinnedTaskView[]
   activeId: number | null
   onToast: (message: string) => void
+  onSpawnAgent: (cwd: string) => void
 }
 
-function BoardWorkspace({ workspace, tasks, activeId, onToast }: BoardWorkspaceProps): JSX.Element {
+function BoardWorkspace({
+  workspace,
+  tasks,
+  activeId,
+  onToast,
+  onSpawnAgent
+}: BoardWorkspaceProps): JSX.Element {
   return (
     <section className="board-workspace">
       <div className="board-workspace-header">
@@ -213,6 +224,7 @@ function BoardWorkspace({ workspace, tasks, activeId, onToast }: BoardWorkspaceP
             tasks={tasks}
             activeId={activeId}
             onToast={onToast}
+            onSpawnAgent={onSpawnAgent}
           />
         ))
       )}
@@ -225,9 +237,10 @@ interface BoardRepoProps {
   tasks: PinnedTaskView[]
   activeId: number | null
   onToast: (message: string) => void
+  onSpawnAgent: (cwd: string) => void
 }
 
-function BoardRepo({ repo, tasks, activeId, onToast }: BoardRepoProps): JSX.Element {
+function BoardRepo({ repo, tasks, activeId, onToast, onSpawnAgent }: BoardRepoProps): JSX.Element {
   return (
     <div className="board-repo">
       <div className="board-repo-header">
@@ -248,6 +261,7 @@ function BoardRepo({ repo, tasks, activeId, onToast }: BoardRepoProps): JSX.Elem
               tasks={tasks}
               activeId={activeId}
               onToast={onToast}
+              onSpawnAgent={onSpawnAgent}
             />
           ))}
         </div>
@@ -262,9 +276,17 @@ interface BoardCardProps {
   tasks: PinnedTaskView[]
   activeId: number | null
   onToast: (message: string) => void
+  onSpawnAgent: (cwd: string) => void
 }
 
-function BoardCard({ worktree, repoName, tasks, activeId, onToast }: BoardCardProps): JSX.Element {
+function BoardCard({
+  worktree,
+  repoName,
+  tasks,
+  activeId,
+  onToast,
+  onSpawnAgent
+}: BoardCardProps): JSX.Element {
   const taskId = taskIdFromBranch(worktree.branch)
   // First pin in config order wins when IDs collide across orgs (spec §Edge Cases).
   const pin = taskId === null ? null : (tasks.find((task) => task.id === taskId) ?? null)
@@ -349,6 +371,15 @@ function BoardCard({ worktree, repoName, tasks, activeId, onToast }: BoardCardPr
           onClick={() => launch('vs2022')}
         >
           <Icon name="shield" size={15} strokeWidth={1.9} />
+        </button>
+        <span className="board-card-footer-divider" />
+        <button
+          type="button"
+          className="board-spawn-btn"
+          title="Spawn agent here"
+          onClick={() => onSpawnAgent(worktree.path)}
+        >
+          <Icon name="terminal" size={15} strokeWidth={1.9} />
         </button>
         <span className="board-card-footer-spacer" />
         <span className="board-card-repo">{repoName}</span>
