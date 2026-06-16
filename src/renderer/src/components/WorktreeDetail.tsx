@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { JSX } from 'react'
+import type { SessionView } from '../../../shared/config'
 import type { ShortcutTool } from '../../../shared/shortcuts'
 import type { PinnedTaskView } from '../../../shared/tasks'
 import type { WorktreeNode } from '../../../shared/tree'
@@ -18,6 +19,12 @@ interface WorktreeDetailProps {
   linkedTaskId: number | null
   /** The matching pinned task, when the extracted ID is pinned. */
   linkedPin: PinnedTaskView | null
+  /** Sessions already running in this worktree (cwd === worktree.path). */
+  sessions: SessionView[]
+  /** Opens the New Session dialog pre-filled with this worktree's cwd. */
+  onSpawnAgent: () => void
+  /** Deep-links to a session (switches to Agents + selects it). */
+  onOpenSession: (id: string) => void
   onToast: (message: string) => void
   onRemoved: (repoPath: string) => void
 }
@@ -64,6 +71,9 @@ export function WorktreeDetail({
   worktree,
   linkedTaskId,
   linkedPin,
+  sessions,
+  onSpawnAgent,
+  onOpenSession,
   onToast,
   onRemoved
 }: WorktreeDetailProps): JSX.Element {
@@ -217,6 +227,30 @@ export function WorktreeDetail({
             ))}
           </div>
         </section>
+
+        <section className="detail-section">
+          <h2 className="detail-section-label">Agents</h2>
+          <div className="detail-agents">
+            <button type="button" className="detail-spawn-agent" onClick={onSpawnAgent}>
+              <Icon name="terminal" size={15} />
+              Spawn agent
+            </button>
+            {sessions.map((session) => (
+              <button
+                key={session.id}
+                type="button"
+                className="detail-session-chip"
+                onClick={() => onOpenSession(session.id)}
+              >
+                <span
+                  className={`detail-session-dot ${session.status === 'running' ? 'green' : 'faint'}`}
+                />
+                {session.title}
+              </button>
+            ))}
+          </div>
+        </section>
+
         <div className="detail-danger">
           <button
             type="button"

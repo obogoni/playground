@@ -59,6 +59,19 @@ function countWorktreesByTask(tree: WorkspaceNode[]): Map<number, number> {
   return counts
 }
 
+/** Worktree paths whose branch carries the given task ID (STWK-04). */
+function worktreePathsForTask(tree: WorkspaceNode[], taskId: number): string[] {
+  const paths: string[] = []
+  for (const workspace of tree) {
+    for (const repo of workspace.repos) {
+      for (const worktree of repo.worktrees) {
+        if (taskIdFromBranch(worktree.branch) === taskId) paths.push(worktree.path)
+      }
+    }
+  }
+  return paths
+}
+
 function App(): JSX.Element {
   const [ui, setUi] = useState<UiState | null>(null)
   const [tree, setTree] = useState<WorkspaceNode[]>([])
@@ -234,6 +247,24 @@ function App(): JSX.Element {
     api.invoke('sessions:remove', { id }).then(refreshSessions).catch(console.error)
   }
 
+  // Deep-link from an entry-point chip: select the session and switch to Agents.
+  const openSession = (id: string): void => {
+    setSelectedSessionId(id)
+    update({ direction: 'agents' })
+  }
+
+  // Pinned-task Agent button: 0 worktrees → caller disables; 1 → preselect it;
+  // many → highlight the task's worktrees in the dialog.
+  const spawnAgentForTask = (task: PinnedTaskView): void => {
+    const paths = worktreePathsForTask(tree, task.id)
+    if (paths.length === 0) return
+    openNewSession({
+      taskId: task.id,
+      cwd: paths.length === 1 ? paths[0] : undefined,
+      highlightWorktrees: paths.length > 1 ? paths : undefined
+    })
+  }
+
   if (!ui) {
     // One frame at most; avoids a default-theme flash before hydration.
     return <></>
@@ -275,6 +306,7 @@ function App(): JSX.Element {
               onAddWorkspace={addWorkspace}
               onRemoveWorkspace={removeWorkspace}
               onNewWorktree={setDialogRepoPath}
+              onSpawnAgent={(cwd) => openNewSession({ cwd })}
             />
             {selected ? (
               <WorktreeDetail
@@ -285,6 +317,9 @@ function App(): JSX.Element {
                 worktree={selected.worktree}
                 linkedTaskId={linkedTaskId}
                 linkedPin={linkedPin}
+                sessions={sessions.filter((s) => s.cwd === selected.worktree.path)}
+                onSpawnAgent={() => openNewSession({ cwd: selected.worktree.path })}
+                onOpenSession={openSession}
                 onToast={setToast}
                 onRemoved={worktreeRemoved}
               />
@@ -296,6 +331,7 @@ function App(): JSX.Element {
               worktreeCounts={worktreeCounts}
               onSnapshot={setTasks}
               onStartWork={setStartWorkTask}
+              onSpawnAgent={spawnAgentForTask}
             />
           </>
         ) : ui.direction === 'agents' ? (
@@ -316,6 +352,7 @@ function App(): JSX.Element {
             worktreeCounts={worktreeCounts}
             onSnapshot={setTasks}
             onToast={setToast}
+            onSpawnAgent={(cwd) => openNewSession({ cwd })}
           />
         )}
       </main>

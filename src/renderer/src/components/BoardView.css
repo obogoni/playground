@@ -500,3 +500,30 @@
   font-size: 10.5px;
   color: var(--text-faint);
 }
+
+/* Card-footer spawn-agent button (AGSN-06): divider + accent-outlined glyph. */
+.board-card-footer-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 2px;
+  background: var(--border);
+}
+
+.board-spawn-btn {
+  border: 1px solid color-mix(in oklab, var(--accent) 50%, transparent);
+  background: transparent;
+  color: var(--accent-text);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.board-spawn-btn:hover {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}

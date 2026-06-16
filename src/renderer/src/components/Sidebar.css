@@ -310,3 +310,34 @@
 .sidebar-note.error {
   color: var(--amber);
 }
+
+/* Worktree-row context menu (AGSN-06): "Spawn agent here". */
+.sidebar-ctx-menu {
+  position: fixed;
+  z-index: 70;
+  min-width: 168px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 12px 36px var(--shadow);
+  padding: 5px;
+}
+
+.sidebar-ctx-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-ctx-item:hover {
+  background: var(--panel-2);
+}

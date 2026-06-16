@@ -12,13 +12,16 @@ interface TasksPaneProps {
   worktreeCounts: Map<number, number>
   onSnapshot: (snapshot: TasksSnapshot) => void
   onStartWork: (task: PinnedTaskView) => void
+  /** Opens the New Session dialog for a task (0/1/many worktree resolution). */
+  onSpawnAgent: (task: PinnedTaskView) => void
 }
 
 export function TasksPane({
   snapshot,
   worktreeCounts,
   onSnapshot,
-  onStartWork
+  onStartWork,
+  onSpawnAgent
 }: TasksPaneProps): JSX.Element {
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -92,6 +95,7 @@ export function TasksPane({
             worktreeCount={worktreeCounts.get(task.id) ?? 0}
             onUnpin={() => unpin(task)}
             onStartWork={() => onStartWork(task)}
+            onSpawnAgent={() => onSpawnAgent(task)}
           />
         ))}
       </div>
@@ -104,9 +108,16 @@ interface TaskCardProps {
   worktreeCount: number
   onUnpin: () => void
   onStartWork: () => void
+  onSpawnAgent: () => void
 }
 
-function TaskCard({ task, worktreeCount, onUnpin, onStartWork }: TaskCardProps): JSX.Element {
+function TaskCard({
+  task,
+  worktreeCount,
+  onUnpin,
+  onStartWork,
+  onSpawnAgent
+}: TaskCardProps): JSX.Element {
   return (
     <article className="task-card">
       <div className="task-card-header">
@@ -154,6 +165,20 @@ function TaskCard({ task, worktreeCount, onUnpin, onStartWork }: TaskCardProps):
         >
           <Icon name="git-fork" size={13} strokeWidth={2} />
           {worktreeCount > 0 ? 'New branch' : 'Start work'}
+        </button>
+        <button
+          type="button"
+          className="task-agent-btn"
+          disabled={worktreeCount === 0}
+          title={
+            worktreeCount === 0
+              ? 'Start work first — no worktree for this task yet'
+              : 'Spawn an agent in this task’s worktree'
+          }
+          onClick={onSpawnAgent}
+        >
+          <Icon name="terminal" size={13} strokeWidth={2} />
+          Agent
         </button>
       </div>
     </article>
