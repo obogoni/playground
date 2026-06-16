@@ -4,7 +4,6 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
-import { SEEDED_AGENTS } from '../shared/agents'
 import { AdoGateway } from './ado-gateway'
 import { ConfigStore } from './config-store'
 import { emit, handle, onSend } from './ipc'
@@ -125,14 +124,17 @@ app.whenReady().then(() => {
     port: new PtyPort(),
     config: configStore,
     emit: emitToWindow,
-    fsExists: existsSync,
-    seededAgents: SEEDED_AGENTS
+    fsExists: existsSync
   })
   const sessions = sessionManager
   handle('sessions:list', () => sessions.list())
-  handle('sessions:spawn', ({ agentName, cwd }) => sessions.spawn(agentName, cwd))
+  handle('sessions:spawn', ({ agentName, cwd, adhocCommand }) =>
+    sessions.spawn(agentName, cwd, adhocCommand)
+  )
   handle('sessions:stop', ({ id }) => sessions.stop(id))
   handle('sessions:respawn', ({ id }) => sessions.respawn(id))
+  handle('sessions:rename', ({ id, title }) => sessions.rename(id, title))
+  handle('sessions:duplicate', ({ id }) => sessions.duplicate(id))
   handle('sessions:remove', ({ id }) => sessions.remove(id))
   handle('sessions:attach', ({ id }) => sessions.attach(id))
   handle('sessions:detach', ({ id }) => sessions.detach(id))
