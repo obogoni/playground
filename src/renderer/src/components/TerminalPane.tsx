@@ -84,6 +84,10 @@ export function TerminalPane({ sessionId }: TerminalPaneProps): JSX.Element {
     const offData = api.on('session:data', (payload) => {
       if (payload.id === sessionId) term.write(payload.data)
     })
+    // Become the active stream target; the buffered scrollback replays as the
+    // first session:data chunk (same ordered channel as live → no seam race),
+    // so we attach only after session:data is subscribed above.
+    api.invoke('sessions:attach', { id: sessionId }).catch(console.error)
     // Typed keystrokes → PTY.
     const inputSub = term.onData((data) => api.send('session:input', { id: sessionId, data }))
     // Shell exit → a plain line (no card/rail behavior; that is AM2).
@@ -116,6 +120,10 @@ export function TerminalPane({ sessionId }: TerminalPaneProps): JSX.Element {
     term.focus()
 
     return () => {
+      // Stop streaming this session in main; its PTY + buffer keep running so a
+      // later re-attach can replay. Switching sessions detaches the old here and
+      // attaches the new on the next mount (sessionId is the effect key).
+      api.invoke('sessions:detach', { id: sessionId }).catch(console.error)
       observer.disconnect()
       themeObserver.disconnect()
       offData()
