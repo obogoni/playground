@@ -163,16 +163,16 @@ The whole embedded-agent feature (PRD #37) rests on three pieces of plumbing the
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| ASPK-01 | P1: Spawn-plan builder (pure helper) | Pending | Pending |
-| ASPK-02 | P1: PtyPort live shell-hosted PTY | Pending | Pending |
-| ASPK-03 | P1: Typed streaming IPC (AD-004) | Pending | Pending |
-| ASPK-04 | P1: Embedded xterm TerminalPane | Pending | Pending |
-| ASPK-05 | P1: Rebuilt + packaged proof | Pending | Pending |
-| ASPK-06 | P2: Token-mapped theming + refit | Pending | Pending |
+| ASPK-01 | P1: Spawn-plan builder (pure helper) | T2 | Verified |
+| ASPK-02 | P1: PtyPort live shell-hosted PTY | T1, T3, T9, T10 | Verified |
+| ASPK-03 | P1: Typed streaming IPC (AD-004) | T4, T5, T6, T7, T9 | Verified |
+| ASPK-04 | P1: Embedded xterm TerminalPane | T8, T10 | Verified |
+| ASPK-05 | P1: Rebuilt + packaged proof | T1, T11 | Verified |
+| ASPK-06 | P2: Token-mapped theming + refit | T12 | Verified |
 
 **ID format:** `ASPK-NN` (Agent SPiKe). **Status values:** Pending → In Design → In Tasks → Implementing → Verified.
 
-**Coverage:** 6 total, 0 mapped to tasks yet (Design + Tasks phases pending).
+**Coverage:** 6 total, all 6 Verified — spawn-plan unit-tested (5 cases); PtyPort + streaming IPC + TerminalPane hand-verified via `scripts/smoke-agent.mjs` (CDP, 3/3) in both `dev` and the **packaged** `win-unpacked` build (the real Claude Code TUI spawns inside pwsh, streams to xterm, keystrokes round-trip); theming visual-verified by toggling light/dark with the terminal open. Gate green: typecheck + lint (0 errors) + 142 tests + `build:win`.
 
 ---
 
