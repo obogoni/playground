@@ -1,0 +1,198 @@
+/* Agents direction — handoff §Screen Direction C (master-detail). */
+
+.agents-view {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.agents-detail {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.agents-detail-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.agents-detail-tile {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  color: var(--accent-text);
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.agents-detail-titles {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.agents-detail-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.agents-detail-cwd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agents-detail-pill {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 7px;
+  padding: 3px 9px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.agents-detail-pill.green {
+  color: var(--green);
+  border-color: color-mix(in oklab, var(--green) 45%, transparent);
+  background: color-mix(in oklab, var(--green) 10%, transparent);
+}
+
+.agents-detail-pill.faint {
+  color: var(--text-faint);
+}
+
+.agents-detail-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.agents-detail-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 7px 13px;
+  font-size: 12.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.agents-detail-btn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.agents-detail-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.agents-detail-btn.red:hover {
+  color: var(--red);
+  border-color: color-mix(in oklab, var(--red) 45%, transparent);
+}
+
+.agents-detail-strip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-2);
+  flex-wrap: wrap;
+}
+
+.agents-strip-branch {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.agents-strip-task {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.agents-strip-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.agents-strip-tag.red {
+  color: var(--red);
+  border-color: color-mix(in oklab, var(--red) 45%, transparent);
+}
+
+.agents-detail .terminal-pane {
+  flex: 1;
+  min-height: 0;
+}
+
+.agents-detail-stopped,
+.agents-detail-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--text-faint);
+}
+
+.agents-detail-empty p,
+.agents-detail-stopped p {
+  font-size: 13.5px;
+}
+
+.agents-empty-new {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.agents-empty-new:hover {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
