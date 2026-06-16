@@ -1,4 +1,13 @@
-import type { IpcChannel, IpcRequest, IpcResponse, RendererApi } from '../../../shared/ipc-contract'
+import type {
+  IpcChannel,
+  IpcEvent,
+  IpcEvents,
+  IpcRequest,
+  IpcResponse,
+  IpcSend,
+  IpcSends,
+  RendererApi
+} from '../../../shared/ipc-contract'
 
 /**
  * Renderer-side IPC client. Thin wrapper over the preload bridge that
@@ -16,5 +25,13 @@ export const api: RendererApi = {
       const message = err instanceof Error ? err.message : String(err)
       throw new Error(`IPC '${channel}' failed: ${message}`)
     }
+  },
+  // Streaming IPC (AD-004) — pass straight through to the preload bridge. on()
+  // returns the unsubscribe so callers can clean up on unmount.
+  on<E extends IpcEvent>(channel: E, listener: (payload: IpcEvents[E]) => void): () => void {
+    return window.api.on(channel, listener)
+  },
+  send<S extends IpcSend>(channel: S, payload: IpcSends[S]): void {
+    window.api.send(channel, payload)
   }
 }

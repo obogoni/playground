@@ -5,7 +5,8 @@
     "M1 — Walking Skeleton & Worktree Navigation": 1,
     "M2 — Worktree Lifecycle": 2,
     "M3 — ADO Tasks & Start-Work Flow": 3,
-    "M4 — Board View & Configurability": 4
+    "M4 — Board View & Configurability": 4,
+    "M5 — Embedded Agent Sessions (v2)": 5
   },
   "features": {
     "app-skeleton": { "issue": 17, "milestone": "M1 — Walking Skeleton & Worktree Navigation" },
@@ -19,6 +20,7 @@
     "per-workspace-config": { "issue": 25, "milestone": "M4 — Board View & Configurability" },
     "vs2022-admin-shortcut": { "issue": 29, "milestone": null },
     "release-cicd-autoupdate": { "issue": 32, "milestone": null, "prd_issue": 30 },
-    "worktree-name-template": { "issue": 34, "milestone": null }
+    "worktree-name-template": { "issue": 34, "milestone": null },
+    "agent-spike": { "issue": 38, "milestone": "M5 — Embedded Agent Sessions (v2)", "prd_issue": 37 }
   }
 }

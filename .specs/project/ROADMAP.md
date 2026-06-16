@@ -1,7 +1,7 @@
 # Roadmap
 
-**Current Milestone:** M4 — Board View & Configurability
-**Status:** M1–M4 feature work complete (Per-Workspace Config verified on `feature/per-workspace-config`, awaiting PR merge) — v1 roadmap done after that merge
+**Current Milestone:** M5 — Embedded Agent Sessions (v2). M1–M4 (v1) feature work complete + worktree-name-template (post-v1)
+**Status:** v1 roadmap done; M5 AM1 (Agent Spike) spec drafted, awaiting approval to Design
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
 
@@ -102,9 +102,35 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 
 ---
 
-## Future Considerations (v2+, per PRD)
+## M5 — Embedded Agent Sessions (v2)
 
-- Embedded terminal hosting (PTY tabs, xterm.js, node-pty)
-- Agent management (saved command/prompt templates)
+**Goal:** Spawn CLI coding agents (Claude / Copilot / Codex / ad-hoc) as worktree-rooted embedded terminal sessions — a consolidated, attributed overview of all agent activity instead of loose terminal windows.
+**Source:** PRD issue #37 (40 stories) + `design/handoff/DESIGN_HANDOFF_AGENTS.md`. Introduces the app's first native module (`node-pty`), first streaming IPC (AD-004), and a packaging concern. Sliced per the PRD's own AM1/AM2/AM3 recommendation; each sub-milestone is independently daily-usable.
+
+### Features
+
+**Agent Spike (AM1 — de-risk)** - SPEC DRAFTED
+
+- Thinnest vertical slice proving the scary stack end-to-end: `node-pty` + `xterm.js` + typed streaming IPC, **rebuilt + packaged**
+- One hard-coded agent, one live embedded terminal; no rail, no persistence, no config
+- Keeps & grows the plumbing (`PtyPort`, streaming-IPC maps/bridge, `buildSpawnPlan`, `TerminalPane`, packaging fix); throws away only the single-agent trigger (ASPK-01..06)
+
+**Agent Sessions (AM2)** - PLANNED
+
+- Agents direction + card rail (master-detail); N sessions; attach/detach with ring-buffer scrollback replay
+- `SessionManager` + `SessionRingBuffer`; persistence (`AppConfig.sessions[]`) + restore-as-stopped + respawn; Stop/Remove
+- All three spawn entry points; derived task tags; reconciliation + path-missing flag
+
+**Agent Config & Integration (AM3)** - PLANNED
+
+- Configurable agent definitions + ad-hoc command + Settings dialog; default-shell setting
+- Worktree-delete-vs-running confirmation (warn + kill); rename/duplicate; soft concurrency warning; full xterm token theming
+
+---
+
+## Future Considerations (v3+, per PRD)
+
+- Task→agent auto-briefing (inject task title/description as opening prompt; `promptTemplate` reserved)
+- Agent-activity notifications ("claude finished" / "awaiting input") — see STATE.md Deferred Ideas
 - ADO write operations and query-based feeds
-- Per-workspace IDE/terminal overrides; multi-platform; sandboxed AFK runs
+- Per-workspace agent/IDE/terminal overrides; multi-platform; sandboxed AFK runs

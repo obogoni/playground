@@ -38,11 +38,35 @@ export interface IpcContract {
   'tasks:unpin': { req: { id: number; org: string; project: string }; res: TasksSnapshot }
   /** Re-fetches live details for every pin (app focus + manual refresh). */
   'tasks:refresh': { req: void; res: TasksSnapshot }
+  /** AM1 agent spike: spawn one shell-hosted agent PTY in the given cwd. */
+  'sessions:spawn': { req: { cwd: string }; res: { id: string } }
+  /** AM1 agent spike: terminate the live session so no hidden PTY survives toggle-off. */
+  'sessions:kill': { req: { id: string }; res: void }
 }
 
 export type IpcChannel = keyof IpcContract
 export type IpcRequest<C extends IpcChannel> = IpcContract[C]['req']
 export type IpcResponse<C extends IpcChannel> = IpcContract[C]['res']
+
+/**
+ * Streaming IPC (AD-004) — the push/fire-and-forget peers of the request/
+ * response IpcContract. PTY bytes are pushed main→renderer continuously
+ * (IpcEvents); keystrokes and resizes are fired renderer→main without a reply
+ * (IpcSends). Every payload carries the session `id` so one renderer can
+ * fan out across sessions (AM2). First used by the agent spike (AM1).
+ */
+export interface IpcEvents {
+  'session:data': { id: string; data: string }
+  'session:exit': { id: string; exitCode: number }
+}
+
+export interface IpcSends {
+  'session:input': { id: string; data: string }
+  'session:resize': { id: string; cols: number; rows: number }
+}
+
+export type IpcEvent = keyof IpcEvents
+export type IpcSend = keyof IpcSends
 
 /** Shape of the bridge exposed to the renderer as window.api. */
 export interface RendererApi {
@@ -50,4 +74,8 @@ export interface RendererApi {
     channel: C,
     ...args: IpcRequest<C> extends void ? [] : [IpcRequest<C>]
   ): Promise<IpcResponse<C>>
+  /** Subscribe to a main→renderer push event; returns an unsubscribe fn. */
+  on<E extends IpcEvent>(channel: E, listener: (payload: IpcEvents[E]) => void): () => void
+  /** Fire-and-forget a renderer→main message (no reply). */
+  send<S extends IpcSend>(channel: S, payload: IpcSends[S]): void
 }

@@ -10,6 +10,7 @@ import { SettingsDialog } from './components/SettingsDialog'
 import { Sidebar } from './components/Sidebar'
 import { StartWorkDialog } from './components/StartWorkDialog'
 import { TasksPane } from './components/TasksPane'
+import { TerminalPane } from './components/TerminalPane'
 import { Toast } from './components/Toast'
 import { TopBar } from './components/TopBar'
 import { WorktreeDetail, WorktreeDetailEmpty } from './components/WorktreeDetail'
@@ -76,6 +77,27 @@ function App(): JSX.Element {
   const [branchTemplate, setBranchTemplate] = useState('')
   const [worktreeTemplate, setWorktreeTemplate] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // AM1 spike — throwaway: id of the live agent session, or null when closed.
+  // Removed in AM2 when the real Agents direction + session rail lands.
+  const [spikeSessionId, setSpikeSessionId] = useState<string | null>(null)
+
+  // Closing the overlay must also kill the PTY — hiding it alone would leak a
+  // hidden agent/shell until app quit (AM1 spike: no daemon, PRD Out of Scope).
+  const closeSpike = (): void => {
+    if (spikeSessionId) api.invoke('sessions:kill', { id: spikeSessionId }).catch(console.error)
+    setSpikeSessionId(null)
+  }
+
+  const toggleSpike = (): void => {
+    if (spikeSessionId) {
+      closeSpike()
+      return
+    }
+    api
+      .invoke('sessions:spawn', { cwd: '' })
+      .then(({ id }) => setSpikeSessionId(id))
+      .catch(console.error)
+  }
 
   const refreshTree = useCallback((): void => {
     api
@@ -200,6 +222,8 @@ function App(): JSX.Element {
           refreshTasks()
         }}
         onOpenSettings={() => setSettingsOpen(true)}
+        spikeActive={spikeSessionId !== null}
+        onToggleSpike={toggleSpike}
       />
       <main className="content">
         {ui.direction === 'tree' ? (
@@ -274,6 +298,18 @@ function App(): JSX.Element {
             setSettingsOpen(false)
           }}
         />
+      )}
+      {/* AM1 spike — throwaway embedded agent terminal overlay. Removed in AM2. */}
+      {spikeSessionId && (
+        <div className="spike-terminal-overlay">
+          <div className="spike-terminal-bar">
+            <span>agent terminal (spike) · Claude</span>
+            <button type="button" onClick={closeSpike}>
+              Close
+            </button>
+          </div>
+          <TerminalPane key={spikeSessionId} sessionId={spikeSessionId} />
+        </div>
       )}
       {toast && <Toast message={toast} onDismiss={dismissToast} />}
     </>

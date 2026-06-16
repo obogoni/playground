@@ -1,7 +1,9 @@
 # State
 
-**Last Updated:** 2026-06-15
-**Current Work:** worktree-name-template — **EXECUTED T1–T9** on `feature/worktree-name-template`; gate green (typecheck + lint + **137** tests, was 125 → +12). Worktree folder name is now a configurable template (`{repo}`/`{branch}`/`{id}`; default `{repo}-{branch}`), mirroring the branch template: global `ado.worktreeTemplate` (Settings dialog) + per-workspace `.app/config.json` `worktreeTemplate`. Empty render blocks create. Key shape changes: `worktreeNameFor`/templated `worktreePathFor` (`src/shared/worktrees.ts`); `workspaceBranchTemplate`→`workspaceTemplates` (both overrides, one read); IPC `workspaces:branch-template`→`workspaces:templates`; `worktrees:create` gains `worktreeTemplate?`. **Remaining:** open PR (body `Closes #<n>` once the feature issue exists). (Prior: release-cicd T1–T9 executed, T10 manual check pending + PR; v1 roadmap done.)
+**Last Updated:** 2026-06-16
+**Current Work:** **M5 Agent Spike (AM1) — EXECUTED T1–T12** on `feature/agent-spike` (11 commits). The scary stack is **de-risked green**: `node-pty` (N-API prebuilds, no Electron-ABI rebuild needed) + AD-004 streaming IPC (`IpcEvents`/`IpcSends` + `on`/`send`) + `xterm.js` `TerminalPane`, **rebuilt + packaged**. The real Claude Code TUI spawns inside `pwsh` in both `dev` and the **packaged** `win-unpacked` build, streams to xterm, and accepts typed input (verified via `scripts/smoke-agent.mjs` CDP, 3/3); theme recolors live light/dark. electron-builder **auto-unpacked** node-pty — no explicit `asarUnpack` rule needed (design's flagged contingency did not bite). Gate: typecheck + lint (0 errors) + **142** tests (+5 spawn-plan) + `build:win`. Permanent plumbing (`buildSpawnPlan`/`PtyPort`/IPC maps+wrappers+bridge/`TerminalPane`/externalize config) is cleanly separated from the throwaway trigger + inline orchestrator (both annotated `AM1 spike — throwaway, replaced by SessionManager in AM2`). **Remaining:** open PR `feature/agent-spike` → main; then Specify AM2/AM3. (Prior: worktree-name-template)
+
+**Prior Current Work:** worktree-name-template — **EXECUTED T1–T9** on `feature/worktree-name-template`; gate green (typecheck + lint + **137** tests, was 125 → +12). Worktree folder name is now a configurable template (`{repo}`/`{branch}`/`{id}`; default `{repo}-{branch}`), mirroring the branch template: global `ado.worktreeTemplate` (Settings dialog) + per-workspace `.app/config.json` `worktreeTemplate`. Empty render blocks create. Key shape changes: `worktreeNameFor`/templated `worktreePathFor` (`src/shared/worktrees.ts`); `workspaceBranchTemplate`→`workspaceTemplates` (both overrides, one read); IPC `workspaces:branch-template`→`workspaces:templates`; `worktrees:create` gains `worktreeTemplate?`. **Remaining:** open PR (body `Closes #<n>` once the feature issue exists). (Prior: release-cicd T1–T9 executed, T10 manual check pending + PR; v1 roadmap done.)
 
 ---
 
@@ -48,6 +50,35 @@
 
 ## Lessons Learned
 
+- **node-pty 1.1.0 ships N-API prebuilds — no Electron-ABI rebuild needed (2026-06-16, AM1):**
+  node-pty 1.1.0 is built on N-API (node-addon-api), so its bundled
+  `prebuilds/win32-x64/{pty,conpty,conpty_console_list}.node` are ABI-stable across Node *and*
+  Electron — they load unchanged under both. Its loader (`lib/utils.js`) probes `build/Release`,
+  `build/Debug`, then `prebuilds/<platform>-<arch>`. The packaged app loads from the prebuilds.
+  Consequence: the `postinstall: electron-builder install-app-deps` source rebuild is *unnecessary*
+  for node-pty and is the only thing that forces a native compile (and fails without a real
+  Python — see next lesson). `build:win` does **not** run postinstall, so packaging just reuses
+  the prebuilds (`npmRebuild: false` already skips the package-time rebuild).
+- **node-pty source rebuild needs real Python + cmd current-dir exec (2026-06-16, AM1):** if a
+  source rebuild *is* forced (`install-app-deps`), node-gyp needs a real Python (the Microsoft
+  Store `python.exe` stub fails; this machine has none on PATH — used Azure CLI's bundled
+  `C:\Program Files\Microsoft SDKs\Azure\CLI2\python.exe` via `$env:PYTHON`). It then fails again
+  inside winpty's `winpty.gyp` (`cmd /c "cd shared && GetCommitHash.bat"`) when the process env has
+  `NoDefaultCurrentDirectoryInExePath=1` (set in this shell) — cmd refuses to run a `.bat` from the
+  current directory ("not recognized"). Clearing that env var lets it build. Both are moot when
+  relying on the prebuilds (previous lesson).
+- **electron-builder auto-unpacks node-pty — no explicit `asarUnpack` needed (2026-06-16, AM1 / ASPK-05):**
+  the design flagged `asarUnpack: node_modules/node-pty/**` as a likely contingency; it was **not**
+  required. `electron-builder` smart-detection put the native module under
+  `dist/win-unpacked/resources/app.asar.unpacked/node_modules/node-pty/` (prebuilds `.node` +
+  `winpty.dll`/`winpty-agent.exe` + conpty `.dll`/`OpenConsole.exe`), and the **packaged** app loads
+  and runs the Claude PTY identically to `dev` (verified by `scripts/smoke-agent.mjs` against
+  `win-unpacked` on a CDP port — 3/3 checks, the real Claude banner rendered + keystrokes round-trip).
+  The whole AM1 scary stack (native module + AD-004 streaming IPC + xterm, rebuilt + packaged) is
+  **de-risked green**. Note: tested `win-unpacked` (byte-identical asar+unpacked layout to the NSIS
+  install, just not copied to Program Files); a full Program-Files install was not run to avoid the
+  invasive registry/shortcut side effects — loading a `.node` needs read+execute, not write, so the
+  read-only-location concern does not change the outcome.
 - **electron-builder `-c.*` short overrides break under PowerShell (2026-06-15):** on
   windows-latest (pwsh default) `npx electron-builder ... -c.publish.channel=alpha` is misread
   as a config-file path (`ENOENT .publish.channel=alpha`). bash parses it correctly, so
@@ -118,6 +149,15 @@
 - [ ] Open PR `feature/release-cicd-autoupdate` → main (body: `Closes #30`)
 - [x] Specify + Execute worktree-name-template (WTNT-01..04) on `feature/worktree-name-template` — global `ado.worktreeTemplate` + `.app/` `worktreeTemplate` override, `{repo}`/`{branch}`/`{id}` placeholders, empty-render guard; gate green (137 tests)
 - [ ] Open PR `feature/worktree-name-template` → main (body: `Closes #<n>` once the feature issue is synced via tlc-to-issues)
+- [x] Structure M5 from PRD #37: added ROADMAP **M5 — Embedded Agent Sessions** (AM1 Agent Spike / AM2 Agent Sessions / AM3 Agent Config); user approved umbrella-PRD → 3-specs split, start with AM1
+- [x] Specify M5 AM1 "Agent Spike" (`.specs/features/agent-spike/spec.md`, ASPK-01..06) — de-risk `node-pty` + `xterm.js` + AD-004 streaming IPC, rebuilt + **packaged**; pure seam = spawn-plan builder; rest hand-verified
+- [x] User approved AM1 spec flagged decisions ("go ahead": throwaway dev trigger + permanent `TerminalPane`; hard-coded agent = Claude, one fixed cwd)
+- [x] Design AM1 (`.specs/features/agent-spike/design.md`) — researched the two de-risk unknowns: (1) electron-vite empty `main:{}` would **bundle** node-pty and break → must add `externalizeDepsPlugin()` to main; (2) electron-builder auto-unpacks native modules but has honored-rule bugs → explicit `asarUnpack: node_modules/node-pty/**` is the contingency. Components: `buildSpawnPlan` (pure, tested) · `PtyPort` (node-pty shell) · streaming IPC `IpcEvents`/`IpcSends` + `on`/`send` (AD-004) · `TerminalPane` (xterm) · throwaway trigger+orchestrator (no config schema change)
+- [x] User approved AM1 design ("go ahead to break down")
+- [x] Tasks AM1 (`.specs/features/agent-spike/tasks.md`) — 12 tasks, 6 phases; only T2 (buildSpawnPlan) is unit-tested, rest `none` (hand-verified OS/IPC/renderer per TESTING.md); all 3 validation tables green. De-risk deliverable = T11 (`build:win` packaged run)
+- [x] **Execute AM1 (T1–T12)** on `feature/agent-spike` — ASPK-01..06 all Verified; gate green (142 tests + `build:win`); de-risk findings recorded as STATE.md Lessons (N-API prebuilds; auto-unpack sufficed)
+- [ ] Open PR `feature/agent-spike` → main (body: `Closes #<n>` for the AM1 feature issue once synced via tlc-to-issues)
+- [ ] Specify AM2 "Agent Sessions" + AM3 "Agent Config" — the spike has de-risked the stack
 
 ---
 
