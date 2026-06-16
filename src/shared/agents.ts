@@ -11,7 +11,7 @@ import type { AgentDef } from '../main/spawn-plan'
  * pulls no main-process code into the renderer bundle.
  */
 export const SEEDED_AGENTS: AgentDef[] = [
-  { name: 'Claude', command: 'claude', args: [] },
-  { name: 'Copilot', command: 'gh', args: ['copilot'] },
-  { name: 'Codex', command: 'codex', args: ['--full-auto'] }
+  { name: 'Claude', command: 'claude', args: [], color: '--accent' },
+  { name: 'Copilot', command: 'gh', args: ['copilot'], color: '--blue' },
+  { name: 'Codex', command: 'codex', args: ['--full-auto'], color: '--green' }
 ]

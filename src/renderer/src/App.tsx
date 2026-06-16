@@ -127,7 +127,7 @@ function App(): JSX.Element {
       })
       .catch((err) => {
         console.error(err)
-        setUi({ theme: 'dark', direction: 'tree' })
+        setUi({ theme: 'dark', direction: 'tree', defaultShell: 'pwsh' })
       })
     refreshTree()
     // Cached pins paint immediately; the live fetch fills details in.
