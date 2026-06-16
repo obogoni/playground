@@ -1,4 +1,4 @@
-import type { AppConfig, ConfigPatch, WorkspaceTemplates } from './config'
+import type { AppConfig, ConfigPatch, SessionStatus, SessionView, WorkspaceTemplates } from './config'
 import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type { PinTaskResult, TasksSnapshot } from './tasks'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'
@@ -38,10 +38,22 @@ export interface IpcContract {
   'tasks:unpin': { req: { id: number; org: string; project: string }; res: TasksSnapshot }
   /** Re-fetches live details for every pin (app focus + manual refresh). */
   'tasks:refresh': { req: void; res: TasksSnapshot }
-  /** AM1 agent spike: spawn one shell-hosted agent PTY in the given cwd. */
-  'sessions:spawn': { req: { cwd: string }; res: { id: string } }
-  /** AM1 agent spike: terminate the live session so no hidden PTY survives toggle-off. */
-  'sessions:kill': { req: { id: string }; res: void }
+  /** Persisted ∪ running sessions, reconciled with pathMissing (no network/spawn). */
+  'sessions:list': { req: void; res: SessionView[] }
+  /** Resolve agent + cwd, shell-host the agent PTY, persist, return the new view. */
+  'sessions:spawn': { req: { agentName: string; cwd: string }; res: SessionView }
+  /** Kill the hosting PTY → status stopped; no orphaned process survives. */
+  'sessions:stop': { req: { id: string }; res: void }
+  /** Re-run a stopped/path-missing session in the same agent + cwd. */
+  'sessions:respawn': { req: { id: string }; res: SessionView }
+  /** Drop a stopped/path-missing session from config; rejected while running. */
+  'sessions:remove': { req: { id: string }; res: void }
+  /** Make this the active stream target; replays scrollback then live deltas. */
+  'sessions:attach': { req: { id: string }; res: void }
+  /** Stop streaming this session; its PTY + buffer keep running in main. */
+  'sessions:detach': { req: { id: string }; res: void }
+  /** Native folder picker for a detached (ad-hoc) cwd; null when cancelled. */
+  'dialog:pickFolder': { req: void; res: { path: string | null } }
 }
 
 export type IpcChannel = keyof IpcContract
@@ -58,6 +70,7 @@ export type IpcResponse<C extends IpcChannel> = IpcContract[C]['res']
 export interface IpcEvents {
   'session:data': { id: string; data: string }
   'session:exit': { id: string; exitCode: number }
+  'session:status': { id: string; status: SessionStatus; pathMissing: boolean }
 }
 
 export interface IpcSends {
