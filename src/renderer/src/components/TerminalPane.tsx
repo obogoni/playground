@@ -59,8 +59,9 @@ function readTheme(): ITheme {
 /**
  * Embedded xterm bound to one session (PRD stories 2, 18; handoff §C-b). PTY
  * bytes arrive over session:data; keystrokes go back over session:input; the
- * container drives fit() + session:resize. Basic readable theme here — the
- * full token→ANSI map and re-emit-on-toggle is the P2 polish (T12).
+ * container drives fit() + session:resize. The terminal is themed via
+ * readTheme() — the full token→ANSI palette map, re-emitted on theme toggle
+ * via a MutationObserver below (handoff §Terminal theming, AGCF-07).
  */
 export function TerminalPane({ sessionId }: TerminalPaneProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
