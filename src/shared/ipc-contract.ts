@@ -1,4 +1,10 @@
-import type { AppConfig, ConfigPatch, SessionStatus, SessionView, WorkspaceTemplates } from './config'
+import type {
+  AppConfig,
+  ConfigPatch,
+  SessionStatus,
+  SessionView,
+  WorkspaceTemplates
+} from './config'
 import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type { PinTaskResult, TasksSnapshot } from './tasks'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'

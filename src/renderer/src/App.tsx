@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
-import type { AppConfig } from '../../shared/config'
+import type { AppConfig, SessionView } from '../../shared/config'
 import type { PinnedTaskView, TasksSnapshot } from '../../shared/tasks'
 import { taskIdFromBranch } from '../../shared/tasks'
 import type { WorkspaceNode, WorktreeNode } from '../../shared/tree'
+import { AgentsView } from './components/AgentsView'
 import { BoardView } from './components/BoardView'
+import { NewSessionDialog, type NewSessionSource } from './components/NewSessionDialog'
 import { NewWorktreeDialog } from './components/NewWorktreeDialog'
 import { SettingsDialog } from './components/SettingsDialog'
 import { Sidebar } from './components/Sidebar'
 import { StartWorkDialog } from './components/StartWorkDialog'
 import { TasksPane } from './components/TasksPane'
-import { TerminalPane } from './components/TerminalPane'
 import { Toast } from './components/Toast'
 import { TopBar } from './components/TopBar'
 import { WorktreeDetail, WorktreeDetailEmpty } from './components/WorktreeDetail'
@@ -77,27 +78,15 @@ function App(): JSX.Element {
   const [branchTemplate, setBranchTemplate] = useState('')
   const [worktreeTemplate, setWorktreeTemplate] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
-  // AM1 spike — throwaway: id of the live agent session, or null when closed.
-  // Removed in AM2 when the real Agents direction + session rail lands.
-  const [spikeSessionId, setSpikeSessionId] = useState<string | null>(null)
+  /** Agent sessions (persisted ∪ running), reconciled by main. */
+  const [sessions, setSessions] = useState<SessionView[]>([])
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
+  /** New-session dialog pre-fill; null = closed. */
+  const [nsSource, setNsSource] = useState<NewSessionSource | null>(null)
 
-  // Closing the overlay must also kill the PTY — hiding it alone would leak a
-  // hidden agent/shell until app quit (AM1 spike: no daemon, PRD Out of Scope).
-  const closeSpike = (): void => {
-    if (spikeSessionId) api.invoke('sessions:kill', { id: spikeSessionId }).catch(console.error)
-    setSpikeSessionId(null)
-  }
-
-  const toggleSpike = (): void => {
-    if (spikeSessionId) {
-      closeSpike()
-      return
-    }
-    api
-      .invoke('sessions:spawn', { cwd: '' })
-      .then(({ id }) => setSpikeSessionId(id))
-      .catch(console.error)
-  }
+  const refreshSessions = useCallback((): void => {
+    api.invoke('sessions:list').then(setSessions).catch(console.error)
+  }, [])
 
   const refreshTree = useCallback((): void => {
     api
@@ -131,7 +120,19 @@ function App(): JSX.Element {
     // Cached pins paint immediately; the live fetch fills details in.
     api.invoke('tasks:list').then(setTasks).catch(console.error)
     refreshTasks()
-  }, [refreshTree, refreshTasks])
+    refreshSessions()
+  }, [refreshTree, refreshTasks, refreshSessions])
+
+  // Keep the session list live: main pushes status on PTY exit / respawn, which
+  // the rail + detail panel reflect without an explicit refresh.
+  useEffect(() => {
+    const offStatus = api.on('session:status', refreshSessions)
+    const offExit = api.on('session:exit', refreshSessions)
+    return () => {
+      offStatus()
+      offExit()
+    }
+  }, [refreshSessions])
 
   // PRD story 7: details re-fetch on app focus, debounced against focus flapping.
   const lastFocusRefresh = useRef(0)
@@ -193,6 +194,46 @@ function App(): JSX.Element {
       .catch(console.error)
   }
 
+  // Entry points (rail, worktree detail, board, tasks, sidebar) all funnel here
+  // to open the New Session dialog with whatever pre-fill they carry.
+  const openNewSession = (source: NewSessionSource = {}): void => {
+    setNsSource(source)
+  }
+
+  const spawnSession = (agentName: string, cwd: string): void => {
+    setNsSource(null)
+    api
+      .invoke('sessions:spawn', { agentName, cwd })
+      .then((view) => {
+        setSelectedSessionId(view.id)
+        update({ direction: 'agents' })
+        refreshSessions()
+      })
+      .catch((err) => {
+        console.error(err)
+        setToast("Couldn't start session")
+      })
+  }
+
+  const stopSession = (id: string): void => {
+    api.invoke('sessions:stop', { id }).then(refreshSessions).catch(console.error)
+  }
+
+  const respawnSession = (id: string): void => {
+    api
+      .invoke('sessions:respawn', { id })
+      .then((view) => {
+        setSelectedSessionId(view.id)
+        refreshSessions()
+      })
+      .catch(console.error)
+  }
+
+  const removeSession = (id: string): void => {
+    if (selectedSessionId === id) setSelectedSessionId(null)
+    api.invoke('sessions:remove', { id }).then(refreshSessions).catch(console.error)
+  }
+
   if (!ui) {
     // One frame at most; avoids a default-theme flash before hydration.
     return <></>
@@ -222,8 +263,6 @@ function App(): JSX.Element {
           refreshTasks()
         }}
         onOpenSettings={() => setSettingsOpen(true)}
-        spikeActive={spikeSessionId !== null}
-        onToggleSpike={toggleSpike}
       />
       <main className="content">
         {ui.direction === 'tree' ? (
@@ -259,6 +298,17 @@ function App(): JSX.Element {
               onStartWork={setStartWorkTask}
             />
           </>
+        ) : ui.direction === 'agents' ? (
+          <AgentsView
+            sessions={sessions}
+            tree={tree}
+            selectedId={selectedSessionId}
+            onSelect={setSelectedSessionId}
+            onStop={stopSession}
+            onRespawn={respawnSession}
+            onRemove={removeSession}
+            onNew={() => openNewSession()}
+          />
         ) : (
           <BoardView
             tree={tree}
@@ -299,17 +349,13 @@ function App(): JSX.Element {
           }}
         />
       )}
-      {/* AM1 spike — throwaway embedded agent terminal overlay. Removed in AM2. */}
-      {spikeSessionId && (
-        <div className="spike-terminal-overlay">
-          <div className="spike-terminal-bar">
-            <span>agent terminal (spike) · Claude</span>
-            <button type="button" onClick={closeSpike}>
-              Close
-            </button>
-          </div>
-          <TerminalPane key={spikeSessionId} sessionId={spikeSessionId} />
-        </div>
+      {nsSource && (
+        <NewSessionDialog
+          tree={tree}
+          source={nsSource}
+          onSpawn={spawnSession}
+          onClose={() => setNsSource(null)}
+        />
       )}
       {toast && <Toast message={toast} onDismiss={dismissToast} />}
     </>

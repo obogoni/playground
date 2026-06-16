@@ -172,12 +172,7 @@ export function NewSessionDialog({
           <button type="button" className="dialog-btn-ghost" onClick={onClose}>
             Cancel
           </button>
-          <button
-            type="button"
-            className="dialog-btn-primary"
-            disabled={!canSpawn}
-            onClick={spawn}
-          >
+          <button type="button" className="dialog-btn-primary" disabled={!canSpawn} onClick={spawn}>
             <Icon name="terminal" size={15} strokeWidth={2.2} />
             Spawn
           </button>

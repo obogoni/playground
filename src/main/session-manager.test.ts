@@ -80,7 +80,12 @@ afterEach(() => {
   dirs.length = 0
 })
 
-function makeManager(opts: { fsExists?: (p: string) => boolean; seed?: PersistedSession[] } = {}) {
+function makeManager(opts: { fsExists?: (p: string) => boolean; seed?: PersistedSession[] } = {}): {
+  manager: SessionManager
+  config: ConfigStore
+  port: PtyPort & { handles: FakeHandle[] }
+  emit: EmitFnRecorder
+} {
   const dir = mkdtempSync(join(tmpdir(), 'sm-'))
   dirs.push(dir)
   const config = new ConfigStore(dir)
@@ -123,7 +128,12 @@ describe('SessionManager', () => {
     const b = manager.spawn('Codex', 'C:\\work\\other')
     expect(a.id).not.toBe(b.id)
     expect(port.handles).toHaveLength(2)
-    expect(manager.list().map((s) => s.id).sort()).toEqual([a.id, b.id].sort())
+    expect(
+      manager
+        .list()
+        .map((s) => s.id)
+        .sort()
+    ).toEqual([a.id, b.id].sort())
   })
 
   it('stop kills the PTY, drops it to stopped, and persists', () => {

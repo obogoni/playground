@@ -153,11 +153,17 @@ export class SessionManager {
   }
 
   #setStatus(id: string, status: SessionStatus): void {
-    const sessions = this.deps.config.get().sessions.map((s) => (s.id === id ? { ...s, status } : s))
+    const sessions = this.deps.config
+      .get()
+      .sessions.map((s) => (s.id === id ? { ...s, status } : s))
     this.deps.config.patch({ sessions })
     const session = sessions.find((s) => s.id === id)
     if (session) {
-      this.deps.emit('session:status', { id, status, pathMissing: !this.deps.fsExists(session.cwd) })
+      this.deps.emit('session:status', {
+        id,
+        status,
+        pathMissing: !this.deps.fsExists(session.cwd)
+      })
     }
   }
 

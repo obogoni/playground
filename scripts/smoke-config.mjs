@@ -141,7 +141,10 @@ const cancelDialog = async () => {
 }
 
 const startWorkBranch = () =>
-  evaluate(ws, `document.querySelectorAll('.dialog-panel .dialog-branch-row .dialog-input')[1].value`)
+  evaluate(
+    ws,
+    `document.querySelectorAll('.dialog-panel .dialog-branch-row .dialog-input')[1].value`
+  )
 
 const pickRepoChip = async (name) => {
   await evaluate(
@@ -207,10 +210,7 @@ check(
 )
 
 // PWCF-02/03: start-work prefills from the saved global template for repo A
-await openDialog(
-  `[...document.querySelectorAll('.task-start-btn')].at(0).click()`,
-  'Start work'
-)
+await openDialog(`[...document.querySelectorAll('.task-start-btn')].at(0).click()`, 'Start work')
 await sleep(500)
 const branchA = await startWorkBranch()
 check(
@@ -229,7 +229,10 @@ check(
 )
 
 // PWCF-03: a manual edit makes the branch sticky across repo switches
-await evaluate(ws, setInputAt('.dialog-panel .dialog-branch-row .dialog-input', 1, 'my/custom-branch'))
+await evaluate(
+  ws,
+  setInputAt('.dialog-panel .dialog-branch-row .dialog-input', 1, 'my/custom-branch')
+)
 await pickRepoChip('alpha')
 const branchSticky = await startWorkBranch()
 check(
