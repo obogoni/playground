@@ -5,8 +5,10 @@ import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
 import { AdoGateway } from './ado-gateway'
 import { ConfigStore } from './config-store'
-import { handle } from './ipc'
+import { emit, handle, onSend } from './ipc'
+import { PtyPort, type PtyHandle } from './pty-port'
 import { ShortcutLauncher } from './shortcut-launcher'
+import { buildSpawnPlan, type AgentDef } from './spawn-plan'
 import { TaskBoard } from './task-board'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
@@ -14,9 +16,13 @@ import { createWorktree, removeWorktree } from './worktree-manager'
 import { workspaceTemplates } from './workspace-config'
 import { WorkspaceRegistry } from './workspace-registry'
 
+// Lifted out of createWindow so the spike orchestrator can reach its
+// webContents for emit(). The app is single-window.
+let mainWindow: BrowserWindow | null = null
+
 function createWindow(): void {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  const win = new BrowserWindow({
     width: 1320,
     height: 860,
     minWidth: 1100,
@@ -30,11 +36,11 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+  win.on('ready-to-show', () => {
+    win.show()
   })
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
+  win.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
@@ -42,10 +48,16 @@ function createWindow(): void {
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    win.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  // Lifted to module scope so the spike orchestrator can emit() to it.
+  mainWindow = win
+  win.on('closed', () => {
+    mainWindow = null
+  })
 }
 
 // This method will be called when Electron has finished
@@ -101,6 +113,13 @@ app.whenReady().then(() => {
   handle('tasks:unpin', (ref) => taskBoard.unpin(ref))
   handle('tasks:refresh', () => taskBoard.refresh())
 
+  // ── AM1 spike — throwaway, replaced by SessionManager in AM2 ──────────────
+  // One hard-coded agent, one fixed session id, no Map, no persistence. The
+  // permanent plumbing it rides on (PtyPort, buildSpawnPlan, emit/onSend, the
+  // streaming contract) stays; this wiring block is what AM2 throws away.
+  registerSpikeAgent()
+  // ──────────────────────────────────────────────────────────────────────────
+
   // Silent auto-update. Inert under `electron-vite dev` unless PLAYGROUND_FORCE_UPDATE=1
   // opts into the real GitHub feed via dev-app-update.yml (local update-flow testing).
   new UpdateService({
@@ -125,10 +144,56 @@ app.whenReady().then(() => {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
+  // AM1 spike: PTYs die on quit — no daemon (PRD Out of Scope). Kill the live
+  // session so no orphaned shell/agent survives the window closing.
+  spikeSession?.kill()
+  spikeSession = null
   if (process.platform !== 'darwin') {
     app.quit()
   }
 })
+
+// ── AM1 spike — throwaway, replaced by SessionManager in AM2 ────────────────
+// Hard-coded for AM1; AM3 makes agents configurable in AppConfig.
+const CLAUDE: AgentDef = { name: 'Claude', command: 'claude', args: [] }
+// Hard-coded cwd for the spike — the developer's home. The cwd/worktree model
+// is AM2. AM1 proves one live agent in one fixed folder.
+const SPIKE_CWD = app.getPath('home')
+const SPIKE_ID = 'spike'
+
+let spikeSession: PtyHandle | null = null
+
+/**
+ * Spawns the one hard-coded agent through the real spawn-plan + PtyPort and
+ * wires it to the streaming IPC. A single module-scoped handle (no Map yet);
+ * respawn replaces any prior PTY. Everything here is throwaway — AM2 replaces
+ * it with SessionManager — but the seams it calls are permanent.
+ */
+function registerSpikeAgent(): void {
+  const port = new PtyPort()
+
+  handle('sessions:spawn', ({ cwd }) => {
+    spikeSession?.kill()
+    const plan = buildSpawnPlan(CLAUDE, cwd || SPIKE_CWD, 'pwsh')
+    const session = port.spawn(plan)
+    session.onData((data) => {
+      if (mainWindow) emit(mainWindow.webContents, 'session:data', { id: SPIKE_ID, data })
+    })
+    session.onExit(({ exitCode }) => {
+      if (mainWindow) emit(mainWindow.webContents, 'session:exit', { id: SPIKE_ID, exitCode })
+      spikeSession = null
+    })
+    spikeSession = session
+    return { id: SPIKE_ID }
+  })
+
+  onSend('session:input', ({ data }) => spikeSession?.write(data))
+  onSend('session:resize', ({ cols, rows }) => {
+    // node-pty throws on zero/negative dimensions (a fit() before layout).
+    if (cols > 0 && rows > 0) spikeSession?.resize(cols, rows)
+  })
+}
+// ────────────────────────────────────────────────────────────────────────────
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
