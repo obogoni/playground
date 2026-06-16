@@ -1,0 +1,166 @@
+/* Settings — Coding agents registry + Default shell (AGCF-01/02). */
+
+.set-agent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 9px;
+}
+
+.set-agent-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel-2);
+  padding: 7px 10px;
+}
+
+.set-agent-tile {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  background: color-mix(in oklab, var(--accent) 15%, transparent);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.set-agent-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.set-agent-cmd {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.set-agent-icon-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.set-agent-icon-btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.set-agent-empty {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-faint);
+  padding: 6px 2px;
+}
+
+.set-agent-add {
+  width: 100%;
+  border: 1px dashed var(--border-strong);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 9px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.set-agent-add:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.set-agent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+  padding: 11px;
+}
+
+.set-agent-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.set-agent-colors {
+  display: flex;
+  gap: 8px;
+}
+
+.set-color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+
+.set-color-swatch.selected {
+  border-color: var(--text);
+}
+
+.set-agent-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.set-shell-segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.set-shell-segment {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 18px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.set-shell-segment.selected {
+  background: var(--accent);
+  color: #fff;
+}

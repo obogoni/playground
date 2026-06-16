@@ -18,6 +18,8 @@ export interface AgentDef {
   /** Extra arguments appended after the command. */
   args: string[]
   icon?: string
+  /** Tile tint token (handoff agent→colour, e.g. `--accent`); default token when unset. */
+  color?: string
 }
 
 export interface SpawnPlan {
@@ -69,4 +71,17 @@ export function buildSpawnPlan(agent: AgentDef, cwd: string, shell: Shell): Spaw
   const head = command === agent.command ? command : `& ${command}`
   const autoCommand = [head, ...agent.args.map(quotePwsh)].join(' ').trim()
   return { file: 'pwsh.exe', args: ['-NoExit', '-Command', autoCommand], cwd, autoCommand }
+}
+
+/**
+ * Ad-hoc sibling of `buildSpawnPlan`: the user typed a whole shell line, so it
+ * is hosted **verbatim** (no per-token re-quoting — `buildSpawnPlan`'s argv
+ * quoting would corrupt syntax the user wrote on purpose). Same `-NoExit`/`/K`
+ * keep-shell-live convention so the prompt survives after the command ends.
+ */
+export function buildRawSpawnPlan(command: string, cwd: string, shell: Shell): SpawnPlan {
+  if (shell === 'cmd') {
+    return { file: 'cmd.exe', args: ['/K', command], cwd, autoCommand: command }
+  }
+  return { file: 'pwsh.exe', args: ['-NoExit', '-Command', command], cwd, autoCommand: command }
 }

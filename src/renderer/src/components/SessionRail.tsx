@@ -1,13 +1,20 @@
 import type { JSX, KeyboardEvent, MouseEvent } from 'react'
+import type { AgentDef } from '../../../shared/agents'
 import type { SessionView } from '../../../shared/config'
 import type { WorkspaceNode } from '../../../shared/tree'
+import { agentTileStyle } from '../lib/agent-color'
+import { stripAnsi } from '../lib/ansi'
 import { deriveAttribution } from '../lib/session-attribution'
 import { Icon } from './Icon'
 import './SessionRail.css'
 
+/** Above this many live sessions the rail warns about resource use (AGCF-06). */
+const CONCURRENCY_WARN_AT = 4
+
 interface SessionRailProps {
   sessions: SessionView[]
   tree: WorkspaceNode[]
+  agents: AgentDef[]
   selectedId: string | null
   onSelect: (id: string) => void
   onStop: (id: string) => void
@@ -20,6 +27,7 @@ interface SessionRailProps {
 export function SessionRail({
   sessions,
   tree,
+  agents,
   selectedId,
   onSelect,
   onStop,
@@ -40,6 +48,12 @@ export function SessionRail({
           <Icon name="plus" size={14} strokeWidth={2.2} /> New session
         </button>
       </header>
+      {runningCount >= CONCURRENCY_WARN_AT && (
+        <div className="session-rail-warning" role="status">
+          <Icon name="alert" size={14} />
+          <span>{runningCount} live sessions — each is a real OS process consuming resources.</span>
+        </div>
+      )}
       <div className="session-rail-list">
         {sessions.length === 0 ? (
           <div className="session-rail-empty">No sessions yet.</div>
@@ -49,6 +63,7 @@ export function SessionRail({
               key={session.id}
               session={session}
               tree={tree}
+              agents={agents}
               selected={session.id === selectedId}
               onSelect={onSelect}
               onStop={onStop}
@@ -65,6 +80,7 @@ export function SessionRail({
 interface SessionCardProps {
   session: SessionView
   tree: WorkspaceNode[]
+  agents: AgentDef[]
   selected: boolean
   onSelect: (id: string) => void
   onStop: (id: string) => void
@@ -75,6 +91,7 @@ interface SessionCardProps {
 function SessionCard({
   session,
   tree,
+  agents,
   selected,
   onSelect,
   onStop,
@@ -84,6 +101,7 @@ function SessionCard({
   const { branch, taskId, detached } = deriveAttribution(tree, session.cwd)
   const running = session.status === 'running'
   const statusClass = running ? 'green' : 'faint'
+  const preview = !running && session.lastOutput ? stripAnsi(session.lastOutput).trim() : ''
 
   const act = (event: MouseEvent, fn: () => void): void => {
     event.stopPropagation()
@@ -109,7 +127,9 @@ function SessionCard({
       onKeyDown={onKeyDown}
     >
       <div className="session-card-head">
-        <div className="session-card-tile">{session.agent.charAt(0)}</div>
+        <div className="session-card-tile" style={agentTileStyle(agents, session.agent)}>
+          {session.agent.charAt(0)}
+        </div>
         <div className="session-card-titles">
           <span className="session-card-title">{session.title}</span>
           <span className="session-card-meta">
@@ -124,6 +144,7 @@ function SessionCard({
         {detached && <span className="session-card-tag">detached</span>}
         {session.pathMissing && <span className="session-card-tag red">path missing</span>}
       </div>
+      {preview && <pre className="session-card-preview">{preview}</pre>}
       <div className="session-card-footer">
         {running ? (
           <button

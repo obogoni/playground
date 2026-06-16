@@ -8,6 +8,7 @@ import { api } from '../lib/api'
 import { stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import type { IconName } from './Icon'
+import { RemoveWorktreeConfirm } from './RemoveWorktreeConfirm'
 import './WorktreeDetail.css'
 
 interface WorktreeDetailProps {
@@ -82,6 +83,10 @@ export function WorktreeDetail({
   const [copied, setCopied] = useState(false)
   const [removing, setRemoving] = useState(false)
   const [removeError, setRemoveError] = useState<string | null>(null)
+  /** When set, the running-sessions removal confirmation is open (AGCF-05). */
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const runningSessions = sessions.filter((s) => s.status === 'running')
 
   useEffect(() => {
     if (!copied) return
@@ -104,7 +109,7 @@ export function WorktreeDetail({
       ? `${worktree.changes} uncommitted change${worktree.changes === 1 ? '' : 's'} — commit or stash before removing.`
       : null
 
-  const remove = (): void => {
+  const doRemove = (): void => {
     setRemoving(true)
     setRemoveError(null)
     api
@@ -121,6 +126,33 @@ export function WorktreeDetail({
       .catch((err) => {
         setRemoving(false)
         setRemoveError(err instanceof Error ? err.message : String(err))
+      })
+  }
+
+  // Running agents must be terminated first (AGCF-05): open the confirm dialog
+  // when any session is live, otherwise remove straight away as before.
+  const remove = (): void => {
+    if (runningSessions.length > 0) setConfirmOpen(true)
+    else doRemove()
+  }
+
+  // Terminate every running agent before removing (AGCF-05). If any stop fails,
+  // abort: surface the error and leave the worktree intact rather than removing
+  // it with sessions potentially still alive.
+  const confirmRemove = (): void => {
+    setRemoving(true)
+    setRemoveError(null)
+    Promise.all(runningSessions.map((s) => api.invoke('sessions:stop', { id: s.id })))
+      .then(() => {
+        setConfirmOpen(false)
+        doRemove()
+      })
+      .catch((err) => {
+        setRemoving(false)
+        setConfirmOpen(false)
+        setRemoveError(
+          `Couldn’t terminate running agents: ${err instanceof Error ? err.message : String(err)}`
+        )
       })
   }
 
@@ -265,6 +297,15 @@ export function WorktreeDetail({
           {removeError && <span className="detail-danger-note error">{removeError}</span>}
         </div>
       </div>
+      {confirmOpen && (
+        <RemoveWorktreeConfirm
+          branch={worktree.branch}
+          runningSessions={runningSessions}
+          busy={removing}
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={confirmRemove}
+        />
+      )}
     </div>
   )
 }

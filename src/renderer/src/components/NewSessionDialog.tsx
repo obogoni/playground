@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { JSX } from 'react'
-import { SEEDED_AGENTS } from '../../../shared/agents'
+import type { AgentDef } from '../../../shared/agents'
 import { taskIdFromBranch } from '../../../shared/tasks'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { api } from '../lib/api'
@@ -8,6 +8,9 @@ import { Icon } from './Icon'
 import './NewWorktreeDialog.css'
 import './StartWorkDialog.css'
 import './NewSessionDialog.css'
+
+/** Sentinel agent name for the ad-hoc command chip (not a registry entry). */
+const ADHOC = 'Ad-hoc'
 
 /** Pre-fill carried in from whichever entry point opened the dialog. */
 export interface NewSessionSource {
@@ -21,8 +24,10 @@ export interface NewSessionSource {
 
 interface NewSessionDialogProps {
   tree: WorkspaceNode[]
+  /** Registry agents from config (AGCF-01); no longer the hard-coded constant. */
+  agents: AgentDef[]
   source: NewSessionSource
-  onSpawn: (agentName: string, cwd: string) => void
+  onSpawn: (agentName: string, cwd: string, adhocCommand?: string) => void
   onClose: () => void
 }
 
@@ -49,27 +54,36 @@ function worktreeOptions(tree: WorkspaceNode[]): CwdOption[] {
 }
 
 /**
- * New Session modal (handoff §New Session dialog): pick a seeded agent + a cwd,
- * then spawn. Same chassis as StartWorkDialog. cwd comes from the worktree grid
- * (optionally task-highlighted) or a browsed folder (AGSN-09). No ad-hoc agent
- * input and no Settings — both are AM3.
+ * New Session modal (handoff §New Session dialog): pick a registry agent (or the
+ * Ad-hoc command escape hatch) + a cwd, then spawn. Same chassis as
+ * StartWorkDialog. cwd comes from the worktree grid (optionally task-highlighted)
+ * or a browsed folder (AGSN-09). Agents come from config, not a constant (AGCF-01);
+ * Ad-hoc runs a one-shot raw command, never saved to the registry (AGCF-03).
  */
 export function NewSessionDialog({
   tree,
+  agents,
   source,
   onSpawn,
   onClose
 }: NewSessionDialogProps): JSX.Element {
   const options = worktreeOptions(tree)
-  const [agentName, setAgentName] = useState(SEEDED_AGENTS[0]?.name ?? '')
+  const [agentName, setAgentName] = useState(agents[0]?.name ?? ADHOC)
   const [cwd, setCwd] = useState<string | null>(source.cwd ?? null)
+  const [adhocCommand, setAdhocCommand] = useState('')
 
-  const agent = SEEDED_AGENTS.find((a) => a.name === agentName)
+  const isAdhoc = agentName === ADHOC
+  const agent = agents.find((a) => a.name === agentName)
   const highlight = new Set(source.highlightWorktrees ?? [])
   // A browsed (detached) cwd isn't in the worktree grid; surface it separately.
   const detachedCwd = cwd !== null && !options.some((o) => o.path === cwd) ? cwd : null
-  const willRun = agent ? [agent.command, ...agent.args].join(' ').trim() : ''
-  const canSpawn = cwd !== null && agent !== undefined
+  const willRun = isAdhoc
+    ? adhocCommand.trim()
+    : agent
+      ? [agent.command, ...agent.args].join(' ').trim()
+      : ''
+  const commandReady = isAdhoc ? adhocCommand.trim() !== '' : agent !== undefined
+  const canSpawn = cwd !== null && commandReady
 
   const browse = (): void => {
     api
@@ -81,7 +95,9 @@ export function NewSessionDialog({
   }
 
   const spawn = (): void => {
-    if (cwd !== null && agent !== undefined) onSpawn(agent.name, cwd)
+    if (cwd === null || !commandReady) return
+    if (isAdhoc) onSpawn(ADHOC, cwd, adhocCommand.trim())
+    else if (agent) onSpawn(agent.name, cwd)
   }
 
   return (
@@ -104,7 +120,7 @@ export function NewSessionDialog({
           <div>
             <div className="dialog-field-label">Agent</div>
             <div className="ns-agent-grid">
-              {SEEDED_AGENTS.map((a) => (
+              {agents.map((a) => (
                 <button
                   key={a.name}
                   type="button"
@@ -115,7 +131,25 @@ export function NewSessionDialog({
                   <span className="ns-agent-cmd">{[a.command, ...a.args].join(' ')}</span>
                 </button>
               ))}
+              <button
+                type="button"
+                className={`ns-agent-chip adhoc${isAdhoc ? ' selected' : ''}`}
+                onClick={() => setAgentName(ADHOC)}
+              >
+                <span className="ns-agent-name">Ad-hoc command</span>
+                <span className="ns-agent-cmd">{'>_ run any shell line'}</span>
+              </button>
             </div>
+            {isAdhoc && (
+              <input
+                className="dialog-input ns-adhoc-input"
+                placeholder="Command to run, e.g. npm run dev"
+                value={adhocCommand}
+                autoFocus
+                spellCheck={false}
+                onChange={(event) => setAdhocCommand(event.target.value)}
+              />
+            )}
           </div>
 
           <div>

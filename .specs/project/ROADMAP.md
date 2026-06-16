@@ -1,7 +1,7 @@
 # Roadmap
 
 **Current Milestone:** M5 — Embedded Agent Sessions (v2). M1–M4 (v1) feature work complete + worktree-name-template (post-v1)
-**Status:** v1 roadmap done; M5 AM1 (Agent Spike) COMPLETE (merged PR #39); AM2 (Agent Sessions) planned (spec + design + tasks), ready to execute; AM3 (Agent Config) planned
+**Status:** v1 roadmap done; M5 AM1 (Agent Spike) COMPLETE (merged PR #39); AM2 (Agent Sessions) COMPLETE (merged PR #41); AM3 (Agent Config) EXECUTED + dev-verified (CDP 15/15) — **PR #44 open** (`Closes #43`); AGCF-05 confirm hand-verify can ride post-merge
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
 
@@ -115,16 +115,17 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - One hard-coded agent, one live embedded terminal; no rail, no persistence, no config
 - Keeps & grows the plumbing (`PtyPort`, streaming-IPC maps/bridge, `buildSpawnPlan`, `TerminalPane`, packaging fix); throws away only the single-agent trigger (ASPK-01..06)
 
-**Agent Sessions (AM2)** - PLANNED
+**Agent Sessions (AM2)** - COMPLETE (merged PR #41)
 
 - Agents direction + card rail (master-detail); N sessions; attach/detach with ring-buffer scrollback replay
 - `SessionManager` + `SessionRingBuffer`; persistence (`AppConfig.sessions[]`) + restore-as-stopped + respawn; Stop/Remove
-- All three spawn entry points; derived task tags; reconciliation + path-missing flag
+- All spawn entry points; derived task tags; reconciliation + path-missing flag
 
-**Agent Config & Integration (AM3)** - PLANNED
+**Agent Config & Integration (AM3)** - EXECUTED T1–T11 (`feature/agent-config`; gate green + CDP smoke 15/15) — PR #44 open (`Closes #43`)
 
-- Configurable agent definitions + ad-hoc command + Settings dialog; default-shell setting
-- Worktree-delete-vs-running confirmation (warn + kill); rename/duplicate; soft concurrency warning; full xterm token theming
+- Editable agent registry (`AppConfig.agents[]`) + ad-hoc command + Settings dialog; default-shell setting
+- Worktree-delete-vs-running confirmation (warn + kill); rename/duplicate; soft concurrency warning; full ANSI role-palette theming; in-memory last-output preview
+- **Deferred (not AM3):** amber agent-exited sub-status + agent-exit detection (no observable signal without a sentinel/polling)
 
 ---
 

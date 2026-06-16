@@ -62,7 +62,12 @@ describe('ConfigStore', () => {
     new ConfigStore(dir).patch({ ui: { direction: 'board' } })
 
     const onDisk = JSON.parse(readFileSync(join(dir, 'config.json'), 'utf8'))
-    expect(onDisk.ui).toEqual({ theme: 'light', direction: 'board', futureFlag: true })
+    expect(onDisk.ui).toEqual({
+      theme: 'light',
+      direction: 'board',
+      defaultShell: 'pwsh',
+      futureFlag: true
+    })
     expect(onDisk.workspaces).toEqual(['x'])
   })
 
@@ -71,7 +76,7 @@ describe('ConfigStore', () => {
 
     const result = store.patch({ ui: { theme: 'light' } })
 
-    expect(result.ui).toEqual({ theme: 'light', direction: 'tree' })
+    expect(result.ui).toEqual({ theme: 'light', direction: 'tree', defaultShell: 'pwsh' })
     expect(store.get()).toBe(result)
   })
 })

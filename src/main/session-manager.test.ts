@@ -97,8 +97,7 @@ function makeManager(opts: { fsExists?: (p: string) => boolean; seed?: Persisted
     config,
     // the recorder is intentionally loosely typed; cast to the manager's EmitFn
     emit: emit as unknown as EmitFn,
-    fsExists: opts.fsExists ?? (() => true),
-    seededAgents: SEEDED_AGENTS
+    fsExists: opts.fsExists ?? (() => true)
   })
   return { manager, config, port, emit }
 }
@@ -255,5 +254,96 @@ describe('SessionManager', () => {
     expect(port.handles.every((h) => h.killed)).toBe(true)
     // every session is now stopped (no live PTY)
     expect(manager.list().every((s) => s.status === 'stopped')).toBe(true)
+  })
+
+  // --- AM3: registry from config, default shell, ad-hoc, rename, duplicate, preview ---
+
+  it('resolves agents from config.agents, not an injected constant', () => {
+    const { manager, config } = makeManager()
+    config.patch({ agents: [...SEEDED_AGENTS, { name: 'Custom', command: 'mytool', args: [] }] })
+    const view = manager.spawn('Custom', CWD)
+    expect(view.agent).toBe('Custom')
+  })
+
+  it('throws once an agent is removed from config.agents', () => {
+    const { manager, config } = makeManager()
+    config.patch({ agents: SEEDED_AGENTS.filter((a) => a.name !== 'Codex') })
+    expect(() => manager.spawn('Codex', CWD)).toThrow(/Unknown agent/)
+  })
+
+  it('builds the spawn plan with config.ui.defaultShell', () => {
+    const { manager, config, port } = makeManager()
+    config.patch({ ui: { defaultShell: 'cmd' } })
+    manager.spawn('Claude', CWD)
+    expect(port.handles[0].plan.file).toBe('cmd.exe')
+  })
+
+  it('ad-hoc spawn persists the command and runs it verbatim', () => {
+    const { manager, config, port } = makeManager()
+    const view = manager.spawn('Ad-hoc', CWD, 'npm run dev')
+    expect(view.agent).toBe('Ad-hoc')
+    expect(view.command).toBe('npm run dev')
+    expect(config.get().sessions[0].command).toBe('npm run dev')
+    expect(port.handles[0].plan.autoCommand).toBe('npm run dev')
+  })
+
+  it('ad-hoc respawn re-runs the stored command', () => {
+    const { manager, port } = makeManager()
+    const view = manager.spawn('Ad-hoc', CWD, 'npm run dev')
+    manager.stop(view.id)
+    manager.respawn(view.id)
+    expect(port.handles[1].plan.autoCommand).toBe('npm run dev')
+  })
+
+  it('rename trims the new title and persists it', () => {
+    const { manager, config } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    const renamed = manager.rename(view.id, '  My session  ')
+    expect(renamed.title).toBe('My session')
+    expect(config.get().sessions[0].title).toBe('My session')
+  })
+
+  it('rename with empty/whitespace input is a no-op (keeps prior title)', () => {
+    const { manager } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    const before = view.title
+    const renamed = manager.rename(view.id, '   ')
+    expect(renamed.title).toBe(before)
+  })
+
+  it('duplicate clones agent + cwd into a new independent running session', () => {
+    const { manager, port } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    const clone = manager.duplicate(view.id)
+    expect(clone.id).not.toBe(view.id)
+    expect(clone.agent).toBe('Claude')
+    expect(clone.cwd).toBe(CWD)
+    expect(clone.status).toBe('running')
+    expect(port.handles).toHaveLength(2)
+    expect(manager.list()).toHaveLength(2)
+  })
+
+  it('exposes lastOutput (tail) once a session is stopped', () => {
+    const { manager, port } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    port.handles[0].emitData('alpha\nbravo')
+    manager.stop(view.id)
+    expect(manager.list()[0].lastOutput).toBe('alpha\nbravo')
+  })
+
+  it('clears lastOutput on respawn and has none after restore', () => {
+    const { manager, port } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    port.handles[0].emitData('alpha\nbravo')
+    manager.stop(view.id)
+    manager.respawn(view.id)
+    expect(manager.list()[0].lastOutput).toBeUndefined()
+
+    // A session restored from disk (new manager, no retained buffer) has no preview.
+    const seed: PersistedSession[] = [
+      { id: 's9', agent: 'Claude', cwd: CWD, title: 'Claude · repo', status: 'stopped' }
+    ]
+    const restored = makeManager({ seed })
+    expect(restored.manager.list()[0].lastOutput).toBeUndefined()
   })
 })

@@ -1,5 +1,8 @@
 import type { AgentDef } from '../main/spawn-plan'
 
+// Re-exported so the renderer can type agent props without reaching into main.
+export type { AgentDef, Shell } from '../main/spawn-plan'
+
 /**
  * The fixed seed agent list for AM2. Both main (to resolve a session's stored
  * agent name to its launch definition) and the renderer (to render the agent
@@ -11,7 +14,7 @@ import type { AgentDef } from '../main/spawn-plan'
  * pulls no main-process code into the renderer bundle.
  */
 export const SEEDED_AGENTS: AgentDef[] = [
-  { name: 'Claude', command: 'claude', args: [] },
-  { name: 'Copilot', command: 'gh', args: ['copilot'] },
-  { name: 'Codex', command: 'codex', args: ['--full-auto'] }
+  { name: 'Claude', command: 'claude', args: [], color: '--accent' },
+  { name: 'Copilot', command: 'gh', args: ['copilot'], color: '--blue' },
+  { name: 'Codex', command: 'codex', args: ['--full-auto'], color: '--green' }
 ]

@@ -5,7 +5,7 @@ import type { IpcEvent, IpcEvents } from '../shared/ipc-contract'
 import type { ConfigStore } from './config-store'
 import type { PtyHandle, PtyPort } from './pty-port'
 import { SessionRingBuffer } from './session-ring-buffer'
-import { buildSpawnPlan, type AgentDef } from './spawn-plan'
+import { buildRawSpawnPlan, buildSpawnPlan, type AgentDef } from './spawn-plan'
 
 /** Typed main→renderer push, bound to the live window's webContents by index.ts. */
 export type EmitFn = <E extends IpcEvent>(channel: E, payload: IpcEvents[E]) => void
@@ -16,8 +16,10 @@ export interface SessionManagerDeps {
   emit: EmitFn
   /** Injectable for reconcile tests (fs.existsSync in production). */
   fsExists: (path: string) => boolean
-  seededAgents: AgentDef[]
 }
+
+/** Stored on ad-hoc sessions in place of a registry agent name. */
+const ADHOC_AGENT = 'Ad-hoc'
 
 /** A session with a live PTY. Stopped/restored sessions live only in config. */
 interface RunningSession {
@@ -39,6 +41,10 @@ interface RunningSession {
  */
 export class SessionManager {
   readonly #running = new Map<string, RunningSession>()
+  /** A stopped session's last scrollback, kept so its card can show a 2-line
+   * preview. Cleared on respawn/remove; absent for sessions restored from disk
+   * (the PTY — and its buffer — never survive a restart). */
+  readonly #retained = new Map<string, SessionRingBuffer>()
   #activeId: string | null = null
 
   constructor(private readonly deps: SessionManagerDeps) {
@@ -55,16 +61,56 @@ export class SessionManager {
     return this.deps.config.get().sessions.map((s) => this.#toView(s))
   }
 
-  spawn(agentName: string, cwd: string): SessionView {
-    const agent = this.#resolve(agentName)
+  spawn(agentName: string, cwd: string, adhocCommand?: string): SessionView {
+    const leaf = basename(cwd) || cwd
+    const meta: PersistedSession = adhocCommand
+      ? {
+          id: randomUUID(),
+          agent: ADHOC_AGENT,
+          cwd,
+          title: `${ADHOC_AGENT} · ${leaf}`,
+          status: 'running',
+          command: adhocCommand
+        }
+      : {
+          id: randomUUID(),
+          agent: this.#resolve(agentName).name,
+          cwd,
+          title: `${this.#resolve(agentName).name} · ${leaf}`,
+          status: 'running'
+        }
+    this.#start(meta) // throws on a bad cwd/shell/agent before anything is persisted
+    this.#persistUpsert(meta)
+    return this.#toView(meta)
+  }
+
+  /** Rename a session's title; trimmed empty input keeps the prior title. */
+  rename(id: string, title: string): SessionView {
+    const meta = this.deps.config.get().sessions.find((s) => s.id === id)
+    if (!meta) throw new Error(`Unknown session: ${id}`)
+    const trimmed = title.trim()
+    if (trimmed === '' || trimmed === meta.title) return this.#toView(meta)
+    const renamed: PersistedSession = { ...meta, title: trimmed }
+    this.#persistUpsert(renamed)
+    const live = this.#running.get(id)
+    if (live) live.meta = { ...live.meta, title: trimmed }
+    return this.#toView(renamed)
+  }
+
+  /** Clone a session's agent + cwd (+ ad-hoc command) into a new running one. */
+  duplicate(id: string): SessionView {
+    const src = this.deps.config.get().sessions.find((s) => s.id === id)
+    if (!src) throw new Error(`Unknown session: ${id}`)
+    const leaf = basename(src.cwd) || src.cwd
     const meta: PersistedSession = {
       id: randomUUID(),
-      agent: agent.name,
-      cwd,
-      title: `${agent.name} · ${basename(cwd) || cwd}`,
-      status: 'running'
+      agent: src.agent,
+      cwd: src.cwd,
+      title: `${src.agent} · ${leaf}`,
+      status: 'running',
+      ...(src.command ? { command: src.command } : {})
     }
-    this.#start(meta) // throws on a bad cwd/shell before anything is persisted
+    this.#start(meta)
     this.#persistUpsert(meta)
     return this.#toView(meta)
   }
@@ -80,6 +126,7 @@ export class SessionManager {
     const meta = this.deps.config.get().sessions.find((s) => s.id === id)
     if (!meta) throw new Error(`Unknown session: ${id}`)
     if (this.#running.has(id)) return this.#toView(meta)
+    this.#retained.delete(id) // fresh PTY → drop the stale preview buffer
     const live: PersistedSession = { ...meta, status: 'running' }
     this.#start(live)
     this.#persistUpsert(live)
@@ -93,6 +140,7 @@ export class SessionManager {
 
   remove(id: string): void {
     if (this.#running.has(id)) throw new Error(`Cannot remove a running session: ${id}`)
+    this.#retained.delete(id)
     const sessions = this.deps.config.get().sessions.filter((s) => s.id !== id)
     this.deps.config.patch({ sessions })
   }
@@ -127,15 +175,17 @@ export class SessionManager {
   }
 
   #resolve(agentName: string): AgentDef {
-    const agent = this.deps.seededAgents.find((a) => a.name === agentName)
+    const agent = this.deps.config.get().agents.find((a) => a.name === agentName)
     if (!agent) throw new Error(`Unknown agent: ${agentName}`)
     return agent
   }
 
   /** Spawn the PTY for a meta and wire its streams; registers the Map entry. */
   #start(meta: PersistedSession): void {
-    const agent = this.#resolve(meta.agent)
-    const plan = buildSpawnPlan(agent, meta.cwd, 'pwsh')
+    const shell = this.deps.config.get().ui.defaultShell
+    const plan = meta.command
+      ? buildRawSpawnPlan(meta.command, meta.cwd, shell)
+      : buildSpawnPlan(this.#resolve(meta.agent), meta.cwd, shell)
     const handle = this.deps.port.spawn(plan)
     const buffer = new SessionRingBuffer()
     handle.onData((data) => {
@@ -152,6 +202,8 @@ export class SessionManager {
     // still emit session:exit on the real onExit so listeners (TerminalPane's
     // "[shell exited with code …]") fire even after a stop() — only the
     // redundant persist/status push is skipped.
+    const session = this.#running.get(id)
+    if (session) this.#retained.set(id, session.buffer) // keep scrollback for the preview
     const wasRunning = this.#running.delete(id)
     if (wasRunning) this.#setStatus(id, 'stopped')
     if (exitCode !== undefined) this.deps.emit('session:exit', { id, exitCode })
@@ -180,10 +232,12 @@ export class SessionManager {
   }
 
   #toView(meta: PersistedSession): SessionView {
+    const preview = this.#retained.get(meta.id)?.tail(2)
     return {
       ...meta,
       status: this.#running.has(meta.id) ? 'running' : 'stopped',
-      pathMissing: !this.deps.fsExists(meta.cwd)
+      pathMissing: !this.deps.fsExists(meta.cwd),
+      ...(preview ? { lastOutput: preview } : {})
     }
   }
 }

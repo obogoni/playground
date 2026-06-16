@@ -26,6 +26,16 @@
   background: color-mix(in oklab, var(--accent) 12%, transparent);
 }
 
+.ns-agent-chip.adhoc.selected {
+  border-color: var(--amber);
+  background: color-mix(in oklab, var(--amber) 12%, transparent);
+}
+
+.ns-adhoc-input {
+  margin-top: 9px;
+  font-family: var(--font-mono);
+}
+
 .ns-agent-name {
   font-size: 13.5px;
   font-weight: 700;

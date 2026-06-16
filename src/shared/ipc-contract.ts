@@ -46,12 +46,19 @@ export interface IpcContract {
   'tasks:refresh': { req: void; res: TasksSnapshot }
   /** Persisted ∪ running sessions, reconciled with pathMissing (no network/spawn). */
   'sessions:list': { req: void; res: SessionView[] }
-  /** Resolve agent + cwd, shell-host the agent PTY, persist, return the new view. */
-  'sessions:spawn': { req: { agentName: string; cwd: string }; res: SessionView }
+  /** Resolve agent (or run `adhocCommand` raw) + cwd, shell-host the PTY, persist, return the view. */
+  'sessions:spawn': {
+    req: { agentName: string; cwd: string; adhocCommand?: string }
+    res: SessionView
+  }
   /** Kill the hosting PTY → status stopped; no orphaned process survives. */
   'sessions:stop': { req: { id: string }; res: void }
   /** Re-run a stopped/path-missing session in the same agent + cwd. */
   'sessions:respawn': { req: { id: string }; res: SessionView }
+  /** Rename a session's title; empty/whitespace keeps the prior title. */
+  'sessions:rename': { req: { id: string; title: string }; res: SessionView }
+  /** Clone a session (agent + cwd + ad-hoc command) into a new running session. */
+  'sessions:duplicate': { req: { id: string }; res: SessionView }
   /** Drop a stopped/path-missing session from config; rejected while running. */
   'sessions:remove': { req: { id: string }; res: void }
   /** Make this the active stream target; replays scrollback then live deltas. */
