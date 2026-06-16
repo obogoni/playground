@@ -1,14 +1,16 @@
 import { app, shell, dialog, BrowserWindow } from 'electron'
+import { existsSync } from 'node:fs'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
+import { SEEDED_AGENTS } from '../shared/agents'
 import { AdoGateway } from './ado-gateway'
 import { ConfigStore } from './config-store'
 import { emit, handle, onSend } from './ipc'
-import { PtyPort, type PtyHandle } from './pty-port'
+import { PtyPort } from './pty-port'
+import { SessionManager, type EmitFn } from './session-manager'
 import { ShortcutLauncher } from './shortcut-launcher'
-import { buildSpawnPlan, type AgentDef } from './spawn-plan'
 import { TaskBoard } from './task-board'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
@@ -16,9 +18,10 @@ import { createWorktree, removeWorktree } from './worktree-manager'
 import { workspaceTemplates } from './workspace-config'
 import { WorkspaceRegistry } from './workspace-registry'
 
-// Lifted out of createWindow so the spike orchestrator can reach its
-// webContents for emit(). The app is single-window.
+// Lifted out of createWindow so SessionManager can reach its webContents for
+// emit() (the app is single-window) and window-all-closed can killAll().
 let mainWindow: BrowserWindow | null = null
+let sessionManager: SessionManager | null = null
 
 function createWindow(): void {
   // Create the browser window.
@@ -53,7 +56,7 @@ function createWindow(): void {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
-  // Lifted to module scope so the spike orchestrator can emit() to it.
+  // Lifted to module scope so SessionManager's emit() can reach it.
   mainWindow = win
   win.on('closed', () => {
     mainWindow = null
@@ -113,12 +116,35 @@ app.whenReady().then(() => {
   handle('tasks:unpin', (ref) => taskBoard.unpin(ref))
   handle('tasks:refresh', () => taskBoard.refresh())
 
-  // ── AM1 spike — throwaway, replaced by SessionManager in AM2 ──────────────
-  // One hard-coded agent, one fixed session id, no Map, no persistence. The
-  // permanent plumbing it rides on (PtyPort, buildSpawnPlan, emit/onSend, the
-  // streaming contract) stays; this wiring block is what AM2 throws away.
-  registerSpikeAgent()
-  // ──────────────────────────────────────────────────────────────────────────
+  // Agent sessions (AM2). SessionManager owns every session's lifecycle,
+  // persistence, and stream routing; emit is lazily bound to the live window.
+  const emitToWindow: EmitFn = (channel, payload) => {
+    if (mainWindow) emit(mainWindow.webContents, channel, payload)
+  }
+  sessionManager = new SessionManager({
+    port: new PtyPort(),
+    config: configStore,
+    emit: emitToWindow,
+    fsExists: existsSync,
+    seededAgents: SEEDED_AGENTS
+  })
+  const sessions = sessionManager
+  handle('sessions:list', () => sessions.list())
+  handle('sessions:spawn', ({ agentName, cwd }) => sessions.spawn(agentName, cwd))
+  handle('sessions:stop', ({ id }) => sessions.stop(id))
+  handle('sessions:respawn', ({ id }) => sessions.respawn(id))
+  handle('sessions:remove', ({ id }) => sessions.remove(id))
+  handle('sessions:attach', ({ id }) => sessions.attach(id))
+  handle('sessions:detach', ({ id }) => sessions.detach(id))
+  handle('dialog:pickFolder', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: 'Choose a folder for the agent',
+      properties: ['openDirectory']
+    })
+    return { path: canceled || filePaths.length === 0 ? null : filePaths[0] }
+  })
+  onSend('session:input', ({ id, data }) => sessions.input(id, data))
+  onSend('session:resize', ({ id, cols, rows }) => sessions.resize(id, cols, rows))
 
   // Silent auto-update. Inert under `electron-vite dev` unless PLAYGROUND_FORCE_UPDATE=1
   // opts into the real GitHub feed via dev-app-update.yml (local update-flow testing).
@@ -144,70 +170,13 @@ app.whenReady().then(() => {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
-  // AM1 spike: PTYs die on quit — no daemon (PRD Out of Scope). Kill the live
-  // session so no orphaned shell/agent survives the window closing.
-  spikeSession?.kill()
-  spikeSession = null
+  // PTYs die on quit — no daemon (PRD Out of Scope). Kill every live session
+  // so no orphaned shell/agent survives the window closing.
+  sessionManager?.killAll()
   if (process.platform !== 'darwin') {
     app.quit()
   }
 })
-
-// ── AM1 spike — throwaway, replaced by SessionManager in AM2 ────────────────
-// Hard-coded for AM1; AM3 makes agents configurable in AppConfig.
-const CLAUDE: AgentDef = { name: 'Claude', command: 'claude', args: [] }
-// Hard-coded cwd for the spike — the developer's home. The cwd/worktree model
-// is AM2. AM1 proves one live agent in one fixed folder.
-const SPIKE_CWD = app.getPath('home')
-const SPIKE_ID = 'spike'
-
-let spikeSession: PtyHandle | null = null
-
-/**
- * Spawns the one hard-coded agent through the real spawn-plan + PtyPort and
- * wires it to the streaming IPC. A single module-scoped handle (no Map yet);
- * respawn replaces any prior PTY. Everything here is throwaway — AM2 replaces
- * it with SessionManager — but the seams it calls are permanent.
- */
-function registerSpikeAgent(): void {
-  const port = new PtyPort()
-
-  handle('sessions:spawn', ({ cwd }) => {
-    spikeSession?.kill()
-    const plan = buildSpawnPlan(CLAUDE, cwd || SPIKE_CWD, 'pwsh')
-    const session = port.spawn(plan)
-    session.onData((data) => {
-      if (mainWindow) emit(mainWindow.webContents, 'session:data', { id: SPIKE_ID, data })
-    })
-    session.onExit(({ exitCode }) => {
-      if (mainWindow) emit(mainWindow.webContents, 'session:exit', { id: SPIKE_ID, exitCode })
-      spikeSession = null
-    })
-    spikeSession = session
-    return { id: SPIKE_ID }
-  })
-
-  // Tear down the live PTY on demand (toggle-off / Close) so a hidden agent
-  // isn't left running until app quit. Throwaway alongside the rest of AM1;
-  // AM2's SessionManager owns lifecycle per session.
-  handle('sessions:kill', ({ id }) => {
-    if (id !== SPIKE_ID) return
-    spikeSession?.kill()
-    spikeSession = null
-  })
-
-  // Every streaming payload carries the session id; gate on it so a stale or
-  // wrong id can't write/resize the live session (the contract AM2 fans out on).
-  onSend('session:input', ({ id, data }) => {
-    if (id === SPIKE_ID) spikeSession?.write(data)
-  })
-  onSend('session:resize', ({ id, cols, rows }) => {
-    if (id !== SPIKE_ID) return
-    // node-pty throws on zero/negative dimensions (a fit() before layout).
-    if (cols > 0 && rows > 0) spikeSession?.resize(cols, rows)
-  })
-}
-// ────────────────────────────────────────────────────────────────────────────
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
