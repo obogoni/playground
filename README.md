@@ -36,11 +36,9 @@ Going from "task in ADO" to "worktree on disk with tools open on it" is normally
 
 **Embedded agent sessions**
 
-- Spawn CLI coding agents (**Claude / Copilot / Codex / ad-hoc command**) as worktree-rooted embedded terminals — a card rail next to a live `xterm.js` terminal (master-detail)
-- N concurrent sessions; attach/detach with ring-buffer scrollback replay; per-session Stop / Respawn / Remove / Rename / Duplicate
-- Sessions are attributed to their worktree and task; a soft warning at ≥ 4 live sessions; removing a worktree with running agents prompts to terminate them first
-- Editable agent registry + default-shell setting in a Settings dialog; full ANSI role-palette theming that recolors with light/dark
-- Sessions persist as metadata and reload as **stopped** (one-click respawn) — PTYs never survive app quit
+- Spawn CLI coding agents (**Claude / Copilot / Codex**) as worktree-rooted embedded terminals — a card rail next to a live `xterm.js` terminal (master-detail)
+- Multiple concurrent sessions; attach/detach with ring-buffer scrollback replay; per-session Stop / Respawn / Remove
+- Sessions are attributed to their worktree and task; sessions persist as metadata and reload as **stopped** (one-click respawn) — PTYs never survive app quit
 
 ![Agents view — embedded agent terminals attributed to their worktree and task](docs/screenshots/agents.png)
 
