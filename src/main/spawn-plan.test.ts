@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSpawnPlan, type AgentDef } from './spawn-plan'
+import { buildRawSpawnPlan, buildSpawnPlan, type AgentDef } from './spawn-plan'
 
 const CLAUDE: AgentDef = { name: 'Claude', command: 'claude', args: [] }
 
@@ -69,5 +69,38 @@ describe('buildSpawnPlan', () => {
       'codex chat'
     ])
     expect(buildSpawnPlan(agent, 'D:\\x', 'cmd').args).toEqual(['/K', 'codex chat'])
+  })
+})
+
+describe('buildRawSpawnPlan', () => {
+  it('wraps the raw command verbatim under pwsh with -NoExit', () => {
+    const plan = buildRawSpawnPlan('npm run dev', 'C:\\code\\repo', 'pwsh')
+    expect(plan.file).toBe('pwsh.exe')
+    expect(plan.args).toEqual(['-NoExit', '-Command', 'npm run dev'])
+    expect(plan.autoCommand).toBe('npm run dev')
+    expect(plan.cwd).toBe('C:\\code\\repo')
+  })
+
+  it('wraps the raw command verbatim under cmd with /K', () => {
+    const plan = buildRawSpawnPlan('npm run dev', 'C:\\code\\repo', 'cmd')
+    expect(plan.file).toBe('cmd.exe')
+    expect(plan.args).toEqual(['/K', 'npm run dev'])
+    expect(plan.autoCommand).toBe('npm run dev')
+  })
+
+  it('passes a line with spaces and quotes through unaltered (no per-token re-quoting)', () => {
+    const line = `git commit -m "hello world"`
+    expect(buildRawSpawnPlan(line, 'C:\\x', 'pwsh').autoCommand).toBe(line)
+    expect(buildRawSpawnPlan(line, 'C:\\x', 'cmd').autoCommand).toBe(line)
+  })
+
+  it('handles an empty command (shell stays live with a bare prompt)', () => {
+    expect(buildRawSpawnPlan('', 'C:\\x', 'pwsh').args).toEqual(['-NoExit', '-Command', ''])
+    expect(buildRawSpawnPlan('', 'C:\\x', 'cmd').args).toEqual(['/K', ''])
+  })
+
+  it('does not re-quote a metacharacter-bearing line (it is raw shell syntax)', () => {
+    const line = 'echo $env:PATH | Select-String foo; ls'
+    expect(buildRawSpawnPlan(line, 'C:\\x', 'pwsh').autoCommand).toBe(line)
   })
 })
