@@ -40,6 +40,8 @@ export interface IpcContract {
   'tasks:refresh': { req: void; res: TasksSnapshot }
   /** AM1 agent spike: spawn one shell-hosted agent PTY in the given cwd. */
   'sessions:spawn': { req: { cwd: string }; res: { id: string } }
+  /** AM1 agent spike: terminate the live session so no hidden PTY survives toggle-off. */
+  'sessions:kill': { req: { id: string }; res: void }
 }
 
 export type IpcChannel = keyof IpcContract

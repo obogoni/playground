@@ -187,8 +187,22 @@ function registerSpikeAgent(): void {
     return { id: SPIKE_ID }
   })
 
-  onSend('session:input', ({ data }) => spikeSession?.write(data))
-  onSend('session:resize', ({ cols, rows }) => {
+  // Tear down the live PTY on demand (toggle-off / Close) so a hidden agent
+  // isn't left running until app quit. Throwaway alongside the rest of AM1;
+  // AM2's SessionManager owns lifecycle per session.
+  handle('sessions:kill', ({ id }) => {
+    if (id !== SPIKE_ID) return
+    spikeSession?.kill()
+    spikeSession = null
+  })
+
+  // Every streaming payload carries the session id; gate on it so a stale or
+  // wrong id can't write/resize the live session (the contract AM2 fans out on).
+  onSend('session:input', ({ id, data }) => {
+    if (id === SPIKE_ID) spikeSession?.write(data)
+  })
+  onSend('session:resize', ({ id, cols, rows }) => {
+    if (id !== SPIKE_ID) return
     // node-pty throws on zero/negative dimensions (a fit() before layout).
     if (cols > 0 && rows > 0) spikeSession?.resize(cols, rows)
   })

@@ -81,9 +81,16 @@ function App(): JSX.Element {
   // Removed in AM2 when the real Agents direction + session rail lands.
   const [spikeSessionId, setSpikeSessionId] = useState<string | null>(null)
 
+  // Closing the overlay must also kill the PTY — hiding it alone would leak a
+  // hidden agent/shell until app quit (AM1 spike: no daemon, PRD Out of Scope).
+  const closeSpike = (): void => {
+    if (spikeSessionId) api.invoke('sessions:kill', { id: spikeSessionId }).catch(console.error)
+    setSpikeSessionId(null)
+  }
+
   const toggleSpike = (): void => {
     if (spikeSessionId) {
-      setSpikeSessionId(null)
+      closeSpike()
       return
     }
     api
@@ -297,7 +304,7 @@ function App(): JSX.Element {
         <div className="spike-terminal-overlay">
           <div className="spike-terminal-bar">
             <span>agent terminal (spike) · Claude</span>
-            <button type="button" onClick={() => setSpikeSessionId(null)}>
+            <button type="button" onClick={closeSpike}>
               Close
             </button>
           </div>
