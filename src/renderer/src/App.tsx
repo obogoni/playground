@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
+import type { AgentDef } from '../../shared/agents'
 import type { AppConfig, SessionView } from '../../shared/config'
 import type { PinnedTaskView, TasksSnapshot } from '../../shared/tasks'
 import { taskIdFromBranch } from '../../shared/tasks'
@@ -94,6 +95,8 @@ function App(): JSX.Element {
   /** Agent sessions (persisted ∪ running), reconciled by main. */
   const [sessions, setSessions] = useState<SessionView[]>([])
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
+  /** Editable agent registry from config (AGCF-01); threaded to the agent UIs. */
+  const [agents, setAgents] = useState<AgentDef[]>([])
   /** New-session dialog pre-fill; null = closed. */
   const [nsSource, setNsSource] = useState<NewSessionSource | null>(null)
 
@@ -124,6 +127,7 @@ function App(): JSX.Element {
         setAdoOrg(config.ado.defaultOrg)
         setBranchTemplate(config.ado.branchTemplate)
         setWorktreeTemplate(config.ado.worktreeTemplate)
+        setAgents(config.agents)
       })
       .catch((err) => {
         console.error(err)
@@ -213,10 +217,10 @@ function App(): JSX.Element {
     setNsSource(source)
   }
 
-  const spawnSession = (agentName: string, cwd: string): void => {
+  const spawnSession = (agentName: string, cwd: string, adhocCommand?: string): void => {
     setNsSource(null)
     api
-      .invoke('sessions:spawn', { agentName, cwd })
+      .invoke('sessions:spawn', { agentName, cwd, adhocCommand })
       .then((view) => {
         setSelectedSessionId(view.id)
         update({ direction: 'agents' })
@@ -225,6 +229,26 @@ function App(): JSX.Element {
       .catch((err) => {
         console.error(err)
         setToast("Couldn't start session")
+      })
+  }
+
+  const renameSession = (id: string, title: string): void => {
+    api
+      .invoke('sessions:rename', { id, title })
+      .then(() => refreshSessions())
+      .catch(console.error)
+  }
+
+  const duplicateSession = (id: string): void => {
+    api
+      .invoke('sessions:duplicate', { id })
+      .then((view) => {
+        setSelectedSessionId(view.id)
+        refreshSessions()
+      })
+      .catch((err) => {
+        console.error(err)
+        setToast("Couldn't duplicate session")
       })
   }
 
@@ -338,11 +362,14 @@ function App(): JSX.Element {
           <AgentsView
             sessions={sessions}
             tree={tree}
+            agents={agents}
             selectedId={selectedSessionId}
             onSelect={setSelectedSessionId}
             onStop={stopSession}
             onRespawn={respawnSession}
             onRemove={removeSession}
+            onRename={renameSession}
+            onDuplicate={duplicateSession}
             onNew={() => openNewSession()}
           />
         ) : (
@@ -382,13 +409,16 @@ function App(): JSX.Element {
             setAdoOrg(config.ado.defaultOrg)
             setBranchTemplate(config.ado.branchTemplate)
             setWorktreeTemplate(config.ado.worktreeTemplate)
+            setAgents(config.agents)
             setSettingsOpen(false)
           }}
+          onAgentsChanged={(config) => setAgents(config.agents)}
         />
       )}
       {nsSource && (
         <NewSessionDialog
           tree={tree}
+          agents={agents}
           source={nsSource}
           onSpawn={spawnSession}
           onClose={() => setNsSource(null)}

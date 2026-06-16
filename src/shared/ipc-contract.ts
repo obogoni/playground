@@ -47,7 +47,10 @@ export interface IpcContract {
   /** Persisted ∪ running sessions, reconciled with pathMissing (no network/spawn). */
   'sessions:list': { req: void; res: SessionView[] }
   /** Resolve agent (or run `adhocCommand` raw) + cwd, shell-host the PTY, persist, return the view. */
-  'sessions:spawn': { req: { agentName: string; cwd: string; adhocCommand?: string }; res: SessionView }
+  'sessions:spawn': {
+    req: { agentName: string; cwd: string; adhocCommand?: string }
+    res: SessionView
+  }
   /** Kill the hosting PTY → status stopped; no orphaned process survives. */
   'sessions:stop': { req: { id: string }; res: void }
   /** Re-run a stopped/path-missing session in the same agent + cwd. */
