@@ -136,13 +136,23 @@ export function WorktreeDetail({
     else doRemove()
   }
 
+  // Terminate every running agent before removing (AGCF-05). If any stop fails,
+  // abort: surface the error and leave the worktree intact rather than removing
+  // it with sessions potentially still alive.
   const confirmRemove = (): void => {
     setRemoving(true)
+    setRemoveError(null)
     Promise.all(runningSessions.map((s) => api.invoke('sessions:stop', { id: s.id })))
-      .catch(console.error)
-      .finally(() => {
+      .then(() => {
         setConfirmOpen(false)
         doRemove()
+      })
+      .catch((err) => {
+        setRemoving(false)
+        setConfirmOpen(false)
+        setRemoveError(
+          `Couldn’t terminate running agents: ${err instanceof Error ? err.message : String(err)}`
+        )
       })
   }
 

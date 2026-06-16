@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { JSX } from 'react'
 import type { SessionView } from '../../../shared/config'
 import { Icon } from './Icon'
@@ -28,11 +29,23 @@ export function RemoveWorktreeConfirm({
   onConfirm
 }: RemoveWorktreeConfirmProps): JSX.Element {
   const count = runningSessions.length
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  // Focus the panel on mount so Escape works and assistive tech announces the
+  // dialog (the panel carries dialog semantics but holds no autofocus input).
+  useEffect(() => {
+    panelRef.current?.focus()
+  }, [])
 
   return (
     <div className="dialog-backdrop" onClick={onCancel}>
       <div
+        ref={panelRef}
         className="dialog-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rwc-title"
+        tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => {
           if (event.key === 'Escape') onCancel()
@@ -43,7 +56,9 @@ export function RemoveWorktreeConfirm({
             <Icon name="alert" size={20} />
           </span>
           <div>
-            <div className="rwc-title">Remove worktree?</div>
+            <div className="rwc-title" id="rwc-title">
+              Remove worktree?
+            </div>
             <div className="rwc-body">
               {count} agent{count === 1 ? ' is' : 's are'} running in{' '}
               <span className="rwc-branch">{branch}</span>. Removing the worktree will terminate
