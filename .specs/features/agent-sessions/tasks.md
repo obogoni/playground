@@ -2,7 +2,7 @@
 
 **Design**: `.specs/features/agent-sessions/design.md`
 **Spec**: `.specs/features/agent-sessions/spec.md`
-**Status**: Draft
+**Status**: Executed T1–T14 on `feature/agent-sessions` — gate green (typecheck + lint + 166 tests + `electron-vite build`). Real `main` baseline was 145 (not 142); +8 (`SessionRingBuffer`) +13 (`SessionManager`) = 166. AGSN-01..05 + entry-point manual dev verification still pending. Note: last-output preview for stopped cards (T8 "What") was dropped — no IPC exposes `tail`, deferred to AM3.
 
 **Test baseline**: anchor to the green count on `main` at execution start — STATE records **142** after the AM1 merge. Two tasks add unit tests: **T1** `SessionRingBuffer` (+6) and **T4** `SessionManager` (+10) → **158** at the end. Every other task is `Tests: none` per the TESTING.md matrix (shared types via `typecheck`; thin `index.ts` IPC wiring + renderer React are hand-verified via CDP/visual, not units).
 
