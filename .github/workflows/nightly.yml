@@ -45,6 +45,10 @@ jobs:
       # app.getName() and thus app.getPath('userData'). Without it, nightly keeps
       # name "playground" and shares %APPDATA% config/userData with stable (RLCD-10).
       #
+      # win.icon points the nightly exe/installer at the moon-badge nightly mark so
+      # the side-by-side build is visually distinct from stable in the taskbar and
+      # Start menu (stable's icon comes from electron-builder.yml win.icon).
+      #
       # SPEC_DEVIATION: --publish never (the task said "always"). electron-builder's
       # GitHub publisher tags releases v{version}, which cannot target the reused
       # fixed `nightly` tag the rolling-single release requires (RLCD-11). We build
@@ -59,6 +63,7 @@ jobs:
             -c.appId=com.playground.nightly \
             -c.productName="Playground Nightly" \
             -c.extraMetadata.name=playground-nightly \
+            -c.win.icon=design/icons/playground-nightly.ico \
             -c.publish.channel=alpha
 
       # Rolling single (RLCD-11 / D8): drop the previous nightly, then publish a
