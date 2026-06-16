@@ -1,7 +1,7 @@
 # Roadmap
 
 **Current Milestone:** M5 — Embedded Agent Sessions (v2). M1–M4 (v1) feature work complete + worktree-name-template (post-v1)
-**Status:** v1 roadmap done; M5 AM1 (Agent Spike) COMPLETE (merged PR #39); AM2 (Agent Sessions) COMPLETE (merged PR #41); AM3 (Agent Config) EXECUTED T1–T11 on `feature/agent-config` (gate green: typecheck + lint + 183 tests + build) — pending interactive AGCF-01..08 dev verify + PR
+**Status:** v1 roadmap done; M5 AM1 (Agent Spike) COMPLETE (merged PR #39); AM2 (Agent Sessions) COMPLETE (merged PR #41); AM3 (Agent Config) EXECUTED + dev-verified (CDP 15/15) — **PR #44 open** (`Closes #43`); AGCF-05 confirm hand-verify can ride post-merge
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
 
@@ -121,7 +121,7 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - `SessionManager` + `SessionRingBuffer`; persistence (`AppConfig.sessions[]`) + restore-as-stopped + respawn; Stop/Remove
 - All spawn entry points; derived task tags; reconciliation + path-missing flag
 
-**Agent Config & Integration (AM3)** - EXECUTED T1–T11 (`feature/agent-config`; gate green) — pending dev verify + PR
+**Agent Config & Integration (AM3)** - EXECUTED T1–T11 (`feature/agent-config`; gate green + CDP smoke 15/15) — PR #44 open (`Closes #43`)
 
 - Editable agent registry (`AppConfig.agents[]`) + ad-hoc command + Settings dialog; default-shell setting
 - Worktree-delete-vs-running confirmation (warn + kill); rename/duplicate; soft concurrency warning; full ANSI role-palette theming; in-memory last-output preview
