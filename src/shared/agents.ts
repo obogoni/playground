@@ -1,5 +1,8 @@
 import type { AgentDef } from '../main/spawn-plan'
 
+// Re-exported so the renderer can type agent props without reaching into main.
+export type { AgentDef, Shell } from '../main/spawn-plan'
+
 /**
  * The fixed seed agent list for AM2. Both main (to resolve a session's stored
  * agent name to its launch definition) and the renderer (to render the agent
