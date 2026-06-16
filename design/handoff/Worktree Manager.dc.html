@@ -23,6 +23,8 @@
   @keyframes fadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
   @keyframes popIn{from{opacity:0;transform:translateY(14px) scale(.985);}to{opacity:1;transform:none;}}
   @keyframes toastIn{from{opacity:0;transform:translateY(10px) translateX(-50%);}to{opacity:1;transform:translateY(0) translateX(-50%);}}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.45;}}
+  @keyframes blink{0%,49%{opacity:1;}50%,100%{opacity:0;}}
 </style>
 </helmet>
 
@@ -50,6 +52,10 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="6" rx="1.5"/><rect x="14" y="14" width="7" height="6" rx="1.5"/></svg>
         Board
       </button>
+      <button onClick="{{ setC }}" style="{{ segC }}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l3 3-3 3"/><path d="M11 16h5"/><rect x="2.4" y="3.5" width="19.2" height="17" rx="3"/></svg>
+        Agents
+      </button>
     </div>
 
     <div style="flex:1;"></div>
@@ -60,6 +66,9 @@
     </div>
     <button title="Refresh tasks" style="width:34px;height:34px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;border:1px solid var(--border,#36312a);background:transparent;color:var(--text-muted);border-radius:9px;cursor:pointer;" style-hover="background:var(--panel-2);color:var(--text);">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg>
+    </button>
+    <button onClick="{{ openSettings }}" title="Settings" style="width:34px;height:34px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;border:1px solid var(--border,#36312a);background:transparent;color:var(--text-muted);border-radius:9px;cursor:pointer;" style-hover="background:var(--panel-2);color:var(--text);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>
     </button>
     <button onClick="{{ toggleTheme }}" title="Toggle theme" style="width:34px;height:34px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;border:1px solid var(--border,#36312a);background:transparent;color:var(--text-muted);border-radius:9px;cursor:pointer;" style-hover="background:var(--panel-2);color:var(--text);">
       <sc-if value="{{ isDark }}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A8 8 0 1 1 11.2 3a6 6 0 0 0 9.8 9.8z"/></svg></sc-if>
@@ -196,6 +205,24 @@
             </button>
           </div>
 
+          <!-- agents -->
+          <div style="margin-top:26px;font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;">Agents</div>
+          <div style="margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <button onClick="{{ spawnAgentSel }}" style="display:inline-flex;align-items:center;gap:8px;border:none;background:var(--accent);color:#fff;border-radius:10px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l3 3-3 3"/><path d="M11 16h5"/><rect x="2.4" y="3.5" width="19.2" height="17" rx="3"/></svg>Spawn agent</button>
+            <span style="font-size:12.5px;color:var(--text-faint);max-width:320px;">Runs a CLI coding agent in an embedded terminal, rooted at this worktree.</span>
+          </div>
+          <sc-if value="{{ hasSelSessions }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;">
+              <sc-for list="{{ selSessionChips }}" as="ses" hint-placeholder-count="2">
+                <button onClick="{{ ses.onClick }}" style="{{ ses.chipStyle }}">
+                  <span style="{{ ses.iconWrap }}">{{ ses.iconEl }}</span>
+                  <span style="font-size:12.5px;font-weight:600;white-space:nowrap;">{{ ses.title }}</span>
+                  <span style="{{ ses.dot }}"></span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+
           <!-- danger -->
           <div style="margin-top:30px;padding-top:22px;border-top:1px solid var(--border);display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
             <button onClick="{{ sel.onDelete }}" style="{{ sel.deleteStyle }}">
@@ -237,7 +264,10 @@
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:11px;">
               <sc-if value="{{ t.hasWt }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:12px;color:var(--text-muted);"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);"></span>{{ t.wtCount }} worktree{{ t.plural }}</span></sc-if>
               <sc-if value="{{ t.noWt }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--text-faint);font-style:italic;white-space:nowrap;">No worktree yet</span></sc-if>
-              <button onClick="{{ t.onStart }}" style="{{ t.startStyle }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6 8v3a4 4 0 0 0 4 4h6"/></svg>{{ t.startLabel }}</button>
+              <div style="display:flex;align-items:center;gap:7px;flex:0 0 auto;">
+                <button onClick="{{ t.onStartAgent }}" title="{{ t.agentDisabledNote }}" style="{{ t.agentBtnStyle }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l3 3-3 3"/><path d="M11 16h5"/><rect x="2.4" y="3.5" width="19.2" height="17" rx="3"/></svg>Agent</button>
+                <button onClick="{{ t.onStart }}" style="{{ t.startStyle }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6 8v3a4 4 0 0 0 4 4h6"/></svg>{{ t.startLabel }}</button>
+              </div>
             </div>
           </div>
         </sc-for>
@@ -308,6 +338,8 @@
                       <button onClick="{{ wt.onExplorer }}" title="File Explorer" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;color:var(--blue);border-radius:8px;cursor:pointer;" style-hover="background:color-mix(in oklab, var(--blue) 14%, transparent);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h3.5l1.8 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>
                       <button onClick="{{ wt.onTerminal }}" title="Windows Terminal" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;color:var(--green);border-radius:8px;cursor:pointer;" style-hover="background:color-mix(in oklab, var(--green) 14%, transparent);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7l4 4-4 4"/><path d="M12 16h7"/></svg></button>
                       <button onClick="{{ wt.onCode }}" title="VS Code" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;color:var(--accent);border-radius:8px;cursor:pointer;" style-hover="background:color-mix(in oklab, var(--accent) 16%, transparent);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8l-4 4 4 4"/><path d="M15 8l4 4-4 4"/></svg></button>
+                      <span style="width:1px;height:18px;background:var(--border);flex:0 0 auto;"></span>
+                      <button onClick="{{ wt.onSpawnAgent }}" title="Spawn agent" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid color-mix(in oklab, var(--accent) 40%, var(--border));background:transparent;color:var(--accent);border-radius:8px;cursor:pointer;" style-hover="background:color-mix(in oklab, var(--accent) 16%, transparent);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l3 3-3 3"/><path d="M11 16h5"/><rect x="2.4" y="3.5" width="19.2" height="17" rx="3"/></svg></button>
                       <span style="flex:1;"></span>
                       <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px;">{{ wt.repoName }}</span>
                     </div>
@@ -319,6 +351,152 @@
         </div>
       </sc-for>
     </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ DIRECTION C : AGENTS ============ -->
+  <sc-if value="{{ isC }}" hint-placeholder-val="{{ true }}">
+  <div style="flex:1;display:flex;min-height:0;">
+
+    <!-- SESSION RAIL -->
+    <aside style="width:344px;flex:0 0 auto;border-right:1px solid var(--border,#36312a);background:var(--panel,#221f1b);display:flex;flex-direction:column;min-height:0;">
+      <div style="height:46px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 16px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;">Agents</span>
+          <span style="font-size:11px;color:var(--text-faint);">{{ runningCount }} running</span>
+        </div>
+        <button onClick="{{ onNewSession }}" style="display:flex;align-items:center;gap:5px;border:none;background:var(--accent);color:#fff;border-radius:8px;padding:6px 11px;font-weight:600;font-size:12.5px;cursor:pointer;white-space:nowrap;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>New session</button>
+      </div>
+      <sc-if value="{{ concurrencyWarn }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:11px 12px 1px;display:flex;align-items:flex-start;gap:8px;font-size:11.5px;line-height:1.4;color:var(--amber);background:color-mix(in oklab, var(--amber) 12%, transparent);border:1px solid color-mix(in oklab, var(--amber) 30%, transparent);border-radius:9px;padding:8px 10px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;margin-top:1px;"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+          <span>{{ runningCount }} live sessions — each is a real OS process consuming resources.</span>
+        </div>
+      </sc-if>
+      <div style="flex:1;min-height:0;overflow-y:auto;padding:11px 12px 16px;display:flex;flex-direction:column;gap:9px;">
+        <sc-for list="{{ sessionCards }}" as="c" hint-placeholder-count="5">
+          <div onClick="{{ c.onSelect }}" style="{{ c.cardStyle }}">
+            <div style="display:flex;align-items:center;gap:9px;min-width:0;">
+              <span style="{{ c.iconWrap }}">{{ c.iconEl }}</span>
+              <span style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">{{ c.title }}</span>
+              <span style="{{ c.statusDot }}"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px;min-width:0;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6 8v3a4 4 0 0 0 4 4h6"/></svg>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">{{ c.branch }}</span>
+            </div>
+            <sc-if value="{{ c.hasTask }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+                <span style="{{ c.typePillStyle }}">{{ c.typeLabel }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--text-muted);flex:0 0 auto;">#{{ c.taskId }}</span>
+                <span style="flex:1;"></span>
+                <span style="{{ c.stateDot }}"></span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ c.detached }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:11px;color:var(--text-faint);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ c.attachNote }}</div>
+            </sc-if>
+            <sc-if value="{{ c.missing }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--red);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>{{ c.attachNote }}</div>
+            </sc-if>
+            <sc-if value="{{ c.hasLastOut }}" hint-placeholder-val="{{ false }}">
+              <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 9px;display:flex;flex-direction:column;gap:2px;">
+                <sc-for list="{{ c.lastOut }}" as="lo" hint-placeholder-count="2">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ lo }}</div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <div style="display:flex;align-items:center;gap:7px;margin-top:1px;">
+              <span style="{{ c.statusPill }}">{{ c.statusLabel }}</span>
+              <span style="flex:1;"></span>
+              <sc-if value="{{ c.running }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ c.onStop }}" style="display:inline-flex;align-items:center;gap:5px;border:1px solid color-mix(in oklab, var(--red) 42%, var(--border));background:transparent;color:var(--red);border-radius:7px;padding:4px 10px;font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Stop</button>
+              </sc-if>
+              <sc-if value="{{ c.isShell }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ c.onStop }}" style="display:inline-flex;align-items:center;gap:5px;border:1px solid color-mix(in oklab, var(--red) 42%, var(--border));background:transparent;color:var(--red);border-radius:7px;padding:4px 10px;font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Stop</button>
+              </sc-if>
+              <sc-if value="{{ c.stopped }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ c.onRespawn }}" style="display:inline-flex;align-items:center;gap:5px;border:1px solid color-mix(in oklab, var(--accent) 42%, var(--border));background:transparent;color:var(--accent-text);border-radius:7px;padding:4px 10px;font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg>Respawn</button>
+                <button onClick="{{ c.onRemove }}" title="Remove session" style="width:27px;height:27px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;color:var(--text-faint);border-radius:7px;cursor:pointer;" style-hover="color:var(--red);border-color:color-mix(in oklab, var(--red) 42%, var(--border));"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg></button>
+              </sc-if>
+              <sc-if value="{{ c.missing }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ c.onRemove }}" title="Remove session" style="width:27px;height:27px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;color:var(--text-faint);border-radius:7px;cursor:pointer;" style-hover="color:var(--red);border-color:color-mix(in oklab, var(--red) 42%, var(--border));"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg></button>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </aside>
+
+    <!-- TERMINAL DETAIL -->
+    <main style="flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg);min-height:0;">
+      <sc-if value="{{ hasActive }}" hint-placeholder-val="{{ true }}">
+        <!-- terminal header -->
+        <div style="flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--border);background:var(--panel);">
+          <span style="{{ activeSession.iconWrap }}">{{ activeSession.iconEl }}</span>
+          <div style="min-width:0;flex:1;">
+            <div style="display:flex;align-items:center;gap:9px;min-width:0;">
+              <span style="font-size:15px;font-weight:700;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ activeSession.title }}</span>
+              <button onClick="{{ activeSession.onRename }}" title="Rename session" style="flex:0 0 auto;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--text-faint);border-radius:6px;cursor:pointer;" style-hover="color:var(--text);background:var(--panel-2);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px;margin-top:3px;min-width:0;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ activeSession.cwd }}</span>
+            </div>
+          </div>
+          <span style="{{ activeSession.statusPill }}"><span style="{{ activeSession.statusDot }}"></span>{{ activeSession.statusLabel }}</span>
+          <div style="display:flex;align-items:center;gap:7px;flex:0 0 auto;">
+            <sc-if value="{{ activeSession.running }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ activeSession.onStop }}" style="display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in oklab, var(--red) 45%, var(--border));background:transparent;color:var(--red);border-radius:8px;padding:7px 13px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Stop</button>
+            </sc-if>
+            <sc-if value="{{ activeSession.stopped }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ activeSession.onRespawn }}" style="display:inline-flex;align-items:center;gap:6px;border:none;background:var(--accent);color:#fff;border-radius:8px;padding:7px 14px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg>Respawn</button>
+            </sc-if>
+            <button onClick="{{ activeSession.onDup }}" title="Duplicate session" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;color:var(--text-muted);border-radius:8px;cursor:pointer;" style-hover="background:var(--panel-2);color:var(--text);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button>
+            <button onClick="{{ activeSession.onRemove }}" title="Remove session" style="{{ activeSession.removeStyle }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg></button>
+          </div>
+        </div>
+        <!-- attribution strip -->
+        <div style="flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid var(--border);background:var(--panel-2);min-width:0;">
+          <sc-if value="{{ activeSession.hasTask }}" hint-placeholder-val="{{ true }}">
+            <span style="{{ activeSession.typePillStyle }}"><span style="{{ activeSession.typeDotStyle }}"></span>{{ activeSession.typeLabel }}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--accent-text);flex:0 0 auto;">#{{ activeSession.taskId }}</span>
+            <span style="font-size:12.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">{{ activeSession.taskTitle }}</span>
+            <span style="flex:1;"></span>
+            <span style="{{ activeSession.statePillStyle }}">{{ activeSession.stateLabel }}</span>
+          </sc-if>
+          <sc-if value="{{ activeSession.detached }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:12px;color:var(--text-faint);font-style:italic;">Detached session — not attached to any registered worktree</span>
+          </sc-if>
+          <sc-if value="{{ activeSession.missing }}" hint-placeholder-val="{{ false }}">
+            <span style="display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--red);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Worktree path missing — this session can't be respawned, only removed.</span>
+          </sc-if>
+        </div>
+        <!-- terminal surface -->
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 22px 14px;background:var(--bg);animation:fadeIn .2s ease;">
+          <sc-for list="{{ activeSession.termLines }}" as="ln" hint-placeholder-count="14">
+            <sc-if value="{{ ln.isText }}" hint-placeholder-val="{{ true }}"><div style="{{ ln.style }}">{{ ln.text }}</div></sc-if>
+            <sc-if value="{{ ln.isBlank }}" hint-placeholder-val="{{ false }}"><div style="height:8px;"></div></sc-if>
+            <sc-if value="{{ ln.isExit }}" hint-placeholder-val="{{ false }}"><div style="display:inline-flex;align-items:center;gap:8px;margin:5px 0;padding:5px 11px;border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:11.5px;background:color-mix(in oklab, var(--amber) 12%, transparent);color:var(--amber);border:1px solid color-mix(in oklab, var(--amber) 28%, transparent);">↳ {{ ln.text }}</div></sc-if>
+            <sc-if value="{{ ln.isStop }}" hint-placeholder-val="{{ false }}"><div style="display:inline-flex;align-items:center;gap:8px;margin:5px 0;padding:5px 11px;border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:11.5px;background:var(--panel-2);color:var(--text-faint);border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>{{ ln.text }}</div></sc-if>
+            <sc-if value="{{ ln.isCaret }}" hint-placeholder-val="{{ false }}"><div style="{{ ln.style }}">{{ ln.text }}<span style="display:inline-block;width:8px;height:15px;background:var(--accent);vertical-align:text-bottom;margin-left:1px;animation:blink 1s step-start infinite;"></span></div></sc-if>
+          </sc-for>
+        </div>
+        <!-- input bar -->
+        <sc-if value="{{ activeSession.running }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:11px 18px;border-top:1px solid var(--border);background:var(--panel);">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent-text);font-weight:600;flex:0 0 auto;">❯</span>
+            <input placeholder="Type to the agent — answer prompts, approve, run commands…" style="flex:1;min-width:0;border:none;background:transparent;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;" />
+            <span style="font-size:10.5px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;flex:0 0 auto;">live · interactive</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ activeSession.stopped }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 18px;border-top:1px solid var(--border);background:var(--panel);">
+            <span style="font-size:12.5px;color:var(--text-faint);">Shell exited — respawn to run the agent again in the same directory.</span>
+            <button onClick="{{ activeSession.onRespawn }}" style="display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in oklab, var(--accent) 45%, var(--border));background:transparent;color:var(--accent-text);border-radius:8px;padding:7px 14px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg>Respawn</button>
+          </div>
+        </sc-if>
+      </sc-if>
+    </main>
   </div>
   </sc-if>
 
@@ -368,6 +546,148 @@
   </div>
   </sc-if>
 
+  <!-- ============ NEW SESSION DIALOG ============ -->
+  <sc-if value="{{ nsOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ onNsCancel }}" style="position:fixed;inset:0;z-index:50;background:rgba(15,11,8,.55);display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px);">
+    <div onClick="{{ stop }}" style="width:600px;max-width:100%;max-height:92vh;overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 70px var(--shadow);animation:popIn .2s ease;">
+      <div style="padding:22px 24px 18px;border-bottom:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;">New session</div>
+        <sc-if value="{{ hasNsFromTask }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:baseline;gap:9px;margin-top:7px;flex-wrap:wrap;">
+            <span style="font-size:14px;color:var(--text-muted);">Start an agent for</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--accent-text);">#{{ nsFromTaskObj.id }}</span>
+            <span style="font-size:15px;font-weight:700;letter-spacing:-.01em;">{{ nsFromTaskObj.title }}</span>
+          </div>
+        </sc-if>
+      </div>
+      <div style="padding:20px 24px;display:flex;flex-direction:column;gap:20px;">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:10px;">Agent</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
+            <sc-for list="{{ nsAgentOpts }}" as="a" hint-placeholder-count="4">
+              <button onClick="{{ a.onPick }}" style="{{ a.chipStyle }}">
+                <span style="{{ a.iconWrap }}">{{ a.iconEl }}</span>
+                <span style="display:flex;flex-direction:column;gap:1px;min-width:0;text-align:left;">
+                  <span style="font-size:13.5px;font-weight:700;white-space:nowrap;">{{ a.name }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ a.command }}</span>
+                </span>
+              </button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ nsIsAdhoc }}" hint-placeholder-val="{{ false }}">
+            <input value="{{ nsCommand }}" onChange="{{ onNsCommand }}" placeholder="pwsh -c &quot;…&quot;" style="margin-top:10px;width:100%;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:10px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;" style-focus="border-color:var(--accent);" />
+          </sc-if>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:12px;font-weight:700;color:var(--text-muted);">Working directory</span>
+            <sc-if value="{{ hasNsFromTask }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:var(--accent-text);">worktrees for #{{ nsFromTaskObj.id }} highlighted</span></sc-if>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;max-height:188px;overflow-y:auto;">
+            <sc-for list="{{ nsWtOpts }}" as="w" hint-placeholder-count="4">
+              <button onClick="{{ w.onPick }}" style="{{ w.chipStyle }}">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ w.branch }}</span>
+                <span style="font-size:11px;color:var(--text-faint);white-space:nowrap;">{{ w.wsName }} / {{ w.repoName }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <button onClick="{{ onNsBrowse }}" style="{{ browseStyle }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><path d="M3 7a2 2 0 0 1 2-2h3.5l1.8 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            <span style="font-size:12.5px;font-weight:600;">Browse for a folder… <span style="color:var(--text-faint);font-weight:400;">(detached session)</span></span>
+          </button>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:13px 14px;">
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--text-faint);text-transform:uppercase;margin-bottom:7px;">Will run</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);line-height:1.55;word-break:break-all;"><span style="color:var(--green);">{{ nsShortPath }}</span> ▸ <span style="color:var(--accent-text);">{{ nsAgentCmd }}</span></div>
+          <div style="font-size:11px;color:var(--text-faint);margin-top:6px;">Spawned inside a shell so PATH and <span style="font-family:'JetBrains Mono',monospace;">.cmd/.ps1</span> shims resolve. Title: <span style="font-family:'JetBrains Mono',monospace;color:var(--text-muted);">{{ nsTitle }}</span></div>
+        </div>
+      </div>
+      <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;">
+        <button onClick="{{ onNsCancel }}" style="border:1px solid var(--border);background:transparent;color:var(--text-muted);border-radius:10px;padding:10px 18px;font-weight:600;font-size:13.5px;cursor:pointer;" style-hover="color:var(--text);">Cancel</button>
+        <sc-if value="{{ nsHasCwd }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ onNsSpawn }}" style="border:none;background:var(--accent);color:#fff;border-radius:10px;padding:10px 20px;font-weight:700;font-size:13.5px;cursor:pointer;display:flex;align-items:center;gap:7px;white-space:nowrap;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l3 3-3 3"/><path d="M11 16h5"/><rect x="2.4" y="3.5" width="19.2" height="17" rx="3"/></svg>Spawn agent</button>
+        </sc-if>
+        <sc-if value="{{ nsNoCwd }}" hint-placeholder-val="{{ false }}">
+          <button title="Pick a working directory first" style="border:1px solid var(--border);background:transparent;color:var(--text-faint);opacity:.65;border-radius:10px;padding:10px 20px;font-weight:700;font-size:13.5px;cursor:not-allowed;display:flex;align-items:center;gap:7px;white-space:nowrap;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l3 3-3 3"/><path d="M11 16h5"/><rect x="2.4" y="3.5" width="19.2" height="17" rx="3"/></svg>Spawn agent</button>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ SETTINGS DIALOG ============ -->
+  <sc-if value="{{ settingsOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ onCloseSettings }}" style="position:fixed;inset:0;z-index:50;background:rgba(15,11,8,.55);display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px);">
+    <div onClick="{{ stop }}" style="width:600px;max-width:100%;max-height:92vh;overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 70px var(--shadow);animation:popIn .2s ease;">
+      <div style="padding:22px 24px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;">Settings</div>
+      </div>
+      <div style="padding:22px 24px;display:flex;flex-direction:column;gap:26px;">
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div><div style="font-size:14px;font-weight:700;">Coding agents</div><div style="font-size:12px;color:var(--text-faint);margin-top:2px;">Spawned inside the default shell, rooted at the chosen directory.</div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <sc-for list="{{ agentRows }}" as="a" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--border);background:var(--bg);border-radius:11px;padding:11px 13px;">
+                <span style="{{ a.iconWrap }}">{{ a.iconEl }}</span>
+                <div style="min-width:0;flex:1;">
+                  <div style="font-size:13.5px;font-weight:700;">{{ a.name }}</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ a.command }} {{ a.args }}</div>
+                </div>
+                <button onClick="{{ a.onEdit }}" title="Edit" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;color:var(--text-muted);border-radius:8px;cursor:pointer;" style-hover="background:var(--panel-2);color:var(--text);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+                <button onClick="{{ a.onDelete }}" title="Remove" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;color:var(--text-faint);border-radius:8px;cursor:pointer;" style-hover="color:var(--red);border-color:color-mix(in oklab, var(--red) 42%, var(--border));"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg></button>
+              </div>
+            </sc-for>
+            <button onClick="{{ onAddAgent }}" style="display:flex;align-items:center;gap:7px;border:1px dashed var(--border-strong);background:transparent;color:var(--text-muted);border-radius:11px;padding:11px 13px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;" style-hover="border-color:var(--accent);color:var(--text);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add agent</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:4px;">Default shell</div>
+          <div style="font-size:12px;color:var(--text-faint);margin-bottom:11px;">Agents run inside this shell so npm shims and PATH resolve like a normal terminal.</div>
+          <div style="display:flex;gap:9px;max-width:280px;">
+            <button onClick="{{ onShellPwsh }}" style="{{ shellPwshStyle }}">pwsh</button>
+            <button onClick="{{ onShellCmd }}" style="{{ shellCmdStyle }}">cmd</button>
+          </div>
+        </div>
+      </div>
+      <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;">
+        <button onClick="{{ onCloseSettings }}" style="border:none;background:var(--accent);color:#fff;border-radius:10px;padding:10px 20px;font-weight:700;font-size:13.5px;cursor:pointer;">Done</button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ DELETE-CONFIRM (running agents) ============ -->
+  <sc-if value="{{ hasDeleteConfirm }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ onCancelDelete }}" style="position:fixed;inset:0;z-index:55;background:rgba(15,11,8,.55);display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px);">
+    <div onClick="{{ stop }}" style="width:480px;max-width:100%;background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 70px var(--shadow);animation:popIn .2s ease;overflow:hidden;">
+      <div style="padding:24px 24px 4px;display:flex;align-items:flex-start;gap:14px;">
+        <span style="width:40px;height:40px;flex:0 0 auto;border-radius:11px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, var(--red) 15%, transparent);color:var(--red);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
+        <div style="min-width:0;">
+          <div style="font-size:16.5px;font-weight:700;letter-spacing:-.01em;">Remove worktree?</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:6px;line-height:1.5;"><span style="font-weight:700;color:var(--text);">{{ deleteConfirmView.count }} agent{{ deleteConfirmView.plural }}</span> {{ deleteConfirmView.verb }} running in <span style="font-family:'JetBrains Mono',monospace;color:var(--text);">{{ deleteConfirmView.branch }}</span>. Removing the worktree will terminate them.</div>
+        </div>
+      </div>
+      <div style="padding:14px 24px 4px;display:flex;flex-direction:column;gap:8px;">
+        <sc-for list="{{ deleteConfirmView.sessions }}" as="s" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--border);background:var(--bg);border-radius:9px;padding:8px 11px;">
+            <span style="{{ s.iconWrap }}">{{ s.iconEl }}</span>
+            <span style="font-size:13px;font-weight:600;">{{ s.title }}</span>
+            <span style="flex:1;"></span>
+            <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--green);"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.8s ease-in-out infinite;"></span>running</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding:14px 24px 0;font-size:11.5px;color:var(--text-faint);line-height:1.5;">The repo's dirty-checkout guard still applies — a worktree with uncommitted changes can't be removed.</div>
+      <div style="padding:18px 24px 22px;display:flex;justify-content:flex-end;gap:10px;">
+        <button onClick="{{ onCancelDelete }}" style="border:1px solid var(--border);background:transparent;color:var(--text-muted);border-radius:10px;padding:10px 18px;font-weight:600;font-size:13.5px;cursor:pointer;" style-hover="color:var(--text);">Cancel</button>
+        <button onClick="{{ onConfirmDelete }}" style="border:none;background:var(--red);color:#fff;border-radius:10px;padding:10px 20px;font-weight:700;font-size:13.5px;cursor:pointer;display:flex;align-items:center;gap:7px;white-space:nowrap;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg>Terminate &amp; remove</button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
   <!-- ============ TOAST ============ -->
   <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;bottom:26px;left:50%;z-index:60;background:var(--text);color:var(--bg);padding:11px 20px;border-radius:11px;font-size:13.5px;font-weight:600;box-shadow:0 12px 34px var(--shadow);animation:toastIn .22s ease;display:flex;align-items:center;gap:9px;white-space:nowrap;">
@@ -380,7 +700,8 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { theme:'dark', dir:'A', selectedId:'wt2', dialogTaskId:null, dialogBranch:'', baseBranch:'main', dialogRepo:'acme-platform/api', highlightTaskId:null, toast:null };
+  state = { theme:'dark', dir:'C', selectedId:'wt2', dialogTaskId:null, dialogBranch:'', baseBranch:'main', dialogRepo:'acme-platform/api', highlightTaskId:null, toast:null,
+    selectedSession:'s1', nsOpen:false, nsAgent:'claude', nsCwd:null, nsCommand:'pwsh', nsFromTask:null, nsBrowse:false, settingsOpen:false, defaultShell:'pwsh', deleteConfirm:null, editAgent:null };
 
   get themes(){ return {
     dark:{'--bg':'#1a1815','--panel':'#221f1b','--panel-2':'#2a2621','--border':'#36312a','--border-strong':'#48413a','--text':'#efe9e0','--text-muted':'#a59c8e','--text-faint':'#6f685c','--accent':'#a78bfa','--accent-text':'#c4b0ff','--green':'#5cbd86','--amber':'#dca35e','--red':'#e08068','--blue':'#71a8e6','--shadow':'rgba(0,0,0,.45)'},
@@ -403,7 +724,8 @@ class Component extends DCLogic {
       ]},
       {name:'web',worktrees:[
         {id:'wt4',branch:'main',path:'C:\\dev\\acme-platform\\web',isDefault:true,taskId:null},
-        {id:'wt5',branch:'feature/5077-export-reports-to-csv',path:'C:\\dev\\acme-platform\\web-feature-5077-export-reports-to-csv',taskId:'5077',dirty:false}
+        {id:'wt5',branch:'feature/5077-export-reports-to-csv',path:'C:\\dev\\acme-platform\\web-feature-5077-export-reports-to-csv',taskId:'5077',dirty:false},
+        {id:'wt8',branch:'feature/4821-add-oauth-refresh-token-rotation',path:'C:\\dev\\acme-platform\\web-feature-4821-add-oauth-refresh-token-rotation',taskId:'4821',dirty:false}
       ]}
     ]},
     {id:'ws2',name:'tools',path:'C:\\dev\\tools',repos:[
@@ -412,6 +734,21 @@ class Component extends DCLogic {
         {id:'wt7',branch:'chore/tidy-readme-and-scripts',path:'C:\\dev\\tools\\worktree-manager-chore-tidy-readme-and-scripts',taskId:null,dirty:false}
       ]}
     ]}
+  ];}
+
+  get agents(){ return [
+    {id:'claude',name:'Claude',command:'claude',args:'',desc:'Anthropic coding agent'},
+    {id:'copilot',name:'Copilot',command:'gh copilot',args:'',desc:'GitHub Copilot CLI'},
+    {id:'codex',name:'Codex',command:'codex',args:'--full-auto',desc:'OpenAI Codex CLI'}
+  ];}
+
+  get sessions(){ return [
+    {id:'s1',agent:'claude',title:'claude · oauth rotation',cwd:'C:\\dev\\acme-platform\\api-feature-4821-add-oauth-refresh-token-rotation',status:'running',agentLive:true},
+    {id:'s2',agent:'codex', title:'codex · token store tidy',cwd:'C:\\dev\\acme-platform\\api-feature-4821-add-oauth-refresh-token-rotation',status:'running',agentLive:false},
+    {id:'s3',agent:'copilot',title:'copilot · repro sso loop',cwd:'C:\\dev\\acme-platform\\api-bugfix-4910-login-redirect-loops-on-sso',status:'running',agentLive:true},
+    {id:'s4',agent:'claude',title:'claude · csv export',cwd:'C:\\dev\\acme-platform\\web-feature-5077-export-reports-to-csv',status:'stopped',agentLive:false},
+    {id:'s5',agent:'adhoc',title:'pwsh · scratch',cwd:'C:\\dev\\scratch',status:'running',agentLive:false,command:'pwsh',detached:true},
+    {id:'s6',agent:'claude',title:'claude · old hotfix',cwd:'C:\\dev\\acme-platform\\api-hotfix-4731-patch-token-leak',status:'stopped',agentLive:false,pathMissing:true}
   ];}
 
   componentDidMount(){ this._apply(); this._rz=()=>this.forceUpdate(); window.addEventListener('resize',this._rz); }
@@ -426,6 +763,90 @@ class Component extends DCLogic {
   _statePill(s){ const m={Active:'var(--green)',New:'var(--blue)','In Progress':'var(--amber)',Resolved:'var(--accent)',Closed:'var(--text-faint)'}; const c=m[s]||'var(--text-muted)'; return {color:c,label:s,bg:'color-mix(in oklab, '+c+' 16%, transparent)'}; }
   _st(s){ const o={}; (s||'').split(';').forEach(p=>{ p=p.trim(); if(!p) return; const i=p.indexOf(':'); if(i<0) return; let k=p.slice(0,i).trim(); const v=p.slice(i+1).trim(); if(k.indexOf('--')===0){ o[k]=v; } else { k=k.replace(/-([a-z])/g,(m,c)=>c.toUpperCase()); o[k]=v; } }); return o; }
   _openDialog(t){ this.setState({dialogTaskId:t.id,dialogBranch:t.branchType+'/'+t.id+'-'+this._slug(t.title),baseBranch:'main',dialogRepo:'acme-platform/api'}); }
+  _agentColor(type){ return {claude:'var(--accent)',copilot:'var(--blue)',codex:'var(--green)',adhoc:'var(--amber)'}[type]||'var(--text-muted)'; }
+  _agentName(type){ return {claude:'Claude',copilot:'Copilot',codex:'Codex',adhoc:'Ad-hoc command'}[type]||type; }
+  _agentIcon(type,size){ const C=React.createElement; const col=this._agentColor(type);
+    if(type==='claude') return C('svg',{width:size,height:size,viewBox:'0 0 24 24',fill:col,stroke:'none'},C('path',{d:'M12 2.4l1.95 6.35 6.35 1.95-6.35 1.95L12 19l-1.95-6.35L3.7 10.7l6.35-1.95z'}));
+    const svg=(ch)=>C('svg',{width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:col,strokeWidth:1.85,strokeLinecap:'round',strokeLinejoin:'round'},ch);
+    if(type==='copilot') return svg([C('rect',{x:4.5,y:8,width:15,height:9,rx:4.5,key:'r'}),C('circle',{cx:9.5,cy:12.5,r:1.05,fill:col,stroke:'none',key:'a'}),C('circle',{cx:14.5,cy:12.5,r:1.05,fill:col,stroke:'none',key:'b'}),C('path',{d:'M12 8V5.2',key:'c'}),C('circle',{cx:12,cy:4,r:1.35,key:'d'})]);
+    if(type==='codex') return svg([C('path',{d:'M9 8l-3.4 4 3.4 4',key:'a'}),C('path',{d:'M15 8l3.4 4-3.4 4',key:'b'}),C('path',{d:'M13.3 6.4l-2.6 11.2',key:'c'})]);
+    return svg([C('path',{d:'M5 7l4 4-4 4',key:'a'}),C('path',{d:'M12 16h7',key:'b'})]); }
+  _spawnSession(opts){ opts=opts||{}; let cwd=opts.cwd||null; let agent=opts.agent||'claude';
+    this.setState({nsOpen:true,nsAgent:agent,nsCwd:cwd,nsCommand:agent==='adhoc'?'pwsh':agent,nsFromTask:opts.fromTask||null,nsBrowse:false}); }
+  _sessionLines(s){ const short=(s.cwd||'').replace('C:\\dev\\','…\\'); const P='PS '+short+'> ';
+    if(s.id==='s1') return [
+      {k:'prompt',t:P+'claude'},
+      {k:'banner',t:'● Claude Code  ·  branch feature/4821-add-oauth-refresh-token-rotation'},
+      {k:'blank'},
+      {k:'user',t:'> add refresh-token rotation to the OAuth token service'},
+      {k:'blank'},
+      {k:'agent',t:'⏺ Reading the current token service to see how refresh works today.'},
+      {k:'dim',t:'   ⎿  Read src/auth/token-service.ts  (142 lines)'},
+      {k:'dim',t:'   ⎿  Read src/auth/refresh-handler.ts  (38 lines)'},
+      {k:'blank'},
+      {k:'agent',t:'⏺ Editing src/auth/token-service.ts'},
+      {k:'add',t:'   +  rotateRefreshToken() — issue a new token, revoke the previous one'},
+      {k:'add',t:'   +  persist rotation + reuse-detection in the token store'},
+      {k:'mod',t:'   ~  validateRefresh() now walks the rotation chain'},
+      {k:'dim',t:'   ⎿  24 additions · 3 removals'},
+      {k:'blank'},
+      {k:'ask',t:'⏺ Run the auth suite to verify the change?'},
+      {k:'cmd2',t:'     npm test -- auth/refresh'},
+      {k:'blank'},
+      {k:'ask',t:'Do you want to proceed?'},
+      {k:'sel',t:'   ❯ 1. Yes, run it'},
+      {k:'opt',t:'     2. No, keep editing'},
+      {k:'caret',t:'   '}
+    ];
+    if(s.id==='s2') return [
+      {k:'prompt',t:P+'codex --full-auto "tidy the token store module"'},
+      {k:'agent',t:'• applied 2 edits to src/auth/token-store.ts'},
+      {k:'dim',t:'  formatted · 41s · agent finished'},
+      {k:'blank'},
+      {k:'exitnote',t:'agent exited (0) — shell is still live, rerun or run git here'},
+      {k:'blank'},
+      {k:'shell',t:P},
+      {k:'caret',t:''}
+    ];
+    if(s.id==='s3') return [
+      {k:'prompt',t:P+'gh copilot'},
+      {k:'banner',t:'● Copilot CLI  ·  branch bugfix/4910-login-redirect-loops-on-sso'},
+      {k:'blank'},
+      {k:'user',t:'> why does SSO sign-in loop back to /login?'},
+      {k:'agent',t:'⏺ Tracing the redirect — checking the session cookie SameSite flag.'},
+      {k:'dim',t:'   ⎿  Read src/auth/session.ts  (96 lines)'},
+      {k:'mod',t:'   ~  set SameSite=None; Secure on the SSO callback cookie'},
+      {k:'caret',t:'   '}
+    ];
+    if(s.id==='s4') return [
+      {k:'prompt',t:P+'claude'},
+      {k:'user',t:'> add CSV export to the reports page'},
+      {k:'agent',t:'⏺ Added exportToCsv() + a download button on ReportsToolbar.'},
+      {k:'add',t:'   +  src/reports/export-csv.ts  (61 lines)'},
+      {k:'mod',t:'   ~  ReportsToolbar.tsx  (+1 button)'},
+      {k:'ok',t:'   ⎿  build passed · 18 files touched'},
+      {k:'blank'},
+      {k:'shell',t:P+'exit'},
+      {k:'blank'},
+      {k:'stopnote',t:'session stopped — shell exited (code 0)'}
+    ];
+    if(s.id==='s5') return [
+      {k:'prompt',t:'PS …\\scratch> '},
+      {k:'dim',t:'detached session — not attached to any registered worktree'},
+      {k:'shell',t:'PS …\\scratch> git status'},
+      {k:'dim',t:'On branch main · nothing to commit, working tree clean'},
+      {k:'caret',t:'PS …\\scratch> '}
+    ];
+    if(s.id==='s6') return [
+      {k:'prompt',t:'PS …\\api-hotfix-4731-patch-token-leak> claude'},
+      {k:'agent',t:'⏺ Patched the token-leak in the refresh handler.'},
+      {k:'ok',t:'   ⎿  committed a1f9c2e · pushed'},
+      {k:'blank'},
+      {k:'shell',t:'PS …> exit'},
+      {k:'blank'},
+      {k:'stopnote',t:'session stopped — worktree path no longer exists'}
+    ];
+    return []; }
 
   renderVals(){
     const S=this.state; const isA=S.dir==='A'; const isB=S.dir==='B'; const isDark=S.theme==='dark'; const hl=S.highlightTaskId;
@@ -464,7 +885,8 @@ class Component extends DCLogic {
             onSelect:()=>this.setState({selectedId:wt.id}),
             onExplorer:(e)=>{if(e&&e.stopPropagation)e.stopPropagation();this._toast('Opening File Explorer…');},
             onTerminal:(e)=>{if(e&&e.stopPropagation)e.stopPropagation();this._toast('Opening Windows Terminal…');},
-            onCode:(e)=>{if(e&&e.stopPropagation)e.stopPropagation();this._toast('Opening VS Code…');}
+            onCode:(e)=>{if(e&&e.stopPropagation)e.stopPropagation();this._toast('Opening VS Code…');},
+            onSpawnAgent:(e)=>{if(e&&e.stopPropagation)e.stopPropagation();this._spawnSession({cwd:wt.id,agent:'claude'});}
           };
         })
       }))
@@ -472,7 +894,7 @@ class Component extends DCLogic {
 
     const startPrimary='border:none;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;gap:6px;white-space:nowrap;flex:0 0 auto;';
     const startGhost='cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:8px;background:transparent;color:var(--text-muted);border:1px solid var(--border);display:flex;align-items:center;gap:6px;white-space:nowrap;flex:0 0 auto;';
-    const tasksView=this.tasks.map(t=>{ let cnt=0; this.workspaces.forEach(w=>w.repos.forEach(r=>r.worktrees.forEach(x=>{if(x.taskId===t.id)cnt++;})));
+    const tasksView=this.tasks.map(t=>{ let cnt=0; const myWts=[]; this.workspaces.forEach(w=>w.repos.forEach(r=>r.worktrees.forEach(x=>{if(x.taskId===t.id){cnt++;myWts.push(x);}})));
       const noWt=cnt===0; const tp=this._typePill(t.branchType); const sp=this._statePill(t.state);
       return {id:t.id,title:t.title,type:t.type,state:t.state, typePill:tp, statePill:sp, wtCount:cnt, hasWt:cnt>0, noWt, plural:cnt===1?'':'s',
         typePillStyle: pill(tp,'11px','2px 9px','5px'), typeDotStyle: dotS(tp.color,'5px'),
@@ -480,6 +902,10 @@ class Component extends DCLogic {
         startStyle: st(noWt?startPrimary:startGhost), startLabel: noWt?'Start work':'New branch',
         chipStyle: st('box-sizing:border-box;border:1px solid '+(hl===t.id?'var(--accent)':'var(--border)')+';background:'+(hl===t.id?'color-mix(in oklab, var(--accent) 14%, transparent)':'var(--panel-2)')+';border-radius:11px;padding:7px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;font:inherit;color:inherit;flex:0 0 auto;transition:all .12s;'),
         onStart:()=>this._openDialog(t),
+        agentDisabled: noWt,
+        agentBtnStyle: st(noWt? 'cursor:default;font:inherit;font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:8px;background:transparent;color:var(--text-faint);border:1px solid var(--border);opacity:.65;display:flex;align-items:center;gap:6px;white-space:nowrap;flex:0 0 auto;' : 'cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:8px;background:transparent;color:var(--accent-text);border:1px solid color-mix(in oklab, var(--accent) 45%, var(--border));display:flex;align-items:center;gap:6px;white-space:nowrap;flex:0 0 auto;'),
+        agentDisabledNote: noWt?'Start work first — no worktree to attach an agent to':'',
+        onStartAgent:()=>{ if(noWt){this._toast('Start work first — no worktree to attach an agent to');return;} if(myWts.length===1){ this._spawnSession({cwd:myWts[0].id,agent:'claude',fromTask:t.id}); } else { this._spawnSession({cwd:null,agent:'claude',fromTask:t.id}); } },
         onChip:()=>this.setState(s=>({highlightTaskId:s.highlightTaskId===t.id?null:t.id}))
       };
     });
@@ -503,7 +929,7 @@ class Component extends DCLogic {
         onTerminal:()=>this._toast('Opening Windows Terminal…'),
         onCode:()=>this._toast('Opening VS Code…'),
         onCopy:()=>this._toast('Path copied to clipboard'),
-        onDelete:()=> raw.dirty?this._toast('Refused — worktree has uncommitted changes'):(raw.isDefault?this._toast('Can\u2019t remove the primary worktree'):this._toast('Worktree removed'))
+        onDelete:()=>{ if(raw.dirty){this._toast('Refused — worktree has uncommitted changes');return;} if(raw.isDefault){this._toast('Can\u2019t remove the primary worktree');return;} const rs=this.sessions.filter(x=>x.cwd===raw.path&&x.status==='running'); if(rs.length){ this.setState({deleteConfirm:{wtPath:raw.path,branch:raw.branch,sessions:rs}}); } else { this._toast('Worktree removed'); } }
       };
     }
 
@@ -514,11 +940,121 @@ class Component extends DCLogic {
     const repoOpts=repoOptions.map(r=>({repoName:r.repoName,wsName:r.wsName, selected:r.key===S.dialogRepo, onPick:()=>this.setState({dialogRepo:r.key}),
       chipStyle:st('box-sizing:border-box;cursor:pointer;border:1px solid '+(r.key===S.dialogRepo?'var(--accent)':'var(--border)')+';background:'+(r.key===S.dialogRepo?'color-mix(in oklab, var(--accent) 12%, transparent)':'transparent')+';border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;text-align:left;font:inherit;color:inherit;')}));
 
+    // ===== AGENTS / SESSIONS =====
+    const isC=S.dir==='C';
+    const wtIndex=[]; this.workspaces.forEach(w=>w.repos.forEach(r=>r.worktrees.forEach(x=>wtIndex.push({wt:x,ws:w,repo:r}))));
+    const findWt=(p)=>wtIndex.find(e=>e.wt.path===p)||null;
+    const runningCount=this.sessions.filter(x=>x.status==='running').length;
+    const kindCol={prompt:'var(--text-faint)',cmd2:'var(--accent-text)',banner:'var(--text-muted)',user:'var(--text)',agent:'var(--text)',dim:'var(--text-faint)',add:'var(--green)',mod:'var(--amber)',del:'var(--red)',ask:'var(--text)',sel:'var(--accent-text)',opt:'var(--text-muted)',ok:'var(--green)',shell:'var(--text-muted)'};
+    const lineStyle=(k)=>st("white-space:pre-wrap;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.6;color:"+(kindCol[k]||'var(--text)')+';'+((k==='user'||k==='ask'||k==='sel'||k==='banner')?'font-weight:600;':''));
+    const mkLines=(sess)=>this._sessionLines(sess).map(l=>({ text:l.t||'', style:lineStyle(l.k),
+      isBlank:l.k==='blank', isExit:l.k==='exitnote', isStop:l.k==='stopnote', isCaret:l.k==='caret',
+      isText:!(l.k==='blank'||l.k==='exitnote'||l.k==='stopnote'||l.k==='caret') }));
+    const sessMeta=(s)=>{ const r=findWt(s.cwd); const attached=!!r&&!s.pathMissing; const task=(attached&&r.wt.taskId)?this._task(r.wt.taskId):null;
+      const shell=s.status==='running'&&!s.agentLive; const kind=s.pathMissing?'missing':(s.status==='stopped'?'stopped':(shell?'shell':'running')); return {r,attached,task,shell,kind}; };
+    const statusMap={running:['var(--green)','running'],shell:['var(--amber)','agent exited · shell'],stopped:['var(--text-faint)','stopped'],missing:['var(--red)','path missing']};
+
+    const sessionCards=this.sessions.map(s=>{ const m=sessMeta(s); const sc=statusMap[m.kind];
+      const tp=m.task?this._typePill(m.task.branchType):null; const sp=m.task?this._statePill(m.task.state):null; const selected=s.id===S.selectedSession;
+      const branch=m.r?m.r.wt.branch:(s.cwd.split('\\').pop());
+      const lastOut=(m.kind==='stopped'||m.kind==='missing')?this._sessionLines(s).filter(l=>l.k!=='blank'&&l.k!=='caret').slice(-2).map(l=>l.t):null;
+      return {id:s.id, selected, title:s.title, kind:m.kind,
+        iconEl:this._agentIcon(s.agent,16), iconWrap:st('width:30px;height:30px;flex:0 0 auto;border-radius:9px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, '+this._agentColor(s.agent)+' 15%, transparent);'),
+        running:m.kind==='running', isShell:m.kind==='shell', stopped:m.kind==='stopped', missing:m.kind==='missing',
+        statusLabel:sc[1], statusPill:st('display:inline-flex;align-items:center;gap:6px;white-space:nowrap;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:700;background:color-mix(in oklab, '+sc[0]+' 15%, transparent);color:'+sc[0]+';'),
+        statusDot:st('flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:'+sc[0]+';'+(m.kind==='running'?'box-shadow:0 0 0 3px color-mix(in oklab, '+sc[0]+' 22%, transparent);animation:pulse 1.8s ease-in-out infinite;':'')),
+        branch, detached:!!s.detached, hasTask:!!m.task, taskId:m.task?m.task.id:'',
+        typePillStyle:tp?pill(tp,'10px','1px 7px','4px'):null, typeLabel:tp?tp.label:'', stateDot:sp?dotS(sp.color,'7px'):null,
+        attachNote: s.detached?('detached · '+s.cwd.split('\\').pop()):(m.missing?'worktree path missing':(m.task?'':'untagged worktree')),
+        lastOut, hasLastOut:!!lastOut,
+        cardStyle:st('box-sizing:border-box;width:100%;text-align:left;border:1px solid '+(selected?'var(--accent)':'var(--border)')+';background:'+(selected?'color-mix(in oklab, var(--accent) 9%, var(--panel))':'var(--panel)')+';border-radius:13px;padding:12px 13px;cursor:pointer;display:flex;flex-direction:column;gap:9px;transition:border-color .12s,background .12s;'+(selected?'box-shadow:inset 2px 0 0 var(--accent);':'')),
+        onSelect:()=>this.setState({selectedSession:s.id}),
+        onStop:(e)=>{if(e&&e.stopPropagation)e.stopPropagation();this._toast('Stopped '+s.title);},
+        onRespawn:(e)=>{if(e&&e.stopPropagation)e.stopPropagation();this._toast('Respawned '+s.title);},
+        onRemove:(e)=>{if(e&&e.stopPropagation)e.stopPropagation();this._toast('Removed session card');}
+      };
+    });
+
+    const aRaw=this.sessions.find(x=>x.id===S.selectedSession)||this.sessions[0];
+    let activeSession=null;
+    if(aRaw){ const m=sessMeta(aRaw); const sc=statusMap[m.kind];
+      const tp=m.task?this._typePill(m.task.branchType):null; const sp=m.task?this._statePill(m.task.state):null;
+      activeSession={ id:aRaw.id, title:aRaw.title, agentName:this._agentName(aRaw.agent), iconEl:this._agentIcon(aRaw.agent,18),
+        iconWrap:st('width:34px;height:34px;flex:0 0 auto;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, '+this._agentColor(aRaw.agent)+' 15%, transparent);'),
+        cwd:aRaw.cwd.replace('C:\\dev\\','…\\'), branch:m.r?m.r.wt.branch:aRaw.cwd.split('\\').pop(), detached:!!aRaw.detached, missing:m.kind==='missing',
+        running:m.kind==='running'||m.kind==='shell', stopped:aRaw.status==='stopped',
+        statusLabel:sc[1], statusPill:st('display:inline-flex;align-items:center;gap:7px;white-space:nowrap;padding:4px 11px;border-radius:20px;font-size:12px;font-weight:700;background:color-mix(in oklab, '+sc[0]+' 15%, transparent);color:'+sc[0]+';'),
+        statusDot:st('width:7px;height:7px;border-radius:50%;background:'+sc[0]+';'+(m.kind==='running'?'animation:pulse 1.8s ease-in-out infinite;':'')),
+        hasTask:!!m.task, taskId:m.task?m.task.id:'', taskTitle:m.task?m.task.title:'',
+        typePillStyle:tp?pill(tp,'11px','2px 9px','5px'):null, typeDotStyle:tp?dotS(tp.color,'5px'):null, typeLabel:tp?tp.label:'',
+        statePillStyle:sp?pill(sp,'11px','2px 9px','0'):null, stateLabel:sp?sp.label:'',
+        termLines:mkLines(aRaw),
+        onStop:()=>this._toast('Stopped '+aRaw.title), onRespawn:()=>this._toast('Respawned '+aRaw.title),
+        onRename:()=>this._toast('Rename session'), onDup:()=>this._toast('Duplicated '+aRaw.title),
+        onRemove:()=> aRaw.status==='stopped'?this._toast('Removed session'):this._toast('Stop the session before removing it'),
+        canRemove:aRaw.status==='stopped', notRemovable:aRaw.status!=='stopped',
+        removeStyle:st('width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;border-radius:8px;'+(aRaw.status==='stopped'?'color:var(--text-muted);cursor:pointer;':'color:var(--text-faint);opacity:.5;cursor:not-allowed;'))
+      };
+    }
+    const concurrencyWarn=runningCount>=4;
+
+    // ----- New session dialog -----
+    const allWt=wtIndex.map(e=>({id:e.wt.id,branch:e.wt.branch,repoName:e.repo.name,wsName:e.ws.name,path:e.wt.path,taskId:e.wt.taskId}));
+    const nsCwdWt=allWt.find(w=>w.id===S.nsCwd)||null;
+    const nsCwdPath=S.nsBrowse?'C:\\dev\\experiments\\spike':(nsCwdWt?nsCwdWt.path:'');
+    const nsShortPath=(nsCwdPath||'').replace('C:\\dev\\','…\\');
+    const nsAgentCmd=S.nsAgent==='adhoc'?(S.nsCommand||'pwsh'):(this.agents.find(a=>a.id===S.nsAgent)||{command:''}).command;
+    const nsTitle=(S.nsAgent==='adhoc'?'pwsh':S.nsAgent)+' · '+(nsCwdWt?nsCwdWt.branch.split('/').pop():(S.nsBrowse?'spike':'…'));
+    const nsAgentOpts=[...this.agents.map(a=>({id:a.id,name:a.name,command:a.command})),{id:'adhoc',name:'Ad-hoc command',command:'any shell command'}].map(a=>({
+      id:a.id,name:a.name,command:a.command, iconEl:this._agentIcon(a.id,18),
+      iconWrap:st('width:32px;height:32px;flex:0 0 auto;border-radius:9px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, '+this._agentColor(a.id)+' 15%, transparent);'),
+      chipStyle:st('box-sizing:border-box;cursor:pointer;border:1px solid '+(a.id===S.nsAgent?'var(--accent)':'var(--border)')+';background:'+(a.id===S.nsAgent?'color-mix(in oklab, var(--accent) 10%, transparent)':'transparent')+';border-radius:11px;padding:10px 12px;display:flex;align-items:center;gap:10px;text-align:left;font:inherit;color:inherit;transition:border-color .12s;'),
+      onPick:()=>this.setState({nsAgent:a.id,nsCommand:a.id==='adhoc'?'pwsh':a.id})
+    }));
+    const nsWtOpts=allWt.map(w=>{ const belongs=!!S.nsFromTask&&w.taskId===S.nsFromTask; const selw=w.id===S.nsCwd&&!S.nsBrowse;
+      return {id:w.id,branch:w.branch,repoName:w.repoName,wsName:w.wsName,belongs,sel:selw,
+        chipStyle:st('box-sizing:border-box;cursor:pointer;border:1px solid '+(selw?'var(--accent)':(belongs?'color-mix(in oklab, var(--accent) 50%, var(--border))':'var(--border)'))+';background:'+(selw?'color-mix(in oklab, var(--accent) 10%, transparent)':'transparent')+';border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;text-align:left;font:inherit;color:inherit;'),
+        onPick:()=>this.setState({nsCwd:w.id,nsBrowse:false}) };
+    });
+    const nsFromTaskObj=S.nsFromTask?this._task(S.nsFromTask):null;
+    const browseStyle=st('box-sizing:border-box;cursor:pointer;width:100%;border:1px dashed '+(S.nsBrowse?'var(--accent)':'var(--border-strong)')+';background:'+(S.nsBrowse?'color-mix(in oklab, var(--accent) 8%, transparent)':'transparent')+';border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:9px;text-align:left;font:inherit;color:var(--text-muted);');
+
+    // ----- Settings -----
+    const agentRows=this.agents.map(a=>({id:a.id,name:a.name,command:a.command,args:a.args,hasArgs:!!a.args, iconEl:this._agentIcon(a.id,18),
+      iconWrap:st('width:34px;height:34px;flex:0 0 auto;border-radius:9px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, '+this._agentColor(a.id)+' 15%, transparent);'),
+      onEdit:()=>this._toast('Edit '+a.name+' definition'), onDelete:()=>this._toast('Removed '+a.name)}));
+    const shellOpt=(v)=>st('flex:1;cursor:pointer;border:1px solid '+(S.defaultShell===v?'var(--accent)':'var(--border)')+';background:'+(S.defaultShell===v?'color-mix(in oklab, var(--accent) 10%, transparent)':'transparent')+';color:'+(S.defaultShell===v?'var(--text)':'var(--text-muted)')+';border-radius:9px;padding:9px 12px;font:inherit;font-size:13px;font-weight:600;');
+
+    // ----- Delete confirm -----
+    const dcS=S.deleteConfirm; let deleteConfirmView=null;
+    if(dcS){ deleteConfirmView={branch:dcS.branch, count:dcS.sessions.length, plural:dcS.sessions.length===1?'':'s', verb:dcS.sessions.length===1?'is':'are',
+      sessions:dcS.sessions.map(x=>({title:x.title,agent:this._agentName(x.agent),iconEl:this._agentIcon(x.agent,15),
+        iconWrap:st('width:26px;height:26px;flex:0 0 auto;border-radius:7px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, '+this._agentColor(x.agent)+' 15%, transparent);')}))}; }
+
+    // ----- Entry-point: sessions on the selected worktree -----
+    const selSessionChips = raw? this.sessions.filter(x=>x.cwd===raw.path).map(x=>{ const mm=sessMeta(x); const sc=statusMap[mm.kind];
+      return {id:x.id,title:x.title,iconEl:this._agentIcon(x.agent,13), iconWrap:st('width:24px;height:24px;flex:0 0 auto;border-radius:7px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, '+this._agentColor(x.agent)+' 15%, transparent);'),
+        dot:st('width:7px;height:7px;border-radius:50%;flex:0 0 auto;background:'+sc[0]+';'+(mm.kind==='running'?'animation:pulse 1.8s ease-in-out infinite;':'')),
+        chipStyle:st('cursor:pointer;display:flex;align-items:center;gap:8px;border:1px solid var(--border);background:var(--panel);border-radius:9px;padding:6px 10px 6px 6px;font:inherit;color:inherit;'),
+        onClick:()=>this.setState({dir:'C',selectedSession:x.id})}; }) : [];
+
     return {
       appStyle,
-      isA,isB,isDark,isLight:!isDark,
-      segA:st(isA?segOn:segOff), segB:st(isB?segOn:segOff),
-      setA:()=>this.setState({dir:'A'}), setB:()=>this.setState({dir:'B'}),
+      isA,isB,isC,isDark,isLight:!isDark,
+      segA:st(isA?segOn:segOff), segB:st(isB?segOn:segOff), segC:st(isC?segOn:segOff),
+      setA:()=>this.setState({dir:'A'}), setB:()=>this.setState({dir:'B'}), setC:()=>this.setState({dir:'C'}),
+      sessionCards, activeSession, hasActive:!!activeSession, runningCount, concurrencyWarn,
+      onNewSession:()=>this._spawnSession({agent:'claude'}),
+      openSettings:()=>this.setState({settingsOpen:true}),
+      nsOpen:S.nsOpen, nsAgentOpts, nsWtOpts, nsIsAdhoc:S.nsAgent==='adhoc', nsCommand:S.nsCommand,
+      nsCwdPath, nsShortPath, nsAgentCmd, nsTitle, nsHasCwd:!!(nsCwdWt||S.nsBrowse), nsNoCwd:!(nsCwdWt||S.nsBrowse), nsFromTaskObj, hasNsFromTask:!!nsFromTaskObj, browseStyle, nsBrowseSel:S.nsBrowse,
+      onNsBrowse:()=>this.setState({nsBrowse:true,nsCwd:null}), onNsCommand:(e)=>this.setState({nsCommand:e.target.value}),
+      onNsCancel:()=>this.setState({nsOpen:false}), onNsSpawn:()=>{this.setState({nsOpen:false,dir:'C'});this._toast('Spawned '+nsTitle);},
+      settingsOpen:S.settingsOpen, agentRows, onCloseSettings:()=>this.setState({settingsOpen:false}), onAddAgent:()=>this._toast('Add a new agent definition'),
+      shellPwshStyle:shellOpt('pwsh'), shellCmdStyle:shellOpt('cmd'), onShellPwsh:()=>this.setState({defaultShell:'pwsh'}), onShellCmd:()=>this.setState({defaultShell:'cmd'}),
+      deleteConfirmView, hasDeleteConfirm:!!deleteConfirmView, onCancelDelete:()=>this.setState({deleteConfirm:null}),
+      onConfirmDelete:()=>{const n=S.deleteConfirm?S.deleteConfirm.sessions.length:0;this.setState({deleteConfirm:null});this._toast('Terminated '+n+' agent'+(n===1?'':'s')+' · worktree removed');},
+      spawnAgentSel: raw?()=>this._spawnSession({cwd:raw.id,agent:'claude'}):()=>{}, selSessionChips, hasSelSessions:selSessionChips.length>0,
       toggleTheme:()=>this.setState(s=>({theme:s.theme==='dark'?'light':'dark'})),
       setRoot:(el)=>{this._root=el; if(el){const t=this.themes[this.state.theme];for(const k in t)el.style.setProperty(k,t[k]);}},
       viewWorkspaces, tasksView, taskCount:this.tasks.length,
