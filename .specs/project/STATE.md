@@ -1,7 +1,9 @@
 # State
 
-**Last Updated:** 2026-06-15
-**Current Work:** worktree-name-template — **EXECUTED T1–T9** on `feature/worktree-name-template`; gate green (typecheck + lint + **137** tests, was 125 → +12). Worktree folder name is now a configurable template (`{repo}`/`{branch}`/`{id}`; default `{repo}-{branch}`), mirroring the branch template: global `ado.worktreeTemplate` (Settings dialog) + per-workspace `.app/config.json` `worktreeTemplate`. Empty render blocks create. Key shape changes: `worktreeNameFor`/templated `worktreePathFor` (`src/shared/worktrees.ts`); `workspaceBranchTemplate`→`workspaceTemplates` (both overrides, one read); IPC `workspaces:branch-template`→`workspaces:templates`; `worktrees:create` gains `worktreeTemplate?`. **Remaining:** open PR (body `Closes #<n>` once the feature issue exists). (Prior: release-cicd T1–T9 executed, T10 manual check pending + PR; v1 roadmap done.)
+**Last Updated:** 2026-06-16
+**Current Work:** **M5 Agent Spike (AM1)** — drafted `.specs/features/agent-spike/spec.md` (de-risk slice for PRD #37: `node-pty` + `xterm.js` + AD-004 streaming IPC, one hard-coded agent, one packaged terminal; ASPK-01..06). Structure decided with user: #37 is an umbrella PRD → new roadmap **M5** + three feature specs (agent-spike / agent-sessions / agent-config = AM1/AM2/AM3); draft AM1 now, AM2/AM3 after the spike lands. **Awaiting user approval of the AM1 spec's flagged decisions (throwaway trigger; hard-coded agent = Claude) before Design.** (Prior: worktree-name-template)
+
+**Prior Current Work:** worktree-name-template — **EXECUTED T1–T9** on `feature/worktree-name-template`; gate green (typecheck + lint + **137** tests, was 125 → +12). Worktree folder name is now a configurable template (`{repo}`/`{branch}`/`{id}`; default `{repo}-{branch}`), mirroring the branch template: global `ado.worktreeTemplate` (Settings dialog) + per-workspace `.app/config.json` `worktreeTemplate`. Empty render blocks create. Key shape changes: `worktreeNameFor`/templated `worktreePathFor` (`src/shared/worktrees.ts`); `workspaceBranchTemplate`→`workspaceTemplates` (both overrides, one read); IPC `workspaces:branch-template`→`workspaces:templates`; `worktrees:create` gains `worktreeTemplate?`. **Remaining:** open PR (body `Closes #<n>` once the feature issue exists). (Prior: release-cicd T1–T9 executed, T10 manual check pending + PR; v1 roadmap done.)
 
 ---
 
@@ -118,6 +120,14 @@
 - [ ] Open PR `feature/release-cicd-autoupdate` → main (body: `Closes #30`)
 - [x] Specify + Execute worktree-name-template (WTNT-01..04) on `feature/worktree-name-template` — global `ado.worktreeTemplate` + `.app/` `worktreeTemplate` override, `{repo}`/`{branch}`/`{id}` placeholders, empty-render guard; gate green (137 tests)
 - [ ] Open PR `feature/worktree-name-template` → main (body: `Closes #<n>` once the feature issue is synced via tlc-to-issues)
+- [x] Structure M5 from PRD #37: added ROADMAP **M5 — Embedded Agent Sessions** (AM1 Agent Spike / AM2 Agent Sessions / AM3 Agent Config); user approved umbrella-PRD → 3-specs split, start with AM1
+- [x] Specify M5 AM1 "Agent Spike" (`.specs/features/agent-spike/spec.md`, ASPK-01..06) — de-risk `node-pty` + `xterm.js` + AD-004 streaming IPC, rebuilt + **packaged**; pure seam = spawn-plan builder; rest hand-verified
+- [x] User approved AM1 spec flagged decisions ("go ahead": throwaway dev trigger + permanent `TerminalPane`; hard-coded agent = Claude, one fixed cwd)
+- [x] Design AM1 (`.specs/features/agent-spike/design.md`) — researched the two de-risk unknowns: (1) electron-vite empty `main:{}` would **bundle** node-pty and break → must add `externalizeDepsPlugin()` to main; (2) electron-builder auto-unpacks native modules but has honored-rule bugs → explicit `asarUnpack: node_modules/node-pty/**` is the contingency. Components: `buildSpawnPlan` (pure, tested) · `PtyPort` (node-pty shell) · streaming IPC `IpcEvents`/`IpcSends` + `on`/`send` (AD-004) · `TerminalPane` (xterm) · throwaway trigger+orchestrator (no config schema change)
+- [x] User approved AM1 design ("go ahead to break down")
+- [x] Tasks AM1 (`.specs/features/agent-spike/tasks.md`) — 12 tasks, 6 phases; only T2 (buildSpawnPlan) is unit-tested, rest `none` (hand-verified OS/IPC/renderer per TESTING.md); all 3 validation tables green. De-risk deliverable = T11 (`build:win` packaged run)
+- [ ] **Get user approval of AM1 tasks + tool/skill choices** → then Execute (orchestrate via sub-agents per phase; one PR `Closes #37`-scope for AM1)
+- [ ] Specify AM2 "Agent Sessions" + AM3 "Agent Config" after the spike de-risks the stack
 
 ---
 
