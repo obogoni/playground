@@ -100,11 +100,14 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           TAG="v$VERSION"
           gh release delete nightly --cleanup-tag --yes || true
+          # Filter with gh's built-in --jq (no external jq dependency) instead of
+          # grep: jq exits 0 on an empty result, so the normal "nothing to prune"
+          # steady state can't trip `set -e -o pipefail` the way grep's
+          # exit-1-on-no-match did. The current TAG is skipped inside the loop.
           gh release list --limit 100 --json tagName,isPrerelease \
-            --jq '.[] | select(.isPrerelease) | .tagName' \
-            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+-alpha\.' \
-            | grep -vxF "$TAG" \
+            --jq '.[] | select(.isPrerelease and (.tagName | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-alpha\\."))) | .tagName' \
             | while read -r old; do
+                [ "$old" = "$TAG" ] && continue
                 echo "Pruning old nightly $old"
                 gh release delete "$old" --cleanup-tag --yes || true
               done
