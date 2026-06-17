@@ -22,12 +22,12 @@ describe('stableVersionFromTag', () => {
 })
 
 describe('nightlyVersion', () => {
-  it('appends the run number as a -nightly pre-release', () => {
-    expect(nightlyVersion('0.1.0', 42)).toBe('0.1.0-nightly.42')
+  it('appends the run number as an -alpha pre-release (channel-aligned)', () => {
+    expect(nightlyVersion('0.1.0', 42)).toBe('0.1.0-alpha.42')
   })
 
   it('accepts a numeric string run number (CI env vars are strings)', () => {
-    expect(nightlyVersion('0.1.0', '7')).toBe('0.1.0-nightly.7')
+    expect(nightlyVersion('0.1.0', '7')).toBe('0.1.0-alpha.7')
   })
 
   it.each([

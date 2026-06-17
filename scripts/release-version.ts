@@ -14,11 +14,21 @@ export function stableVersionFromTag(githubRef: string): string {
   return match[1]
 }
 
-/** ('0.1.0', 42) -> '0.1.0-nightly.42'. runNumber must be a positive integer. */
+/**
+ * ('0.1.0', 42) -> '0.1.0-alpha.42'. runNumber must be a positive integer.
+ *
+ * The pre-release identifier is intentionally `alpha`, not `nightly`: it must
+ * match the `alpha` publish channel (→ `alpha.yml`) so electron-updater's GitHub
+ * provider resolves the right channel file. The provider derives the running
+ * app's channel from `semver.prerelease(version)[0]`, and only releases tagged
+ * with a *valid semver* pre-release in the alpha/beta family are ever selected
+ * (GitHubProvider skips non-semver tags outright). `nightly` satisfied neither,
+ * which is why nightly auto-update never fired.
+ */
 export function nightlyVersion(baseVersion: string, runNumber: number | string): string {
   const n = typeof runNumber === 'string' ? Number(runNumber) : runNumber
   if (!Number.isInteger(n) || n <= 0) {
     throw new Error(`Run number must be a positive integer, got ${JSON.stringify(runNumber)}`)
   }
-  return `${baseVersion}-nightly.${n}`
+  return `${baseVersion}-alpha.${n}`
 }

@@ -1,7 +1,7 @@
 name: Nightly
 
 # Manually dispatched side-by-side "Playground Nightly" build on the alpha channel,
-# published as a rolling single pre-release (RLCD-09/10/11).
+# published as a per-build semver pre-release with old nightlies pruned (RLCD-09/10/11).
 on:
   workflow_dispatch:
 
@@ -28,8 +28,10 @@ jobs:
       - name: Quality gate
         run: npm run typecheck && npm run lint && npm test
 
-      # X.Y.Z-nightly.<run#> — a pre-release id that keeps stable's latest.yml from
-      # ever listing it (RLCD-09).
+      # X.Y.Z-alpha.<run#> — a semver pre-release id. The `alpha` identifier is
+      # load-bearing: electron-updater derives the running app's channel from
+      # semver.prerelease(version)[0], so it must equal the `alpha` publish channel
+      # (→ alpha.yml). It also keeps stable's latest.yml from ever listing it (RLCD-09).
       - name: Stamp nightly version from run number
         run: npx tsx scripts/stamp-version.ts --mode=nightly
 
@@ -49,10 +51,9 @@ jobs:
       # the side-by-side build is visually distinct from stable in the taskbar and
       # Start menu (stable's icon comes from electron-builder.yml win.icon).
       #
-      # SPEC_DEVIATION: --publish never (the task said "always"). electron-builder's
-      # GitHub publisher tags releases v{version}, which cannot target the reused
-      # fixed `nightly` tag the rolling-single release requires (RLCD-11). We build
-      # here and publish via gh below, so every nightly lives on one reused tag.
+      # --publish never: we build here and publish via gh below for full control over
+      # the tag, target SHA, prerelease flag, and commit-stamped notes. Every nightly
+      # gets its own semver tag v{version} (e.g. v0.1.0-alpha.5); old ones are pruned.
       #
       # Signing seam (RLCD-14): add CSC_LINK / CSC_KEY_PASSWORD (from secrets) as env
       # here to sign without restructuring. Unsigned builds still auto-update on Windows.
@@ -66,19 +67,41 @@ jobs:
             -c.win.icon=design/icons/playground-nightly.ico \
             -c.publish.channel=alpha
 
-      # Rolling single (RLCD-11 / D8): drop the previous nightly, then publish a
-      # pre-release on the reused `nightly` tag with a one-line commit-stamped body.
-      # electron-updater follows alpha.yml (asset), not the tag name.
-      - name: Publish rolling nightly pre-release
+      # Publish on a per-build semver tag v{version}. electron-updater's GitHub
+      # provider only selects releases whose tag is valid semver in the alpha/beta
+      # family (it skips non-semver tags like the old fixed `nightly`), then reads
+      # alpha.yml from that release. The tag carries the version; the run-number
+      # bump guarantees each nightly sorts newer than the last (RLCD-09/11).
+      - name: Publish nightly pre-release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          gh release delete nightly --cleanup-tag --yes || true
-          gh release create nightly \
+          TAG="v$VERSION"
+          gh release create "$TAG" \
             --prerelease \
             --target "$GITHUB_SHA" \
             --title "Playground Nightly $VERSION" \
             --notes "Nightly $VERSION — ${GITHUB_SHA::7} built $(date -u +%Y-%m-%dT%H:%MZ)" \
             dist/*-setup.exe dist/*-setup.exe.blockmap dist/alpha.yml
+
+      # Prune so only the just-published nightly lingers (the rolling-single intent,
+      # RLCD-11). Also retire the legacy fixed `nightly` tag from the broken scheme.
+      # Never deletes the current TAG or any stable v* release (only v*-alpha.* pre-releases).
+      - name: Prune old nightly pre-releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          gh release delete nightly --cleanup-tag --yes || true
+          gh release list --limit 100 --json tagName,isPrerelease \
+            --jq '.[] | select(.isPrerelease) | .tagName' \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+-alpha\.' \
+            | grep -vxF "$TAG" \
+            | while read -r old; do
+                echo "Pruning old nightly $old"
+                gh release delete "$old" --cleanup-tag --yes || true
+              done
