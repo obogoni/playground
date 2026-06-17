@@ -79,6 +79,9 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           TAG="v$VERSION"
+          # Idempotent: a re-run keeps the same GITHUB_RUN_NUMBER (and thus the same
+          # tag), so drop any existing release+tag first or `gh release create` errors.
+          gh release delete "$TAG" --cleanup-tag --yes || true
           gh release create "$TAG" \
             --prerelease \
             --target "$GITHUB_SHA" \

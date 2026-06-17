@@ -2,10 +2,15 @@ name: Release
 
 # Pushing a vX.Y.Z tag is the single act that gates, builds, and publishes an
 # installable stable Windows binary to GitHub Releases (RLCD-01).
+#
+# Stable-only: `!v*-*` excludes every semver pre-release (those always carry a
+# hyphen, e.g. nightly's v0.1.0-alpha.N), so the nightly per-build tags never
+# trip this workflow and push a nightly onto the stable/latest pipeline.
 on:
   push:
     tags:
       - 'v*'
+      - '!v*-*'
 
 permissions:
   contents: write
