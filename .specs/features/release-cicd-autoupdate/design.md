@@ -9,7 +9,9 @@
 
 Verified against electron-builder/electron-updater docs + issue tracker (June 2026), because two assumptions, if wrong, would cascade into the workflows:
 
-1. **GitHub publishing never auto-detects the update channel from the version.** electron-builder's `detectUpdateChannel` (version → channel inference) explicitly does **not** apply to the GitHub provider (electron-builder issues #8388, #8589; Publish docs). ⇒ The nightly `alpha` routing **must be set explicitly** via `publish.channel`, never inferred from the `-nightly.N` suffix. The `-nightly.N` suffix still matters for two *other* reasons: it makes the GitHub release a semver pre-release, and it keeps stable's `latest.yml` from ever listing it.
+1. **GitHub publishing never auto-detects the update channel from the version.** electron-builder's `detectUpdateChannel` (version → channel inference) explicitly does **not** apply to the GitHub provider (electron-builder issues #8388, #8589; Publish docs). ⇒ The nightly `alpha` routing **must be set explicitly** via `publish.channel`, never inferred from the version suffix.
+
+   > **CORRECTION (post-implementation, 2026-06-17):** the original design paired channel `alpha` with a `-nightly.N` version suffix and a reused fixed git tag `nightly`. Both broke runtime auto-update. electron-updater's `GitHubProvider.getLatestVersion` (a) **skips any release whose git tag is not valid semver** (`if (!semver.valid(hrefTag)) continue`) — so the `nightly` tag was invisible and `alpha.yml` was never fetched — and (b) derives the *running app's* channel from `semver.prerelease(version)[0]`, so a `-nightly.N` app reports channel `nightly`, matching neither `alpha` nor `beta`. **Fix:** the nightly version uses the `-alpha.N` identifier (channel-aligned) and each build is published on its own semver tag `v{version}` (e.g. `v0.1.0-alpha.5`), with older `v*-alpha.*` pre-releases pruned afterward.
 2. **Only a fixed set of channel names is valid:** `alpha | beta | dev | rc | stable | null` (custom names like `nightly` are rejected at validation). ⇒ Nightly uses the supported **`alpha`** channel (→ `alpha.yml`); stable uses the default **`latest`** channel (→ `latest.yml`). The two channel files are independent, so a stable install reading `latest.yml` never sees a nightly.
 3. **`forceDevUpdateConfig` + `dev-app-update.yml`** is the sanctioned way to exercise the real feed from an unpackaged build. This is an **explicit opt-in** in our design (env-gated), so it never contradicts RLCD-06 ("inert in dev") on a normal `electron-vite dev` run.
 4. **`electron-updater` 6.x** is the runtime companion to `electron-builder` 26.x and is currently absent from `package.json` — it must be added as a **dependency** (not devDependency, since it runs in the packaged main process).
@@ -168,7 +170,7 @@ export function nightlyVersion(baseVersion: string, runNumber: number | string):
 
 | Setting | Stable (`release.yml`) | Nightly (`nightly.yml`) |
 | ------- | ---------------------- | ----------------------- |
-| version | `X.Y.Z` (from tag) | `X.Y.Z-nightly.<run#>` |
+| version | `X.Y.Z` (from tag) | `X.Y.Z-alpha.<run#>` (channel-aligned) |
 | `appId` | `com.playground` (base) | `-c.appId=com.playground.nightly` |
 | `productName` | `Playground` (base) | `-c.productName="Playground Nightly"` |
 | `publish.channel` | `latest` (default) | `-c.publish.channel=alpha` |
@@ -188,8 +190,8 @@ export function nightlyVersion(baseVersion: string, runNumber: number | string):
 ### 7. `nightly.yml` workflow (new)
 
 - **Trigger**: `workflow_dispatch`. **Permissions**: `contents: write`. **Runner**: `windows-latest`.
-- **Steps**: checkout → setup-node → `npm ci` → same **gate** → `npx tsx scripts/stamp-version.ts --mode=nightly` → `npx electron-builder --win --publish always -c.appId=com.playground.nightly -c.productName="Playground Nightly" -c.publish.channel=alpha` → **rolling single**: delete the previous `nightly`-tag release/tag (`gh release delete nightly --cleanup-tag --yes || true`) then publish as a **pre-release** on a reused fixed `nightly` tag with a one-line commit-stamped body (RLCD-11 / D8).
-- **Note**: reusing a fixed `nightly` tag keeps exactly one nightly in the list; electron-updater follows `alpha.yml` (asset), not the tag name.
+- **Steps**: checkout → setup-node → `npm ci` → same **gate** → `npx tsx scripts/stamp-version.ts --mode=nightly` (→ `X.Y.Z-alpha.<run#>`) → `npx electron-builder --win --publish never -c.appId=com.playground.nightly -c.productName="Playground Nightly" -c.publish.channel=alpha` → publish as a **pre-release** on a per-build semver tag `v{version}` with a one-line commit-stamped body → **prune** older `v*-alpha.*` pre-releases (and the legacy `nightly` tag) so only the latest survives (RLCD-11 / D8).
+- **Note**: electron-updater's GitHub provider selects releases by **valid-semver tag name** (skipping non-semver tags) and then reads `alpha.yml` from the selected release — so the tag must be a real `vX.Y.Z-alpha.N`, not a fixed string. A `--publish never` build + manual `gh release create` keeps control over tag/target/prerelease/notes.
 
 ### 8. `dev-app-update.yml` (new)
 
@@ -236,12 +238,12 @@ export function nightlyVersion(baseVersion: string, runNumber: number | string):
 
 | Decision | Choice | Rationale |
 | -------- | ------ | --------- |
-| Nightly channel routing | Explicit `-c.publish.channel=alpha` | GitHub provider never auto-detects channel from version (verified) — inferring from `-nightly.N` would silently publish to `latest` and leak nightlies to stable users |
-| Channel name | `alpha` (not custom `nightly`) | Only `alpha\|beta\|dev\|rc\|stable\|null` are valid channel values |
+| Nightly channel routing | Explicit `-c.publish.channel=alpha` **+ `-alpha.N` version identifier** | GitHub provider never auto-detects channel from version (verified) — but it *does* derive the running app's channel from the version's pre-release id, so the id and the channel must match (`alpha`/`alpha.yml`) |
+| Channel name | `alpha` (not custom `nightly`) | Only `alpha\|beta\|dev\|rc\|stable\|null` are valid channel values, and the version pre-release id must equal it |
 | `forceDevUpdateConfig` | Env-gated opt-in (`PLAYGROUND_FORCE_UPDATE=1`) | Reconciles RLCD-13 (local feed test) with RLCD-06 (inert on normal dev runs) |
 | Version helper placement | `scripts/release-version.ts`, vitest `include` broadened, run via `tsx` | PRD mandates an importable, unit-tested helper (not an inline shell line); keeps it TS + co-located test; `tsx` avoids a build step in CI |
 | Side-by-side isolation | `productName` + `appId` overrides only | NSIS dir, shortcut, and Electron `userData` all derive from them — no bespoke NSIS keys |
-| Nightly retention | Reuse a fixed `nightly` tag, delete-then-publish | Guarantees exactly one nightly pre-release; `alpha.yml` asset drives the updater regardless of tag |
+| Nightly retention | Per-build semver tag `v{version}`, prune older `v*-alpha.*` after publish | GitHub provider skips non-semver tags, so a reused fixed `nightly` tag is invisible to the updater; per-build semver tags are selectable and pruning keeps the list to one |
 | Identity overrides | CLI `-c.*` flags in CI vs. separate config files | One base `electron-builder.yml`; `electron-builder -c <file>` replaces rather than merges, so per-key CLI overrides are the clean way to diff stable/nightly |
 
 ---

@@ -24,10 +24,10 @@ Playground is only runnable from source (`electron-vite dev`/`build`); there is 
 | D2 | **GitHub publish provider** against public `obogoni/playground`, replacing the `generic`/example.com placeholder. | Public repo ⇒ tokenless runtime auto-update feed (PRD story 18) |
 | D3 | **Two channels from one base config + CI-applied overrides.** Stable → `latest`, `appId: com.playground`, `productName: Playground`. Nightly → `alpha`, `appId: com.playground.nightly`, `productName: "Playground Nightly"`, distinct install dir / shortcut / user-data. Channel is baked into the packaged `app-update.yml` at build time. | One config, two identities; each installed build follows exactly one channel side-by-side (PRD stories 10, 12, 14) |
 | D4 | **`UpdateService` — new main-process deep module** wrapping `electron-updater`'s `autoUpdater` behind a minimal interface (`start()`). No-op unless `app.isPackaged`; `autoDownload: true`, `autoInstallOnAppQuit: true`; check on startup + ~4h recurring interval; reads channel from build config. `autoUpdater` and the timer are **injected** so policy is unit-testable with a fake. | Established `ConfigStore`/`TaskBoard` DI pattern; isolates all update policy (PRD §UpdateService, §Testing) |
-| D5 | **Version stamping is an importable helper, not an inline shell line.** Stable: `refs/tags/vX.Y.Z` → `X.Y.Z`. Nightly: base version + run number → `X.Y.Z-nightly.<run#>` (pre-release id mapping to `alpha`). CI writes it into `package.json` (`npm version --no-git-tag-version`) before `electron-builder` (which reads version from `package.json`). | Pure input→output derivation is unit-testable; tag stays the single source of truth (PRD stories 2, 3, §Version stamping) |
+| D5 | **Version stamping is an importable helper, not an inline shell line.** Stable: `refs/tags/vX.Y.Z` → `X.Y.Z`. Nightly: base version + run number → `X.Y.Z-alpha.<run#>` (the pre-release id **is** the `alpha` channel — electron-updater derives the running app's channel from it). CI writes it into `package.json` (`npm version --no-git-tag-version`) before `electron-builder` (which reads version from `package.json`). | Pure input→output derivation is unit-testable; tag stays the single source of truth (PRD stories 2, 3, §Version stamping) |
 | D6 | **`index.ts` wires `new UpdateService(...).start()` inside `app.whenReady()`** as one thin glue line alongside the existing `handle(...)` calls. | Matches every existing deep module's wiring (PRD §UpdateService) |
 | D7 | **Unsigned for now**, SmartScreen click-through accepted; `electron-updater` doesn't require signing on Windows so auto-update still works. Workflow leaves a seam for an OV cert + password via secrets. | No cert today; don't block shipping; don't restructure later (PRD stories 20, 21) |
-| D8 | **Nightly is a rolling single pre-release** — each dispatch removes/reuses the previous nightly so only the latest survives; published as a GitHub pre-release. | Releases list stays clean; stable users never offered a nightly (PRD stories 13, 14) |
+| D8 | **Nightly is published on a per-build semver tag `v{version}`** (e.g. `v0.1.0-alpha.5`) as a GitHub pre-release; older `v*-alpha.*` pre-releases are pruned after each publish so only the latest survives. (A reused fixed `nightly` tag was abandoned: electron-updater skips non-semver tags, making it invisible to the updater.) | Releases list stays clean *and* the updater can actually select the release; stable users never offered a nightly (PRD stories 13, 14) |
 
 ## Out of Scope
 
@@ -122,12 +122,12 @@ Playground is only runnable from source (`electron-vite dev`/`build`); there is 
 
 **Acceptance Criteria**:
 
-1. WHEN `nightly.yml` is dispatched (`workflow_dispatch`) THEN it SHALL run the same gate, stamp `X.Y.Z-nightly.<run#>` (D5), and build with nightly identity + `alpha` channel
+1. WHEN `nightly.yml` is dispatched (`workflow_dispatch`) THEN it SHALL run the same gate, stamp `X.Y.Z-alpha.<run#>` (D5), and build with nightly identity + `alpha` channel
 2. WHEN the nightly is built THEN it SHALL use `appId: com.playground.nightly`, `productName: "Playground Nightly"`, and a distinct install dir / shortcut / user-data folder so it never collides with stable over config or files (D3)
 3. WHEN the nightly build is installed THEN it SHALL auto-update from the `alpha` feed via the same `UpdateService` policy as stable (the channel baked into its `app-update.yml`)
-4. WHEN a `X.Y.Z-nightly.<run#>` version string is produced THEN it SHALL be a pre-release identifier that maps to the `alpha` channel (D5)
+4. WHEN a `X.Y.Z-alpha.<run#>` version string is produced THEN it SHALL be a pre-release identifier that maps to the `alpha` channel (D5)
 
-**Independent Test**: Dispatch the nightly workflow → a "Playground Nightly" installer is produced versioned `X.Y.Z-nightly.<run#>`; installing it alongside stable yields two separate Start-menu entries and two separate user-data folders.
+**Independent Test**: Dispatch the nightly workflow → a "Playground Nightly" installer is produced versioned `X.Y.Z-alpha.<run#>`; installing it alongside stable yields two separate Start-menu entries and two separate user-data folders.
 
 ---
 
@@ -206,7 +206,7 @@ Playground is only runnable from source (`electron-vite dev`/`build`); there is 
 | RLCD-06 | P1: `UpdateService` inert when not packaged (dev) | T4, T6 | Verified |
 | RLCD-07 | P1: `index.ts` wiring of `UpdateService.start()` in `app.whenReady()` | T6 | Implemented (T10) |
 | RLCD-08 | P2: Periodic ~4h re-check (injected timer) | T4 | Verified |
-| RLCD-09 | P2: Nightly dispatch workflow + nightly version stamping (`X.Y.Z-nightly.<run#>` → alpha) | T3, T5, T9 | Implemented (T10) |
+| RLCD-09 | P2: Nightly dispatch workflow + nightly version stamping (`X.Y.Z-alpha.<run#>` → alpha) | T3, T5, T9 | Implemented (T10) |
 | RLCD-10 | P2: Nightly side-by-side identity (appId/productName/install dir/shortcut/user-data/channel) | T6, T9 | Implemented (T10) |
 | RLCD-11 | P2: Rolling single nightly pre-release (replace previous; pre-release; never offered to stable) | T8, T9 | Implemented (T10) |
 | RLCD-12 | P2: Auto-generated stable release notes | T8 | Implemented (T10) |
@@ -226,7 +226,7 @@ place, live round-trip pending the manual T10 release check.
 Per PRD §Testing Decisions, good tests exercise external behavior through each module's public interface — no test reaches the network, the real `electron-updater`, or a real Electron runtime.
 
 - **UpdateService** (injected fake `autoUpdater` + fake timer): not-packaged ⇒ no work (RLCD-06); packaged ⇒ `autoDownload`/`autoInstallOnAppQuit` set + initial check (RLCD-05); recurring check fires on interval (RLCD-08); channel honored from config not overridden (RLCD-05). Co-located `update-service.test.ts` following the existing DI convention.
-- **Version-stamping helper** (pure input→output): `refs/tags/vX.Y.Z` → `X.Y.Z` (RLCD-02); nightly inputs → `X.Y.Z-nightly.<run#>` mapping to `alpha` (RLCD-09); malformed refs rejected/handled (edge case). Co-located `*.test.ts`.
+- **Version-stamping helper** (pure input→output): `refs/tags/vX.Y.Z` → `X.Y.Z` (RLCD-02); nightly inputs → `X.Y.Z-alpha.<run#>` mapping to `alpha` (RLCD-09); malformed refs rejected/handled (edge case). Co-located `*.test.ts`.
 - **Not unit-tested** (verified by cutting a real test release / hand checks): the live GitHub round-trip, `electron-builder` packaging, the two workflows, SmartScreen click-through, and side-by-side install behavior (PRD §Further Notes). `smoke-shortcuts.mjs` stays out of CI.
 
 ## Success Criteria

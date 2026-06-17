@@ -4,8 +4,9 @@
  * package.json via `npm version` so `electron-builder` packages it.
  *
  *   --mode=stable   derive X.Y.Z from GITHUB_REF (a refs/tags/vX.Y.Z tag)
- *   --mode=nightly  derive X.Y.Z-nightly.<run#> from GITHUB_RUN_NUMBER + the
- *                   current package.json version as the base
+ *   --mode=nightly  derive X.Y.Z-alpha.<run#> from GITHUB_RUN_NUMBER + the
+ *                   current package.json version as the base (the `alpha`
+ *                   identifier is channel-aligned — see release-version.ts)
  *   --dry-run       print the computed version and exit without writing
  *
  * Run with no build step via `npx tsx scripts/stamp-version.ts --mode=...`.

@@ -98,8 +98,17 @@
   *generate-notes* API endpoint, writes the body to a file, then `gh release edit --draft=false
   --notes-file` to publish the electron-builder-created draft with auto notes.
 - **electron-builder GitHub publisher always tags `v{version}` (2026-06-15):** it can't target a
-  fixed reused tag, so the rolling-single nightly builds with `--publish never` and publishes the
-  `nightly` tag via `gh` (SPEC_DEVIATION from the task's `--publish always`).
+  fixed reused tag, so the nightly builds with `--publish never` and publishes via `gh`.
+- **Nightly auto-update was structurally broken — fixed 2026-06-17:** the original scheme paired
+  channel `alpha` with a `-nightly.N` version and a reused fixed git tag `nightly`. electron-updater's
+  `GitHubProvider.getLatestVersion` **skips any release whose tag isn't valid semver**
+  (`if (!semver.valid(hrefTag)) continue`), so the `nightly` tag was invisible and `alpha.yml` was
+  never fetched (check failed silently with `ERR_UPDATER_NO_PUBLISHED_VERSIONS`); it also derives the
+  running app's channel from `semver.prerelease(version)[0]`, so a `-nightly.N` build reported channel
+  `nightly`, matching neither `alpha` nor `beta`. **Fix:** version id is now `-alpha.N` (channel-aligned)
+  and each nightly is published on its own semver tag `v{version}`, with older `v*-alpha.*` pre-releases
+  pruned after publish. **One-time:** the existing `0.1.0-nightly.4` install won't auto-migrate (channel
+  mismatch) — reinstall the next nightly once; alpha→alpha updates flow normally thereafter.
 - **Packaged asar `package.json` keeps source `name` + no `productName` (2026-06-15):** so
   `app.getName()` returns `"playground"` in a packaged build; T6 AUMID is `com.${app.getName()}`.
   Whether nightly gets a channel-distinct identity/userData is unconfirmed — verify in T10; if it
