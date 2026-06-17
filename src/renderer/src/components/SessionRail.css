@@ -174,12 +174,88 @@
   background: var(--text-faint);
 }
 
+.session-card-task {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.session-card-task-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.session-card-task-title {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .session-card-tags {
   display: flex;
   align-items: center;
   gap: 7px;
   margin-top: 10px;
   flex-wrap: wrap;
+}
+
+.task-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.task-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.task-pill.red {
+  background: color-mix(in oklab, var(--red) 16%, transparent);
+  color: var(--red);
+}
+
+.task-pill.accent {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  color: var(--accent-text);
+}
+
+.task-pill.amber {
+  background: color-mix(in oklab, var(--amber) 16%, transparent);
+  color: var(--amber);
+}
+
+.task-pill.green {
+  background: color-mix(in oklab, var(--green) 16%, transparent);
+  color: var(--green);
+}
+
+.task-pill.blue {
+  background: color-mix(in oklab, var(--blue) 16%, transparent);
+  color: var(--blue);
+}
+
+.task-pill.faint {
+  background: var(--panel-2);
+  color: var(--text-faint);
+}
+
+.task-pill.muted {
+  background: var(--panel-2);
+  color: var(--text-muted);
 }
 
 .session-card-status {

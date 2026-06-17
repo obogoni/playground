@@ -1,10 +1,12 @@
 import type { JSX, KeyboardEvent, MouseEvent } from 'react'
 import type { AgentDef } from '../../../shared/agents'
 import type { SessionView } from '../../../shared/config'
+import type { PinnedTaskView } from '../../../shared/tasks'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { agentTileStyle } from '../lib/agent-color'
 import { stripAnsi } from '../lib/ansi'
-import { deriveAttribution } from '../lib/session-attribution'
+import { deriveAttribution, linkedPinFor } from '../lib/session-attribution'
+import { stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import './SessionRail.css'
 
@@ -15,6 +17,7 @@ interface SessionRailProps {
   sessions: SessionView[]
   tree: WorkspaceNode[]
   agents: AgentDef[]
+  tasks: PinnedTaskView[]
   selectedId: string | null
   onSelect: (id: string) => void
   onStop: (id: string) => void
@@ -28,6 +31,7 @@ export function SessionRail({
   sessions,
   tree,
   agents,
+  tasks,
   selectedId,
   onSelect,
   onStop,
@@ -64,6 +68,7 @@ export function SessionRail({
               session={session}
               tree={tree}
               agents={agents}
+              tasks={tasks}
               selected={session.id === selectedId}
               onSelect={onSelect}
               onStop={onStop}
@@ -81,6 +86,7 @@ interface SessionCardProps {
   session: SessionView
   tree: WorkspaceNode[]
   agents: AgentDef[]
+  tasks: PinnedTaskView[]
   selected: boolean
   onSelect: (id: string) => void
   onStop: (id: string) => void
@@ -92,6 +98,7 @@ function SessionCard({
   session,
   tree,
   agents,
+  tasks,
   selected,
   onSelect,
   onStop,
@@ -99,6 +106,7 @@ function SessionCard({
   onRemove
 }: SessionCardProps): JSX.Element {
   const { branch, taskId, detached } = deriveAttribution(tree, session.cwd)
+  const pin = linkedPinFor(tasks, taskId)
   const running = session.status === 'running'
   const statusClass = running ? 'green' : 'faint'
   const preview = !running && session.lastOutput ? stripAnsi(session.lastOutput).trim() : ''
@@ -139,6 +147,20 @@ function SessionCard({
         </div>
         <span className={`session-card-dot ${statusClass}`} aria-label={session.status} />
       </div>
+      {pin?.details && (
+        <div className="session-card-task">
+          <div className="session-card-task-pills">
+            <span className={`task-pill ${typeClass(pin.details.type)}`}>
+              <span className="task-pill-dot" />
+              {pin.details.type}
+            </span>
+            <span className={`task-pill ${stateClass(pin.details.state)}`}>
+              {pin.details.state}
+            </span>
+          </div>
+          <span className="session-card-task-title">{pin.details.title}</span>
+        </div>
+      )}
       <div className="session-card-tags">
         <span className="session-card-status">{running ? 'running' : 'stopped'}</span>
         {detached && <span className="session-card-tag">detached</span>}

@@ -277,6 +277,14 @@ function App(): JSX.Element {
     update({ direction: 'agents' })
   }
 
+  // Reverse deep-link (ACTX-04): from an agent session, jump to its worktree's
+  // Tree detail (where the launchers live). The worktree's path is its selection
+  // id, so a session's cwd selects it directly.
+  const openWorktreeForSession = (cwd: string): void => {
+    setSelectedId(cwd)
+    update({ direction: 'tree' })
+  }
+
   // Pinned-task Agent button: 0 worktrees → caller disables; 1 → preselect it;
   // many → highlight the task's worktrees in the dialog.
   const spawnAgentForTask = (task: PinnedTaskView): void => {
@@ -363,6 +371,7 @@ function App(): JSX.Element {
             sessions={sessions}
             tree={tree}
             agents={agents}
+            tasks={tasks.tasks}
             selectedId={selectedSessionId}
             onSelect={setSelectedSessionId}
             onStop={stopSession}
@@ -370,6 +379,7 @@ function App(): JSX.Element {
             onRemove={removeSession}
             onRename={renameSession}
             onDuplicate={duplicateSession}
+            onOpenWorktree={openWorktreeForSession}
             onNew={() => openNewSession()}
           />
         ) : (
