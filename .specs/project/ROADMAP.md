@@ -100,6 +100,12 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - Global `ado.worktreeTemplate` (Settings dialog) + per-workspace `.app/config.json` `worktreeTemplate` override
 - Empty-render guard blocks creation with a readable message (WTNT-01..04)
 
+**Agent Task Context & Jump-to-Worktree** - COMPLETE (code; hand-verify pending)
+
+- Agent rail cards + session detail strip show the linked ADO task (title + type/state pills) when the session's worktree branch carries a *pinned* task ID; bare `#id`/`detached` fallbacks unchanged (ACTX-01..03)
+- "Open worktree" shortcut in the session detail top bar jumps to the Tree direction with that worktree selected (to the "Open with" launchers, incl. Visual Studio 2022); shown only when attributed to a live worktree (ACTX-04)
+- Renderer-only: new `linkedPinFor` join helper; link stays derived, never stored; no new IPC
+
 ---
 
 ## M5 — Embedded Agent Sessions (v2)

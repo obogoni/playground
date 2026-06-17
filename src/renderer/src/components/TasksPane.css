@@ -135,59 +135,6 @@
   color: var(--text-faint);
 }
 
-.task-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
-  border-radius: 20px;
-  font-size: 10.5px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.task-pill-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.task-pill.red {
-  background: color-mix(in oklab, var(--red) 16%, transparent);
-  color: var(--red);
-}
-
-.task-pill.accent {
-  background: color-mix(in oklab, var(--accent) 16%, transparent);
-  color: var(--accent-text);
-}
-
-.task-pill.amber {
-  background: color-mix(in oklab, var(--amber) 16%, transparent);
-  color: var(--amber);
-}
-
-.task-pill.green {
-  background: color-mix(in oklab, var(--green) 16%, transparent);
-  color: var(--green);
-}
-
-.task-pill.blue {
-  background: color-mix(in oklab, var(--blue) 16%, transparent);
-  color: var(--blue);
-}
-
-.task-pill.faint {
-  background: var(--panel-2);
-  color: var(--text-faint);
-}
-
-.task-pill.muted {
-  background: var(--panel-2);
-  color: var(--text-muted);
-}
-
 .task-card-title {
   margin-top: 9px;
   font-size: 14px;

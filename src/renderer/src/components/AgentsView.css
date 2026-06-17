@@ -181,6 +181,15 @@
   color: var(--accent-text);
 }
 
+.agents-strip-task-title {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
 .agents-strip-tag {
   font-size: 10px;
   font-weight: 700;
