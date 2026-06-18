@@ -100,6 +100,10 @@ async function refreshBaseFromRemote(
   repoPath: string,
   baseBranch: string
 ): Promise<CreateWorktreeResult> {
+  const noUpstream: CreateWorktreeResult = {
+    ok: false,
+    error: `Base branch "${baseBranch}" has no remote upstream to refresh from. Uncheck "Update base branch from remote" to skip.`
+  }
   // 1. Resolve the base branch's upstream (e.g. "origin/main").
   let upstream: string
   try {
@@ -110,14 +114,13 @@ async function refreshBaseFromRemote(
     ])
     upstream = stdout.trim()
   } catch {
-    return {
-      ok: false,
-      error: `Base branch "${baseBranch}" has no remote upstream to refresh from. Uncheck "Update base branch from remote" to skip.`
-    }
+    return noUpstream
   }
+  // An upstream with no `<remote>/` prefix is a local-ref tracking branch — there
+  // is no remote to refresh from, so treat it like the missing-upstream case.
   const slash = upstream.indexOf('/')
   if (slash < 0) {
-    return { ok: false, error: `Could not parse upstream "${upstream}" for base "${baseBranch}".` }
+    return noUpstream
   }
   const remote = upstream.slice(0, slash)
   const remoteBranch = upstream.slice(slash + 1)

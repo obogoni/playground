@@ -344,6 +344,20 @@ describe('createWorktree — base refresh (WBR)', () => {
     expect(existsSync(join(root, 'repo-feature-w'))).toBe(false)
   })
 
+  it('treats a local-ref upstream (no remote) as no remote upstream', async () => {
+    // A branch tracking another *local* branch: rev-parse succeeds but yields a
+    // bare name with no "<remote>/" prefix.
+    git(repo, 'branch', 'localtrack')
+    git(repo, 'config', 'branch.localtrack.remote', '.')
+    git(repo, 'config', 'branch.localtrack.merge', 'refs/heads/main')
+
+    const result = await createWorktree(repo, 'feature/lt', 'localtrack', undefined, true)
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/no remote upstream/i)
+    expect(existsSync(join(root, 'repo-feature-lt'))).toBe(false)
+  })
+
   it('blocks when the checked-out base is dirty and the ff would touch the change', async () => {
     writeFileSync(join(repo, 'a.txt'), 'uncommitted', 'utf8')
     advanceRemote('main', 'remote')
