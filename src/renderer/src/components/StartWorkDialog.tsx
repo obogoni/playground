@@ -43,6 +43,8 @@ export function StartWorkDialog({
   )
   // Workspace worktree-template override (null = use the global one).
   const [worktreeOverride, setWorktreeOverride] = useState<string | null>(null)
+  // Fast-forward the base from its remote before cutting the branch (WBR-04, default on).
+  const [updateBase, setUpdateBase] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const branchEdited = useRef(false)
@@ -91,7 +93,8 @@ export function StartWorkDialog({
         branch,
         // Empty base falls back to checking out `branch` as an existing branch.
         baseBranch: baseBranch.trim() || undefined,
-        worktreeTemplate: effectiveWorktreeTemplate
+        worktreeTemplate: effectiveWorktreeTemplate,
+        updateBase
       })
       .then((result) => {
         if (result.ok && result.path) {
@@ -178,6 +181,22 @@ export function StartWorkDialog({
               </div>
             </div>
           )}
+          <label className={`dialog-check${baseBranch.trim() === '' ? ' disabled' : ''}`}>
+            <input
+              type="checkbox"
+              checked={updateBase && baseBranch.trim() !== ''}
+              disabled={baseBranch.trim() === ''}
+              onChange={(event) => setUpdateBase(event.target.checked)}
+            />
+            <span className="dialog-check-text">
+              Update base branch from remote
+              <span className="dialog-check-note">
+                {baseBranch.trim() === ''
+                  ? 'No base branch — checks out the existing branch as-is.'
+                  : `Fast-forward ${baseBranch.trim()} to its remote before creating the branch.`}
+              </span>
+            </span>
+          </label>
           {error && (
             <div className="dialog-error">
               <Icon name="alert" size={13} /> {error}
