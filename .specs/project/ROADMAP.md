@@ -106,6 +106,12 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - "Open worktree" shortcut in the session detail top bar jumps to the Tree direction with that worktree selected (to the "Open with" launchers, incl. Visual Studio 2022); shown only when attributed to a live worktree (ACTX-04)
 - Renderer-only: new `linkedPinFor` join helper; link stays derived, never stored; no new IPC
 
+**Refresh Base Branch on Worktree Create** - COMPLETE (code; hand-verify pending)
+
+- Default-on "Update base branch from remote" checkbox in both create dialogs; when on (+ base given), `createWorktree` fast-forwards the local base to its remote upstream before cutting the branch, so new branches start current (WBR-01/04)
+- Fast-forward only, in-place `merge --ff-only` inside the worktree holding the checked-out base (else a direct ref fetch); any refresh failure (no upstream / fetch fail / diverged / dirty base) **blocks** the create with a readable inline error — never a silent stale base (WBR-02)
+- Per-dialog default, **not persisted** (no `AppConfig` field); inert when no base branch is given; new optional `worktrees:create` `updateBase` field; `GIT_TERMINAL_PROMPT=0` so a credential-less fetch fails fast (WBR-03/05)
+
 ---
 
 ## M5 — Embedded Agent Sessions (v2)

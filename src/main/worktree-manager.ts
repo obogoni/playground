@@ -49,14 +49,17 @@ export async function listWorktrees(repoPath: string): Promise<WorktreeNode[]> {
 /**
  * `git worktree add` at the PRD flat-sibling path (CRWT-02), with the folder
  * name rendered from the effective worktree template (WTNT-01). With a base:
- * `-b <branch> <base>`; without: checks out the existing branch. Failures are
- * returned (dialog shows them inline), never thrown.
+ * `-b <branch> <base>`; without: checks out the existing branch. When
+ * `updateBase` is set and a base is given, the local base is first
+ * fast-forwarded to its remote upstream (WBR-01) — a refresh failure blocks the
+ * create (WBR-02). Failures are returned (dialog shows them inline), never thrown.
  */
 export async function createWorktree(
   repoPath: string,
   branch: string,
   baseBranch?: string,
-  worktreeTemplate?: string
+  worktreeTemplate?: string,
+  updateBase?: boolean
 ): Promise<CreateWorktreeResult> {
   if (worktreeNameFor(repoPath, branch, worktreeTemplate) === '') {
     return {
@@ -68,6 +71,13 @@ export async function createWorktree(
   if (existsSync(target)) {
     return { ok: false, error: `Target path already exists: ${target}` }
   }
+  // Refresh the base from its remote before cutting the branch (WBR-01/02). Only
+  // meaningful on the new-branch-from-base path; the existing-branch checkout
+  // (empty base) has nothing to refresh (WBR-D4).
+  if (updateBase && baseBranch) {
+    const refreshed = await refreshBaseFromRemote(repoPath, baseBranch)
+    if (!refreshed.ok) return refreshed
+  }
   const args = baseBranch
     ? ['worktree', 'add', target, '-b', branch, baseBranch]
     : ['worktree', 'add', target, branch]
@@ -77,6 +87,85 @@ export async function createWorktree(
   } catch (err) {
     return { ok: false, error: gitFailureLine(err) }
   }
+}
+
+/**
+ * Fast-forward the local `baseBranch` to its configured remote upstream so a
+ * branch cut from it starts current (WBR-01). Fast-forward only: a missing
+ * upstream, a fetch failure, a dirty base checkout, or a diverged (non-ff) base
+ * all return `{ ok: false }` and block the create (WBR-02) — never a silent
+ * stale base. Side-effect-free when the caller doesn't opt in.
+ */
+async function refreshBaseFromRemote(
+  repoPath: string,
+  baseBranch: string
+): Promise<CreateWorktreeResult> {
+  const noUpstream: CreateWorktreeResult = {
+    ok: false,
+    error: `Base branch "${baseBranch}" has no remote upstream to refresh from. Uncheck "Update base branch from remote" to skip.`
+  }
+  // 1. Resolve the base branch's upstream (e.g. "origin/main").
+  let upstream: string
+  try {
+    const { stdout } = await git(repoPath, [
+      'rev-parse',
+      '--abbrev-ref',
+      `${baseBranch}@{upstream}`
+    ])
+    upstream = stdout.trim()
+  } catch {
+    return noUpstream
+  }
+  // An upstream with no `<remote>/` prefix is a local-ref tracking branch — there
+  // is no remote to refresh from, so treat it like the missing-upstream case.
+  const slash = upstream.indexOf('/')
+  if (slash < 0) {
+    return noUpstream
+  }
+  const remote = upstream.slice(0, slash)
+  const remoteBranch = upstream.slice(slash + 1)
+
+  // 2. Update the remote-tracking ref (credential prompts suppressed; failure blocks).
+  try {
+    await git(repoPath, ['fetch', remote, remoteBranch])
+  } catch (err) {
+    return { ok: false, error: gitFailureLine(err) }
+  }
+
+  // 3. Fast-forward the local base to the fetched upstream tip.
+  const hosting = await worktreeHosting(repoPath, baseBranch)
+  try {
+    if (hosting) {
+      // Base is checked out (the normal case): ff-merge in place — aborts if dirty.
+      await git(hosting, ['merge', '--ff-only', upstream])
+    } else {
+      // Base not checked out anywhere: fast-forward the ref directly (ff-only by default).
+      await git(repoPath, ['fetch', remote, `${remoteBranch}:${baseBranch}`])
+    }
+  } catch (err) {
+    return { ok: false, error: ffFailureLine(err, baseBranch, upstream) }
+  }
+  return { ok: true }
+}
+
+/** Path of the worktree that has `branch` checked out, or null if none does. */
+async function worktreeHosting(repoPath: string, branch: string): Promise<string | null> {
+  try {
+    const { stdout } = await git(repoPath, ['worktree', 'list', '--porcelain'])
+    const block = parsePorcelainBlocks(stdout).find((b) => b.branch === branch)
+    return block ? block.path : null
+  } catch {
+    return null
+  }
+}
+
+/** A non-fast-forward reads better as "diverged"; anything else keeps git's own line. */
+function ffFailureLine(err: unknown, baseBranch: string, upstream: string): string {
+  const stderr = (err as { stderr?: string }).stderr ?? ''
+  if (/non-fast-forward|not possible to fast-forward|\[rejected\]/i.test(stderr)) {
+    return `Local "${baseBranch}" has diverged from ${upstream} — can't fast-forward. Uncheck "Update base branch from remote" to skip.`
+  }
+  return gitFailureLine(err)
 }
 
 /**
@@ -176,5 +265,11 @@ async function statusOf(worktreePath: string): Promise<{ dirty: boolean; changes
 }
 
 function git(cwd: string, args: string[]): Promise<{ stdout: string }> {
-  return run('git', args, { cwd, windowsHide: true })
+  // GIT_TERMINAL_PROMPT=0: a fetch with no cached credentials fails fast instead
+  // of hanging the main process on an un-answerable prompt (WBR-02 → blocks).
+  return run('git', args, {
+    cwd,
+    windowsHide: true,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
+  })
 }

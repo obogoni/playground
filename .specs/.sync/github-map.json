@@ -22,6 +22,7 @@
     "release-cicd-autoupdate": { "issue": 32, "milestone": null, "prd_issue": 30 },
     "worktree-name-template": { "issue": 34, "milestone": null },
     "agent-spike": { "issue": 38, "milestone": "M5 — Embedded Agent Sessions (v2)", "prd_issue": 37 },
-    "agent-sessions": { "issue": 40, "milestone": "M5 — Embedded Agent Sessions (v2)", "prd_issue": 37 }
+    "agent-sessions": { "issue": 40, "milestone": "M5 — Embedded Agent Sessions (v2)", "prd_issue": 37 },
+    "worktree-base-refresh": { "issue": 51, "milestone": null }
   }
 }

@@ -29,7 +29,14 @@ export interface IpcContract {
   'shortcuts:launch': { req: { tool: ShortcutTool; path: string }; res: LaunchResult }
   /** git worktree add at the flat-sibling path; failures are returned, never thrown. */
   'worktrees:create': {
-    req: { repoPath: string; branch: string; baseBranch?: string; worktreeTemplate?: string }
+    req: {
+      repoPath: string
+      branch: string
+      baseBranch?: string
+      worktreeTemplate?: string
+      /** Fast-forward the local base from its remote upstream first (WBR-01); absent = off. */
+      updateBase?: boolean
+    }
     res: CreateWorktreeResult
   }
   /** git worktree remove with dirty/primary guards; failures are returned, never thrown. */

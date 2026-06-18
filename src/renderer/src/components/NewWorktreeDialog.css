@@ -150,6 +150,50 @@
   line-height: 1.5;
 }
 
+.dialog-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dialog-check input {
+  margin: 1px 0 0;
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dialog-check-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.dialog-check-note {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.dialog-check.disabled {
+  cursor: default;
+}
+
+.dialog-check.disabled input {
+  cursor: default;
+}
+
+.dialog-check.disabled .dialog-check-text {
+  color: var(--text-faint);
+}
+
 .dialog-error {
   display: flex;
   align-items: center;
