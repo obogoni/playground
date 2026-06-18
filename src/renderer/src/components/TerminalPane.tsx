@@ -81,6 +81,21 @@ export function TerminalPane({ sessionId }: TerminalPaneProps): JSX.Element {
     term.open(container)
     fit.fit()
 
+    // Copy the selection on Ctrl+Shift+C (symmetric with xterm's built-in
+    // Ctrl+Shift+V paste). xterm renders selection on its own layer, not as a
+    // native DOM selection, so the browser's Ctrl+C copies nothing — we read
+    // term.getSelection() ourselves. Ctrl+C is left untouched so it still
+    // sends SIGINT to the PTY. Returning false stops xterm from forwarding the
+    // chord to the shell.
+    term.attachCustomKeyEventHandler((event) => {
+      if (event.type === 'keydown' && event.ctrlKey && event.shiftKey && event.code === 'KeyC') {
+        const selection = term.getSelection()
+        if (selection) navigator.clipboard.writeText(selection).catch(console.error)
+        return false
+      }
+      return true
+    })
+
     // PTY output → terminal.
     const offData = api.on('session:data', (payload) => {
       if (payload.id === sessionId) term.write(payload.data)
