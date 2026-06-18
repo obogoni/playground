@@ -100,8 +100,8 @@ app.whenReady().then(() => {
   handle('workspaces:remove', ({ id }) => registry.remove(id))
   handle('workspaces:templates', ({ workspacePath }) => workspaceTemplates(workspacePath))
   handle('tree:get', () => buildTree(registry))
-  handle('worktrees:create', ({ repoPath, branch, baseBranch, worktreeTemplate }) =>
-    createWorktree(repoPath, branch, baseBranch, worktreeTemplate)
+  handle('worktrees:create', ({ repoPath, branch, baseBranch, worktreeTemplate, updateBase }) =>
+    createWorktree(repoPath, branch, baseBranch, worktreeTemplate, updateBase)
   )
   // No force path from the UI in v1 — the dirty guard is not overridable here.
   handle('worktrees:remove', ({ repoPath, worktreePath }) => removeWorktree(repoPath, worktreePath))

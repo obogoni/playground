@@ -1,8 +1,16 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sanitizeBranch, worktreeNameFor, worktreePathFor } from '../shared/worktrees'
 import { createWorktree, GitError, listWorktrees, removeWorktree } from './worktree-manager'
 
@@ -240,6 +248,131 @@ describe('createWorktree', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error).toBeTruthy()
+  })
+})
+
+describe('createWorktree — base refresh (WBR)', () => {
+  // These exercises clone real repos over local paths; under full-suite parallel
+  // load the default 5s test / 10s hook timeouts are too tight (clones get
+  // starved). Raise both — fast tests in this file are unaffected.
+  vi.setConfig({ testTimeout: 30000, hookTimeout: 30000 })
+
+  let root: string
+  let origin: string
+  let repo: string
+
+  beforeEach(() => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-refresh-')))
+    origin = join(root, 'origin')
+    repo = join(root, 'repo')
+    // Bare remote + a clone whose `main` tracks `origin/main`.
+    git(root, 'init', '--bare', '-b', 'main', origin)
+    git(root, 'clone', origin, 'repo')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+    git(repo, 'push', '-u', 'origin', 'main')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  /** Advance `branch` on the remote by overwriting a.txt, via a throwaway clone. */
+  const advanceRemote = (branch: string, content: string): void => {
+    const scratch = join(root, `scratch-${branch.replace(/\W/g, '')}`)
+    git(root, 'clone', origin, scratch)
+    git(scratch, 'config', 'user.email', 'test@test.local')
+    git(scratch, 'config', 'user.name', 'Test')
+    git(scratch, 'checkout', branch)
+    writeFileSync(join(scratch, 'a.txt'), content, 'utf8')
+    git(scratch, 'commit', '-am', `remote ${content}`)
+    git(scratch, 'push', 'origin', branch)
+    rmSync(scratch, { recursive: true, force: true })
+  }
+
+  const headOf = (cwd: string, ref: string): string => git(cwd, 'rev-parse', ref).trim()
+
+  it('fast-forwards a checked-out base and cuts the new branch from the remote tip', async () => {
+    advanceRemote('main', 'two')
+
+    const result = await createWorktree(repo, 'feature/x', 'main', undefined, true)
+
+    expect(result.ok).toBe(true)
+    // Local main moved up to the fetched remote tip…
+    expect(headOf(repo, 'main')).toBe(headOf(repo, 'origin/main'))
+    // …and the new worktree carries the remote commit.
+    expect(readFileSync(join(result.path!, 'a.txt'), 'utf8')).toBe('two')
+  })
+
+  it('fast-forwards a base that is not checked out anywhere', async () => {
+    // A second branch tracking origin/release, left unchecked (main stays HEAD).
+    git(repo, 'checkout', '-b', 'release')
+    git(repo, 'push', '-u', 'origin', 'release')
+    git(repo, 'checkout', 'main')
+    advanceRemote('release', 'rel-two')
+
+    const result = await createWorktree(repo, 'feature/y', 'release', undefined, true)
+
+    expect(result.ok).toBe(true)
+    expect(headOf(repo, 'release')).toBe(headOf(repo, 'origin/release'))
+    expect(readFileSync(join(result.path!, 'a.txt'), 'utf8')).toBe('rel-two')
+  })
+
+  it('blocks when the local base has diverged from its remote', async () => {
+    // A local-only commit on main, plus a different remote commit → non-ff.
+    writeFileSync(join(repo, 'a.txt'), 'local', 'utf8')
+    git(repo, 'commit', '-am', 'local change')
+    advanceRemote('main', 'remote')
+
+    const result = await createWorktree(repo, 'feature/z', 'main', undefined, true)
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/diverged|fast-forward/i)
+    expect(existsSync(join(root, 'repo-feature-z'))).toBe(false)
+  })
+
+  it('blocks when the base branch has no remote upstream', async () => {
+    git(repo, 'branch', 'local-only')
+
+    const result = await createWorktree(repo, 'feature/w', 'local-only', undefined, true)
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/no remote upstream/i)
+    expect(existsSync(join(root, 'repo-feature-w'))).toBe(false)
+  })
+
+  it('blocks when the checked-out base is dirty and the ff would touch the change', async () => {
+    writeFileSync(join(repo, 'a.txt'), 'uncommitted', 'utf8')
+    advanceRemote('main', 'remote')
+
+    const result = await createWorktree(repo, 'feature/d', 'main', undefined, true)
+
+    expect(result.ok).toBe(false)
+    expect(existsSync(join(root, 'repo-feature-d'))).toBe(false)
+  })
+
+  it('skips the refresh entirely when updateBase is off (stale base, no fetch)', async () => {
+    const before = headOf(repo, 'main')
+    advanceRemote('main', 'two')
+
+    const result = await createWorktree(repo, 'feature/off', 'main', undefined, false)
+
+    expect(result.ok).toBe(true)
+    // Local main untouched and the new worktree still on the old content.
+    expect(headOf(repo, 'main')).toBe(before)
+    expect(readFileSync(join(result.path!, 'a.txt'), 'utf8')).toBe('one')
+  })
+
+  it('skips the refresh when no base branch is given (existing-branch checkout)', async () => {
+    git(repo, 'branch', 'chore')
+    advanceRemote('main', 'two')
+
+    const result = await createWorktree(repo, 'chore', undefined, undefined, true)
+
+    expect(result.ok).toBe(true)
   })
 })
 
