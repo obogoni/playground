@@ -64,3 +64,18 @@ export interface RemoveWorktreeResult {
   /** Human-readable refusal/failure message, present when ok is false. */
   error?: string
 }
+
+/**
+ * A presentational label for a changed file in a worktree, derived from the
+ * `git status --porcelain` two-char code. Not a faithful git state machine:
+ * when index and worktree columns disagree, the single most-relevant label wins
+ * (deleted > added > renamed > modified; `??` → untracked).
+ */
+export type ChangeStatus = 'modified' | 'added' | 'deleted' | 'renamed' | 'untracked'
+
+/** One changed file as shown in the force-remove confirmation (FRWT-01). */
+export interface ChangedFile {
+  /** Worktree-relative path; for a rename, the destination (post-`-> `) path. */
+  path: string
+  status: ChangeStatus
+}
