@@ -4,6 +4,7 @@ import type { SessionView } from '../../../shared/config'
 import type { ShortcutTool } from '../../../shared/shortcuts'
 import type { PinnedTaskView } from '../../../shared/tasks'
 import type { WorktreeNode } from '../../../shared/tree'
+import type { ChangedFile } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
@@ -83,8 +84,11 @@ export function WorktreeDetail({
   const [copied, setCopied] = useState(false)
   const [removing, setRemoving] = useState(false)
   const [removeError, setRemoveError] = useState<string | null>(null)
-  /** When set, the running-sessions removal confirmation is open (AGCF-05). */
+  /** When set, the removal confirmation is open — agents and/or dirty (AGCF-05, FRWT-03). */
   const [confirmOpen, setConfirmOpen] = useState(false)
+  /** Fresh changed-file list for the confirm dialog when the worktree is dirty (FRWT-03). */
+  const [changes, setChanges] = useState<ChangedFile[]>([])
+  const [loadingChanges, setLoadingChanges] = useState(false)
 
   const runningSessions = sessions.filter((s) => s.status === 'running')
 
@@ -101,19 +105,21 @@ export function WorktreeDetail({
       .catch(console.error)
   }
 
-  // §1b/§Interactions remove guard: primary checkout outranks dirty in the note.
-  const removable = !worktree.dirty && !worktree.isDefault
+  // §1b/§Interactions remove guard: only the primary checkout still blocks
+  // removal (FRWT-02). Dirty is now a deliberate, informed force-remove — its
+  // note states the consequence rather than refusing.
+  const removable = !worktree.isDefault
   const guardNote = worktree.isDefault
     ? 'This is the repo’s primary checkout — it can’t be removed here.'
     : worktree.dirty
-      ? `${worktree.changes} uncommitted change${worktree.changes === 1 ? '' : 's'} — commit or stash before removing.`
+      ? `${worktree.changes} uncommitted change${worktree.changes === 1 ? '' : 's'} will be discarded on remove.`
       : null
 
   const doRemove = (): void => {
     setRemoving(true)
     setRemoveError(null)
     api
-      .invoke('worktrees:remove', { repoPath, worktreePath: worktree.path })
+      .invoke('worktrees:remove', { repoPath, worktreePath: worktree.path, force: worktree.dirty })
       .then((result) => {
         if (result.ok) {
           onToast(`Removed ${worktree.branch}`)
@@ -129,11 +135,25 @@ export function WorktreeDetail({
       })
   }
 
-  // Running agents must be terminated first (AGCF-05): open the confirm dialog
-  // when any session is live, otherwise remove straight away as before.
+  // Open the confirm dialog when there's something to confirm — running agents
+  // to terminate (AGCF-05) and/or uncommitted changes to discard (FRWT-03);
+  // otherwise remove straight away. When dirty, fetch the changed files fresh so
+  // the dialog lists exactly what's being discarded (never the stale snapshot).
   const remove = (): void => {
-    if (runningSessions.length > 0) setConfirmOpen(true)
-    else doRemove()
+    if (worktree.dirty || runningSessions.length > 0) {
+      setConfirmOpen(true)
+      if (worktree.dirty) {
+        setChanges([])
+        setLoadingChanges(true)
+        api
+          .invoke('worktrees:changes', { worktreePath: worktree.path })
+          .then(setChanges)
+          .catch(() => setChanges([]))
+          .finally(() => setLoadingChanges(false))
+      }
+    } else {
+      doRemove()
+    }
   }
 
   // Terminate every running agent before removing (AGCF-05). If any stop fails,
@@ -301,6 +321,8 @@ export function WorktreeDetail({
         <RemoveWorktreeConfirm
           branch={worktree.branch}
           runningSessions={runningSessions}
+          changes={changes}
+          loadingChanges={loadingChanges}
           busy={removing}
           onCancel={() => setConfirmOpen(false)}
           onConfirm={confirmRemove}
