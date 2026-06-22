@@ -6,6 +6,7 @@
  * coverage, seed chore/wip with mixed dirt — a modified tracked file, an added
  * untracked file, and a deleted tracked file — so the confirm dialog renders
  * Modified/Added/Deleted rows; any non-empty dirt also passes.
+ * Seed it with: node scripts/seed-smoke-remove.mjs   (run before launching the app)
  * Run: node scripts/smoke-remove.mjs
  */
 
