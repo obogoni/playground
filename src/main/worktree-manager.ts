@@ -2,7 +2,12 @@ import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { promisify } from 'node:util'
 import type { WorktreeNode } from '../shared/tree'
-import type { CreateWorktreeResult, RemoveWorktreeResult } from '../shared/worktrees'
+import type {
+  ChangedFile,
+  ChangeStatus,
+  CreateWorktreeResult,
+  RemoveWorktreeResult
+} from '../shared/worktrees'
 import { worktreeNameFor, worktreePathFor } from '../shared/worktrees'
 
 const run = promisify(execFile)
@@ -262,6 +267,85 @@ async function statusOf(worktreePath: string): Promise<{ dirty: boolean; changes
     // rather than failing the whole repo listing.
     return { dirty: false, changes: 0 }
   }
+}
+
+/**
+ * Live changed-file list for the force-remove confirmation (FRWT-01) — the same
+ * `git status --porcelain` `statusOf` counts, parsed into labelled rows. Swallows
+ * errors → `[]` (mirrors `statusOf`'s stance); never the authority for the
+ * remove (`removeWorktree` rechecks independently), only what the dialog shows.
+ */
+export async function changedFilesOf(worktreePath: string): Promise<ChangedFile[]> {
+  try {
+    const { stdout } = await git(worktreePath, ['status', '--porcelain'])
+    return parseChangedFiles(stdout)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Pure porcelain → `ChangedFile[]` (one row per non-empty line, so the count
+ * matches `statusOf`'s `changes`). The two-char `XY` code maps to a single label
+ * by destructive precedence — deleted > added > renamed > modified — with `??`
+ * untracked; renames surface the post-`-> ` destination path. Git's C-style
+ * quoting on special-char/non-ASCII paths is stripped back to the raw path.
+ */
+export function parseChangedFiles(stdout: string): ChangedFile[] {
+  const files: ChangedFile[] = []
+  for (const line of stdout.split(/\r?\n/)) {
+    if (line === '') continue
+    const code = line.slice(0, 2)
+    let rest = line.slice(3) // "XY " then the path (or "orig -> dest")
+    if (code === '??') {
+      files.push({ path: unquotePath(rest), status: 'untracked' })
+      continue
+    }
+    // A rename/copy lists "orig -> dest"; the surviving file is the destination.
+    const arrow = rest.indexOf(' -> ')
+    if (arrow >= 0) rest = rest.slice(arrow + ' -> '.length)
+    files.push({ path: unquotePath(rest), status: statusFromCode(code) })
+  }
+  return files
+}
+
+/** Single label from the porcelain `XY` columns, most-destructive-wins. */
+function statusFromCode(code: string): ChangeStatus {
+  if (code.includes('D')) return 'deleted'
+  if (code.includes('A')) return 'added'
+  if (code.includes('R')) return 'renamed'
+  return 'modified'
+}
+
+/**
+ * Reverse git's path quoting: when a path has special/non-ASCII bytes git wraps
+ * it in double quotes with C-style escapes (incl. octal byte sequences for
+ * UTF-8). Strip the quotes and decode the bytes; plain paths pass through.
+ */
+function unquotePath(raw: string): string {
+  if (raw.length < 2 || !raw.startsWith('"') || !raw.endsWith('"')) return raw
+  const body = raw.slice(1, -1)
+  const bytes: number[] = []
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i]
+    if (ch !== '\\') {
+      bytes.push(ch.charCodeAt(0) & 0xff)
+      continue
+    }
+    const next = body[i + 1]
+    if (next >= '0' && next <= '7') {
+      let oct = ''
+      let j = i + 1
+      while (j < body.length && oct.length < 3 && body[j] >= '0' && body[j] <= '7') oct += body[j++]
+      bytes.push(parseInt(oct, 8))
+      i = j - 1
+    } else {
+      const simple: Record<string, number> = { '"': 0x22, '\\': 0x5c, t: 0x09, n: 0x0a, r: 0x0d }
+      bytes.push(simple[next] ?? next.charCodeAt(0))
+      i++
+    }
+  }
+  return Buffer.from(bytes).toString('utf8')
 }
 
 function git(cwd: string, args: string[]): Promise<{ stdout: string }> {
