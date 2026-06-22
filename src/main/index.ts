@@ -13,7 +13,7 @@ import { ShortcutLauncher } from './shortcut-launcher'
 import { TaskBoard } from './task-board'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
-import { createWorktree, removeWorktree } from './worktree-manager'
+import { changedFilesOf, createWorktree, removeWorktree } from './worktree-manager'
 import { workspaceTemplates } from './workspace-config'
 import { WorkspaceRegistry } from './workspace-registry'
 
@@ -103,8 +103,10 @@ app.whenReady().then(() => {
   handle('worktrees:create', ({ repoPath, branch, baseBranch, worktreeTemplate, updateBase }) =>
     createWorktree(repoPath, branch, baseBranch, worktreeTemplate, updateBase)
   )
-  // No force path from the UI in v1 — the dirty guard is not overridable here.
-  handle('worktrees:remove', ({ repoPath, worktreePath }) => removeWorktree(repoPath, worktreePath))
+  handle('worktrees:remove', ({ repoPath, worktreePath, force }) =>
+    removeWorktree(repoPath, worktreePath, { force })
+  )
+  handle('worktrees:changes', ({ worktreePath }) => changedFilesOf(worktreePath))
 
   const launcher = new ShortcutLauncher()
   handle('shortcuts:launch', ({ tool, path }) => launcher.launch(tool, path))
