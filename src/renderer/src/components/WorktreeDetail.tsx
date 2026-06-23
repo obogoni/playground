@@ -141,9 +141,12 @@ export function WorktreeDetail({
   // the dialog lists exactly what's being discarded (never the stale snapshot).
   const remove = (): void => {
     if (worktree.dirty || runningSessions.length > 0) {
+      // Always clear the prior change list so an agents-only confirm can't show a
+      // stale snapshot left over from an earlier dirty-remove that was cancelled.
+      setChanges([])
+      setLoadingChanges(false)
       setConfirmOpen(true)
       if (worktree.dirty) {
-        setChanges([])
         setLoadingChanges(true)
         api
           .invoke('worktrees:changes', { worktreePath: worktree.path })
@@ -321,6 +324,7 @@ export function WorktreeDetail({
         <RemoveWorktreeConfirm
           branch={worktree.branch}
           runningSessions={runningSessions}
+          dirty={worktree.dirty}
           changes={changes}
           loadingChanges={loadingChanges}
           busy={removing}

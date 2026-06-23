@@ -11,6 +11,13 @@ interface RemoveWorktreeConfirmProps {
   branch: string
   /** The worktree's running sessions — terminated before the worktree is removed. */
   runningSessions: SessionView[]
+  /**
+   * The worktree was opened as dirty → removal will force-discard its working
+   * tree (FRWT-03). Authoritative for discard intent: `changes` may momentarily
+   * be `[]` while the fresh fetch is in flight or if it resolves empty, but the
+   * caller still removes with `force: true`, so the copy must say so regardless.
+   */
+  dirty: boolean
   /** Uncommitted changes to be discarded on a force-remove (FRWT-03); [] when clean. */
   changes: ChangedFile[]
   /** True while the fresh `worktrees:changes` fetch is in flight (FRWT-03). */
@@ -39,6 +46,7 @@ const STATUS_LABEL: Record<ChangeStatus, string> = {
 export function RemoveWorktreeConfirm({
   branch,
   runningSessions,
+  dirty,
   changes,
   loadingChanges,
   busy,
@@ -49,9 +57,12 @@ export function RemoveWorktreeConfirm({
   const changeCount = changes.length
   const hasAgents = agentCount > 0
   const hasChanges = changeCount > 0
-  // Show the changes block while a dirty-opened dialog resolves its fresh fetch,
-  // or once it has changes to list.
-  const showChanges = loadingChanges || hasChanges
+  // Discard intent and the changes section are driven by the explicit `dirty`
+  // flag, not `changes.length` — a dirty-opened dialog still force-removes even
+  // when the fresh fetch resolves to []. The section then renders "No
+  // uncommitted changes." rather than vanishing and contradicting the copy.
+  const willDiscard = dirty
+  const showChanges = dirty
   const panelRef = useRef<HTMLDivElement>(null)
 
   // Focus the panel on mount so Escape works and assistive tech announces the
@@ -64,13 +75,14 @@ export function RemoveWorktreeConfirm({
   // uncommitted changes", joined when both apply.
   const phrases: string[] = []
   if (hasAgents) phrases.push(`terminate ${agentCount} running agent${agentCount === 1 ? '' : 's'}`)
-  if (hasChanges)
-    phrases.push(`discard ${changeCount} uncommitted change${changeCount === 1 ? '' : 's'}`)
-  else if (loadingChanges && !hasAgents) phrases.push('discard its uncommitted changes')
+  if (willDiscard)
+    phrases.push(
+      hasChanges
+        ? `discard ${changeCount} uncommitted change${changeCount === 1 ? '' : 's'}`
+        : 'discard its uncommitted changes'
+    )
 
-  // Confirm-button label by which guards apply (stays "Discard…" while a
-  // dirty-opened dialog loads, so it doesn't flicker).
-  const willDiscard = hasChanges || (loadingChanges && !hasAgents)
+  // Confirm-button label by which guards apply.
   const confirmLabel =
     hasAgents && willDiscard
       ? 'Terminate, discard & remove'

@@ -287,9 +287,9 @@ export async function changedFilesOf(worktreePath: string): Promise<ChangedFile[
 /**
  * Pure porcelain → `ChangedFile[]` (one row per non-empty line, so the count
  * matches `statusOf`'s `changes`). The two-char `XY` code maps to a single label
- * by destructive precedence — deleted > added > renamed > modified — with `??`
- * untracked; renames surface the post-`-> ` destination path. Git's C-style
- * quoting on special-char/non-ASCII paths is stripped back to the raw path.
+ * by destructive precedence — deleted > added/copied > renamed > modified — with
+ * `??` untracked; renames/copies surface the post-`-> ` destination path. Git's
+ * C-style quoting on special-char/non-ASCII paths is stripped back to the raw path.
  */
 export function parseChangedFiles(stdout: string): ChangedFile[] {
   const files: ChangedFile[] = []
@@ -301,9 +301,14 @@ export function parseChangedFiles(stdout: string): ChangedFile[] {
       files.push({ path: unquotePath(rest), status: 'untracked' })
       continue
     }
-    // A rename/copy lists "orig -> dest"; the surviving file is the destination.
-    const arrow = rest.indexOf(' -> ')
-    if (arrow >= 0) rest = rest.slice(arrow + ' -> '.length)
+    // Only rename (R) and copy (C) entries carry the "orig -> dest" arrow; the
+    // surviving file is the destination. Restrict the split to those codes —
+    // splitting unconditionally would corrupt a plain path that legitimately
+    // contains " -> ".
+    if (code.includes('R') || code.includes('C')) {
+      const arrow = rest.indexOf(' -> ')
+      if (arrow >= 0) rest = rest.slice(arrow + ' -> '.length)
+    }
     files.push({ path: unquotePath(rest), status: statusFromCode(code) })
   }
   return files
@@ -312,7 +317,8 @@ export function parseChangedFiles(stdout: string): ChangedFile[] {
 /** Single label from the porcelain `XY` columns, most-destructive-wins. */
 function statusFromCode(code: string): ChangeStatus {
   if (code.includes('D')) return 'deleted'
-  if (code.includes('A')) return 'added'
+  // Copy (C) produces a new file at the destination — surface it as added.
+  if (code.includes('A') || code.includes('C')) return 'added'
   if (code.includes('R')) return 'renamed'
   return 'modified'
 }

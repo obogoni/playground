@@ -209,6 +209,18 @@ describe('parseChangedFiles', () => {
     ])
   })
 
+  it('surfaces the destination path for a copy and labels it added', () => {
+    expect(parseChangedFiles('C  src.txt -> copy.txt')).toEqual([
+      { path: 'copy.txt', status: 'added' }
+    ])
+  })
+
+  it('keeps a literal " -> " inside a non-rename path intact', () => {
+    // Only rename/copy codes carry the arrow; a modified path that happens to
+    // contain " -> " must pass through unsplit.
+    expect(parseChangedFiles(' M a -> b.txt')).toEqual([{ path: 'a -> b.txt', status: 'modified' }])
+  })
+
   it('picks the most-destructive label when index and worktree disagree', () => {
     // Precedence: deleted > added > renamed > modified.
     expect(parseChangedFiles('AD gone.txt')[0].status).toBe('deleted')
