@@ -1,8 +1,12 @@
-/* CDP smoke for the delete-worktree feature (DLWT-01..04). Assumes the app
- * is running with --remote-debugging-port=9222 and a seeded workspace named
- * wtm-smoke-* containing repo `api` (branch main) plus a clean linked
- * worktree `api-feature-42` (branch feature/42) and a dirty linked worktree
- * `api-chore-wip` (branch chore/wip, one uncommitted file).
+/* CDP smoke for delete-worktree (DLWT-01..04) + force-remove-worktree
+ * (FRWT-01..04). Assumes the app is running with --remote-debugging-port=9222
+ * and a seeded workspace named wtm-smoke-* containing repo `api` (branch main)
+ * plus a clean linked worktree `api-feature-42` (branch feature/42) and a dirty
+ * linked worktree `api-chore-wip` (branch chore/wip). For the fullest FRWT
+ * coverage, seed chore/wip with mixed dirt — a modified tracked file, an added
+ * untracked file, and a deleted tracked file — so the confirm dialog renders
+ * Modified/Added/Deleted rows; any non-empty dirt also passes.
+ * Seed it with: node scripts/seed-smoke-remove.mjs   (run before launching the app)
  * Run: node scripts/smoke-remove.mjs
  */
 
@@ -102,11 +106,12 @@ check(
   JSON.stringify(primary)
 )
 
-// DLWT-02: dirty worktree → disabled look + change-count note
+// FRWT-02: dirty worktree → ARMED red button + "will be discarded" note
+// (was disabled-look with a "commit or stash" refusal in delete-worktree v1).
 const dirty = await evaluate(ws, selectExpr('chore/wip'))
 check(
-  'dirty worktree shows disabled remove + change count',
-  dirty.disabled === true && /uncommitted change.*commit or stash/.test(dirty.note ?? ''),
+  'dirty worktree shows ARMED remove + discard note (FRWT-02)',
+  dirty.armed === true && dirty.disabled === false && /will be discarded/.test(dirty.note ?? ''),
   JSON.stringify(dirty)
 )
 
@@ -169,6 +174,78 @@ check(
   JSON.stringify(removed.toast)
 )
 check('worktree folder gone from disk (DLWT-01)', !existsSync(cleanWt.path))
+
+// FRWT-01: worktrees:changes returns the live dirty files, each with a label.
+const VALID = ['modified', 'added', 'deleted', 'renamed', 'untracked']
+const dirtyChanges = await evaluate(
+  ws,
+  `window.api.invoke('worktrees:changes', { worktreePath: ${JSON.stringify(dirtyWt.path)} })`
+)
+check(
+  'worktrees:changes returns the dirty files with labels (FRWT-01)',
+  Array.isArray(dirtyChanges) &&
+    dirtyChanges.length > 0 &&
+    dirtyChanges.every((c) => typeof c.path === 'string' && VALID.includes(c.status)),
+  JSON.stringify(dirtyChanges)
+)
+
+// FRWT-03: clicking Remove on the dirty worktree opens the confirm dialog and
+// renders one row per changed file (status pill + path) + a "Discard & remove"
+// danger button.
+const dialog = await evaluate(
+  ws,
+  `(async () => {
+     const row = [...document.querySelectorAll('.sidebar-worktree')].find((r) =>
+       r.querySelector('.sidebar-worktree-branch')?.textContent === 'chore/wip')
+     row?.click()
+     await new Promise((r) => setTimeout(r, 400))
+     document.querySelector('.detail-remove-btn').click()
+     await new Promise((r) => setTimeout(r, 1000)) // worktrees:changes fetch
+     const rows = [...document.querySelectorAll('.rwc-change-row')].map((el) => ({
+       label: el.querySelector('.rwc-change-pill')?.textContent ?? null,
+       path: el.querySelector('.rwc-change-path')?.textContent ?? null
+     }))
+     return { rows, confirmLabel: document.querySelector('.dialog-btn-danger')?.textContent ?? null }
+   })()`
+)
+const LABELS = ['Modified', 'Added', 'Deleted', 'Renamed', 'Untracked']
+check(
+  'confirm dialog lists each changed file with a status label (FRWT-03)',
+  dialog.rows.length === dirtyChanges.length &&
+    dialog.rows.length > 0 &&
+    dialog.rows.every((r) => r.path && LABELS.includes(r.label)),
+  JSON.stringify(dialog.rows)
+)
+check(
+  'confirm button reads "Discard & remove" for a dirty-only worktree (FRWT-03)',
+  /Discard & remove/.test(dialog.confirmLabel ?? ''),
+  JSON.stringify(dialog.confirmLabel)
+)
+
+// FRWT-03: confirming force-removes — row gone, branch in toast, folder deleted.
+const forced = await evaluate(
+  ws,
+  `(async () => {
+     document.querySelector('.dialog-btn-danger').click()
+     await new Promise((r) => setTimeout(r, 2500))
+     return {
+       rowGone: ![...document.querySelectorAll('.sidebar-worktree-branch')]
+         .some((b) => b.textContent === 'chore/wip'),
+       toast: document.querySelector('.toast')?.textContent ?? null
+     }
+   })()`
+)
+check(
+  'force-remove deletes the dirty row (FRWT-03)',
+  forced.rowGone === true,
+  JSON.stringify(forced)
+)
+check(
+  'force-remove toast names the branch (FRWT-03)',
+  /Removed chore\/wip/.test(forced.toast ?? ''),
+  JSON.stringify(forced.toast)
+)
+check('dirty worktree folder gone from disk (FRWT-03)', !existsSync(dirtyWt.path))
 
 ws.close()
 const failed = checks.filter((c) => !c.ok).length

@@ -8,7 +8,7 @@ import type {
 import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type { PinTaskResult, TasksSnapshot } from './tasks'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'
-import type { CreateWorktreeResult, RemoveWorktreeResult } from './worktrees'
+import type { ChangedFile, CreateWorktreeResult, RemoveWorktreeResult } from './worktrees'
 
 /**
  * Single request/response channel map shared by main, preload, and renderer.
@@ -41,9 +41,16 @@ export interface IpcContract {
   }
   /** git worktree remove with dirty/primary guards; failures are returned, never thrown. */
   'worktrees:remove': {
-    req: { repoPath: string; worktreePath: string }
+    req: {
+      repoPath: string
+      worktreePath: string
+      /** Override the dirty guard with `git worktree remove --force` (FRWT-01); absent = off. */
+      force?: boolean
+    }
     res: RemoveWorktreeResult
   }
+  /** Live `git status --porcelain` of a worktree, parsed for the remove confirm (FRWT-01); [] when clean/unreadable. */
+  'worktrees:changes': { req: { worktreePath: string }; res: ChangedFile[] }
   /** Pinned tasks merged with this session's cached details; no network. */
   'tasks:list': { req: void; res: TasksSnapshot }
   /** Parses ID/URL, validates against ADO, persists; failures are returned, never thrown. */

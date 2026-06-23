@@ -12,7 +12,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sanitizeBranch, worktreeNameFor, worktreePathFor } from '../shared/worktrees'
-import { createWorktree, GitError, listWorktrees, removeWorktree } from './worktree-manager'
+import {
+  changedFilesOf,
+  createWorktree,
+  GitError,
+  listWorktrees,
+  parseChangedFiles,
+  removeWorktree
+} from './worktree-manager'
 
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync('git', args, { cwd, encoding: 'utf8' })
@@ -174,6 +181,66 @@ describe('worktreePathFor', () => {
   it('applies a custom template to the final segment only', () => {
     expect(worktreePathFor('C:\\ws\\api', 'feature/42-x', '{id}')).toBe('C:\\ws\\42')
     expect(worktreePathFor('/ws/api', 'feature/42-x', '{id}')).toBe('/ws/42')
+  })
+})
+
+describe('parseChangedFiles', () => {
+  it('maps each porcelain code to its human status label', () => {
+    const out = [
+      ' M edited.txt',
+      'M  staged.txt',
+      'A  added.txt',
+      ' D removed.txt',
+      '?? new.txt'
+    ].join('\n')
+
+    expect(parseChangedFiles(out)).toEqual([
+      { path: 'edited.txt', status: 'modified' },
+      { path: 'staged.txt', status: 'modified' },
+      { path: 'added.txt', status: 'added' },
+      { path: 'removed.txt', status: 'deleted' },
+      { path: 'new.txt', status: 'untracked' }
+    ])
+  })
+
+  it('surfaces the destination path for a rename', () => {
+    expect(parseChangedFiles('R  old/name.txt -> new/name.txt')).toEqual([
+      { path: 'new/name.txt', status: 'renamed' }
+    ])
+  })
+
+  it('surfaces the destination path for a copy and labels it added', () => {
+    expect(parseChangedFiles('C  src.txt -> copy.txt')).toEqual([
+      { path: 'copy.txt', status: 'added' }
+    ])
+  })
+
+  it('keeps a literal " -> " inside a non-rename path intact', () => {
+    // Only rename/copy codes carry the arrow; a modified path that happens to
+    // contain " -> " must pass through unsplit.
+    expect(parseChangedFiles(' M a -> b.txt')).toEqual([{ path: 'a -> b.txt', status: 'modified' }])
+  })
+
+  it('picks the most-destructive label when index and worktree disagree', () => {
+    // Precedence: deleted > added > renamed > modified.
+    expect(parseChangedFiles('AD gone.txt')[0].status).toBe('deleted')
+    expect(parseChangedFiles('MM both.txt')[0].status).toBe('modified')
+    expect(parseChangedFiles('RM moved.txt -> there.txt')[0]).toEqual({
+      path: 'there.txt',
+      status: 'renamed'
+    })
+  })
+
+  it('unquotes git C-style quoting on special/non-ASCII paths', () => {
+    // git quotePath emits octal UTF-8 byte escapes: \303\251 == "é".
+    expect(parseChangedFiles('?? "caf\\303\\251.txt"')).toEqual([
+      { path: 'café.txt', status: 'untracked' }
+    ])
+  })
+
+  it('ignores blank lines and returns [] for empty input', () => {
+    expect(parseChangedFiles('')).toEqual([])
+    expect(parseChangedFiles('\n\n')).toEqual([])
   })
 })
 
@@ -463,6 +530,37 @@ describe('removeWorktree', () => {
 
     expect(result).toEqual({ ok: true })
     expect(existsSync(sibling)).toBe(false)
+  })
+
+  it('force-removes a worktree with mixed dirt and reports each change', async () => {
+    // A second committed file so we have something to delete; then modify one,
+    // delete another, and leave an untracked file (one of each tracked status).
+    writeFileSync(join(sibling, 'b.txt'), 'two', 'utf8')
+    git(sibling, 'add', '.')
+    git(sibling, 'commit', '-m', 'add b')
+    writeFileSync(join(sibling, 'a.txt'), 'edited', 'utf8')
+    rmSync(join(sibling, 'b.txt'))
+    writeFileSync(join(sibling, 'c.txt'), 'wip', 'utf8')
+
+    const files = await changedFilesOf(sibling)
+    expect(files.map((f) => f.status).sort()).toEqual(['deleted', 'modified', 'untracked'])
+    // Count parity: one ChangedFile per change, matching listWorktrees' count.
+    const listed = (await listWorktrees(repo)).find((w) => w.path === sibling)
+    expect(files).toHaveLength(listed?.changes ?? -1)
+
+    const result = await removeWorktree(repo, sibling, { force: true })
+
+    expect(result).toEqual({ ok: true })
+    expect(existsSync(sibling)).toBe(false)
+    expect(await listWorktrees(repo)).toHaveLength(1)
+  })
+
+  it('refuses the primary checkout even under force', async () => {
+    const result = await removeWorktree(repo, repo, { force: true })
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/primary checkout/i)
+    expect(existsSync(repo)).toBe(true)
   })
 
   it('returns the git error for a path that is not a worktree of the repo', async () => {
