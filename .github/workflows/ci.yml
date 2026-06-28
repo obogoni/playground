@@ -9,6 +9,11 @@ on:
   pull_request:
   push:
 
+# Least privilege: the gate only reads the repo to typecheck/lint/test — it
+# never publishes. (release.yml/nightly.yml need contents: write to publish.)
+permissions:
+  contents: read
+
 jobs:
   gate:
     runs-on: ubuntu-latest
