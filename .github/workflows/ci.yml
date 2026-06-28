@@ -1,0 +1,30 @@
+name: CI
+
+# Quality gate for every change. Release/nightly run the same gate only on a
+# tag/dispatch and on windows-latest (they build the installer); this runs on
+# every PR and push so regressions are caught before merging into main.
+# Runner is ubuntu-latest (AD-002): the gate only typechecks/lints/tests — no
+# Windows installer build — and the unit tests are OS-independent.
+on:
+  pull_request:
+  push:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Same gate as release/nightly: a red gate fails the check on the PR.
+      - name: Quality gate
+        run: npm run typecheck && npm run lint && npm test
