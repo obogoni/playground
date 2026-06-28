@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { AgentDef } from '../../shared/agents'
-import type { AppConfig, SessionView } from '../../shared/config'
+import type { AppConfig } from '../../shared/config'
 import type { PinnedTaskView, TasksSnapshot } from '../../shared/tasks'
 import { taskIdFromBranch } from '../../shared/tasks'
-import type { WorkspaceNode, WorktreeNode } from '../../shared/tree'
+import type { WorkspaceNode } from '../../shared/tree'
 import { AgentsView } from './components/AgentsView'
 import { BoardView } from './components/BoardView'
 import { NewSessionDialog, type NewSessionSource } from './components/NewSessionDialog'
@@ -17,34 +17,12 @@ import { Toast } from './components/Toast'
 import { TopBar } from './components/TopBar'
 import { WorktreeDetail, WorktreeDetailEmpty } from './components/WorktreeDetail'
 import { api } from './lib/api'
+import { findWorktree } from './lib/tree-selection'
+import { useSessions } from './lib/use-sessions'
+import { useTree } from './lib/use-tree'
 import './App.css'
 
 type UiState = AppConfig['ui']
-
-interface SelectedWorktree {
-  workspaceName: string
-  repoName: string
-  repoPath: string
-  worktree: WorktreeNode
-}
-
-function findWorktree(tree: WorkspaceNode[], id: string | null): SelectedWorktree | null {
-  if (!id) return null
-  for (const workspace of tree) {
-    for (const repo of workspace.repos) {
-      const worktree = repo.worktrees.find((w) => w.id === id)
-      if (worktree) {
-        return {
-          workspaceName: workspace.displayName,
-          repoName: repo.name,
-          repoPath: repo.path,
-          worktree
-        }
-      }
-    }
-  }
-  return null
-}
 
 /** Worktrees per extracted task ID across all workspaces (STWK-04, spec §Edge Cases). */
 function countWorktreesByTask(tree: WorkspaceNode[]): Map<number, number> {
@@ -75,8 +53,6 @@ function worktreePathsForTask(tree: WorkspaceNode[], taskId: number): string[] {
 
 function App(): JSX.Element {
   const [ui, setUi] = useState<UiState | null>(null)
-  const [tree, setTree] = useState<WorkspaceNode[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const dismissToast = useCallback(() => setToast(null), [])
   /** Repo path the new-worktree dialog was opened for; null = closed. */
@@ -92,28 +68,38 @@ function App(): JSX.Element {
   const [branchTemplate, setBranchTemplate] = useState('')
   const [worktreeTemplate, setWorktreeTemplate] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
-  /** Agent sessions (persisted ∪ running), reconciled by main. */
-  const [sessions, setSessions] = useState<SessionView[]>([])
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   /** Editable agent registry from config (AGCF-01); threaded to the agent UIs. */
   const [agents, setAgents] = useState<AgentDef[]>([])
   /** New-session dialog pre-fill; null = closed. */
   const [nsSource, setNsSource] = useState<NewSessionSource | null>(null)
 
-  const refreshSessions = useCallback((): void => {
-    api.invoke('sessions:list').then(setSessions).catch(console.error)
-  }, [])
+  const update = (patch: Partial<UiState>): void => {
+    setUi((prev) => (prev ? { ...prev, ...patch } : prev))
+    api.invoke('config:patch', { ui: patch }).catch(console.error)
+  }
 
-  const refreshTree = useCallback((): void => {
-    api
-      .invoke('tree:get')
-      .then((next) => {
-        setTree(next)
-        // Preserve selection only while the worktree still exists on disk.
-        setSelectedId((id) => (findWorktree(next, id) ? id : null))
-      })
-      .catch(console.error)
-  }, [])
+  // Session + tree orchestration live in dedicated hooks; App composes them with
+  // its UI/config state (toasts, view direction, dialogs).
+  const {
+    tree,
+    selectedId,
+    setSelectedId,
+    refreshTree,
+    refreshAndSelect,
+    refreshAndSelectDefault
+  } = useTree()
+  const {
+    sessions,
+    selectedSessionId,
+    setSelectedSessionId,
+    refreshSessions,
+    spawnSession,
+    renameSession,
+    duplicateSession,
+    stopSession,
+    respawnSession,
+    removeSession
+  } = useSessions({ onToast: setToast, onSwitchToAgents: () => update({ direction: 'agents' }) })
 
   const refreshTasks = useCallback((): void => {
     api.invoke('tasks:refresh').then(setTasks).catch(console.error)
@@ -140,17 +126,6 @@ function App(): JSX.Element {
     refreshSessions()
   }, [refreshTree, refreshTasks, refreshSessions])
 
-  // Keep the session list live: main pushes status on PTY exit / respawn, which
-  // the rail + detail panel reflect without an explicit refresh.
-  useEffect(() => {
-    const offStatus = api.on('session:status', refreshSessions)
-    const offExit = api.on('session:exit', refreshSessions)
-    return () => {
-      offStatus()
-      offExit()
-    }
-  }, [refreshSessions])
-
   // PRD story 7: details re-fetch on app focus, debounced against focus flapping.
   const lastFocusRefresh = useRef(0)
   useEffect(() => {
@@ -167,11 +142,6 @@ function App(): JSX.Element {
     if (ui) document.documentElement.dataset.theme = ui.theme
   }, [ui])
 
-  const update = (patch: Partial<UiState>): void => {
-    setUi((prev) => (prev ? { ...prev, ...patch } : prev))
-    api.invoke('config:patch', { ui: patch }).catch(console.error)
-  }
-
   const addWorkspace = (): void => {
     api
       .invoke('workspaces:add')
@@ -185,90 +155,17 @@ function App(): JSX.Element {
     api.invoke('workspaces:remove', { id }).then(refreshTree).catch(console.error)
   }
 
-  // After a removal the selected row is gone — land on the repo's primary
-  // checkout instead of the empty state (spec §Decisions).
-  const worktreeRemoved = (repoPath: string): void => {
-    api
-      .invoke('tree:get')
-      .then((next) => {
-        setTree(next)
-        const repo = next.flatMap((ws) => ws.repos).find((r) => r.path === repoPath)
-        setSelectedId(repo?.worktrees.find((w) => w.isDefault)?.id ?? null)
-      })
-      .catch(console.error)
-  }
-
   // PRD start-work flow: refresh and select the new worktree, no auto-open.
   const worktreeCreated = (worktreePath: string): void => {
     setDialogRepoPath(null)
     setStartWorkTask(null)
-    api
-      .invoke('tree:get')
-      .then((next) => {
-        setTree(next)
-        setSelectedId(worktreePath)
-      })
-      .catch(console.error)
+    refreshAndSelect(worktreePath)
   }
 
   // Entry points (rail, worktree detail, board, tasks, sidebar) all funnel here
   // to open the New Session dialog with whatever pre-fill they carry.
   const openNewSession = (source: NewSessionSource = {}): void => {
     setNsSource(source)
-  }
-
-  const spawnSession = (agentName: string, cwd: string, adhocCommand?: string): void => {
-    setNsSource(null)
-    api
-      .invoke('sessions:spawn', { agentName, cwd, adhocCommand })
-      .then((view) => {
-        setSelectedSessionId(view.id)
-        update({ direction: 'agents' })
-        refreshSessions()
-      })
-      .catch((err) => {
-        console.error(err)
-        setToast("Couldn't start session")
-      })
-  }
-
-  const renameSession = (id: string, title: string): void => {
-    api
-      .invoke('sessions:rename', { id, title })
-      .then(() => refreshSessions())
-      .catch(console.error)
-  }
-
-  const duplicateSession = (id: string): void => {
-    api
-      .invoke('sessions:duplicate', { id })
-      .then((view) => {
-        setSelectedSessionId(view.id)
-        refreshSessions()
-      })
-      .catch((err) => {
-        console.error(err)
-        setToast("Couldn't duplicate session")
-      })
-  }
-
-  const stopSession = (id: string): void => {
-    api.invoke('sessions:stop', { id }).then(refreshSessions).catch(console.error)
-  }
-
-  const respawnSession = (id: string): void => {
-    api
-      .invoke('sessions:respawn', { id })
-      .then((view) => {
-        setSelectedSessionId(view.id)
-        refreshSessions()
-      })
-      .catch(console.error)
-  }
-
-  const removeSession = (id: string): void => {
-    if (selectedSessionId === id) setSelectedSessionId(null)
-    api.invoke('sessions:remove', { id }).then(refreshSessions).catch(console.error)
   }
 
   // Deep-link from an entry-point chip: select the session and switch to Agents.
@@ -353,7 +250,7 @@ function App(): JSX.Element {
                 onSpawnAgent={() => openNewSession({ cwd: selected.worktree.path })}
                 onOpenSession={openSession}
                 onToast={setToast}
-                onRemoved={worktreeRemoved}
+                onRemoved={refreshAndSelectDefault}
               />
             ) : (
               <WorktreeDetailEmpty />
@@ -430,7 +327,10 @@ function App(): JSX.Element {
           tree={tree}
           agents={agents}
           source={nsSource}
-          onSpawn={spawnSession}
+          onSpawn={(agentName, cwd, adhocCommand) => {
+            setNsSource(null)
+            spawnSession(agentName, cwd, adhocCommand)
+          }}
           onClose={() => setNsSource(null)}
         />
       )}
