@@ -56,6 +56,10 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l3 3-3 3"/><path d="M11 16h5"/><rect x="2.4" y="3.5" width="19.2" height="17" rx="3"/></svg>
         Agents
       </button>
+      <button onClick="{{ setD }}" style="{{ segD }}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="1.7"/><circle cx="6" cy="18" r="1.7"/><circle cx="18" cy="12" r="1.7"/><path d="M7.6 6h3.4a2 2 0 0 1 2 2v0a2 2 0 0 0 2 2"/><path d="M7.6 18h3.4a2 2 0 0 0 2-2v0a2 2 0 0 1 2-2"/></svg>
+        Workflows
+      </button>
     </div>
 
     <div style="flex:1;"></div>
@@ -500,6 +504,215 @@
   </div>
   </sc-if>
 
+  <!-- ============ DIRECTION D : WORKFLOWS ============ -->
+  <sc-if value="{{ isD }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;min-height:0;">
+
+    <!-- WORKFLOWS RAIL -->
+    <aside style="width:360px;flex:0 0 auto;border-right:1px solid var(--border,#36312a);background:var(--panel,#221f1b);display:flex;flex-direction:column;min-height:0;">
+      <div style="height:46px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 16px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;">Workflows</span>
+          <span style="font-size:11px;color:var(--text-faint);">{{ wfDefCount }} defined</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <button onClick="{{ onReloadWf }}" title="Reload from ~/.playground/workflows" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:transparent;color:var(--text-muted);border-radius:8px;cursor:pointer;" style-hover="background:var(--panel-2);color:var(--text);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg></button>
+          <button onClick="{{ onNewWorkflow }}" style="display:flex;align-items:center;gap:5px;border:none;background:var(--accent);color:#fff;border-radius:8px;padding:6px 11px;font-weight:600;font-size:12.5px;cursor:pointer;white-space:nowrap;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>New</button>
+        </div>
+      </div>
+      <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 12px 16px;display:flex;flex-direction:column;gap:9px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;padding:0 2px 1px;">Definitions</div>
+        <sc-for list="{{ wfDefs }}" as="d" hint-placeholder-count="3">
+          <div style="{{ d.cardStyle }}">
+            <sc-if value="{{ d.ok }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:flex-start;gap:10px;">
+                <span style="{{ d.glyphWrap }}">{{ d.glyphEl }}</span>
+                <div style="min-width:0;flex:1;">
+                  <div style="font-size:13.5px;font-weight:700;letter-spacing:-.01em;">{{ d.name }}</div>
+                  <div style="font-size:11.5px;color:var(--text-muted);line-height:1.45;margin-top:3px;">{{ d.desc }}</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:11px;">
+                <span style="font-size:11px;color:var(--text-faint);">{{ d.inputLabel }}</span>
+                <span style="flex:1;"></span>
+                <button onClick="{{ d.onRun }}" style="display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in oklab, var(--accent) 45%, var(--border));background:transparent;color:var(--accent-text);border-radius:8px;padding:5px 13px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;" style-hover="background:color-mix(in oklab, var(--accent) 12%, transparent);"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 5l11 7-11 7z"/></svg>Run</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ d.broken }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:flex-start;gap:10px;">
+                <span style="width:30px;height:30px;flex:0 0 auto;border-radius:9px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, var(--red) 14%, transparent);color:var(--red);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
+                <div style="min-width:0;flex:1;">
+                  <div style="display:flex;align-items:center;gap:7px;">
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;">{{ d.id }}</span>
+                    <span style="font-size:10px;font-weight:700;color:var(--red);background:color-mix(in oklab, var(--red) 14%, transparent);border-radius:20px;padding:1px 8px;">broken</span>
+                  </div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);line-height:1.5;margin-top:5px;word-break:break-word;">{{ d.error }}</div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;padding:0 2px 1px;margin-top:14px;">Recent runs</div>
+        <sc-for list="{{ runHistory }}" as="r" hint-placeholder-count="4">
+          <button onClick="{{ r.onSelect }}" style="{{ r.rowStyle }}">
+            <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+              <span style="{{ r.dot }}"></span>
+              <span style="font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">{{ r.name }}</span>
+              <span style="{{ r.pill }}">{{ r.statusLabel }}</span>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-faint);margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.meta }}</div>
+          </button>
+        </sc-for>
+      </div>
+    </aside>
+
+    <!-- RUN DETAIL -->
+    <main style="flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg);min-height:0;">
+      <sc-if value="{{ hasRun }}" hint-placeholder-val="{{ true }}">
+        <!-- run header -->
+        <div style="flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--border);background:var(--panel);">
+          <span style="{{ activeRun.glyphWrap }}">{{ activeRun.glyphEl }}</span>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:15px;font-weight:700;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ activeRun.name }}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:3px;min-width:0;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text-faint);">{{ activeRun.runId }}</span>
+              <span style="color:var(--text-faint);font-size:11px;">·</span>
+              <span style="font-size:11.5px;color:var(--text-faint);">started {{ activeRun.when }}</span>
+            </div>
+          </div>
+          <span style="{{ activeRun.statusPill }}"><span style="{{ activeRun.statusDot }}"></span>{{ activeRun.statusLabel }}</span>
+          <div style="display:flex;align-items:center;gap:7px;flex:0 0 auto;">
+            <sc-if value="{{ activeRun.canCancel }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ onCancelRun }}" style="display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in oklab, var(--red) 45%, var(--border));background:transparent;color:var(--red);border-radius:8px;padding:7px 13px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Cancel</button>
+            </sc-if>
+            <sc-if value="{{ activeRun.canRerun }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ onRerun }}" style="display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in oklab, var(--accent) 45%, var(--border));background:transparent;color:var(--accent-text);border-radius:8px;padding:7px 14px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg>Re-run</button>
+            </sc-if>
+          </div>
+        </div>
+        <!-- inputs strip -->
+        <div style="flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:9px 18px;border-bottom:1px solid var(--border);background:var(--panel-2);min-width:0;overflow-x:auto;">
+          <span style="font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--text-faint);text-transform:uppercase;flex:0 0 auto;">Inputs</span>
+          <sc-for list="{{ activeRun.inputs }}" as="inp" hint-placeholder-count="1">
+            <span style="display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;border:1px solid var(--border);background:var(--bg);border-radius:8px;padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:11.5px;"><span style="color:var(--text-faint);">{{ inp.k }}</span><span style="color:var(--accent-text);">=</span><span style="color:var(--text);">{{ inp.v }}</span></span>
+          </sc-for>
+          <sc-if value="{{ activeRun.noInputs }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--text-faint);font-style:italic;">no inputs</span></sc-if>
+        </div>
+        <!-- step timeline -->
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:22px 26px 34px;animation:fadeIn .22s ease;">
+          <sc-for list="{{ activeRun.rows }}" as="row" hint-placeholder-count="6">
+            <div style="{{ row.rowStyle }}">
+              <div style="width:26px;flex:0 0 auto;position:relative;display:flex;justify-content:center;align-items:flex-start;">
+                <div style="{{ row.connectorStyle }}"></div>
+                <div style="{{ row.nodeStyle }}">{{ row.nodeIcon }}</div>
+              </div>
+              <div style="flex:1;min-width:0;padding-bottom:16px;">
+                <sc-if value="{{ row.isGroup }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;gap:9px;padding-top:3px;flex-wrap:wrap;">
+                    <span style="font-size:13.5px;font-weight:700;letter-spacing:-.01em;">{{ row.label }}</span>
+                    <span style="{{ row.groupPillStyle }}">{{ row.groupStatusLabel }}</span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ row.isStep }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;gap:8px;min-width:0;padding-top:3px;">
+                    <span style="{{ row.kindStyle }}">{{ row.kindLabel }}</span>
+                    <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">{{ row.label }}</span>
+                    <span style="flex:1;"></span>
+                    <sc-if value="{{ row.hasDur }}" hint-placeholder-val="{{ true }}"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);flex:0 0 auto;">{{ row.dur }}</span></sc-if>
+                  </div>
+                  <sc-if value="{{ row.hasDetail }}" hint-placeholder-val="{{ false }}">
+                    <div style="{{ row.detailBoxStyle }}">
+                      <sc-if value="{{ row.isAgent }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;flex-wrap:wrap;">
+                          <span style="{{ row.agentMeta.iconWrap }}">{{ row.agentMeta.iconEl }}</span>
+                          <span style="font-size:12.5px;font-weight:700;">{{ row.agentMeta.agentName }}</span>
+                          <span style="{{ row.agentMeta.permStyle }}">{{ row.agentMeta.permLabel }}</span>
+                          <span style="flex:1;"></span>
+                          <span style="{{ row.agentMeta.emitStyle }}">{{ row.agentMeta.emitLabel }}</span>
+                        </div>
+                        <sc-if value="{{ row.hasPrompt }}" hint-placeholder-val="{{ true }}"><div style="font-size:11.5px;color:var(--text-muted);font-style:italic;line-height:1.5;margin-bottom:5px;">{{ row.promptText }}</div></sc-if>
+                      </sc-if>
+                      <sc-for list="{{ row.detailLines }}" as="dl" hint-placeholder-count="2"><div style="{{ dl.style }}">{{ dl.text }}</div></sc-for>
+                      <sc-if value="{{ row.liveCaret }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:6px;margin-top:3px;"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);">running</span><span style="display:inline-block;width:7px;height:13px;background:var(--accent);animation:blink 1s step-start infinite;"></span></div></sc-if>
+                    </div>
+                  </sc-if>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+
+          <sc-if value="{{ activeRun.failed }}" hint-placeholder-val="{{ false }}">
+            <div style="margin:6px 0 0 38px;border:1px solid color-mix(in oklab, var(--red) 40%, transparent);background:color-mix(in oklab, var(--red) 8%, transparent);border-radius:12px;padding:14px 16px;">
+              <div style="display:flex;align-items:center;gap:8px;color:var(--red);font-weight:700;font-size:13px;margin-bottom:8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>Run failed</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);margin-bottom:6px;word-break:break-word;">{{ activeRun.failCmd }}</div>
+              <div style="font-size:11.5px;color:var(--text-faint);line-height:1.5;">No engine rollback — worktrees and branches are left in place so you can inspect the half-finished state. Add a <span style="font-family:'JetBrains Mono',monospace;">try/finally</span> in the workflow to tear down on failure.</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ activeRun.blocked }}" hint-placeholder-val="{{ false }}">
+            <div style="margin:8px 0 0 38px;border:1px solid color-mix(in oklab, var(--amber) 45%, transparent);background:color-mix(in oklab, var(--amber) 10%, transparent);border-radius:14px;padding:16px 18px;">
+              <div style="display:flex;align-items:flex-start;gap:11px;">
+                <span style="width:34px;height:34px;flex:0 0 auto;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, var(--amber) 16%, transparent);color:var(--amber);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.5 1.4c0 1.6-2 2-2 2.6"/><path d="M12 17h.01"/></svg></span>
+                <div style="min-width:0;flex:1;">
+                  <div style="font-size:14px;font-weight:700;letter-spacing:-.01em;">Blocked — the agent needs your input</div>
+                  <div style="font-size:13px;color:var(--text);line-height:1.5;margin-top:7px;">{{ activeRun.question }}</div>
+                  <div style="font-size:11.5px;color:var(--text-faint);line-height:1.5;margin-top:8px;">Guidance resumes the <span style="font-weight:600;color:var(--text-muted);">same</span> agent conversation (session <span style="font-family:'JetBrains Mono',monospace;color:var(--accent-text);">{{ activeRun.session }}</span>) via <span style="font-family:'JetBrains Mono',monospace;">--resume</span>, keeping all of its context.</div>
+                </div>
+              </div>
+              <textarea value="{{ blockedGuidance }}" onChange="{{ onWfGuidance }}" placeholder="Type guidance to unblock the agent — e.g. write a data migration that backfills existing tokens, do not drop the table." style="width:100%;min-height:74px;resize:vertical;margin-top:13px;border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:10px;padding:11px 13px;font-family:inherit;font-size:13px;line-height:1.5;outline:none;" style-focus="border-color:var(--accent);"></textarea>
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:12px;">
+                <button onClick="{{ onAbortRun }}" style="display:inline-flex;align-items:center;gap:7px;border:1px solid color-mix(in oklab, var(--red) 45%, var(--border));background:transparent;color:var(--red);border-radius:10px;padding:9px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;">Abort run</button>
+                <button onClick="{{ onResumeRun }}" style="display:inline-flex;align-items:center;gap:7px;border:none;background:var(--accent);color:#fff;border-radius:10px;padding:9px 18px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"/><path d="M13 6l6 6-6 6"/></svg>Resume with guidance</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noRun }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:14px;">Select a run, or trigger a workflow from the list</div>
+      </sc-if>
+    </main>
+  </div>
+  </sc-if>
+
+  <!-- ============ RUN-WORKFLOW DIALOG ============ -->
+  <sc-if value="{{ wfDialogOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ onWfCancel }}" style="position:fixed;inset:0;z-index:50;background:rgba(15,11,8,.55);display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px);">
+    <div onClick="{{ stop }}" style="width:520px;max-width:100%;max-height:90vh;overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 70px var(--shadow);animation:popIn .2s ease;">
+      <div style="padding:22px 24px 18px;border-bottom:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-faint);text-transform:uppercase;">Run workflow</div>
+        <div style="display:flex;align-items:center;gap:11px;margin-top:9px;">
+          <span style="{{ wfDialogDef.glyphWrap }}">{{ wfDialogDef.glyphEl }}</span>
+          <div style="min-width:0;">
+            <div style="font-size:16px;font-weight:700;letter-spacing:-.01em;">{{ wfDialogDef.name }}</div>
+          </div>
+        </div>
+        <div style="font-size:12.5px;color:var(--text-muted);line-height:1.5;margin-top:9px;">{{ wfDialogDef.desc }}</div>
+      </div>
+      <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
+        <sc-for list="{{ wfInputFields }}" as="f" hint-placeholder-count="1">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px;">{{ f.label }} <sc-if value="{{ f.required }}" hint-placeholder-val="{{ true }}"><span style="color:var(--red);font-weight:700;">*</span></sc-if></div>
+            <input value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.key }}" style="width:100%;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:10px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;" style-focus="border-color:var(--accent);" />
+          </div>
+        </sc-for>
+        <sc-if value="{{ wfNoInputs }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:12.5px;color:var(--text-faint);font-style:italic;">This workflow takes no inputs — just run it.</div>
+        </sc-if>
+      </div>
+      <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;">
+        <button onClick="{{ onWfCancel }}" style="border:1px solid var(--border);background:transparent;color:var(--text-muted);border-radius:10px;padding:10px 18px;font-weight:600;font-size:13.5px;cursor:pointer;" style-hover="color:var(--text);">Cancel</button>
+        <sc-if value="{{ wfCanRun }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ onWfRun }}" style="border:none;background:var(--accent);color:#fff;border-radius:10px;padding:10px 20px;font-weight:700;font-size:13.5px;cursor:pointer;display:flex;align-items:center;gap:7px;white-space:nowrap;"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 5l11 7-11 7z"/></svg>Run workflow</button>
+        </sc-if>
+        <sc-if value="{{ wfCannotRun }}" hint-placeholder-val="{{ false }}">
+          <button title="Fill in the required inputs first" style="border:1px solid var(--border);background:transparent;color:var(--text-faint);opacity:.65;border-radius:10px;padding:10px 20px;font-weight:700;font-size:13.5px;cursor:not-allowed;display:flex;align-items:center;gap:7px;white-space:nowrap;"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 5l11 7-11 7z"/></svg>Run workflow</button>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
   <!-- ============ START-WORK DIALOG ============ -->
   <sc-if value="{{ showDialog }}" hint-placeholder-val="{{ false }}">
   <div onClick="{{ onCancelDialog }}" style="position:fixed;inset:0;z-index:50;background:rgba(15,11,8,.55);display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px);">
@@ -700,8 +913,9 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { theme:'dark', dir:'C', selectedId:'wt2', dialogTaskId:null, dialogBranch:'', baseBranch:'main', dialogRepo:'acme-platform/api', highlightTaskId:null, toast:null,
-    selectedSession:'s1', nsOpen:false, nsAgent:'claude', nsCwd:null, nsCommand:'pwsh', nsFromTask:null, nsBrowse:false, settingsOpen:false, defaultShell:'pwsh', deleteConfirm:null, editAgent:null };
+  state = { theme:'dark', dir:'D', selectedId:'wt2', dialogTaskId:null, dialogBranch:'', baseBranch:'main', dialogRepo:'acme-platform/api', highlightTaskId:null, toast:null,
+    selectedSession:'s1', nsOpen:false, nsAgent:'claude', nsCwd:null, nsCommand:'pwsh', nsFromTask:null, nsBrowse:false, settingsOpen:false, defaultShell:'pwsh', deleteConfirm:null, editAgent:null,
+    selectedRun:'r1', wfDialogId:null, wfInput:{}, blockedGuidance:'' };
 
   get themes(){ return {
     dark:{'--bg':'#1a1815','--panel':'#221f1b','--panel-2':'#2a2621','--border':'#36312a','--border-strong':'#48413a','--text':'#efe9e0','--text-muted':'#a59c8e','--text-faint':'#6f685c','--accent':'#a78bfa','--accent-text':'#c4b0ff','--green':'#5cbd86','--amber':'#dca35e','--red':'#e08068','--blue':'#71a8e6','--shadow':'rgba(0,0,0,.45)'},
@@ -847,6 +1061,152 @@ class Component extends DCLogic {
       {k:'stopnote',t:'session stopped — worktree path no longer exists'}
     ];
     return []; }
+
+  get workflows(){ return [
+    {id:'review-pr',name:'Review PR',desc:'Create a worktree for a remote branch, fetch, gather the diff, and have an agent review it — then notify you with the findings.',inputs:[{key:'branch',label:'Remote branch',required:true}]},
+    {id:'implement-ticket',name:'Implement ticket',desc:'Walk each task on a ticket: create a worktree, have an agent implement it, and pause for you only when it hits a blocker.',inputs:[{key:'task',label:'ADO task id',required:true}]},
+    {id:'tidy-format',name:'Tidy & format',desc:'Run formatters and lint across a worktree; the run fails if lint does not pass.',inputs:[{key:'path',label:'Worktree path',required:false}]},
+    {id:'release-notes',broken:true,error:'SyntaxError: workflow.ts (14:7) — missing `run` export'}
+  ];}
+
+  get runs(){ return [
+    {id:'r1',wf:'implement-ticket',name:'Implement ticket',status:'blocked',when:'4m ago',session:'a3f1c8',inputs:[{k:'task',v:'#4821'}],steps:[
+      {kind:'ado',status:'done',label:'Fetch ticket #4821 and child tasks',dur:'0.6s',result:['#4821  Add OAuth refresh-token rotation','└ 3 child tasks queued:  #4822 · #4823 · #4824']},
+      {group:'Task 1 · #4822  rotateRefreshToken()',status:'done'},
+      {kind:'worktree',status:'done',indent:1,label:'Create worktree feature/4822-rotate-refresh-token',dur:'1.1s'},
+      {kind:'agent',agent:'claude',perm:'write',status:'done',indent:1,label:'Implement the task',dur:'52s',emit:'done',prompt:'Implement #4822 — add rotateRefreshToken() that issues a new token and revokes the previous one.',data:[['summary','added rotateRefreshToken() + reuse detection'],['filesTouched','4'],['testsPassed','true']]},
+      {group:'Task 2 · #4823  Persist rotation in token store',status:'blocked'},
+      {kind:'worktree',status:'done',indent:1,label:'Create worktree feature/4823-persist-rotation',dur:'0.9s'},
+      {kind:'agent',agent:'claude',perm:'write',status:'blocked',indent:1,label:'Implement the task',emit:'blocked',prompt:'Implement #4823 — persist rotation and reuse-detection in the token store.',question:'The migration would drop the legacy `refresh_tokens` table. Should I write a data migration to preserve existing tokens, or is dropping it acceptable in this environment?'},
+      {group:'Task 3 · #4824  Reuse-detection alerts',status:'pending'},
+      {kind:'agent',agent:'claude',perm:'write',status:'pending',indent:1,label:'Implement the task'},
+      {kind:'notify',status:'pending',label:'Notify a summary of all tasks'}
+    ]},
+    {id:'r2',wf:'review-pr',name:'Review PR',status:'running',when:'1m ago',session:'b7e0d4',inputs:[{k:'branch',v:'origin/feat/sso-token-leak'}],steps:[
+      {kind:'worktree',status:'done',label:'Create worktree from origin/feat/sso-token-leak',dur:'0.8s'},
+      {kind:'sh',status:'done',label:'git fetch origin',dur:'1.4s'},
+      {kind:'worktree',status:'done',label:'Read changed files',dur:'0.1s',result:['9 files changed','src/auth/session.ts · src/auth/token-store.ts · 7 more']},
+      {kind:'agent',agent:'claude',perm:'read',status:'running',label:'Review the diff',emit:'running',prompt:'Review the diff for correctness, security, and style. Report findings as structured data.',tail:['⏺ Reviewing 9 changed files for correctness and security…','   ⎿  Read src/auth/session.ts  (96 lines)','   ~  flags SameSite=None set without Secure on the SSO cookie']},
+      {kind:'notify',status:'pending',label:'Notify findings as a toast'}
+    ]},
+    {id:'r3',wf:'review-pr',name:'Review PR',status:'done',when:'2h ago',session:'c1a9f7',inputs:[{k:'branch',v:'origin/feat/csv-export'}],steps:[
+      {kind:'worktree',status:'done',label:'Create worktree from origin/feat/csv-export',dur:'0.7s'},
+      {kind:'sh',status:'done',label:'git fetch origin',dur:'1.2s'},
+      {kind:'worktree',status:'done',label:'Read changed files',dur:'0.1s',result:['3 files changed','src/reports/export-csv.ts · ReportsToolbar.tsx · 1 more']},
+      {kind:'agent',agent:'claude',perm:'read',status:'done',label:'Review the diff',dur:'1m 12s',emit:'done',prompt:'Review the diff for correctness, security, and style. Report findings as structured data.',data:[['severity','2 medium · 1 low'],['finding 1','no test for the CSV escaping of embedded commas'],['finding 2','exportToCsv() reads the whole result set into memory'],['finding 3','prefer const over let in ReportsToolbar.tsx']]},
+      {kind:'notify',status:'done',label:'Notify findings as a toast',dur:'0.0s',result:['toast sent: 3 findings on origin/feat/csv-export']}
+    ]},
+    {id:'r4',wf:'tidy-format',name:'Tidy & format',status:'failed',when:'3h ago',session:'',inputs:[{k:'path',v:'web'}],steps:[
+      {kind:'worktree',status:'done',label:'Resolve worktree web',dur:'0.1s'},
+      {kind:'sh',status:'done',label:'npm run format',dur:'2.1s'},
+      {kind:'sh',status:'failed',label:'npm run lint',dur:'3.4s',cmd:'npm run lint',out:['web:lint: ✖ 12 problems (12 errors, 0 warnings)','exit code 1']}
+    ]},
+    {id:'r5',wf:'implement-ticket',name:'Implement ticket',status:'cancelled',when:'5h ago',session:'',inputs:[{k:'task',v:'#5012'}],steps:[
+      {kind:'ado',status:'done',label:'Fetch ticket #5012 and child tasks',dur:'0.5s'},
+      {kind:'worktree',status:'done',label:'Create worktree feature/5012-dashboard-perf',dur:'1.0s'},
+      {kind:'agent',agent:'claude',perm:'write',status:'cancelled',label:'Implement the task'}
+    ]}
+  ];}
+
+  _wfGlyph(size){ const C=React.createElement; return C('svg',{width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:'var(--accent)',strokeWidth:1.8,strokeLinecap:'round',strokeLinejoin:'round'},[C('circle',{cx:6,cy:6,r:2,key:'a'}),C('circle',{cx:6,cy:18,r:2,key:'b'}),C('circle',{cx:18,cy:12,r:2,key:'c'}),C('path',{d:'M8 6h4a2 2 0 0 1 2 2v0a2 2 0 0 0 2 2',key:'d'}),C('path',{d:'M8 18h4a2 2 0 0 0 2-2v0a2 2 0 0 1 2-2',key:'e'})]); }
+
+  _workflowVals(){
+    const C=React.createElement; const S=this.state; const st=(s)=>this._st(s);
+    const runColors={running:'var(--blue)',blocked:'var(--amber)',done:'var(--green)',failed:'var(--red)',cancelled:'var(--text-faint)',pending:'var(--text-faint)'};
+    const runLabel={running:'running',blocked:'blocked',done:'done',failed:'failed',cancelled:'cancelled',pending:'pending'};
+    const kindMeta={sh:['var(--text-muted)','sh'],git:['var(--blue)','git'],worktree:['var(--accent)','worktree'],ado:['var(--green)','ado'],notify:['var(--amber)','notify'],ask:['var(--amber)','ask']};
+    const permMeta={read:['var(--blue)','read-only'],write:['var(--accent)','write'],bypass:['var(--red)','bypass']};
+    const pill=(c,fs,pad)=>'display:inline-flex;align-items:center;gap:6px;white-space:nowrap;padding:'+pad+';border-radius:20px;font-size:'+fs+';font-weight:700;background:color-mix(in oklab, '+c+' 15%, transparent);color:'+c+';';
+    const dot=(c,sz,anim)=>'flex:0 0 auto;display:inline-block;width:'+sz+';height:'+sz+';border-radius:50%;background:'+c+';'+(anim?'animation:pulse 1.8s ease-in-out infinite;':'');
+    const mono=(c,b)=>st("white-space:pre-wrap;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.6;color:"+c+';'+(b?'font-weight:600;':''));
+    const infer=(t)=>{ t=(t||'').replace(/^\s+/,''); const h=t.charAt(0); if(h==='+'||t.indexOf('✓')===0) return 'var(--green)'; if(h==='~') return 'var(--amber)'; if(h==='-'||t.indexOf('✖')===0||t.indexOf('✗')===0) return 'var(--red)'; if(t.indexOf('⎿')===0||t.indexOf('└')===0) return 'var(--text-faint)'; if(t.indexOf('⏺')===0||t.indexOf('●')===0) return 'var(--text)'; if(h==='$') return 'var(--text)'; if(h==='#') return 'var(--text)'; return 'var(--text-muted)'; };
+    const nodeIcon=(s)=>{ const c=runColors[s];
+      if(s==='done') return C('svg',{width:13,height:13,viewBox:'0 0 24 24',fill:'none',stroke:c,strokeWidth:2.6,strokeLinecap:'round',strokeLinejoin:'round'},C('path',{d:'M5 12l4 4 10-11'}));
+      if(s==='failed'||s==='cancelled') return C('svg',{width:11,height:11,viewBox:'0 0 24 24',fill:'none',stroke:c,strokeWidth:2.6,strokeLinecap:'round'},[C('path',{d:'M6 6l12 12',key:'a'}),C('path',{d:'M18 6L6 18',key:'b'})]);
+      if(s==='blocked') return C('span',{style:{color:c,fontWeight:800,fontSize:'14px',lineHeight:1}},'!');
+      if(s==='running') return C('span',{style:{width:'8px',height:'8px',borderRadius:'50%',background:c,display:'block'}});
+      return null; };
+    const nodeStyle=(s)=>{ const c=runColors[s]; const tint=s==='pending'?'transparent':'color-mix(in oklab, '+c+' 14%, transparent)'; const ring=s==='pending'?'var(--border-strong)':'color-mix(in oklab, '+c+' 40%, transparent)';
+      return st('width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:1;flex:0 0 auto;background:'+tint+';border:1px solid '+ring+';'+(s==='running'?'box-shadow:0 0 0 3px color-mix(in oklab, '+c+' 16%, transparent);animation:pulse 1.8s ease-in-out infinite;':'')); };
+    const connector=(f,l)=>st('position:absolute;left:12px;width:2px;background:var(--border);'+(f?'top:13px;':'top:0;')+(l?'bottom:13px;':'bottom:0;'));
+
+    const buildRows=(run)=>{ const flat=[]; run.steps.forEach(sp=>{ if(sp.group){ flat.push({type:'group',status:sp.status,label:sp.group,indent:0}); } else { flat.push(Object.assign({type:'step'},sp)); } });
+      return flat.map((r,idx)=>{ const isFirst=idx===0; const isLast=idx===flat.length-1;
+        const base={ isGroup:r.type==='group', isStep:r.type==='step', label:r.label,
+          nodeStyle:nodeStyle(r.status), nodeIcon:nodeIcon(r.status), connectorStyle:connector(isFirst,isLast),
+          rowStyle:st('display:flex;gap:12px;'+(r.indent?'margin-left:24px;':'')) };
+        if(r.type==='group'){ base.groupStatusLabel=runLabel[r.status]; base.groupPillStyle=st(pill(runColors[r.status],'10px','1px 9px')); return base; }
+        const km = r.kind==='agent' ? [this._agentColor(r.agent),'agent · '+r.agent] : (kindMeta[r.kind]||['var(--text-muted)',r.kind]);
+        base.kindLabel=km[1]; base.kindStyle=st('display:inline-flex;align-items:center;white-space:nowrap;flex:0 0 auto;padding:1px 7px;border-radius:6px;font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:600;background:color-mix(in oklab, '+km[0]+' 13%, transparent);color:'+km[0]+';');
+        base.dur=r.dur||''; base.hasDur=!!r.dur;
+        base.isAgent=false; base.hasPrompt=false; base.promptText=''; base.liveCaret=false; base.detailLines=[]; base.hasDetail=false;
+        base.detailBoxStyle=st('margin-top:9px;border:1px solid var(--border);background:var(--bg);border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;');
+        if(r.kind==='agent'){ base.isAgent=true; base.hasDetail=true; const ac=this._agentColor(r.agent); const pm=permMeta[r.perm]||['var(--text-muted)',r.perm];
+          base.agentMeta={ iconEl:this._agentIcon(r.agent,15), iconWrap:st('width:26px;height:26px;flex:0 0 auto;border-radius:8px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, '+ac+' 15%, transparent);'),
+            agentName:this._agentName(r.agent), permLabel:pm[1], permStyle:st('display:inline-flex;align-items:center;white-space:nowrap;padding:1px 8px;border-radius:20px;font-size:10px;font-weight:700;background:color-mix(in oklab, '+pm[0]+' 15%, transparent);color:'+pm[0]+';'),
+            emitLabel: r.emit==='done'?'emit_result · done':(r.emit==='blocked'?'emit_result · blocked':'running…'),
+            emitStyle: st('display:inline-flex;align-items:center;white-space:nowrap;flex:0 0 auto;padding:1px 8px;border-radius:20px;font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:700;background:color-mix(in oklab, '+(r.emit==='done'?'var(--green)':(r.emit==='blocked'?'var(--amber)':'var(--blue)'))+' 15%, transparent);color:'+(r.emit==='done'?'var(--green)':(r.emit==='blocked'?'var(--amber)':'var(--blue)'))+';') };
+          if(r.prompt){ base.hasPrompt=true; base.promptText='“'+r.prompt+'”'; }
+          if(r.emit==='done'){ base.detailLines=(r.data||[]).map(d=>({text:'• '+d[0]+'  '+d[1],style:mono('var(--text-muted)')})); }
+          else if(r.emit==='blocked'){ base.detailLines=[{text:'↳ reported a blocker — your input is needed below',style:mono('var(--amber)',true)}]; }
+          else { base.detailLines=(r.tail||[]).map(t=>({text:t,style:mono(infer(t))})); base.liveCaret=true; }
+        } else if(r.result){ base.hasDetail=true; base.detailLines=r.result.map(t=>({text:t,style:mono(infer(t))})); }
+        else if(r.status==='failed'&&r.cmd){ base.hasDetail=true; base.detailLines=[{text:'$ '+r.cmd,style:mono('var(--text)',true)}].concat((r.out||[]).map(t=>({text:t,style:mono(infer(t))}))); }
+        return base; });
+    };
+
+    const wfDefs=this.workflows.map(w=>{ const ok=!w.broken; const n=ok?(w.inputs||[]).length:0;
+      return { id:w.id, name:w.name, desc:w.desc, ok, broken:!!w.broken, error:w.error||'',
+        glyphEl:this._wfGlyph(16), glyphWrap:st('width:30px;height:30px;flex:0 0 auto;border-radius:9px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, var(--accent) 14%, transparent);'),
+        inputLabel: n===0?'no inputs':(n+' input'+(n===1?'':'s')),
+        cardStyle:st('box-sizing:border-box;border:1px solid '+(w.broken?'color-mix(in oklab, var(--red) 32%, var(--border))':'var(--border)')+';background:'+(w.broken?'color-mix(in oklab, var(--red) 5%, var(--panel))':'var(--panel)')+';border-radius:13px;padding:13px;'),
+        onRun:()=>this.setState({wfDialogId:w.id,wfInput:{}}) };
+    });
+
+    const runHistory=this.runs.map(r=>{ const sel=r.id===S.selectedRun; const c=runColors[r.status];
+      return { id:r.id, name:r.name, statusLabel:runLabel[r.status],
+        dot:st(dot(c,'8px',r.status==='running')), pill:st(pill(c,'10px','1px 9px')),
+        meta:(r.inputs||[]).map(i=>i.k+' '+i.v).join(' · ')+'   ·   '+r.when,
+        rowStyle:st('box-sizing:border-box;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;border:1px solid '+(sel?'var(--accent)':'var(--border)')+';background:'+(sel?'color-mix(in oklab, var(--accent) 9%, var(--panel))':'var(--panel)')+';border-radius:11px;padding:10px 12px;'+(sel?'box-shadow:inset 2px 0 0 var(--accent);':'')),
+        onSelect:()=>this.setState({selectedRun:r.id,blockedGuidance:''}) };
+    });
+
+    const ar=this.runs.find(x=>x.id===S.selectedRun)||this.runs[0];
+    let activeRun=null;
+    if(ar){ const c=runColors[ar.status]; const bl=ar.steps.find(sp=>!sp.group&&sp.emit==='blocked'); const fs=ar.steps.find(sp=>!sp.group&&sp.status==='failed');
+      activeRun={ name:ar.name, runId:ar.id.toUpperCase(), when:ar.when, session:ar.session||'',
+        glyphEl:this._wfGlyph(18), glyphWrap:st('width:34px;height:34px;flex:0 0 auto;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, var(--accent) 14%, transparent);'),
+        statusLabel:runLabel[ar.status], statusPill:st(pill(c,'12px','4px 11px')), statusDot:st(dot(c,'7px',ar.status==='running')),
+        inputs:(ar.inputs||[]).map(i=>({k:i.k,v:i.v})), noInputs:(ar.inputs||[]).length===0,
+        rows:buildRows(ar),
+        running:ar.status==='running', blocked:ar.status==='blocked', failed:ar.status==='failed', done:ar.status==='done', cancelled:ar.status==='cancelled',
+        canCancel:ar.status==='running'||ar.status==='blocked', canRerun:ar.status==='done'||ar.status==='failed'||ar.status==='cancelled',
+        question: bl?bl.question:'', failCmd: fs?("ctx.sh('"+fs.cmd+"') exited with code 1"):'' };
+    }
+
+    const wdef=S.wfDialogId?this.workflows.find(w=>w.id===S.wfDialogId):null;
+    let wfInputFields=[]; let wfCanRun=true;
+    if(wdef){ wfInputFields=(wdef.inputs||[]).map(inp=>({ key:inp.key, label:inp.label, required:!!inp.required,
+        value:(S.wfInput&&S.wfInput[inp.key])||'',
+        onChange:(e)=>{ const v=e.target.value; this.setState(s=>({wfInput:Object.assign({},s.wfInput,{[inp.key]:v})})); } }));
+      wfCanRun=(wdef.inputs||[]).every(inp=>!inp.required||(((S.wfInput&&S.wfInput[inp.key])||'').trim()!=='')); }
+    const wfDialogDef=wdef?{ name:wdef.name, desc:wdef.desc, glyphEl:this._wfGlyph(18), glyphWrap:st('width:34px;height:34px;flex:0 0 auto;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, var(--accent) 14%, transparent);'), noInputs:(wdef.inputs||[]).length===0 }:null;
+
+    return {
+      wfDefs, wfDefCount:this.workflows.filter(w=>!w.broken).length, runHistory,
+      activeRun, hasRun:!!activeRun, noRun:!activeRun,
+      onNewWorkflow:()=>this._toast('Scaffolded ~/.playground/workflows/new-workflow — opening in editor'),
+      onReloadWf:()=>this._toast('Rescanned ~/.playground/workflows — '+this.workflows.length+' found'),
+      onCancelRun:()=>this._toast('Cancelling run — killing the agent subprocess'),
+      onRerun:()=>this._toast('Re-running '+(ar?ar.name:'')),
+      onAbortRun:()=>this._toast('Run aborted'),
+      onResumeRun:()=>this._toast('Resuming the agent via --resume with your guidance'),
+      onWfGuidance:(e)=>this.setState({blockedGuidance:e.target.value}), blockedGuidance:S.blockedGuidance||'',
+      wfDialogOpen:!!wdef, wfDialogDef:wfDialogDef||{name:'',desc:'',noInputs:true}, wfInputFields, wfNoInputs:!!(wdef&&(wdef.inputs||[]).length===0), wfCanRun, wfCannotRun:!wfCanRun,
+      onWfCancel:()=>this.setState({wfDialogId:null}),
+      onWfRun:()=>{ const id=S.wfDialogId; const r=this.runs.find(x=>x.wf===id); this.setState({wfDialogId:null,selectedRun:r?r.id:S.selectedRun}); this._toast('Triggered '+(wdef?wdef.name:'workflow')); }
+    };
+  }
 
   renderVals(){
     const S=this.state; const isA=S.dir==='A'; const isB=S.dir==='B'; const isDark=S.theme==='dark'; const hl=S.highlightTaskId;
@@ -1040,9 +1400,10 @@ class Component extends DCLogic {
 
     return {
       appStyle,
-      isA,isB,isC,isDark,isLight:!isDark,
-      segA:st(isA?segOn:segOff), segB:st(isB?segOn:segOff), segC:st(isC?segOn:segOff),
-      setA:()=>this.setState({dir:'A'}), setB:()=>this.setState({dir:'B'}), setC:()=>this.setState({dir:'C'}),
+      isA,isB,isC,isD:S.dir==='D',isDark,isLight:!isDark,
+      segA:st(isA?segOn:segOff), segB:st(isB?segOn:segOff), segC:st(isC?segOn:segOff), segD:st(S.dir==='D'?segOn:segOff),
+      setA:()=>this.setState({dir:'A'}), setB:()=>this.setState({dir:'B'}), setC:()=>this.setState({dir:'C'}), setD:()=>this.setState({dir:'D'}),
+      ...this._workflowVals(),
       sessionCards, activeSession, hasActive:!!activeSession, runningCount, concurrencyWarn,
       onNewSession:()=>this._spawnSession({agent:'claude'}),
       openSettings:()=>this.setState({settingsOpen:true}),
