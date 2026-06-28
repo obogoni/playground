@@ -5,6 +5,7 @@ import type { AppConfig } from '../../../shared/config'
 import { DEFAULT_BRANCH_TEMPLATE } from '../../../shared/tasks'
 import { DEFAULT_WORKTREE_TEMPLATE } from '../../../shared/worktrees'
 import { api } from '../lib/api'
+import { applyAgentEdit } from '../lib/agent-registry'
 import { Icon } from './Icon'
 import './NewWorktreeDialog.css'
 import './SettingsDialog.css'
@@ -20,15 +21,19 @@ interface SettingsDialogProps {
 const COLOR_OPTIONS = ['--accent', '--blue', '--green', '--amber', '--red']
 
 interface AgentForm {
-  /** Index being edited, or -1 when adding a new agent. */
-  index: number
+  /**
+   * Stable key (the agent's original name) being edited, or null when adding a
+   * new agent. Keyed by name — not array index — so an edit survives concurrent
+   * list mutations (e.g. deleting another agent) without retargeting.
+   */
+  editKey: string | null
   name: string
   command: string
   args: string
   color: string
 }
 
-const EMPTY_FORM: Omit<AgentForm, 'index'> = {
+const EMPTY_FORM: Omit<AgentForm, 'editKey'> = {
   name: '',
   command: '',
   args: '',
@@ -90,15 +95,16 @@ export function SettingsDialog({
       args: form.args.trim().split(/\s+/).filter(Boolean),
       color: form.color
     }
-    const next =
-      form.index === -1 ? [...agents, def] : agents.map((a, i) => (i === form.index ? def : a))
-    persistAgents(next)
+    persistAgents(applyAgentEdit(agents, form.editKey, def))
     setForm(null)
   }
 
   const deleteAgent = (index: number): void => {
+    const removed = agents[index]
     persistAgents(agents.filter((_, i) => i !== index))
-    if (form && form.index === index) setForm(null)
+    // Close the form only if the agent being edited is the one removed; deleting
+    // a different agent must leave the open edit targeting its original agent.
+    if (form && removed && form.editKey === removed.name) setForm(null)
   }
 
   const save = (): void => {
@@ -197,7 +203,7 @@ export function SettingsDialog({
               <div className="dialog-field-label">Coding agents</div>
               <div className="set-agent-list">
                 {agents.map((agent, index) => (
-                  <div key={index} className="set-agent-row">
+                  <div key={agent.name} className="set-agent-row">
                     <span
                       className="set-agent-tile"
                       style={tileStyle(agent.color)}
@@ -215,7 +221,7 @@ export function SettingsDialog({
                       title="Edit agent"
                       onClick={() =>
                         setForm({
-                          index,
+                          editKey: agent.name,
                           name: agent.name,
                           command: agent.command,
                           args: agent.args.join(' '),
@@ -295,7 +301,7 @@ export function SettingsDialog({
                       disabled={!formValid}
                       onClick={commitForm}
                     >
-                      {form.index === -1 ? 'Add' : 'Save'} agent
+                      {form.editKey === null ? 'Add' : 'Save'} agent
                     </button>
                   </div>
                 </div>
@@ -303,7 +309,7 @@ export function SettingsDialog({
                 <button
                   type="button"
                   className="set-agent-add"
-                  onClick={() => setForm({ index: -1, ...EMPTY_FORM })}
+                  onClick={() => setForm({ editKey: null, ...EMPTY_FORM })}
                 >
                   <Icon name="plus" size={14} strokeWidth={2.2} /> Add agent
                 </button>
