@@ -1,0 +1,37 @@
+name: CI
+
+# Quality gate for every change. Release/nightly run the same gate only on a
+# tag/dispatch; this runs on every PR and push so regressions are caught before
+# merging into main.
+# Runner is windows-latest (AD-005, reversing AD-002): the worktree-manager
+# tests normalize paths to Windows backslashes (the app is Windows-only — only
+# --win is ever built), so the suite is OS-coupled and fails on ubuntu. Match
+# release/nightly, where the suite is known green.
+on:
+  pull_request:
+  push:
+
+# Least privilege: the gate only reads the repo to typecheck/lint/test — it
+# never publishes. (release.yml/nightly.yml need contents: write to publish.)
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Same gate as release/nightly: a red gate fails the check on the PR.
+      - name: Quality gate
+        run: npm run typecheck && npm run lint && npm test
