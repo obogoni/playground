@@ -14,11 +14,22 @@ Handoff snapshot.
 
 ## Handoff
 
-**In-flight:** Technical-debt batch (AD-001). Specs registered for all five features.
-Next action: execute `ci-pr-gate` (#1).
+**Status:** Technical-debt batch (AD-001) implemented. Each feature is committed on
+its own branch (PR-per-feature convention); none merged yet. Independent
+verification ran (standalone `validate.md` fallback): all PASS, discrimination
+sensor killed 3/3 mutations on the tested logic. See each feature's `validation.md`.
 
-- [ ] ci-pr-gate (#1)
-- [ ] agent-form-stable-key (#2)
-- [ ] app-hooks-extraction (#3)
-- [ ] ado-fetch-timeout (#9)
-- [ ] coverage-reporting (#12)
+**Next action:** open the five PRs (each body: `Closes #<n>` once synced via
+`tlc-to-issues`), then merge in order — `ci-pr-gate` first so the gate guards the
+rest; merge `coverage-reporting` after `ci-pr-gate` (it branches off it).
+
+| Feature | Branch | Commit | Verdict |
+| ------- | ------ | ------ | ------- |
+| ci-pr-gate (#1) | `feature/ci-pr-gate` | `a464391` | PASS (remote trigger pending first PR) |
+| agent-form-stable-key (#2) | `feature/agent-form-stable-key` | `c3dea60` | PASS |
+| app-hooks-extraction (#3) | `feature/app-hooks-extraction` | `570c2d7` | PASS (CDP smoke pending) |
+| ado-fetch-timeout (#9) | `feature/ado-fetch-timeout` | `04de856` | PASS |
+| coverage-reporting (#12) | `feature/coverage-reporting` (off #1) | `cf422c5` | PASS (report-only) |
+
+**Open follow-ups (not in this batch):** 3 pre-existing transitive dev advisories
+(esbuild/form-data/undici) surfaced during the coverage install — candidate debt item.
