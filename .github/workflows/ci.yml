@@ -35,3 +35,10 @@ jobs:
       # Same gate as release/nightly: a red gate fails the check on the PR.
       - name: Quality gate
         run: npm run typecheck && npm run lint && npm test
+
+      # Coverage is report-only (AD-003): surfaced in the log to spot
+      # under-tested logic modules, never blocking the merge. continue-on-error
+      # makes the non-blocking guarantee explicit even if the report step errors.
+      - name: Coverage (report-only)
+        continue-on-error: true
+        run: npm run test:coverage
