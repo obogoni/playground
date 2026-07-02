@@ -56,6 +56,13 @@ export interface CreateWorktreeResult {
   path?: string
   /** Human-readable failure message, present when ok is false. */
   error?: string
+  /**
+   * Set (with `ok: false` and no `error`) when a local branch of the requested
+   * name already exists and the caller must choose to reuse or recreate it
+   * (EXB-05). Distinct from an ordinary failure: the renderer prompts instead of
+   * showing an error.
+   */
+  conflict?: 'branch-exists'
 }
 
 /** Result of worktrees:remove — failures (guards included) are returned, never thrown. */

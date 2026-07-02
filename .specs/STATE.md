@@ -15,27 +15,34 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status:** Technical-debt batch (AD-001) **COMPLETE** — all five PRs merged to `main`.
-Independent verification ran (standalone `validate.md` fallback): all PASS,
-discrimination sensor killed 3/3 mutations on the tested logic. The PR gate
-(`ci.yml`, windows-latest per AD-005) ran green on every feature before merge.
+**Status:** Feature `worktree-existing-branch` (reuse/recreate an existing branch
+on worktree create) **COMPLETE — PR [#62](https://github.com/obogoni/playground/pull/62)
+open** on branch `feature/worktree-existing-branch`, awaiting review/merge. Design
+resolved via grill-me; spec at `.specs/features/worktree-existing-branch/spec.md`.
 
-| Feature | PR | Merge | Notes |
-| ------- | -- | ----- | ----- |
-| ci-pr-gate (#1) | #57 | merged | gate now active on `main` |
-| agent-form-stable-key (#2) | #58 | merged (admin) | — |
-| app-hooks-extraction (#3) | #59 | merged | CDP smoke parity still owner-run |
-| ado-fetch-timeout (#9) | #60 | merged | — |
-| coverage-reporting (#12) | #61 | merged (admin) | report-only |
+Independent Verifier ran (fresh sub-agent, author ≠ verifier): **PASS** — 10/10
+ACs traced to `file:line`, gate 67 passed / 0 failed (typecheck + lint 0 errors +
+`worktree-manager.test.ts`), discrimination sensor 3/3 mutants killed. Report at
+`.specs/features/worktree-existing-branch/validation.md`. One Verifier gap
+(recreate re-invoke vs checked-out branch) closed with an added test post-report.
 
-**Merge note:** `main` has a ruleset (`copilot_code_review`, `non_fast_forward`,
-`deletion`). The CI `gate` is **not** a required status check; merges are gated by
-the Copilot-review rule, which BLOCKs after a force-push (`review_on_push:false`
-won't re-review the new head) — #58/#61 needed `gh pr merge --admin` to complete.
+**Commits on the branch (4):**
+| Commit | What |
+| ------ | ---- |
+| 8ba68c6 | docs(specs): spec |
+| 106605e | feat: backend pre-flight detect + reuse/recreate modes + IPC (EXB-01..05, EXB-D8) |
+| a558933 | feat: inline `<BranchExistsChoice>` in both create dialogs (EXB-06) |
+| (latest) | test: recreate re-invoke vs checked-out branch (gap close) |
 
-**Open follow-ups (not in this batch):**
-- 3 pre-existing transitive dev advisories (esbuild/form-data/undici) surfaced
-  during the coverage install — candidate debt item.
+**Next step:** address PR #62 review, then merge. The PR body carries **no**
+`Closes #<n>` — this feature was not synced to a GitHub issue via `tlc-to-issues`
+(no issue exists). Renderer UI (`BranchExistsChoice`) has no unit tests by
+convention (AD-004) — visual/CDP hand-verify is owner-run.
+
+**Merge note (unchanged):** `main` ruleset (`copilot_code_review`,
+`non_fast_forward`, `deletion`); CI `gate` is not a required check; a force-push
+BLOCKs the Copilot review → needs `gh pr merge --admin`.
+
+**Open follow-ups (older, not in this feature):**
+- 3 pre-existing transitive dev advisories (esbuild/form-data/undici) — candidate debt.
 - App.tsx refactor remainder: `useTasks` / `useConfig` extraction (deferred, AD-004).
-- Specs were never synced to GitHub issues (`tlc-to-issues`); PRs merged without
-  `Closes #n`.

@@ -4,6 +4,7 @@ import type { WorkspaceNode } from '../../../shared/tree'
 import { worktreePathFor } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { defaultBaseFor, repoOptionsOf } from '../lib/repo-options'
+import { BranchExistsChoice } from './BranchExistsChoice'
 import { Icon } from './Icon'
 import './NewWorktreeDialog.css'
 
@@ -36,6 +37,9 @@ export function NewWorktreeDialog({
   const [updateBase, setUpdateBase] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Set when create reports the branch already exists — swaps the footer for the
+  // reuse/recreate choice (EXB-06).
+  const [conflict, setConflict] = useState<'branch-exists' | null>(null)
 
   const repoOptions = repoOptionsOf(tree)
   const selectedRepo = repoOptions.find((r) => r.path === repoPath)
@@ -68,7 +72,12 @@ export function NewWorktreeDialog({
     setError(null)
   }
 
-  const create = (): void => {
+  // Single create path: the first click sends no mode and may come back with a
+  // branch-exists conflict; the reuse/recreate buttons re-invoke with a mode,
+  // which never re-prompts (EXB-06).
+  const submit = (onExisting?: 'reuse' | 'recreate'): void => {
+    setError(null)
+    setConflict(null)
     setBusy(true)
     api
       .invoke('worktrees:create', {
@@ -77,15 +86,21 @@ export function NewWorktreeDialog({
         // Empty base falls back to checking out `branch` as an existing branch.
         baseBranch: baseBranch.trim() || undefined,
         worktreeTemplate: effectiveWorktreeTemplate,
-        updateBase
+        updateBase,
+        onExisting
       })
       .then((result) => {
         if (result.ok && result.path) {
           onCreated(result.path)
-        } else {
-          setError(result.error ?? 'Worktree creation failed')
-          setBusy(false)
+          return
         }
+        if (!onExisting && result.conflict === 'branch-exists') {
+          setConflict('branch-exists')
+          setBusy(false)
+          return
+        }
+        setError(result.error ?? 'Worktree creation failed')
+        setBusy(false)
       })
       .catch((err) => {
         setError(String(err))
@@ -172,20 +187,30 @@ export function NewWorktreeDialog({
             </div>
           )}
         </div>
-        <footer className="dialog-footer">
-          <button type="button" className="dialog-btn-ghost" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="dialog-btn-primary"
-            disabled={!canCreate}
-            onClick={create}
-          >
-            <Icon name="plus" size={15} strokeWidth={2.2} />
-            Create worktree
-          </button>
-        </footer>
+        {conflict ? (
+          <BranchExistsChoice
+            branch={branch}
+            busy={busy}
+            onReuse={() => submit('reuse')}
+            onRecreate={() => submit('recreate')}
+            onCancel={() => setConflict(null)}
+          />
+        ) : (
+          <footer className="dialog-footer">
+            <button type="button" className="dialog-btn-ghost" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="dialog-btn-primary"
+              disabled={!canCreate}
+              onClick={() => submit()}
+            >
+              <Icon name="plus" size={15} strokeWidth={2.2} />
+              Create worktree
+            </button>
+          </footer>
+        )}
       </div>
     </div>
   )

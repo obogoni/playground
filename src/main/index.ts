@@ -100,8 +100,10 @@ app.whenReady().then(() => {
   handle('workspaces:remove', ({ id }) => registry.remove(id))
   handle('workspaces:templates', ({ workspacePath }) => workspaceTemplates(workspacePath))
   handle('tree:get', () => buildTree(registry))
-  handle('worktrees:create', ({ repoPath, branch, baseBranch, worktreeTemplate, updateBase }) =>
-    createWorktree(repoPath, branch, baseBranch, worktreeTemplate, updateBase)
+  handle(
+    'worktrees:create',
+    ({ repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting }) =>
+      createWorktree(repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting)
   )
   handle('worktrees:remove', ({ repoPath, worktreePath, force }) =>
     removeWorktree(repoPath, worktreePath, { force })
