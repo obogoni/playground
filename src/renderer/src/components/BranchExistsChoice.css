@@ -1,0 +1,61 @@
+/* Inline branch-name collision resolver (EXB-06) — lives in the dialog footer region. */
+
+.branch-exists {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.branch-exists-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.branch-exists-msg code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent-text);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+
+.branch-exists-note {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  padding-left: 22px;
+}
+
+.branch-exists-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dialog-btn-danger {
+  border: 1px solid var(--red);
+  background: transparent;
+  color: var(--red);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-weight: 700;
+  font-size: 13.5px;
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+
+.dialog-btn-danger:hover {
+  background: color-mix(in oklab, var(--red) 12%, transparent);
+}
+
+.dialog-btn-danger:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
