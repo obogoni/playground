@@ -39,7 +39,7 @@
   flex-wrap: wrap;
 }
 
-.dialog-btn-danger {
+.branch-exists-btn-danger {
   border: 1px solid var(--red);
   background: transparent;
   color: var(--red);
@@ -51,11 +51,11 @@
   transition: background 0.12s;
 }
 
-.dialog-btn-danger:hover {
+.branch-exists-btn-danger:hover {
   background: color-mix(in oklab, var(--red) 12%, transparent);
 }
 
-.dialog-btn-danger:disabled {
+.branch-exists-btn-danger:disabled {
   opacity: 0.45;
   cursor: default;
 }

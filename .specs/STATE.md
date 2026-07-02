@@ -16,9 +16,9 @@ Handoff snapshot.
 ## Handoff
 
 **Status:** Feature `worktree-existing-branch` (reuse/recreate an existing branch
-on worktree create) **COMPLETE on branch `feature/worktree-existing-branch`** —
-not yet pushed / no PR. Design resolved via grill-me; spec at
-`.specs/features/worktree-existing-branch/spec.md`.
+on worktree create) **COMPLETE — PR [#62](https://github.com/obogoni/playground/pull/62)
+open** on branch `feature/worktree-existing-branch`, awaiting review/merge. Design
+resolved via grill-me; spec at `.specs/features/worktree-existing-branch/spec.md`.
 
 Independent Verifier ran (fresh sub-agent, author ≠ verifier): **PASS** — 10/10
 ACs traced to `file:line`, gate 67 passed / 0 failed (typecheck + lint 0 errors +
@@ -34,9 +34,9 @@ ACs traced to `file:line`, gate 67 passed / 0 failed (typecheck + lint 0 errors 
 | a558933 | feat: inline `<BranchExistsChoice>` in both create dialogs (EXB-06) |
 | (latest) | test: recreate re-invoke vs checked-out branch (gap close) |
 
-**Next step:** push branch + open PR. Per repo convention, put `Closes #<n>` in the
-PR body — but this feature was **not** synced to a GitHub issue via `tlc-to-issues`
-(no issue exists yet). Renderer UI (`BranchExistsChoice`) has no unit tests by
+**Next step:** address PR #62 review, then merge. The PR body carries **no**
+`Closes #<n>` — this feature was not synced to a GitHub issue via `tlc-to-issues`
+(no issue exists). Renderer UI (`BranchExistsChoice`) has no unit tests by
 convention (AD-004) — visual/CDP hand-verify is owner-run.
 
 **Merge note (unchanged):** `main` ruleset (`copilot_code_review`,

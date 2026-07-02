@@ -79,5 +79,3 @@ Ordinary errors (including EXB-04's checked-out-elsewhere) still render in the e
 | EXB-05 | `src/shared/ipc-contract.ts`, `src/shared/worktrees.ts` (`CreateWorktreeResult.conflict`), `src/main/index.ts` |
 | EXB-06 | `src/renderer/src/components/BranchExistsChoice.tsx` (new, shared), `NewWorktreeDialog.tsx`, `StartWorkDialog.tsx` (+ CSS) |
 | Unit | `src/main/worktree-manager.test.ts` |
-</content>
-</invoke>

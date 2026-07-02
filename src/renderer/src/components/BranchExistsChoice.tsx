@@ -40,7 +40,12 @@ export function BranchExistsChoice({
         <button type="button" className="dialog-btn-ghost" onClick={onCancel} disabled={busy}>
           Cancel
         </button>
-        <button type="button" className="dialog-btn-danger" onClick={onRecreate} disabled={busy}>
+        <button
+          type="button"
+          className="branch-exists-btn-danger"
+          onClick={onRecreate}
+          disabled={busy}
+        >
           Delete &amp; recreate
         </button>
         <button
