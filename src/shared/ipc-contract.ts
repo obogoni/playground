@@ -16,6 +16,8 @@ import type { ChangedFile, CreateWorktreeResult, RemoveWorktreeResult } from './
  * shapes fail typecheck at the call site.
  */
 export interface IpcContract {
+  /** The running app's version (electron `app.getVersion()`), shown as the TopBar version tag. */
+  'app:version': { req: void; res: string }
   'config:get': { req: void; res: AppConfig }
   'config:patch': { req: ConfigPatch; res: AppConfig }
   /** Opens a native folder picker in main; null when cancelled or already registered. */

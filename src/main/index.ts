@@ -84,6 +84,8 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  handle('app:version', () => app.getVersion())
+
   const configStore = new ConfigStore(app.getPath('userData'))
   handle('config:get', () => configStore.get())
   handle('config:patch', (patch) => configStore.patch(patch))
