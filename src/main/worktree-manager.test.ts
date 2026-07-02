@@ -411,6 +411,20 @@ describe('createWorktree — existing branch (EXB)', () => {
     expect(result.error).toContain(live)
   })
 
+  it('blocks a recreate re-invoke against a branch checked out elsewhere', async () => {
+    const live = join(root, 'repo-live')
+    git(repo, 'worktree', 'add', live, '-b', 'feature/live')
+    const tipBefore = git(repo, 'rev-parse', 'feature/live').trim()
+
+    const result = await createWorktree(repo, 'feature/live', 'main', undefined, false, 'recreate')
+
+    expect(result.ok).toBe(false)
+    expect(result.conflict).toBeUndefined()
+    expect(result.error).toContain(live)
+    // The host guard runs before the force-delete — the branch is never touched.
+    expect(git(repo, 'rev-parse', 'feature/live').trim()).toBe(tipBefore)
+  })
+
   it('short-circuits on target-path collision before the branch check', async () => {
     branchAhead('feature/dupe', 'branch-work')
     mkdirSync(join(root, 'repo-feature-dupe'))
