@@ -318,6 +318,112 @@ describe('createWorktree', () => {
   })
 })
 
+describe('createWorktree — existing branch (EXB)', () => {
+  let root: string
+  let repo: string
+
+  beforeEach(() => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-exb-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  const headOf = (ref: string): string => git(repo, 'rev-parse', ref).trim()
+
+  /** Create `branch` ahead of main with distinct a.txt content, leaving main checked out. */
+  const branchAhead = (branch: string, content: string): void => {
+    git(repo, 'checkout', '-b', branch)
+    writeFileSync(join(repo, 'a.txt'), content, 'utf8')
+    git(repo, 'commit', '-am', `work on ${branch}`)
+    git(repo, 'checkout', 'main')
+  }
+
+  it('signals a conflict and mutates nothing when the branch already exists', async () => {
+    branchAhead('feature/dupe', 'branch-work')
+    const tipBefore = headOf('feature/dupe')
+
+    const result = await createWorktree(repo, 'feature/dupe', 'main')
+
+    expect(result).toEqual({ ok: false, conflict: 'branch-exists' })
+    expect(result.error).toBeUndefined()
+    // No worktree created, branch tip untouched.
+    expect(existsSync(join(root, 'repo-feature-dupe'))).toBe(false)
+    expect(await listWorktrees(repo)).toHaveLength(1)
+    expect(headOf('feature/dupe')).toBe(tipBefore)
+  })
+
+  it('reuse checks out the existing branch at its own tip, ignoring the base', async () => {
+    branchAhead('feature/reuse', 'reuse-content')
+
+    const result = await createWorktree(repo, 'feature/reuse', 'main', undefined, false, 'reuse')
+
+    expect(result.ok).toBe(true)
+    // The worktree carries the existing branch's commit — not main's 'one'.
+    expect(readFileSync(join(result.path!, 'a.txt'), 'utf8')).toBe('reuse-content')
+    const listed = (await listWorktrees(repo)).find((w) => w.path === result.path)
+    expect(listed?.branch).toBe('feature/reuse')
+  })
+
+  it('recreate force-deletes the branch and recuts it from the base tip', async () => {
+    branchAhead('feature/re', 'stale-work')
+    const oldTip = headOf('feature/re')
+
+    const result = await createWorktree(repo, 'feature/re', 'main', undefined, false, 'recreate')
+
+    expect(result.ok).toBe(true)
+    // Recut from main: main's content, and the branch now points at main's tip…
+    expect(readFileSync(join(result.path!, 'a.txt'), 'utf8')).toBe('one')
+    expect(headOf('feature/re')).toBe(headOf('main'))
+    // …the old branch's unique commit is gone.
+    expect(headOf('feature/re')).not.toBe(oldTip)
+  })
+
+  it('blocks with an error naming the host when the branch is checked out elsewhere', async () => {
+    const live = join(root, 'repo-live')
+    git(repo, 'worktree', 'add', live, '-b', 'feature/live')
+
+    const result = await createWorktree(repo, 'feature/live', 'main')
+
+    expect(result.ok).toBe(false)
+    expect(result.conflict).toBeUndefined()
+    expect(result.error).toContain(live)
+    expect(existsSync(join(root, 'repo-feature-live'))).toBe(false)
+  })
+
+  it('blocks a reuse re-invoke against a branch checked out elsewhere', async () => {
+    const live = join(root, 'repo-live')
+    git(repo, 'worktree', 'add', live, '-b', 'feature/live')
+
+    const result = await createWorktree(repo, 'feature/live', 'main', undefined, false, 'reuse')
+
+    expect(result.ok).toBe(false)
+    expect(result.conflict).toBeUndefined()
+    expect(result.error).toContain(live)
+  })
+
+  it('short-circuits on target-path collision before the branch check', async () => {
+    branchAhead('feature/dupe', 'branch-work')
+    mkdirSync(join(root, 'repo-feature-dupe'))
+
+    const result = await createWorktree(repo, 'feature/dupe', 'main')
+
+    // The path guard wins over the branch-exists signal (ordering).
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/exists/i)
+    expect(result.conflict).toBeUndefined()
+  })
+})
+
 describe('createWorktree — base refresh (WBR)', () => {
   // These exercises clone real repos over local paths; under full-suite parallel
   // load the default 5s test / 10s hook timeouts are too tight (clones get
@@ -454,6 +560,40 @@ describe('createWorktree — base refresh (WBR)', () => {
     const result = await createWorktree(repo, 'chore', undefined, undefined, true)
 
     expect(result.ok).toBe(true)
+  })
+
+  it('recreate refreshes the base first, then recuts the branch from the remote tip', async () => {
+    // An existing branch with its own commit; the remote advances past local main.
+    git(repo, 'checkout', '-b', 'feature/re')
+    writeFileSync(join(repo, 'a.txt'), 'stale', 'utf8')
+    git(repo, 'commit', '-am', 'stale work')
+    git(repo, 'checkout', 'main')
+    advanceRemote('main', 'two')
+
+    const result = await createWorktree(repo, 'feature/re', 'main', undefined, true, 'recreate')
+
+    expect(result.ok).toBe(true)
+    // Base refreshed to the remote tip…
+    expect(headOf(repo, 'main')).toBe(headOf(repo, 'origin/main'))
+    // …and the recut branch carries the refreshed content, not the stale branch work.
+    expect(readFileSync(join(result.path!, 'a.txt'), 'utf8')).toBe('two')
+  })
+
+  it('recreate preserves the branch when the pre-delete base refresh fails', async () => {
+    // Local main diverges from its remote so the refresh can't fast-forward.
+    writeFileSync(join(repo, 'a.txt'), 'local', 'utf8')
+    git(repo, 'commit', '-am', 'local change')
+    advanceRemote('main', 'remote')
+    git(repo, 'branch', 'feature/re')
+    const tipBefore = headOf(repo, 'feature/re')
+
+    const result = await createWorktree(repo, 'feature/re', 'main', undefined, true, 'recreate')
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/diverged|fast-forward/i)
+    // EXB-D8: a preliminary-step failure must not destroy the branch.
+    expect(headOf(repo, 'feature/re')).toBe(tipBefore)
+    expect(existsSync(join(root, 'repo-feature-re'))).toBe(false)
   })
 })
 

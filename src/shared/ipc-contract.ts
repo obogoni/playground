@@ -36,6 +36,12 @@ export interface IpcContract {
       worktreeTemplate?: string
       /** Fast-forward the local base from its remote upstream first (WBR-01); absent = off. */
       updateBase?: boolean
+      /**
+       * How to handle a pre-existing branch of the same name (EXB-05): absent =
+       * detect and return `conflict: 'branch-exists'`; `reuse` = check it out
+       * as-is; `recreate` = force-delete and recut from base.
+       */
+      onExisting?: 'reuse' | 'recreate'
     }
     res: CreateWorktreeResult
   }

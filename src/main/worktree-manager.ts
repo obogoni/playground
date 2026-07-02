@@ -57,14 +57,25 @@ export async function listWorktrees(repoPath: string): Promise<WorktreeNode[]> {
  * `-b <branch> <base>`; without: checks out the existing branch. When
  * `updateBase` is set and a base is given, the local base is first
  * fast-forwarded to its remote upstream (WBR-01) — a refresh failure blocks the
- * create (WBR-02). Failures are returned (dialog shows them inline), never thrown.
+ * create (WBR-02).
+ *
+ * On the new-branch-from-base path, a **pre-existing local branch** of the same
+ * name is a collision (EXB-01): with no `onExisting` mode the create makes
+ * nothing and returns `{ ok: false, conflict: 'branch-exists' }` for the dialog
+ * to resolve; `onExisting: 'reuse'` checks the existing branch out as-is
+ * (EXB-02, base/updateBase ignored); `onExisting: 'recreate'` force-deletes it
+ * and recuts from base (EXB-03), refreshing the base *before* the delete so a
+ * refresh failure never destroys the branch (EXB-D8). A branch already checked
+ * out in another worktree blocks both (EXB-04). Failures are returned (dialog
+ * shows them inline), never thrown.
  */
 export async function createWorktree(
   repoPath: string,
   branch: string,
   baseBranch?: string,
   worktreeTemplate?: string,
-  updateBase?: boolean
+  updateBase?: boolean,
+  onExisting?: 'reuse' | 'recreate'
 ): Promise<CreateWorktreeResult> {
   if (worktreeNameFor(repoPath, branch, worktreeTemplate) === '') {
     return {
@@ -76,6 +87,15 @@ export async function createWorktree(
   if (existsSync(target)) {
     return { ok: false, error: `Target path already exists: ${target}` }
   }
+  // Existing-branch handling only applies to the new-branch-from-base path; the
+  // empty-base call already means "check out the existing branch" (EXB-D2).
+  if (baseBranch && (await branchExists(repoPath, branch))) {
+    const conflict = await resolveExistingBranch(repoPath, branch, baseBranch, target, {
+      updateBase,
+      onExisting
+    })
+    if (conflict) return conflict
+  }
   // Refresh the base from its remote before cutting the branch (WBR-01/02). Only
   // meaningful on the new-branch-from-base path; the existing-branch checkout
   // (empty base) has nothing to refresh (WBR-D4).
@@ -86,6 +106,67 @@ export async function createWorktree(
   const args = baseBranch
     ? ['worktree', 'add', target, '-b', branch, baseBranch]
     : ['worktree', 'add', target, branch]
+  return addWorktree(repoPath, args, target)
+}
+
+/**
+ * The existing-branch fork (EXB-01..04). Returns the result that ends the create
+ * (a conflict signal, an error, or a completed reuse/recreate), or `null` to let
+ * the caller fall through to the normal new-branch-from-base path (only reached
+ * when the branch existed but has since been resolved — currently never null on
+ * this path, kept as the "not my concern" signal for readability).
+ */
+async function resolveExistingBranch(
+  repoPath: string,
+  branch: string,
+  baseBranch: string,
+  target: string,
+  opts: { updateBase?: boolean; onExisting?: 'reuse' | 'recreate' }
+): Promise<CreateWorktreeResult | null> {
+  // Neither reuse nor recreate can run while the branch is live in another
+  // worktree — git refuses the checkout and the delete alike (EXB-04).
+  const hosting = await worktreeHosting(repoPath, branch)
+  if (hosting) {
+    return { ok: false, error: `Branch "${branch}" is already checked out at ${hosting}.` }
+  }
+  if (!opts.onExisting) {
+    // Make nothing; let the renderer choose reuse vs recreate (EXB-01/EXB-05).
+    return { ok: false, conflict: 'branch-exists' }
+  }
+  if (opts.onExisting === 'reuse') {
+    // Check the existing branch out at its current tip; base/updateBase ignored (EXB-02).
+    return addWorktree(repoPath, ['worktree', 'add', target, branch], target)
+  }
+  // recreate: refresh the base first so a refresh failure can't orphan the
+  // branch we are about to delete (EXB-03/EXB-D8), then force-delete and recut.
+  if (opts.updateBase) {
+    const refreshed = await refreshBaseFromRemote(repoPath, baseBranch)
+    if (!refreshed.ok) return refreshed
+  }
+  try {
+    await git(repoPath, ['branch', '-D', branch])
+  } catch (err) {
+    return { ok: false, error: gitFailureLine(err) }
+  }
+  return addWorktree(repoPath, ['worktree', 'add', target, '-b', branch, baseBranch], target)
+}
+
+/** Whether a local branch of this name exists (`rev-parse --verify` exits 0). */
+async function branchExists(repoPath: string, branch: string): Promise<boolean> {
+  try {
+    await git(repoPath, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`])
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Run `git worktree add` and shape the result; the one place the add is issued. */
+async function addWorktree(
+  repoPath: string,
+  args: string[],
+  target: string
+): Promise<CreateWorktreeResult> {
   try {
     await git(repoPath, args)
     return { ok: true, path: target }
