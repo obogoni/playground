@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
+import type { IpcEvent, IpcEvents } from '../shared/ipc-contract'
 import type { RunStatus, StepEvent, WorkflowDef, WorkflowRun } from '../shared/workflows'
 import { initialRun, reduce } from './run-state'
 import { CancellationError, makeCtx, type CtxDeps, type CtxRuntime } from './workflow-ctx'
@@ -7,22 +8,12 @@ import type { LoadedWorkflow } from './workflow-loader'
 import type { WorkflowRunStore } from './workflow-run-store'
 
 /**
- * The `workflow:*` push events the manager streams main→renderer. Declared
- * locally so T8 stays typecheck-clean before T9 folds these into the real
- * `IpcEvents` contract (`src/shared/ipc-contract.ts`); the shapes match the
- * design's IPC surface exactly, so the real `EmitFn` remains assignable here.
+ * Typed main→renderer push, bound to the live window's webContents by index.ts.
+ * The manager only emits the `workflow:*` channels, but typing against the whole
+ * shared `IpcEvents` map keeps it assignable from the one `emitToWindow` the app
+ * shares with `SessionManager` (mirrors `session-manager.ts`'s `EmitFn`).
  */
-interface WorkflowIpcEvents {
-  'workflow:status': { runId: string; status: RunStatus }
-  'workflow:step': { runId: string; step: StepEvent }
-  'workflow:log': { runId: string; message: string; group?: string }
-}
-
-/** Typed main→renderer push, compatible with the shared `EmitFn` (T9 wires the real one). */
-export type EmitFn = <E extends keyof WorkflowIpcEvents>(
-  channel: E,
-  payload: WorkflowIpcEvents[E]
-) => void
+export type EmitFn = <E extends IpcEvent>(channel: E, payload: IpcEvents[E]) => void
 
 /** The loader seam — the two `workflow-loader` functions, injected so tests use fakes. */
 export interface WorkflowLoader {
