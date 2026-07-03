@@ -67,7 +67,10 @@ export function TopBar({
     api
       .invoke('app:version')
       .then((v) => live && setVersion(v))
-      .catch(() => {})
+      // api.invoke already tags the error with the channel; surface it so a
+      // broken preload bridge / unregistered channel is diagnosable rather than
+      // just a silently missing tag.
+      .catch((err) => console.error(err))
     return () => {
       live = false
     }
