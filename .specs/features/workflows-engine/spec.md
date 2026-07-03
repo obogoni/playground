@@ -276,28 +276,28 @@ Every ambiguity is resolved or recorded here — nothing left silently unclear.
 
 ## Requirement Traceability
 
-| Requirement | Story (PRD US) | Priority | Phase | Status |
+| Requirement | Story (PRD US) | Priority | Task | Status |
 | --- | --- | --- | --- | --- |
-| WF2-01 | US 2,3,8 | P1/P2(reload) | Design | Pending |
-| WF2-02 | US 4,5 | P1 | Design | Pending |
-| WF2-03 | US 7 | P2 | Design | Pending |
-| WF2-04 | US 4,9 | P2 | Design | Pending |
-| WF2-05 | US 10,14 | P1(create)/P2(changed) | Design | Pending |
-| WF2-06 | US 11,12,13 | P1/P2(allowFail) | Design | Pending |
-| WF2-07 | US 11 | P1 | Design | Pending |
-| WF2-08 | US 15 | P2 | Design | Pending |
-| WF2-09 | US 22 | P1 | Design | Pending |
-| WF2-10 | US 28,29,30 | P1/P3(step) | Design | Pending |
-| WF2-11 | US 9 | P1 | Design | Pending |
-| WF2-12 | US 28,36 | P1 | Design | Pending |
-| WF2-13 | US 34,35,42 | P1 | Design | Pending |
-| WF2-14 | US 31 | P2 | Design | Pending |
-| WF2-15 | US 36 | P1 | Design | Pending |
-| WF2-16 | US 40 | P1 | Design | Pending |
-| WF2-17 | US 39 | P1 | Design | Pending |
-| WF2-18 | US 42 | P1 | Design | Pending |
-| WF2-19 | (types) | P1 | Design | Pending |
-| WF2-20 | (gate) | P1 | Design | Pending |
+| WF2-01 | US 2,3,8 | P1/P2(reload) | T5,T8 | ✅ Done (tested) |
+| WF2-02 | US 4,5 | P1 | T5 | ✅ Done (tested) |
+| WF2-03 | US 7 | P2 | T5,T8 | ✅ Done (tested) |
+| WF2-04 | US 4,9 | P2 | T1,T5 | ✅ Done (tested) |
+| WF2-05 | US 10,14 | P1(create)/P2(changed) | T7 | ✅ Done (tested) |
+| WF2-06 | US 11,12,13 | P1/P2(allowFail) | T7 | ✅ Done (tested) |
+| WF2-07 | US 11 | P1 | T7,T9 | ✅ Done (tested) |
+| WF2-08 | US 15 | P2 | T6,T7 | ✅ Done (tested) |
+| WF2-09 | US 22 | P1 | T7,T9 | ✅ Done (T7 tested; real Notification T9 hand-verified) |
+| WF2-10 | US 28,29,30 | P1/P3(step) | T7 | ✅ Done (tested) |
+| WF2-11 | US 9 | P1 | T7,T8 | ✅ Done (tested) |
+| WF2-12 | US 28,36 | P1 | T3 | ✅ Done (tested) |
+| WF2-13 | US 34,35,42 | P1 | T8 | ✅ Done (tested) |
+| WF2-14 | US 31 | P2 | T7,T8 | ✅ Done (tested) |
+| WF2-15 | US 36 | P1 | T8 | ✅ Done (tested) |
+| WF2-16 | US 40 | P1 | T4 | ✅ Done (tested) |
+| WF2-17 | US 39 | P1 | T8 | ✅ Done (tested) |
+| WF2-18 | US 42 | P1 | T9 | ✅ Done (contract+wiring; typecheck-gated, hand-verified) |
+| WF2-19 | (types) | P1 | T1 | ✅ Done (typecheck-gated) |
+| WF2-20 | (gate) | P1 | T10 | ⏳ Script done; **owner-run manual smoke pending** |
 
 **Coverage:** 20 requirements; all mapped to a priority. Task mapping happens in Tasks.
 

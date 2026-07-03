@@ -17,10 +17,11 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current):** Workflows epic (issue #56) — WF1 **COMPLETE** (T1–T7,
-including the owner-run empirical gate). Branch
-**`feature/wf1-headless-agent-spike`** cut from `origin/main` (carries merged
-topbar PR #63). Nothing pushed yet; no PR opened.
+**Status (current):** Workflows epic (issue #56) — **WF1 COMPLETE** (T1–T7 + owner
+empirical gate) **and WF2 COMPLETE + Verifier PASS**. Both stacked on branch
+**`feature/wf1-headless-agent-spike`** (cut from `origin/main`, carries merged topbar
+PR #63). Nothing pushed yet; no PR opened. Owner chose (2026-07-03) to **stack WF2 on
+the WF1 branch** and land them in **one combined PR** (rather than land WF1 first).
 
 **T7 empirical gate PASSED** (`tsx scripts/wf1-spike/run.ts` vs `claude` 2.1.199,
 live subscription, auth scrubbed): both arms + `--resume` ran end-to-end (42→142,
@@ -67,44 +68,53 @@ PRD), with Arm N (`--json-schema`) as a lighter `done`-only fast-path. Not super
 — WF3 design decides. Two seams survive to WF3: `scrub-auth-env.ts`,
 `emit-result-schema.ts`.
 
-**⏸ PAUSED (2026-07-03) — WF2 Specify done; resume at Design.**
+**WF2 (issue #56, milestone 2) — EXECUTED + VERIFIED (2026-07-03).** Specify→Design→
+Tasks→Execute all done. `spec.md` (20 reqs WF2-01..20), `design.md` (Approved),
+`tasks.md` (Done), `validation.md` (PASS) under `.specs/features/workflows-engine/`.
+Owner gray-area decisions still hold (WF2-D1 native toast; WF2-D2 WF2-subset run-state;
+WF2-D3 smoke-script gate; WF2-D4 esbuild→direct dep; WF2-D5 fail-fast no rollback;
+WF2-D6 `ctx.sh` uses a shell). **3 Design forks (owner-confirmed):** explicit
+`instrument()` auto-log wrapper; loader = esbuild bundle → temp `.mjs` → `import(file://)`;
+ADO = **new dedicated `getWorkItemWithRelations`** (fields/$expand are mutually exclusive).
 
-**WF2 (issue #56, milestone 2) — Specify DONE, spec approved to proceed.**
-`spec.md` at `.specs/features/workflows-engine/spec.md` (20 reqs WF2-01..20, Large;
-committed). Owner said "proceed to Design, but not now" — so **Specify is closed**
-(the 3 validation points I surfaced were left at their logged-default assumptions:
-`ctx.git` = fetch-only, 2nd concurrent run refused/no-queue, `ctx.ado.getTask` =
-immediate children — owner did not override). Owner gray-area decisions (2026-07-03):
-**WF2-D1** native OS toast (`electron.Notification`); **WF2-D2** run-state = WF2 subset
-only (`pending|running|done|failed|cancelled`, no blocked/resumed yet); **WF2-D3** gate
-= `scripts/smoke-workflow.mjs` over `workflows:run` (view is WF5); **WF2-D4** esbuild →
-direct dep; **WF2-D5** fail-fast, no rollback.
+**Executed via 4 phase sub-agents (one worker/phase) + independent Verifier:**
+| Phase | Tasks | Commits |
+| --- | --- | --- |
+| 1 | T1 types, T2 esbuild→dep, T6 ADO relations | `0fd6daf` `254273a` `4027ab9` |
+| 2 | T3 reducer, T4 run-store, T5 loader, T7 ctx (+lint `a2c7e3b`) | `dadd86f` `b94c354` `45b5c04` `0c60ce2` |
+| 3 | T8 workflow-manager (DI, serial, lifecycle) | `0277067` |
+| 4 | T9 IPC+wiring+native toast, T10 smoke script | `1186f89` `f0a8cb6` |
 
-**Codebase grounding (Explore recon — the Design inputs):** reuse worktree-manager
-(module fns `createWorktree`/`removeWorktree`/`changedFilesOf`, results not throws);
-ado-gateway `AdoGateway.getWorkItems` is fields-only batch → **add `$expand=Relations`**
-(no `$expand` today); IPC = mirror `session:*` across `src/shared/ipc-contract.ts`
-(3 maps) + `handle`/`emit`/`onSend` in `src/main/index.ts` + `api.invoke/on` renderer;
-persistence model = `config-store.ts` atomic tmp+rename; DI model = `SessionManager`
-object-bag `{port,config,emit,fsExists}`; test conventions = pure direct-assert
-(`spawn-plan.test.ts`) + DI'd orchestrator on temp dirs (`session-manager.test.ts`) +
-real temp-git-repo (`worktree-manager.test.ts`). `esbuild@0.25.12` transitive (promote
-to direct dep); `src/shared/workflows.ts`, native toast, generic `ctx.sh`, and a
-`~/.playground` reader are all **net-new**.
+**Verifier PASS** (fresh sub-agent, author≠verifier): 20/20 ACs traced to `file:line`+
+assertion; payload/conjunction rule satisfied (events/persisted run/`ctx.sh`/`ctx.ado`
+assert on values); **discrimination sensor 6/6 mutants killed**; gate green
+(typecheck 0, lint 0 errors, **318 tests** pass, 257→318 = +61). Report:
+`.specs/features/workflows-engine/validation.md`. New net-new main modules:
+`run-state.ts`, `workflow-run-store.ts` (`WorkflowRunStore`), `workflow-loader.ts`,
+`workflow-ctx.ts` (`makeCtx`/`CtxDeps`/`CtxRuntime`/`CancellationError`),
+`workflow-manager.ts` (`WorkflowManager`); `getWorkItemWithRelations`/`parseChildRefs`
+added to `ado-gateway.ts`; `workflows:*`+`workflow:*` in `ipc-contract.ts`; wiring in
+`index.ts`; `src/shared/workflows.ts`; `scripts/smoke-workflow.mjs`.
 
-**Next step (resume here):** **Design** WF2 — modules loader / runner / run-state
-(pure reducer) / `ctx` facade / mcp-N/A / the new `$expand=Relations` ADO surface /
-`workflows:*` IPC + `src/shared/workflows.ts` / ephemeral run-log store. Follow the
-tlc Design flow; the recon above is the grounding.
+**Feeds WF3:** WF1's two seams (`scrub-auth-env.ts`, `emit-result-schema.ts`) + Arm-M
+recommendation still stand (see below). WF2's `ctx` facade + `instrument` wrapper +
+`workflow-manager` are the extension points WF3's `ctx.agent()` plugs into; the manager
+carries an unused `notifier` in its deps bag reserved for WF4 lifecycle toasts.
 
-**⚠ Branch topology to resolve at resume:** the WF2 spec is committed on
-**`feature/wf1-headless-agent-spike`** (WF1's branch, still local/unpushed) because
-`STATE.md`'s AD-006/AD-007 + WF1 handoff live only on that branch (not on `origin/main`).
-Cutting WF2 off `main` now would lose that history. Preferred resolution: **land WF1
-first** (push + PR, must **not** `Closes #56`; `main` gated by `copilot_code_review`),
-let `main` absorb it, then cut **`feature/wf2-workflows-engine`** off updated `main`
-for Design. Alternatively stack WF2 on the WF1 branch and accept a combined PR. Decide
-before starting Design implementation.
+**⚠ Two open items before this can merge:**
+1. **Owner-run WF2-20 smoke (manual gate, not CI):** `npm run dev -- -- --remote-debugging-port=9222`
+   then `node scripts/smoke-workflow.mjs` (optional `SMOKE_REPO=<repo>`), expect exit 0
+   (5 checks: status→done, ≥1 step, ≥1 log, run-log file written). Not runnable headless.
+2. **Combined WF1+WF2 PR:** push `feature/wf1-headless-agent-spike` + open ONE PR to
+   `main` (must **NOT** `Closes #56` — the epic spans WF1..WF5; `main` gated by
+   `copilot_code_review`, so a force-push BLOCKs the review → `gh pr merge --admin`).
+
+**Pre-existing quirk (NOT WF2, candidate cleanup):** `src/main/ado-gateway.ts` is
+UTF-16-encoded — git treats it as binary (no textual diffs). Present since before WF2.
+
+**Next step (resume here):** run item 1 (owner) → open item 2 (combined PR) → after
+merge, spec **WF3** (agent step: `ctx.agent()`, MCP result server, agent-command-builder,
+`session_id` capture) off updated `main`.
 
 **Prior features (merged, for context only):** `worktree-existing-branch` (PR #62)
 and `topbar-version-indicator` (PR #63) are both merged into `main`.

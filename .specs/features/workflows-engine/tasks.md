@@ -12,11 +12,36 @@ sub-agent delegation, adequacy review, Verifier, discrimination sensor).
 ---
 
 **Design**: `.specs/features/workflows-engine/design.md`
-**Status**: In Progress
+**Status**: Done ✅ (Verifier PASS — 20/20 ACs, 6/6 mutants killed, gate 318 green;
+`validation.md`). Only open item: the owner-run WF2-20 smoke (manual gate).
 
-**Progress:** Phase 1 ✅ (T1 `0fd6daf`, T2 `254273a`, T6 `4027ab9`; suite 257→262).
-New exports for T7: `getWorkItemWithRelations`, `parseChildRefs`,
-`GetWorkItemWithRelationsResult`.
+**Progress:**
+- Phase 1 ✅ (T1 `0fd6daf`, T2 `254273a`, T6 `4027ab9`; suite 257→262).
+- Phase 2 ✅ (T3 `dadd86f`, T4 `b94c354`, T5 `45b5c04`, T7 `0c60ce2`, +lint `a2c7e3b`;
+  suite 262→313).
+- Phase 3 ✅ (T8 `0277067`; suite 313→318, full gate green). `emit` typed against a
+  LOCAL `WorkflowIpcEvents` map in `workflow-manager.ts` (exported `EmitFn`) — **T9
+  must move `workflow:status|step|log` into `src/shared/ipc-contract.ts` `IpcEvents`
+  and repoint the manager's `EmitFn` to the shared `IpcEvent`.** `seq = events.length`
+  assigned in `apply`. `notifier` in the bag is reserved (WF4) but T9 still wires a
+  real `electron.Notification` notifier for `ctxDeps.notifier` (ctx.notify toast).
+- Phase 4 ✅ (T9 `1186f89`, T10 `f0a8cb6`; suite stays 318 — thin shell/manual add no
+  unit tests). Manager `EmitFn` repointed to shared `IpcEvent`. **WF2-20 smoke gate is
+  owner-run** (not CI): `npm run dev -- -- --remote-debugging-port=9222` then
+  `node scripts/smoke-workflow.mjs` (optional `SMOKE_REPO=<repo>`), expect exit 0.
+- **Verifier PASS** (`validation.md`): 20/20 ACs, 6/6 mutants killed, gate 318 green.
+- Note (pre-existing, not WF2): `src/main/ado-gateway.ts` is UTF-16-encoded (git sees it
+  as binary — no textual diffs). Present since before WF2; candidate cleanup, out of scope.
+
+**Interfaces for T8/T9:**
+- `run-state`: `initialRun(id,workflowId,input)` (`startedAt:''`, clock-free),
+  `reduce(run,event)` (guarded; `failed` sets `run.error` + keeps stdout/code in event).
+- `WorkflowRunStore` (class): `save/load/list`.
+- `workflow-loader`: `discoverWorkflows`, `validateMeta`, `loadWorkflow`, `LoadedWorkflow`.
+- `workflow-ctx`: `makeCtx(deps:CtxDeps, runtime:CtxRuntime):Ctx`, `CancellationError`.
+  Runtime seam T8 must satisfy: `checkCancel()` (throws), `emitStep(label,group?)`,
+  `emitLog(message,group?)`, `input`. `ctx.ado.getTask` throws on auth of parent OR
+  child batch; returns `{task, children:[{ref,details}]}` (resolved children only).
 
 ---
 
