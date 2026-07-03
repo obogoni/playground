@@ -67,10 +67,44 @@ PRD), with Arm N (`--json-schema`) as a lighter `done`-only fast-path. Not super
 — WF3 design decides. Two seams survive to WF3: `scrub-auth-env.ts`,
 `emit-result-schema.ts`.
 
-**Next step:** push `feature/wf1-headless-agent-spike` and open the PR. The PR must
-**not** `Closes #56` (the epic stays open through WF5); consider `tlc-to-issues` to
-create a per-milestone issue first. After WF1 lands, spec **WF2** (workflow-loader/
-runner + ADO child-task `$expand=Relations` fetch, per AD-006).
+**⏸ PAUSED (2026-07-03) — WF2 Specify done; resume at Design.**
+
+**WF2 (issue #56, milestone 2) — Specify DONE, spec approved to proceed.**
+`spec.md` at `.specs/features/workflows-engine/spec.md` (20 reqs WF2-01..20, Large;
+committed). Owner said "proceed to Design, but not now" — so **Specify is closed**
+(the 3 validation points I surfaced were left at their logged-default assumptions:
+`ctx.git` = fetch-only, 2nd concurrent run refused/no-queue, `ctx.ado.getTask` =
+immediate children — owner did not override). Owner gray-area decisions (2026-07-03):
+**WF2-D1** native OS toast (`electron.Notification`); **WF2-D2** run-state = WF2 subset
+only (`pending|running|done|failed|cancelled`, no blocked/resumed yet); **WF2-D3** gate
+= `scripts/smoke-workflow.mjs` over `workflows:run` (view is WF5); **WF2-D4** esbuild →
+direct dep; **WF2-D5** fail-fast, no rollback.
+
+**Codebase grounding (Explore recon — the Design inputs):** reuse worktree-manager
+(module fns `createWorktree`/`removeWorktree`/`changedFilesOf`, results not throws);
+ado-gateway `AdoGateway.getWorkItems` is fields-only batch → **add `$expand=Relations`**
+(no `$expand` today); IPC = mirror `session:*` across `src/shared/ipc-contract.ts`
+(3 maps) + `handle`/`emit`/`onSend` in `src/main/index.ts` + `api.invoke/on` renderer;
+persistence model = `config-store.ts` atomic tmp+rename; DI model = `SessionManager`
+object-bag `{port,config,emit,fsExists}`; test conventions = pure direct-assert
+(`spawn-plan.test.ts`) + DI'd orchestrator on temp dirs (`session-manager.test.ts`) +
+real temp-git-repo (`worktree-manager.test.ts`). `esbuild@0.25.12` transitive (promote
+to direct dep); `src/shared/workflows.ts`, native toast, generic `ctx.sh`, and a
+`~/.playground` reader are all **net-new**.
+
+**Next step (resume here):** **Design** WF2 — modules loader / runner / run-state
+(pure reducer) / `ctx` facade / mcp-N/A / the new `$expand=Relations` ADO surface /
+`workflows:*` IPC + `src/shared/workflows.ts` / ephemeral run-log store. Follow the
+tlc Design flow; the recon above is the grounding.
+
+**⚠ Branch topology to resolve at resume:** the WF2 spec is committed on
+**`feature/wf1-headless-agent-spike`** (WF1's branch, still local/unpushed) because
+`STATE.md`'s AD-006/AD-007 + WF1 handoff live only on that branch (not on `origin/main`).
+Cutting WF2 off `main` now would lose that history. Preferred resolution: **land WF1
+first** (push + PR, must **not** `Closes #56`; `main` gated by `copilot_code_review`),
+let `main` absorb it, then cut **`feature/wf2-workflows-engine`** off updated `main`
+for Design. Alternatively stack WF2 on the WF1 branch and accept a combined PR. Decide
+before starting Design implementation.
 
 **Prior features (merged, for context only):** `worktree-existing-branch` (PR #62)
 and `topbar-version-indicator` (PR #63) are both merged into `main`.
