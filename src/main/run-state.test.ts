@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import type { StepEvent } from '../shared/workflows'
+import type { StepEvent, WorkflowRun } from '../shared/workflows'
 import { initialRun, reduce } from './run-state'
 
 let seq = 0
 const ev = (e: Omit<StepEvent, 'seq'>): StepEvent => ({ seq: seq++, ...e })
 
-const pending = () => initialRun('run-1', 'wf-1', { key: 'value' })
-const running = () => reduce(pending(), ev({ kind: 'run-started' }))
+const pending = (): WorkflowRun => initialRun('run-1', 'wf-1', { key: 'value' })
+const running = (): WorkflowRun => reduce(pending(), ev({ kind: 'run-started' }))
 
 describe('initialRun', () => {
   it('starts a run in pending with its identity, input, and no events', () => {

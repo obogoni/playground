@@ -15,11 +15,7 @@ export type RunFn = (ctx: unknown) => Promise<void>
 export type LoadedWorkflow = { meta: WorkflowMeta; run: RunFn } | { error: string }
 
 /** Node builtins + electron are left external — a bundled workflow never inlines them. */
-const EXTERNAL = [
-  ...builtinModules,
-  ...builtinModules.map((m) => `node:${m}`),
-  'electron'
-]
+const EXTERNAL = [...builtinModules, ...builtinModules.map((m) => `node:${m}`), 'electron']
 
 /**
  * List the workflow folder names directly under `root` (workflow id = folder
