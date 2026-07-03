@@ -16,10 +16,21 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current):** Workflows epic (issue #56) — WF1 **Execute done for the
-automated surface**; T7 (empirical) handed to the owner. Branch
+**Status (current):** Workflows epic (issue #56) — WF1 **COMPLETE** (T1–T7,
+including the owner-run empirical gate). Branch
 **`feature/wf1-headless-agent-spike`** cut from `origin/main` (carries merged
 topbar PR #63). Nothing pushed yet; no PR opened.
+
+**T7 empirical gate PASSED** (`tsx scripts/wf1-spike/run.ts` vs `claude` 2.1.199,
+live subscription, auth scrubbed): both arms + `--resume` ran end-to-end (42→142,
+context carried); Arm M's forced `emit_result` hit the loopback HTTP MCP server;
+`dontAsk` auto-denied a would-prompt action without hanging. **All WF1-01..08
+confirmed** — see `findings.md`. Key confirmations: HTTP-MCP over loopback works
+on 2.1.199 (the top risk); `session_id` field; `--json-schema`→`structured_output`;
+`mcp__result__emit_result` allow-name works in headless; `--bare` refuted (unused).
+**T7 code fix (226d903):** the installed `claude` is a native `.exe` not a `.cmd`
+shim, so `shell:true` corrupted inline JSON — fixed to spawn directly (`shell:false`,
+argv verbatim, stdin closed).
 
 **T1–T6 committed (one atomic commit each) + independently verified (PASS):**
 | Commit | Task | What |
@@ -49,15 +60,16 @@ discrimination sensor **5/5 mutants killed**. Report:
 - `scripts/` is NOT in `tsconfig.node.json` (matches `release-version.ts`) → spike
   `.ts` are covered by `npm test` + `eslint .`, not `tsc`.
 
-**Next step (OWNER):** run **T7** — `tsx scripts/wf1-spike/run.ts` against the live
-logged-in Claude subscription. Confirm/refute every flag lead (spawn incantation on
-Windows — `claude` is a .cmd shim needing shell:true; whether inline `--mcp-config`
-JSON survives the shell or must move to a file; `session_id` field; `--json-schema`
-→ `structured_output`; `dontAsk` no-hang; `mcp__result__emit_result` allow-name;
-`--bare` refutation) and write `findings.md` with a **Arm N vs Arm M recommendation**
-for WF3. Then push the branch and open the PR. The PR does **not** `Closes #56` (the
-epic stays open through WF5); consider `tlc-to-issues` to create a per-milestone
-issue. After WF1 lands, spec WF2 (workflow-loader/runner + ADO child-task fetch, AD-006).
+**Findings recommendation for WF3:** both arms work; **default to Arm M (MCP)** to
+keep the `blocked` terminal value + per-step routing/auth first-class (matches the
+PRD), with Arm N (`--json-schema`) as a lighter `done`-only fast-path. Not superseded
+— WF3 design decides. Two seams survive to WF3: `scrub-auth-env.ts`,
+`emit-result-schema.ts`.
+
+**Next step:** push `feature/wf1-headless-agent-spike` and open the PR. The PR must
+**not** `Closes #56` (the epic stays open through WF5); consider `tlc-to-issues` to
+create a per-milestone issue first. After WF1 lands, spec **WF2** (workflow-loader/
+runner + ADO child-task `$expand=Relations` fetch, per AD-006).
 
 **Prior features (merged, for context only):** `worktree-existing-branch` (PR #62)
 and `topbar-version-indicator` (PR #63) are both merged into `main`.

@@ -9,9 +9,11 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/workflows-headless-agent-spike/design.md`
-**Status**: Executed — **T1–T6 done + independently verified** (PASS, sensor 5/5
-mutants killed, see `validation.md`). **T7 remains owner-run** (empirical gate
-against the live subscription; produces `findings.md`).
+**Status**: ✅ **COMPLETE.** T1–T6 done + independently verified (PASS, sensor 5/5,
+see `validation.md`). **T7 empirical gate PASSED** on the live subscription
+(`claude` 2.1.199) — both arms + resume end-to-end; all WF1-01..08 confirmed; see
+`findings.md`. One T7 code fix: spawn `claude` directly (`shell:false`) since it is
+a native .exe, not a .cmd shim (commit 226d903).
 **Phases**: 3 → **inline execution** (≤3 phases, no per-phase sub-agent offer).
 
 ---
