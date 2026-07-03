@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -45,6 +45,40 @@ describe('validateMeta (pure)', () => {
 
   it('rejects a meta whose inputs is not an array', () => {
     expect('error' in validateMeta({ meta: { name: 'X', inputs: {} }, run })).toBe(true)
+  })
+
+  it('accepts a well-formed input item with required + description', () => {
+    const meta = {
+      name: 'X',
+      description: 'demo',
+      inputs: [{ key: 'k', label: 'K', required: true }]
+    }
+    expect(validateMeta({ meta, run })).toEqual({ meta, run })
+  })
+
+  it('rejects a meta whose description is present but not a string', () => {
+    expect('error' in validateMeta({ meta: { name: 'X', description: 1, inputs: [] }, run })).toBe(
+      true
+    )
+  })
+
+  it('rejects an input item that is not an object', () => {
+    expect('error' in validateMeta({ meta: { name: 'X', inputs: ['nope'] }, run })).toBe(true)
+  })
+
+  it('rejects an input item missing key', () => {
+    expect('error' in validateMeta({ meta: { name: 'X', inputs: [{ label: 'K' }] }, run })).toBe(
+      true
+    )
+  })
+
+  it('rejects an input item missing label', () => {
+    expect('error' in validateMeta({ meta: { name: 'X', inputs: [{ key: 'k' }] }, run })).toBe(true)
+  })
+
+  it('rejects an input item whose required is not a boolean', () => {
+    const meta = { name: 'X', inputs: [{ key: 'k', label: 'K', required: 'yes' }] }
+    expect('error' in validateMeta({ meta, run })).toBe(true)
   })
 })
 
@@ -95,6 +129,18 @@ describe('loadWorkflow (real esbuild bundle)', () => {
     })
     const result = await loadWorkflow(folder)
     expect('error' in result).toBe(true)
+  })
+
+  it('does not leak the bundled temp .mjs after loading', async () => {
+    const leaked = (): number =>
+      readdirSync(tmpdir()).filter((f) => f.startsWith('workflow-') && f.endsWith('.mjs')).length
+    const before = leaked()
+    const folder = workflowDir({
+      'workflow.ts': `export const meta = { name: 'Clean', inputs: [] }\nexport async function run() {}\n`
+    })
+    const result = await loadWorkflow(folder)
+    if ('error' in result) throw new Error(`expected load, got error: ${result.error}`)
+    expect(leaked()).toBe(before)
   })
 
   it('bundles a relative helper import into one working module', async () => {
