@@ -16,53 +16,51 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current):** Workflows epic (issue #56) — **Execute** phase, WF1 only.
-Planning complete: `spec.md` (WF1-01..08 — WF1-08 added a native `--json-schema`
-arm N vs MCP arm M comparison), `design.md`, `tasks.md` (T1–T7, 3 phases → inline
-execution). Per **AD-006**, only WF1 is spec'd; WF2–WF5 wait for the spike's pinned
-flags. Branch **`feature/wf1-headless-agent-spike`** cut from `origin/main` (which
-now carries the merged topbar PR #63).
+**Status (current):** Workflows epic (issue #56) — WF1 **Execute done for the
+automated surface**; T7 (empirical) handed to the owner. Branch
+**`feature/wf1-headless-agent-spike`** cut from `origin/main` (carries merged
+topbar PR #63). Nothing pushed yet; no PR opened.
 
-**Execution plan (owner chose: cut branch + execute T1–T6; T7 owner-run):**
-- Phase 1 (pure seams, parallel-safe): T1 `scrubAuthEnv`, T2 `emit-result-schema`,
-  T3 `parseEnvelope`, T4 `buildAgentArgv` — all under `scripts/wf1-spike/*.ts`
-  (+ `*.test.ts`), gated by `npm test` (glob already includes `scripts/**`).
-- Phase 2: T5 `mcp-server.ts` (loopback HTTP MCP, adds `@modelcontextprotocol/sdk`
-  devDep), gated `npm run typecheck && npm test`.
-- Phase 3: T6 `run.ts` wiring (build gate), then **T7 empirical run + `findings.md`
-  — owner-run against the live subscription** (WF1-D1; the milestone gate, not CI).
+**T1–T6 committed (one atomic commit each) + independently verified (PASS):**
+| Commit | Task | What |
+| ------ | ---- | ---- |
+| 3179cee | — | docs: spec + design + tasks |
+| 632e8bc | T1 | `scrubAuthEnv` pure seam (WF1-01) |
+| 39aae24 | T2 | `emit-result-schema` builder+validator (WF1-04) |
+| 02dbc12 | T3 | `parseEnvelope` (WF1-05) |
+| 3a20a49 | T4 | `buildAgentArgv` native+mcp arms (WF1-02/07/08) |
+| 04bc480 | T5 | loopback HTTP MCP result server (+`@modelcontextprotocol/sdk` devDep) (WF1-03/04) |
+| e89a4aa | T6 | `run.ts` throwaway orchestrator (no tests — external CLI boundary, AD-004) |
 
-**Convention note:** `scripts/` is NOT in `tsconfig.node.json` include (matches the
-existing `scripts/release-version.ts`), so spike `.ts` are covered by `npm test` +
-`eslint .` (lint-clean), not `tsc`. No tsconfig change.
+Independent Verifier (fresh sub-agent, author ≠ verifier): **PASS** — 8/8
+automated ACs traced to `file:line`; gate green (typecheck 0 err, lint 0 warnings
+in `scripts/wf1-spike/`, **257 tests pass**, spike subset 5 files / 32 tests);
+discrimination sensor **5/5 mutants killed**. Report:
+`.specs/features/workflows-headless-agent-spike/validation.md`. No gaps.
 
-**Next step:** implement T1→T6 one atomic commit each (tlc Execute per-task cycle),
-then dispatch the independent Verifier over the pure seams + MCP server. T7 handed
-to the owner.
+**Key implementation facts (feed WF2/WF3):**
+- Two surviving pure seams (→ WF3): `scrub-auth-env.ts`, `emit-result-schema.ts`.
+- MCP server uses the **low-level `Server` + `setRequestHandler`** (not `McpServer`)
+  so `tools/list` returns `buildToolInputSchema(expect)` **verbatim**; `registerTool`
+  reshapes it through Zod. Stateful per-token transport, `enableJsonResponse: true`,
+  bearer token = auth **and** routing.
+- SDK version `@modelcontextprotocol/sdk@^1.29.0`, installed with `--ignore-scripts`
+  to skip the `electron-builder install-app-deps` native rebuild (node-gyp workaround).
+- `scripts/` is NOT in `tsconfig.node.json` (matches `release-version.ts`) → spike
+  `.ts` are covered by `npm test` + `eslint .`, not `tsc`.
 
-**Prior status:** Feature `worktree-existing-branch` (reuse/recreate an existing branch
-on worktree create) **COMPLETE — PR [#62](https://github.com/obogoni/playground/pull/62)
-open** on branch `feature/worktree-existing-branch`, awaiting review/merge. Design
-resolved via grill-me; spec at `.specs/features/worktree-existing-branch/spec.md`.
+**Next step (OWNER):** run **T7** — `tsx scripts/wf1-spike/run.ts` against the live
+logged-in Claude subscription. Confirm/refute every flag lead (spawn incantation on
+Windows — `claude` is a .cmd shim needing shell:true; whether inline `--mcp-config`
+JSON survives the shell or must move to a file; `session_id` field; `--json-schema`
+→ `structured_output`; `dontAsk` no-hang; `mcp__result__emit_result` allow-name;
+`--bare` refutation) and write `findings.md` with a **Arm N vs Arm M recommendation**
+for WF3. Then push the branch and open the PR. The PR does **not** `Closes #56` (the
+epic stays open through WF5); consider `tlc-to-issues` to create a per-milestone
+issue. After WF1 lands, spec WF2 (workflow-loader/runner + ADO child-task fetch, AD-006).
 
-Independent Verifier ran (fresh sub-agent, author ≠ verifier): **PASS** — 10/10
-ACs traced to `file:line`, gate 67 passed / 0 failed (typecheck + lint 0 errors +
-`worktree-manager.test.ts`), discrimination sensor 3/3 mutants killed. Report at
-`.specs/features/worktree-existing-branch/validation.md`. One Verifier gap
-(recreate re-invoke vs checked-out branch) closed with an added test post-report.
-
-**Commits on the branch (4):**
-| Commit | What |
-| ------ | ---- |
-| 8ba68c6 | docs(specs): spec |
-| 106605e | feat: backend pre-flight detect + reuse/recreate modes + IPC (EXB-01..05, EXB-D8) |
-| a558933 | feat: inline `<BranchExistsChoice>` in both create dialogs (EXB-06) |
-| (latest) | test: recreate re-invoke vs checked-out branch (gap close) |
-
-**Next step:** address PR #62 review, then merge. The PR body carries **no**
-`Closes #<n>` — this feature was not synced to a GitHub issue via `tlc-to-issues`
-(no issue exists). Renderer UI (`BranchExistsChoice`) has no unit tests by
-convention (AD-004) — visual/CDP hand-verify is owner-run.
+**Prior features (merged, for context only):** `worktree-existing-branch` (PR #62)
+and `topbar-version-indicator` (PR #63) are both merged into `main`.
 
 **Merge note (unchanged):** `main` ruleset (`copilot_code_review`,
 `non_fast_forward`, `deletion`); CI `gate` is not a required check; a force-push

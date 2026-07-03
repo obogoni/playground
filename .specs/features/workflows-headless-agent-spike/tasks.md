@@ -9,7 +9,9 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/workflows-headless-agent-spike/design.md`
-**Status**: Draft
+**Status**: Executed — **T1–T6 done + independently verified** (PASS, sensor 5/5
+mutants killed, see `validation.md`). **T7 remains owner-run** (empirical gate
+against the live subscription; produces `findings.md`).
 **Phases**: 3 → **inline execution** (≤3 phases, no per-phase sub-agent offer).
 
 ---
