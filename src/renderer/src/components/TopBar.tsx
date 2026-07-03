@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { JSX } from 'react'
 import type { AppConfig } from '../../../shared/config'
 import type { AdoAuthState } from '../../../shared/tasks'
+import { api } from '../lib/api'
 import { Icon } from './Icon'
 import './TopBar.css'
 
@@ -57,6 +58,24 @@ export function TopBar({
     return () => window.clearInterval(timer)
   }, [])
 
+  // The running app's version, surfaced so silent auto-updates are visible (a
+  // bumped tag here is how you confirm an update applied). Fetched once from
+  // main's app.getVersion(); the tag renders once it resolves.
+  const [version, setVersion] = useState<string | null>(null)
+  useEffect(() => {
+    let live = true
+    api
+      .invoke('app:version')
+      .then((v) => live && setVersion(v))
+      // api.invoke already tags the error with the channel; surface it so a
+      // broken preload bridge / unregistered channel is diagnosable rather than
+      // just a silently missing tag.
+      .catch((err) => console.error(err))
+    return () => {
+      live = false
+    }
+  }, [])
+
   const connected = sync.auth === 'ok' && sync.lastSyncAt !== null
 
   return (
@@ -66,7 +85,14 @@ export function TopBar({
           <Icon name="git-branch" size={17} strokeWidth={2} />
         </div>
         <div className="topbar-brand-labels">
-          <span className="topbar-brand-name">Playground</span>
+          <span className="topbar-brand-name">
+            Playground
+            {version && (
+              <span className="topbar-brand-version" title="Installed version">
+                v{version}
+              </span>
+            )}
+          </span>
           <span className="topbar-brand-sub">tasks &amp; worktrees</span>
         </div>
       </div>
