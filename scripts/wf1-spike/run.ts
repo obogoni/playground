@@ -10,16 +10,19 @@
  * external-CLI boundaries, AD-004).
  *
  * EMPIRICAL UNKNOWNS this run pins (record each in findings.md, T7):
- *   - The spawn incantation on Windows: `claude` is a .cmd shim, so shell:true
- *     is required (Node refuses to spawn .cmd directly) — and whether the inline
- *     --mcp-config JSON survives the shell re-parse, or must move to a file.
+ *   - The spawn incantation on Windows. FINDING (run 1): the installed `claude`
+ *     is a native .exe (C:\...\.local\bin\claude.exe), NOT a .cmd shim — so
+ *     shell:true is WRONG: cmd re-parses the inline --json-schema/--mcp-config
+ *     JSON and corrupts it ("Unterminated string"). Fix: resolve the exe and
+ *     spawn with shell:false, passing the argv array verbatim, with stdin closed
+ *     (headless otherwise blocks waiting for stdin: "no stdin data received").
  *   - Whether the documented flag leads in build-agent-argv actually work.
  *   - The envelope field carrying session_id, and where Arm N's payload lands
  *     (structured_output).
  *   - Whether `dontAsk` + allowedTools stops a would-prompt action from hanging.
  */
 
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { buildAgentArgv } from './build-agent-argv'
 import { createMcpResultServer, type McpResultServer } from './mcp-server'
@@ -47,18 +50,31 @@ interface SpawnResult {
   code: number | null
 }
 
-// Windows cmd quoting for shell:true — throwaway spawn plumbing, NOT a seam
-// (buildAgentArgv owns the argv; this only survives it through the shell).
-function winQuote(token: string): string {
-  if (token === '') return '""'
-  if (!/[\s"^&|<>()]/.test(token)) return token
-  return `"${token.replace(/"/g, '""')}"`
+// Resolve the real claude executable once. On Windows a bare `spawn('claude')`
+// with shell:false won't PATH-resolve, so we look up the .exe and spawn it
+// directly — this keeps the argv array verbatim (no shell re-parse to corrupt
+// the inline --json-schema / --mcp-config JSON).
+function resolveClaude(): string {
+  try {
+    const out = execFileSync('where', ['claude'], { encoding: 'utf8' })
+    const first = out.split(/\r?\n/).find((line) => line.trim().length > 0)
+    return first ? first.trim() : 'claude'
+  } catch {
+    return 'claude'
+  }
 }
+const CLAUDE = resolveClaude()
 
 function spawnClaude(argv: string[], cwd: string): Promise<SpawnResult> {
   return new Promise((resolve, reject) => {
-    const commandLine = ['claude', ...argv].map(winQuote).join(' ')
-    const child = spawn(commandLine, { cwd, env: scrubAuthEnv(process.env), shell: true })
+    // shell:false + argv array → flags pass verbatim; stdin ignored so headless
+    // does not block waiting for piped input.
+    const child = spawn(CLAUDE, argv, {
+      cwd,
+      env: scrubAuthEnv(process.env),
+      shell: false,
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
     let stdout = ''
     let stderr = ''
     const timer = setTimeout(() => {
