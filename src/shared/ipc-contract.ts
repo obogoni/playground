@@ -8,6 +8,7 @@ import type {
 import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type { PinTaskResult, TasksSnapshot } from './tasks'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'
+import type { RunStatus, StepEvent, WorkflowDef } from './workflows'
 import type { ChangedFile, CreateWorktreeResult, RemoveWorktreeResult } from './worktrees'
 
 /**
@@ -89,6 +90,14 @@ export interface IpcContract {
   'sessions:detach': { req: { id: string }; res: void }
   /** Native folder picker for a detached (ad-hoc) cwd; null when cancelled. */
   'dialog:pickFolder': { req: void; res: { path: string | null } }
+  /** Every discovered workflow, valid (`{id,meta}`) or broken (`{id,error}`) (WF2-01). */
+  'workflows:list': { req: void; res: WorkflowDef[] }
+  /** Start a serial run of workflow `id` in the main process; returns its runId (WF2-13/17). */
+  'workflows:run': { req: { id: string; input?: Record<string, string> }; res: { runId: string } }
+  /** Request cancellation of a run; read at the next `ctx.*` checkpoint (WF2-14). */
+  'workflows:cancel': { req: { runId: string }; res: void }
+  /** Drop any discovery cache (v1 no-op — discovery is on-demand) (WF2-01). */
+  'workflows:reload': { req: void; res: void }
 }
 
 export type IpcChannel = keyof IpcContract
@@ -106,6 +115,12 @@ export interface IpcEvents {
   'session:data': { id: string; data: string }
   'session:exit': { id: string; exitCode: number }
   'session:status': { id: string; status: SessionStatus; pathMissing: boolean }
+  /** A run's folded lifecycle status changed (WF2-12). */
+  'workflow:status': { runId: string; status: RunStatus }
+  /** A `step-started` event — an executed `ctx.*` primitive / `ctx.step` group (WF2-10). */
+  'workflow:step': { runId: string; step: StepEvent }
+  /** A `step-logged` log/notify line, optionally nested under a `ctx.step` group (WF2-10). */
+  'workflow:log': { runId: string; message: string; group?: string }
 }
 
 export interface IpcSends {

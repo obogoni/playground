@@ -1,5 +1,8 @@
-import { app, shell, dialog, BrowserWindow } from 'electron'
+import { app, shell, dialog, BrowserWindow, Notification } from 'electron'
+import { execFile, spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { promisify } from 'node:util'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
@@ -13,9 +16,53 @@ import { ShortcutLauncher } from './shortcut-launcher'
 import { TaskBoard } from './task-board'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
+import type { CtxDeps, GitFetchOptions, ShellResult } from './workflow-ctx'
+import { discoverWorkflows, loadWorkflow } from './workflow-loader'
+import { WorkflowManager } from './workflow-manager'
+import { WorkflowRunStore } from './workflow-run-store'
 import { changedFilesOf, createWorktree, removeWorktree } from './worktree-manager'
 import { workspaceTemplates } from './workspace-config'
 import { WorkspaceRegistry } from './workspace-registry'
+
+const execFileAsync = promisify(execFile)
+
+/**
+ * WF2 real `ctx.git.fetch` (WF2-07): a no-shell `git fetch`, mirroring the
+ * worktree-manager `git` seam. `GIT_TERMINAL_PROMPT=0` fails fast instead of
+ * hanging the main process on an un-answerable credential prompt; a non-zero
+ * exit rejects (the promisified `execFile` throws), which `ctx.git.fetch`
+ * propagates.
+ */
+async function gitFetch({ cwd, remote, branch }: GitFetchOptions): Promise<void> {
+  const args = ['fetch', ...(remote ? [remote] : []), ...(branch ? [branch] : [])]
+  await execFileAsync('git', args, {
+    cwd,
+    windowsHide: true,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
+  })
+}
+
+/**
+ * WF2 real `ctx.sh` runner (WF2-06, WF2-D6): spawn the command **through a
+ * shell** and capture `{code, stdout, stderr}`. It never throws — the `ctx.sh`
+ * gate in `workflow-ctx` decides throw-vs-`allowFail` from the exit code.
+ */
+function runShell(cmd: string, opts: { cwd: string }): Promise<ShellResult> {
+  return new Promise<ShellResult>((resolve) => {
+    const child = spawn(cmd, { cwd: opts.cwd, shell: true, windowsHide: true })
+    let stdout = ''
+    let stderr = ''
+    child.stdout?.on('data', (chunk) => (stdout += chunk.toString()))
+    child.stderr?.on('data', (chunk) => (stderr += chunk.toString()))
+    child.on('error', (err) => resolve({ code: -1, stdout, stderr: stderr + String(err) }))
+    child.on('close', (code) => resolve({ code: code ?? -1, stdout, stderr }))
+  })
+}
+
+/** WF2 real `ctx.notify({ toast })` sink (WF2-09): a native OS toast, when supported. */
+function notifier(title: string, body: string): void {
+  if (Notification.isSupported()) new Notification({ title, body }).show()
+}
 
 // Lifted out of createWindow so SessionManager can reach its webContents for
 // emit() (the app is single-window) and window-all-closed can killAll().
@@ -153,6 +200,37 @@ app.whenReady().then(() => {
   })
   onSend('session:input', ({ id, data }) => sessions.input(id, data))
   onSend('session:resize', ({ id, cols, rows }) => sessions.resize(id, cols, rows))
+
+  // Workflows engine (WF2). The manager runs one workflow at a time in the main
+  // process; ctxDeps assembles the real deterministic capability seams (worktree
+  // fns, a no-shell git fetch, a shell-hosted `ctx.sh`, ADO, native toasts).
+  const workflowsAdo = new AdoGateway()
+  const ctxDeps: CtxDeps = {
+    worktree: {
+      create: createWorktree,
+      remove: removeWorktree,
+      changedFiles: changedFilesOf
+    },
+    gitFetch,
+    runShell,
+    ado: {
+      getWorkItemWithRelations: workflowsAdo.getWorkItemWithRelations.bind(workflowsAdo),
+      getWorkItems: workflowsAdo.getWorkItems.bind(workflowsAdo)
+    },
+    notifier
+  }
+  const workflows = new WorkflowManager({
+    workflowsRoot: join(homedir(), '.playground', 'workflows'),
+    loader: { discoverWorkflows, loadWorkflow },
+    ctxDeps,
+    store: new WorkflowRunStore(join(app.getPath('userData'), 'workflow-runs')),
+    emit: emitToWindow,
+    notifier
+  })
+  handle('workflows:list', () => workflows.list())
+  handle('workflows:run', ({ id, input }) => workflows.run({ id, input }))
+  handle('workflows:cancel', ({ runId }) => workflows.cancel(runId))
+  handle('workflows:reload', () => workflows.reload())
 
   // Silent auto-update. Inert under `electron-vite dev` unless PLAYGROUND_FORCE_UPDATE=1
   // opts into the real GitHub feed via dev-app-update.yml (local update-flow testing).
