@@ -101,10 +101,10 @@ recommendation still stand (see below). WF2's `ctx` facade + `instrument` wrappe
 `workflow-manager` are the extension points WF3's `ctx.agent()` plugs into; the manager
 carries an unused `notifier` in its deps bag reserved for WF4 lifecycle toasts.
 
-**⚠ Two open items before this can merge:**
-1. **Owner-run WF2-20 smoke (manual gate, not CI):** `npm run dev -- -- --remote-debugging-port=9222`
-   then `node scripts/smoke-workflow.mjs` (optional `SMOKE_REPO=<repo>`), expect exit 0
-   (5 checks: status→done, ≥1 step, ≥1 log, run-log file written). Not runnable headless.
+**⚠ One open item before this can merge:**
+1. ~~Owner-run WF2-20 smoke~~ **PASSED 5/5 (2026-07-03)** — runId `4f5d9c9f…`,
+   statuses `[running,done]`, 3 steps, 2 logs, run-log persisted under
+   `%APPDATA%/playground/workflow-runs/`. WF2 is now fully green incl. the manual gate.
 2. **Combined WF1+WF2 PR:** push `feature/wf1-headless-agent-spike` + open ONE PR to
    `main` (must **NOT** `Closes #56` — the epic spans WF1..WF5; `main` gated by
    `copilot_code_review`, so a force-push BLOCKs the review → `gh pr merge --admin`).

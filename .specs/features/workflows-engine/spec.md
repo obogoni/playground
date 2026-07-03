@@ -297,7 +297,7 @@ Every ambiguity is resolved or recorded here — nothing left silently unclear.
 | WF2-17 | US 39 | P1 | T8 | ✅ Done (tested) |
 | WF2-18 | US 42 | P1 | T9 | ✅ Done (contract+wiring; typecheck-gated, hand-verified) |
 | WF2-19 | (types) | P1 | T1 | ✅ Done (typecheck-gated) |
-| WF2-20 | (gate) | P1 | T10 | ⏳ Script done; **owner-run manual smoke pending** |
+| WF2-20 | (gate) | P1 | T10 | ✅ Done — **owner-run smoke PASSED 5/5** (2026-07-03; runId `4f5d9c9f…`, statuses `[running,done]`, 3 steps, 2 logs, run-log persisted) |
 
 **Coverage:** 20 requirements; all mapped to a priority. Task mapping happens in Tasks.
 
