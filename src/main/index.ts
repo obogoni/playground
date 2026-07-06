@@ -23,6 +23,7 @@ import type { CtxDeps, GitFetchOptions, ShellResult } from './workflow-ctx'
 import { discoverWorkflows, loadWorkflow } from './workflow-loader'
 import { WorkflowManager } from './workflow-manager'
 import { WorkflowRunStore } from './workflow-run-store'
+import { scaffoldWorkflow } from './workflow-scaffold'
 import { changedFilesOf, createWorktree, removeWorktree } from './worktree-manager'
 import { workspaceTemplates } from './workspace-config'
 import { WorkspaceRegistry } from './workspace-registry'
@@ -293,8 +294,9 @@ app.whenReady().then(() => {
     notifier,
     agent: agentRunner
   }
+  const workflowsRoot = join(homedir(), '.playground', 'workflows')
   const workflows = new WorkflowManager({
-    workflowsRoot: join(homedir(), '.playground', 'workflows'),
+    workflowsRoot,
     loader: { discoverWorkflows, loadWorkflow },
     ctxDeps,
     store: new WorkflowRunStore(join(app.getPath('userData'), 'workflow-runs')),
@@ -306,6 +308,13 @@ app.whenReady().then(() => {
   handle('workflows:cancel', ({ runId }) => workflows.cancel(runId))
   handle('workflows:respond', ({ runId, decision }) => workflows.respond(runId, decision))
   handle('workflows:reload', () => workflows.reload())
+  // Scaffold a new workflow folder from a template, then reveal it in the OS file
+  // manager (WF5-25); the create logic is the unit-tested workflow-scaffold module.
+  handle('workflows:scaffold', async ({ name }) => {
+    const result = await scaffoldWorkflow(workflowsRoot, name)
+    if (result.ok) shell.showItemInFolder(result.path)
+    return result
+  })
 
   // Free the shared MCP result server's loopback port when the app quits (WF3-10).
   app.on('will-quit', () => {
