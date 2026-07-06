@@ -1,0 +1,44 @@
+/* Run-workflow dialog — hifi deltas over the shared dialog chassis
+   (NewWorktreeDialog.css). Handoff §"Dialog: Run workflow". */
+
+.dialog-panel.wf-dialog-panel {
+  width: 520px;
+}
+
+.wf-dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: 9px;
+}
+
+.wf-dialog-tile {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.wf-dialog-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.wf-dialog-desc {
+  margin-top: 10px;
+  color: var(--text-muted);
+}
+
+.wf-req {
+  color: var(--red);
+}
+
+.wf-no-inputs {
+  font-style: italic;
+}
