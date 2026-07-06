@@ -172,6 +172,48 @@ describe('reduce — guarded (invalid) transitions return the run unchanged', ()
   })
 })
 
+describe('reduce — step-finished fold (WHF-03)', () => {
+  it('appends step-finished when running, clock-free, with no status change', () => {
+    const e = ev({ kind: 'step-finished', stepId: 1, durationMs: 1400, ok: true })
+    const next = reduce(running(), e)
+    expect(next.status).toBe('running')
+    expect(next.events.at(-1)).toEqual(e)
+    expect(next.events.at(-1)?.durationMs).toBe(1400)
+    expect(next.events).toHaveLength(2)
+  })
+
+  it('ignores step-finished while still pending (before run-started)', () => {
+    const run = pending()
+    const next = reduce(run, ev({ kind: 'step-finished', stepId: 1, durationMs: 5, ok: true }))
+    expect(next).toBe(run)
+    expect(next.status).toBe('pending')
+    expect(next.events).toEqual([])
+  })
+
+  it('ignores step-finished after a terminal status (done/failed/cancelled)', () => {
+    const done = reduce(running(), ev({ kind: 'done' }))
+    expect(reduce(done, ev({ kind: 'step-finished', stepId: 1, durationMs: 5, ok: true }))).toBe(
+      done
+    )
+    const failed = reduce(running(), ev({ kind: 'failed', error: 'x' }))
+    expect(reduce(failed, ev({ kind: 'step-finished', stepId: 2, durationMs: 5, ok: false }))).toBe(
+      failed
+    )
+    const cancelled = reduce(running(), ev({ kind: 'cancelled' }))
+    expect(reduce(cancelled, ev({ kind: 'step-finished', stepId: 3, durationMs: 5 }))).toBe(
+      cancelled
+    )
+  })
+
+  it('preserves order: step-started then step-finished append in sequence', () => {
+    const started = ev({ kind: 'step-started', label: 'sh', stepId: 7, stepKind: 'sh' })
+    const finished = ev({ kind: 'step-finished', stepId: 7, durationMs: 52000, ok: true })
+    const next = reduce(reduce(running(), started), finished)
+    expect(next.events.map((e) => e.kind)).toEqual(['run-started', 'step-started', 'step-finished'])
+    expect(next.events.map((e) => e.stepId)).toEqual([undefined, 7, 7])
+  })
+})
+
 describe('reduce — sessionId pass-through (WF3-16)', () => {
   it('appends a step-logged event carrying sessionId with the field intact', () => {
     const e = ev({ kind: 'step-logged', message: 'agent session s-1', sessionId: 'sess-abc123' })

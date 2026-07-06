@@ -45,7 +45,10 @@ export function reduce(run: WorkflowRun, event: StepEvent): WorkflowRun {
       if (run.status !== 'pending') return run
       return { ...run, status: 'running', events: [...run.events, event] }
     case 'step-started':
+    case 'step-finished':
     case 'step-logged':
+      // Auto-logged step lifecycle — appended clock-free (durationMs is
+      // stamped by the manager, never here); no status change (WHF-03).
       if (run.status !== 'running') return run
       return { ...run, events: [...run.events, event] }
     case 'blocked':
