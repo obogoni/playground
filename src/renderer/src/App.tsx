@@ -15,11 +15,13 @@ import { StartWorkDialog } from './components/StartWorkDialog'
 import { TasksPane } from './components/TasksPane'
 import { Toast } from './components/Toast'
 import { TopBar } from './components/TopBar'
+import { WorkflowsView } from './components/WorkflowsView'
 import { WorktreeDetail, WorktreeDetailEmpty } from './components/WorktreeDetail'
 import { api } from './lib/api'
 import { findWorktree } from './lib/tree-selection'
 import { useSessions } from './lib/use-sessions'
 import { useTree } from './lib/use-tree'
+import { useWorkflowRuns } from './lib/use-workflow-runs'
 import './App.css'
 
 type UiState = AppConfig['ui']
@@ -100,6 +102,9 @@ function App(): JSX.Element {
     respawnSession,
     removeSession
   } = useSessions({ onToast: setToast, onSwitchToAgents: () => update({ direction: 'agents' }) })
+  // Always mounted (above the direction switch) so runs accumulate from the
+  // workflow:* stream even while another direction is active (WF5-04, AD-011).
+  const workflows = useWorkflowRuns()
 
   const refreshTasks = useCallback((): void => {
     api.invoke('tasks:refresh').then(setTasks).catch(console.error)
@@ -141,6 +146,18 @@ function App(): JSX.Element {
   useEffect(() => {
     if (ui) document.documentElement.dataset.theme = ui.theme
   }, [ui])
+
+  // A WF4 lifecycle-toast click asks the renderer to surface a run: switch to the
+  // Workflows direction and open that run (WF5-17).
+  const selectRun = workflows.selectRun
+  useEffect(() => {
+    const off = api.on('workflow:focus-run', ({ runId }) => {
+      setUi((prev) => (prev ? { ...prev, direction: 'workflows' } : prev))
+      api.invoke('config:patch', { ui: { direction: 'workflows' } }).catch(console.error)
+      selectRun(runId)
+    })
+    return off
+  }, [selectRun])
 
   const addWorkspace = (): void => {
     api
@@ -278,6 +295,20 @@ function App(): JSX.Element {
             onDuplicate={duplicateSession}
             onOpenWorktree={openWorktreeForSession}
             onNew={() => openNewSession()}
+          />
+        ) : ui.direction === 'workflows' ? (
+          <WorkflowsView
+            defs={workflows.defs}
+            runs={workflows.runs}
+            selectedRunId={workflows.selectedRunId}
+            activeRunId={workflows.activeRunId}
+            error={workflows.error}
+            onRun={workflows.start}
+            onCancel={workflows.cancel}
+            onRespond={workflows.respond}
+            onReload={workflows.refresh}
+            onScaffold={workflows.scaffold}
+            onSelectRun={workflows.selectRun}
           />
         ) : (
           <BoardView

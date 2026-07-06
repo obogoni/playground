@@ -128,6 +128,16 @@ export function TopBar({
           <Icon name="terminal" size={14} />
           Agents
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={direction === 'workflows'}
+          className={`topbar-segment${direction === 'workflows' ? ' active' : ''}`}
+          onClick={() => onDirectionChange('workflows')}
+        >
+          <Icon name="git-fork" size={14} />
+          Workflows
+        </button>
       </div>
 
       <div className="topbar-spacer" />
