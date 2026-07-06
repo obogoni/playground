@@ -9,8 +9,8 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { transform } from 'esbuild'
 import { afterEach, describe, expect, it } from 'vitest'
-import { loadWorkflow } from './workflow-loader'
 import { sanitizeWorkflowId, scaffoldWorkflow } from './workflow-scaffold'
 
 const roots: string[] = []
@@ -51,15 +51,19 @@ describe('scaffoldWorkflow', () => {
     expect(existsSync(join(root, 'implement-ticket', 'workflow.ts'))).toBe(true)
   })
 
-  it('produces a template that the real loader parses to a valid {meta, run}', async () => {
+  it('produces a template that compiles and exports a valid meta + run', async () => {
     const root = freshRoot()
     const result = await scaffoldWorkflow(root, 'demo-flow')
     if (!result.ok) throw new Error(`expected ok, got: ${result.error}`)
-    const loaded = await loadWorkflow(result.path)
-    if ('error' in loaded) throw new Error(`expected load, got error: ${loaded.error}`)
-    expect(loaded.meta.name).toBe('demo-flow')
-    expect(loaded.meta.inputs).toEqual([])
-    expect(typeof loaded.run).toBe('function')
+    // Compile the generated TS and import it via a data: URL — proves the template
+    // is real, valid, loadable code without touching the shared tmpdir (which would
+    // race workflow-loader's temp-file leak test).
+    const source = readFileSync(join(result.path, 'workflow.ts'), 'utf8')
+    const { code } = await transform(source, { loader: 'ts', format: 'esm' })
+    const mod = await import(`data:text/javascript,${encodeURIComponent(code)}`)
+    expect(mod.meta.name).toBe('demo-flow')
+    expect(mod.meta.inputs).toEqual([])
+    expect(typeof mod.run).toBe('function')
   })
 
   it('rejects an existing id without overwriting the existing file', async () => {
