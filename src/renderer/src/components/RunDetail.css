@@ -1,0 +1,205 @@
+.run-detail {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.run-detail-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.run-detail-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.run-detail-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.run-detail-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.run-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.run-badge-running {
+  color: var(--blue);
+  border-color: color-mix(in oklab, var(--blue) 45%, transparent);
+  background: color-mix(in oklab, var(--blue) 12%, transparent);
+}
+
+.run-badge-blocked {
+  color: var(--amber);
+  border-color: color-mix(in oklab, var(--amber) 45%, transparent);
+  background: color-mix(in oklab, var(--amber) 14%, transparent);
+}
+
+.run-badge-done {
+  color: var(--green);
+  border-color: color-mix(in oklab, var(--green) 45%, transparent);
+  background: color-mix(in oklab, var(--green) 12%, transparent);
+}
+
+.run-badge-failed {
+  color: var(--red);
+  border-color: color-mix(in oklab, var(--red) 45%, transparent);
+  background: color-mix(in oklab, var(--red) 12%, transparent);
+}
+
+.run-cancel-btn {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.run-cancel-btn:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* Blocked respond panel */
+.respond-panel {
+  margin: 14px 18px 0;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in oklab, var(--amber) 45%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--amber) 8%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.respond-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.respond-body {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}
+
+.respond-input {
+  width: 100%;
+  min-height: 66px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+}
+
+.respond-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.respond-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.respond-abort {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--red);
+  cursor: pointer;
+}
+
+.respond-send {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+.respond-send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Timeline */
+.run-timeline {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.run-timeline-empty {
+  color: var(--text-faint);
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+
+.run-row {
+  font-size: 13px;
+  padding: 3px 0;
+  line-height: 1.45;
+}
+
+.run-row.grouped {
+  padding-left: 16px;
+  border-left: 1px solid var(--border);
+  margin-left: 3px;
+}
+
+.run-step-label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.run-log-msg {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
