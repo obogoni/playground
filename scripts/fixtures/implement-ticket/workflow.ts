@@ -32,7 +32,8 @@ export const meta = {
     'Create a worktree and have an agent implement a ticket, pausing to ask when the ticket is ambiguous.',
   inputs: [
     { key: 'repoPath', label: 'Repository path', required: true },
-    { key: 'branch', label: 'Feature branch', required: true }
+    { key: 'branch', label: 'Feature branch', required: true },
+    { key: 'baseBranch', label: 'Base branch', required: false }
   ]
 }
 
@@ -59,8 +60,12 @@ interface ImplementCtx {
 export async function run(ctx: ImplementCtx): Promise<void> {
   const repoPath = ctx.input.repoPath
   const branch = ctx.input.branch
+  // A base branch is REQUIRED to cut a NEW branch: with a base the manager runs
+  // `git worktree add <target> -b <branch> <base>`; WITHOUT one it tries to check out an
+  // already-existing branch and fails `invalid reference` for a fresh branch name.
+  const baseBranch = ctx.input.baseBranch || 'main'
 
-  const created = await ctx.worktree.create(repoPath, branch)
+  const created = await ctx.worktree.create(repoPath, branch, baseBranch)
   if (!created.ok || !created.path) {
     await ctx.log(`implement-ticket: worktree create failed: ${created.error ?? 'unknown error'}`)
     return

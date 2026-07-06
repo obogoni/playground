@@ -152,7 +152,7 @@ await evaluate(
   `(() => {
      window.__wfRun = window.api.invoke('workflows:run', { id: 'implement-ticket', input: { repoPath: ${JSON.stringify(
        repoPath
-     )}, branch: ${JSON.stringify(BRANCH)} } })
+     )}, branch: ${JSON.stringify(BRANCH)}, baseBranch: 'main' } })
      window.__wfRun.then((r) => { window.__wfRunResult = r }, (e) => { window.__wfRunError = String(e) })
      return true
    })()`
