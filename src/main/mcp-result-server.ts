@@ -33,13 +33,17 @@ import {
 } from './emit-result-schema'
 
 export interface McpResultServer {
-  /** Bind an ephemeral loopback port; returns the URL to hand to the agent. */
-  start(): Promise<{ url: string; port: number }>
+  /** Bind a loopback port (ephemeral by default); returns the URL to hand to the
+   *  agent. Rejects if the port cannot be bound instead of hanging (WF4-20). */
+  start(port?: number): Promise<{ url: string; port: number }>
   /** Register a step: its token authorizes calls and its `expect` shapes the tool.
    *  Resolves when the agent makes a valid `emit_result` call for this token. */
   register(token: string, expect: JsonSchema): Promise<EmitResultPayload>
   /** Drop a token — later calls with it are rejected (token = auth, not just routing). */
   revoke(token: string): void
+  /** The last field-level ajv error recorded for a non-conforming `emit_result`
+   *  under this token, or `undefined` if none / the token is unknown (WF4-18). */
+  lastError(token: string): string | undefined
   /** Close every per-token transport and the HTTP listener. */
   stop(): Promise<void>
 }
@@ -52,6 +56,8 @@ interface Registration {
   resolve: (payload: EmitResultPayload) => void
   reject: (err: Error) => void
   settled: boolean
+  /** The most recent ajv rejection message for this token (WF4-18). */
+  lastError?: string
 }
 
 function bearerToken(req: IncomingMessage): string | undefined {
@@ -92,6 +98,8 @@ function buildTokenServer(reg: Registration): Server {
     if (!result.ok) {
       // A non-conforming payload is REPORTED as a tool error; the corrective
       // --resume retry (if the run ends with no valid emit) is the runner's job.
+      // Record the field-level ajv message so the retry prompt can surface it (WF4-18).
+      reg.lastError = result.error
       return {
         content: [{ type: 'text', text: `invalid emit_result: ${result.error}` }],
         isError: true
@@ -124,11 +132,15 @@ export function createMcpResultServer(): McpResultServer {
   })
 
   return {
-    start() {
-      return new Promise((resolve) => {
-        httpServer.listen(0, '127.0.0.1', () => {
-          const port = (httpServer.address() as AddressInfo).port
-          resolve({ url: `http://127.0.0.1:${port}/mcp`, port })
+    start(port = 0) {
+      return new Promise((resolve, reject) => {
+        // A bind failure (e.g. EADDRINUSE) must reject, not hang forever (WF4-20).
+        const onError = (err: Error): void => reject(err)
+        httpServer.once('error', onError)
+        httpServer.listen(port, '127.0.0.1', () => {
+          httpServer.removeListener('error', onError)
+          const bound = (httpServer.address() as AddressInfo).port
+          resolve({ url: `http://127.0.0.1:${bound}/mcp`, port: bound })
         })
       })
     },
@@ -149,6 +161,10 @@ export function createMcpResultServer(): McpResultServer {
       reg.ready = reg.server.connect(reg.transport)
       registrations.set(token, reg)
       return emitted
+    },
+
+    lastError(token) {
+      return registrations.get(token)?.lastError
     },
 
     revoke(token) {

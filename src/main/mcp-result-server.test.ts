@@ -109,6 +109,45 @@ describe('createMcpResultServer — token is auth, not just routing (WF3-08)', (
   })
 })
 
+describe('createMcpResultServer — field-level lastError (WF4-18)', () => {
+  it('stores the field-level ajv error for a non-conforming payload, exposed via lastError(token)', async () => {
+    void server.register('tok-e', EXPECT).catch(() => {})
+    expect(server.lastError('tok-e')).toBeUndefined() // none before any invalid call
+    const client = await connectClient('tok-e')
+    await client.callTool({
+      name: 'emit_result',
+      arguments: { status: 'done', data: { answer: 'not-a-number' } }
+    })
+    const err = server.lastError('tok-e')
+    expect(err).toMatch(/answer/) // names the offending field
+    expect(err).toMatch(/number/) // and why it failed
+  })
+
+  it('returns undefined for an unknown token', () => {
+    expect(server.lastError('never-registered')).toBeUndefined()
+  })
+
+  it('leaves lastError undefined when the emit is valid (no WF3 regression)', async () => {
+    const pending = server.register('tok-v', EXPECT)
+    const client = await connectClient('tok-v')
+    await client.callTool({
+      name: 'emit_result',
+      arguments: { status: 'done', data: { answer: 7 } }
+    })
+    await expect(pending).resolves.toEqual({ status: 'done', data: { answer: 7 } })
+    expect(server.lastError('tok-v')).toBeUndefined()
+  })
+})
+
+describe('createMcpResultServer — bind-failure reject (WF4-20)', () => {
+  it('rejects start() when the port is already bound instead of hanging forever', async () => {
+    const second = createMcpResultServer()
+    // `port` is held by the beforeEach server on 127.0.0.1 → EADDRINUSE.
+    await expect(second.start(port)).rejects.toThrow()
+    await second.stop().catch(() => {})
+  })
+})
+
 describe('createMcpResultServer — revoke (WF3-09)', () => {
   it('rejects an un-settled pending on revoke and 401s later calls with that token', async () => {
     const pending = server.register('tok-4', EXPECT)
