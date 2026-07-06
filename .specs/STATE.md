@@ -22,18 +22,22 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current, 2026-07-06):** Workflows epic (issue #56) — **WF1–WF4 MERGED to `main`**.
-**WF5 hi-fi rebuild (`workflows-ui-hifi`, AD-012): EXECUTED + VERIFIED (PASS)** on branch
-**`feature/workflows-ui`**. All 11 tasks / 5 phases committed inline via one sub-agent per phase
+**Status (current, 2026-07-06):** **Workflows epic (issue #56) — DONE + CLOSED.** WF1–WF5
+(incl. the WF5 hi-fi rebuild) all **MERGED to `main`**. WF5 + hifi landed via **PR #67**
+(merge commit `668b2d4`); the `feature/workflows-ui` branch is deleted; issue #56 is **CLOSED**.
+The owner-run two-example UI gate **PASSED** (handoff fidelity confirmed). Details of the hifi
+slice below for the record.
+
+**WF5 hi-fi rebuild (`workflows-ui-hifi`, AD-012): EXECUTED + VERIFIED (PASS) + MERGED.** Built on
+the (now deleted) branch `feature/workflows-ui`. All 11 tasks / 5 phases committed inline via one sub-agent per phase
 (`d256870..c38f996`, 11 atomic commits). **Verifier PASS** (independent, author ≠ verifier):
 10/10 backend unit ACs matched spec outcome (payload/conjunction rule satisfied — every field
 asserted on value), 14/14 renderer ACs data-path present (visual proof deferred to the owner UI
 gate per convention), gate green **486/486 tests / 36 files**, `npm run build` OK, discrimination
 sensor **6/6 mutants killed** (reducer step-finished guard, manager durationMs, stepId
 monotonicity, agent `read` permission default, groupRollup precedence, stepStatus ok-flag), no
-survivors, no gaps. Report: `.specs/features/workflows-ui-hifi/validation.md`. **NOT merged to
-`main`** — the hifi work sits on `feature/workflows-ui`; one PR (`Closes #56`) then
-`gh pr merge --admin`. Epic #56 stays **open** until then.
+survivors, no gaps. Report: `.specs/features/workflows-ui-hifi/validation.md`. **Merged to `main`**
+via PR #67 (`668b2d4`, `Closes #56`, admin merge per the copilot_code_review ruleset).
 
 **Commit map (`d256870..c38f996`, in order):**
 | Commit | Task | What |
@@ -56,18 +60,8 @@ keyframe but `global.css` only had `fadeIn`/`popIn`/`toastIn`. No new named anim
 handoff's set, no new tokens. Distilled as lesson **L-002** (candidate, `spec_deviation`): grep
 `global.css` to confirm a referenced CSS keyframe exists before a UI design cites it as existing.
 
-**NEXT STEP (resume here — owner-run UI gate, then PR):**
-1. **Owner-run two-example UI gate (the milestone gate — MANUAL, not automatable):**
-   `npm run dev -- -- --remote-debugging-port=9222`, then drive **"implement ticket"** + **"review PR"**
-   through the UI and verify handoff fidelity: kind tags, durations, agent detail box with emitted
-   `data`, `ctx.step` **group rollup** (implement-ticket), blocked panel + session `<id>` note, resume,
-   done/failed footer. A deliberately-failing workflow should show the failed footer with the call +
-   exit code. (`node scripts/smoke-blocker-resume.mjs` still greps the `implement-ticket result:` notify
-   line — unchanged.)
-2. **After owner PASS → one PR** on `feature/workflows-ui` with body `Closes #56` →
-   `gh pr merge --admin` (main gated by copilot_code_review ruleset, per the main-branch-merge-ruleset
-   memory). This single PR closes the whole Workflows epic (WF5 first pass + hifi rebuild both ride
-   this branch).
+**DONE (this session):** owner-run two-example UI gate PASSED → PR #67 created → admin-merged to
+`main` (`668b2d4`) → issue #56 CLOSED → branch deleted. **No open next step for the Workflows epic.**
 
 **Deferred (spec Out of Scope):** Re-run action; live token-by-token agent stdout tail; persisted-run
 read channel (`workflows:get`); backend `ctx.step` rollup status (renderer-derived); agent kind tag
