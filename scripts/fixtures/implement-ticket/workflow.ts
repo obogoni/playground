@@ -68,19 +68,21 @@ export async function run(ctx: ImplementCtx): Promise<void> {
   const worktreePath = created.path
   await ctx.log(`implement-ticket: worktree ready at ${worktreePath}`)
 
-  // The ticket is under-specified ON PURPOSE: it names no file, no function name, and no
-  // greeting text. A good agent must ask before writing — that ask is the blocker we test.
+  // The ticket is under-specified ON PURPOSE and the prompt makes blocking a MANDATORY
+  // first phase (not a judgement call) so the gate deterministically exercises the WF4
+  // block → guidance → resume loop — a capable agent left to its own judgement would just
+  // pick reasonable defaults and finish `done` without ever asking.
   const prompt =
     'You are implementing a ticket in this repository worktree.\n\n' +
-    'TICKET: "Add a greeting helper module."\n\n' +
-    'The ticket is intentionally under-specified — it does not say which file to create, ' +
-    'what to name the function, or what the greeting text should be. Before writing ANY ' +
-    'code, if a critical detail is missing or ambiguous you MUST call the emit_result tool ' +
-    'with status "blocked" and a single clear `question` asking for the missing detail. Do ' +
-    'NOT guess and do NOT create files yet.\n\n' +
-    'Once you receive guidance on a resumed turn, make the change, then finish by calling ' +
-    'emit_result with status "done", a `summary` of what you did, and a `filesChanged` ' +
-    'array of the paths you touched.'
+    'TICKET: "Add a greeting helper module (details to be confirmed with the requester)."\n\n' +
+    'This task uses a MANDATORY two-phase confirmation protocol — follow it exactly:\n\n' +
+    'PHASE 1 (now): Your FIRST emit_result call MUST have status "blocked" and a single ' +
+    '`question` asking the requester to confirm three things: the target filename, the ' +
+    'exported function name, and the exact greeting text. Do NOT create or edit ANY file in ' +
+    'this phase and do NOT guess these details — blocking to ask is required.\n\n' +
+    'PHASE 2 (after you receive a guidance response): make the change EXACTLY as the ' +
+    'guidance instructs, then call emit_result with status "done", a `summary` of what you ' +
+    'did, and a `filesChanged` array of the paths you touched.'
 
   // NO pause/resume code here — the engine auto-pauses on a `blocked` emit, surfaces the
   // question (toast + workflow:blocked), and resumes THIS call with the guidance (WF4-01).

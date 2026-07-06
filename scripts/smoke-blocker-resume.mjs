@@ -158,18 +158,23 @@ await evaluate(
    })()`
 )
 
-// Poll for the blocked question (the agent may take a minute to decide to ask).
+// Poll for the blocked question (the agent may take a minute to decide to ask). Capture the
+// runId from the status stream too, so it is available even if the run finishes WITHOUT
+// blocking (every workflow:status/blocked payload carries the runId).
 let blocked = null
 let statuses = []
+let runIdFromStream = null
 for (let i = 0; i < 180; i++) {
   const s = await evaluate(
     ws,
     `(() => {
        const s = window.__wfBlockSmoke
-       return { blocked: s.blocked, statuses: s.statuses.map((x) => x.status) }
+       const runId = (s.statuses[0] && s.statuses[0].runId) || (s.blocked[0] && s.blocked[0].runId) || null
+       return { blocked: s.blocked, statuses: s.statuses.map((x) => x.status), runId }
      })()`
   )
   statuses = s.statuses
+  runIdFromStream = s.runId
   if (s.blocked.length > 0) {
     blocked = s.blocked[0]
     break
@@ -187,7 +192,7 @@ check(
 )
 check('blocked status was streamed', statuses.includes('blocked'), JSON.stringify(statuses))
 
-const runId = blocked?.runId ?? null
+const runId = blocked?.runId ?? runIdFromStream
 
 // Respond with guidance that resolves every ambiguity → the engine resumes the session.
 if (runId) {
@@ -206,9 +211,11 @@ for (let i = 0; i < 240; i++) {
   await sleep(1000)
 }
 
+// A pass requires the run to have BLOCKED first and then reached done — a run that went
+// straight to done without ever pausing is a FAIL (the WF4 loop was never exercised).
 check(
-  'run resumed and reached done after guidance',
-  statuses.includes('done'),
+  'run blocked, then resumed and reached done after guidance',
+  Boolean(blocked) && statuses.includes('done'),
   JSON.stringify(statuses)
 )
 
