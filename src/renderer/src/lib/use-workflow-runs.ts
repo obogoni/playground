@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { RespondDecision, ScaffoldResult, WorkflowDef } from '../../../shared/workflows'
 import { api } from './api'
 import { foldRunEvent, type RunView } from './workflow-run-view'
@@ -28,17 +28,15 @@ export interface UseWorkflowRuns {
  * wiring.
  *
  * `workflows:run` resolves its `{runId}` only when the run *finishes*, so the
- * runId is learned from the event stream instead: the first `workflow:status`
- * for a never-seen run is the just-triggered serial run — it is auto-selected and
- * tagged with the `workflowId` we started (`pendingWf`).
+ * runId + its `workflowId`/`input`/`startedAt` are learned from the
+ * `workflow:run-started` event (WHF-08): folding it seeds the run and
+ * auto-selects it — no `pendingWf` runId/workflowId inference (retired).
  */
 export function useWorkflowRuns(): UseWorkflowRuns {
   const [defs, setDefs] = useState<WorkflowDef[]>([])
   const [runs, setRuns] = useState<RunView[]>([])
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const knownIds = useRef<Set<string>>(new Set())
-  const pendingWf = useRef<string | null>(null)
 
   const refresh = useCallback((): void => {
     api
@@ -49,33 +47,34 @@ export function useWorkflowRuns(): UseWorkflowRuns {
 
   useEffect(() => refresh(), [refresh])
 
-  // Always-on run stream: fold status/step/log/blocked into the session's runs.
+  // Always-on run stream: fold run-started/status/step/log/blocked into the
+  // session's runs. `run-started` seeds workflowId/input/startedAt and
+  // auto-selects the just-triggered serial run; `step` carries both
+  // `step-started` and `step-finished` (the fold branches on `StepEvent.kind`).
   useEffect(() => {
-    const offStatus = api.on('workflow:status', ({ runId, status }) => {
-      if (!knownIds.current.has(runId)) {
-        knownIds.current.add(runId)
-        const wf = pendingWf.current
-        pendingWf.current = null
+    const offRunStarted = api.on(
+      'workflow:run-started',
+      ({ runId, workflowId, input, startedAt }) => {
         setSelectedRunId(runId)
         setRuns((prev) =>
-          foldRunEvent(prev, { type: 'status', runId, status }).map((r) =>
-            r.runId === runId && wf ? { ...r, workflowId: wf } : r
-          )
+          foldRunEvent(prev, { type: 'run-started', runId, workflowId, input, startedAt })
         )
-      } else {
-        setRuns((prev) => foldRunEvent(prev, { type: 'status', runId, status }))
       }
-    })
+    )
+    const offStatus = api.on('workflow:status', ({ runId, status }) =>
+      setRuns((prev) => foldRunEvent(prev, { type: 'status', runId, status }))
+    )
     const offStep = api.on('workflow:step', ({ runId, step }) =>
       setRuns((prev) => foldRunEvent(prev, { type: 'step', runId, step }))
     )
     const offLog = api.on('workflow:log', ({ runId, message, group }) =>
       setRuns((prev) => foldRunEvent(prev, { type: 'log', runId, message, group }))
     )
-    const offBlocked = api.on('workflow:blocked', ({ runId, question }) =>
-      setRuns((prev) => foldRunEvent(prev, { type: 'blocked', runId, question }))
+    const offBlocked = api.on('workflow:blocked', ({ runId, question, sessionId }) =>
+      setRuns((prev) => foldRunEvent(prev, { type: 'blocked', runId, question, sessionId }))
     )
     return () => {
+      offRunStarted()
       offStatus()
       offStep()
       offLog()
@@ -85,11 +84,9 @@ export function useWorkflowRuns(): UseWorkflowRuns {
 
   const start = useCallback((id: string, input: Record<string, string>): void => {
     setError(null)
-    pendingWf.current = id
-    // Fire-and-forget: the runId arrives via workflow:status; a rejection here is
-    // the serial-run guard (WF2-17), surfaced instead of swallowed (WF5-20).
+    // Fire-and-forget: the runId arrives via workflow:run-started; a rejection
+    // here is the serial-run guard (WF2-17), surfaced instead of swallowed (WF5-20).
     api.invoke('workflows:run', { id, input }).catch((err) => {
-      pendingWf.current = null
       setError(err instanceof Error ? err.message : String(err))
     })
   }, [])
