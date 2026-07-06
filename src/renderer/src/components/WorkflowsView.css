@@ -1,0 +1,226 @@
+.workflows-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.wf-rail {
+  width: 320px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding-bottom: 16px;
+}
+
+.wf-rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+}
+
+.wf-rail-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.wf-rail-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.wf-rail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.wf-rail-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.wf-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 16px 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--red);
+  border: 1px solid color-mix(in oklab, var(--red) 45%, transparent);
+  border-radius: 7px;
+  background: color-mix(in oklab, var(--red) 10%, transparent);
+}
+
+.wf-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  padding: 10px 16px 6px;
+}
+
+.wf-defs,
+.wf-runs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 10px;
+}
+
+.wf-empty {
+  font-size: 12px;
+  color: var(--text-faint);
+  padding: 2px 6px;
+  margin: 0;
+}
+
+.wf-def {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.wf-def.broken {
+  border-color: color-mix(in oklab, var(--red) 40%, var(--border));
+}
+
+.wf-def-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+
+.wf-def-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wf-def-desc {
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wf-def-error {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--red);
+}
+
+.wf-run-btn {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+.wf-run-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  border-color: var(--border);
+  background: var(--bg);
+  color: var(--text-faint);
+}
+
+.wf-run-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.wf-run-item:hover {
+  background: var(--bg);
+}
+
+.wf-run-item.selected {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+
+.wf-run-item-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wf-run-item-status {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.wf-status-pending,
+.wf-status-cancelled {
+  color: var(--text-faint);
+}
+.wf-status-running {
+  color: var(--blue);
+}
+.wf-status-blocked {
+  color: var(--amber);
+}
+.wf-status-done {
+  color: var(--green);
+}
+.wf-status-failed {
+  color: var(--red);
+}
+
+.wf-detail-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-faint);
+}
+
+.wf-detail-empty p {
+  font-size: 13px;
+  margin: 0;
+}
