@@ -1,5 +1,6 @@
 import type { WorkItemDetails } from '../shared/tasks'
 import type { ChangedFile, CreateWorktreeResult, RemoveWorktreeResult } from '../shared/worktrees'
+import type { AgentResult, AgentStepOptions } from './agent-step-runner'
 import {
   refKey,
   type GetWorkItemsResult,
@@ -78,6 +79,14 @@ export interface CtxDeps {
     getWorkItems(refs: WorkItemRef[]): Promise<GetWorkItemsResult>
   }
   notifier(title: string, message: string): void
+  // SPEC_DEVIATION: design (§7 / Data Models) types `agent` as required. It is
+  // typed optional here so `index.ts` — which wires the real runner in T11 — keeps
+  // typechecking through this phase without an out-of-scope edit. Production always
+  // injects it; `ctx.agent` throws a clear error if invoked without it.
+  // Reason: preserve a green gate across the phase boundary (T9 ships before T11).
+  agent?: {
+    run(opts: AgentStepOptions, signal?: AbortSignal): Promise<AgentResult>
+  }
 }
 
 /**
@@ -90,10 +99,16 @@ export interface CtxRuntime {
   checkCancel(): void
   /** Record a `step-started` for an executed primitive / `ctx.step` group (WF2-10). */
   emitStep(label: string, group?: string): void
-  /** Record a `step-logged` log line (WF2-10). */
-  emitLog(message: string, group?: string): void
+  /** Record a `step-logged` log line; `sessionId` rides the event for the agent step (WF3-16). */
+  emitLog(message: string, group?: string, sessionId?: string): void
   /** The trigger values (`workflows:run` payload) — exposed frozen as `ctx.input`. */
   input: Record<string, string>
+  // SPEC_DEVIATION: design (§7) types `signal` as required. It is typed optional
+  // here so `workflow-manager.ts` — which sets it in T10, after this task's commit —
+  // keeps typechecking now without an out-of-scope edit. Production always provides it.
+  // Reason: preserve a green gate across the T9→T10 ordering.
+  /** The run's cancellation signal, forwarded to `deps.agent.run` for child-kill (WF3-20). */
+  signal?: AbortSignal
 }
 
 /** The deterministic facade handed to a workflow's `run(ctx)`. */
@@ -120,6 +135,8 @@ export interface Ctx {
   notify(message: string, opts?: { toast?: boolean }): Promise<void>
   log(message: string): Promise<void>
   step<T>(label: string, fn: () => Promise<T>): Promise<T>
+  /** Run a headless agent step returning validated structured data (WF3-01). */
+  agent(opts: AgentStepOptions): Promise<AgentResult>
   input: Record<string, string>
 }
 
@@ -234,6 +251,17 @@ export function makeCtx(deps: CtxDeps, runtime: CtxRuntime): Ctx {
         groupStack.pop()
       }
     },
+
+    // `instrument` runs `checkCancel` (before spawn, WF3-19) and auto-emits a
+    // `step-started` labeled `agent`; the delegate forwards the run's cancellation
+    // `signal` so a running child is killed on cancel (WF3-20), then records the
+    // agent's `session_id` on a `step-logged` event for WF4 `--resume` (WF3-16).
+    agent: instrument('agent', async (opts: AgentStepOptions): Promise<AgentResult> => {
+      if (!deps.agent) throw new Error('agent capability is not configured')
+      const result = await deps.agent.run(opts, runtime.signal)
+      runtime.emitLog(`agent session ${result.sessionId}`, currentGroup(), result.sessionId)
+      return result
+    }),
 
     input: Object.freeze({ ...runtime.input })
   }

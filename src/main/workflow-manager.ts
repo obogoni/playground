@@ -36,9 +36,15 @@ export interface WorkflowManagerDeps {
   notifier: (title: string, message: string) => void
 }
 
-/** A run's cancellation token — flipped by `cancel`, read by the ctx `checkCancel`. */
+/**
+ * A run's cancellation token. `cancelled` is flipped by `cancel` and polled by the
+ * ctx `checkCancel` at each `ctx.*` boundary (WF2-14); `controller` drives the
+ * `AbortSignal` handed to a long-running agent step so a running child is killed
+ * mid-flight rather than only at the next checkpoint (WF3-20).
+ */
 interface CancelToken {
   cancelled: boolean
+  controller: AbortController
 }
 
 /**
@@ -103,7 +109,7 @@ export class WorkflowManager {
 
     const runId = randomUUID()
     const resolvedInput = input ?? {}
-    const token: CancelToken = { cancelled: false }
+    const token: CancelToken = { cancelled: false, controller: new AbortController() }
     this.#activeRunId = runId
     this.#activeToken = token
     this.#activeRun = initialRun(runId, id, resolvedInput)
@@ -114,9 +120,12 @@ export class WorkflowManager {
       },
       emitStep: (label: string, group?: string): void =>
         this.#apply({ kind: 'step-started', label, group }),
-      emitLog: (message: string, group?: string): void =>
-        this.#apply({ kind: 'step-logged', message, group }),
-      input: resolvedInput
+      emitLog: (message: string, group?: string, sessionId?: string): void =>
+        this.#apply({ kind: 'step-logged', message, group, sessionId }),
+      input: resolvedInput,
+      // The run's cancellation signal, forwarded by `ctx.agent` to the runner so an
+      // in-flight agent child is killed on cancel (WF3-20).
+      signal: token.controller.signal
     }
 
     try {
@@ -147,10 +156,15 @@ export class WorkflowManager {
     return { runId }
   }
 
-  /** Request cancellation of `runId`; the token is read at the next `ctx.*` checkpoint (WF2-14). */
+  /**
+   * Request cancellation of `runId`. Sets the token (read at the next `ctx.*`
+   * checkpoint, WF2-14) AND aborts the controller so a running agent child is
+   * killed mid-flight rather than surviving until the next checkpoint (WF3-20).
+   */
   cancel(runId: string): void {
     if (runId === this.#activeRunId && this.#activeToken) {
       this.#activeToken.cancelled = true
+      this.#activeToken.controller.abort()
     }
   }
 

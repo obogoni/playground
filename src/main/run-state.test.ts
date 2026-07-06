@@ -110,6 +110,24 @@ describe('reduce — guarded (invalid) transitions return the run unchanged', ()
   })
 })
 
+describe('reduce — sessionId pass-through (WF3-16)', () => {
+  it('appends a step-logged event carrying sessionId with the field intact', () => {
+    const e = ev({ kind: 'step-logged', message: 'agent session s-1', sessionId: 'sess-abc123' })
+    const next = reduce(running(), e)
+    expect(next.status).toBe('running')
+    const last = next.events.at(-1)
+    expect(last?.sessionId).toBe('sess-abc123')
+    expect(last?.message).toBe('agent session s-1')
+    expect(last?.kind).toBe('step-logged')
+  })
+
+  it('leaves sessionId undefined on a step-logged event without one (no fabrication)', () => {
+    const e = ev({ kind: 'step-logged', message: 'plain log' })
+    const next = reduce(running(), e)
+    expect(next.events.at(-1)?.sessionId).toBeUndefined()
+  })
+})
+
 describe('reduce — purity', () => {
   it('never mutates the input run on a valid transition', () => {
     const run = running()

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { AgentResult, AgentStepOptions } from './agent-step-runner'
 import { refKey, type WorkItemRef } from './ado-gateway'
 import { CancellationError, makeCtx, type CtxDeps, type CtxRuntime } from './workflow-ctx'
 
@@ -9,9 +10,13 @@ interface StepRec {
 interface LogRec {
   message: string
   group?: string
+  sessionId?: string
 }
 
-function makeRuntime(input: Record<string, string> = {}): {
+function makeRuntime(
+  input: Record<string, string> = {},
+  signal?: AbortSignal
+): {
   runtime: CtxRuntime
   steps: StepRec[]
   logs: LogRec[]
@@ -27,10 +32,11 @@ function makeRuntime(input: Record<string, string> = {}): {
     emitStep(label, group) {
       steps.push({ label, group })
     },
-    emitLog(message, group) {
-      logs.push({ message, group })
+    emitLog(message, group, sessionId) {
+      logs.push({ message, group, sessionId })
     },
-    input
+    input,
+    signal
   }
   return { runtime, steps, logs, cancel: () => (cancelled = true) }
 }
@@ -326,5 +332,119 @@ describe('auto-logging + cancellation (WF2-10 / WF2-14)', () => {
     cancel()
     await expect(ctx.log('x')).rejects.toBeInstanceOf(CancellationError)
     expect(logs).toEqual([])
+  })
+})
+
+/** A recording fake for the injected `agent` capability. */
+function fakeAgent(result: AgentResult): {
+  agent: NonNullable<CtxDeps['agent']>
+  calls: Array<{ opts: AgentStepOptions; signal?: AbortSignal }>
+} {
+  const calls: Array<{ opts: AgentStepOptions; signal?: AbortSignal }> = []
+  return {
+    agent: {
+      async run(opts, signal) {
+        calls.push({ opts, signal })
+        return result
+      }
+    },
+    calls
+  }
+}
+
+const AGENT_OPTS: AgentStepOptions = {
+  prompt: 'review this diff',
+  expect: { type: 'object' },
+  cwd: 'C:/wt'
+}
+
+describe('ctx.agent (WF3-01 / WF3-16 / WF3-19)', () => {
+  it('delegates to deps.agent.run with (opts, runtime.signal) and returns its result', async () => {
+    const deps = makeDeps()
+    const controller = new AbortController()
+    const { runtime } = makeRuntime({}, controller.signal)
+    const result: AgentResult = { status: 'done', data: { findings: [] }, sessionId: 'sess-1' }
+    const { agent, calls } = fakeAgent(result)
+    deps.agent = agent
+    const ctx = makeCtx(deps, runtime)
+
+    const returned = await ctx.agent(AGENT_OPTS)
+
+    expect(returned).toBe(result)
+    expect(calls).toHaveLength(1)
+    expect(calls[0].opts).toBe(AGENT_OPTS)
+    expect(calls[0].signal).toBe(controller.signal)
+  })
+
+  it('returns a blocked result verbatim (ctx does not transform it) (WF3-17)', async () => {
+    const deps = makeDeps()
+    const { runtime } = makeRuntime()
+    const blocked: AgentResult = {
+      status: 'blocked',
+      question: 'Which branch should I target?',
+      sessionId: 'sess-b'
+    }
+    const { agent } = fakeAgent(blocked)
+    deps.agent = agent
+    const ctx = makeCtx(deps, runtime)
+
+    const returned = await ctx.agent(AGENT_OPTS)
+
+    expect(returned).toEqual({
+      status: 'blocked',
+      question: 'Which branch should I target?',
+      sessionId: 'sess-b'
+    })
+  })
+
+  it('auto-emits a step-started labeled "agent" (WF3-19)', async () => {
+    const deps = makeDeps()
+    const { runtime, steps } = makeRuntime()
+    const { agent } = fakeAgent({ status: 'done', sessionId: 'sess-1' })
+    deps.agent = agent
+    const ctx = makeCtx(deps, runtime)
+
+    await ctx.agent(AGENT_OPTS)
+
+    expect(steps).toEqual([{ label: 'agent', group: undefined }])
+  })
+
+  it('records the returned sessionId on a step-logged event via emitLog (WF3-16)', async () => {
+    const deps = makeDeps()
+    const { runtime, logs } = makeRuntime()
+    const { agent } = fakeAgent({ status: 'done', data: {}, sessionId: 'sess-xyz-42' })
+    deps.agent = agent
+    const ctx = makeCtx(deps, runtime)
+
+    await ctx.agent(AGENT_OPTS)
+
+    const sessionLog = logs.find((l) => l.sessionId !== undefined)
+    expect(sessionLog?.sessionId).toBe('sess-xyz-42')
+    expect(sessionLog?.message).toContain('sess-xyz-42')
+  })
+
+  it('checks cancellation before spawning: a cancelled run throws and never delegates (WF3-19)', async () => {
+    const deps = makeDeps()
+    const { runtime, steps, cancel } = makeRuntime()
+    const { agent, calls } = fakeAgent({ status: 'done', sessionId: 'sess-1' })
+    deps.agent = agent
+    const ctx = makeCtx(deps, runtime)
+    cancel()
+
+    await expect(ctx.agent(AGENT_OPTS)).rejects.toBeInstanceOf(CancellationError)
+    expect(calls).toEqual([])
+    expect(steps).toEqual([])
+  })
+
+  it('passes permission through as-is; ctx does not default it (default resolved downstream)', async () => {
+    const deps = makeDeps()
+    const { runtime } = makeRuntime()
+    const { agent, calls } = fakeAgent({ status: 'done', sessionId: 'sess-1' })
+    deps.agent = agent
+    const ctx = makeCtx(deps, runtime)
+
+    await ctx.agent({ prompt: 'p', expect: { type: 'object' }, cwd: 'C:/x' })
+
+    expect(calls[0].opts.permission).toBeUndefined()
   })
 })

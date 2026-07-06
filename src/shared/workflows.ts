@@ -51,6 +51,8 @@ export interface StepEvent {
   stdout?: string
   /** failed: captured exit code. */
   code?: number
+  /** step-logged: the agent's captured `session_id`, for WF4 `--resume` (WF3-16). */
+  sessionId?: string
 }
 
 /**
