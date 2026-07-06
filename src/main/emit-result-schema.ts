@@ -70,7 +70,10 @@ export function createValidator(expect: JsonSchema): (payload: unknown) => Valid
     // status === 'done' → the structured data must be present and conform to `expect`.
     if (!('data' in p)) return { ok: false, error: 'done requires data' }
     if (!validateData(p.data)) {
-      return { ok: false, error: `data does not conform to expect: ${ajv.errorsText(validateData.errors)}` }
+      return {
+        ok: false,
+        error: `data does not conform to expect: ${ajv.errorsText(validateData.errors)}`
+      }
     }
     return { ok: true, value: { status: 'done', data: p.data } }
   }

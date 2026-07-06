@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buildToolInputSchema, createValidator, validate, type JsonSchema } from './emit-result-schema'
+import {
+  buildToolInputSchema,
+  createValidator,
+  validate,
+  type JsonSchema
+} from './emit-result-schema'
 
 // A representative step `expect`: the structured data the agent must emit.
 const EXPECT: JsonSchema = {
