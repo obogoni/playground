@@ -62,11 +62,6 @@ function runShell(cmd: string, opts: { cwd: string }): Promise<ShellResult> {
   })
 }
 
-/** WF2 real `ctx.notify({ toast })` sink (WF2-09): a native OS toast, when supported. */
-function notifier(title: string, body: string): void {
-  if (Notification.isSupported()) new Notification({ title, body }).show()
-}
-
 /**
  * WF3 real `AgentSpawn` seam (WF3-01): spawn the resolved `claude` binary **directly**
  * (`shell:false`, argv verbatim) with **stdin closed** (`stdio:['ignore','pipe','pipe']`),
@@ -198,6 +193,28 @@ app.whenReady().then(() => {
   const emitToWindow: EmitFn = (channel, payload) => {
     if (mainWindow) emit(mainWindow.webContents, channel, payload)
   }
+
+  /**
+   * WF2 author `ctx.notify({ toast })` sink (WF2-09) AND WF4 manager lifecycle toast
+   * (WF4-13): a native OS toast. A lifecycle toast (`opts.runId`) attaches a `click`
+   * handler that surfaces the window and asks the renderer to reveal the run
+   * (`workflow:focus-run`, WF4-15); an author toast (no `runId`) is a plain
+   * notification, behaviour unchanged.
+   */
+  const notifier = (title: string, body: string, opts?: { runId?: string }): void => {
+    if (!Notification.isSupported()) return
+    const notification = new Notification({ title, body })
+    if (opts?.runId) {
+      const runId = opts.runId
+      notification.on('click', () => {
+        mainWindow?.show()
+        mainWindow?.focus()
+        emitToWindow('workflow:focus-run', { runId })
+      })
+    }
+    notification.show()
+  }
+
   sessionManager = new SessionManager({
     port: new PtyPort(),
     config: configStore,
@@ -287,6 +304,7 @@ app.whenReady().then(() => {
   handle('workflows:list', () => workflows.list())
   handle('workflows:run', ({ id, input }) => workflows.run({ id, input }))
   handle('workflows:cancel', ({ runId }) => workflows.cancel(runId))
+  handle('workflows:respond', ({ runId, decision }) => workflows.respond(runId, decision))
   handle('workflows:reload', () => workflows.reload())
 
   // Free the shared MCP result server's loopback port when the app quits (WF3-10).
