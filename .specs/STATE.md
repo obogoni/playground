@@ -60,17 +60,25 @@ typecheck green across the producer/consumer split; production always injects al
 `index.ts`/manager, and the leaves throw clear errors if unconfigured. This recurring
 pattern promoted lesson **L-001 to `confirmed`** (recurrence 2) via `scripts/lessons.py`.
 
-**Next step (resume here):** WF4 code is DONE + VERIFIED. Remaining to close WF4:
-1. **Owner-run live smoke (WF4-17)** — `npm run dev -- -- --remote-debugging-port=9222`
-   then `node scripts/smoke-blocker-resume.mjs` against a live Claude subscription. Confirms
-   the empirical block→guidance→resume-same-session→done loop (mirrors the WF3-22 pattern;
-   the `read`/`write`/`bypass` postures + live pause were LEADS beyond unit coverage). Record
-   the result in `validation.md`.
-2. **Open the WF4 PR** (`gh pr create`, body must carry `Closes` line only if WF4 has its
+**Owner-run live smoke (WF4-17) — PASSED 9/9 (2026-07-06):** `node
+scripts/smoke-blocker-resume.mjs` vs a live Claude subscription — runId `42c4317e`,
+statuses **`[running,blocked,running,done]`**, run-log records `blocked` + `resumed`
+transitions, non-empty `session_id` `047d6c90-...` (same session resumed via `--resume`),
+result validates vs `IMPLEMENT_SCHEMA` (agent created `greeting.js`). Closes the design's one
+empirical risk. Three T8-only fixes were needed during the run (core T1–T7 untouched):
+(1) prompt made blocking a mandatory two-phase protocol (a capable agent finished `done`
+without asking); (2) `ctx.worktree.create` needs a `baseBranch` to cut a NEW branch
+(`-b <branch> <base>` — without it, `invalid reference`); (3) smoke resets its window
+collectors per run (app survives across invocations → stale collector read the prior runId).
+Extra commits after the docs commit: `7bdb84c`, `054c8fa`, `c30a28c` (+ this docs update).
+
+**Next step (resume here):** WF4 is DONE + VERIFIED + owner-smoke PASSED. Only the PR/merge
+remains:
+1. **Open the WF4 PR** (`gh pr create`, body must carry `Closes` line only if WF4 has its
    own issue — else reference epic #56; do NOT auto-close #56, WF5 remains). main is gated by
    the `copilot_code_review` ruleset — a force-pushed PR goes BLOCKED → merge with
    `gh pr merge --admin`.
-3. **WF5 (Workflows UI)** is the remaining epic milestone (the view, run timeline, and the
+2. **WF5 (Workflows UI)** is the remaining epic milestone (the view, run timeline, and the
    **blocked-respond panel** that consumes WF4's `workflow:blocked` + `workflow:focus-run`
    signals). Specify it next milestone-by-milestone (AD-006).
 

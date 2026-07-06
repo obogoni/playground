@@ -105,6 +105,26 @@ The suite discriminates on all five highest-risk new behaviors (reducer guard, r
 
 **Flaky note**: `src/main/tree.test.ts > snapshots a workspace with repos and their worktrees` (AD-005 real-git-on-Windows EPERM/timeout under parallel load) **did NOT flake** this run — passed as part of the full 422. No isolation re-run needed. Not WF4-touched.
 
+### Owner-run live smoke (WF4-17) — PASSED 9/9 (2026-07-06)
+
+`node scripts/smoke-blocker-resume.mjs` vs a live Claude subscription — runId
+`42c4317e-3205-4786-b15b-0d460d2279f1`. The full WF4 loop executed end-to-end:
+- statuses streamed **`["running","blocked","running","done"]`** — the exact WF4 state machine (running → blocked → resumed/running → done)
+- `workflow:blocked` fired carrying the agent's real question (it asked to confirm filename, function name, greeting text — no guessing, per the two-phase protocol)
+- `workflows:respond` guidance **resumed the same session** — persisted log records both a `blocked` and a `resumed` transition
+- non-empty `session_id` captured: `047d6c90-2da9-4960-9950-d29f77106101`
+- final `status:'done'`; the agent's result validates against `IMPLEMENT_SCHEMA` (it created `greeting.js` exporting `greet(name)` → `Hello, ${name}!`)
+
+This closes the design's one empirical risk (a live block→guidance→resume-same-session→done
+loop over a real subscription), mirroring the WF3-22 close. Fixes made during the owner run:
+(1) the `implement-ticket` prompt now makes phase-1 blocking a mandatory two-phase protocol
+(a capable agent left to judgement finished `done` without asking); (2) `ctx.worktree.create`
+needs a `baseBranch` to cut a NEW branch (`-b <branch> <base>`) — without one it tried to
+check out a non-existent branch (`invalid reference`); (3) the smoke resets its window
+collectors per run (the app survives across invocations, so a stale collector read the prior
+run's runId and responded to the wrong run). All three are T8 fixture/smoke fixes — the
+verified T1–T7 core was untouched.
+
 ---
 
 ## Requirement Traceability
@@ -140,4 +160,7 @@ The suite discriminates on all five highest-risk new behaviors (reducer guard, r
 
 All 20 WF4 acceptance criteria are satisfied — 17 covered by located, reproduced unit assertions and 3 (WF4-15/16/17) deferred by design to the hand-verified `index.ts` thin shell and the owner-run CDP smoke, exactly as the test matrix prescribes. The build gate is green (typecheck 0, lint 0 errors, 422/422 tests, +32 with no deletions). The discrimination sensor injected 5 behavior-level faults into the highest-risk new logic (reducer guard, resume argv, field-level retry, respond target guard, lastError capture) and all 5 were killed — the tests genuinely discriminate. Code is surgical, reuse-first, and matches WF2/WF3 conventions; the 3 SPEC_DEVIATION optional-typing markers are benign (production always injects, guards throw clearly). No gaps, no surviving mutants, tree left clean.
 
-**Remaining (by design, not a gap):** the WF4-17 owner-run smoke against a live Claude subscription is the manual gate — the script and fixture are present and structurally verified, but the live block→guidance→resume→done execution is the owner's to run and record (mirrors the WF3-22 pattern).
+**Owner-run smoke (WF4-17): EXECUTED — PASSED 9/9** (2026-07-06, runId `42c4317e`). The live
+block→guidance→resume-same-session→done loop ran end-to-end against a real Claude
+subscription (see the Gate Check section for evidence). WF4 is fully verified — nothing
+remains but the PR/merge.
