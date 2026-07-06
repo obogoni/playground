@@ -19,165 +19,71 @@ Handoff snapshot.
 ## Handoff
 
 **Status (current, 2026-07-06):** Workflows epic (issue #56) — **WF1 + WF2 MERGED to
-`main`** (combined **PR #64**, merge commit `e6d7e11`; plus follow-up fix `972f68d`).
-Working tree clean on `main`, synced with `origin/main`. **WF3 (Structured agent step)
-— SPECIFIED + DESIGNED + TASKED, all owner-approved.** Ready to **Execute**. NOTHING
-CODED YET — no branch cut, no commits.
+`main`** (PR #64, merge `e6d7e11`; fix `972f68d`). **WF3 (Structured agent step) —
+EXECUTED + VERIFIED (PASS).** On branch `feature/workflows-agent-step` (cut off
+`e6d7e11`); 14 commits (`4896c47` docs → `d361131`); working tree clean. **NOT yet
+pushed / no PR.** One item remains before merge: **owner-run live smoke gate (WF3-22).**
 
-**WF3 planning artifacts (all approved):** `.specs/features/workflows-agent-step/`
-`spec.md` (WF3-01..25, 6 user stories), `design.md` (Approach A — dedicated
-`AgentStepRunner` + one shared `McpResultServer`; Status Approved), `tasks.md` (12
-tasks / 4 phases, Status Approved; all 3 pre-approval tables pass). 4 scope decisions
-= **AD-008** (Arm M/MCP only, ajv, full-envelope return w/ blocked-as-is, read/write/
-bypass default read).
+**How WF3 was executed:** Specify→Design→Tasks were already owner-approved; this session
+ran **Execute** = 4 phase sub-agents (one worker/phase, sequential) + a fresh independent
+**Verifier** (author≠verifier). `.specs/features/workflows-agent-step/`: `spec.md`
+(WF3-01..25, 6 US), `design.md` (Approach A), `tasks.md` (12 tasks/4 phases, Status now
+EXECUTED+VERIFIED), `validation.md` (**PASS**). Scope decisions = **AD-008**.
 
-**Baseline before WF3: 325 tests / 27 files** (`npx vitest run`, 2026-07-03 — the
-WF2 318 + 7 from fix `972f68d`). WF3 projects **~381** (~56 new units). Gate =
-`npm run typecheck && npm run lint && npm test`; owner-run manual gate = T12
-`scripts/smoke-agent-workflow.mjs` against a live subscription.
-
-**WF3 task shape (resume here → start Execute):**
-| Phase | Tasks | Deliver |
-| --- | --- | --- |
-| 1 | T1 deps(ajv+sdk→prod) → T2 emit-result-schema(ajv) · T3 scrub-auth · T4 parse-envelope [P] → T5 agent-command-builder(presets) | pure seams |
-| 2 | T6 mcp-result-server → T7 **agent-step-runner** (retry + cancel-kill — the core) | server + runner |
-| 3 | T8 StepEvent.sessionId [P] → T9 ctx.agent+signal → T10 manager AbortController | facade + cancel |
-| 4 | T11 index.ts wiring (server+runner+resolveClaude+will-quit) → T12 review-pr example + owner smoke | integration + gate |
-
-**Execute mechanics:** >3 phases → skill OFFERS one sub-agent per phase (sequential,
-offer-then-confirm); owner must pick sub-agent-per-phase vs inline at Execute start.
-Fresh Verifier (author≠verifier) runs automatically after T12. MCP/Skill NONE on all.
-Cut a `feature/workflows-agent-step` branch off `main` before T1 (main gated by
-`copilot_code_review` ruleset — force-push BLOCKs → `gh pr merge --admin`; PR body must
-NOT `Closes #56`, the epic spans WF1..WF5).
-
-**Key implementation facts (feed Execute):**
-- WF1 spike `scripts/wf1-spike/` stays **frozen** (owner-re-runnable empirical harness
-  + findings.md). WF3 creates FRESH `src/main/` prod modules (adapted: ajv, MCP-only,
-  presets, DI'd runner), NOT git-mv. Spike modules to port: `scrub-auth-env.ts`,
-  `emit-result-schema.ts` (swap minimal checker→ajv), `build-agent-argv.ts`
-  (→`agent-command-builder`, drop Arm N, add presets), `parse-envelope.ts`,
-  `mcp-server.ts` (→`mcp-result-server`). Only `agent-step-runner` is net-new logic.
-- WF1 pinned (findings.md): native `claude.exe` on PATH, spawn `shell:false`+argv
-  verbatim + stdin closed; `--print`/`--output-format json`(→`session_id`)/`--mcp-config`
-  http+Bearer/`--allowedTools mcp__result__emit_result`/`--permission-mode dontAsk`/
-  `--resume`. HTTP-MCP over loopback works on 2.1.199.
-- Deps: `esbuild` already prod (WF2); `@modelcontextprotocol/sdk` is **devDep** → T1
-  promotes to prod; `ajv` NOT present → T1 adds. Install `--ignore-scripts` (node-gyp
-  workaround). `@modelcontextprotocol/sdk` + ajv are pure JS (no native rebuild).
-- WF2 seam extensions WF3 makes: `CtxRuntime.signal:AbortSignal`, `CtxDeps.agent`,
-  `Ctx.agent`, `StepEvent.sessionId?`, `WorkflowManager` CancelToken gains an
-  `AbortController` (`cancel()` aborts it → child-kill). `WorkflowManager.notifier`
-  stays reserved for WF4.
-- **One empirical risk** (design Risks): the read-only allowedTools list + the
-  `bypassPermissions` mode name are LEADS beyond WF1's confirmed `dontAsk`+emit. The
-  T12 owner smoke confirms `read` (incl. "no files mutated"); `bypass` confirmed by
-  WF4's implement-ticket example. `dontAsk` auto-denies a wrong tool name → safe degrade.
-
-**Superseded handoff (historical):** WF1+WF2 were once stacked on branch
-`feature/wf1-headless-agent-spike`; that branch is now merged (PR #64). The two
-"open items before merge" below are both DONE (smoke passed 5/5; combined PR merged).
-
-**T7 empirical gate PASSED** (`tsx scripts/wf1-spike/run.ts` vs `claude` 2.1.199,
-live subscription, auth scrubbed): both arms + `--resume` ran end-to-end (42→142,
-context carried); Arm M's forced `emit_result` hit the loopback HTTP MCP server;
-`dontAsk` auto-denied a would-prompt action without hanging. **All WF1-01..08
-confirmed** — see `findings.md`. Key confirmations: HTTP-MCP over loopback works
-on 2.1.199 (the top risk); `session_id` field; `--json-schema`→`structured_output`;
-`mcp__result__emit_result` allow-name works in headless; `--bare` refuted (unused).
-**T7 code fix (226d903):** the installed `claude` is a native `.exe` not a `.cmd`
-shim, so `shell:true` corrupted inline JSON — fixed to spawn directly (`shell:false`,
-argv verbatim, stdin closed).
-
-**T1–T6 committed (one atomic commit each) + independently verified (PASS):**
+**Commits (main..HEAD, `e6d7e11..d361131`):**
 | Commit | Task | What |
 | ------ | ---- | ---- |
-| 3179cee | — | docs: spec + design + tasks |
-| 632e8bc | T1 | `scrubAuthEnv` pure seam (WF1-01) |
-| 39aae24 | T2 | `emit-result-schema` builder+validator (WF1-04) |
-| 02dbc12 | T3 | `parseEnvelope` (WF1-05) |
-| 3a20a49 | T4 | `buildAgentArgv` native+mcp arms (WF1-02/07/08) |
-| 04bc480 | T5 | loopback HTTP MCP result server (+`@modelcontextprotocol/sdk` devDep) (WF1-03/04) |
-| e89a4aa | T6 | `run.ts` throwaway orchestrator (no tests — external CLI boundary, AD-004) |
+| 4896c47 | — | docs: spec + design + tasks |
+| 1e01b10 | T1 | ajv + promote `@modelcontextprotocol/sdk` to prod dep (`--ignore-scripts`) |
+| d864c95 | T2 | `emit-result-schema` (ajv `createValidator`/`buildToolInputSchema`) |
+| c4876e4 | T3 | `scrub-auth-env` prod seam |
+| 95f0166 | T4 | `parse-envelope` prod seam (`{sessionId,result}`) |
+| 695abbc | T5 | `agent-command-builder` (MCP-only + read/write/bypass presets) |
+| 9af5d61 | — | style: prettier line-wrap on emit-result-schema (T2 files) |
+| 1bf7b12 | T6 | `mcp-result-server` (low-level `Server`, per-token, ajv) |
+| 5774f7e | T7 | `agent-step-runner` (corrective `--resume` retry + cancel-kill) |
+| fd25835 | T8 | `StepEvent.sessionId` + reducer pass-through |
+| 0e63530 | T9 | `ctx.agent` facade + `CtxRuntime.signal` + sessionId log |
+| 76e82c1 | T10 | `WorkflowManager` AbortController (cancel→abort→child-kill) |
+| 88073d3 | T11 | wire mcp server + runner + `resolveClaude` + will-quit into `index.ts` |
+| d361131 | T12 | `review-pr` example fixture + `scripts/smoke-agent-workflow.mjs` |
 
-Independent Verifier (fresh sub-agent, author ≠ verifier): **PASS** — 8/8
-automated ACs traced to `file:line`; gate green (typecheck 0 err, lint 0 warnings
-in `scripts/wf1-spike/`, **257 tests pass**, spike subset 5 files / 32 tests);
-discrimination sensor **5/5 mutants killed**. Report:
-`.specs/features/workflows-headless-agent-spike/validation.md`. No gaps.
+**Verifier verdict (PASS):** 25/25 ACs matched spec outcome (22 unit-covered + `index.ts`
+hand-verified; **3 deferred to owner-run smoke by design** — WF3-21 fixture artifact,
+WF3-22 live gate, and the runtime auto-deny behind WF3-11/14). Payload rule pass. Gate:
+typecheck 0 err, lint 0 err (18 pre-existing prettier warnings, non-WF3), **390 tests /
+33 files** (325 → +65, 0 deletions). Discrimination sensor **8/8 mutants killed**.
+Report: `.specs/features/workflows-agent-step/validation.md`.
 
-**Key implementation facts (feed WF2/WF3):**
-- Two surviving pure seams (→ WF3): `scrub-auth-env.ts`, `emit-result-schema.ts`.
-- MCP server uses the **low-level `Server` + `setRequestHandler`** (not `McpServer`)
-  so `tools/list` returns `buildToolInputSchema(expect)` **verbatim**; `registerTool`
-  reshapes it through Zod. Stateful per-token transport, `enableJsonResponse: true`,
-  bearer token = auth **and** routing.
-- SDK version `@modelcontextprotocol/sdk@^1.29.0`, installed with `--ignore-scripts`
-  to skip the `electron-builder install-app-deps` native rebuild (node-gyp workaround).
-- `scripts/` is NOT in `tsconfig.node.json` (matches `release-version.ts`) → spike
-  `.ts` are covered by `npm test` + `eslint .`, not `tsc`.
+**Deviations (all judged BENIGN by the Verifier — no AC weakened):**
+- 2 `SPEC_DEVIATION` markers in `src/main/workflow-ctx.ts`: `CtxDeps.agent` +
+  `CtxRuntime.signal` typed **optional** (design §7 shows required). Reason: making them
+  required breaks `workflow-ctx.test.ts` helpers (`makeDeps`/`makeRuntime`), in typecheck
+  scope. Production always injects both (T11 wires agent, T10 wires signal); `ctx.agent`
+  throws clearly if agent absent. → candidate lesson **L-001** (`scripts/lessons.py`).
+- T5 `agent-command-builder` deliberately does NOT import `JsonSchema` (MCP arm carries
+  `expect` on the server tool `inputSchema`, not in argv) — CORRECT, no AC requires it.
+- T7 corrective-retry prompt is generic (server reports ajv errors in-turn; retry fires
+  only on no-emit) — matches design, no AC pins the string.
 
-**Findings recommendation for WF3:** both arms work; **default to Arm M (MCP)** to
-keep the `blocked` terminal value + per-step routing/auth first-class (matches the
-PRD), with Arm N (`--json-schema`) as a lighter `done`-only fast-path. Not superseded
-— WF3 design decides. Two seams survive to WF3: `scrub-auth-env.ts`,
-`emit-result-schema.ts`.
+**⚠ One open item before merge (resume here):**
+1. **Owner-run live smoke (WF3-22):** `npm run dev -- -- --remote-debugging-port=9222`
+   then `node scripts/smoke-agent-workflow.mjs` → exit 0 against a live subscription.
+   Confirms: persisted run `status:done`, findings validate vs `FINDINGS_SCHEMA`,
+   non-empty `session_id`, and **no worktree files mutated** (read posture). This is the
+   empirical risk from the design (read-only allowedTools + `bypassPermissions` name are
+   LEADS beyond WF1's confirmed `dontAsk`+emit).
+2. **After smoke passes:** push branch + open ONE PR to `main`. PR body must **NOT**
+   `Closes #56` (epic spans WF1..WF5). `main` gated by `copilot_code_review` — a
+   force-push BLOCKs the review → `gh pr merge --admin`. Reference WF3 milestone/issues
+   per the tlc-to-issues mapping if desired.
 
-**WF2 (issue #56, milestone 2) — EXECUTED + VERIFIED (2026-07-03).** Specify→Design→
-Tasks→Execute all done. `spec.md` (20 reqs WF2-01..20), `design.md` (Approved),
-`tasks.md` (Done), `validation.md` (PASS) under `.specs/features/workflows-engine/`.
-Owner gray-area decisions still hold (WF2-D1 native toast; WF2-D2 WF2-subset run-state;
-WF2-D3 smoke-script gate; WF2-D4 esbuild→direct dep; WF2-D5 fail-fast no rollback;
-WF2-D6 `ctx.sh` uses a shell). **3 Design forks (owner-confirmed):** explicit
-`instrument()` auto-log wrapper; loader = esbuild bundle → temp `.mjs` → `import(file://)`;
-ADO = **new dedicated `getWorkItemWithRelations`** (fields/$expand are mutually exclusive).
+**Key facts (feed WF4):** WF3's `AgentStepRunner` returns the **full envelope**
+`{status,data?,question?,sessionId}` and returns `blocked` **as-is** (no engine pause —
+that is WF4's job). `WorkflowManager.notifier` stays reserved for WF4 lifecycle toasts.
+The `bypass` preset is confirmed only once WF4's implement-ticket example exercises it.
 
-**Executed via 4 phase sub-agents (one worker/phase) + independent Verifier:**
-| Phase | Tasks | Commits |
-| --- | --- | --- |
-| 1 | T1 types, T2 esbuild→dep, T6 ADO relations | `0fd6daf` `254273a` `4027ab9` |
-| 2 | T3 reducer, T4 run-store, T5 loader, T7 ctx (+lint `a2c7e3b`) | `dadd86f` `b94c354` `45b5c04` `0c60ce2` |
-| 3 | T8 workflow-manager (DI, serial, lifecycle) | `0277067` |
-| 4 | T9 IPC+wiring+native toast, T10 smoke script | `1186f89` `f0a8cb6` |
-
-**Verifier PASS** (fresh sub-agent, author≠verifier): 20/20 ACs traced to `file:line`+
-assertion; payload/conjunction rule satisfied (events/persisted run/`ctx.sh`/`ctx.ado`
-assert on values); **discrimination sensor 6/6 mutants killed**; gate green
-(typecheck 0, lint 0 errors, **318 tests** pass, 257→318 = +61). Report:
-`.specs/features/workflows-engine/validation.md`. New net-new main modules:
-`run-state.ts`, `workflow-run-store.ts` (`WorkflowRunStore`), `workflow-loader.ts`,
-`workflow-ctx.ts` (`makeCtx`/`CtxDeps`/`CtxRuntime`/`CancellationError`),
-`workflow-manager.ts` (`WorkflowManager`); `getWorkItemWithRelations`/`parseChildRefs`
-added to `ado-gateway.ts`; `workflows:*`+`workflow:*` in `ipc-contract.ts`; wiring in
-`index.ts`; `src/shared/workflows.ts`; `scripts/smoke-workflow.mjs`.
-
-**Feeds WF3:** WF1's two seams (`scrub-auth-env.ts`, `emit-result-schema.ts`) + Arm-M
-recommendation still stand (see below). WF2's `ctx` facade + `instrument` wrapper +
-`workflow-manager` are the extension points WF3's `ctx.agent()` plugs into; the manager
-carries an unused `notifier` in its deps bag reserved for WF4 lifecycle toasts.
-
-**⚠ One open item before this can merge:**
-1. ~~Owner-run WF2-20 smoke~~ **PASSED 5/5 (2026-07-03)** — runId `4f5d9c9f…`,
-   statuses `[running,done]`, 3 steps, 2 logs, run-log persisted under
-   `%APPDATA%/playground/workflow-runs/`. WF2 is now fully green incl. the manual gate.
-2. **Combined WF1+WF2 PR:** push `feature/wf1-headless-agent-spike` + open ONE PR to
-   `main` (must **NOT** `Closes #56` — the epic spans WF1..WF5; `main` gated by
-   `copilot_code_review`, so a force-push BLOCKs the review → `gh pr merge --admin`).
-
-**Pre-existing quirk (NOT WF2, candidate cleanup):** `src/main/ado-gateway.ts` is
-UTF-16-encoded — git treats it as binary (no textual diffs). Present since before WF2.
-
-**Next step (resume here):** run item 1 (owner) → open item 2 (combined PR) → after
-merge, spec **WF3** (agent step: `ctx.agent()`, MCP result server, agent-command-builder,
-`session_id` capture) off updated `main`.
-
-**Prior features (merged, for context only):** `worktree-existing-branch` (PR #62)
-and `topbar-version-indicator` (PR #63) are both merged into `main`.
-
-**Merge note (unchanged):** `main` ruleset (`copilot_code_review`,
-`non_fast_forward`, `deletion`); CI `gate` is not a required check; a force-push
-BLOCKs the Copilot review → needs `gh pr merge --admin`.
-
-**Open follow-ups (older, not in this feature):**
-- 3 pre-existing transitive dev advisories (esbuild/form-data/undici) — candidate debt.
-- App.tsx refactor remainder: `useTasks` / `useConfig` extraction (deferred, AD-004).
+**Prior context:** `worktree-existing-branch` (PR #62), `topbar-version-indicator`
+(PR #63) merged. Pre-existing quirk: `src/main/ado-gateway.ts` is UTF-16 (git treats it
+as binary). Open follow-ups: 3 transitive dev advisories (esbuild/form-data/undici);
+App.tsx `useTasks`/`useConfig` extraction deferred (AD-004).

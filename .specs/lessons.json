@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 2,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "spec_deviation::when a design types a cross phase dependency as required wire the producer and consumer in one phase or gate the field rather than relaxing it to optional to keep an interim phase s typecheck green",
+      "text": "When a design types a cross-phase dependency as required, wire the producer and consumer in one phase (or gate the field) rather than relaxing it to optional to keep an interim phase's typecheck green",
+      "signal": "spec_deviation",
+      "scope": "workflow-ctx",
+      "status": "candidate",
+      "features": [
+        "workflows-agent-step"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/main/workflow-ctx.ts:82,106 (CtxDeps.agent / CtxRuntime.signal SPEC_DEVIATION) (workflow-ctx)"
+      ],
+      "created": "2026-07-06T13:28:04Z",
+      "last_seen": "2026-07-06T13:28:04Z"
+    }
+  ]
+}
