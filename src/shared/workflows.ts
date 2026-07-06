@@ -25,20 +25,43 @@ export interface WorkflowMeta {
  * or broken (`error` explaining why it failed to load). A broken folder is still
  * listed — it never blocks the others (WF2-03/04).
  */
-export type WorkflowDef =
-  | { id: string; meta: WorkflowMeta }
-  | { id: string; error: string }
+export type WorkflowDef = { id: string; meta: WorkflowMeta } | { id: string; error: string }
 
-/** The run lifecycle status folded from the event stream (WF2-12). */
-export type RunStatus = 'pending' | 'running' | 'done' | 'failed' | 'cancelled'
+/** The run lifecycle status folded from the event stream (WF2-12, WF4-06). */
+export type RunStatus = 'pending' | 'running' | 'blocked' | 'done' | 'failed' | 'cancelled'
+
+/**
+ * A human-in-the-loop question that pauses a run (WF4). Rides the `blocked`
+ * `StepEvent` (persisted) and the `workflow:blocked` IPC event. `body` is the
+ * agent's blocker question or the author's `ctx.ask` prompt.
+ */
+export interface BlockerQuestion {
+  title: string
+  body: string
+}
+
+/**
+ * The author's / user's answer to a `BlockerQuestion` (WF4). `ctx.ask()`
+ * returns it and `workflows:respond` carries it: `abort` ends the run
+ * `cancelled`, `guidance` resumes the paused work with the supplied text.
+ */
+export type RespondDecision = { action: 'abort' } | { action: 'guidance'; guidance: string }
 
 /**
  * One entry in a run's ordered event stream — lifecycle transitions plus the
- * auto-logged `ctx.*` steps and log lines (WF2-10/12/15).
+ * auto-logged `ctx.*` steps and log lines (WF2-10/12/15, WF4-06).
  */
 export interface StepEvent {
   seq: number
-  kind: 'run-started' | 'step-started' | 'step-logged' | 'done' | 'failed' | 'cancelled'
+  kind:
+    | 'run-started'
+    | 'step-started'
+    | 'step-logged'
+    | 'blocked'
+    | 'resumed'
+    | 'done'
+    | 'failed'
+    | 'cancelled'
   /** step-started: the primitive name / `ctx.step` label. */
   label?: string
   /** step-logged: the log / notify line. */
@@ -53,6 +76,8 @@ export interface StepEvent {
   code?: number
   /** step-logged: the agent's captured `session_id`, for WF4 `--resume` (WF3-16). */
   sessionId?: string
+  /** blocked: the question that paused the run (WF4-06). */
+  question?: BlockerQuestion
 }
 
 /**

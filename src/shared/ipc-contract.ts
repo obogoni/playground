@@ -8,7 +8,13 @@ import type {
 import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type { PinTaskResult, TasksSnapshot } from './tasks'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'
-import type { RunStatus, StepEvent, WorkflowDef } from './workflows'
+import type {
+  BlockerQuestion,
+  RespondDecision,
+  RunStatus,
+  StepEvent,
+  WorkflowDef
+} from './workflows'
 import type { ChangedFile, CreateWorktreeResult, RemoveWorktreeResult } from './worktrees'
 
 /**
@@ -96,6 +102,8 @@ export interface IpcContract {
   'workflows:run': { req: { id: string; input?: Record<string, string> }; res: { runId: string } }
   /** Request cancellation of a run; read at the next `ctx.*` checkpoint (WF2-14). */
   'workflows:cancel': { req: { runId: string }; res: void }
+  /** Answer a blocked run: `abort` → cancelled, `guidance` → resume (WF4-07). */
+  'workflows:respond': { req: { runId: string; decision: RespondDecision }; res: void }
   /** Drop any discovery cache (v1 no-op — discovery is on-demand) (WF2-01). */
   'workflows:reload': { req: void; res: void }
 }
@@ -121,6 +129,10 @@ export interface IpcEvents {
   'workflow:step': { runId: string; step: StepEvent }
   /** A `step-logged` log/notify line, optionally nested under a `ctx.step` group (WF2-10). */
   'workflow:log': { runId: string; message: string; group?: string }
+  /** A run paused awaiting a human answer (WF4-01/15). */
+  'workflow:blocked': { runId: string; question: BlockerQuestion }
+  /** A lifecycle-toast click asked the renderer to surface this run (WF4-15). */
+  'workflow:focus-run': { runId: string }
 }
 
 export interface IpcSends {
