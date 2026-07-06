@@ -12,9 +12,11 @@ sub-agent delegation, adequacy review, Verifier, discrimination sensor).
 ---
 
 **Design**: `.specs/features/workflows-blocker-resume/design.md`
-**Status**: **APPROVED (owner, 2026-07-06)** — Specify + Design + Tasks all owner-approved;
-**Execute deferred to the next session** (owner decision). MCP: NONE / Skill: NONE (+
-`coding-guidelines` optional) across all 8 tasks.
+**Status**: **EXECUTED + VERIFIED (PASS, 2026-07-06)** — all 8 tasks implemented, each with
+its own atomic commit + green gate; independent Verifier (author ≠ verifier) returned
+**PASS** (20/20 ACs, 422/422 tests, discrimination sensor 5/5 mutants killed, 0 gaps). See
+`validation.md`. Only the owner-run live smoke (WF4-17) remains as the owner's manual gate.
+MCP: NONE / Skill: NONE across all 8 tasks.
 
 **Baseline**: **390 tests / 33 files** (`npx vitest run`, 2026-07-06, off `main` @ WF3
 merge). Every expected-pass count below is `390 + N`; a task that adds N unit tests must

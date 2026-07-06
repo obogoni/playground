@@ -21,112 +21,60 @@ Handoff snapshot.
 ## Handoff
 
 **Status (current, 2026-07-06):** Workflows epic (issue #56) — **WF1 + WF2 + WF3 MERGED
-to `main`** (WF1/WF2 = PR #64, merge `e6d7e11`; **WF3 = PR #65, MERGED**, merge `02e8795`).
-**WF4 (Blocker + resume) — PLANNED & OWNER-APPROVED; Execute deferred to the next session
-(owner decision, 2026-07-06).** On branch **`feature/workflows-blocker-resume`** (cut off
-`main` @ `02e8795`). Epic #56 stays **open** (WF4 Execute + WF5 remain).
+to `main`** (WF1/WF2 = PR #64; WF3 = PR #65, merge `02e8795`). **WF4 (Blocker + resume) —
+EXECUTED + independently VERIFIED (PASS).** On branch **`feature/workflows-blocker-resume`**
+(cut off `main` @ `02e8795`). Epic #56 stays **open** (WF4 owner-run smoke + PR/merge, then
+WF5 remain).
 
-**WF4 planning done this session (Specify→Design→Tasks, all owner-approved):**
-`.specs/features/workflows-blocker-resume/`: `spec.md` (WF4-01..20, 8 US; owner Discuss
-resolved 3 forks), `design.md` (**Approach A** — block-loop in the DI'd runner via injected
-`onBlocked`; one manager-owned pause primitive), `tasks.md` (**8 tasks / 3 phases**, Status
-**APPROVED**). Scope + architecture decisions = **AD-010**. MCP: NONE / Skill: NONE (+
-`coding-guidelines` optional). **Next step = run Execute** (activate `tlc-spec-driven`;
-3 phases run **inline**, no sub-agent offer since the >3-phase threshold isn't met; fresh
-independent Verifier after the last task).
-
-**WF4 baseline / gate floor:** **390 tests / 33 files** (`npx vitest run`, off `main`).
-⚠ One **flaky** real-git test — `src/main/tree.test.ts > snapshots a workspace with repos
-and their worktrees` — intermittently fails under full-suite parallel load (`Test timed
-out in 5000ms` + `EPERM` on `afterEach` temp `rmSync`); passes **4/4 in isolation**
-(`npx vitest run src/main/tree.test.ts`). AD-005 real-git-on-Windows category — NOT a
-regression, NOT WF4-touched. Re-run it in isolation to confirm if a WF4 gate flakes on it.
-
-**WF4 grafts onto (all from WF3, verified this session by reading the merged code):**
-`ctx.agent` returns the full envelope and today returns `blocked` **as-is**;
-`AgentStepRunner` already does `--resume` (corrective retry only) and captures `session_id`;
-`WorkflowManager.notifier` is **reserved & unused**; reducer statuses are
-`pending|running|done|failed|cancelled` (WF4 adds `blocked` + `resumed`); `agent-command-builder`
-already emits `--resume <id>`. The 3 WF3 carry-in gaps (AD-009: field-level corrective
-prompt, server-reuse assert, MCP bind-failure) are folded into WF4 tasks **T3/T4**
-(WF4-18/19/20).
-
-**WF3 (Structured agent step) — DONE** (history): all gates green incl. owner-run live
-smoke (WF3-22 PASSED 6/6). Independent SDD eval (author≠judge): **Final 0.98 —
-"Spec-complete"** (`.specs/features/workflows-agent-step/evaluations/P1-workflows-agent-step-20260706T141244Z.md`).
-
-**How WF3 was executed:** Specify→Design→Tasks were already owner-approved; this session
-ran **Execute** = 4 phase sub-agents (one worker/phase, sequential) + a fresh independent
-**Verifier** (author≠verifier). `.specs/features/workflows-agent-step/`: `spec.md`
-(WF3-01..25, 6 US), `design.md` (Approach A), `tasks.md` (12 tasks/4 phases, Status now
-EXECUTED+VERIFIED), `validation.md` (**PASS**). Scope decisions = **AD-008**.
-
-**Commits (main..HEAD, `e6d7e11..d361131`):**
+**WF4 Execute done this session (all 8 tasks, 3 phases, inline — 8 atomic commits
+`7a0db81..c938ad3`):**
 | Commit | Task | What |
 | ------ | ---- | ---- |
-| 4896c47 | — | docs: spec + design + tasks |
-| 1e01b10 | T1 | ajv + promote `@modelcontextprotocol/sdk` to prod dep (`--ignore-scripts`) |
-| d864c95 | T2 | `emit-result-schema` (ajv `createValidator`/`buildToolInputSchema`) |
-| c4876e4 | T3 | `scrub-auth-env` prod seam |
-| 95f0166 | T4 | `parse-envelope` prod seam (`{sessionId,result}`) |
-| 695abbc | T5 | `agent-command-builder` (MCP-only + read/write/bypass presets) |
-| 9af5d61 | — | style: prettier line-wrap on emit-result-schema (T2 files) |
-| 1bf7b12 | T6 | `mcp-result-server` (low-level `Server`, per-token, ajv) |
-| 5774f7e | T7 | `agent-step-runner` (corrective `--resume` retry + cancel-kill) |
-| fd25835 | T8 | `StepEvent.sessionId` + reducer pass-through |
-| 0e63530 | T9 | `ctx.agent` facade + `CtxRuntime.signal` + sessionId log |
-| 76e82c1 | T10 | `WorkflowManager` AbortController (cancel→abort→child-kill) |
-| 88073d3 | T11 | wire mcp server + runner + `resolveClaude` + will-quit into `index.ts` |
-| d361131 | T12 | `review-pr` example fixture + `scripts/smoke-agent-workflow.mjs` |
+| 7a0db81 | T1 | shared `blocked` RunStatus + `BlockerQuestion`/`RespondDecision` + `blocked`/`resumed` StepEvent kinds + `workflows:respond`/`workflow:blocked`/`workflow:focus-run` IPC (type-only) |
+| abf7048 | T2 | `run-state` reducer `running→blocked`, `blocked→running`, `blocked→cancelled` (+7 tests) |
+| 20d48f1 | T3 | `mcp-result-server` field-level `lastError(token)` + `start()` bind-failure reject (+4) |
+| f783447 | T4 | `agent-step-runner` outer block-loop over `#turn`; abort→throw, guidance→`--resume` same session; field-level corrective prompt; reuse/bind coverage (+8) |
+| d0d7545 | T5 | `ctx.ask` + `ctx.agent` `onBlocked` wire + `CtxRuntime.requestInput` (optional, SPEC_DEVIATION for T5→T6 ordering) + `BlockedResolver` export (+5) |
+| e1f889e | T6 | `WorkflowManager` `#pendingRespond` pause primitive, `respond`, cancel-while-blocked reject, `workflow:blocked` emit + lifecycle toasts on block/done/failed (cancel silent) (+8) |
+| e9d1c2a | T7 | `index.ts` `workflows:respond` handler + `notifier(…,{runId})` click→focus + `workflow:focus-run` (hand-verified shell) |
+| c938ad3 | T8 | `implement-ticket` fixture + `scripts/smoke-blocker-resume.mjs` owner-run gate |
 
-**Verifier verdict (PASS):** 25/25 ACs matched spec outcome (22 unit-covered + `index.ts`
-hand-verified; **3 deferred to owner-run smoke by design** — WF3-21 fixture artifact,
-WF3-22 live gate, and the runtime auto-deny behind WF3-11/14). Payload rule pass. Gate:
-typecheck 0 err, lint 0 err (18 pre-existing prettier warnings, non-WF3), **390 tests /
-33 files** (325 → +65, 0 deletions). Discrimination sensor **8/8 mutants killed**.
-Report: `.specs/features/workflows-agent-step/validation.md`.
+**Verifier verdict (independent, author ≠ verifier) — PASS:** 20/20 ACs (17 unit-covered
+with located assertions; **WF4-15/16/17 deferred-by-design** = index.ts hand-verified shell
++ owner-run CDP smoke, per the test matrix). Gate: typecheck 0 err, lint 0 err (22
+pre-existing prettier warnings), **422/422 tests / 33 files** (390 → +32, 0 deletions).
+Discrimination sensor **5/5 mutants killed** (run-state resumed guard, runner
+guidance-`--resume`/field-level prompt, manager `respond` runId guard, mcp `lastError`
+capture). No surviving mutants, no evidence-zero gaps. Report:
+`.specs/features/workflows-blocker-resume/validation.md`.
 
-**Deviations (all judged BENIGN by the Verifier — no AC weakened):**
-- 2 `SPEC_DEVIATION` markers in `src/main/workflow-ctx.ts`: `CtxDeps.agent` +
-  `CtxRuntime.signal` typed **optional** (design §7 shows required). Reason: making them
-  required breaks `workflow-ctx.test.ts` helpers (`makeDeps`/`makeRuntime`), in typecheck
-  scope. Production always injects both (T11 wires agent, T10 wires signal); `ctx.agent`
-  throws clearly if agent absent. → candidate lesson **L-001** (`scripts/lessons.py`).
-- T5 `agent-command-builder` deliberately does NOT import `JsonSchema` (MCP arm carries
-  `expect` on the server tool `inputSchema`, not in argv) — CORRECT, no AC requires it.
-- T7 corrective-retry prompt is generic (server reports ajv errors in-turn; retry fires
-  only on no-emit) — matches design, no AC pins the string.
+**Baseline flaky note:** `src/main/tree.test.ts > snapshots a workspace with repos and
+their worktrees` is the AD-005 real-git-on-Windows EPERM/timeout flake (passes 4/4 in
+isolation, NOT WF4-touched). It did **not** flake in the Verifier's full run. If a future
+gate flakes on it, re-run `npx vitest run src/main/tree.test.ts` in isolation before
+treating it as real.
 
-**Owner-run live smoke (WF3-22) — PASSED 6/6 (2026-07-06):** `node
-scripts/smoke-agent-workflow.mjs` vs a live subscription — runId
-`8a8b19d7-b4a5-4f0a-8db9-6d21065037d2`, statuses `[running,done]`, run-log persisted,
-non-empty `session_id` `9b1438dd-35f1-448d-bad1-fff87c7ccbb1`, findings validate vs
-`FINDINGS_SCHEMA` (2 findings), and **read posture left the worktree unmutated** — this
-closes the design's empirical risk (read-only allowedTools + `bypassPermissions` were
-LEADS beyond WF1's confirmed `dontAsk`+emit; `read` now confirmed).
+**SPEC_DEVIATIONS (all benign, Verifier-confirmed):** `workflow-ctx.ts` types `agent?`,
+`signal?` (WF3) and **`requestInput?`** (WF4-T5) as optional to keep the interim phase's
+typecheck green across the producer/consumer split; production always injects all three via
+`index.ts`/manager, and the leaves throw clear errors if unconfigured. This recurring
+pattern promoted lesson **L-001 to `confirmed`** (recurrence 2) via `scripts/lessons.py`.
 
-**Next step (resume here):** ✅ **WF4 planning is DONE** (Specify→Design→Tasks approved —
-see the WF4 handoff block at the top of this section). **Resume by running Execute** for
-`.specs/features/workflows-blocker-resume/` via `tlc-spec-driven`.
+**Next step (resume here):** WF4 code is DONE + VERIFIED. Remaining to close WF4:
+1. **Owner-run live smoke (WF4-17)** — `npm run dev -- -- --remote-debugging-port=9222`
+   then `node scripts/smoke-blocker-resume.mjs` against a live Claude subscription. Confirms
+   the empirical block→guidance→resume-same-session→done loop (mirrors the WF3-22 pattern;
+   the `read`/`write`/`bypass` postures + live pause were LEADS beyond unit coverage). Record
+   the result in `validation.md`.
+2. **Open the WF4 PR** (`gh pr create`, body must carry `Closes` line only if WF4 has its
+   own issue — else reference epic #56; do NOT auto-close #56, WF5 remains). main is gated by
+   the `copilot_code_review` ruleset — a force-pushed PR goes BLOCKED → merge with
+   `gh pr merge --admin`.
+3. **WF5 (Workflows UI)** is the remaining epic milestone (the view, run timeline, and the
+   **blocked-respond panel** that consumes WF4's `workflow:blocked` + `workflow:focus-run`
+   signals). Specify it next milestone-by-milestone (AD-006).
 
-**WF3 polish carried into WF4** (from the SDD eval; both merged as-is — now WF4 tasks
-**T3/T4**, requirements WF4-18/19/20):
-1. **WF3-04** — the corrective-retry prompt is **generic** (`"no valid emit_result call
-   was made"`). Capture the last server-reported ajv error for the token and interpolate
-   it into `correctivePrompt(reason)`; add an `agent-step-runner.test.ts` assertion that
-   the retry argv/prompt carries the field-level validation error.
-2. **WF3-10** — server **reuse is unasserted**: add `expect(server.startCalls).toBe(1)`
-   across two `run()` calls in `agent-step-runner.test.ts` (`FakeServer.startCalls` is
-   already tracked but never checked).
-3. **Edge (minor)** — MCP **bind-failure** path (`server.start()` rejects) is not
-   unit-tested; add a runner test → clear step failure, no spawn.
-
-**Key facts (feed WF4):** WF3's `AgentStepRunner` returns the **full envelope**
-`{status,data?,question?,sessionId}` and returns `blocked` **as-is** (no engine pause —
-that is WF4's job). `WorkflowManager.notifier` stays reserved for WF4 lifecycle toasts.
-The `bypass` preset is confirmed only once WF4's implement-ticket example exercises it.
-
-**Prior context:** `worktree-existing-branch` (PR #62), `topbar-version-indicator`
-(PR #63) merged. Pre-existing quirk: `src/main/ado-gateway.ts` is UTF-16 (git treats it
-as binary). Open follow-ups: 3 transitive dev advisories (esbuild/form-data/undici);
-App.tsx `useTasks`/`useConfig` extraction deferred (AD-004).
+**Prior context:** `worktree-existing-branch` (PR #62), `topbar-version-indicator` (PR #63)
+merged. Pre-existing quirk: `src/main/ado-gateway.ts` is UTF-16 (git treats it as binary).
+Open follow-ups: 3 transitive dev advisories (esbuild/form-data/undici); App.tsx
+`useTasks`/`useConfig` extraction deferred (AD-004).
