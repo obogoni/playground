@@ -15,17 +15,21 @@ Handoff snapshot.
 | AD-005 | 2026-06-28 | The PR gate runs on **windows-latest**, reversing AD-002. | First CI run (PR #57) failed: `worktree-manager.test.ts` asserts Windows backslash paths because the production code normalizes paths to backslashes — the app is Windows-only (only `--win` is ever built). The real-git suite is OS-coupled (`expected "/tmp/.../repo"` vs `received "\tmp\...\repo"`, plus `spawn git ENOENT`) and is green only on Windows. Making it OS-portable would be a large change to Windows-only code with no benefit. Matches release/nightly. |
 | AD-007 | 2026-07-03 | The headless agent process is spawned **directly** — `shell:false`, argv array passed verbatim, child **stdin closed** (`stdio:['ignore','pipe','pipe']`). **NOT** via a shell, and **NOT** as a `.cmd` shim needing `shell:true` — this corrects the ".cmd shim" assumption in WF1's spec/design. Binds WF3's `agent-command-builder` / `agent-step-runner`. | WF1-T7 empirical finding (`claude` 2.1.199): the installed CLI is a native `.exe` (`~/.local/bin/claude.exe`). Under `shell:true` on Windows, cmd re-parses and corrupts inline JSON args (`--json-schema is not valid JSON: Unterminated string`), so `--json-schema`/`--mcp-config` must reach the exe **unquoted-by-a-shell**; a direct spawn keeps the argv intact and no config file is needed. Headless also blocks ~3s on stdin unless it is closed. Full evidence: `features/workflows-headless-agent-spike/findings.md`. |
 | AD-010 | 2026-07-06 | **WF4 (Blocker + resume) scope pinned via 3 owner decisions + the design's pause architecture:** (1) **Engine auto-pauses + resumes** inside `ctx.agent` on a `blocked` agent result — the author writes no pause/resume code; `ctx.agent` resolves `done` after any number of guidance rounds, or the run cancels on abort. `ctx.ask({title,body})` is the standalone human-in-the-loop primitive that path reuses. (2) **`abort` → run ends `cancelled`** (reuse the terminal status; no new status). (3) **Native lifecycle toasts on block/finish/fail**, cancel silent (`ctx.notify({toast})` stays independent). **Architecture:** the block-loop lives in the DI'd `AgentStepRunner` via an injected `onBlocked` resolver (Approach A — keeps `ctx` thin, mirrors WF3); ONE manager-owned pause primitive (`runtime.requestInput` + `#pendingRespond`) funnels both `ctx.ask` and the agent `onBlocked`; `respond` **always** transitions `blocked→running` (resumed) and hands the decision to the caller — the `abort→cancelled` outcome is produced by the agent consumer throwing `CancellationError`, NOT a reducer edge (so the reducer adds only `blocked`/`resumed` + a `blocked→cancelled` guard for cancel-while-blocked). | Owner chose engine-driven auto-pause for "supervise by exception" (US 38) with zero author plumbing; `cancelled` reuse avoids widening `RunStatus` beyond `blocked`; toasts match US 22. Approach A matches the project's DI-orchestrator-tested-via-fakes convention and WF3's own Approach A. Spec/design/tasks: `.specs/features/workflows-blocker-resume/` (WF4-01..20). |
-| AD-011 | 2026-07-06 | **WF5 (Workflows UI) scope pinned via 3 owner decisions + the renderer design:** (1) **Run state is live-stream only** — the view accumulates `workflow:*` events in an always-App-mounted `useWorkflowRuns` hook (survives direction switches); NO read channel for persisted/past runs (v2). (2) **A failed run shows only its `failed` status** in the UI — `error`/`stdout`/`code` are captured server-side but not broadcast (deferred). (3) **"New workflow" = scaffold + reveal** via a NEW `workflows:scaffold` channel; the created folder is revealed **main-side** with `shell.showItemInFolder` (no editor coupling). **Architecture:** the fold logic is a pure, unit-tested `workflow-run-view.ts` (like `tree-selection`); only `workflow-run-view` + `workflow-scaffold` carry unit tests, the rest (view, dialogs, hook wiring, handler) is hand-verified per project UI convention. 10 tasks / 3 phases (inline). | Owner chose live-only to match the PRD's v1-ephemeral posture with zero backend; failure-detail broadcast is cheap-but-deferred; scaffold+reveal avoids editor coupling. The always-mounted hook is required so a WF4 `workflow:focus-run` toast restores a run's full timeline from any direction. Spec/design/tasks: `.specs/features/workflows-ui/` (WF5-01..25). |
+| AD-012 | 2026-07-06 | **WF5 gets a hi-fi rebuild slice (`workflows-ui-hifi`) that AMENDS AD-011.** The authoritative visual spec is `design/handoff/DESIGN_HANDOFF_WORKFLOWS.md` (hifi) — it was **missed during the original WF5 Design** (process error; the delivered timeline was low-fidelity). Two AD-011 decisions are **reversed** by the handoff: (1) a **failed run now shows a failed footer** with the failing call + `error/stdout/code` (was "status only"); (2) the **live event stream is enriched** (was "minimal"): steps gain a semantic `stepKind` + `stepId` + a `step-finished {durationMs}` event, agent steps carry `{prompt, permission}` on start and `{status, data, sessionId}` on finish, failures are broadcast, and a new `workflow:run-started {runId, workflowId, input, startedAt}` event seeds the header/INPUTS strip (also retiring WF5's `pendingWf` runId hack). AD-011 decision 3 (scaffold+reveal) stands. Scope: `.specs/features/workflows-ui-hifi/spec.md` — 24 ACs (WHF-01..24); WHF-01..10 backend/unit-tested, WHF-11..24 renderer/hand-verified. Same branch `feature/workflows-ui`. **Spec APPROVED; Design next (fresh session).** | The handoff is the source of truth for visual fidelity (PRD = behavior); the AD-011 options were chosen without it on the table. The hifi timeline (kind tags, durations, agent detail boxes, step detail boxes, failed footer) genuinely requires data the merged WF2/WF3 event surface never carried — so a backend enrichment (unit-tested) rides alongside the renderer rebuild. Lesson saved: always read `design/handoff/` before UI design. |
+| AD-011 | 2026-07-06 | ~~**WF5 (Workflows UI) scope pinned via 3 owner decisions**~~ **(decisions 1 & 2 AMENDED by AD-012; decision 3 stands):** (1) **Run state is live-stream only** — the view accumulates `workflow:*` events in an always-App-mounted `useWorkflowRuns` hook (survives direction switches); NO read channel for persisted/past runs (v2). (2) **A failed run shows only its `failed` status** in the UI — `error`/`stdout`/`code` are captured server-side but not broadcast (deferred). (3) **"New workflow" = scaffold + reveal** via a NEW `workflows:scaffold` channel; the created folder is revealed **main-side** with `shell.showItemInFolder` (no editor coupling). **Architecture:** the fold logic is a pure, unit-tested `workflow-run-view.ts` (like `tree-selection`); only `workflow-run-view` + `workflow-scaffold` carry unit tests, the rest (view, dialogs, hook wiring, handler) is hand-verified per project UI convention. 10 tasks / 3 phases (inline). | Owner chose live-only to match the PRD's v1-ephemeral posture with zero backend; failure-detail broadcast is cheap-but-deferred; scaffold+reveal avoids editor coupling. The always-mounted hook is required so a WF4 `workflow:focus-run` toast restores a run's full timeline from any direction. Spec/design/tasks: `.specs/features/workflows-ui/` (WF5-01..25). |
 | AD-009 | 2026-07-06 | **WF3 MERGED to `main` (PR #65).** Independent SDD eval (author≠judge, `spec-driven-eval`): **Final 0.98 — "Spec-complete"** (S=PASS, E recall/precision/justified ≈1.0, gates build/lint/unit green; live smoke owner-PASS 6/6). Two minor gaps merged as-is and **carried into WF4** (WF3-04 generic retry prompt; WF3-10 unasserted server reuse). **WF4 planning deferred to the next session.** | The two gaps are cheap polish on the same runner/`--resume` path WF4 already touches, so folding them into WF4 avoids a throwaway PR. Report: `.specs/features/workflows-agent-step/evaluations/P1-workflows-agent-step-20260706T141244Z.md`. |
 | AD-008 | 2026-07-03 | **WF3 (Structured agent step) scope pinned via 4 owner decisions:** (1) **Arm M (MCP) only** — one shared loopback HTTP MCP server, per-step bearer token = auth+routing, forced `emit_result`; Arm N (`--json-schema`) dropped. (2) **ajv** for payload validation (promotes `emit-result-schema` off the spike's minimal checker; `expect` stays a JSON Schema). (3) `ctx.agent()` returns the **full envelope** `{status,data?,question?,sessionId}`; `blocked` is returned **as-is** (no engine pause in WF3 — that's WF4). (4) Permission presets **read/write/bypass**, default **read** (read = read-only tools + `emit_result`, guaranteed non-mutating). | Findings recommended Arm M to keep the `blocked` terminal value + per-step routing first-class for WF4; ajv because the author declares a JSON Schema and the tool `inputSchema` is JSON Schema too; full-envelope return lets WF4 add the pause without breaking the happy path; the preset set is PRD-fixed (US 26). Spec: `.specs/features/workflows-agent-step/spec.md` (WF3-01..25). |
 
 ## Handoff
 
 **Status (current, 2026-07-06):** Workflows epic (issue #56) — **WF1–WF4 MERGED to `main`**
-(WF1/WF2 = PR #64; WF3 = PR #65; WF4 = PR #66, merge `660180b`). **WF5 (Workflows UI) —
-EXECUTED + independently VERIFIED (PASS).** On branch **`feature/workflows-ui`** (cut off
-`main` @ `660180b`), 11 commits `5f0ad4d..1c5b84c`. Epic #56 stays **open** (WF5 owner-run
-smoke + PR/merge remain; WF5 is the last milestone → merging it can close #56).
+(WF4 = PR #66, merge `660180b`). **WF5 (Workflows UI): first pass EXECUTED + VERIFIED (PASS)**
+on branch **`feature/workflows-ui`** (`5f0ad4d..1c5b84c`), **but the owner caught a
+fidelity gap** — the hi-fi design handoff `design/handoff/DESIGN_HANDOFF_WORKFLOWS.md` was
+missed during Design, so the delivered timeline is low-fi. A **hi-fi rebuild slice
+`workflows-ui-hifi` (AD-012, amends AD-011) is SPEC'd + APPROVED; Design is the next step**
+(fresh session). NOT merged to `main` — the hifi work lands on the same branch, then one PR
+closes #56. Epic #56 stays **open**.
 
 **WF4 Execute done this session (all 8 tasks, 3 phases, inline — 8 atomic commits
 `7a0db81..c938ad3`):**
@@ -91,15 +95,49 @@ typecheck 0 err, lint 0 err (1 tolerated prettier warning), **440/440 tests / 35
 upsert-ignore-create; scaffold EEXIST-guard / sanitize-trim). No survivors, no gaps. Prod build
 (`npm run build`) OK. Report: `.specs/features/workflows-ui/validation.md`.
 
-**Next step (resume here):** WF5 DONE + VERIFIED. Remaining:
-1. **Owner-run two-example UI smoke** (the milestone gate, analogous to WF4-17): launch the app
-   (`npm run dev`), drive **"review PR"** and **"implement ticket"** entirely through the
-   Workflows view — trigger → live timeline → (implement-ticket) blocker respond panel →
-   guidance resumes → finish. Needs a live Claude subscription + authored example workflows in
-   `~/.playground/workflows/`.
-2. **Open the WF5 PR** (`gh pr create`). Since WF5 is the last epic milestone, the body MAY
-   carry `Closes #56`. main is gated by the `copilot_code_review` ruleset — a force-pushed PR
-   goes BLOCKED → merge with `gh pr merge --admin`.
+**WF5 first pass (done + merged-to-branch, low-fi):** 11 commits `5f0ad4d..1c5b84c` — pure fold
+`workflow-run-view` (+tests), `workflow-scaffold` (+tests), `ScaffoldResult`/`workflows:scaffold`
+contract + handler, `useWorkflowRuns` hook, `WorkflowTriggerDialog`, `NewWorkflowDialog`,
+`RunDetail`+`RespondPanel`, `WorkflowsView`, App integration. Verifier PASS (25/25). These files
+are the rebuild's starting point — the hifi slice rewrites the renderer + enriches the backend.
+
+**Next step (resume here — Design of `workflows-ui-hifi`):**
+- **Spec (APPROVED):** `.specs/features/workflows-ui-hifi/spec.md` — 24 ACs. WHF-01..10 =
+  backend event enrichment (unit-tested): `stepKind`+`stepId` on step-started; new
+  `step-finished {stepId, durationMs}` (instrument times fn; reducer stays clock-free); agent
+  `{prompt,permission}` on start + `{status,data,sessionId}` on finish; broadcast failed
+  `error/stdout/code` (incl. from `AgentStepError.detail`); new `workflow:run-started
+  {runId,workflowId,input,startedAt}`. WHF-11..24 = renderer rebuild to the handoff
+  (node timeline+glyphs+connectors, kind tags, durations, group rollup, step + agent detail
+  boxes, header+relative-time, INPUTS strip, hifi respond panel + session note, failed footer,
+  hifi cards/RECENT-RUNS, pipeline glyph, hifi dialog).
+- **Backend files to enrich (all merged + tested — do NOT break their suites):**
+  `src/shared/workflows.ts` (StepEvent: add `stepKind`/`stepId`/`durationMs`/`agent`/`agentResult`;
+  new `step-finished` kind), `src/shared/ipc-contract.ts` (add `workflow:run-started`),
+  `src/main/workflow-ctx.ts` (`instrument` → stepId + kind + timing + finish; agent detail),
+  `src/main/run-state.ts` (fold `step-finished`), `src/main/workflow-manager.ts` (`#emit`
+  broadcast start/finish/run-started/failed; stamp durationMs), `src/main/agent-step-runner.ts`
+  (surface prompt/permission/data + failure detail; sessionId on blocked). Backend surface map
+  (exact file:line for every emit/label) is in this session's Explore result.
+- **Renderer files to rewrite:** `RunDetail.tsx`/`.css`, `WorkflowsView.tsx`/`.css`,
+  `workflow-run-view.ts` (fold the new events into a richer `RunView`: kind/duration/detail/agent
+  per step, input/startedAt per run — retire the `pendingWf` hack via `run-started`),
+  `use-workflow-runs.ts`, `WorkflowTriggerDialog.tsx`, `TopBar.tsx` (pipeline glyph + `Icon`).
+- **Design decisions to make:** duration/stepId correlation model (chosen: monotonic stepId,
+  start+finish events); how instrument captures per-primitive result → detail box payload
+  (ado task+children, changedFiles list, failed-sh cmd+output) without leaking types; group
+  rollup precedence (failed>blocked>running>done>pending) in the renderer; the run-status/kind/
+  permission → color CSS mappings (reuse base palette, no new tokens).
+- **OPEN QUESTION (unresolved — decide at Design):** update the `scripts/fixtures/implement-ticket`
+  fixture to use `ctx.step` groups per task (as the mockup shows: `ado.getTask` + child tasks →
+  a `ctx.step` group per task with worktree.create + agent inside) so the group-rollup rendering
+  (WHF-14) is exercised in the two-example gate? Owner was asked, did not answer yet. The current
+  two fixtures are flat + inject agent `data` via `ctx.notify(JSON.stringify)`; the enrichment
+  makes `data` flow natively so that notify hack can be dropped.
+- Deferred (spec Out of Scope): Re-run action; live token-by-token agent tail; persisted-run
+  read channel.
+- **After Design → Tasks → Execute → Verifier**, then owner-run two-example UI smoke at hifi
+  fidelity, then one PR (`Closes #56`) → `gh pr merge --admin` (copilot_code_review ruleset).
 
 **Prior context:** `worktree-existing-branch` (PR #62), `topbar-version-indicator` (PR #63)
 merged. Pre-existing quirk: `src/main/ado-gateway.ts` is UTF-16 (git treats it as binary).
