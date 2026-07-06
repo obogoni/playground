@@ -28,7 +28,6 @@ const run = (over: Partial<RunView> = {}): RunView => ({
   input: {},
   steps: [],
   logs: [],
-  timeline: [],
   ...over
 })
 
@@ -80,7 +79,6 @@ describe('foldRunEvent — status', () => {
         input: {},
         steps: [],
         logs: [],
-        timeline: [],
         blocked: undefined,
         blockedSessionId: undefined
       }
@@ -244,8 +242,8 @@ describe('foldRunEvent — failure evidence', () => {
   })
 })
 
-describe('foldRunEvent — logs & legacy timeline', () => {
-  it('appends a log line to logs and mirrors it onto the legacy timeline', () => {
+describe('foldRunEvent — logs', () => {
+  it('appends a log line to logs', () => {
     const runs = foldRunEvent([run()], {
       type: 'log',
       runId: 'r1',
@@ -253,27 +251,6 @@ describe('foldRunEvent — logs & legacy timeline', () => {
       group: 'g1'
     })
     expect(runs[0].logs).toEqual([{ message: 'fetching', group: 'g1' }])
-    expect(runs[0].timeline).toEqual([{ kind: 'log', message: 'fetching', group: 'g1' }])
-  })
-
-  it('mirrors step-started rows onto the legacy timeline in arrival order', () => {
-    let runs = [run()]
-    runs = foldRunEvent(runs, {
-      type: 'step',
-      runId: 'r1',
-      step: stepEvent({ stepId: 0, stepKind: 'sh', label: 'A' })
-    })
-    runs = foldRunEvent(runs, { type: 'log', runId: 'r1', message: 'a-log' })
-    runs = foldRunEvent(runs, {
-      type: 'step',
-      runId: 'r1',
-      step: stepEvent({ stepId: 1, stepKind: 'sh', label: 'B' })
-    })
-    expect(runs[0].timeline).toEqual([
-      { kind: 'step', label: 'A', group: undefined },
-      { kind: 'log', message: 'a-log', group: undefined },
-      { kind: 'step', label: 'B', group: undefined }
-    ])
   })
 })
 

@@ -19,9 +19,9 @@ import type {
  * `step-started` upserts a `StepNode`, each `step-finished` correlates by
  * `stepId` and stamps its outcome (ok/duration/agentResult/detail). Per-step
  * status and group rollup are derived here (`stepStatus`/`groupRollup`) — the
- * backend carries no group-status field (spec Out-of-Scope). `timeline` is kept
- * populated transitionally so the WF5 `RunDetail` keeps rendering until it is
- * rebuilt to consume `steps`/`logs`.
+ * backend carries no group-status field (spec Out-of-Scope). The hifi
+ * `RunDetail` consumes `steps` + `logs` directly (the transitional flat
+ * `timeline` was dropped once RunDetail was rebuilt).
  */
 
 /** The status the renderer paints on a step node (glyph + tint). */
@@ -46,11 +46,6 @@ export interface StepNode {
   detail?: StepDetail
 }
 
-/** One row on a run's legacy flat timeline: an executed step (label) or a log line. */
-export type TimelineEntry =
-  | { kind: 'step'; label: string; group?: string }
-  | { kind: 'log'; message: string; group?: string }
-
 /** A run as the renderer displays it — header, INPUTS strip, node timeline, blocked panel, footer. */
 export interface RunView {
   runId: string
@@ -73,11 +68,6 @@ export interface RunView {
   error?: string
   stdout?: string
   code?: number
-  /**
-   * Legacy flat timeline, kept populated transitionally so the WF5 `RunDetail`
-   * keeps rendering until it is rebuilt to consume `steps`/`logs`.
-   */
-  timeline: TimelineEntry[]
 }
 
 /**
@@ -149,7 +139,7 @@ export function groupRollup(children: StepStatus[]): StepStatus {
 
 /** A defensive default for an event whose run the view has never seen (create-or-update). */
 function emptyRun(runId: string): RunView {
-  return { runId, status: 'pending', input: {}, steps: [], logs: [], timeline: [] }
+  return { runId, status: 'pending', input: {}, steps: [], logs: [] }
 }
 
 /** Upsert the run `runId` in `runs` (newest-first on create), applying `update`. */
@@ -174,11 +164,7 @@ function startStep(r: RunView, step: StepEvent): RunView {
   const idx = r.steps.findIndex((s) => s.stepId === node.stepId)
   const steps =
     idx < 0 ? [...r.steps, node] : r.steps.map((s, i) => (i === idx ? { ...s, ...node } : s))
-  return {
-    ...r,
-    steps,
-    timeline: [...r.timeline, { kind: 'step', label: node.label, group: node.group }]
-  }
+  return { ...r, steps }
 }
 
 /** Stamp a `StepNode` on `step-finished`, correlating by `stepId` (leaves others untouched). */
@@ -251,8 +237,7 @@ export function foldRunEvent(runs: RunView[], ev: WorkflowFoldEvent): RunView[] 
     case 'log':
       return upsert(runs, ev.runId, (r) => ({
         ...r,
-        logs: [...r.logs, { message: ev.message, group: ev.group }],
-        timeline: [...r.timeline, { kind: 'log', message: ev.message, group: ev.group }]
+        logs: [...r.logs, { message: ev.message, group: ev.group }]
       }))
     case 'blocked':
       return upsert(runs, ev.runId, (r) => ({
