@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 2,
+  "next_id": 3,
   "lessons": [
     {
       "id": "L-001",
@@ -24,6 +24,24 @@
       ],
       "created": "2026-07-06T13:28:04Z",
       "last_seen": "2026-07-06T16:15:40Z"
+    },
+    {
+      "id": "L-002",
+      "key": "spec_deviation::before a ui design references a shared css keyframe as existing grep global css to confirm it exists the whf handoff assumed pulse blink existed but global css only had fadein popin toastin forcing a component local keyframes pulse",
+      "text": "Before a UI design references a shared CSS keyframe as 'existing', grep global.css to confirm it exists — the WHF handoff assumed pulse/blink existed but global.css only had fadeIn/popIn/toastIn, forcing a component-local @keyframes pulse.",
+      "signal": "spec_deviation",
+      "scope": "src/renderer/**/*.css",
+      "status": "candidate",
+      "features": [
+        "workflows-ui-hifi"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "RunDetail.css:14 / WorkflowsView.css:21 (SPEC_DEVIATION pulse keyframe) (src/renderer/**/*.css)"
+      ],
+      "created": "2026-07-06T21:57:51Z",
+      "last_seen": "2026-07-06T21:57:51Z"
     }
   ]
 }

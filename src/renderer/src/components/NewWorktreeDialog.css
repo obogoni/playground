@@ -66,6 +66,14 @@
   margin-bottom: 9px;
 }
 
+/* Muted helper/description line (WF5 trigger + new-workflow dialogs). */
+.dialog-desc {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-faint);
+  margin: 0;
+}
+
 .dialog-repo-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

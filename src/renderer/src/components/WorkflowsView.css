@@ -1,0 +1,367 @@
+.workflows-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.wf-rail {
+  width: 360px;
+  flex-shrink: 0;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* pulse is also defined in RunDetail.css (always bundled via the RunDetail
+   import); duplicated here so the rail's running dot animates even when no run
+   is selected. See RunDetail.css for the SPEC_DEVIATION rationale. */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Header */
+.wf-rail-head {
+  flex: 0 0 auto;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wf-rail-head-titles {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.wf-rail-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.wf-rail-count {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.wf-rail-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.wf-rail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.wf-rail-btn:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.wf-new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Scroll body */
+.wf-rail-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.wf-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--red);
+  border: 1px solid color-mix(in oklab, var(--red) 45%, transparent);
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--red) 10%, transparent);
+}
+
+.wf-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.wf-runs-label {
+  margin-top: 14px;
+}
+
+.wf-defs,
+.wf-runs {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.wf-empty {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin: 0;
+}
+
+/* Definition card */
+.wf-def {
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--panel);
+  padding: 13px;
+}
+
+.wf-def.broken {
+  border-color: color-mix(in oklab, var(--red) 32%, var(--border));
+  background: color-mix(in oklab, var(--red) 5%, var(--panel));
+}
+
+.wf-def-row {
+  display: flex;
+  gap: 10px;
+}
+
+.wf-def-tile {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.wf-def-tile.broken {
+  background: color-mix(in oklab, var(--red) 15%, transparent);
+  color: var(--red);
+}
+
+.wf-def-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  gap: 3px;
+}
+
+.wf-def-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wf-def-desc {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.wf-def-broken-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.wf-def-id {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.wf-broken-pill {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--red);
+  background: color-mix(in oklab, var(--red) 15%, transparent);
+  border-radius: 20px;
+  padding: 1px 8px;
+}
+
+.wf-def-error {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  word-break: break-word;
+}
+
+.wf-def-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.wf-def-inputs {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.wf-def-spacer {
+  flex: 1;
+}
+
+.wf-run-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 13px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, var(--border));
+  background: transparent;
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+.wf-run-btn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
+.wf-run-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  border-color: var(--border);
+  color: var(--text-faint);
+}
+
+/* Recent-run row */
+.wf-run-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--panel);
+  cursor: pointer;
+  text-align: left;
+}
+
+.wf-run-item:hover {
+  border-color: var(--border-strong);
+}
+
+.wf-run-item.selected {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 9%, var(--panel));
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.wf-run-line1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wf-run-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.wf-run-dot.running {
+  background: var(--blue);
+  animation: pulse 1.8s ease-in-out infinite;
+}
+.wf-run-dot.blocked {
+  background: var(--amber);
+}
+.wf-run-dot.done {
+  background: var(--green);
+}
+.wf-run-dot.failed {
+  background: var(--red);
+}
+.wf-run-dot.pending,
+.wf-run-dot.cancelled {
+  background: var(--text-faint);
+}
+
+.wf-run-item-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wf-run-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Empty detail */
+.wf-detail-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-faint);
+  background: var(--bg);
+}
+
+.wf-detail-empty p {
+  font-size: 14px;
+  margin: 0;
+}

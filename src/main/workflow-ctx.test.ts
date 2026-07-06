@@ -1,12 +1,28 @@
 import { describe, expect, it } from 'vitest'
-import type { BlockerQuestion, RespondDecision } from '../shared/workflows'
+import type {
+  BlockerQuestion,
+  PermissionPreset,
+  RespondDecision,
+  StepDetail,
+  StepEvent,
+  StepKind
+} from '../shared/workflows'
 import type { AgentResult, AgentStepOptions, BlockedResolver } from './agent-step-runner'
 import { refKey, type WorkItemRef } from './ado-gateway'
 import { CancellationError, makeCtx, type CtxDeps, type CtxRuntime } from './workflow-ctx'
 
 interface StepRec {
+  stepId: number
   label: string
+  kind: StepKind
   group?: string
+  agent?: { prompt: string; permission: PermissionPreset }
+}
+interface FinishRec {
+  stepId: number
+  ok?: boolean
+  detail?: StepDetail
+  agentResult?: StepEvent['agentResult']
 }
 interface LogRec {
   message: string
@@ -21,20 +37,31 @@ function makeRuntime(
 ): {
   runtime: CtxRuntime
   steps: StepRec[]
+  finishes: FinishRec[]
   logs: LogRec[]
   cancel: () => void
   asks: BlockerQuestion[]
+  /** The `sessionId` forwarded to each `requestInput` call, in order (WHF-07). */
+  reqSessions: Array<string | undefined>
 } {
   const steps: StepRec[] = []
+  const finishes: FinishRec[] = []
   const logs: LogRec[] = []
   const asks: BlockerQuestion[] = []
+  const reqSessions: Array<string | undefined> = []
   let cancelled = false
+  let seq = 0
   const runtime: CtxRuntime = {
     checkCancel() {
       if (cancelled) throw new CancellationError()
     },
-    emitStep(label, group) {
-      steps.push({ label, group })
+    startStep(spec) {
+      const id = seq++
+      steps.push({ stepId: id, ...spec })
+      return id
+    },
+    finishStep(stepId, out) {
+      finishes.push({ stepId, ...out })
     },
     emitLog(message, group, sessionId) {
       logs.push({ message, group, sessionId })
@@ -42,13 +69,14 @@ function makeRuntime(
     input,
     signal,
     requestInput: requestInput
-      ? async (q) => {
+      ? async (q, sessionId) => {
           asks.push(q)
+          reqSessions.push(sessionId)
           return requestInput(q)
         }
       : undefined
   }
-  return { runtime, steps, logs, cancel: () => (cancelled = true), asks }
+  return { runtime, steps, finishes, logs, cancel: () => (cancelled = true), asks, reqSessions }
 }
 
 /** A fully-populated fake deps bag; tests reassign the one method they exercise. */
@@ -350,8 +378,11 @@ function fakeAgent(result: AgentResult): {
   agent: NonNullable<CtxDeps['agent']>
   calls: Array<{ opts: AgentStepOptions; signal?: AbortSignal; onBlocked?: BlockedResolver }>
 } {
-  const calls: Array<{ opts: AgentStepOptions; signal?: AbortSignal; onBlocked?: BlockedResolver }> =
-    []
+  const calls: Array<{
+    opts: AgentStepOptions
+    signal?: AbortSignal
+    onBlocked?: BlockedResolver
+  }> = []
   return {
     agent: {
       async run(opts, signal, onBlocked) {
@@ -408,7 +439,7 @@ describe('ctx.agent (WF3-01 / WF3-16 / WF3-19)', () => {
     })
   })
 
-  it('auto-emits a step-started labeled "agent" (WF3-19)', async () => {
+  it('auto-emits a step-started labeled "agent" of kind agent (WF3-19)', async () => {
     const deps = makeDeps()
     const { runtime, steps } = makeRuntime()
     const { agent } = fakeAgent({ status: 'done', sessionId: 'sess-1' })
@@ -417,7 +448,8 @@ describe('ctx.agent (WF3-01 / WF3-16 / WF3-19)', () => {
 
     await ctx.agent(AGENT_OPTS)
 
-    expect(steps).toEqual([{ label: 'agent', group: undefined }])
+    expect(steps).toHaveLength(1)
+    expect(steps[0]).toMatchObject({ stepId: 0, label: 'agent', kind: 'agent', group: undefined })
   })
 
   it('records the returned sessionId on a step-logged event via emitLog (WF3-16)', async () => {
@@ -462,7 +494,7 @@ describe('ctx.agent (WF3-01 / WF3-16 / WF3-19)', () => {
   it('wires onBlocked to runtime.requestInput so a blocked agent pauses via the manager (WF4-01)', async () => {
     const deps = makeDeps()
     const decision: RespondDecision = { action: 'guidance', guidance: 'do X' }
-    const { runtime, asks } = makeRuntime({}, undefined, async () => decision)
+    const { runtime, asks, reqSessions } = makeRuntime({}, undefined, async () => decision)
     const { agent, calls } = fakeAgent({ status: 'done', data: {}, sessionId: 's1' })
     deps.agent = agent
     const ctx = makeCtx(deps, runtime)
@@ -475,6 +507,8 @@ describe('ctx.agent (WF3-01 / WF3-16 / WF3-19)', () => {
     const q: BlockerQuestion = { title: 'Agent needs input', body: 'which env?' }
     await expect(onBlocked!(q, 's1')).resolves.toEqual(decision)
     expect(asks).toEqual([q])
+    // WHF-07: the agent's sessionId is forwarded through requestInput.
+    expect(reqSessions).toEqual(['s1'])
   })
 })
 
@@ -498,12 +532,13 @@ describe('ctx.ask (WF4-11 / WF4-12)', () => {
     await expect(ctx.ask({ title: 't', body: 'b' })).resolves.toEqual({ action: 'abort' })
   })
 
-  it('auto-emits a step-started labeled "ask" (WF4-12)', async () => {
+  it('auto-emits a step-started labeled "ask" of kind ask (WF4-12)', async () => {
     const deps = makeDeps()
     const { runtime, steps } = makeRuntime({}, undefined, async () => ({ action: 'abort' }))
     const ctx = makeCtx(deps, runtime)
     await ctx.ask({ title: 't', body: 'b' })
-    expect(steps).toEqual([{ label: 'ask', group: undefined }])
+    expect(steps).toHaveLength(1)
+    expect(steps[0]).toMatchObject({ stepId: 0, label: 'ask', kind: 'ask', group: undefined })
   })
 
   it('checks cancellation before asking: a cancelled run throws and never requests input (WF4-12)', async () => {
@@ -516,5 +551,203 @@ describe('ctx.ask (WF4-11 / WF4-12)', () => {
     await expect(ctx.ask({ title: 't', body: 'b' })).rejects.toBeInstanceOf(CancellationError)
     expect(asks).toEqual([])
     expect(steps).toEqual([])
+  })
+})
+
+describe('instrument start/finish seam (WHF-01/02/05/06)', () => {
+  it('stamps each primitive with its semantic stepKind', async () => {
+    const deps = makeDeps()
+    const { runtime, steps } = makeRuntime()
+    const { agent } = fakeAgent({ status: 'done', data: {}, sessionId: 's' })
+    deps.agent = agent
+    const ctx = makeCtx(deps, runtime)
+
+    await ctx.worktree.create('r', 'b')
+    await ctx.worktree.remove('r', 'w')
+    await ctx.worktree.changedFiles('w')
+    await ctx.sh('echo', { cwd: 'x' })
+    await ctx.git.fetch({ cwd: 'x' })
+    await ctx.ado.getTask(REF)
+    await ctx.notify('n')
+    await ctx.agent(AGENT_OPTS)
+
+    const kindByLabel = Object.fromEntries(steps.map((s) => [s.label, s.kind]))
+    expect(kindByLabel).toEqual({
+      'worktree.create': 'worktree',
+      'worktree.remove': 'worktree',
+      'worktree.changedFiles': 'worktree',
+      sh: 'sh',
+      'git.fetch': 'git',
+      'ado.getTask': 'ado',
+      notify: 'notify',
+      agent: 'agent'
+    })
+  })
+
+  it('assigns monotonic stepIds and finishes each with its matching id', async () => {
+    const deps = makeDeps()
+    const { runtime, steps, finishes } = makeRuntime()
+    const ctx = makeCtx(deps, runtime)
+
+    await ctx.sh('a', { cwd: 'x' })
+    await ctx.sh('b', { cwd: 'x' })
+    await ctx.sh('c', { cwd: 'x' })
+
+    expect(steps.map((s) => s.stepId)).toEqual([0, 1, 2])
+    expect(finishes.map((f) => f.stepId)).toEqual([0, 1, 2])
+  })
+
+  it('opens the step before the call and closes it only after the call resolves', async () => {
+    const deps = makeDeps()
+    const { runtime, steps, finishes } = makeRuntime()
+    let startedAtCall = -1
+    let finishedAtCall = -1
+    deps.runShell = async () => {
+      startedAtCall = steps.length
+      finishedAtCall = finishes.length
+      return { code: 0, stdout: '', stderr: '' }
+    }
+    const ctx = makeCtx(deps, runtime)
+
+    await ctx.sh('x', { cwd: 'y' })
+
+    expect(startedAtCall).toBe(1) // step-started emitted before the call ran
+    expect(finishedAtCall).toBe(0) // not yet finished while the call was in flight
+    expect(finishes).toHaveLength(1) // finished after it resolved
+  })
+
+  it('finishes ok:true on resolve and ok:false (then rethrows) on throw', async () => {
+    const deps = makeDeps()
+    const { runtime, finishes } = makeRuntime()
+    const ctx = makeCtx(deps, runtime)
+
+    await ctx.sh('ok', { cwd: 'x' })
+    expect(finishes.at(-1)?.ok).toBe(true)
+
+    deps.gitFetch = async () => {
+      throw new Error('boom')
+    }
+    await expect(ctx.git.fetch({ cwd: 'x' })).rejects.toThrow(/boom/)
+    expect(finishes.at(-1)?.ok).toBe(false)
+  })
+
+  it('carries the agent prompt + permission on start, defaulting permission to read', async () => {
+    const deps = makeDeps()
+    const { runtime, steps } = makeRuntime()
+    const { agent } = fakeAgent({ status: 'done', data: {}, sessionId: 's' })
+    deps.agent = agent
+    const ctx = makeCtx(deps, runtime)
+
+    await ctx.agent({ prompt: 'do it', expect: { type: 'object' }, cwd: 'x' })
+
+    const start = steps.find((s) => s.kind === 'agent')
+    expect(start?.agent).toEqual({ prompt: 'do it', permission: 'read' })
+  })
+
+  it('passes an explicit agent permission through on start', async () => {
+    const deps = makeDeps()
+    const { runtime, steps } = makeRuntime()
+    const { agent } = fakeAgent({ status: 'done', data: {}, sessionId: 's' })
+    deps.agent = agent
+    const ctx = makeCtx(deps, runtime)
+
+    await ctx.agent({ prompt: 'p', expect: { type: 'object' }, cwd: 'x', permission: 'write' })
+
+    const start = steps.find((s) => s.kind === 'agent')
+    expect(start?.agent).toEqual({ prompt: 'p', permission: 'write' })
+  })
+
+  it('carries the validated agent result envelope on finish', async () => {
+    const deps = makeDeps()
+    const { runtime, finishes } = makeRuntime()
+    const { agent } = fakeAgent({ status: 'done', data: { summary: 'ok' }, sessionId: 'sess-9' })
+    deps.agent = agent
+    const ctx = makeCtx(deps, runtime)
+
+    await ctx.agent(AGENT_OPTS)
+
+    const finish = finishes.find((f) => f.agentResult)
+    expect(finish?.agentResult).toEqual({
+      status: 'done',
+      data: { summary: 'ok' },
+      sessionId: 'sess-9'
+    })
+  })
+
+  it('extracts the ado detail payload (task + children details) on finish', async () => {
+    const deps = makeDeps()
+    const { runtime, finishes } = makeRuntime()
+    const child1: WorkItemRef = { id: 11, org: 'o', project: 'p' }
+    const child2: WorkItemRef = { id: 12, org: 'o', project: 'p' }
+    deps.ado.getWorkItemWithRelations = async () => ({
+      ok: true,
+      item: { title: 'Parent', type: 'Task', state: 'Active' },
+      childRefs: [child1, child2]
+    })
+    deps.ado.getWorkItems = async () => ({
+      ok: true,
+      details: new Map([
+        [refKey(child1), { title: 'C1', type: 'Task', state: 'New' }],
+        [refKey(child2), { title: 'C2', type: 'Task', state: 'Done' }]
+      ])
+    })
+    const ctx = makeCtx(deps, runtime)
+
+    await ctx.ado.getTask(REF)
+
+    const finish = finishes.find((f) => f.detail?.kind === 'ado')
+    expect(finish?.detail).toEqual({
+      kind: 'ado',
+      task: { title: 'Parent', type: 'Task', state: 'Active' },
+      children: [
+        { title: 'C1', type: 'Task', state: 'New' },
+        { title: 'C2', type: 'Task', state: 'Done' }
+      ]
+    })
+  })
+
+  it('extracts the changed-files detail payload on finish', async () => {
+    const deps = makeDeps()
+    const files = [{ path: 'a.ts', status: 'modified' as const }]
+    deps.worktree.changedFiles = async () => files
+    const { runtime, finishes } = makeRuntime()
+    const ctx = makeCtx(deps, runtime)
+
+    await ctx.worktree.changedFiles('w')
+
+    const finish = finishes.find((f) => f.detail?.kind === 'files')
+    expect(finish?.detail).toEqual({ kind: 'files', files })
+  })
+
+  it('brackets ctx.step as a group step (kind group) around its nested children', async () => {
+    const deps = makeDeps()
+    const { runtime, steps, finishes } = makeRuntime()
+    const ctx = makeCtx(deps, runtime)
+
+    await ctx.step('phase', async () => {
+      await ctx.sh('inner', { cwd: 'x' })
+    })
+
+    const group = steps.find((s) => s.label === 'phase')
+    expect(group?.kind).toBe('group')
+    // The nested child records the group LABEL as its parent group.
+    expect(steps.find((s) => s.label === 'sh')?.group).toBe('phase')
+    // The group itself finished ok.
+    expect(finishes.some((f) => f.stepId === group?.stepId && f.ok === true)).toBe(true)
+  })
+
+  it('finishes ctx.step with ok:false and rethrows when its body throws', async () => {
+    const deps = makeDeps()
+    const { runtime, steps, finishes } = makeRuntime()
+    const ctx = makeCtx(deps, runtime)
+
+    await expect(
+      ctx.step('phase', async () => {
+        throw new Error('inner boom')
+      })
+    ).rejects.toThrow(/inner boom/)
+
+    const group = steps.find((s) => s.label === 'phase')
+    expect(finishes.find((f) => f.stepId === group?.stepId)?.ok).toBe(false)
   })
 })

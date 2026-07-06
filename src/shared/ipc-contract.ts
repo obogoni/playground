@@ -12,6 +12,7 @@ import type {
   BlockerQuestion,
   RespondDecision,
   RunStatus,
+  ScaffoldResult,
   StepEvent,
   WorkflowDef
 } from './workflows'
@@ -106,6 +107,8 @@ export interface IpcContract {
   'workflows:respond': { req: { runId: string; decision: RespondDecision }; res: void }
   /** Drop any discovery cache (v1 no-op — discovery is on-demand) (WF2-01). */
   'workflows:reload': { req: void; res: void }
+  /** Scaffold a new workflow folder from a template + reveal it; an existing id is rejected, never overwritten (WF5-22/24/25). */
+  'workflows:scaffold': { req: { name: string }; res: ScaffoldResult }
 }
 
 export type IpcChannel = keyof IpcContract
@@ -129,8 +132,15 @@ export interface IpcEvents {
   'workflow:step': { runId: string; step: StepEvent }
   /** A `step-logged` log/notify line, optionally nested under a `ctx.step` group (WF2-10). */
   'workflow:log': { runId: string; message: string; group?: string }
-  /** A run paused awaiting a human answer (WF4-01/15). */
-  'workflow:blocked': { runId: string; question: BlockerQuestion }
+  /** A run started — seeds the RunView with its identity + input + start time (WHF-08). */
+  'workflow:run-started': {
+    runId: string
+    workflowId: string
+    input: Record<string, string>
+    startedAt: string
+  }
+  /** A run paused awaiting a human answer; `sessionId` scopes the agent resume note (WF4-01/15, WHF-07). */
+  'workflow:blocked': { runId: string; question: BlockerQuestion; sessionId?: string }
   /** A lifecycle-toast click asked the renderer to surface this run (WF4-15). */
   'workflow:focus-run': { runId: string }
 }
