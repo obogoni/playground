@@ -18,6 +18,30 @@ export type LoadedWorkflow = { meta: WorkflowMeta; run: RunFn } | { error: strin
 const EXTERNAL = [...builtinModules, ...builtinModules.map((m) => `node:${m}`), 'electron']
 
 /**
+ * The on-disk path of esbuild's native binary inside a packaged app (WF fix).
+ * esbuild resolves its binary relative to its own package, which electron-builder
+ * places inside `app.asar`; a `.exe` there is not a real file, so `spawn` gets
+ * ENOENT. electron-builder DOES smart-unpack `@esbuild/*` to `app.asar.unpacked`,
+ * so we point esbuild's `ESBUILD_BINARY_PATH` env at that real copy. Pure so it
+ * can be unit-tested without Electron; the caller supplies `process.resourcesPath`.
+ */
+export function esbuildBinaryPath(
+  resourcesPath: string,
+  platform: NodeJS.Platform,
+  arch: string
+): string {
+  const bin = platform === 'win32' ? 'esbuild.exe' : join('bin', 'esbuild')
+  return join(
+    resourcesPath,
+    'app.asar.unpacked',
+    'node_modules',
+    '@esbuild',
+    `${platform}-${arch}`,
+    bin
+  )
+}
+
+/**
  * List the workflow folder names directly under `root` (workflow id = folder
  * name, WF2-01). Returns `[]` — never throws — when `root` is missing or empty.
  */

@@ -20,7 +20,7 @@ import { TaskBoard } from './task-board'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
 import type { CtxDeps, GitFetchOptions, ShellResult } from './workflow-ctx'
-import { discoverWorkflows, loadWorkflow } from './workflow-loader'
+import { discoverWorkflows, esbuildBinaryPath, loadWorkflow } from './workflow-loader'
 import { WorkflowManager } from './workflow-manager'
 import { WorkflowRunStore } from './workflow-run-store'
 import { scaffoldWorkflow } from './workflow-scaffold'
@@ -29,6 +29,18 @@ import { workspaceTemplates } from './workspace-config'
 import { WorkspaceRegistry } from './workspace-registry'
 
 const execFileAsync = promisify(execFile)
+
+// The workflow-loader bundles workflow.ts with esbuild, which spawns its native
+// binary. In a packaged app esbuild resolves that binary to a path inside
+// app.asar (not a real file → spawn ENOENT); point its env at the unpacked copy
+// before the first build(). No-op in dev, where the binary sits in node_modules.
+if (app.isPackaged && !process.env.ESBUILD_BINARY_PATH) {
+  process.env.ESBUILD_BINARY_PATH = esbuildBinaryPath(
+    process.resourcesPath,
+    process.platform,
+    process.arch
+  )
+}
 
 /**
  * WF2 real `ctx.git.fetch` (WF2-07): a no-shell `git fetch`, mirroring the
