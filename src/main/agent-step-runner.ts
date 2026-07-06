@@ -25,11 +25,23 @@
  * pending promise causally before the child exits; no grace window is needed.
  */
 
+import type { BlockerQuestion, RespondDecision } from '../shared/workflows'
 import { buildAgentCommand, type Permission } from './agent-command-builder'
 import { createValidator, type EmitResultPayload, type JsonSchema } from './emit-result-schema'
 import type { McpResultServer } from './mcp-result-server'
 import { parseEnvelope } from './parse-envelope'
 import { CancellationError } from './workflow-ctx'
+
+/**
+ * The engine-injected human-in-the-loop resolver for an agent `blocked` (WF4).
+ * Given the blocker question and the current session, it resolves to the human's
+ * decision: `abort` ends the run, `guidance` resumes the same session. Wired by
+ * `ctx.agent` to the manager's `requestInput`; a fake in unit tests.
+ */
+export type BlockedResolver = (
+  question: BlockerQuestion,
+  sessionId: string
+) => Promise<RespondDecision>
 
 export interface AgentStepOptions {
   prompt: string
@@ -94,6 +106,8 @@ interface AttemptResult {
   stdout: string
   stderr: string
   code: number | null
+  /** The per-attempt token (for reading its server-recorded `lastError`, WF4-18). */
+  token: string
 }
 
 export class AgentStepRunner {
@@ -106,7 +120,11 @@ export class AgentStepRunner {
     return (this.#started ??= this.deps.server.start())
   }
 
-  async run(opts: AgentStepOptions, signal?: AbortSignal): Promise<AgentResult> {
+  async run(
+    opts: AgentStepOptions,
+    signal?: AbortSignal,
+    onBlocked?: BlockedResolver
+  ): Promise<AgentResult> {
     // 1. Invalid `expect` fails BEFORE any spawn or registration (WF3-24). The
     // per-payload check is enforced server-side; compiling here fails fast on a bad
     // schema (createValidator throws on an uncompilable `expect`).
@@ -117,45 +135,95 @@ export class AgentStepRunner {
     const tokens: string[] = []
 
     try {
-      // 5. First pass.
-      const first = await this.#attempt({
-        prompt: opts.prompt,
-        expect: opts.expect,
-        url,
-        permission,
-        cwd: opts.cwd,
-        tokens,
-        signal
-      })
-      const session1 = parseEnvelope(first.stdout).sessionId
+      // Outer block-loop (WF4): each `#turn` is a full agent turn (attempt + one
+      // corrective retry). A `done` result ends the loop; a `blocked` result is
+      // handed to `onBlocked` → `abort` throws, `guidance` resumes the SAME session
+      // and loops, unbounded (WF4-02/04). No `onBlocked` (WF3 back-compat / unit
+      // fakes) → `blocked` returns as-is (WF3-17).
+      let prompt = opts.prompt
+      let resumeId: string | undefined
+      for (;;) {
+        const { payload, sessionId } = await this.#turn({
+          prompt,
+          expect: opts.expect,
+          url,
+          permission,
+          cwd: opts.cwd,
+          resumeSessionId: resumeId,
+          tokens,
+          signal
+        })
 
-      // 6. A valid emit → return as-is (`blocked` included, WF3-17).
-      if (first.payload) return { ...first.payload, sessionId: session1 }
+        if (payload.status === 'done') return { ...payload, sessionId }
 
-      // 7. No valid emit → ONE corrective --resume retry (WF3-04/05).
-      const retry = await this.#attempt({
-        prompt: correctivePrompt('no valid emit_result call was made'),
-        expect: opts.expect,
-        url,
-        permission,
-        cwd: opts.cwd,
-        resumeSessionId: session1,
-        tokens,
-        signal
-      })
-      const session2 = parseEnvelope(retry.stdout).sessionId
-      if (retry.payload) return { ...retry.payload, sessionId: session2 }
+        // payload.status === 'blocked'
+        if (!onBlocked) return { ...payload, sessionId }
 
-      // Still no valid emit after the retry → fail with captured output (WF3-05).
-      throw new AgentStepError('agent did not emit a valid result after one corrective retry', {
-        stdout: retry.stdout,
-        stderr: retry.stderr,
-        code: retry.code
-      })
+        const decision = await onBlocked(
+          { title: 'Agent needs input', body: payload.question ?? '' },
+          sessionId
+        )
+        if (decision.action === 'abort') throw new CancellationError() // WF4-05/10
+        // guidance → resume the same session with the supplied text (WF4-02).
+        prompt = decision.guidance
+        resumeId = sessionId
+      }
     } finally {
-      // 8. Revoke every issued token so a late/duplicate call cannot resolve a step.
+      // Revoke every issued token so a late/duplicate call cannot resolve a step.
       for (const token of tokens) this.deps.server.revoke(token)
     }
+  }
+
+  /**
+   * One full agent turn: a first `#attempt`, and — if it emitted nothing valid —
+   * ONE corrective `--resume` retry whose prompt carries the server's field-level
+   * ajv error (WF4-18). Returns the valid payload (`done` OR `blocked`); throws
+   * `AgentStepError` with the captured output if neither turn emitted (WF3-05).
+   */
+  async #turn(args: {
+    prompt: string
+    expect: JsonSchema
+    url: string
+    permission?: Permission
+    cwd: string
+    resumeSessionId?: string
+    tokens: string[]
+    signal?: AbortSignal
+  }): Promise<{ payload: EmitResultPayload; sessionId: string }> {
+    const first = await this.#attempt({
+      prompt: args.prompt,
+      expect: args.expect,
+      url: args.url,
+      permission: args.permission,
+      cwd: args.cwd,
+      resumeSessionId: args.resumeSessionId,
+      tokens: args.tokens,
+      signal: args.signal
+    })
+    const session1 = parseEnvelope(first.stdout).sessionId
+    if (first.payload) return { payload: first.payload, sessionId: session1 }
+
+    // No valid emit → ONE corrective --resume retry (WF3-04/05). Surface the
+    // server's field-level ajv error so the retry is actionable (WF4-18).
+    const reason = this.deps.server.lastError(first.token) ?? 'no valid emit_result call was made'
+    const retry = await this.#attempt({
+      prompt: correctivePrompt(reason),
+      expect: args.expect,
+      url: args.url,
+      permission: args.permission,
+      cwd: args.cwd,
+      resumeSessionId: session1,
+      tokens: args.tokens,
+      signal: args.signal
+    })
+    const session2 = parseEnvelope(retry.stdout).sessionId
+    if (retry.payload) return { payload: retry.payload, sessionId: session2 }
+
+    throw new AgentStepError('agent did not emit a valid result after one corrective retry', {
+      stdout: retry.stdout,
+      stderr: retry.stderr,
+      code: retry.code
+    })
   }
 
   /** Register a token, spawn one agent turn, and capture its emit + output. */
@@ -231,7 +299,7 @@ export class AgentStepRunner {
       // The in-process server resolves `pending` before the child exits; flush the
       // microtask that set `captured`.
       await Promise.resolve()
-      return { payload: captured, stdout, stderr, code }
+      return { payload: captured, stdout, stderr, code, token }
     } finally {
       if (args.signal && onAbort) args.signal.removeEventListener('abort', onAbort)
     }
