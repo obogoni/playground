@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current Milestone:** **M6 — Workflows (epic #56)** — IN PROGRESS: WF1 + WF2 + WF3 merged; **WF4 planned & approved (Execute next session)**; WF5 remains.
+**Current Milestone:** **M6 — Workflows (epic #56)** — NEARLY COMPLETE: WF1 + WF2 + WF3 + WF4 merged to `main`; **WF5 (Workflows UI) executed + independently verified (PASS)** on `feature/workflows-ui` — owner-run two-example UI smoke + PR/merge are all that remain (merging WF5 closes the epic).
 **Status:** v1 (M1–M4) + worktree-name-template (post-v1) + M5 (v2) complete and on `main`. M5 AM1 (Agent Spike) merged PR #39, AM2 (Agent Sessions) merged PR #41 (`Closes #40`), AM3 (Agent Config) merged PR #44 (`Closes #43`). AGCF-05 remove-worktree confirm + visual theme toggle = hand-verify only (code merged). **M6 (Workflows) now active — see below.**
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
@@ -161,14 +161,16 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - `ctx.agent({prompt, expect, cwd, permission})` → validated `{status, data?, question?, sessionId}`; self-hosted loopback MCP `emit_result` server (per-step bearer token = auth+routing, ajv validation); permission presets read/write/bypass (default read, guaranteed non-mutating); one corrective `--resume` retry; cancel→child-kill; `session_id` capture; `blocked` returned as-is (WF3-01..25).
 - Independent SDD eval: **Final 0.98 "Spec-complete"**. Two minor gaps (WF3-04 generic retry prompt, WF3-10 unasserted server reuse) **carried into WF4**.
 
-**WF4 — Blocker + resume (native toasts)** - PLANNED & APPROVED (Execute next session)
+**WF4 — Blocker + resume (native toasts)** - COMPLETE (merged PR #66, merge `660180b`)
 
 - `ctx.ask()` + engine-driven **pause on `blocked`** + `workflows:respond` + resume the same conversation via `--resume`; native OS toast on block/finish/fail + click-to-focus-run (US 21/22/23/24/25). Grafts onto WF3's `blocked`-as-is envelope + reserved `WorkflowManager.notifier`.
-- **Planned 2026-07-06** (Specify→Design→Tasks owner-approved): `.specs/features/workflows-blocker-resume/` — 8 tasks / 3 phases, 20 ACs (WF4-01..20), Approach A (block-loop in the DI'd runner). Scope + architecture = **AD-010**. Folds in the 3 WF3 carry-in gaps (WF4-18/19/20). Branch `feature/workflows-blocker-resume`.
+- 8 tasks / 3 phases, 20 ACs (WF4-01..20), Approach A (block-loop in the DI'd runner). Scope + architecture = **AD-010**. Folded in the 3 WF3 carry-in gaps (WF4-18/19/20). Verifier PASS (20/20, sensor 5/5); owner-run live smoke PASSED 9/9 (`42c4317e`, statuses `[running,blocked,running,done]`, session resumed via `--resume`).
 
-**WF5 — Workflows UI** - PLANNED
+**WF5 — Workflows UI** - EXECUTED + VERIFIED (owner-smoke + PR remain)
 
-- Workflows view, live step timeline, blocked-respond panel, trigger dialog from `meta.inputs`, New/Reload actions (US 6/7/8/9/28/30).
+- Workflows view (fourth direction), live step timeline, blocked-respond panel, run-trigger dialog from `meta.inputs`, New workflow (scaffold + reveal) / Reload, `workflow:focus-run` handling (US 6/7/8/9/22/23/24/28/30/31). Scope + architecture = **AD-011**.
+- 10 tasks / 3 phases (inline), 25 ACs (WF5-01..25), 11 commits `5f0ad4d..1c5b84c` on `feature/workflows-ui`. Two unit-tested pure seams (`workflow-run-view` fold, `workflow-scaffold`); the rest hand-verified per the project's UI convention. Verifier **PASS** (25/25 ACs, discrimination sensor 5/5 killed, gate 440/440 tests, prod build OK). Report: `.specs/features/workflows-ui/validation.md`.
+- **Remaining:** owner-run two-example UI smoke ("review PR" + "implement ticket" driven through the GUI with a live agent) → PR (`Closes #56`) → `gh pr merge --admin`.
 
 ---
 
