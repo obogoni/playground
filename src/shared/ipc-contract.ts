@@ -12,6 +12,7 @@ import type {
   BlockerQuestion,
   RespondDecision,
   RunStatus,
+  ScaffoldResult,
   StepEvent,
   WorkflowDef
 } from './workflows'
@@ -106,6 +107,8 @@ export interface IpcContract {
   'workflows:respond': { req: { runId: string; decision: RespondDecision }; res: void }
   /** Drop any discovery cache (v1 no-op — discovery is on-demand) (WF2-01). */
   'workflows:reload': { req: void; res: void }
+  /** Scaffold a new workflow folder from a template + reveal it; an existing id is rejected, never overwritten (WF5-22/24/25). */
+  'workflows:scaffold': { req: { name: string }; res: ScaffoldResult }
 }
 
 export type IpcChannel = keyof IpcContract

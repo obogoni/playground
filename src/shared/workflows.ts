@@ -48,6 +48,14 @@ export interface BlockerQuestion {
 export type RespondDecision = { action: 'abort' } | { action: 'guidance'; guidance: string }
 
 /**
+ * The result of scaffolding a new workflow folder (WF5-22/24). `ok:true` returns
+ * the created id (folder name) + its absolute path (revealed by the main
+ * handler); `ok:false` carries why — an empty/invalid name, or an id that
+ * already exists, which is never overwritten.
+ */
+export type ScaffoldResult = { ok: true; id: string; path: string } | { ok: false; error: string }
+
+/**
  * One entry in a run's ordered event stream — lifecycle transitions plus the
  * auto-logged `ctx.*` steps and log lines (WF2-10/12/15, WF4-06).
  */
