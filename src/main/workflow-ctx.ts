@@ -1,6 +1,7 @@
 import type { WorkItemDetails } from '../shared/tasks'
+import type { BlockerQuestion, RespondDecision } from '../shared/workflows'
 import type { ChangedFile, CreateWorktreeResult, RemoveWorktreeResult } from '../shared/worktrees'
-import type { AgentResult, AgentStepOptions } from './agent-step-runner'
+import type { AgentResult, AgentStepOptions, BlockedResolver } from './agent-step-runner'
 import {
   refKey,
   type GetWorkItemsResult,
@@ -85,7 +86,11 @@ export interface CtxDeps {
   // injects it; `ctx.agent` throws a clear error if invoked without it.
   // Reason: preserve a green gate across the phase boundary (T9 ships before T11).
   agent?: {
-    run(opts: AgentStepOptions, signal?: AbortSignal): Promise<AgentResult>
+    run(
+      opts: AgentStepOptions,
+      signal?: AbortSignal,
+      onBlocked?: BlockedResolver
+    ): Promise<AgentResult>
   }
 }
 
@@ -109,6 +114,14 @@ export interface CtxRuntime {
   // Reason: preserve a green gate across the T9→T10 ordering.
   /** The run's cancellation signal, forwarded to `deps.agent.run` for child-kill (WF3-20). */
   signal?: AbortSignal
+  // SPEC_DEVIATION: design (§4) types `requestInput` as required. It is typed
+  // optional here — mirroring `signal?`/`agent?` above — so `workflow-manager.ts`
+  // (which implements it in T6, after this commit) keeps typechecking now without an
+  // out-of-scope edit. Production always provides it; `ctx.ask` throws a clear error
+  // if invoked without it, and `ctx.agent` falls back to WF3 (no engine pause).
+  // Reason: preserve a green production typecheck across the T5→T6 ordering.
+  /** Pause the run awaiting a human answer (WF4-01); resolves with the decision. */
+  requestInput?(question: BlockerQuestion): Promise<RespondDecision>
 }
 
 /** The deterministic facade handed to a workflow's `run(ctx)`. */
@@ -137,6 +150,8 @@ export interface Ctx {
   step<T>(label: string, fn: () => Promise<T>): Promise<T>
   /** Run a headless agent step returning validated structured data (WF3-01). */
   agent(opts: AgentStepOptions): Promise<AgentResult>
+  /** Pause the run and ask the human a question; resolves with their decision (WF4-11). */
+  ask(opts: { title: string; body: string }): Promise<RespondDecision>
   input: Record<string, string>
 }
 
@@ -258,10 +273,30 @@ export function makeCtx(deps: CtxDeps, runtime: CtxRuntime): Ctx {
     // agent's `session_id` on a `step-logged` event for WF4 `--resume` (WF3-16).
     agent: instrument('agent', async (opts: AgentStepOptions): Promise<AgentResult> => {
       if (!deps.agent) throw new Error('agent capability is not configured')
-      const result = await deps.agent.run(opts, runtime.signal)
+      // Wire the engine-driven pause: a `blocked` agent result funnels through the
+      // manager's `requestInput` (WF4-01). The block↔guidance↔resume loop lives in
+      // the runner (Approach A). Absent a runtime that supports `requestInput`, the
+      // runner returns `blocked` as-is (WF3 back-compat).
+      const requestInput = runtime.requestInput
+      const onBlocked: BlockedResolver | undefined = requestInput
+        ? (q) => requestInput(q)
+        : undefined
+      const result = await deps.agent.run(opts, runtime.signal, onBlocked)
       runtime.emitLog(`agent session ${result.sessionId}`, currentGroup(), result.sessionId)
       return result
     }),
+
+    // `instrument` runs `checkCancel` then auto-emits a `step-started` labeled `ask`
+    // (WF4-12); the delegate pauses the run via the manager's `requestInput` and
+    // returns the human decision AS-IS — `abort` does NOT throw here (WF4-11), so the
+    // author can branch on it. (The agent path's abort→cancelled is the runner's job.)
+    ask: instrument(
+      'ask',
+      async (o: { title: string; body: string }): Promise<RespondDecision> => {
+        if (!runtime.requestInput) throw new Error('ask capability is not configured')
+        return runtime.requestInput({ title: o.title, body: o.body })
+      }
+    ),
 
     input: Object.freeze({ ...runtime.input })
   }
