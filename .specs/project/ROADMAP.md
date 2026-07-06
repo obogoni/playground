@@ -1,7 +1,7 @@
 # Roadmap
 
-**Current Milestone:** None active — M5 (v2) COMPLETE. Next planned work is v3 (see Future Considerations).
-**Status:** Planned roadmap through v2 done and on `main`. v1 (M1–M4) + worktree-name-template (post-v1) complete; M5 AM1 (Agent Spike) merged PR #39, AM2 (Agent Sessions) merged PR #41 (`Closes #40`), AM3 (Agent Config) merged PR #44 (`Closes #43`). AGCF-05 remove-worktree confirm + visual theme toggle = hand-verify only (code merged).
+**Current Milestone:** **M6 — Workflows (epic #56)** — IN PROGRESS: WF1 + WF2 + WF3 merged; WF4–WF5 remain.
+**Status:** v1 (M1–M4) + worktree-name-template (post-v1) + M5 (v2) complete and on `main`. M5 AM1 (Agent Spike) merged PR #39, AM2 (Agent Sessions) merged PR #41 (`Closes #40`), AM3 (Agent Config) merged PR #44 (`Closes #43`). AGCF-05 remove-worktree confirm + visual theme toggle = hand-verify only (code merged). **M6 (Workflows) now active — see below.**
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
 
@@ -138,6 +138,36 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - Editable agent registry (`AppConfig.agents[]`) + ad-hoc command + Settings dialog; default-shell setting
 - Worktree-delete-vs-running confirmation (warn + kill); rename/duplicate; soft concurrency warning; full ANSI role-palette theming; in-memory last-output preview
 - **Deferred (not AM3):** amber agent-exited sub-status + agent-exit detection (no observable signal without a sentinel/polling)
+
+---
+
+## M6 — Workflows (v3, epic #56)
+
+**Goal:** User-authored, code-first automations (`~/.playground/workflows/<name>/workflow.ts`) that orchestrate deterministic + AI-agent steps with data flowing between them, running headless Claude Code on the personal subscription. Sliced milestone-by-milestone (AD-006); each is independently verifiable.
+**Source:** PRD issue #56 (34+ stories) + WF1 empirical findings. Scope decisions: AD-006/007/008.
+
+### Milestones
+
+**WF1 — Headless-agent spike (de-risk)** - COMPLETE (merged PR #64)
+
+- Throwaway spike pinning every Claude Code headless flag (`--print`, `--output-format json`, loopback HTTP-MCP, `--json-schema`, `--permission-mode`, `--resume`); direct `shell:false` spawn with stdin closed (AD-007). Frozen under `scripts/wf1-spike/`.
+
+**WF2 — Engine + `ctx` facade + WorkflowManager** - COMPLETE (merged PR #64)
+
+- Deterministic primitives `ctx.worktree/git/sh/ado/notify`; `instrument()` auto-log; serial runner; run-state reducer + persistence; ADO child-task fetching (`$expand=Relations`).
+
+**WF3 — Structured agent step (`ctx.agent` + MCP result server)** - COMPLETE (merged PR #65)
+
+- `ctx.agent({prompt, expect, cwd, permission})` → validated `{status, data?, question?, sessionId}`; self-hosted loopback MCP `emit_result` server (per-step bearer token = auth+routing, ajv validation); permission presets read/write/bypass (default read, guaranteed non-mutating); one corrective `--resume` retry; cancel→child-kill; `session_id` capture; `blocked` returned as-is (WF3-01..25).
+- Independent SDD eval: **Final 0.98 "Spec-complete"**. Two minor gaps (WF3-04 generic retry prompt, WF3-10 unasserted server reuse) **carried into WF4**.
+
+**WF4 — Blocker + resume (native toasts)** - NEXT (planning next session)
+
+- `ctx.ask()` + engine-driven **pause on `blocked`** + `workflows:respond` + resume the same conversation via `--resume`; native OS toast on block/finish/fail + click-to-focus-run (US 21/22/23/24/25). Grafts onto WF3's `blocked`-as-is envelope + reserved `WorkflowManager.notifier`.
+
+**WF5 — Workflows UI** - PLANNED
+
+- Workflows view, live step timeline, blocked-respond panel, trigger dialog from `meta.inputs`, New/Reload actions (US 6/7/8/9/28/30).
 
 ---
 

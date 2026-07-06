@@ -14,15 +14,18 @@ Handoff snapshot.
 | AD-006 | 2026-07-03 | The **Workflows** epic (issue #56 PRD) is specified **milestone-by-milestone, WF1 first**. WF1 (headless-agent spike) is spec'd and will be executed before WF2–WF5 are spec'd. Also decided: ADO **child-task fetching** (net-new `$expand=Relations` gateway surface) is **in v1 scope** (lands in WF2). | The PRD itself calls WF1 a throwaway de-risk spike whose exact Claude Code flags are unverified; WF3/WF4 ACs depend entirely on what WF1 pins. Writing testable ACs for the agent step before the spike runs would fabricate outcomes. Child-task fetching doesn't exist today (`getWorkItems` is flat-fields only) but the "implement ticket" example (US 38) needs it. |
 | AD-005 | 2026-06-28 | The PR gate runs on **windows-latest**, reversing AD-002. | First CI run (PR #57) failed: `worktree-manager.test.ts` asserts Windows backslash paths because the production code normalizes paths to backslashes — the app is Windows-only (only `--win` is ever built). The real-git suite is OS-coupled (`expected "/tmp/.../repo"` vs `received "\tmp\...\repo"`, plus `spawn git ENOENT`) and is green only on Windows. Making it OS-portable would be a large change to Windows-only code with no benefit. Matches release/nightly. |
 | AD-007 | 2026-07-03 | The headless agent process is spawned **directly** — `shell:false`, argv array passed verbatim, child **stdin closed** (`stdio:['ignore','pipe','pipe']`). **NOT** via a shell, and **NOT** as a `.cmd` shim needing `shell:true` — this corrects the ".cmd shim" assumption in WF1's spec/design. Binds WF3's `agent-command-builder` / `agent-step-runner`. | WF1-T7 empirical finding (`claude` 2.1.199): the installed CLI is a native `.exe` (`~/.local/bin/claude.exe`). Under `shell:true` on Windows, cmd re-parses and corrupts inline JSON args (`--json-schema is not valid JSON: Unterminated string`), so `--json-schema`/`--mcp-config` must reach the exe **unquoted-by-a-shell**; a direct spawn keeps the argv intact and no config file is needed. Headless also blocks ~3s on stdin unless it is closed. Full evidence: `features/workflows-headless-agent-spike/findings.md`. |
+| AD-009 | 2026-07-06 | **WF3 MERGED to `main` (PR #65).** Independent SDD eval (author≠judge, `spec-driven-eval`): **Final 0.98 — "Spec-complete"** (S=PASS, E recall/precision/justified ≈1.0, gates build/lint/unit green; live smoke owner-PASS 6/6). Two minor gaps merged as-is and **carried into WF4** (WF3-04 generic retry prompt; WF3-10 unasserted server reuse). **WF4 planning deferred to the next session.** | The two gaps are cheap polish on the same runner/`--resume` path WF4 already touches, so folding them into WF4 avoids a throwaway PR. Report: `.specs/features/workflows-agent-step/evaluations/P1-workflows-agent-step-20260706T141244Z.md`. |
 | AD-008 | 2026-07-03 | **WF3 (Structured agent step) scope pinned via 4 owner decisions:** (1) **Arm M (MCP) only** — one shared loopback HTTP MCP server, per-step bearer token = auth+routing, forced `emit_result`; Arm N (`--json-schema`) dropped. (2) **ajv** for payload validation (promotes `emit-result-schema` off the spike's minimal checker; `expect` stays a JSON Schema). (3) `ctx.agent()` returns the **full envelope** `{status,data?,question?,sessionId}`; `blocked` is returned **as-is** (no engine pause in WF3 — that's WF4). (4) Permission presets **read/write/bypass**, default **read** (read = read-only tools + `emit_result`, guaranteed non-mutating). | Findings recommended Arm M to keep the `blocked` terminal value + per-step routing first-class for WF4; ajv because the author declares a JSON Schema and the tool `inputSchema` is JSON Schema too; full-envelope return lets WF4 add the pause without breaking the happy path; the preset set is PRD-fixed (US 26). Spec: `.specs/features/workflows-agent-step/spec.md` (WF3-01..25). |
 
 ## Handoff
 
-**Status (current, 2026-07-06):** Workflows epic (issue #56) — **WF1 + WF2 MERGED to
-`main`** (PR #64, merge `e6d7e11`; fix `972f68d`). **WF3 (Structured agent step) —
-EXECUTED + VERIFIED (PASS).** On branch `feature/workflows-agent-step` (cut off
-`e6d7e11`); working tree clean. **All gates green incl. the owner-run live smoke
-(WF3-22 PASSED 6/6, 2026-07-06).** No open items — ready to push + open PR.
+**Status (current, 2026-07-06):** Workflows epic (issue #56) — **WF1 + WF2 + WF3 MERGED
+to `main`** (WF1/WF2 = PR #64, merge `e6d7e11`; **WF3 = PR #65, MERGED**). **WF3
+(Structured agent step) — DONE.** All gates green incl. the owner-run live smoke (WF3-22
+PASSED 6/6, 2026-07-06). Independent SDD eval (author≠judge): **Final 0.98 —
+"Spec-complete"** (`evaluations/P1-workflows-agent-step-20260706T141244Z.md`). Epic #56
+stays **open** (WF4–WF5 remain). **Next up: WF4 — planning deferred to the next session
+(owner decision, 2026-07-06).**
 
 **How WF3 was executed:** Specify→Design→Tasks were already owner-approved; this session
 ran **Execute** = 4 phase sub-agents (one worker/phase, sequential) + a fresh independent
@@ -74,9 +77,24 @@ non-empty `session_id` `9b1438dd-35f1-448d-bad1-fff87c7ccbb1`, findings validate
 closes the design's empirical risk (read-only allowedTools + `bypassPermissions` were
 LEADS beyond WF1's confirmed `dontAsk`+emit; `read` now confirmed).
 
-**Next step (resume here):** push branch + open ONE PR to `main`. PR body must **NOT**
-`Closes #56` (epic spans WF1..WF5). `main` gated by `copilot_code_review` — a force-push
-BLOCKs the review → `gh pr merge --admin`.
+**Next step (resume here):** **plan WF4 (blocker + resume)** — run Specify→Design→Tasks
+via `tlc-spec-driven`. WF4 = `ctx.ask()` + engine-driven **pause on `blocked`** +
+`workflows:respond` + resume-via-`--resume`, plus the native toast on block/finish/fail +
+click-to-focus-run (US 21/22/23/24/25). WF3 already returns `blocked` **as-is** and
+captures `session_id`, and `WorkflowManager.notifier` is reserved — so WF4 grafts the
+pause + toasts onto the existing envelope without touching the WF3 happy path.
+
+**WF3 polish carried into WF4** (from the SDD eval; both merged as-is — minor, fold into
+WF4 since it touches the same runner / `--resume` path):
+1. **WF3-04** — the corrective-retry prompt is **generic** (`"no valid emit_result call
+   was made"`). Capture the last server-reported ajv error for the token and interpolate
+   it into `correctivePrompt(reason)`; add an `agent-step-runner.test.ts` assertion that
+   the retry argv/prompt carries the field-level validation error.
+2. **WF3-10** — server **reuse is unasserted**: add `expect(server.startCalls).toBe(1)`
+   across two `run()` calls in `agent-step-runner.test.ts` (`FakeServer.startCalls` is
+   already tracked but never checked).
+3. **Edge (minor)** — MCP **bind-failure** path (`server.start()` rejects) is not
+   unit-tested; add a runner test → clear step failure, no spawn.
 
 **Key facts (feed WF4):** WF3's `AgentStepRunner` returns the **full envelope**
 `{status,data?,question?,sessionId}` and returns `blocked` **as-is** (no engine pause —
