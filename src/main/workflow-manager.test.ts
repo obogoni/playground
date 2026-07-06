@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { RespondDecision, RunStatus, StepEvent, WorkflowMeta } from '../shared/workflows'
-import type { AgentResult } from './agent-step-runner'
+import { AgentStepError, type AgentResult } from './agent-step-runner'
 import { CancellationError, type Ctx, type CtxDeps } from './workflow-ctx'
 import type { LoadedWorkflow, RunFn } from './workflow-loader'
 import { WorkflowRunStore } from './workflow-run-store'
@@ -200,9 +200,13 @@ describe('WorkflowManager', () => {
     expect(statuses.at(-1)).toBe('done')
 
     // Streamed step (from ctx.step) and logs (from ctx.log), in author order.
+    // `workflow:step` now carries both step-started and step-finished (WHF-04);
+    // the started event names the ctx.step label 'phase'.
     const stepLabels = emit.events
       .filter((e) => e.channel === 'workflow:step')
-      .map((e) => (e.payload as { step: StepEvent }).step.label)
+      .map((e) => (e.payload as { step: StepEvent }).step)
+      .filter((s) => s.kind === 'step-started')
+      .map((s) => s.label)
     expect(stepLabels).toEqual(['phase'])
     const logs = emit.events
       .filter((e) => e.channel === 'workflow:log')
@@ -695,5 +699,138 @@ describe('WorkflowManager', () => {
       data: { summary: 'shipped' },
       sessionId: 'sess-7'
     })
+  })
+
+  it('fires workflow:run-started with {runId, workflowId, input, startedAt} (WHF-08)', async () => {
+    const loader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> => workflow(async () => {})
+    })
+    const { manager, emit } = makeManager(loader)
+
+    const { runId } = await manager.run({ id: 'wf', input: { ticket: '42' } })
+
+    const started = emit.events.find((e) => e.channel === 'workflow:run-started')
+    expect(started?.payload).toEqual({
+      runId,
+      workflowId: 'wf',
+      input: { ticket: '42' },
+      startedAt: expect.any(String)
+    })
+    expect((started?.payload as { startedAt: string }).startedAt).not.toBe('')
+  })
+
+  it('broadcasts both step-started and step-finished on workflow:step (WHF-04)', async () => {
+    const loader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async (ctx) => {
+          await ctx.step('phase', async () => {})
+        })
+    })
+    const { manager, emit } = makeManager(loader)
+
+    await manager.run({ id: 'wf' })
+
+    const steps = emit.events
+      .filter((e) => e.channel === 'workflow:step')
+      .map((e) => (e.payload as { step: StepEvent }).step)
+    expect(steps.some((s) => s.kind === 'step-started')).toBe(true)
+    expect(steps.some((s) => s.kind === 'step-finished')).toBe(true)
+  })
+
+  it('broadcasts the terminal failed event on workflow:step with error/stdout/code (WHF-09)', async () => {
+    const loader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async () => {
+          const err = new Error('command exploded') as Error & { code: number; stdout: string }
+          err.code = 3
+          err.stdout = 'partial output before the crash'
+          throw err
+        })
+    })
+    const { manager, emit } = makeManager(loader)
+
+    await manager.run({ id: 'wf' })
+
+    const failedStep = emit.events
+      .filter((e) => e.channel === 'workflow:step')
+      .map((e) => (e.payload as { step: StepEvent }).step)
+      .find((s) => s.kind === 'failed')
+    expect(failedStep).toMatchObject({
+      kind: 'failed',
+      error: 'command exploded',
+      stdout: 'partial output before the crash',
+      code: 3
+    })
+  })
+
+  it('surfaces AgentStepError.detail stdout/code onto the failed event + broadcast (WHF-10)', async () => {
+    const agent = {
+      run: async (): Promise<AgentResult> => {
+        throw new AgentStepError('agent did not emit a valid result after one corrective retry', {
+          stdout: 'agent stdout tail',
+          stderr: 'boom',
+          code: 7
+        })
+      }
+    }
+    const loader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async (ctx) => {
+          await ctx.agent(AGENT_OPTS)
+        })
+    })
+    const { manager, store, emit } = makeManager(loader, agent)
+
+    const { runId } = await manager.run({ id: 'wf' })
+
+    const persisted = store.load(runId)
+    expect(persisted?.status).toBe('failed')
+    const failed = persisted?.events.find((e) => e.kind === 'failed')
+    expect(failed).toMatchObject({ stdout: 'agent stdout tail', code: 7 })
+    // The evidence reached the renderer on workflow:step (WHF-09/10).
+    const failedStep = emit.events
+      .filter((e) => e.channel === 'workflow:step')
+      .map((e) => (e.payload as { step: StepEvent }).step)
+      .find((s) => s.kind === 'failed')
+    expect(failedStep).toMatchObject({ stdout: 'agent stdout tail', code: 7 })
+  })
+
+  it('carries the agent sessionId on the workflow:blocked emit (WHF-07)', async () => {
+    const agent = {
+      run: async (
+        _opts: unknown,
+        _signal?: AbortSignal,
+        onBlocked?: (
+          q: { title: string; body: string },
+          sessionId: string
+        ) => Promise<RespondDecision>
+      ): Promise<AgentResult> => {
+        if (onBlocked) {
+          await onBlocked({ title: 'Agent needs input', body: 'which env?' }, 'sess-block-1')
+        }
+        return { status: 'done', data: {}, sessionId: 'sess-block-1' }
+      }
+    }
+    const loader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async (ctx) => {
+          await ctx.agent(AGENT_OPTS)
+        })
+    })
+    const { manager, emit } = makeManager(loader, agent)
+
+    const runPromise = manager.run({ id: 'wf' })
+    const runId = activeRunId(emit)
+    await untilBlocked(emit)
+
+    const blocked = emit.events.find((e) => e.channel === 'workflow:blocked')
+    expect(blocked?.payload).toEqual({
+      runId,
+      question: { title: 'Agent needs input', body: 'which env?' },
+      sessionId: 'sess-block-1'
+    })
+
+    manager.respond(runId, { action: 'guidance', guidance: 'staging' })
+    await runPromise
   })
 })

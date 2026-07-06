@@ -202,12 +202,28 @@ export class WorkflowManager {
       if (err instanceof CancellationError) {
         this.#apply({ kind: 'cancelled' })
       } else {
-        const evidence = err as { stdout?: unknown; code?: unknown }
+        // Capture failure evidence from either shape: `ShellError` carries
+        // `stdout`/`code` at the top level; `AgentStepError` carries them under
+        // `.detail` (WHF-10). Prefer the top-level, then fall back to the detail.
+        const shell = err as { stdout?: unknown; code?: unknown }
+        const detail = (err as { detail?: { stdout?: unknown; code?: unknown } }).detail
+        const stdout =
+          typeof shell.stdout === 'string'
+            ? shell.stdout
+            : typeof detail?.stdout === 'string'
+              ? detail.stdout
+              : undefined
+        const code =
+          typeof shell.code === 'number'
+            ? shell.code
+            : typeof detail?.code === 'number'
+              ? detail.code
+              : undefined
         this.#apply({
           kind: 'failed',
           error: err instanceof Error ? err.message : String(err),
-          stdout: typeof evidence.stdout === 'string' ? evidence.stdout : undefined,
-          code: typeof evidence.code === 'number' ? evidence.code : undefined
+          stdout,
+          code
         })
       }
     } finally {
@@ -295,16 +311,27 @@ export class WorkflowManager {
 
   /**
    * Emit the matching IPC event(s) and fire native lifecycle toasts. Status on a
-   * change; step/log for the auto-log events; `workflow:blocked` + a toast on a
-   * `blocked` event; a lifecycle toast on `done`/`failed` (WF4-13). `cancelled` is
-   * silent (no lifecycle toast) — the user initiated it.
+   * change; a `workflow:run-started` on the run-started transition (WHF-08);
+   * `workflow:step` for `step-started`/`step-finished` (WHF-04) AND the terminal
+   * `failed` event so its `error`/`stdout`/`code` reach the failed footer (WHF-09);
+   * `workflow:log` for a log line; `workflow:blocked` (+ `sessionId`, WHF-07) + a
+   * toast on a `blocked` event; a lifecycle toast on `done`/`failed` (WF4-13).
+   * `cancelled` is silent (no lifecycle toast) — the user initiated it.
    */
   #emit(run: WorkflowRun, prevStatus: RunStatus, event: StepEvent): void {
     const changed = run.status !== prevStatus
     if (changed) {
       this.deps.emit('workflow:status', { runId: run.runId, status: run.status })
     }
-    if (event.kind === 'step-started') {
+    if (event.kind === 'run-started') {
+      // Seed the renderer's RunView with the run identity + input + start time (WHF-08).
+      this.deps.emit('workflow:run-started', {
+        runId: run.runId,
+        workflowId: run.workflowId,
+        input: run.input,
+        startedAt: run.startedAt
+      })
+    } else if (event.kind === 'step-started' || event.kind === 'step-finished') {
       this.deps.emit('workflow:step', { runId: run.runId, step: event })
     } else if (event.kind === 'step-logged') {
       this.deps.emit('workflow:log', {
@@ -314,8 +341,17 @@ export class WorkflowManager {
       })
     } else if (event.kind === 'blocked' && event.question) {
       // Pause signal for the renderer + native toast carrying the question (WF4-01/13).
-      this.deps.emit('workflow:blocked', { runId: run.runId, question: event.question })
+      // `sessionId` scopes an agent block to its `--resume` session note (WHF-07).
+      this.deps.emit('workflow:blocked', {
+        runId: run.runId,
+        question: event.question,
+        sessionId: event.sessionId
+      })
       this.deps.notifier(event.question.title, event.question.body, { runId: run.runId })
+    } else if (event.kind === 'failed') {
+      // Broadcast the terminal failure so the renderer's failed footer has the
+      // failing call's `error`/`stdout`/`code`, not just the status (WHF-09).
+      this.deps.emit('workflow:step', { runId: run.runId, step: event })
     }
     if (changed && run.status === 'done') {
       this.deps.notifier('Workflow finished', `${run.workflowId} completed`, { runId: run.runId })
