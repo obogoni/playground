@@ -18,7 +18,11 @@ Corroborated across multiple features. Safe to apply as guidance.
 
 Seen once or not yet corroborated. Tracked, not trusted.
 
-_none_
+### L-002 — Before a UI design references a shared CSS keyframe as 'existing', grep global.css to confirm it exists — the WHF handoff assumed pulse/blink existed but global.css only had fadeIn/popIn/toastIn, forcing a component-local @keyframes pulse.
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `src/renderer/**/*.css` · harmful: 0
+- features: workflows-ui-hifi
+- evidence: RunDetail.css:14 / WorkflowsView.css:21 (SPEC_DEVIATION pulse keyframe) (src/renderer/**/*.css)
+- last seen: 2026-07-06T21:57:51Z
 
 ## Quarantined (failed when applied — ignore)
 

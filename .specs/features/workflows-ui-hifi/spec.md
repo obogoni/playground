@@ -240,30 +240,30 @@ required is filled.
 
 | ID | Story | Layer | Phase | Status |
 | -- | ----- | ----- | ----- | ------ |
-| WHF-01 | S1 stepKind + stepId on start | backend (unit) | Design | Pending |
-| WHF-02 | S1 step-finished + durationMs | backend (unit) | Design | Pending |
-| WHF-03 | S1 reducer folds start/finish clock-free | backend (unit) | Design | Pending |
-| WHF-04 | S1 broadcast step-started/finished | backend (unit) | Design | Pending |
-| WHF-05 | S2 agent {prompt,permission} on start | backend (unit) | Design | Pending |
-| WHF-06 | S2 agentResult {status,data,sessionId} on finish | backend (unit) | Design | Pending |
-| WHF-07 | S2 sessionId on blocked event | backend (unit) | Design | Pending |
-| WHF-08 | S3 workflow:run-started {input,startedAt,workflowId} | backend (unit) | Design | Pending |
-| WHF-09 | S3 broadcast failed error/stdout/code | backend (unit) | Design | Pending |
-| WHF-10 | S3 agent failure detail surfaced | backend (unit) | Design | Pending |
-| WHF-11 | S4 node timeline + status glyphs + connectors | renderer | Design | Pending |
-| WHF-12 | S4 kind tags | renderer | Design | Pending |
-| WHF-13 | S4 durations | renderer | Design | Pending |
-| WHF-14 | S4 group rows + rollup pill | renderer | Design | Pending |
-| WHF-15 | S5 step detail boxes (ado/changed/sh) | renderer | Design | Pending |
-| WHF-16 | S5 agent detail box (pill+badge+prompt+data) | renderer | Design | Pending |
-| WHF-17 | S6 header + relative time + status pill pulse | renderer | Design | Pending |
-| WHF-18 | S6 INPUTS strip | renderer | Design | Pending |
-| WHF-19 | S6 hifi respond panel + session note | renderer | Design | Pending |
-| WHF-20 | S6 failed footer | renderer | Design | Pending |
-| WHF-21 | S7 hifi definition cards + rail header | renderer | Design | Pending |
-| WHF-22 | S7 RECENT RUNS meta + relative time | renderer | Design | Pending |
-| WHF-23 | S7 pipeline glyph on the segment | renderer | Design | Pending |
-| WHF-24 | S8 hifi run-workflow dialog | renderer | Design | Pending |
+| WHF-01 | S1 stepKind + stepId on start | backend (unit) | T1/T2 | Done (Verified) |
+| WHF-02 | S1 step-finished + durationMs | backend (unit) | T1/T2 | Done (Verified) |
+| WHF-03 | S1 reducer folds start/finish clock-free | backend (unit) | T1 | Done (Verified) |
+| WHF-04 | S1 broadcast step-started/finished | backend (unit) | T3 | Done (Verified) |
+| WHF-05 | S2 agent {prompt,permission} on start | backend (unit) | T2 | Done (Verified) |
+| WHF-06 | S2 agentResult {status,data,sessionId} on finish | backend (unit) | T2 | Done (Verified) |
+| WHF-07 | S2 sessionId on blocked event | backend (unit) | T1/T2/T3 | Done (Verified) |
+| WHF-08 | S3 workflow:run-started {input,startedAt,workflowId} | backend (unit) | T1/T3/T6 | Done (Verified) |
+| WHF-09 | S3 broadcast failed error/stdout/code | backend (unit) | T3 | Done (Verified) |
+| WHF-10 | S3 agent failure detail surfaced | backend (unit) | T3 | Done (Verified) |
+| WHF-11 | S4 node timeline + status glyphs + connectors | renderer | T4/T8 | Done (owner UI gate pending) |
+| WHF-12 | S4 kind tags | renderer | T8 | Done (owner UI gate pending) |
+| WHF-13 | S4 durations | renderer | T8 | Done (owner UI gate pending) |
+| WHF-14 | S4 group rows + rollup pill | renderer | T4/T8/T11 | Done (owner UI gate pending) |
+| WHF-15 | S5 step detail boxes (ado/changed/sh) | renderer | T4/T8 | Done (owner UI gate pending) |
+| WHF-16 | S5 agent detail box (pill+badge+prompt+data) | renderer | T4/T8 | Done (owner UI gate pending) |
+| WHF-17 | S6 header + relative time + status pill pulse | renderer | T5/T8 | Done (owner UI gate pending) |
+| WHF-18 | S6 INPUTS strip | renderer | T8 | Done (owner UI gate pending) |
+| WHF-19 | S6 hifi respond panel + session note | renderer | T8 | Done (owner UI gate pending) |
+| WHF-20 | S6 failed footer | renderer | T8 | Done (owner UI gate pending) |
+| WHF-21 | S7 hifi definition cards + rail header | renderer | T9 | Done (owner UI gate pending) |
+| WHF-22 | S7 RECENT RUNS meta + relative time | renderer | T5/T9 | Done (owner UI gate pending) |
+| WHF-23 | S7 pipeline glyph on the segment | renderer | T7/T9 | Done (owner UI gate pending) |
+| WHF-24 | S8 hifi run-workflow dialog | renderer | T10 | Done (owner UI gate pending) |
 
 **Coverage:** 24 total. **WHF-01..10 are backend, unit-tested** (10 ACs); WHF-11..24 are
 renderer, hand-verified vs the handoff (14 ACs). The milestone gate is the two examples driven

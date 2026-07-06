@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Design**: `.specs/features/workflows-ui-hifi/design.md`
 **Spec**: `.specs/features/workflows-ui-hifi/spec.md`
-**Status**: Approved
+**Status**: Executed + Verified (PASS) — all 11 tasks committed `d256870..c38f996`; Verifier PASS (`validation.md`). Owner-run two-example UI gate + PR (`Closes #56`) pending.
 
 > **Baseline to reconfirm at Execute start:** STATE records **440 tests / 35 files** green on
 > `feature/workflows-ui` (WF5 Verifier). Run `npm test` once before T1 to pin the real number;

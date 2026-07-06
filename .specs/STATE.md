@@ -22,162 +22,64 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current, 2026-07-06):** Workflows epic (issue #56) — **WF1–WF4 MERGED to `main`**
-(WF4 = PR #66, merge `660180b`). **WF5 (Workflows UI): first pass EXECUTED + VERIFIED (PASS)**
-on branch **`feature/workflows-ui`** (`5f0ad4d..1c5b84c`), **but the owner caught a
-fidelity gap** — the hi-fi design handoff `design/handoff/DESIGN_HANDOFF_WORKFLOWS.md` was
-missed during Design, so the delivered timeline is low-fi. The **hi-fi rebuild slice
-`workflows-ui-hifi` (AD-012, amends AD-011): Spec + Design + Tasks are DONE + APPROVED —
-`EXECUTE is the next step`** (fresh session, on the same branch `feature/workflows-ui`). NOT
-merged to `main` — the hifi work lands on the same branch, then one PR closes #56. Epic #56 stays
-**open**.
+**Status (current, 2026-07-06):** Workflows epic (issue #56) — **WF1–WF4 MERGED to `main`**.
+**WF5 hi-fi rebuild (`workflows-ui-hifi`, AD-012): EXECUTED + VERIFIED (PASS)** on branch
+**`feature/workflows-ui`**. All 11 tasks / 5 phases committed inline via one sub-agent per phase
+(`d256870..c38f996`, 11 atomic commits). **Verifier PASS** (independent, author ≠ verifier):
+10/10 backend unit ACs matched spec outcome (payload/conjunction rule satisfied — every field
+asserted on value), 14/14 renderer ACs data-path present (visual proof deferred to the owner UI
+gate per convention), gate green **486/486 tests / 36 files**, `npm run build` OK, discrimination
+sensor **6/6 mutants killed** (reducer step-finished guard, manager durationMs, stepId
+monotonicity, agent `read` permission default, groupRollup precedence, stepStatus ok-flag), no
+survivors, no gaps. Report: `.specs/features/workflows-ui-hifi/validation.md`. **NOT merged to
+`main`** — the hifi work sits on `feature/workflows-ui`; one PR (`Closes #56`) then
+`gh pr merge --admin`. Epic #56 stays **open** until then.
 
-**Design + Tasks APPROVED this session (`workflows-ui-hifi`, no code yet):**
-`.specs/features/workflows-ui-hifi/{design.md,tasks.md}` (both Status: Approved). **11 tasks / 5
-phases.** One owner decision taken during Design — **fixtures = "light"**: wrap the
-`implement-ticket` body in ONE `ctx.step` group so WHF-14 group rollup gets live gate coverage
-without an ADO dependency; `review-pr` stays flat; the `ado` `StepDetail` variant (WHF-15) is
-fold-unit-tested + eyeballed only (logged assumption — shares the render path with the `files`
-detail box that review-pr exercises live). Key design calls (feature-local, no new AD): manager
-owns the clock + monotonic `stepId` (reducer stays clock-free); `start/finish` instrument bracket
-replaces `emitStep` (T2 wires producer `workflow-ctx` + consumer `workflow-manager` in ONE task
-per **L-001** — no interim `optional`); a per-step **`ok` flag** on `step-finished` (false on
-throw) drives the failed node glyph + group rollup without a failing-stepId hack; `group` stays a
-**label string** (kept the `StepEvent` change purely additive → green gate per task; duplicate-
-label collision is an accepted v1 edge); `RunView.timeline` is kept **transitionally** (expand-
-contract) and dropped in **T8** when `RunDetail` — its only consumer — moves to `steps`.
-
-**Phase map (offer sub-agents at Execute — >3 phases):**
-- **P1 (seq):** T1 shared `StepEvent`/`ipc-contract` growth (additive: `StepKind`/`PermissionPreset`/
-  `StepDetail`/`step-finished` kind + `stepId`/`stepKind`/`durationMs`/`ok`/`agent`/`agentResult`/
-  `detail`; `workflow:run-started`; `workflow:blocked` +`sessionId`) + reducer `step-finished` fold.
-- **P2 (seq):** T2 `start/finish` seam (ctx+manager, clock/stepId, per-kind detail + agent extractors,
-  onBlocked forwards sessionId) → T3 manager broadcasts (`step-finished`/`run-started`/`failed`/
-  blocked `sessionId`) + read `AgentStepError.detail` for failure evidence.
-- **P3 (‖):** T4 `workflow-run-view` fold rebuild (StepNode[], `stepStatus`/`groupRollup`, seeds) ·
-  T5 `relative-time` helper.
-- **P4 (‖):** T6 hook (consume `run-started`, retire `pendingWf`) · T7 Icon+TopBar pipeline glyph
-  (`workflow-nodes`) · T8 RunDetail hifi rebuild (+drop transitional `timeline`) · T9 WorkflowsView
-  rail hifi · T10 hifi Run-workflow dialog.
-- **P5 (seq):** T11 `implement-ticket` `ctx.step` group (WHF-14 live gate).
-- **Baseline to reconfirm at Execute start:** `npm test` — STATE records **440/440** (WF5 Verifier);
-  T1–T5 add ~40 unit tests, T6–T11 add 0 (renderer/fixture hand-verified per TESTING.md). Gate:
-  `npm run typecheck && npm run lint && npm test` (+ `npm run build` after the renderer rebuild).
-- **Two-example UI gate (owner-run, the milestone gate):** `npm run dev -- -- --remote-debugging-port=9222`
-  then drive "implement ticket" + "review PR" — verify handoff fidelity (kind tags, durations, agent
-  box w/ emitted data, group rollup, blocked panel + session note, resume, done/failed footer).
-- **After Execute → Verifier (author≠verifier) → owner UI gate → one PR (`Closes #56`) →
-  `gh pr merge --admin`** (copilot_code_review ruleset).
-
-**WF4 Execute done this session (all 8 tasks, 3 phases, inline — 8 atomic commits
-`7a0db81..c938ad3`):**
+**Commit map (`d256870..c38f996`, in order):**
 | Commit | Task | What |
 | ------ | ---- | ---- |
-| 7a0db81 | T1 | shared `blocked` RunStatus + `BlockerQuestion`/`RespondDecision` + `blocked`/`resumed` StepEvent kinds + `workflows:respond`/`workflow:blocked`/`workflow:focus-run` IPC (type-only) |
-| abf7048 | T2 | `run-state` reducer `running→blocked`, `blocked→running`, `blocked→cancelled` (+7 tests) |
-| 20d48f1 | T3 | `mcp-result-server` field-level `lastError(token)` + `start()` bind-failure reject (+4) |
-| f783447 | T4 | `agent-step-runner` outer block-loop over `#turn`; abort→throw, guidance→`--resume` same session; field-level corrective prompt; reuse/bind coverage (+8) |
-| d0d7545 | T5 | `ctx.ask` + `ctx.agent` `onBlocked` wire + `CtxRuntime.requestInput` (optional, SPEC_DEVIATION for T5→T6 ordering) + `BlockedResolver` export (+5) |
-| e1f889e | T6 | `WorkflowManager` `#pendingRespond` pause primitive, `respond`, cancel-while-blocked reject, `workflow:blocked` emit + lifecycle toasts on block/done/failed (cancel silent) (+8) |
-| e9d1c2a | T7 | `index.ts` `workflows:respond` handler + `notifier(…,{runId})` click→focus + `workflow:focus-run` (hand-verified shell) |
-| c938ad3 | T8 | `implement-ticket` fixture + `scripts/smoke-blocker-resume.mjs` owner-run gate |
+| d256870 | T1 | StepEvent enrichment (StepKind/PermissionPreset/StepDetail, `step-finished` kind + stepId/stepKind/durationMs/ok/agent/agentResult/detail) + ipc `workflow:run-started`/blocked `sessionId?` + reducer `step-finished` fold (+4 tests) |
+| ddba92b | T2 | start/finish instrument seam (ctx `startStep`/`finishStep` replace `emitStep`; per-kind detail + agent extractors; onBlocked forwards sessionId) + manager clock/stepId (`#stepSeq`/`#stepStart`, durationMs) (+15) |
+| ba78590 | T3 | manager broadcasts `step-finished`/`run-started`/terminal `failed` (error/stdout/code) + `AgentStepError.detail` surfaced + blocked `sessionId` emit (+5) |
+| 8ca31fb | T4 | `workflow-run-view` fold rebuild — `StepNode[]`, `stepStatus`, `groupRollup` (failed>blocked>running>done>pending), run-started/input/startedAt/blockedSessionId/error seeds; transitional `timeline` kept (+19, replaced 12 WF5 fold tests) |
+| a294d5b | T5 | `relative-time` pure helper extracted from TopBar (+4) |
+| 56022ff | T7 | Icon glyphs (`workflow-nodes`/`play`/`help-circle`/`x-circle`/`stop-square`) + TopBar Workflows segment uses `workflow-nodes` |
+| 899ddc9 | T6 | `use-workflow-runs` consumes `workflow:run-started`, retires `pendingWf` hack |
+| 01461e9 | T8 | hifi `RunDetail` — node timeline+glyphs+connectors, kind tags, durations, group rollup, step + agent detail boxes, header+relative-time, INPUTS strip, hifi respond panel+session note, failed footer; **dropped transitional `timeline`** from RunView+fold (−1 timeline-only fold test) |
+| a7bf88f | T9 | hifi `WorkflowsView` rail — DEFINITIONS cards + RECENT RUNS + relative time + pipeline glyph empty state |
+| 070da74 | T10 | hifi `WorkflowTriggerDialog` (kicker, tile, mono fields, required `*`, play-triangle Run) |
+| c38f996 | T11 | `implement-ticket` fixture wraps worktree.create+agent in one `ctx.step` group (WHF-14 live gate); `notify(JSON)` result line preserved |
 
-**Verifier verdict (independent, author ≠ verifier) — PASS:** 20/20 ACs (17 unit-covered
-with located assertions; **WF4-15/16/17 deferred-by-design** = index.ts hand-verified shell
-+ owner-run CDP smoke, per the test matrix). Gate: typecheck 0 err, lint 0 err (22
-pre-existing prettier warnings), **422/422 tests / 33 files** (390 → +32, 0 deletions).
-Discrimination sensor **5/5 mutants killed** (run-state resumed guard, runner
-guidance-`--resume`/field-level prompt, manager `respond` runId guard, mcp `lastError`
-capture). No surviving mutants, no evidence-zero gaps. Report:
-`.specs/features/workflows-blocker-resume/validation.md`.
+**SPEC_DEVIATION (benign, Verifier-confirmed):** `RunDetail.css:14` + `WorkflowsView.css:21`
+materialise `@keyframes pulse` component-locally — the handoff/design assumed a shared `pulse`
+keyframe but `global.css` only had `fadeIn`/`popIn`/`toastIn`. No new named animation beyond the
+handoff's set, no new tokens. Distilled as lesson **L-002** (candidate, `spec_deviation`): grep
+`global.css` to confirm a referenced CSS keyframe exists before a UI design cites it as existing.
 
-**Baseline flaky note:** `src/main/tree.test.ts > snapshots a workspace with repos and
-their worktrees` is the AD-005 real-git-on-Windows EPERM/timeout flake (passes 4/4 in
-isolation, NOT WF4-touched). It did **not** flake in the Verifier's full run. If a future
-gate flakes on it, re-run `npx vitest run src/main/tree.test.ts` in isolation before
-treating it as real.
+**NEXT STEP (resume here — owner-run UI gate, then PR):**
+1. **Owner-run two-example UI gate (the milestone gate — MANUAL, not automatable):**
+   `npm run dev -- -- --remote-debugging-port=9222`, then drive **"implement ticket"** + **"review PR"**
+   through the UI and verify handoff fidelity: kind tags, durations, agent detail box with emitted
+   `data`, `ctx.step` **group rollup** (implement-ticket), blocked panel + session `<id>` note, resume,
+   done/failed footer. A deliberately-failing workflow should show the failed footer with the call +
+   exit code. (`node scripts/smoke-blocker-resume.mjs` still greps the `implement-ticket result:` notify
+   line — unchanged.)
+2. **After owner PASS → one PR** on `feature/workflows-ui` with body `Closes #56` →
+   `gh pr merge --admin` (main gated by copilot_code_review ruleset, per the main-branch-merge-ruleset
+   memory). This single PR closes the whole Workflows epic (WF5 first pass + hifi rebuild both ride
+   this branch).
 
-**SPEC_DEVIATIONS (all benign, Verifier-confirmed):** `workflow-ctx.ts` types `agent?`,
-`signal?` (WF3) and **`requestInput?`** (WF4-T5) as optional to keep the interim phase's
-typecheck green across the producer/consumer split; production always injects all three via
-`index.ts`/manager, and the leaves throw clear errors if unconfigured. This recurring
-pattern promoted lesson **L-001 to `confirmed`** (recurrence 2) via `scripts/lessons.py`.
+**Deferred (spec Out of Scope):** Re-run action; live token-by-token agent stdout tail; persisted-run
+read channel (`workflows:get`); backend `ctx.step` rollup status (renderer-derived); agent kind tag
+shows `agent` (no `agentId` on the stream — box uses the step label as name).
 
-**Owner-run live smoke (WF4-17) — PASSED 9/9 (2026-07-06):** `node
-scripts/smoke-blocker-resume.mjs` vs a live Claude subscription — runId `42c4317e`,
-statuses **`[running,blocked,running,done]`**, run-log records `blocked` + `resumed`
-transitions, non-empty `session_id` `047d6c90-...` (same session resumed via `--resume`),
-result validates vs `IMPLEMENT_SCHEMA` (agent created `greeting.js`). Closes the design's one
-empirical risk. Three T8-only fixes were needed during the run (core T1–T7 untouched):
-(1) prompt made blocking a mandatory two-phase protocol (a capable agent finished `done`
-without asking); (2) `ctx.worktree.create` needs a `baseBranch` to cut a NEW branch
-(`-b <branch> <base>` — without it, `invalid reference`); (3) smoke resets its window
-collectors per run (app survives across invocations → stale collector read the prior runId).
-Extra commits after the docs commit: `7bdb84c`, `054c8fa`, `c30a28c` (+ this docs update).
+**Baseline note:** `feature/workflows-ui` now at **486 tests / 36 files** green (was 440 at WF5
+Verifier; T1–T5 added ~+47 unit tests, T6–T11 added 0 per renderer/fixture hand-verify convention;
+T4 replaced WF5's 12 fold tests, T8 dropped 1 timeline-only fold test). Gate:
+`npm run typecheck && npm run lint && npm test` (+ `npm run build`). AD-005 `tree.test.ts` real-git
+Windows flake did not fire in the Verifier's full run; re-run in isolation if a future gate flakes on it.
 
-**WF5 Execute done this session (all 10 tasks, 3 phases, inline — 11 atomic commits
-`5f0ad4d..1c5b84c`):** T1 `workflow-run-view` pure fold + 12 tests; T3 shared `ScaffoldResult`
-+ `workflows:scaffold` contract; T2 `workflow-scaffold` module + 6 tests; T4 `useWorkflowRuns`
-always-mounted hook; T5 `WorkflowTriggerDialog`; T6 `NewWorkflowDialog`; T7 `RunDetail` +
-`RespondPanel`; T8 `workflows:scaffold` handler + `shell.showItemInFolder` reveal; T9
-`WorkflowsView` master-detail; T10 App integration (`'workflows'` direction + TopBar tab +
-render branch + `workflow:focus-run` effect). Plus one test-hardening commit (`268759c`):
-scaffold template-validity test compiles via `esbuild.transform` + `data:` URL import instead
-of the real loader, removing a shared-`tmpdir` race with `workflow-loader`'s leak test.
-
-**Verifier verdict (independent, author ≠ verifier) — PASS:** 25/25 ACs implemented with
-located evidence (5 unit-covered: WF5-10/11/12 fold half + WF5-23/24; the other 20
-hand-verified renderer/IPC wiring, proof deferred to the owner-run UI gate — mirrors WF4). Gate:
-typecheck 0 err, lint 0 err (1 tolerated prettier warning), **440/440 tests / 35 files** (422 →
-+18). Discrimination sensor **5/5 mutants killed** (fold keep-blocked / drop-step-row /
-upsert-ignore-create; scaffold EEXIST-guard / sanitize-trim). No survivors, no gaps. Prod build
-(`npm run build`) OK. Report: `.specs/features/workflows-ui/validation.md`.
-
-**WF5 first pass (done + merged-to-branch, low-fi):** 11 commits `5f0ad4d..1c5b84c` — pure fold
-`workflow-run-view` (+tests), `workflow-scaffold` (+tests), `ScaffoldResult`/`workflows:scaffold`
-contract + handler, `useWorkflowRuns` hook, `WorkflowTriggerDialog`, `NewWorkflowDialog`,
-`RunDetail`+`RespondPanel`, `WorkflowsView`, App integration. Verifier PASS (25/25). These files
-are the rebuild's starting point — the hifi slice rewrites the renderer + enriches the backend.
-
-**Next step (resume here — Design of `workflows-ui-hifi`):**
-- **Spec (APPROVED):** `.specs/features/workflows-ui-hifi/spec.md` — 24 ACs. WHF-01..10 =
-  backend event enrichment (unit-tested): `stepKind`+`stepId` on step-started; new
-  `step-finished {stepId, durationMs}` (instrument times fn; reducer stays clock-free); agent
-  `{prompt,permission}` on start + `{status,data,sessionId}` on finish; broadcast failed
-  `error/stdout/code` (incl. from `AgentStepError.detail`); new `workflow:run-started
-  {runId,workflowId,input,startedAt}`. WHF-11..24 = renderer rebuild to the handoff
-  (node timeline+glyphs+connectors, kind tags, durations, group rollup, step + agent detail
-  boxes, header+relative-time, INPUTS strip, hifi respond panel + session note, failed footer,
-  hifi cards/RECENT-RUNS, pipeline glyph, hifi dialog).
-- **Backend files to enrich (all merged + tested — do NOT break their suites):**
-  `src/shared/workflows.ts` (StepEvent: add `stepKind`/`stepId`/`durationMs`/`agent`/`agentResult`;
-  new `step-finished` kind), `src/shared/ipc-contract.ts` (add `workflow:run-started`),
-  `src/main/workflow-ctx.ts` (`instrument` → stepId + kind + timing + finish; agent detail),
-  `src/main/run-state.ts` (fold `step-finished`), `src/main/workflow-manager.ts` (`#emit`
-  broadcast start/finish/run-started/failed; stamp durationMs), `src/main/agent-step-runner.ts`
-  (surface prompt/permission/data + failure detail; sessionId on blocked). Backend surface map
-  (exact file:line for every emit/label) is in this session's Explore result.
-- **Renderer files to rewrite:** `RunDetail.tsx`/`.css`, `WorkflowsView.tsx`/`.css`,
-  `workflow-run-view.ts` (fold the new events into a richer `RunView`: kind/duration/detail/agent
-  per step, input/startedAt per run — retire the `pendingWf` hack via `run-started`),
-  `use-workflow-runs.ts`, `WorkflowTriggerDialog.tsx`, `TopBar.tsx` (pipeline glyph + `Icon`).
-- **Design decisions to make:** duration/stepId correlation model (chosen: monotonic stepId,
-  start+finish events); how instrument captures per-primitive result → detail box payload
-  (ado task+children, changedFiles list, failed-sh cmd+output) without leaking types; group
-  rollup precedence (failed>blocked>running>done>pending) in the renderer; the run-status/kind/
-  permission → color CSS mappings (reuse base palette, no new tokens).
-- **OPEN QUESTION (unresolved — decide at Design):** update the `scripts/fixtures/implement-ticket`
-  fixture to use `ctx.step` groups per task (as the mockup shows: `ado.getTask` + child tasks →
-  a `ctx.step` group per task with worktree.create + agent inside) so the group-rollup rendering
-  (WHF-14) is exercised in the two-example gate? Owner was asked, did not answer yet. The current
-  two fixtures are flat + inject agent `data` via `ctx.notify(JSON.stringify)`; the enrichment
-  makes `data` flow natively so that notify hack can be dropped.
-- Deferred (spec Out of Scope): Re-run action; live token-by-token agent tail; persisted-run
-  read channel.
-- **After Design → Tasks → Execute → Verifier**, then owner-run two-example UI smoke at hifi
-  fidelity, then one PR (`Closes #56`) → `gh pr merge --admin` (copilot_code_review ruleset).
-
-**Prior context:** `worktree-existing-branch` (PR #62), `topbar-version-indicator` (PR #63)
-merged. Pre-existing quirk: `src/main/ado-gateway.ts` is UTF-16 (git treats it as binary).
+**Prior context:** `worktree-existing-branch` (PR #62), `topbar-version-indicator` (PR #63),
+WF1–WF4 all merged. Pre-existing quirk: `src/main/ado-gateway.ts` is UTF-16 (git treats it as binary).
 Open follow-ups: 3 transitive dev advisories (esbuild/form-data/undici); App.tsx
 `useTasks`/`useConfig` extraction deferred (AD-004).
