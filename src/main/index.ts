@@ -1,5 +1,6 @@
 import { app, shell, dialog, BrowserWindow, Notification } from 'electron'
-import { execFile, spawn } from 'node:child_process'
+import { execFile, execFileSync, spawn } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { promisify } from 'node:util'
@@ -8,8 +9,10 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
 import { AdoGateway } from './ado-gateway'
+import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-runner'
 import { ConfigStore } from './config-store'
 import { emit, handle, onSend } from './ipc'
+import { createMcpResultServer } from './mcp-result-server'
 import { PtyPort } from './pty-port'
 import { SessionManager, type EmitFn } from './session-manager'
 import { ShortcutLauncher } from './shortcut-launcher'
@@ -62,6 +65,28 @@ function runShell(cmd: string, opts: { cwd: string }): Promise<ShellResult> {
 /** WF2 real `ctx.notify({ toast })` sink (WF2-09): a native OS toast, when supported. */
 function notifier(title: string, body: string): void {
   if (Notification.isSupported()) new Notification({ title, body }).show()
+}
+
+/**
+ * WF3 real `AgentSpawn` seam (WF3-01): spawn the resolved `claude` binary **directly**
+ * (`shell:false`, argv verbatim) with **stdin closed** (`stdio:['ignore','pipe','pipe']`),
+ * adapting `child_process.spawn` to the runner's `AgentChild` interface. The DI'd runner
+ * owns the retry/validate/cancel logic; this seam is the one hand-verified I/O boundary.
+ */
+const spawnAgent: AgentSpawn = (bin, argv, { cwd, env }): AgentChild => {
+  const child = spawn(bin, argv, {
+    cwd,
+    env,
+    shell: false,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true
+  })
+  return {
+    onStdout: (listener) => child.stdout?.on('data', (chunk) => listener(chunk.toString())),
+    onStderr: (listener) => child.stderr?.on('data', (chunk) => listener(chunk.toString())),
+    onClose: (listener) => child.on('close', (code) => listener(code)),
+    kill: () => child.kill()
+  }
 }
 
 // Lifted out of createWindow so SessionManager can reach its webContents for
@@ -201,9 +226,40 @@ app.whenReady().then(() => {
   onSend('session:input', ({ id, data }) => sessions.input(id, data))
   onSend('session:resize', ({ id, cols, rows }) => sessions.resize(id, cols, rows))
 
+  // WF3 agent step: one shared MCP result server (started lazily by the runner on the
+  // first agent step, reused across steps/runs — WF3-10) forces structured output; the
+  // DI'd runner drives a headless `claude` child through it (real spawn seam,
+  // `resolveClaude`, `randomUUID` tokens) and is injected as the ctx `agent` capability.
+  const resultServer = createMcpResultServer()
+  // Resolve the `claude` binary (WF3-23): the first `where claude` hit on PATH, else the
+  // optional `agent.claudePath` config override, else throw so the step fails clearly
+  // without spawning. `agent` is not a typed AppConfig section yet (WF4+), read via cast.
+  const resolveClaude = (): string => {
+    try {
+      const out = execFileSync('where', ['claude'], { encoding: 'utf8', windowsHide: true })
+      const first = out
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .find((line) => line.length > 0)
+      if (first) return first
+    } catch {
+      // not on PATH — fall through to the config override
+    }
+    const configured = (configStore.get() as { agent?: { claudePath?: string } }).agent?.claudePath
+    if (configured) return configured
+    throw new Error('agent binary not found')
+  }
+  const agentRunner = new AgentStepRunner({
+    server: resultServer,
+    spawn: spawnAgent,
+    resolveClaude,
+    genToken: randomUUID
+  })
+
   // Workflows engine (WF2). The manager runs one workflow at a time in the main
   // process; ctxDeps assembles the real deterministic capability seams (worktree
-  // fns, a no-shell git fetch, a shell-hosted `ctx.sh`, ADO, native toasts).
+  // fns, a no-shell git fetch, a shell-hosted `ctx.sh`, ADO, native toasts, and the
+  // WF3 headless agent step).
   const workflowsAdo = new AdoGateway()
   const ctxDeps: CtxDeps = {
     worktree: {
@@ -217,7 +273,8 @@ app.whenReady().then(() => {
       getWorkItemWithRelations: workflowsAdo.getWorkItemWithRelations.bind(workflowsAdo),
       getWorkItems: workflowsAdo.getWorkItems.bind(workflowsAdo)
     },
-    notifier
+    notifier,
+    agent: agentRunner
   }
   const workflows = new WorkflowManager({
     workflowsRoot: join(homedir(), '.playground', 'workflows'),
@@ -231,6 +288,11 @@ app.whenReady().then(() => {
   handle('workflows:run', ({ id, input }) => workflows.run({ id, input }))
   handle('workflows:cancel', ({ runId }) => workflows.cancel(runId))
   handle('workflows:reload', () => workflows.reload())
+
+  // Free the shared MCP result server's loopback port when the app quits (WF3-10).
+  app.on('will-quit', () => {
+    void resultServer.stop()
+  })
 
   // Silent auto-update. Inert under `electron-vite dev` unless PLAYGROUND_FORCE_UPDATE=1
   // opts into the real GitHub feed via dev-app-update.yml (local update-flow testing).
