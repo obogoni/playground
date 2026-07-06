@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import type { BlockerQuestion, RespondDecision } from '../shared/workflows'
 import {
   AgentStepError,
   AgentStepRunner,
   type AgentChild,
   type AgentSpawn,
-  type AgentStepRunnerDeps
+  type AgentStepRunnerDeps,
+  type BlockedResolver
 } from './agent-step-runner'
 import type { EmitResultPayload, JsonSchema } from './emit-result-schema'
 import type { McpResultServer } from './mcp-result-server'
@@ -29,6 +31,7 @@ interface FakeReg {
   resolve: (p: EmitResultPayload) => void
   reject: (e: Error) => void
   settled: boolean
+  lastError?: string
 }
 
 class FakeServer implements McpResultServer {
@@ -61,6 +64,10 @@ class FakeServer implements McpResultServer {
     }
   }
 
+  lastError(token: string): string | undefined {
+    return this.regs.find((r) => r.token === token)?.lastError
+  }
+
   async stop(): Promise<void> {
     // no-op: the fake holds no real listener to close
   }
@@ -71,6 +78,28 @@ class FakeServer implements McpResultServer {
     reg.settled = true
     reg.resolve(payload)
   }
+
+  /** Test helper: simulate the server recording a field-level ajv error for the latest token. */
+  setLastError(message: string): void {
+    this.regs[this.regs.length - 1].lastError = message
+  }
+}
+
+/** A recording fake `onBlocked` resolver returning scripted decisions in order. */
+function makeOnBlocked(decisions: RespondDecision[]): {
+  fn: BlockedResolver
+  questions: BlockerQuestion[]
+  sessions: string[]
+} {
+  const questions: BlockerQuestion[] = []
+  const sessions: string[] = []
+  let i = 0
+  const fn: BlockedResolver = async (question, sessionId) => {
+    questions.push(question)
+    sessions.push(sessionId)
+    return decisions[i++]
+  }
+  return { fn, questions, sessions }
 }
 
 // --- fake spawn seam: a scripted program drives each spawned child ---
@@ -338,5 +367,219 @@ describe('AgentStepRunner — cancel kills the running child (WF3-20)', () => {
 
     expect(kills).toContain(0) // the fake child (index 0) was killed
     expect(server.revoked).toContain('tok-1') // tokens revoked in finally
+  })
+})
+
+describe('AgentStepRunner — block-loop resumes on guidance (WF4-02/03)', () => {
+  it('resumes the same session with the guidance prompt and resolves the resumed done', async () => {
+    const server = new FakeServer()
+    const { spawn, calls } = makeFakeSpawn([
+      // turn 1: the agent blocks.
+      (ctl) => {
+        server.emitLatest({ status: 'blocked', question: 'which env?' })
+        ctl.stdout(envelope('sess-A'))
+        ctl.close(0)
+      },
+      // turn 2 (--resume): the guided agent completes.
+      (ctl) => {
+        server.emitLatest({ status: 'done', data: { answer: 9 } })
+        ctl.stdout(envelope('sess-A2'))
+        ctl.close(0)
+      }
+    ])
+    const runner = makeRunner(server, spawn)
+    const onBlocked = makeOnBlocked([{ action: 'guidance', guidance: 'use staging' }])
+
+    const res = await runner.run(
+      { prompt: 'p', expect: NUM_EXPECT, cwd: '/repo' },
+      undefined,
+      onBlocked.fn
+    )
+
+    // WF4-03: resolves done with the RESUMED session id.
+    expect(res).toEqual({ status: 'done', data: { answer: 9 }, sessionId: 'sess-A2' })
+    // The resolver saw the blocker question and the pre-resume session.
+    expect(onBlocked.questions).toEqual([{ title: 'Agent needs input', body: 'which env?' }])
+    expect(onBlocked.sessions).toEqual(['sess-A'])
+    // WF4-02: the resume attempt carries --resume <sess-A> AND the guidance prompt.
+    expect(calls).toHaveLength(2)
+    expect(calls[1].argv.slice(0, 2)).toEqual(['--resume', 'sess-A'])
+    expect(calls[1].argv).toContain('use staging')
+  })
+})
+
+describe('AgentStepRunner — block↔guidance rounds repeat unbounded (WF4-04)', () => {
+  it('blocks twice, calling onBlocked each round, then resolves the final done', async () => {
+    const server = new FakeServer()
+    const { spawn, calls } = makeFakeSpawn([
+      (ctl) => {
+        server.emitLatest({ status: 'blocked', question: 'q1' })
+        ctl.stdout(envelope('s1'))
+        ctl.close(0)
+      },
+      (ctl) => {
+        server.emitLatest({ status: 'blocked', question: 'q2' })
+        ctl.stdout(envelope('s2'))
+        ctl.close(0)
+      },
+      (ctl) => {
+        server.emitLatest({ status: 'done', data: { answer: 1 } })
+        ctl.stdout(envelope('s3'))
+        ctl.close(0)
+      }
+    ])
+    const runner = makeRunner(server, spawn)
+    const onBlocked = makeOnBlocked([
+      { action: 'guidance', guidance: 'g1' },
+      { action: 'guidance', guidance: 'g2' }
+    ])
+
+    const res = await runner.run(
+      { prompt: 'p', expect: NUM_EXPECT, cwd: '/repo' },
+      undefined,
+      onBlocked.fn
+    )
+
+    expect(res).toEqual({ status: 'done', data: { answer: 1 }, sessionId: 's3' })
+    expect(onBlocked.questions.map((q) => q.body)).toEqual(['q1', 'q2'])
+    expect(calls).toHaveLength(3)
+    expect(calls[1].argv.slice(0, 2)).toEqual(['--resume', 's1'])
+    expect(calls[2].argv.slice(0, 2)).toEqual(['--resume', 's2'])
+  })
+})
+
+describe('AgentStepRunner — abort response ends the run (WF4-05/10)', () => {
+  it('throws CancellationError and spawns no further child', async () => {
+    const server = new FakeServer()
+    const { spawn, calls } = makeFakeSpawn([
+      (ctl) => {
+        server.emitLatest({ status: 'blocked', question: 'q?' })
+        ctl.stdout(envelope('sA'))
+        ctl.close(0)
+      }
+    ])
+    const runner = makeRunner(server, spawn)
+    const onBlocked = makeOnBlocked([{ action: 'abort' }])
+
+    await expect(
+      runner.run({ prompt: 'p', expect: NUM_EXPECT, cwd: '/repo' }, undefined, onBlocked.fn)
+    ).rejects.toBeInstanceOf(CancellationError)
+
+    expect(calls).toHaveLength(1) // no resume spawn after abort
+    expect(server.revoked).toContain('tok-1') // token revoked in finally
+  })
+
+  it('aborts mid-loop after a guidance round, spawning nothing past the abort', async () => {
+    const server = new FakeServer()
+    const { spawn, calls } = makeFakeSpawn([
+      (ctl) => {
+        server.emitLatest({ status: 'blocked', question: 'q1' })
+        ctl.stdout(envelope('s1'))
+        ctl.close(0)
+      },
+      (ctl) => {
+        server.emitLatest({ status: 'blocked', question: 'q2' })
+        ctl.stdout(envelope('s2'))
+        ctl.close(0)
+      }
+    ])
+    const runner = makeRunner(server, spawn)
+    const onBlocked = makeOnBlocked([{ action: 'guidance', guidance: 'g1' }, { action: 'abort' }])
+
+    await expect(
+      runner.run({ prompt: 'p', expect: NUM_EXPECT, cwd: '/repo' }, undefined, onBlocked.fn)
+    ).rejects.toBeInstanceOf(CancellationError)
+
+    expect(calls).toHaveLength(2) // turn1 (block) + turn2 (resume→block), then abort
+  })
+})
+
+describe('AgentStepRunner — corrective retry carries the field-level error (WF4-18)', () => {
+  it("interpolates the server's ajv error into the corrective retry prompt", async () => {
+    const server = new FakeServer()
+    const { spawn, calls } = makeFakeSpawn([
+      // First attempt: the server recorded a field-level error, no valid emit.
+      (ctl) => {
+        server.setLastError('data/answer must be number')
+        ctl.stdout(envelope('sess-x'))
+        ctl.close(0)
+      },
+      // Corrective retry (--resume): a conforming emit.
+      (ctl) => {
+        server.emitLatest({ status: 'done', data: { answer: 5 } })
+        ctl.stdout(envelope('sess-x2'))
+        ctl.close(0)
+      }
+    ])
+    const runner = makeRunner(server, spawn)
+
+    const res = await runner.run({ prompt: 'p', expect: NUM_EXPECT, cwd: '/repo' })
+
+    expect(res).toEqual({ status: 'done', data: { answer: 5 }, sessionId: 'sess-x2' })
+    expect(calls).toHaveLength(2)
+    // The retry prompt (an argv element) names the offending field, not a generic string.
+    const carried = calls[1].argv.some((a) => a.includes('data/answer must be number'))
+    expect(carried).toBe(true)
+  })
+
+  it('falls back to the generic reason when the server recorded no field error', async () => {
+    const server = new FakeServer()
+    const { spawn, calls } = makeFakeSpawn([
+      (ctl) => {
+        ctl.stdout(envelope('sess-y'))
+        ctl.close(0)
+      },
+      (ctl) => {
+        server.emitLatest({ status: 'done', data: { answer: 3 } })
+        ctl.stdout(envelope('sess-y2'))
+        ctl.close(0)
+      }
+    ])
+    const runner = makeRunner(server, spawn)
+
+    await runner.run({ prompt: 'p', expect: NUM_EXPECT, cwd: '/repo' })
+
+    const carried = calls[1].argv.some((a) => a.includes('no valid emit_result call was made'))
+    expect(carried).toBe(true)
+  })
+})
+
+describe('AgentStepRunner — shared server started once (WF4-19)', () => {
+  it('calls server.start() exactly once across two run() calls', async () => {
+    const server = new FakeServer()
+    const { spawn } = makeFakeSpawn([
+      (ctl) => {
+        server.emitLatest({ status: 'done', data: { answer: 1 } })
+        ctl.stdout(envelope('s-a'))
+        ctl.close(0)
+      },
+      (ctl) => {
+        server.emitLatest({ status: 'done', data: { answer: 2 } })
+        ctl.stdout(envelope('s-b'))
+        ctl.close(0)
+      }
+    ])
+    const runner = makeRunner(server, spawn)
+
+    await runner.run({ prompt: 'p1', expect: NUM_EXPECT, cwd: '/repo' })
+    await runner.run({ prompt: 'p2', expect: NUM_EXPECT, cwd: '/repo' })
+
+    expect(server.startCalls).toBe(1)
+  })
+})
+
+describe('AgentStepRunner — server bind failure fails before spawn (WF4-20)', () => {
+  it('rejects and never spawns when the shared server fails to start', async () => {
+    const server = new FakeServer()
+    server.start = async (): Promise<{ url: string; port: number }> => {
+      throw new Error('EADDRINUSE')
+    }
+    const { spawn, calls } = makeFakeSpawn([])
+    const runner = makeRunner(server, spawn)
+
+    await expect(runner.run({ prompt: 'p', expect: NUM_EXPECT, cwd: '/repo' })).rejects.toThrow(
+      /EADDRINUSE/
+    )
+    expect(calls).toHaveLength(0)
   })
 })

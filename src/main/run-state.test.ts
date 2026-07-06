@@ -7,6 +7,8 @@ const ev = (e: Omit<StepEvent, 'seq'>): StepEvent => ({ seq: seq++, ...e })
 
 const pending = (): WorkflowRun => initialRun('run-1', 'wf-1', { key: 'value' })
 const running = (): WorkflowRun => reduce(pending(), ev({ kind: 'run-started' }))
+const blocked = (): WorkflowRun =>
+  reduce(running(), ev({ kind: 'blocked', question: { title: 'Q', body: 'ask' } }))
 
 describe('initialRun', () => {
   it('starts a run in pending with its identity, input, and no events', () => {
@@ -69,6 +71,66 @@ describe('reduce — valid transitions', () => {
     const next = reduce(running(), e)
     expect(next.status).toBe('cancelled')
     expect(next.events.at(-1)).toEqual(e)
+  })
+})
+
+describe('reduce — blocked/resumed/cancelled transitions (WF4-06)', () => {
+  it('running → blocked on blocked, appending the event with question intact', () => {
+    const q = { title: 'Agent needs input', body: 'which branch?' }
+    const e = ev({ kind: 'blocked', question: q })
+    const next = reduce(running(), e)
+    expect(next.status).toBe('blocked')
+    expect(next.events.at(-1)).toEqual(e)
+    expect(next.events.at(-1)?.question).toEqual(q)
+  })
+
+  it('blocked → running on resumed, appending the event', () => {
+    const e = ev({ kind: 'resumed' })
+    const next = reduce(blocked(), e)
+    expect(next.status).toBe('running')
+    expect(next.events.at(-1)).toEqual(e)
+  })
+
+  it('blocked → cancelled on cancelled, appending the event', () => {
+    const e = ev({ kind: 'cancelled' })
+    const next = reduce(blocked(), e)
+    expect(next.status).toBe('cancelled')
+    expect(next.events.at(-1)).toEqual(e)
+  })
+
+  it('drives the abort sequence running → blocked → running → cancelled in order', () => {
+    const b = blocked()
+    const resumed = reduce(b, ev({ kind: 'resumed' }))
+    const cancelled = reduce(resumed, ev({ kind: 'cancelled' }))
+    expect(cancelled.status).toBe('cancelled')
+    expect(cancelled.events.map((e) => e.kind)).toEqual([
+      'run-started',
+      'blocked',
+      'resumed',
+      'cancelled'
+    ])
+  })
+
+  it('is non-terminal: a step-started/step-logged/done/failed while blocked is a guarded no-op', () => {
+    const b = blocked()
+    expect(reduce(b, ev({ kind: 'step-started', label: 'x' }))).toBe(b)
+    expect(reduce(b, ev({ kind: 'step-logged', message: 'y' }))).toBe(b)
+    expect(reduce(b, ev({ kind: 'done' }))).toBe(b)
+    expect(reduce(b, ev({ kind: 'failed', error: 'z' }))).toBe(b)
+    expect(b.status).toBe('blocked')
+  })
+
+  it('ignores blocked while still running-less (pending) and resumed while running', () => {
+    const p = pending()
+    expect(reduce(p, ev({ kind: 'blocked', question: { title: 't', body: 'b' } }))).toBe(p)
+    const r = running()
+    expect(reduce(r, ev({ kind: 'resumed' }))).toBe(r)
+  })
+
+  it('a terminal run ignores blocked and resumed', () => {
+    const done = reduce(running(), ev({ kind: 'done' }))
+    expect(reduce(done, ev({ kind: 'blocked', question: { title: 't', body: 'b' } }))).toBe(done)
+    expect(reduce(done, ev({ kind: 'resumed' }))).toBe(done)
   })
 })
 

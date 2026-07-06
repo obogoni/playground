@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import type { IpcEvent, IpcEvents } from '../shared/ipc-contract'
-import type { RunStatus, StepEvent, WorkflowDef, WorkflowRun } from '../shared/workflows'
+import type {
+  BlockerQuestion,
+  RespondDecision,
+  RunStatus,
+  StepEvent,
+  WorkflowDef,
+  WorkflowRun
+} from '../shared/workflows'
 import { initialRun, reduce } from './run-state'
 import { CancellationError, makeCtx, type CtxDeps, type CtxRuntime } from './workflow-ctx'
 import type { LoadedWorkflow } from './workflow-loader'
@@ -30,10 +37,12 @@ export interface WorkflowManagerDeps {
   store: WorkflowRunStore
   emit: EmitFn
   /**
-   * Reserved for manager-level lifecycle toasts (WF4). WF2's `ctx.notify` toast
-   * flows through `ctxDeps.notifier`; the manager itself does not fire it yet.
+   * Manager-level lifecycle toasts (WF4-13): fired on block / done / failed. An
+   * `opts.runId` marks a lifecycle toast so `index.ts` can attach a click-to-focus
+   * handler (WF4-15). Distinct from WF2's `ctx.notify` author toast, which flows
+   * through `ctxDeps.notifier` with no `runId`.
    */
-  notifier: (title: string, message: string) => void
+  notifier: (title: string, message: string, opts?: { runId?: string }) => void
 }
 
 /**
@@ -63,6 +72,16 @@ export class WorkflowManager {
   #activeToken: CancelToken | null = null
   /** The in-flight run's current immutable snapshot (serial ⇒ at most one). */
   #activeRun: WorkflowRun | null = null
+  /**
+   * The single in-flight human-in-the-loop pause (serial ⇒ at most one, WF4). Set
+   * when a run blocks via `runtime.requestInput`; resolved by `respond` (guidance
+   * or abort) or rejected by `cancel` (CancellationError). Cleared on settle and in
+   * `run()`'s finally.
+   */
+  #pendingRespond: {
+    resolve: (decision: RespondDecision) => void
+    reject: (err: Error) => void
+  } | null = null
 
   constructor(private readonly deps: WorkflowManagerDeps) {}
 
@@ -125,7 +144,16 @@ export class WorkflowManager {
       input: resolvedInput,
       // The run's cancellation signal, forwarded by `ctx.agent` to the runner so an
       // in-flight agent child is killed on cancel (WF3-20).
-      signal: token.controller.signal
+      signal: token.controller.signal,
+      // The ONE manager-owned pause primitive (WF4-01): both `ctx.ask` and the
+      // agent block-loop's `onBlocked` funnel here. Store the pending settler, then
+      // apply `blocked` (drives status + `workflow:blocked` + toast). The promise
+      // does not settle until `respond` (resolve) or `cancel` (reject).
+      requestInput: (question: BlockerQuestion): Promise<RespondDecision> =>
+        new Promise<RespondDecision>((resolve, reject) => {
+          this.#pendingRespond = { resolve, reject }
+          this.#apply({ kind: 'blocked', question })
+        })
     }
 
     try {
@@ -151,9 +179,25 @@ export class WorkflowManager {
       this.#activeRunId = null
       this.#activeToken = null
       this.#activeRun = null
+      this.#pendingRespond = null
     }
 
     return { runId }
+  }
+
+  /**
+   * Answer the active blocked run (WF4-07). For the active run with a pending
+   * response: transition `blocked → running` (resumed) and resolve the pending with
+   * the decision — uniform for `abort` and `guidance`. The agent path's
+   * `abort → cancelled` is produced downstream by the runner throwing, not here.
+   * A stray/duplicate/wrong-run respond is a guarded no-op.
+   */
+  respond(runId: string, decision: RespondDecision): void {
+    if (runId !== this.#activeRunId || !this.#pendingRespond) return
+    const pending = this.#pendingRespond
+    this.#pendingRespond = null
+    this.#apply({ kind: 'resumed' })
+    pending.resolve(decision)
   }
 
   /**
@@ -165,6 +209,13 @@ export class WorkflowManager {
     if (runId === this.#activeRunId && this.#activeToken) {
       this.#activeToken.cancelled = true
       this.#activeToken.controller.abort()
+      // A blocked run is awaiting a response — reject it so CancellationError bubbles
+      // through `requestInput` → `loaded.run` → the catch → `cancelled` (WF4-09).
+      if (this.#pendingRespond) {
+        const pending = this.#pendingRespond
+        this.#pendingRespond = null
+        pending.reject(new CancellationError())
+      }
     }
   }
 
@@ -203,9 +254,15 @@ export class WorkflowManager {
     return run
   }
 
-  /** Emit the matching IPC event(s): status on a change, step for step-started, log for step-logged. */
+  /**
+   * Emit the matching IPC event(s) and fire native lifecycle toasts. Status on a
+   * change; step/log for the auto-log events; `workflow:blocked` + a toast on a
+   * `blocked` event; a lifecycle toast on `done`/`failed` (WF4-13). `cancelled` is
+   * silent (no lifecycle toast) — the user initiated it.
+   */
   #emit(run: WorkflowRun, prevStatus: RunStatus, event: StepEvent): void {
-    if (run.status !== prevStatus) {
+    const changed = run.status !== prevStatus
+    if (changed) {
       this.deps.emit('workflow:status', { runId: run.runId, status: run.status })
     }
     if (event.kind === 'step-started') {
@@ -215,6 +272,17 @@ export class WorkflowManager {
         runId: run.runId,
         message: event.message ?? '',
         group: event.group
+      })
+    } else if (event.kind === 'blocked' && event.question) {
+      // Pause signal for the renderer + native toast carrying the question (WF4-01/13).
+      this.deps.emit('workflow:blocked', { runId: run.runId, question: event.question })
+      this.deps.notifier(event.question.title, event.question.body, { runId: run.runId })
+    }
+    if (changed && run.status === 'done') {
+      this.deps.notifier('Workflow finished', `${run.workflowId} completed`, { runId: run.runId })
+    } else if (changed && run.status === 'failed') {
+      this.deps.notifier('Workflow failed', `${run.workflowId}: ${run.error ?? 'failed'}`, {
+        runId: run.runId
       })
     }
   }

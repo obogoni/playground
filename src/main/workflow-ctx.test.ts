@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { AgentResult, AgentStepOptions } from './agent-step-runner'
+import type { BlockerQuestion, RespondDecision } from '../shared/workflows'
+import type { AgentResult, AgentStepOptions, BlockedResolver } from './agent-step-runner'
 import { refKey, type WorkItemRef } from './ado-gateway'
 import { CancellationError, makeCtx, type CtxDeps, type CtxRuntime } from './workflow-ctx'
 
@@ -15,15 +16,18 @@ interface LogRec {
 
 function makeRuntime(
   input: Record<string, string> = {},
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  requestInput?: (q: BlockerQuestion) => Promise<RespondDecision>
 ): {
   runtime: CtxRuntime
   steps: StepRec[]
   logs: LogRec[]
   cancel: () => void
+  asks: BlockerQuestion[]
 } {
   const steps: StepRec[] = []
   const logs: LogRec[] = []
+  const asks: BlockerQuestion[] = []
   let cancelled = false
   const runtime: CtxRuntime = {
     checkCancel() {
@@ -36,9 +40,15 @@ function makeRuntime(
       logs.push({ message, group, sessionId })
     },
     input,
-    signal
+    signal,
+    requestInput: requestInput
+      ? async (q) => {
+          asks.push(q)
+          return requestInput(q)
+        }
+      : undefined
   }
-  return { runtime, steps, logs, cancel: () => (cancelled = true) }
+  return { runtime, steps, logs, cancel: () => (cancelled = true), asks }
 }
 
 /** A fully-populated fake deps bag; tests reassign the one method they exercise. */
@@ -338,13 +348,14 @@ describe('auto-logging + cancellation (WF2-10 / WF2-14)', () => {
 /** A recording fake for the injected `agent` capability. */
 function fakeAgent(result: AgentResult): {
   agent: NonNullable<CtxDeps['agent']>
-  calls: Array<{ opts: AgentStepOptions; signal?: AbortSignal }>
+  calls: Array<{ opts: AgentStepOptions; signal?: AbortSignal; onBlocked?: BlockedResolver }>
 } {
-  const calls: Array<{ opts: AgentStepOptions; signal?: AbortSignal }> = []
+  const calls: Array<{ opts: AgentStepOptions; signal?: AbortSignal; onBlocked?: BlockedResolver }> =
+    []
   return {
     agent: {
-      async run(opts, signal) {
-        calls.push({ opts, signal })
+      async run(opts, signal, onBlocked) {
+        calls.push({ opts, signal, onBlocked })
         return result
       }
     },
@@ -446,5 +457,64 @@ describe('ctx.agent (WF3-01 / WF3-16 / WF3-19)', () => {
     await ctx.agent({ prompt: 'p', expect: { type: 'object' }, cwd: 'C:/x' })
 
     expect(calls[0].opts.permission).toBeUndefined()
+  })
+
+  it('wires onBlocked to runtime.requestInput so a blocked agent pauses via the manager (WF4-01)', async () => {
+    const deps = makeDeps()
+    const decision: RespondDecision = { action: 'guidance', guidance: 'do X' }
+    const { runtime, asks } = makeRuntime({}, undefined, async () => decision)
+    const { agent, calls } = fakeAgent({ status: 'done', data: {}, sessionId: 's1' })
+    deps.agent = agent
+    const ctx = makeCtx(deps, runtime)
+
+    await ctx.agent(AGENT_OPTS)
+
+    // ctx.agent passed a 3rd onBlocked arg that delegates to runtime.requestInput.
+    const onBlocked = calls[0].onBlocked
+    expect(onBlocked).toBeTypeOf('function')
+    const q: BlockerQuestion = { title: 'Agent needs input', body: 'which env?' }
+    await expect(onBlocked!(q, 's1')).resolves.toEqual(decision)
+    expect(asks).toEqual([q])
+  })
+})
+
+describe('ctx.ask (WF4-11 / WF4-12)', () => {
+  it('delegates to runtime.requestInput with { title, body } and returns the decision as-is', async () => {
+    const deps = makeDeps()
+    const decision: RespondDecision = { action: 'guidance', guidance: 'use main' }
+    const { runtime, asks } = makeRuntime({}, undefined, async () => decision)
+    const ctx = makeCtx(deps, runtime)
+
+    const got = await ctx.ask({ title: 'Pick a branch', body: 'which one?' })
+
+    expect(got).toBe(decision)
+    expect(asks).toEqual([{ title: 'Pick a branch', body: 'which one?' }])
+  })
+
+  it('resolves an abort decision WITHOUT throwing (WF4-11)', async () => {
+    const deps = makeDeps()
+    const { runtime } = makeRuntime({}, undefined, async () => ({ action: 'abort' }))
+    const ctx = makeCtx(deps, runtime)
+    await expect(ctx.ask({ title: 't', body: 'b' })).resolves.toEqual({ action: 'abort' })
+  })
+
+  it('auto-emits a step-started labeled "ask" (WF4-12)', async () => {
+    const deps = makeDeps()
+    const { runtime, steps } = makeRuntime({}, undefined, async () => ({ action: 'abort' }))
+    const ctx = makeCtx(deps, runtime)
+    await ctx.ask({ title: 't', body: 'b' })
+    expect(steps).toEqual([{ label: 'ask', group: undefined }])
+  })
+
+  it('checks cancellation before asking: a cancelled run throws and never requests input (WF4-12)', async () => {
+    const deps = makeDeps()
+    const { runtime, asks, steps, cancel } = makeRuntime({}, undefined, async () => ({
+      action: 'abort'
+    }))
+    const ctx = makeCtx(deps, runtime)
+    cancel()
+    await expect(ctx.ask({ title: 't', body: 'b' })).rejects.toBeInstanceOf(CancellationError)
+    expect(asks).toEqual([])
+    expect(steps).toEqual([])
   })
 })
