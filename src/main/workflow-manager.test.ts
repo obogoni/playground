@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { RunStatus, StepEvent, WorkflowMeta } from '../shared/workflows'
+import type { RespondDecision, RunStatus, StepEvent, WorkflowMeta } from '../shared/workflows'
 import type { AgentResult } from './agent-step-runner'
 import { CancellationError, type Ctx, type CtxDeps } from './workflow-ctx'
 import type { LoadedWorkflow, RunFn } from './workflow-loader'
@@ -26,12 +26,41 @@ function recordingEmit(): EmitFnRecorder {
   return fn
 }
 
+// --- recording notifier (records title/message/opts of every toast) ---
+
+interface NotifyCall {
+  title: string
+  message: string
+  opts?: { runId?: string }
+}
+type NotifierRecorder = ((title: string, message: string, opts?: { runId?: string }) => void) & {
+  calls: NotifyCall[]
+}
+
+function recordingNotifier(): NotifierRecorder {
+  const calls: NotifyCall[] = []
+  const fn = ((title: string, message: string, opts?: { runId?: string }): void => {
+    calls.push({ title, message, opts })
+  }) as NotifierRecorder
+  fn.calls = calls
+  return fn
+}
+
+/** Flush microtasks until `cond` holds (the manager pause loop is all microtask-driven). */
+async function waitUntil(cond: () => boolean, tries = 100): Promise<void> {
+  for (let i = 0; i < tries; i++) {
+    if (cond()) return
+    await new Promise<void>((r) => setTimeout(r, 0))
+  }
+  throw new Error('waitUntil: condition never held')
+}
+
 // --- injected fakes ---
 
 const META: WorkflowMeta = { name: 'Test Workflow', inputs: [] }
 
 /** A CtxDeps whose capability seams throw if touched — the manager tests never exercise them. */
-function fakeCtxDeps(): CtxDeps {
+function fakeCtxDeps(notifier?: NotifierRecorder): CtxDeps {
   const unused = (): never => {
     throw new Error('CtxDeps seam not used in this test')
   }
@@ -40,7 +69,7 @@ function fakeCtxDeps(): CtxDeps {
     runShell: unused,
     gitFetch: unused,
     ado: { getWorkItemWithRelations: unused, getWorkItems: unused },
-    notifier: (): void => {}
+    notifier: notifier ?? ((): void => {})
   }
 }
 
@@ -73,23 +102,55 @@ function makeManager(
   manager: WorkflowManager
   store: WorkflowRunStore
   emit: EmitFnRecorder
+  /** The manager-level lifecycle-toast notifier (WF4-13). */
+  notifier: NotifierRecorder
+  /** The author `ctx.notify` toast notifier (WF2-09) — a DISTINCT injection point (WF4-14). */
+  ctxNotifier: NotifierRecorder
 } {
   const dir = mkdtempSync(join(tmpdir(), 'wm-'))
   dirs.push(dir)
   const store = new WorkflowRunStore(dir)
   const emit = recordingEmit()
-  const ctxDeps = fakeCtxDeps()
+  const ctxNotifier = recordingNotifier()
+  const ctxDeps = fakeCtxDeps(ctxNotifier)
   if (agent) ctxDeps.agent = agent
+  const notifier = recordingNotifier()
   const manager = new WorkflowManager({
     workflowsRoot: '/virtual/workflows',
     loader,
     ctxDeps,
     store,
     emit: emit as unknown as EmitFn,
-    notifier: (): void => {}
+    notifier
   })
-  return { manager, store, emit }
+  return { manager, store, emit, notifier, ctxNotifier }
 }
+
+/** A loader whose author `run(ctx)` blocks on `ctx.ask`, capturing the decision it receives. */
+function askingLoader(question = { title: 'Need input', body: 'which env?' }): {
+  loader: WorkflowLoader
+  received: () => RespondDecision | undefined
+  caught: () => unknown
+} {
+  let received: RespondDecision | undefined
+  let caught: unknown
+  const loader = fakeLoader({
+    load: async (): Promise<LoadedWorkflow> =>
+      workflow(async (ctx) => {
+        try {
+          received = await ctx.ask(question)
+        } catch (e) {
+          caught = e
+          throw e
+        }
+      })
+  })
+  return { loader, received: () => received, caught: () => caught }
+}
+
+/** Wait until a `workflow:blocked` event has been emitted for the active run. */
+const untilBlocked = (emit: EmitFnRecorder): Promise<void> =>
+  waitUntil(() => emit.events.some((e) => e.channel === 'workflow:blocked'))
 
 /** The `runId` carried on the first `workflow:status` emit (fired synchronously on run-started). */
 function activeRunId(emit: EmitFnRecorder): string {
@@ -341,5 +402,204 @@ describe('WorkflowManager', () => {
       .load(runId)
       ?.events.find((e) => e.kind === 'step-logged' && e.sessionId !== undefined)
     expect(logged?.sessionId).toBe('sess-persisted-9')
+  })
+
+  it('requestInput blocks the run, emits workflow:blocked, and fires a toast with the question (WF4-01/13)', async () => {
+    const { loader } = askingLoader({ title: 'Need input', body: 'which env?' })
+    const { manager, emit, store, notifier } = makeManager(loader)
+
+    const runPromise = manager.run({ id: 'wf' })
+    const runId = activeRunId(emit)
+    await untilBlocked(emit)
+
+    // Status folded to blocked and persisted.
+    expect(store.load(runId)?.status).toBe('blocked')
+    const statuses = emit.events
+      .filter((e) => e.channel === 'workflow:status')
+      .map((e) => (e.payload as { status: RunStatus }).status)
+    expect(statuses).toContain('blocked')
+    // The workflow:blocked event carries the exact question.
+    const blockedEvt = emit.events.find((e) => e.channel === 'workflow:blocked')
+    expect(blockedEvt?.payload).toEqual({
+      runId,
+      question: { title: 'Need input', body: 'which env?' }
+    })
+    // A native toast fired carrying the question body + the runId (lifecycle toast).
+    expect(notifier.calls).toContainEqual({
+      title: 'Need input',
+      message: 'which env?',
+      opts: { runId }
+    })
+
+    manager.respond(runId, { action: 'guidance', guidance: 'staging' })
+    await runPromise
+  })
+
+  it('respond(guidance) resumes blocked→running and resolves ctx.ask with the decision (WF4-07)', async () => {
+    const { loader, received } = askingLoader()
+    const { manager, emit, store } = makeManager(loader)
+
+    const runPromise = manager.run({ id: 'wf' })
+    const runId = activeRunId(emit)
+    await untilBlocked(emit)
+
+    manager.respond(runId, { action: 'guidance', guidance: 'use staging' })
+    await runPromise
+
+    // ctx.ask resolved with the decision as-is.
+    expect(received()).toEqual({ action: 'guidance', guidance: 'use staging' })
+    // The event log shows blocked → resumed → done.
+    const kinds = store.load(runId)?.events.map((e) => e.kind)
+    expect(kinds).toContain('blocked')
+    expect(kinds).toContain('resumed')
+    expect(store.load(runId)?.status).toBe('done')
+  })
+
+  it('respond(abort) resolves ctx.ask to { action: abort } without throwing (WF4-07/11)', async () => {
+    const { loader, received } = askingLoader()
+    const { manager, emit } = makeManager(loader)
+
+    const runPromise = manager.run({ id: 'wf' })
+    const runId = activeRunId(emit)
+    await untilBlocked(emit)
+
+    manager.respond(runId, { action: 'abort' })
+    await runPromise
+
+    // ctx.ask returned abort as-is (the author's workflow did not throw on it).
+    expect(received()).toEqual({ action: 'abort' })
+  })
+
+  it('respond for a wrong runId, or after the pending resolved, is a guarded no-op (WF4-07)', async () => {
+    const { loader } = askingLoader()
+    const { manager, emit, store } = makeManager(loader)
+
+    const runPromise = manager.run({ id: 'wf' })
+    const runId = activeRunId(emit)
+    await untilBlocked(emit)
+
+    // Wrong runId → no-op: the run stays blocked.
+    manager.respond('not-the-active-run', { action: 'guidance', guidance: 'x' })
+    expect(store.load(runId)?.status).toBe('blocked')
+
+    // Correct respond releases it.
+    manager.respond(runId, { action: 'abort' })
+    await runPromise
+
+    // A duplicate respond after settle (run no longer active) is a no-op, not a throw.
+    expect(() => manager.respond(runId, { action: 'abort' })).not.toThrow()
+  })
+
+  it('cancel while blocked rejects the pending → cancelled and releases the serial guard (WF4-09)', async () => {
+    let block = true
+    let caught: unknown
+    let received: RespondDecision | undefined
+    const loader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async (ctx) => {
+          if (block) {
+            try {
+              received = await ctx.ask({ title: 't', body: 'b' })
+            } catch (e) {
+              caught = e
+              throw e
+            }
+          } else {
+            await ctx.log('second run ok')
+          }
+        })
+    })
+    const { manager, emit, store } = makeManager(loader)
+
+    const runPromise = manager.run({ id: 'wf' })
+    const runId = activeRunId(emit)
+    await untilBlocked(emit)
+
+    manager.cancel(runId)
+    await runPromise
+
+    expect(received).toBeUndefined() // ctx.ask rejected — it never returned a decision
+    expect(caught).toBeInstanceOf(CancellationError)
+    expect(store.load(runId)?.status).toBe('cancelled')
+
+    // The serial guard was released: a subsequent run succeeds.
+    block = false
+    const second = await manager.run({ id: 'wf' })
+    expect(store.load(second.runId)?.status).toBe('done')
+  })
+
+  it('a second workflows:run while blocked is refused by the serial guard (WF4-08)', async () => {
+    const { loader } = askingLoader()
+    const { manager, emit } = makeManager(loader)
+
+    const runPromise = manager.run({ id: 'wf' })
+    const runId = activeRunId(emit)
+    await untilBlocked(emit)
+
+    await expect(manager.run({ id: 'wf' })).rejects.toThrow(/already active/i)
+
+    manager.respond(runId, { action: 'abort' })
+    await runPromise
+  })
+
+  it('fires a lifecycle toast on done and failed, but none on cancelled (WF4-13)', async () => {
+    // done → 'Workflow finished'
+    const doneLoader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> => workflow(async () => {})
+    })
+    const { manager: m1, notifier: n1 } = makeManager(doneLoader)
+    await m1.run({ id: 'wf' })
+    expect(n1.calls.some((c) => c.title === 'Workflow finished')).toBe(true)
+
+    // failed → 'Workflow failed' carrying the error
+    const failLoader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async () => {
+          throw new Error('boom')
+        })
+    })
+    const { manager: m2, notifier: n2 } = makeManager(failLoader)
+    await m2.run({ id: 'wf' })
+    const failToast = n2.calls.find((c) => c.title === 'Workflow failed')
+    expect(failToast).toBeTruthy()
+    expect(failToast?.message).toContain('boom')
+
+    // cancelled → NO lifecycle toast
+    const cancelLoader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async (ctx) => {
+          await ctx.log('x')
+        })
+    })
+    const { manager: m3, emit: e3, notifier: n3 } = makeManager(cancelLoader)
+    const p = m3.run({ id: 'wf' })
+    const rid = activeRunId(e3)
+    m3.cancel(rid)
+    await p
+    expect(n3.calls).toEqual([]) // cancel is silent
+  })
+
+  it('an author ctx.notify toast fires via the author notifier (no runId), distinct from lifecycle toasts (WF4-14)', async () => {
+    const loader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async (ctx) => {
+          await ctx.notify('author says hi', { toast: true })
+        })
+    })
+    const { manager, notifier, ctxNotifier } = makeManager(loader)
+
+    await manager.run({ id: 'wf' })
+
+    // Author toast: through ctxDeps.notifier, WF2-09 shape ('Workflow' title, no runId).
+    expect(ctxNotifier.calls).toContainEqual({
+      title: 'Workflow',
+      message: 'author says hi',
+      opts: undefined
+    })
+    // The lifecycle done toast is a DIFFERENT notifier and carries a runId.
+    const done = notifier.calls.find((c) => c.title === 'Workflow finished')
+    expect(done?.opts?.runId).toBeTruthy()
+    // The author toast did NOT flow through the lifecycle notifier.
+    expect(notifier.calls.some((c) => c.message === 'author says hi')).toBe(false)
   })
 })
