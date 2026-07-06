@@ -15,16 +15,17 @@ Handoff snapshot.
 | AD-005 | 2026-06-28 | The PR gate runs on **windows-latest**, reversing AD-002. | First CI run (PR #57) failed: `worktree-manager.test.ts` asserts Windows backslash paths because the production code normalizes paths to backslashes — the app is Windows-only (only `--win` is ever built). The real-git suite is OS-coupled (`expected "/tmp/.../repo"` vs `received "\tmp\...\repo"`, plus `spawn git ENOENT`) and is green only on Windows. Making it OS-portable would be a large change to Windows-only code with no benefit. Matches release/nightly. |
 | AD-007 | 2026-07-03 | The headless agent process is spawned **directly** — `shell:false`, argv array passed verbatim, child **stdin closed** (`stdio:['ignore','pipe','pipe']`). **NOT** via a shell, and **NOT** as a `.cmd` shim needing `shell:true` — this corrects the ".cmd shim" assumption in WF1's spec/design. Binds WF3's `agent-command-builder` / `agent-step-runner`. | WF1-T7 empirical finding (`claude` 2.1.199): the installed CLI is a native `.exe` (`~/.local/bin/claude.exe`). Under `shell:true` on Windows, cmd re-parses and corrupts inline JSON args (`--json-schema is not valid JSON: Unterminated string`), so `--json-schema`/`--mcp-config` must reach the exe **unquoted-by-a-shell**; a direct spawn keeps the argv intact and no config file is needed. Headless also blocks ~3s on stdin unless it is closed. Full evidence: `features/workflows-headless-agent-spike/findings.md`. |
 | AD-010 | 2026-07-06 | **WF4 (Blocker + resume) scope pinned via 3 owner decisions + the design's pause architecture:** (1) **Engine auto-pauses + resumes** inside `ctx.agent` on a `blocked` agent result — the author writes no pause/resume code; `ctx.agent` resolves `done` after any number of guidance rounds, or the run cancels on abort. `ctx.ask({title,body})` is the standalone human-in-the-loop primitive that path reuses. (2) **`abort` → run ends `cancelled`** (reuse the terminal status; no new status). (3) **Native lifecycle toasts on block/finish/fail**, cancel silent (`ctx.notify({toast})` stays independent). **Architecture:** the block-loop lives in the DI'd `AgentStepRunner` via an injected `onBlocked` resolver (Approach A — keeps `ctx` thin, mirrors WF3); ONE manager-owned pause primitive (`runtime.requestInput` + `#pendingRespond`) funnels both `ctx.ask` and the agent `onBlocked`; `respond` **always** transitions `blocked→running` (resumed) and hands the decision to the caller — the `abort→cancelled` outcome is produced by the agent consumer throwing `CancellationError`, NOT a reducer edge (so the reducer adds only `blocked`/`resumed` + a `blocked→cancelled` guard for cancel-while-blocked). | Owner chose engine-driven auto-pause for "supervise by exception" (US 38) with zero author plumbing; `cancelled` reuse avoids widening `RunStatus` beyond `blocked`; toasts match US 22. Approach A matches the project's DI-orchestrator-tested-via-fakes convention and WF3's own Approach A. Spec/design/tasks: `.specs/features/workflows-blocker-resume/` (WF4-01..20). |
+| AD-011 | 2026-07-06 | **WF5 (Workflows UI) scope pinned via 3 owner decisions + the renderer design:** (1) **Run state is live-stream only** — the view accumulates `workflow:*` events in an always-App-mounted `useWorkflowRuns` hook (survives direction switches); NO read channel for persisted/past runs (v2). (2) **A failed run shows only its `failed` status** in the UI — `error`/`stdout`/`code` are captured server-side but not broadcast (deferred). (3) **"New workflow" = scaffold + reveal** via a NEW `workflows:scaffold` channel; the created folder is revealed **main-side** with `shell.showItemInFolder` (no editor coupling). **Architecture:** the fold logic is a pure, unit-tested `workflow-run-view.ts` (like `tree-selection`); only `workflow-run-view` + `workflow-scaffold` carry unit tests, the rest (view, dialogs, hook wiring, handler) is hand-verified per project UI convention. 10 tasks / 3 phases (inline). | Owner chose live-only to match the PRD's v1-ephemeral posture with zero backend; failure-detail broadcast is cheap-but-deferred; scaffold+reveal avoids editor coupling. The always-mounted hook is required so a WF4 `workflow:focus-run` toast restores a run's full timeline from any direction. Spec/design/tasks: `.specs/features/workflows-ui/` (WF5-01..25). |
 | AD-009 | 2026-07-06 | **WF3 MERGED to `main` (PR #65).** Independent SDD eval (author≠judge, `spec-driven-eval`): **Final 0.98 — "Spec-complete"** (S=PASS, E recall/precision/justified ≈1.0, gates build/lint/unit green; live smoke owner-PASS 6/6). Two minor gaps merged as-is and **carried into WF4** (WF3-04 generic retry prompt; WF3-10 unasserted server reuse). **WF4 planning deferred to the next session.** | The two gaps are cheap polish on the same runner/`--resume` path WF4 already touches, so folding them into WF4 avoids a throwaway PR. Report: `.specs/features/workflows-agent-step/evaluations/P1-workflows-agent-step-20260706T141244Z.md`. |
 | AD-008 | 2026-07-03 | **WF3 (Structured agent step) scope pinned via 4 owner decisions:** (1) **Arm M (MCP) only** — one shared loopback HTTP MCP server, per-step bearer token = auth+routing, forced `emit_result`; Arm N (`--json-schema`) dropped. (2) **ajv** for payload validation (promotes `emit-result-schema` off the spike's minimal checker; `expect` stays a JSON Schema). (3) `ctx.agent()` returns the **full envelope** `{status,data?,question?,sessionId}`; `blocked` is returned **as-is** (no engine pause in WF3 — that's WF4). (4) Permission presets **read/write/bypass**, default **read** (read = read-only tools + `emit_result`, guaranteed non-mutating). | Findings recommended Arm M to keep the `blocked` terminal value + per-step routing first-class for WF4; ajv because the author declares a JSON Schema and the tool `inputSchema` is JSON Schema too; full-envelope return lets WF4 add the pause without breaking the happy path; the preset set is PRD-fixed (US 26). Spec: `.specs/features/workflows-agent-step/spec.md` (WF3-01..25). |
 
 ## Handoff
 
-**Status (current, 2026-07-06):** Workflows epic (issue #56) — **WF1 + WF2 + WF3 MERGED
-to `main`** (WF1/WF2 = PR #64; WF3 = PR #65, merge `02e8795`). **WF4 (Blocker + resume) —
-EXECUTED + independently VERIFIED (PASS).** On branch **`feature/workflows-blocker-resume`**
-(cut off `main` @ `02e8795`). Epic #56 stays **open** (WF4 owner-run smoke + PR/merge, then
-WF5 remain).
+**Status (current, 2026-07-06):** Workflows epic (issue #56) — **WF1–WF4 MERGED to `main`**
+(WF1/WF2 = PR #64; WF3 = PR #65; WF4 = PR #66, merge `660180b`). **WF5 (Workflows UI) —
+EXECUTED + independently VERIFIED (PASS).** On branch **`feature/workflows-ui`** (cut off
+`main` @ `660180b`), 11 commits `5f0ad4d..1c5b84c`. Epic #56 stays **open** (WF5 owner-run
+smoke + PR/merge remain; WF5 is the last milestone → merging it can close #56).
 
 **WF4 Execute done this session (all 8 tasks, 3 phases, inline — 8 atomic commits
 `7a0db81..c938ad3`):**
@@ -72,15 +73,33 @@ without asking); (2) `ctx.worktree.create` needs a `baseBranch` to cut a NEW bra
 collectors per run (app survives across invocations → stale collector read the prior runId).
 Extra commits after the docs commit: `7bdb84c`, `054c8fa`, `c30a28c` (+ this docs update).
 
-**Next step (resume here):** WF4 is DONE + VERIFIED + owner-smoke PASSED. Only the PR/merge
-remains:
-1. **Open the WF4 PR** (`gh pr create`, body must carry `Closes` line only if WF4 has its
-   own issue — else reference epic #56; do NOT auto-close #56, WF5 remains). main is gated by
-   the `copilot_code_review` ruleset — a force-pushed PR goes BLOCKED → merge with
-   `gh pr merge --admin`.
-2. **WF5 (Workflows UI)** is the remaining epic milestone (the view, run timeline, and the
-   **blocked-respond panel** that consumes WF4's `workflow:blocked` + `workflow:focus-run`
-   signals). Specify it next milestone-by-milestone (AD-006).
+**WF5 Execute done this session (all 10 tasks, 3 phases, inline — 11 atomic commits
+`5f0ad4d..1c5b84c`):** T1 `workflow-run-view` pure fold + 12 tests; T3 shared `ScaffoldResult`
++ `workflows:scaffold` contract; T2 `workflow-scaffold` module + 6 tests; T4 `useWorkflowRuns`
+always-mounted hook; T5 `WorkflowTriggerDialog`; T6 `NewWorkflowDialog`; T7 `RunDetail` +
+`RespondPanel`; T8 `workflows:scaffold` handler + `shell.showItemInFolder` reveal; T9
+`WorkflowsView` master-detail; T10 App integration (`'workflows'` direction + TopBar tab +
+render branch + `workflow:focus-run` effect). Plus one test-hardening commit (`268759c`):
+scaffold template-validity test compiles via `esbuild.transform` + `data:` URL import instead
+of the real loader, removing a shared-`tmpdir` race with `workflow-loader`'s leak test.
+
+**Verifier verdict (independent, author ≠ verifier) — PASS:** 25/25 ACs implemented with
+located evidence (5 unit-covered: WF5-10/11/12 fold half + WF5-23/24; the other 20
+hand-verified renderer/IPC wiring, proof deferred to the owner-run UI gate — mirrors WF4). Gate:
+typecheck 0 err, lint 0 err (1 tolerated prettier warning), **440/440 tests / 35 files** (422 →
++18). Discrimination sensor **5/5 mutants killed** (fold keep-blocked / drop-step-row /
+upsert-ignore-create; scaffold EEXIST-guard / sanitize-trim). No survivors, no gaps. Prod build
+(`npm run build`) OK. Report: `.specs/features/workflows-ui/validation.md`.
+
+**Next step (resume here):** WF5 DONE + VERIFIED. Remaining:
+1. **Owner-run two-example UI smoke** (the milestone gate, analogous to WF4-17): launch the app
+   (`npm run dev`), drive **"review PR"** and **"implement ticket"** entirely through the
+   Workflows view — trigger → live timeline → (implement-ticket) blocker respond panel →
+   guidance resumes → finish. Needs a live Claude subscription + authored example workflows in
+   `~/.playground/workflows/`.
+2. **Open the WF5 PR** (`gh pr create`). Since WF5 is the last epic milestone, the body MAY
+   carry `Closes #56`. main is gated by the `copilot_code_review` ruleset — a force-pushed PR
+   goes BLOCKED → merge with `gh pr merge --admin`.
 
 **Prior context:** `worktree-existing-branch` (PR #62), `topbar-version-indicator` (PR #63)
 merged. Pre-existing quirk: `src/main/ado-gateway.ts` is UTF-16 (git treats it as binary).
