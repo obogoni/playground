@@ -21,8 +21,8 @@ Handoff snapshot.
 **Status (current, 2026-07-06):** Workflows epic (issue #56) — **WF1 + WF2 MERGED to
 `main`** (PR #64, merge `e6d7e11`; fix `972f68d`). **WF3 (Structured agent step) —
 EXECUTED + VERIFIED (PASS).** On branch `feature/workflows-agent-step` (cut off
-`e6d7e11`); 14 commits (`4896c47` docs → `d361131`); working tree clean. **NOT yet
-pushed / no PR.** One item remains before merge: **owner-run live smoke gate (WF3-22).**
+`e6d7e11`); working tree clean. **All gates green incl. the owner-run live smoke
+(WF3-22 PASSED 6/6, 2026-07-06).** No open items — ready to push + open PR.
 
 **How WF3 was executed:** Specify→Design→Tasks were already owner-approved; this session
 ran **Execute** = 4 phase sub-agents (one worker/phase, sequential) + a fresh independent
@@ -66,17 +66,17 @@ Report: `.specs/features/workflows-agent-step/validation.md`.
 - T7 corrective-retry prompt is generic (server reports ajv errors in-turn; retry fires
   only on no-emit) — matches design, no AC pins the string.
 
-**⚠ One open item before merge (resume here):**
-1. **Owner-run live smoke (WF3-22):** `npm run dev -- -- --remote-debugging-port=9222`
-   then `node scripts/smoke-agent-workflow.mjs` → exit 0 against a live subscription.
-   Confirms: persisted run `status:done`, findings validate vs `FINDINGS_SCHEMA`,
-   non-empty `session_id`, and **no worktree files mutated** (read posture). This is the
-   empirical risk from the design (read-only allowedTools + `bypassPermissions` name are
-   LEADS beyond WF1's confirmed `dontAsk`+emit).
-2. **After smoke passes:** push branch + open ONE PR to `main`. PR body must **NOT**
-   `Closes #56` (epic spans WF1..WF5). `main` gated by `copilot_code_review` — a
-   force-push BLOCKs the review → `gh pr merge --admin`. Reference WF3 milestone/issues
-   per the tlc-to-issues mapping if desired.
+**Owner-run live smoke (WF3-22) — PASSED 6/6 (2026-07-06):** `node
+scripts/smoke-agent-workflow.mjs` vs a live subscription — runId
+`8a8b19d7-b4a5-4f0a-8db9-6d21065037d2`, statuses `[running,done]`, run-log persisted,
+non-empty `session_id` `9b1438dd-35f1-448d-bad1-fff87c7ccbb1`, findings validate vs
+`FINDINGS_SCHEMA` (2 findings), and **read posture left the worktree unmutated** — this
+closes the design's empirical risk (read-only allowedTools + `bypassPermissions` were
+LEADS beyond WF1's confirmed `dontAsk`+emit; `read` now confirmed).
+
+**Next step (resume here):** push branch + open ONE PR to `main`. PR body must **NOT**
+`Closes #56` (epic spans WF1..WF5). `main` gated by `copilot_code_review` — a force-push
+BLOCKs the review → `gh pr merge --admin`.
 
 **Key facts (feed WF4):** WF3's `AgentStepRunner` returns the **full envelope**
 `{status,data?,question?,sessionId}` and returns `blocked` **as-is** (no engine pause —

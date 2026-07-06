@@ -16,9 +16,10 @@ sub-agent delegation, adequacy review, Verifier, discrimination sensor).
 atomic commit each) via 4 phase sub-agents (one worker/phase) + fresh independent
 Verifier. Gate green: typecheck 0 err, lint 0 err (18 pre-existing prettier warnings),
 **390 tests / 33 files** (325 → +65, 0 deletions). Discrimination sensor 8/8 mutants
-killed. Report: `validation.md`. **One item remains: owner-run live smoke gate
-(WF3-22)** via `scripts/smoke-agent-workflow.mjs` against a live subscription. MCP: NONE
-/ Skill: NONE on all 12.
+killed. Report: `validation.md`. **Owner-run live smoke gate (WF3-22) PASSED 6/6**
+(2026-07-06, live subscription): runId `8a8b19d7…`, `session_id` `9b1438dd…`, 2 findings
+validate vs `FINDINGS_SCHEMA`, worktree unmutated (read posture). All gates green — no
+open items. MCP: NONE / Skill: NONE on all 12.
 
 **Baseline**: **325 tests / 27 files** (verified `npx vitest run`, 2026-07-03). Every
 expected-pass count below is `325 + N`; a task that adds N unit tests must end at its
