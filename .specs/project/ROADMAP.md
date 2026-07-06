@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current Milestone:** **M6 — Workflows (epic #56)** — IN PROGRESS: WF1 + WF2 + WF3 merged; WF4–WF5 remain.
+**Current Milestone:** **M6 — Workflows (epic #56)** — IN PROGRESS: WF1 + WF2 + WF3 merged; **WF4 planned & approved (Execute next session)**; WF5 remains.
 **Status:** v1 (M1–M4) + worktree-name-template (post-v1) + M5 (v2) complete and on `main`. M5 AM1 (Agent Spike) merged PR #39, AM2 (Agent Sessions) merged PR #41 (`Closes #40`), AM3 (Agent Config) merged PR #44 (`Closes #43`). AGCF-05 remove-worktree confirm + visual theme toggle = hand-verify only (code merged). **M6 (Workflows) now active — see below.**
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
@@ -161,9 +161,10 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - `ctx.agent({prompt, expect, cwd, permission})` → validated `{status, data?, question?, sessionId}`; self-hosted loopback MCP `emit_result` server (per-step bearer token = auth+routing, ajv validation); permission presets read/write/bypass (default read, guaranteed non-mutating); one corrective `--resume` retry; cancel→child-kill; `session_id` capture; `blocked` returned as-is (WF3-01..25).
 - Independent SDD eval: **Final 0.98 "Spec-complete"**. Two minor gaps (WF3-04 generic retry prompt, WF3-10 unasserted server reuse) **carried into WF4**.
 
-**WF4 — Blocker + resume (native toasts)** - NEXT (planning next session)
+**WF4 — Blocker + resume (native toasts)** - PLANNED & APPROVED (Execute next session)
 
 - `ctx.ask()` + engine-driven **pause on `blocked`** + `workflows:respond` + resume the same conversation via `--resume`; native OS toast on block/finish/fail + click-to-focus-run (US 21/22/23/24/25). Grafts onto WF3's `blocked`-as-is envelope + reserved `WorkflowManager.notifier`.
+- **Planned 2026-07-06** (Specify→Design→Tasks owner-approved): `.specs/features/workflows-blocker-resume/` — 8 tasks / 3 phases, 20 ACs (WF4-01..20), Approach A (block-loop in the DI'd runner). Scope + architecture = **AD-010**. Folds in the 3 WF3 carry-in gaps (WF4-18/19/20). Branch `feature/workflows-blocker-resume`.
 
 **WF5 — Workflows UI** - PLANNED
 
