@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 import type { AppConfig } from '../../../shared/config'
 import type { AdoAuthState } from '../../../shared/tasks'
 import { api } from '../lib/api'
+import { relativeTime } from '../lib/relative-time'
 import { Icon } from './Icon'
 import './TopBar.css'
 
@@ -25,13 +26,6 @@ interface TopBarProps {
   onDirectionChange: (direction: Direction) => void
   onRefresh: () => void
   onOpenSettings: () => void
-}
-
-function relativeTime(epochMs: number, now: number): string {
-  const minutes = Math.floor((now - epochMs) / 60_000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  return `${Math.floor(minutes / 60)}h ago`
 }
 
 function syncText(sync: SyncStatus, now: number): string {
@@ -135,7 +129,7 @@ export function TopBar({
           className={`topbar-segment${direction === 'workflows' ? ' active' : ''}`}
           onClick={() => onDirectionChange('workflows')}
         >
-          <Icon name="git-fork" size={14} />
+          <Icon name="workflow-nodes" size={14} />
           Workflows
         </button>
       </div>

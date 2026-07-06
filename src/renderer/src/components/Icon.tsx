@@ -22,6 +22,11 @@ export type IconName =
   | 'settings'
   | 'shield'
   | 'pencil'
+  | 'workflow-nodes'
+  | 'play'
+  | 'help-circle'
+  | 'x-circle'
+  | 'stop-square'
 
 const PATHS: Record<IconName, JSX.Element> = {
   'git-branch': (
@@ -147,6 +152,35 @@ const PATHS: Record<IconName, JSX.Element> = {
       <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
       <path d="m15 5 4 4" />
     </>
+  ),
+  // Converging-nodes / pipeline glyph — two source nodes (cx6/cy6, cx6/cy18)
+  // merge via two elbow paths into one node (cx18/cy12). Handoff §Top bar.
+  'workflow-nodes': (
+    <>
+      <circle cx="6" cy="6" r="1.7" />
+      <circle cx="6" cy="18" r="1.7" />
+      <circle cx="18" cy="12" r="2" />
+      <path d="M7.7 6h4.3a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2" />
+      <path d="M7.7 18h4.3a2 2 0 0 0 2-2v-2a2 2 0 0 1 2-2" />
+    </>
+  ),
+  play: <path d="M7 5l11 7-11 7z" fill="currentColor" stroke="none" />,
+  'help-circle': (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <path d="M12 17h.01" />
+    </>
+  ),
+  'x-circle': (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="m15 9-6 6" />
+      <path d="m9 9 6 6" />
+    </>
+  ),
+  'stop-square': (
+    <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none" />
   )
 }
 
