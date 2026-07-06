@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { discoverWorkflows, loadWorkflow, validateMeta } from './workflow-loader'
+import { discoverWorkflows, esbuildBinaryPath, loadWorkflow, validateMeta } from './workflow-loader'
 
 const dirs: string[] = []
 afterEach(() => {
@@ -21,6 +21,37 @@ function workflowDir(files: Record<string, string>): string {
   }
   return folder
 }
+
+describe('esbuildBinaryPath (pure)', () => {
+  it('points at the unpacked win32 .exe under app.asar.unpacked', () => {
+    const p = esbuildBinaryPath('C:\\app\\resources', 'win32', 'x64')
+    expect(p).toBe(
+      join(
+        'C:\\app\\resources',
+        'app.asar.unpacked',
+        'node_modules',
+        '@esbuild',
+        'win32-x64',
+        'esbuild.exe'
+      )
+    )
+  })
+
+  it('uses the bin/esbuild layout on non-Windows platforms', () => {
+    const p = esbuildBinaryPath('/app/resources', 'darwin', 'arm64')
+    expect(p).toBe(
+      join(
+        '/app/resources',
+        'app.asar.unpacked',
+        'node_modules',
+        '@esbuild',
+        'darwin-arm64',
+        'bin',
+        'esbuild'
+      )
+    )
+  })
+})
 
 describe('validateMeta (pure)', () => {
   const run = async (): Promise<void> => {}
