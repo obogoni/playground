@@ -6,100 +6,180 @@
 }
 
 .wf-rail {
-  width: 320px;
+  width: 360px;
   flex-shrink: 0;
+  background: var(--panel);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  padding-bottom: 16px;
+  min-height: 0;
 }
 
+/* pulse is also defined in RunDetail.css (always bundled via the RunDetail
+   import); duplicated here so the rail's running dot animates even when no run
+   is selected. See RunDetail.css for the SPEC_DEVIATION rationale. */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Header */
 .wf-rail-head {
+  flex: 0 0 auto;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px 10px;
+  gap: 10px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wf-rail-head-titles {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
 }
 
 .wf-rail-title {
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--text);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.wf-rail-count {
+  font-size: 11px;
+  color: var(--text-faint);
 }
 
 .wf-rail-actions {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
 }
 
 .wf-rail-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--bg);
+  border-radius: 8px;
+  background: transparent;
   color: var(--text-muted);
   cursor: pointer;
 }
 
 .wf-rail-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent-text);
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.wf-new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Scroll body */
+.wf-rail-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
 }
 
 .wf-error {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 0 16px 8px;
   padding: 7px 10px;
   font-size: 12px;
   color: var(--red);
   border: 1px solid color-mix(in oklab, var(--red) 45%, transparent);
-  border-radius: 7px;
+  border-radius: 8px;
   background: color-mix(in oklab, var(--red) 10%, transparent);
 }
 
 .wf-section-label {
   font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--text-faint);
-  padding: 10px 16px 6px;
+}
+
+.wf-runs-label {
+  margin-top: 14px;
 }
 
 .wf-defs,
 .wf-runs {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 0 10px;
+  gap: 9px;
 }
 
 .wf-empty {
   font-size: 12px;
   color: var(--text-faint);
-  padding: 2px 6px;
   margin: 0;
 }
 
+/* Definition card */
 .wf-def {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 13px;
   background: var(--panel);
+  padding: 13px;
 }
 
 .wf-def.broken {
-  border-color: color-mix(in oklab, var(--red) 40%, var(--border));
+  border-color: color-mix(in oklab, var(--red) 32%, var(--border));
+  background: color-mix(in oklab, var(--red) 5%, var(--panel));
+}
+
+.wf-def-row {
+  display: flex;
+  gap: 10px;
+}
+
+.wf-def-tile {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.wf-def-tile.broken {
+  background: color-mix(in oklab, var(--red) 15%, transparent);
+  color: var(--red);
 }
 
 .wf-def-info {
@@ -107,12 +187,12 @@
   flex-direction: column;
   min-width: 0;
   flex: 1;
-  gap: 2px;
+  gap: 3px;
 }
 
 .wf-def-name {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 13.5px;
+  font-weight: 700;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -120,96 +200,156 @@
 }
 
 .wf-def-desc {
-  font-size: 11px;
-  color: var(--text-faint);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.wf-def-broken-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.wf-def-id {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.wf-broken-pill {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--red);
+  background: color-mix(in oklab, var(--red) 15%, transparent);
+  border-radius: 20px;
+  padding: 1px 8px;
 }
 
 .wf-def-error {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  word-break: break-word;
+}
+
+.wf-def-foot {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.wf-def-inputs {
   font-size: 11px;
-  color: var(--red);
+  color: var(--text-faint);
+}
+
+.wf-def-spacer {
+  flex: 1;
 }
 
 .wf-run-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   flex-shrink: 0;
   font-size: 12px;
-  font-weight: 600;
-  padding: 5px 14px;
-  border-radius: 7px;
-  border: 1px solid var(--accent);
-  background: var(--accent);
+  font-weight: 700;
+  padding: 5px 13px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, var(--border));
+  background: transparent;
   color: var(--accent-text);
   cursor: pointer;
+}
+
+.wf-run-btn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
 }
 
 .wf-run-btn:disabled {
   opacity: 0.4;
   cursor: default;
   border-color: var(--border);
-  background: var(--bg);
   color: var(--text-faint);
 }
 
+/* Recent-run row */
 .wf-run-item {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: none;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--panel);
   cursor: pointer;
   text-align: left;
 }
 
 .wf-run-item:hover {
-  background: var(--bg);
+  border-color: var(--border-strong);
 }
 
 .wf-run-item.selected {
   border-color: var(--accent);
-  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  background: color-mix(in oklab, var(--accent) 9%, var(--panel));
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.wf-run-line1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wf-run-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.wf-run-dot.running {
+  background: var(--blue);
+  animation: pulse 1.8s ease-in-out infinite;
+}
+.wf-run-dot.blocked {
+  background: var(--amber);
+}
+.wf-run-dot.done {
+  background: var(--green);
+}
+.wf-run-dot.failed {
+  background: var(--red);
+}
+.wf-run-dot.pending,
+.wf-run-dot.cancelled {
+  background: var(--text-faint);
 }
 
 .wf-run-item-name {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 600;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.wf-run-item-status {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.wf-status-pending,
-.wf-status-cancelled {
+.wf-run-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
   color: var(--text-faint);
-}
-.wf-status-running {
-  color: var(--blue);
-}
-.wf-status-blocked {
-  color: var(--amber);
-}
-.wf-status-done {
-  color: var(--green);
-}
-.wf-status-failed {
-  color: var(--red);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* Empty detail */
 .wf-detail-empty {
   flex: 1;
   display: flex;
@@ -218,9 +358,10 @@
   justify-content: center;
   gap: 12px;
   color: var(--text-faint);
+  background: var(--bg);
 }
 
 .wf-detail-empty p {
-  font-size: 13px;
+  font-size: 14px;
   margin: 0;
 }
