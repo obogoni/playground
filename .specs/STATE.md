@@ -26,10 +26,48 @@ Handoff snapshot.
 (WF4 = PR #66, merge `660180b`). **WF5 (Workflows UI): first pass EXECUTED + VERIFIED (PASS)**
 on branch **`feature/workflows-ui`** (`5f0ad4d..1c5b84c`), **but the owner caught a
 fidelity gap** — the hi-fi design handoff `design/handoff/DESIGN_HANDOFF_WORKFLOWS.md` was
-missed during Design, so the delivered timeline is low-fi. A **hi-fi rebuild slice
-`workflows-ui-hifi` (AD-012, amends AD-011) is SPEC'd + APPROVED; Design is the next step**
-(fresh session). NOT merged to `main` — the hifi work lands on the same branch, then one PR
-closes #56. Epic #56 stays **open**.
+missed during Design, so the delivered timeline is low-fi. The **hi-fi rebuild slice
+`workflows-ui-hifi` (AD-012, amends AD-011): Spec + Design + Tasks are DONE + APPROVED —
+`EXECUTE is the next step`** (fresh session, on the same branch `feature/workflows-ui`). NOT
+merged to `main` — the hifi work lands on the same branch, then one PR closes #56. Epic #56 stays
+**open**.
+
+**Design + Tasks APPROVED this session (`workflows-ui-hifi`, no code yet):**
+`.specs/features/workflows-ui-hifi/{design.md,tasks.md}` (both Status: Approved). **11 tasks / 5
+phases.** One owner decision taken during Design — **fixtures = "light"**: wrap the
+`implement-ticket` body in ONE `ctx.step` group so WHF-14 group rollup gets live gate coverage
+without an ADO dependency; `review-pr` stays flat; the `ado` `StepDetail` variant (WHF-15) is
+fold-unit-tested + eyeballed only (logged assumption — shares the render path with the `files`
+detail box that review-pr exercises live). Key design calls (feature-local, no new AD): manager
+owns the clock + monotonic `stepId` (reducer stays clock-free); `start/finish` instrument bracket
+replaces `emitStep` (T2 wires producer `workflow-ctx` + consumer `workflow-manager` in ONE task
+per **L-001** — no interim `optional`); a per-step **`ok` flag** on `step-finished` (false on
+throw) drives the failed node glyph + group rollup without a failing-stepId hack; `group` stays a
+**label string** (kept the `StepEvent` change purely additive → green gate per task; duplicate-
+label collision is an accepted v1 edge); `RunView.timeline` is kept **transitionally** (expand-
+contract) and dropped in **T8** when `RunDetail` — its only consumer — moves to `steps`.
+
+**Phase map (offer sub-agents at Execute — >3 phases):**
+- **P1 (seq):** T1 shared `StepEvent`/`ipc-contract` growth (additive: `StepKind`/`PermissionPreset`/
+  `StepDetail`/`step-finished` kind + `stepId`/`stepKind`/`durationMs`/`ok`/`agent`/`agentResult`/
+  `detail`; `workflow:run-started`; `workflow:blocked` +`sessionId`) + reducer `step-finished` fold.
+- **P2 (seq):** T2 `start/finish` seam (ctx+manager, clock/stepId, per-kind detail + agent extractors,
+  onBlocked forwards sessionId) → T3 manager broadcasts (`step-finished`/`run-started`/`failed`/
+  blocked `sessionId`) + read `AgentStepError.detail` for failure evidence.
+- **P3 (‖):** T4 `workflow-run-view` fold rebuild (StepNode[], `stepStatus`/`groupRollup`, seeds) ·
+  T5 `relative-time` helper.
+- **P4 (‖):** T6 hook (consume `run-started`, retire `pendingWf`) · T7 Icon+TopBar pipeline glyph
+  (`workflow-nodes`) · T8 RunDetail hifi rebuild (+drop transitional `timeline`) · T9 WorkflowsView
+  rail hifi · T10 hifi Run-workflow dialog.
+- **P5 (seq):** T11 `implement-ticket` `ctx.step` group (WHF-14 live gate).
+- **Baseline to reconfirm at Execute start:** `npm test` — STATE records **440/440** (WF5 Verifier);
+  T1–T5 add ~40 unit tests, T6–T11 add 0 (renderer/fixture hand-verified per TESTING.md). Gate:
+  `npm run typecheck && npm run lint && npm test` (+ `npm run build` after the renderer rebuild).
+- **Two-example UI gate (owner-run, the milestone gate):** `npm run dev -- -- --remote-debugging-port=9222`
+  then drive "implement ticket" + "review PR" — verify handoff fidelity (kind tags, durations, agent
+  box w/ emitted data, group rollup, blocked panel + session note, resume, done/failed footer).
+- **After Execute → Verifier (author≠verifier) → owner UI gate → one PR (`Closes #56`) →
+  `gh pr merge --admin`** (copilot_code_review ruleset).
 
 **WF4 Execute done this session (all 8 tasks, 3 phases, inline — 8 atomic commits
 `7a0db81..c938ad3`):**
