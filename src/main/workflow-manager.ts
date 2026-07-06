@@ -73,6 +73,14 @@ export class WorkflowManager {
   /** The in-flight run's current immutable snapshot (serial ⇒ at most one). */
   #activeRun: WorkflowRun | null = null
   /**
+   * The monotonic step-id counter for the active run (serial ⇒ one at a time).
+   * `startStep` hands out the next id + records its `t0`; `finishStep` computes
+   * `durationMs` from it. The manager owns the clock so the reducer stays clock-free
+   * (WHF-01/02). Both are reset in `run()`'s `finally`.
+   */
+  #stepSeq = 0
+  #stepStart = new Map<number, number>()
+  /**
    * The single in-flight human-in-the-loop pause (serial ⇒ at most one, WF4). Set
    * when a run blocks via `runtime.requestInput`; resolved by `respond` (guidance
    * or abort) or rejected by `cancel` (CancellationError). Cleared on settle and in
@@ -137,8 +145,35 @@ export class WorkflowManager {
       checkCancel: (): void => {
         if (token.cancelled) throw new CancellationError()
       },
-      emitStep: (label: string, group?: string): void =>
-        this.#apply({ kind: 'step-started', label, group }),
+      // Open a step: hand out the next monotonic id, record its start clock, and
+      // apply a `step-started` carrying its semantic kind + agent detail (WHF-01/05).
+      startStep: (spec): number => {
+        const id = this.#stepSeq++
+        this.#stepStart.set(id, Date.now())
+        this.#apply({
+          kind: 'step-started',
+          label: spec.label,
+          group: spec.group,
+          stepId: id,
+          stepKind: spec.kind,
+          agent: spec.agent
+        })
+        return id
+      },
+      // Close a step: stamp the manager-owned `durationMs` (reducer stays clock-free)
+      // and apply a `step-finished` with the ok outcome + detail/agentResult (WHF-02/06).
+      finishStep: (stepId, out): void => {
+        const durationMs = Date.now() - (this.#stepStart.get(stepId) ?? Date.now())
+        this.#stepStart.delete(stepId)
+        this.#apply({
+          kind: 'step-finished',
+          stepId,
+          durationMs,
+          ok: out?.ok ?? true,
+          detail: out?.detail,
+          agentResult: out?.agentResult
+        })
+      },
       emitLog: (message: string, group?: string, sessionId?: string): void =>
         this.#apply({ kind: 'step-logged', message, group, sessionId }),
       input: resolvedInput,
@@ -149,10 +184,10 @@ export class WorkflowManager {
       // agent block-loop's `onBlocked` funnel here. Store the pending settler, then
       // apply `blocked` (drives status + `workflow:blocked` + toast). The promise
       // does not settle until `respond` (resolve) or `cancel` (reject).
-      requestInput: (question: BlockerQuestion): Promise<RespondDecision> =>
+      requestInput: (question: BlockerQuestion, sessionId?: string): Promise<RespondDecision> =>
         new Promise<RespondDecision>((resolve, reject) => {
           this.#pendingRespond = { resolve, reject }
-          this.#apply({ kind: 'blocked', question })
+          this.#apply({ kind: 'blocked', question, sessionId })
         })
     }
 
@@ -180,6 +215,10 @@ export class WorkflowManager {
       this.#activeToken = null
       this.#activeRun = null
       this.#pendingRespond = null
+      // Reset the per-run step clock/counter (serial — one run at a time) so the
+      // next run's stepIds restart at 0 (WHF-01).
+      this.#stepSeq = 0
+      this.#stepStart.clear()
     }
 
     return { runId }

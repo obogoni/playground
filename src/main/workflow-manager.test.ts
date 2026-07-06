@@ -221,12 +221,13 @@ describe('WorkflowManager', () => {
     expect(persisted?.status).toBe('done')
     expect(persisted?.events.map((e) => e.kind)).toEqual([
       'run-started',
-      'step-logged',
-      'step-started',
-      'step-logged',
+      'step-logged', // first
+      'step-started', // phase group opens
+      'step-logged', // inside
+      'step-finished', // phase group closes (WHF-02)
       'done'
     ])
-    expect(persisted?.events.map((e) => e.seq)).toEqual([0, 1, 2, 3, 4])
+    expect(persisted?.events.map((e) => e.seq)).toEqual([0, 1, 2, 3, 4, 5])
     expect(persisted?.startedAt).not.toBe('')
     expect(persisted?.finishedAt).toBeTruthy()
     // The nested log carries the ctx.step group id.
@@ -235,6 +236,11 @@ describe('WorkflowManager', () => {
       message: 'inside',
       group: 'phase'
     })
+    // The group's step-started/step-finished share a stepId (WHF-01).
+    const groupStart = persisted?.events.find((e) => e.kind === 'step-started')
+    const groupFinish = persisted?.events.find((e) => e.kind === 'step-finished')
+    expect(groupStart?.stepKind).toBe('group')
+    expect(groupFinish?.stepId).toBe(groupStart?.stepId)
   })
 
   it('refuses a second concurrent run while one is active; the first still completes (WF2-17)', async () => {
@@ -601,5 +607,93 @@ describe('WorkflowManager', () => {
     expect(done?.opts?.runId).toBeTruthy()
     // The author toast did NOT flow through the lifecycle notifier.
     expect(notifier.calls.some((c) => c.message === 'author says hi')).toBe(false)
+  })
+
+  it('stamps a non-negative durationMs and correlates start↔finish by stepId (WHF-02)', async () => {
+    const loader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async (ctx) => {
+          await ctx.step('phase', async () => {})
+        })
+    })
+    const { manager, store } = makeManager(loader)
+
+    const { runId } = await manager.run({ id: 'wf' })
+
+    const events = store.load(runId)!.events
+    const started = events.filter((e) => e.kind === 'step-started')
+    const finished = events.filter((e) => e.kind === 'step-finished')
+    expect(started).toHaveLength(1)
+    expect(finished).toHaveLength(1)
+    expect(finished[0].stepId).toBe(started[0].stepId)
+    expect(finished[0].durationMs).toBeGreaterThanOrEqual(0)
+  })
+
+  it('assigns monotonic stepIds across the steps within a run (WHF-01)', async () => {
+    const loader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async (ctx) => {
+          await ctx.step('a', async () => {})
+          await ctx.step('b', async () => {})
+        })
+    })
+    const { manager, store } = makeManager(loader)
+
+    const { runId } = await manager.run({ id: 'wf' })
+
+    const started = store.load(runId)!.events.filter((e) => e.kind === 'step-started')
+    expect(started.map((e) => e.stepId)).toEqual([0, 1])
+  })
+
+  it('resets the stepId counter between sequential runs (WHF-01)', async () => {
+    const loader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async (ctx) => {
+          await ctx.step('s', async () => {})
+        })
+    })
+    const { manager, store } = makeManager(loader)
+
+    const r1 = await manager.run({ id: 'wf' })
+    const r2 = await manager.run({ id: 'wf' })
+
+    const firstStepId = (rid: string): number | undefined =>
+      store.load(rid)!.events.find((e) => e.kind === 'step-started')?.stepId
+    expect(firstStepId(r1.runId)).toBe(0)
+    expect(firstStepId(r2.runId)).toBe(0) // counter reset in the finally
+  })
+
+  it('carries the agent prompt/permission on start and result envelope on finish (WHF-05/06)', async () => {
+    const agent = {
+      run: async (): Promise<AgentResult> => ({
+        status: 'done',
+        data: { summary: 'shipped' },
+        sessionId: 'sess-7'
+      })
+    }
+    const loader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async (ctx) => {
+          await ctx.agent({
+            prompt: 'ship it',
+            expect: { type: 'object' },
+            cwd: 'C:/x',
+            permission: 'write'
+          })
+        })
+    })
+    const { manager, store } = makeManager(loader, agent)
+
+    const { runId } = await manager.run({ id: 'wf' })
+
+    const events = store.load(runId)!.events
+    const start = events.find((e) => e.kind === 'step-started' && e.stepKind === 'agent')
+    expect(start?.agent).toEqual({ prompt: 'ship it', permission: 'write' })
+    const finish = events.find((e) => e.kind === 'step-finished' && e.agentResult)
+    expect(finish?.agentResult).toEqual({
+      status: 'done',
+      data: { summary: 'shipped' },
+      sessionId: 'sess-7'
+    })
   })
 })
