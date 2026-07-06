@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { RunStatus, StepEvent, WorkflowMeta } from '../shared/workflows'
-import type { Ctx, CtxDeps } from './workflow-ctx'
+import type { AgentResult } from './agent-step-runner'
+import { CancellationError, type Ctx, type CtxDeps } from './workflow-ctx'
 import type { LoadedWorkflow, RunFn } from './workflow-loader'
 import { WorkflowRunStore } from './workflow-run-store'
 import { WorkflowManager, type EmitFn, type WorkflowLoader } from './workflow-manager'
@@ -65,7 +66,10 @@ afterEach(() => {
   dirs.length = 0
 })
 
-function makeManager(loader: WorkflowLoader): {
+function makeManager(
+  loader: WorkflowLoader,
+  agent?: NonNullable<CtxDeps['agent']>
+): {
   manager: WorkflowManager
   store: WorkflowRunStore
   emit: EmitFnRecorder
@@ -74,10 +78,12 @@ function makeManager(loader: WorkflowLoader): {
   dirs.push(dir)
   const store = new WorkflowRunStore(dir)
   const emit = recordingEmit()
+  const ctxDeps = fakeCtxDeps()
+  if (agent) ctxDeps.agent = agent
   const manager = new WorkflowManager({
     workflowsRoot: '/virtual/workflows',
     loader,
-    ctxDeps: fakeCtxDeps(),
+    ctxDeps,
     store,
     emit: emit as unknown as EmitFn,
     notifier: (): void => {}
@@ -250,5 +256,90 @@ describe('WorkflowManager', () => {
       channel: 'workflow:status',
       payload: { runId, status: 'cancelled' }
     })
+  })
+
+  const AGENT_OPTS = { prompt: 'p', expect: { type: 'object' as const }, cwd: 'C:/x' }
+
+  it('hands makeCtx a runtime whose signal is a live, un-aborted AbortSignal (WF3-20)', async () => {
+    let captured: AbortSignal | undefined
+    const agent = {
+      run: async (_opts: unknown, signal?: AbortSignal): Promise<AgentResult> => {
+        captured = signal
+        return { status: 'done', data: {}, sessionId: 's-1' }
+      }
+    }
+    const loader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async (ctx) => {
+          await ctx.agent(AGENT_OPTS)
+        })
+    })
+    const { manager, store } = makeManager(loader, agent)
+
+    const { runId } = await manager.run({ id: 'wf' })
+
+    expect(captured).toBeInstanceOf(AbortSignal)
+    expect(captured?.aborted).toBe(false) // a normal completion never fires the signal
+    expect(store.load(runId)?.status).toBe('done')
+  })
+
+  it('cancel(runId) aborts the run signal, killing an in-flight agent step → cancelled (WF3-20)', async () => {
+    let captured: AbortSignal | undefined
+    let aborted = false
+    let started: () => void = () => {}
+    const startedP = new Promise<void>((resolve) => (started = resolve))
+    const agent = {
+      run: (_opts: unknown, signal?: AbortSignal): Promise<AgentResult> =>
+        new Promise<AgentResult>((_resolve, reject) => {
+          captured = signal
+          signal?.addEventListener('abort', () => {
+            aborted = true
+            reject(new CancellationError()) // the runner rejects on abort after child.kill()
+          })
+          started()
+        })
+    }
+    const loader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async (ctx) => {
+          await ctx.agent(AGENT_OPTS)
+        })
+    })
+    const { manager, store, emit } = makeManager(loader, agent)
+
+    const runPromise = manager.run({ id: 'wf' })
+    const runId = activeRunId(emit)
+    await startedP // the agent step is now in-flight, awaiting on the signal
+
+    manager.cancel(runId)
+    await runPromise
+
+    expect(captured).toBeInstanceOf(AbortSignal)
+    expect(aborted).toBe(true) // cancel fired the abort, not merely the boolean token
+    expect(store.load(runId)?.status).toBe('cancelled')
+  })
+
+  it('persists the agent step-logged sessionId on the run record (WF3-16)', async () => {
+    const agent = {
+      run: async (): Promise<AgentResult> => ({
+        status: 'done',
+        data: {},
+        sessionId: 'sess-persisted-9'
+      })
+    }
+    const loader = fakeLoader({
+      load: async (): Promise<LoadedWorkflow> =>
+        workflow(async (ctx) => {
+          await ctx.agent(AGENT_OPTS)
+        })
+    })
+    const { manager, store } = makeManager(loader, agent)
+
+    const { runId } = await manager.run({ id: 'wf' })
+
+    const logged = store
+      .load(runId)
+      ?.events.find((e) => e.kind === 'step-logged' && e.sessionId !== undefined)
+    expect(logged?.sessionId).toBe('sess-persisted-9')
   })
 })
