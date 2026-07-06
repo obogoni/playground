@@ -129,17 +129,20 @@ await new Promise((resolve, reject) => {
   ws.addEventListener('error', reject)
 })
 
-// Subscribe once; collectors live on window so they survive across evaluate calls.
+// RESET the collectors for THIS run (the app — and thus window — survives across smoke
+// invocations, so stale events from a prior run would otherwise pollute runId + statuses).
+// Subscribe only once, but have the listeners push into the CURRENT `window.__wfBlockSmoke`
+// so a reset between runs still routes new events into the fresh collector.
 await evaluate(
   ws,
   `(() => {
-     if (!window.__wfBlockSmoke) {
-       const s = { steps: [], logs: [], statuses: [], blocked: [] }
-       window.__wfBlockSmoke = s
-       window.api.on('workflow:step', (p) => s.steps.push(p))
-       window.api.on('workflow:log', (p) => s.logs.push(p))
-       window.api.on('workflow:status', (p) => s.statuses.push(p))
-       window.api.on('workflow:blocked', (p) => s.blocked.push(p))
+     window.__wfBlockSmoke = { steps: [], logs: [], statuses: [], blocked: [] }
+     if (!window.__wfBlockSmokeSubscribed) {
+       window.__wfBlockSmokeSubscribed = true
+       window.api.on('workflow:step', (p) => window.__wfBlockSmoke.steps.push(p))
+       window.api.on('workflow:log', (p) => window.__wfBlockSmoke.logs.push(p))
+       window.api.on('workflow:status', (p) => window.__wfBlockSmoke.statuses.push(p))
+       window.api.on('workflow:blocked', (p) => window.__wfBlockSmoke.blocked.push(p))
      }
      return true
    })()`
