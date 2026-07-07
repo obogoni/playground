@@ -20,7 +20,12 @@ import { TaskBoard } from './task-board'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
 import type { CtxDeps, GitFetchOptions, ShellResult } from './workflow-ctx'
-import { discoverWorkflows, esbuildBinaryPath, loadWorkflow } from './workflow-loader'
+import {
+  discoverWorkflows,
+  esbuildBinaryPath,
+  esbuildBinarySubpath,
+  loadWorkflow
+} from './workflow-loader'
 import { WorkflowManager } from './workflow-manager'
 import { WorkflowRunStore } from './workflow-run-store'
 import { scaffoldWorkflow } from './workflow-scaffold'
@@ -30,17 +35,16 @@ import { WorkspaceRegistry } from './workspace-registry'
 
 const execFileAsync = promisify(execFile)
 
-// The workflow-loader bundles workflow.ts with esbuild, which spawns its native
-// binary. In a packaged app esbuild resolves that binary to a path inside
-// app.asar (not a real file → spawn ENOENT); point its env at the unpacked copy
-// before the first build(). No-op in dev, where the binary sits in node_modules.
-if (app.isPackaged && !process.env.ESBUILD_BINARY_PATH) {
-  process.env.ESBUILD_BINARY_PATH = esbuildBinaryPath(
-    process.resourcesPath,
-    process.platform,
-    process.arch
-  )
-}
+// The workflow-loader bundles workflow.ts by spawning esbuild's native binary.
+// Resolve it once here (main knows whether we're packaged): in a packaged app the
+// binary lives in app.asar.unpacked (the in-asar copy is not spawnable); in dev
+// it sits in node_modules. Passed into the loader — NOT set as ESBUILD_BINARY_PATH,
+// which would leak into every child process the app spawns.
+const esbuildBin = app.isPackaged
+  ? esbuildBinaryPath(process.resourcesPath, process.platform, process.arch)
+  : require.resolve(
+      `@esbuild/${process.platform}-${process.arch}/${esbuildBinarySubpath(process.platform)}`
+    )
 
 /**
  * WF2 real `ctx.git.fetch` (WF2-07): a no-shell `git fetch`, mirroring the
@@ -309,7 +313,7 @@ app.whenReady().then(() => {
   const workflowsRoot = join(homedir(), '.playground', 'workflows')
   const workflows = new WorkflowManager({
     workflowsRoot,
-    loader: { discoverWorkflows, loadWorkflow },
+    loader: { discoverWorkflows, loadWorkflow: (folder) => loadWorkflow(folder, esbuildBin) },
     ctxDeps,
     store: new WorkflowRunStore(join(app.getPath('userData'), 'workflow-runs')),
     emit: emitToWindow,

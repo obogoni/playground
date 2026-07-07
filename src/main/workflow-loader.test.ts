@@ -1,8 +1,22 @@
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { discoverWorkflows, esbuildBinaryPath, loadWorkflow, validateMeta } from './workflow-loader'
+import {
+  discoverWorkflows,
+  esbuildBinaryPath,
+  esbuildBinarySubpath,
+  loadWorkflow,
+  validateMeta
+} from './workflow-loader'
+
+// The real esbuild binary in node_modules — loadWorkflow spawns it (it no longer
+// resolves the binary itself, so the caller supplies the path).
+const require = createRequire(import.meta.url)
+const ESBUILD_BIN = require.resolve(
+  `@esbuild/${process.platform}-${process.arch}/${esbuildBinarySubpath(process.platform)}`
+)
 
 const dirs: string[] = []
 afterEach(() => {
@@ -141,7 +155,7 @@ describe('loadWorkflow (real esbuild bundle)', () => {
         `export const meta = { name: 'Demo', inputs: [{ key: 'k', label: 'K' }] }\n` +
         `export async function run(ctx) { await ctx.log('hi') }\n`
     })
-    const result = await loadWorkflow(folder)
+    const result = await loadWorkflow(folder, ESBUILD_BIN)
     if ('error' in result) throw new Error(`expected load, got error: ${result.error}`)
     expect(result.meta.name).toBe('Demo')
     expect(result.meta.inputs).toEqual([{ key: 'k', label: 'K' }])
@@ -150,7 +164,7 @@ describe('loadWorkflow (real esbuild bundle)', () => {
 
   it('returns { error } when workflow.ts has a syntax error', async () => {
     const folder = workflowDir({ 'workflow.ts': `export const meta = { name: 'Broken' ,,,` })
-    const result = await loadWorkflow(folder)
+    const result = await loadWorkflow(folder, ESBUILD_BIN)
     expect('error' in result).toBe(true)
   })
 
@@ -158,7 +172,7 @@ describe('loadWorkflow (real esbuild bundle)', () => {
     const folder = workflowDir({
       'workflow.ts': `export const meta = { name: 'NoRun', inputs: [] }\n`
     })
-    const result = await loadWorkflow(folder)
+    const result = await loadWorkflow(folder, ESBUILD_BIN)
     expect('error' in result).toBe(true)
   })
 
@@ -169,9 +183,17 @@ describe('loadWorkflow (real esbuild bundle)', () => {
     const folder = workflowDir({
       'workflow.ts': `export const meta = { name: 'Clean', inputs: [] }\nexport async function run() {}\n`
     })
-    const result = await loadWorkflow(folder)
+    const result = await loadWorkflow(folder, ESBUILD_BIN)
     if ('error' in result) throw new Error(`expected load, got error: ${result.error}`)
     expect(leaked()).toBe(before)
+  })
+
+  it('returns { error } when the esbuild binary path is invalid', async () => {
+    const folder = workflowDir({
+      'workflow.ts': `export const meta = { name: 'X', inputs: [] }\nexport async function run() {}\n`
+    })
+    const result = await loadWorkflow(folder, join(tmpdir(), 'does-not-exist-esbuild.exe'))
+    expect('error' in result).toBe(true)
   })
 
   it('bundles a relative helper import into one working module', async () => {
@@ -182,7 +204,7 @@ describe('loadWorkflow (real esbuild bundle)', () => {
         `export const meta = { name: NAME, inputs: [] }\n` +
         `export async function run() {}\n`
     })
-    const result = await loadWorkflow(folder)
+    const result = await loadWorkflow(folder, ESBUILD_BIN)
     if ('error' in result) throw new Error(`expected load, got error: ${result.error}`)
     expect(result.meta.name).toBe('FromHelper')
   })
