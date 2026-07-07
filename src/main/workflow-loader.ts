@@ -1,7 +1,7 @@
-import { build } from 'esbuild'
+import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { readdir } from 'node:fs/promises'
-import { unlinkSync, writeFileSync } from 'node:fs'
+import { unlinkSync } from 'node:fs'
 import { builtinModules } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -19,26 +19,34 @@ const EXTERNAL = [...builtinModules, ...builtinModules.map((m) => `node:${m}`), 
 
 /**
  * The on-disk path of esbuild's native binary inside a packaged app (WF fix).
- * esbuild resolves its binary relative to its own package, which electron-builder
- * places inside `app.asar`; a `.exe` there is not a real file, so `spawn` gets
- * ENOENT. electron-builder DOES smart-unpack `@esbuild/*` to `app.asar.unpacked`,
- * so we point esbuild's `ESBUILD_BINARY_PATH` env at that real copy. Pure so it
- * can be unit-tested without Electron; the caller supplies `process.resourcesPath`.
+ * esbuild would resolve its binary relative to its own package, which
+ * electron-builder places inside `app.asar`; a `.exe` there is not a real file,
+ * so spawning it gets ENOENT. electron-builder DOES smart-unpack `@esbuild/*` to
+ * `app.asar.unpacked`, so `loadWorkflow` spawns that real copy — the caller
+ * (main, which knows `process.resourcesPath`) builds this path. Pure so it can be
+ * unit-tested without Electron. NOTE: we pass this path straight to the spawn, we
+ * do NOT set `ESBUILD_BINARY_PATH` — that global env would leak into every child
+ * the app spawns (agents/CLIs), forcing their own, differently-versioned esbuild
+ * onto this binary and breaking them with a host/binary version mismatch.
  */
 export function esbuildBinaryPath(
   resourcesPath: string,
   platform: NodeJS.Platform,
   arch: string
 ): string {
-  const bin = platform === 'win32' ? 'esbuild.exe' : join('bin', 'esbuild')
   return join(
     resourcesPath,
     'app.asar.unpacked',
     'node_modules',
     '@esbuild',
     `${platform}-${arch}`,
-    bin
+    esbuildBinarySubpath(platform)
   )
+}
+
+/** The binary's name within its `@esbuild/<platform>-<arch>` package. */
+export function esbuildBinarySubpath(platform: NodeJS.Platform): string {
+  return platform === 'win32' ? 'esbuild.exe' : join('bin', 'esbuild')
 }
 
 /**
@@ -103,33 +111,54 @@ export function validateMeta(mod: unknown): LoadedWorkflow {
 
 /**
  * Load one workflow: bundle `<folder>/workflow.ts` with esbuild (bundle mode, so
- * relative helper/prompt imports resolve into one module), write the output to a
- * uniquely-named temp `.mjs` (unique name ⇒ the ESM cache never returns a stale
- * module across reloads), `import()` it, and validate its exports (WF2-02/03). A
- * transpile/bundle failure or an invalid export set yields `{error}` — never
- * throws — so a broken workflow lists without blocking the others. The temp file
- * is unlinked once imported (the module is already in memory) so repeated
- * loads/reloads don't leak files in the OS temp directory.
+ * relative helper/prompt imports resolve into one module) into a uniquely-named
+ * temp `.mjs` (unique name ⇒ the ESM cache never returns a stale module across
+ * reloads), `import()` it, and validate its exports (WF2-02/03). A transpile/
+ * bundle failure or an invalid export set yields `{error}` — never throws — so a
+ * broken workflow lists without blocking the others. The temp file is unlinked
+ * once imported (the module is already in memory) so repeated loads/reloads
+ * don't leak files in the OS temp directory.
+ *
+ * Bundles by spawning the esbuild binary (`esbuildBin`, its CLI) directly, NOT
+ * esbuild's Node API. The async `build()` keeps a long-lived service child
+ * spawned with `stdio[2]: 'inherit'`, which in a packaged Windows Electron app
+ * (GUI subsystem, no valid parent stderr) dies right after launch — the next
+ * write to its stdin fails with `write EPIPE` ("The service is no longer
+ * running"), listing every workflow as broken; `buildSync` sidesteps that but
+ * spins a worker thread that is fragile in a host already running esbuild. A
+ * plain one-shot `execFileSync` of the binary with piped (not inherited) stdio
+ * has none of those failure modes and behaves identically in dev and packaged;
+ * esbuild's stderr diagnostics are captured and surfaced in `{error}` instead of
+ * the opaque EPIPE.
  */
-export async function loadWorkflow(folder: string): Promise<LoadedWorkflow> {
-  let outputText: string
-  try {
-    const result = await build({
-      entryPoints: [join(folder, 'workflow.ts')],
-      bundle: true,
-      platform: 'node',
-      format: 'esm',
-      write: false,
-      external: EXTERNAL
-    })
-    outputText = result.outputFiles[0].text
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : String(err) }
-  }
-
+export async function loadWorkflow(folder: string, esbuildBin: string): Promise<LoadedWorkflow> {
   const tmpFile = join(tmpdir(), `workflow-${randomUUID()}.mjs`)
   try {
-    writeFileSync(tmpFile, outputText, 'utf8')
+    execFileSync(
+      esbuildBin,
+      [
+        join(folder, 'workflow.ts'),
+        '--bundle',
+        '--platform=node',
+        '--format=esm',
+        ...EXTERNAL.map((m) => `--external:${m}`),
+        `--outfile=${tmpFile}`
+      ],
+      { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true }
+    )
+  } catch (err) {
+    // esbuild writes bundle diagnostics to stderr, which execFileSync attaches to
+    // the thrown error; prefer that over the generic "Command failed" message.
+    const stderr = (err as { stderr?: Buffer }).stderr
+    const message = stderr?.length
+      ? stderr.toString('utf8').trim()
+      : err instanceof Error
+        ? err.message
+        : String(err)
+    return { error: message }
+  }
+
+  try {
     const href = pathToFileURL(tmpFile).href
     const mod = await import(/* @vite-ignore */ href)
     return validateMeta(mod)
