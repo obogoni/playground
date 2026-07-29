@@ -37,6 +37,35 @@ describe('runHookShell', () => {
     expect(result.timedOut).toBeUndefined()
   })
 
+  it('captures stderr from a failing command', async () => {
+    // The real seam's stderr wiring is asserted nowhere else — the runner's stderr
+    // tests all drive a fake shell, so only this pins the actual capture.
+    const result = await runHookShell('echo bad-news 1>&2 & exit 1', {
+      cwd: dir,
+      env,
+      timeoutMs: 30000
+    })
+
+    expect(result.code).toBe(1)
+    expect(result.stderr).toContain('bad-news')
+  })
+
+  it('captures a large burst of output in full', async () => {
+    // Guards the settle race in the direction the timeout tests cannot: settling on
+    // `exit` must never truncate a command that is still flushing. 2000 lines is far
+    // more than a pipe buffer holds.
+    const result = await runHookShell('for /L %i in (1,1,2000) do @echo line-%i', {
+      cwd: dir,
+      env,
+      timeoutMs: 30000
+    })
+
+    expect(result.code).toBe(0)
+    expect(result.stdout).toContain('line-1\r\n')
+    expect(result.stdout).toContain('line-2000')
+    expect(result.stdout.split('line-').length - 1).toBe(2000)
+  })
+
   it('passes the environment through to the command', async () => {
     const result = await runHookShell('echo %PLAYGROUND_BRANCH%', {
       cwd: dir,
@@ -65,14 +94,18 @@ describe('runHookShell', () => {
   // grandchild holds its cwd open, which would make the afterEach cleanup fail
   // with EPERM on Windows. The cwd is irrelevant to what they assert.
   it('kills a long-running command and flags it as timed out', async () => {
-    const result = await runHookShell('ping -n 10 127.0.0.1', {
+    const result = await runHookShell('ping -n 5 127.0.0.1', {
       cwd: tmpdir(),
       env,
-      timeoutMs: 700
+      timeoutMs: 500
     })
 
     expect(result.timedOut).toBe(true)
     expect(result.code).toBe(-1)
+    // WPC-05 keeps the output captured *so far* — the flush grace period is what
+    // makes that true on the kill path, where `close` never arrives in time.
+    // (Asserted on the address, not on ping's localized prose.)
+    expect(result.stdout).toContain('127.0.0.1')
   })
 
   it('returns promptly when a surviving grandchild holds the pipes open', async () => {
@@ -81,15 +114,17 @@ describe('runHookShell', () => {
     // keeps those pipes open and `close` lags the kill by many seconds — or never
     // arrives. This must still return, and must still say it timed out.
     const started = Date.now()
-    const result = await runHookShell('start /b ping -n 10 127.0.0.1 & ping -n 10 127.0.0.1', {
+    const result = await runHookShell('start /b ping -n 5 127.0.0.1 & ping -n 5 127.0.0.1', {
       cwd: tmpdir(),
       env,
-      timeoutMs: 700
+      timeoutMs: 500
     })
     const elapsed = Date.now() - started
 
     expect(result.timedOut).toBe(true)
     expect(result.code).toBe(-1)
-    expect(elapsed).toBeLessThan(6000)
+    // Settling on `exit` lands ~750ms; waiting for `close` would take ~4s while the
+    // grandchild holds the pipes. The bound has to sit between the two to discriminate.
+    expect(elapsed).toBeLessThan(2000)
   }, 20000)
 })

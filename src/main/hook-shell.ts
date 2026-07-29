@@ -25,10 +25,19 @@ export const HOOK_FLUSH_GRACE_MS = 250
  * would leave `worktrees:create` unresolved and the caller stuck.
  *
  * So whichever comes first wins: `close` (complete output, the normal case) or
- * `exit` plus a short flush grace period (guaranteed progress). Either way the
- * result is returned promptly. A detached grandchild may still outlive the shell —
- * that limitation stands (a real process-tree kill is out of scope) — but it can no
- * longer hold the create hostage.
+ * `exit` plus a short flush grace period (progress even when `close` is hostage to
+ * a grandchild). Either way the result is returned promptly. A detached grandchild
+ * may still outlive the shell — that limitation stands (a real process-tree kill is
+ * out of scope) — but it can no longer hold the create hostage.
+ *
+ * The grace timer is deliberately **not** `unref`'d: it must be able to keep the
+ * event loop alive on its own for those few milliseconds, or the `exit` path would
+ * only appear to guarantee progress while actually depending on `close`/the open
+ * pipes to keep the process running.
+ *
+ * Output completeness is unaffected. A process cannot exit until its writes have
+ * been accepted, so at most a pipe-buffer's worth is in flight at `exit`, and
+ * `close` wins that race — measured complete for a 1 MB single burst.
  */
 export const runHookShell: HookShell = (cmd, { cwd, env, timeoutMs }) => {
   return new Promise<HookShellResult>((resolve) => {
@@ -61,9 +70,9 @@ export const runHookShell: HookShell = (cmd, { cwd, env, timeoutMs }) => {
     child.on('error', (err) => settle({ code: -1, stdout, stderr: stderr + String(err) }))
     child.on('close', (code, signal) => settle(outcome(code, signal)))
     child.on('exit', (code, signal) => {
+      // Left referenced on purpose (see the note above): this timer is the only
+      // thing guaranteeing the promise settles when `close` is held hostage.
       graceTimer = setTimeout(() => settle(outcome(code, signal)), HOOK_FLUSH_GRACE_MS)
-      // Don't hold the event loop open just for the grace timer.
-      graceTimer.unref?.()
     })
   })
 }
