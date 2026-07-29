@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { CreateWorktreeResult } from '../shared/worktrees'
+import { runHookShell } from './hook-shell'
 import type { CreateWorktreeFn, HookShell, HookShellResult } from './post-create-hook'
 import {
   HOOK_OUTPUT_MAX_CHARS,
@@ -7,6 +12,8 @@ import {
   runPostCreateHook,
   withPostCreateHook
 } from './post-create-hook'
+import { repoPostCreateCommand } from './repo-config'
+import { createWorktree } from './worktree-manager'
 
 interface ShellCall {
   cmd: string
@@ -121,7 +128,11 @@ describe('runPostCreateHook', () => {
 
     const hook = await runPostCreateHook('SetupSkills.cmd', ctx, shell)
 
-    expect(hook.output).toHaveLength(HOOK_OUTPUT_MAX_CHARS)
+    // Pinned to the spec's literal bound, not to the constant — asserting
+    // toHaveLength(HOOK_OUTPUT_MAX_CHARS) alone is self-referential and would
+    // still pass if the bound were changed.
+    expect(HOOK_OUTPUT_MAX_CHARS).toBe(4000)
+    expect(hook.output).toHaveLength(4000)
     expect(hook.output.endsWith('TAIL')).toBe(true)
   })
 
@@ -321,5 +332,75 @@ describe('withPostCreateHook', () => {
     expect(slow.hook?.output).toBe('ran in M:\\src\\Code-slow')
     expect(fast.hook?.command).toBe('Fast.cmd')
     expect(fast.hook?.output).toBe('ran in M:\\src\\Code-fast')
+  })
+})
+
+/**
+ * The spec's own Independent Test for WPC-01/WPC-03, wired end to end over real
+ * git, a real repo config and a real shell — the only way to assert the part that
+ * matters most: a failed init command must not cost you the worktree ON DISK.
+ */
+describe('withPostCreateHook over real git', () => {
+  let root: string
+  let repo: string
+
+  const git = (cwd: string, ...args: string[]): void => {
+    execFileSync('git', args, { cwd, windowsHide: true })
+  }
+
+  const declareCommand = (command: string): void => {
+    mkdirSync(join(repo, '.app'), { recursive: true })
+    writeFileSync(join(repo, '.app', 'config.json'), JSON.stringify({ postCreateCommand: command }))
+  }
+
+  const create = withPostCreateHook(createWorktree, {
+    readCommand: repoPostCreateCommand,
+    shell: runHookShell
+  })
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'wtm-hookint-'))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('runs the declared command inside the new worktree', async () => {
+    declareCommand('echo initialized > hook-ran.txt')
+
+    const result = await create(repo, 'feature/ok', 'main')
+
+    expect(result.ok).toBe(true)
+    expect(result.hook?.ok).toBe(true)
+    expect(existsSync(join(result.path as string, 'hook-ran.txt'))).toBe(true)
+  })
+
+  it('keeps the worktree on disk when the command fails', async () => {
+    declareCommand('exit 1')
+
+    const result = await create(repo, 'feature/bad', 'main')
+
+    expect(result.ok).toBe(true)
+    expect(result.hook?.ok).toBe(false)
+    expect(result.hook?.code).toBe(1)
+    expect(existsSync(result.path as string)).toBe(true)
+    expect(existsSync(join(result.path as string, 'a.txt'))).toBe(true)
+  })
+
+  it('leaves no hook on the result when the repo declares nothing', async () => {
+    const result = await create(repo, 'feature/plain', 'main')
+
+    expect(result.ok).toBe(true)
+    expect('hook' in result).toBe(false)
+    expect(existsSync(result.path as string)).toBe(true)
   })
 })
