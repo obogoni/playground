@@ -125,7 +125,12 @@ export function NewWorktreeDialog({
   }
 
   return (
-    <div className="dialog-backdrop" onClick={onClose}>
+    // While the hook advisory is up the worktree already exists, so dismissing by
+    // backdrop must continue the post-create flow, not silently drop it (WPC-14).
+    <div
+      className="dialog-backdrop"
+      onClick={hookFailure ? () => onCreated(hookFailure.path) : onClose}
+    >
       <div className="dialog-panel" onClick={(event) => event.stopPropagation()}>
         <header className="dialog-header">
           <div className="dialog-kicker">New worktree</div>
