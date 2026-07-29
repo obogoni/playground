@@ -11,9 +11,10 @@ import icon from '../../resources/icon.png?asset'
 import { AdoGateway } from './ado-gateway'
 import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-runner'
 import { ConfigStore } from './config-store'
+import { runHookShell } from './hook-shell'
 import { emit, handle, onSend } from './ipc'
 import { createMcpResultServer } from './mcp-result-server'
-import { withPostCreateHook, type HookShell, type HookShellResult } from './post-create-hook'
+import { withPostCreateHook } from './post-create-hook'
 import { PtyPort } from './pty-port'
 import { repoPostCreateCommand } from './repo-config'
 import { SessionManager, type EmitFn } from './session-manager'
@@ -78,43 +79,6 @@ function runShell(cmd: string, opts: { cwd: string }): Promise<ShellResult> {
     child.stderr?.on('data', (chunk) => (stderr += chunk.toString()))
     child.on('error', (err) => resolve({ code: -1, stdout, stderr: stderr + String(err) }))
     child.on('close', (code) => resolve({ code: code ?? -1, stdout, stderr }))
-  })
-}
-
-/**
- * WPC real `HookShell` seam (WPC-01): a repo's post-create command runs **through a
- * shell** so a checked-in `.cmd`/`.ps1` works, in the new worktree, with the
- * `PLAYGROUND_*` env the caller supplies. Same never-throw capture shape as
- * `runShell` above — a spawn error becomes `code: -1` rather than a rejection.
- *
- * The timeout is `spawn`'s own: on expiry Node sends `killSignal`, and the `close`
- * event then reports a non-null `signal`, which is the only reliable
- * "killed-for-time" marker (an exit code alone is ambiguous on Windows). Only the
- * spawned shell is killed — a detached grandchild can outlive it (documented Out
- * of Scope; a real tree-kill is a separate concern).
- */
-const runHookShell: HookShell = (cmd, { cwd, env, timeoutMs }) => {
-  return new Promise<HookShellResult>((resolve) => {
-    const child = spawn(cmd, {
-      cwd,
-      env,
-      shell: true,
-      windowsHide: true,
-      timeout: timeoutMs,
-      killSignal: 'SIGTERM'
-    })
-    let stdout = ''
-    let stderr = ''
-    child.stdout?.on('data', (chunk) => (stdout += chunk.toString()))
-    child.stderr?.on('data', (chunk) => (stderr += chunk.toString()))
-    child.on('error', (err) => resolve({ code: -1, stdout, stderr: stderr + String(err) }))
-    child.on('close', (code, signal) => {
-      if (signal !== null) {
-        resolve({ code: -1, stdout, stderr, timedOut: true })
-        return
-      }
-      resolve({ code: code ?? -1, stdout, stderr })
-    })
   })
 }
 
