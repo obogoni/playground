@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import type { HookShell, HookShellResult } from './post-create-hook'
-import { HOOK_OUTPUT_MAX_CHARS, HOOK_TIMEOUT_MS, runPostCreateHook } from './post-create-hook'
+import type { CreateWorktreeResult } from '../shared/worktrees'
+import type { CreateWorktreeFn, HookShell, HookShellResult } from './post-create-hook'
+import {
+  HOOK_OUTPUT_MAX_CHARS,
+  HOOK_TIMEOUT_MS,
+  runPostCreateHook,
+  withPostCreateHook
+} from './post-create-hook'
 
 interface ShellCall {
   cmd: string
@@ -141,5 +147,179 @@ describe('runPostCreateHook', () => {
     const hook = await runPostCreateHook('rem no-op', ctx, shell)
 
     expect(hook.ok).toBe(true)
+  })
+})
+
+/** Records every create invocation so argument pass-through can be asserted. */
+function fakeCreate(result: CreateWorktreeResult): { create: CreateWorktreeFn; args: unknown[][] } {
+  const args: unknown[][] = []
+  const create: CreateWorktreeFn = (...called) => {
+    args.push(called)
+    return Promise.resolve(result)
+  }
+  return { create, args }
+}
+
+describe('withPostCreateHook', () => {
+  it('runs the command in the created worktree and attaches the outcome', async () => {
+    const { create } = fakeCreate({ ok: true, path: 'M:\\src\\Code-feature-x' })
+    const { shell, calls } = fakeShell({ code: 0, stdout: 'junctions created' })
+
+    const result = await withPostCreateHook(create, {
+      readCommand: () => 'SetupSkills.cmd',
+      shell
+    })('M:\\src\\Code', 'feature/x', 'main')
+
+    expect(calls[0].cwd).toBe('M:\\src\\Code-feature-x')
+    expect(result.ok).toBe(true)
+    expect(result.path).toBe('M:\\src\\Code-feature-x')
+    expect(result.hook).toEqual({
+      ok: true,
+      command: 'SetupSkills.cmd',
+      code: 0,
+      output: 'junctions created'
+    })
+  })
+
+  it('keeps the worktree when the command fails', async () => {
+    const { create } = fakeCreate({ ok: true, path: 'M:\\src\\Code-feature-x' })
+    const { shell } = fakeShell({ code: 1, stderr: 'ERRO' })
+
+    const result = await withPostCreateHook(create, {
+      readCommand: () => 'SetupSkills.cmd',
+      shell
+    })('M:\\src\\Code', 'feature/x', 'main')
+
+    expect(result.ok).toBe(true)
+    expect(result.path).toBe('M:\\src\\Code-feature-x')
+    expect(result.error).toBeUndefined()
+    expect(result.hook?.ok).toBe(false)
+    expect(result.hook?.code).toBe(1)
+  })
+
+  it('does not run the command when the branch already exists', async () => {
+    const { create } = fakeCreate({ ok: false, conflict: 'branch-exists' })
+    const { shell, calls } = fakeShell({ code: 0 })
+
+    const result = await withPostCreateHook(create, {
+      readCommand: () => 'SetupSkills.cmd',
+      shell
+    })('M:\\src\\Code', 'feature/x', 'main')
+
+    expect(calls).toHaveLength(0)
+    expect('hook' in result).toBe(false)
+    expect(result.conflict).toBe('branch-exists')
+  })
+
+  it('does not run the command when the create failed', async () => {
+    const { create } = fakeCreate({ ok: false, error: 'Target path already exists: …' })
+    const { shell, calls } = fakeShell({ code: 0 })
+
+    const result = await withPostCreateHook(create, {
+      readCommand: () => 'SetupSkills.cmd',
+      shell
+    })('M:\\src\\Code', 'feature/x', 'main')
+
+    expect(calls).toHaveLength(0)
+    expect('hook' in result).toBe(false)
+  })
+
+  it('does not run the command when the create reported no path', async () => {
+    const { create } = fakeCreate({ ok: true })
+    const { shell, calls } = fakeShell({ code: 0 })
+
+    const result = await withPostCreateHook(create, {
+      readCommand: () => 'SetupSkills.cmd',
+      shell
+    })('M:\\src\\Code', 'feature/x', 'main')
+
+    expect(calls).toHaveLength(0)
+    expect('hook' in result).toBe(false)
+  })
+
+  it('runs the command on the reuse path', async () => {
+    const { create } = fakeCreate({ ok: true, path: 'M:\\src\\Code-feature-reuse' })
+    const { shell, calls } = fakeShell({ code: 0 })
+
+    const result = await withPostCreateHook(create, {
+      readCommand: () => 'SetupSkills.cmd',
+      shell
+    })('M:\\src\\Code', 'feature/reuse', 'main', undefined, false, 'reuse')
+
+    expect(calls[0].cwd).toBe('M:\\src\\Code-feature-reuse')
+    expect(result.hook?.ok).toBe(true)
+  })
+
+  it('runs the command on the recreate path', async () => {
+    const { create } = fakeCreate({ ok: true, path: 'M:\\src\\Code-feature-re' })
+    const { shell, calls } = fakeShell({ code: 0 })
+
+    const result = await withPostCreateHook(create, {
+      readCommand: () => 'SetupSkills.cmd',
+      shell
+    })('M:\\src\\Code', 'feature/re', 'main', undefined, false, 'recreate')
+
+    expect(calls[0].cwd).toBe('M:\\src\\Code-feature-re')
+    expect(result.hook?.ok).toBe(true)
+  })
+
+  it('leaves the result untouched when the repo declares no command', async () => {
+    const { create } = fakeCreate({ ok: true, path: 'M:\\src\\Code-feature-x' })
+    const { shell, calls } = fakeShell({ code: 0 })
+
+    const result = await withPostCreateHook(create, { readCommand: () => null, shell })(
+      'M:\\src\\Code',
+      'feature/x',
+      'main'
+    )
+
+    expect(calls).toHaveLength(0)
+    expect('hook' in result).toBe(false)
+    expect(result).toEqual({ ok: true, path: 'M:\\src\\Code-feature-x' })
+  })
+
+  it('forwards every create argument verbatim', async () => {
+    const { create, args } = fakeCreate({ ok: true, path: 'M:\\src\\Code-feature-x' })
+    const { shell } = fakeShell({ code: 0 })
+
+    await withPostCreateHook(create, { readCommand: () => null, shell })(
+      'M:\\src\\Code',
+      'feature/x',
+      'main',
+      '{repo}-{id}',
+      true,
+      'reuse'
+    )
+
+    expect(args[0]).toEqual(['M:\\src\\Code', 'feature/x', 'main', '{repo}-{id}', true, 'reuse'])
+  })
+
+  it('keeps concurrent creates isolated from each other', async () => {
+    // Each shell call reports its own cwd back, delayed so the two interleave.
+    const shell: HookShell = (_cmd, opts) =>
+      new Promise((resolve) =>
+        setTimeout(
+          () => resolve({ code: 0, stdout: `ran in ${opts.cwd}`, stderr: '' }),
+          opts.cwd.endsWith('slow') ? 20 : 1
+        )
+      )
+    const wrapSlow = withPostCreateHook(
+      fakeCreate({ ok: true, path: 'M:\\src\\Code-slow' }).create,
+      { readCommand: () => 'Slow.cmd', shell }
+    )
+    const wrapFast = withPostCreateHook(
+      fakeCreate({ ok: true, path: 'M:\\src\\Code-fast' }).create,
+      { readCommand: () => 'Fast.cmd', shell }
+    )
+
+    const [slow, fast] = await Promise.all([
+      wrapSlow('M:\\src\\Code', 'slow'),
+      wrapFast('M:\\src\\Code', 'fast')
+    ])
+
+    expect(slow.hook?.command).toBe('Slow.cmd')
+    expect(slow.hook?.output).toBe('ran in M:\\src\\Code-slow')
+    expect(fast.hook?.command).toBe('Fast.cmd')
+    expect(fast.hook?.output).toBe('ran in M:\\src\\Code-fast')
   })
 })

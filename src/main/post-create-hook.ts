@@ -1,4 +1,4 @@
-import type { PostCreateHookResult } from '../shared/worktrees'
+import type { CreateWorktreeResult, PostCreateHookResult } from '../shared/worktrees'
 
 /** How long a repo's init command may run before it is killed (WPC-05). */
 export const HOOK_TIMEOUT_MS = 120000
@@ -78,4 +78,63 @@ export async function runPostCreateHook(
 function combinedTail({ stdout, stderr }: HookShellResult): string {
   const combined = [stdout, stderr].filter((stream) => stream !== '').join('\n')
   return combined.length > HOOK_OUTPUT_MAX_CHARS ? combined.slice(-HOOK_OUTPUT_MAX_CHARS) : combined
+}
+
+/** `createWorktree`'s exact shape — what the decorator consumes and returns. */
+export type CreateWorktreeFn = (
+  repoPath: string,
+  branch: string,
+  baseBranch?: string,
+  worktreeTemplate?: string,
+  updateBase?: boolean,
+  onExisting?: 'reuse' | 'recreate'
+) => Promise<CreateWorktreeResult>
+
+export interface PostCreateHookDeps {
+  /** Reads the repo's declared command; null when it declares none. */
+  readCommand(repoPath: string): string | null
+  shell: HookShell
+}
+
+/**
+ * Wraps a create with the repo's post-create hook, returning a function with the
+ * **identical signature** so it is a drop-in for every caller (WPC-10). Wiring
+ * this once in `index.ts` and handing it to both the IPC handler and the workflow
+ * ctx is what makes the hook non-optional — no call site can bypass it.
+ *
+ * The hook runs **iff the create actually produced a worktree**: `ok` with a
+ * `path`. That single test covers every no-worktree outcome without enumerating
+ * them (WPC-08) — a branch-exists conflict, an empty rendered template, an
+ * existing target path, a blocked base refresh and a failed `git worktree add`
+ * are all `ok: false` — while the successful `reuse`/`recreate` paths are
+ * `ok: true` with a path and so do run it.
+ *
+ * A repo that declares no command is returned untouched, with **no `hook` key at
+ * all**, keeping the pre-feature result shape byte-identical (WPC-06). A hook
+ * that fails never invalidates the create: `ok` and `path` pass through and the
+ * failure rides along in `hook` (WPC-03) — nothing here removes a worktree.
+ */
+export function withPostCreateHook(
+  create: CreateWorktreeFn,
+  deps: PostCreateHookDeps
+): CreateWorktreeFn {
+  return async (repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting) => {
+    const result = await create(
+      repoPath,
+      branch,
+      baseBranch,
+      worktreeTemplate,
+      updateBase,
+      onExisting
+    )
+    if (!result.ok || typeof result.path !== 'string') return result
+    const command = deps.readCommand(repoPath)
+    if (command === null) return result
+    const hook = await runPostCreateHook(
+      command,
+      { worktreePath: result.path, repoPath, branch },
+      deps.shell
+    )
+    return { ...result, hook }
+  }
 }
