@@ -24,6 +24,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: RunDetail.css:14 / WorkflowsView.css:21 (SPEC_DEVIATION pulse keyframe) (src/renderer/**/*.css)
 - last seen: 2026-07-06T21:57:51Z
 
+### L-003 — When wrapping a spawned process with a timeout, settle the promise on 'exit' plus a short flush grace period, never on 'close' alone: 'close' waits for stdio EOF and killing a shell does not kill its children, so a surviving grandchild holds the inherited pipes and the promise can lag by seconds or never settle
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `child-process` · harmful: 0
+- features: worktree-post-create-hook
+- evidence: validation.md round-1 blocker; src/main/hook-shell.ts:71 (child-process)
+- last seen: 2026-07-29T22:37:03Z
+
+### L-004 — Assert a spec-defined bound against its literal value, not against the constant that implements it: expect(x).toHaveLength(MAX_CHARS) is self-referential and survives a mutation of MAX_CHARS itself
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: worktree-post-create-hook
+- evidence: mutant R1/M7; post-create-hook.test.ts output-tail test (testing)
+- last seen: 2026-07-29T22:37:04Z
+
+### L-005 — Before adding real-process or real-git tests, check whether existing suites already sit near the default per-test timeout: the extra parallel load alone can push them over it, turning a green gate red without any production change
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: worktree-post-create-hook
+- evidence: validation.md round-2 gate section; tree.test.ts / worktree-manager.test.ts timeouts (testing)
+- last seen: 2026-07-29T22:37:06Z
+
 ## Quarantined (failed when applied — ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

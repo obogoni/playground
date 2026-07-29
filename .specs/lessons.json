@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 3,
+  "next_id": 6,
   "lessons": [
     {
       "id": "L-001",
@@ -42,6 +42,60 @@
       ],
       "created": "2026-07-06T21:57:51Z",
       "last_seen": "2026-07-06T21:57:51Z"
+    },
+    {
+      "id": "L-003",
+      "key": "ac_gap::when wrapping a spawned process with a timeout settle the promise on exit plus a short flush grace period never on close alone close waits for stdio eof and killing a shell does not kill its children so a surviving grandchild holds the inherited pipes and the promise can lag by seconds or never settle",
+      "text": "When wrapping a spawned process with a timeout, settle the promise on 'exit' plus a short flush grace period, never on 'close' alone: 'close' waits for stdio EOF and killing a shell does not kill its children, so a surviving grandchild holds the inherited pipes and the promise can lag by seconds or never settle",
+      "signal": "ac_gap",
+      "scope": "child-process",
+      "status": "candidate",
+      "features": [
+        "worktree-post-create-hook"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round-1 blocker; src/main/hook-shell.ts:71 (child-process)"
+      ],
+      "created": "2026-07-29T22:37:03Z",
+      "last_seen": "2026-07-29T22:37:03Z"
+    },
+    {
+      "id": "L-004",
+      "key": "surviving_mutant::assert a spec defined bound against its literal value not against the constant that implements it expect x tohavelength max chars is self referential and survives a mutation of max chars itself",
+      "text": "Assert a spec-defined bound against its literal value, not against the constant that implements it: expect(x).toHaveLength(MAX_CHARS) is self-referential and survives a mutation of MAX_CHARS itself",
+      "signal": "surviving_mutant",
+      "scope": "testing",
+      "status": "candidate",
+      "features": [
+        "worktree-post-create-hook"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "mutant R1/M7; post-create-hook.test.ts output-tail test (testing)"
+      ],
+      "created": "2026-07-29T22:37:04Z",
+      "last_seen": "2026-07-29T22:37:04Z"
+    },
+    {
+      "id": "L-005",
+      "key": "gate_fail::before adding real process or real git tests check whether existing suites already sit near the default per test timeout the extra parallel load alone can push them over it turning a green gate red without any production change",
+      "text": "Before adding real-process or real-git tests, check whether existing suites already sit near the default per-test timeout: the extra parallel load alone can push them over it, turning a green gate red without any production change",
+      "signal": "gate_fail",
+      "scope": "testing",
+      "status": "candidate",
+      "features": [
+        "worktree-post-create-hook"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round-2 gate section; tree.test.ts / worktree-manager.test.ts timeouts (testing)"
+      ],
+      "created": "2026-07-29T22:37:06Z",
+      "last_seen": "2026-07-29T22:37:06Z"
     }
   ]
 }
