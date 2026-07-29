@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { JSX } from 'react'
 import type { WorkspaceNode } from '../../../shared/tree'
+import type { PostCreateHookResult } from '../../../shared/worktrees'
 import { worktreePathFor } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { defaultBaseFor, repoOptionsOf } from '../lib/repo-options'
 import { BranchExistsChoice } from './BranchExistsChoice'
+import { HookFailureNotice } from './HookFailureNotice'
 import { Icon } from './Icon'
 import './NewWorktreeDialog.css'
 
@@ -40,6 +42,13 @@ export function NewWorktreeDialog({
   // Set when create reports the branch already exists — swaps the footer for the
   // reuse/recreate choice (EXB-06).
   const [conflict, setConflict] = useState<'branch-exists' | null>(null)
+  // Set when the worktree was created but the repo's init command failed — swaps
+  // the footer for the advisory (WPC-12). Holds the created path so Continue can
+  // proceed with the normal flow (WPC-14).
+  const [hookFailure, setHookFailure] = useState<{
+    path: string
+    hook: PostCreateHookResult
+  } | null>(null)
 
   const repoOptions = repoOptionsOf(tree)
   const selectedRepo = repoOptions.find((r) => r.path === repoPath)
@@ -91,6 +100,13 @@ export function NewWorktreeDialog({
       })
       .then((result) => {
         if (result.ok && result.path) {
+          // The worktree exists either way; a failed init command only earns an
+          // advisory before the normal flow continues (WPC-12/15).
+          if (result.hook && !result.hook.ok) {
+            setHookFailure({ path: result.path, hook: result.hook })
+            setBusy(false)
+            return
+          }
           onCreated(result.path)
           return
         }
@@ -187,7 +203,13 @@ export function NewWorktreeDialog({
             </div>
           )}
         </div>
-        {conflict ? (
+        {hookFailure ? (
+          <HookFailureNotice
+            worktreePath={hookFailure.path}
+            hook={hookFailure.hook}
+            onProceed={() => onCreated(hookFailure.path)}
+          />
+        ) : conflict ? (
           <BranchExistsChoice
             branch={branch}
             busy={busy}
