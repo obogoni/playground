@@ -12,9 +12,36 @@ review, Verifier, discrimination sensor).
 ---
 
 **Design**: `.specs/features/worktree-post-create-hook/design.md`
-**Status**: Approved
+**Status**: Done (T1–T6 committed + 3 Verifier fix commits; validation round 2 in progress)
 **Branch**: `feature/worktree-post-create-hook`
 **Baseline**: 489 tests / 36 files (green on `main`, verified)
+**Final**: 531 tests / 39 files green
+
+## Execution Record
+
+| Task | Commit | Tests added | Notes |
+| ---- | ------ | ----------- | ----- |
+| T1 | `7732a89` | +10 (planned +9) | non-string got its own test |
+| T2 | `4859446` | +12 | as planned |
+| T3 | `bce57f4` | +10 | as planned |
+| T4 | `dd3eeab` | 0 | thin shell, build gate |
+| T5 | `0ce6177` | 0 | renderer, build gate |
+| T6 | `cd95f5a` | 0 | renderer, build gate; `build:win` OK |
+| F1 | `0291a70` | +7 | **Verifier blocker** — hook shell settled on `close` only; extracted to `hook-shell.ts` with real-process tests |
+| F2+F3 | `adff2bb` | +3 | pinned the 4000 literal (surviving mutant); real-git end-to-end for WPC-03's on-disk half |
+| F4 | `98034eb` | 0 | backdrop dismissal skipped the tree refresh |
+
+**Deviation from the design:** `runHookShell` was planned to live in `index.ts` as a
+hand-verified thin shell. The Verifier proved its settle condition was wrong in a way no fake
+could catch, so it was extracted to `src/main/hook-shell.ts` and given real-process tests. The
+design's module table is otherwise unchanged.
+
+**Environment note (not a code issue):** `npm test` with default worker count is unreliable on
+this machine — real-git tests in `tree.test.ts` / `worktree-manager.test.ts` intermittently
+exceed their 5000 ms default timeout under load (observed 5.1 s / 6.1 s / 44 s), with a
+cascading `EPERM` in `afterEach` because the timed-out git child still holds the temp dir.
+`npx vitest run --maxWorkers=2` runs the identical suite reliably and faster. Surfaced as a
+repo follow-up; deliberately not changed here (out of feature scope).
 
 ---
 

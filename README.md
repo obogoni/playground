@@ -46,6 +46,27 @@ Going from "task in ADO" to "worktree on disk with tools open on it" is normally
 
 - Light / dark theme, persisted last-session UI state (direction, selection, theme)
 - Per-workspace overrides via `.app/config.json` (branch + worktree-folder templates); global defaults in Settings
+- Per-repo worktree initialization: a repo declares `postCreateCommand` in its own
+  `.app/config.json` and it runs in every new worktree — from the dialogs and from workflows
+  alike. A failing command never costs you the worktree; the exit code and output are reported
+  inline
+
+```jsonc
+// <repo>/.app/config.json — checked in, so it travels with the repo
+{
+  // Runs with cwd = the new worktree. Note the JSON-escaped backslash, and that
+  // the leading ".\" matters: some environments set
+  // NoDefaultCurrentDirectoryInExePath, which stops a bare "SetupSkills.cmd"
+  // from resolving.
+  "postCreateCommand": ".\\SetupSkills.cmd"
+}
+```
+
+The command runs through a shell (so `.cmd`/`.ps1` work), with `PLAYGROUND_WORKTREE_PATH`,
+`PLAYGROUND_REPO_PATH` and `PLAYGROUND_BRANCH` in its environment, and is killed after 120 s.
+A malformed or blank value is ignored (no hook runs). Note the command is repo content: cloning
+an untrusted repo into a registered workspace means its `postCreateCommand` runs on your next
+worktree create for that repo.
 
 ## Stack
 
