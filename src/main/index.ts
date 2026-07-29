@@ -13,7 +13,9 @@ import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-
 import { ConfigStore } from './config-store'
 import { emit, handle, onSend } from './ipc'
 import { createMcpResultServer } from './mcp-result-server'
+import { withPostCreateHook, type HookShell, type HookShellResult } from './post-create-hook'
 import { PtyPort } from './pty-port'
+import { repoPostCreateCommand } from './repo-config'
 import { SessionManager, type EmitFn } from './session-manager'
 import { ShortcutLauncher } from './shortcut-launcher'
 import { TaskBoard } from './task-board'
@@ -76,6 +78,43 @@ function runShell(cmd: string, opts: { cwd: string }): Promise<ShellResult> {
     child.stderr?.on('data', (chunk) => (stderr += chunk.toString()))
     child.on('error', (err) => resolve({ code: -1, stdout, stderr: stderr + String(err) }))
     child.on('close', (code) => resolve({ code: code ?? -1, stdout, stderr }))
+  })
+}
+
+/**
+ * WPC real `HookShell` seam (WPC-01): a repo's post-create command runs **through a
+ * shell** so a checked-in `.cmd`/`.ps1` works, in the new worktree, with the
+ * `PLAYGROUND_*` env the caller supplies. Same never-throw capture shape as
+ * `runShell` above — a spawn error becomes `code: -1` rather than a rejection.
+ *
+ * The timeout is `spawn`'s own: on expiry Node sends `killSignal`, and the `close`
+ * event then reports a non-null `signal`, which is the only reliable
+ * "killed-for-time" marker (an exit code alone is ambiguous on Windows). Only the
+ * spawned shell is killed — a detached grandchild can outlive it (documented Out
+ * of Scope; a real tree-kill is a separate concern).
+ */
+const runHookShell: HookShell = (cmd, { cwd, env, timeoutMs }) => {
+  return new Promise<HookShellResult>((resolve) => {
+    const child = spawn(cmd, {
+      cwd,
+      env,
+      shell: true,
+      windowsHide: true,
+      timeout: timeoutMs,
+      killSignal: 'SIGTERM'
+    })
+    let stdout = ''
+    let stderr = ''
+    child.stdout?.on('data', (chunk) => (stdout += chunk.toString()))
+    child.stderr?.on('data', (chunk) => (stderr += chunk.toString()))
+    child.on('error', (err) => resolve({ code: -1, stdout, stderr: stderr + String(err) }))
+    child.on('close', (code, signal) => {
+      if (signal !== null) {
+        resolve({ code: -1, stdout, stderr, timedOut: true })
+        return
+      }
+      resolve({ code: code ?? -1, stdout, stderr })
+    })
   })
 }
 
@@ -186,10 +225,17 @@ app.whenReady().then(() => {
   handle('workspaces:remove', ({ id }) => registry.remove(id))
   handle('workspaces:templates', ({ workspacePath }) => workspaceTemplates(workspacePath))
   handle('tree:get', () => buildTree(registry))
+  // WPC-10: ONE hook-wrapped create, shared by the IPC handler below and the
+  // workflow ctx further down. Because both consumers get this same wrapper —
+  // never bare `createWorktree` — no call path can skip a repo's init command.
+  const createWorktreeWithHook = withPostCreateHook(createWorktree, {
+    readCommand: repoPostCreateCommand,
+    shell: runHookShell
+  })
   handle(
     'worktrees:create',
     ({ repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting }) =>
-      createWorktree(repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting)
+      createWorktreeWithHook(repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting)
   )
   handle('worktrees:remove', ({ repoPath, worktreePath, force }) =>
     removeWorktree(repoPath, worktreePath, { force })
@@ -297,7 +343,9 @@ app.whenReady().then(() => {
   const workflowsAdo = new AdoGateway()
   const ctxDeps: CtxDeps = {
     worktree: {
-      create: createWorktree,
+      // The hook-wrapped create (WPC-10) — a workflow-created worktree for an
+      // agent is the case that most needs the repo's init command to have run.
+      create: createWorktreeWithHook,
       remove: removeWorktree,
       changedFiles: changedFilesOf
     },
