@@ -703,3 +703,59 @@ byte-identical backup (`git diff src/main/dir-remover.ts` empty) before the gate
 *recursive*, spec-precision gap P2) touches `spec.md`, which is outside this round's scope. F2's fixture
 makes the recursive reading the only one that passes, so the ambiguity is now pinned by test even though
 the prose still allows both readings. WRFT-06 remains blocked on the owner's live smoke run.
+
+---
+
+## Fix round 2 (from `validation.md`, Verifier round 2 — again both gaps are test-strength)
+
+Round 1's two survivors were confirmed killed, but two **new** adversarial probes survived (N3, N6). Both
+are the same family one step narrower: each fix had been shaped around the single mutation that was known,
+so a neighbouring wrong reading still passed. No production code changed in this round either.
+
+### F3: Pin the leftover count against a mixed file and directory residue
+
+**Gap**: WRFT-04 AC 3b — the amended AC says `remaining` is the recursive count of **every entry**, but F2's
+fixture (`wt/keep/a/b`) is *directories only* by construction, so a directories-only count reads the same 3
+and is indistinguishable from it. Mutation **N3** — `readEntries` filtered to `isDirectory()` — left all
+**16 tests green**. In the spec's own headline residue (`sub/`, `sub/deep.txt`, `untracked.txt`) that reports
+**1** instead of 3, in exactly the scenario the problem statement describes.
+
+**Where**: `src/main/dir-remover.test.ts` (test-only; the `:328-348` test and the `:323` `>= 1` assertion
+are both kept, the new test sits alongside them)
+**Requirement**: WRFT-04 AC 3
+
+**Fix**: a new real-fs test, `counts every leftover entry, files as well as directories`, asserting
+`expect(result.leftover).toEqual({ blockedPath: held, remaining: 3 })`.
+
+The fixture separates **four** readings at once rather than two. The tree contains nothing but the locked
+chain `wt/keep/a/held.txt` — no sibling entry, so no traversal-order dependence — and the holder is an
+*external* pwsh process opening `held.txt` with `FileShare.None` (a cwd holder does not protect the files
+beside it, and Node's own handles do not block deletion at all: libuv sets `FILE_SHARE_DELETE`). The residue
+is exactly `keep`, `keep\a`, `keep\a\held.txt`:
+
+| Reading of `remaining` | Value |
+| --- | --- |
+| recursive, every entry (**the spec's**) | **3** |
+| recursive, directories only (N3) | 2 |
+| recursive, files only | 1 |
+| top level only (M13) | 1 |
+
+**Mutation evidence** — four variants run against the restored file, one at a time:
+
+```
+N3   readEntries filtered to isDirectory()          →  1 failed | 16 passed (17)   - 3 / + 2
+     readEntries filtered to isFile()               →  2 failed | 15 passed (17)   - 3 / + 1
+     readEntries + 1 phantom entry (off-by-one)     →  2 failed | 15 passed (17)   - 3 / + 4
+     readdir(path)          (non-recursive, M13)    →  2 failed | 15 passed (17)   - 3 / + 1
+```
+
+N3 before: `16 passed (16)` — **survived**. After: **killed**, and so are the files-only, off-by-one and
+non-recursive variants. `dir-remover.test.ts`'s `afterEach` cleanup gained `maxRetries`/`retryDelay` on its
+`rmSync`, because Windows releases a killed holder's file handle asynchronously and the temp cleanup would
+otherwise fail EPERM on the very file the test held. Production file restored from a byte-identical backup
+(`git diff src/main/dir-remover.ts` empty) before the gate and the commit.
+
+**Test count**: 565 → 566 (+1 test, +0 files, zero deletions)
+**Tests**: unit
+**Gate**: full — `npm run typecheck && npm run lint && npm test`
+**Commit**: `test(worktree): pin the leftover count against a mixed file and directory residue`

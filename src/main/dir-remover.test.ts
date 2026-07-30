@@ -199,7 +199,10 @@ describe('removeDirTree against the real filesystem', () => {
     // Kill first, and even when the test failed: a live child whose cwd sits
     // inside the tree makes the cleanup below fail with EPERM on Windows.
     for (const holder of holders) await stopHolder(holder)
-    rmSync(root, { recursive: true, force: true })
+    // Windows releases a killed process's file handles asynchronously, so the
+    // very handle that made a test's residue survive can still be open here;
+    // retry rather than fail the cleanup with EPERM.
+    rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   })
 
   const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
@@ -216,6 +219,28 @@ describe('removeDirTree against the real filesystem', () => {
     })
     holders.push(holder)
     await delay(400) // measured settle time before the lock is actually held
+    return holder
+  }
+
+  /**
+   * An external process holding one *file* open with `FileShare.None`. A cwd
+   * holder protects only the directory it sits in — the files beside it are
+   * deleted — so this is the only fixture that leaves a surviving file behind,
+   * and it is the same shape the spec used to measure the original defect
+   * (finding A).
+   */
+  async function holdFile(file: string): Promise<ChildProcess> {
+    const holder = spawn(
+      'pwsh',
+      [
+        '-NoProfile',
+        '-Command',
+        `$fs=[IO.File]::Open('${file}',[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None); Start-Sleep 60`
+      ],
+      { stdio: 'ignore' }
+    )
+    holders.push(holder)
+    await delay(2500) // measured: pwsh startup plus acquiring the handle
     return holder
   }
 
@@ -344,6 +369,32 @@ describe('removeDirTree against the real filesystem', () => {
     expect(result.ok).toBe(false)
     expect(result.leftover).toEqual({ blockedPath: held, remaining: 3 })
     // The residue really is nested — which is what makes 3 distinguishable from 1.
+    expect(existsSync(held)).toBe(true)
+  }, 30000)
+
+  it('counts every leftover entry, files as well as directories', async () => {
+    // WRFT-04 AC 3: `remaining` is the recursive count of *every* entry still
+    // present under the worktree root — not only its directories. The test
+    // above cannot say so: its fixture is directories-only by construction, so
+    // a directories-only count reads the same 3.
+    //
+    // Here the tree is nothing but the locked chain, and the residue after the
+    // failed attempt is exactly `keep`, `keep\a`, `keep\a\held.txt`. That single
+    // number separates four readings at once: recursive-every-entry = 3,
+    // directories-only = 2, files-only = 1, top-level-only = 1. Nothing else
+    // exists under the root, so no sibling's deletion order can make it flaky.
+    const worktree = join(root, 'wt')
+    const held = join(worktree, 'keep', 'a', 'held.txt')
+    mkdirSync(join(worktree, 'keep', 'a'), { recursive: true })
+    writeFileSync(held, 'held', 'utf8')
+    await holdFile(held)
+
+    const result = await removeDirTree(worktree)
+
+    expect(result.ok).toBe(false)
+    expect(result.leftover).toEqual({ blockedPath: held, remaining: 3 })
+    // The surviving entry really is a file — which is what makes 3 distinct
+    // from the directories-only 2.
     expect(existsSync(held)).toBe(true)
   }, 30000)
 
