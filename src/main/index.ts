@@ -11,9 +11,12 @@ import icon from '../../resources/icon.png?asset'
 import { AdoGateway } from './ado-gateway'
 import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-runner'
 import { ConfigStore } from './config-store'
+import { runHookShell } from './hook-shell'
 import { emit, handle, onSend } from './ipc'
 import { createMcpResultServer } from './mcp-result-server'
+import { withPostCreateHook } from './post-create-hook'
 import { PtyPort } from './pty-port'
+import { repoPostCreateCommand } from './repo-config'
 import { SessionManager, type EmitFn } from './session-manager'
 import { ShortcutLauncher } from './shortcut-launcher'
 import { TaskBoard } from './task-board'
@@ -186,10 +189,17 @@ app.whenReady().then(() => {
   handle('workspaces:remove', ({ id }) => registry.remove(id))
   handle('workspaces:templates', ({ workspacePath }) => workspaceTemplates(workspacePath))
   handle('tree:get', () => buildTree(registry))
+  // WPC-10: ONE hook-wrapped create, shared by the IPC handler below and the
+  // workflow ctx further down. Because both consumers get this same wrapper —
+  // never bare `createWorktree` — no call path can skip a repo's init command.
+  const createWorktreeWithHook = withPostCreateHook(createWorktree, {
+    readCommand: repoPostCreateCommand,
+    shell: runHookShell
+  })
   handle(
     'worktrees:create',
     ({ repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting }) =>
-      createWorktree(repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting)
+      createWorktreeWithHook(repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting)
   )
   handle('worktrees:remove', ({ repoPath, worktreePath, force }) =>
     removeWorktree(repoPath, worktreePath, { force })
@@ -297,7 +307,9 @@ app.whenReady().then(() => {
   const workflowsAdo = new AdoGateway()
   const ctxDeps: CtxDeps = {
     worktree: {
-      create: createWorktree,
+      // The hook-wrapped create (WPC-10) — a workflow-created worktree for an
+      // agent is the case that most needs the repo's init command to have run.
+      create: createWorktreeWithHook,
       remove: removeWorktree,
       changedFiles: changedFilesOf
     },

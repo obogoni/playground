@@ -3,10 +3,12 @@ import type { JSX } from 'react'
 import type { PinnedTaskView } from '../../../shared/tasks'
 import { branchNameFor } from '../../../shared/tasks'
 import type { WorkspaceNode } from '../../../shared/tree'
+import type { PostCreateHookResult } from '../../../shared/worktrees'
 import { worktreePathFor } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { defaultBaseFor, repoOptionsOf } from '../lib/repo-options'
 import { BranchExistsChoice } from './BranchExistsChoice'
+import { HookFailureNotice } from './HookFailureNotice'
 import { Icon } from './Icon'
 import './NewWorktreeDialog.css'
 import './StartWorkDialog.css'
@@ -51,6 +53,13 @@ export function StartWorkDialog({
   // Set when create reports the branch already exists — swaps the footer for the
   // reuse/recreate choice (EXB-06).
   const [conflict, setConflict] = useState<'branch-exists' | null>(null)
+  // Set when the worktree was created but the repo's init command failed — swaps
+  // the footer for the advisory (WPC-13). Holds the created path so Continue can
+  // proceed with the normal flow (WPC-14).
+  const [hookFailure, setHookFailure] = useState<{
+    path: string
+    hook: PostCreateHookResult
+  } | null>(null)
   const branchEdited = useRef(false)
 
   const selectedRepo = repoOptions.find((r) => r.path === repoPath)
@@ -108,6 +117,13 @@ export function StartWorkDialog({
       })
       .then((result) => {
         if (result.ok && result.path) {
+          // The worktree exists either way; a failed init command only earns an
+          // advisory before the normal flow continues (WPC-13/15).
+          if (result.hook && !result.hook.ok) {
+            setHookFailure({ path: result.path, hook: result.hook })
+            setBusy(false)
+            return
+          }
           onCreated(result.path)
           return
         }
@@ -126,7 +142,12 @@ export function StartWorkDialog({
   }
 
   return (
-    <div className="dialog-backdrop" onClick={onClose}>
+    // While the hook advisory is up the worktree already exists, so dismissing by
+    // backdrop must continue the post-create flow, not silently drop it (WPC-14).
+    <div
+      className="dialog-backdrop"
+      onClick={hookFailure ? () => onCreated(hookFailure.path) : onClose}
+    >
       <div className="dialog-panel" onClick={(event) => event.stopPropagation()}>
         <header className="dialog-header">
           <div className="dialog-kicker">Start work</div>
@@ -218,7 +239,13 @@ export function StartWorkDialog({
             </div>
           )}
         </div>
-        {conflict ? (
+        {hookFailure ? (
+          <HookFailureNotice
+            worktreePath={hookFailure.path}
+            hook={hookFailure.hook}
+            onProceed={() => onCreated(hookFailure.path)}
+          />
+        ) : conflict ? (
           <BranchExistsChoice
             branch={branch}
             busy={busy}

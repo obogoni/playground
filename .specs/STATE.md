@@ -19,61 +19,78 @@ Handoff snapshot.
 | AD-011 | 2026-07-06 | ~~**WF5 (Workflows UI) scope pinned via 3 owner decisions**~~ **(decisions 1 & 2 AMENDED by AD-012; decision 3 stands):** (1) **Run state is live-stream only** — the view accumulates `workflow:*` events in an always-App-mounted `useWorkflowRuns` hook (survives direction switches); NO read channel for persisted/past runs (v2). (2) **A failed run shows only its `failed` status** in the UI — `error`/`stdout`/`code` are captured server-side but not broadcast (deferred). (3) **"New workflow" = scaffold + reveal** via a NEW `workflows:scaffold` channel; the created folder is revealed **main-side** with `shell.showItemInFolder` (no editor coupling). **Architecture:** the fold logic is a pure, unit-tested `workflow-run-view.ts` (like `tree-selection`); only `workflow-run-view` + `workflow-scaffold` carry unit tests, the rest (view, dialogs, hook wiring, handler) is hand-verified per project UI convention. 10 tasks / 3 phases (inline). | Owner chose live-only to match the PRD's v1-ephemeral posture with zero backend; failure-detail broadcast is cheap-but-deferred; scaffold+reveal avoids editor coupling. The always-mounted hook is required so a WF4 `workflow:focus-run` toast restores a run's full timeline from any direction. Spec/design/tasks: `.specs/features/workflows-ui/` (WF5-01..25). |
 | AD-009 | 2026-07-06 | **WF3 MERGED to `main` (PR #65).** Independent SDD eval (author≠judge, `spec-driven-eval`): **Final 0.98 — "Spec-complete"** (S=PASS, E recall/precision/justified ≈1.0, gates build/lint/unit green; live smoke owner-PASS 6/6). Two minor gaps merged as-is and **carried into WF4** (WF3-04 generic retry prompt; WF3-10 unasserted server reuse). **WF4 planning deferred to the next session.** | The two gaps are cheap polish on the same runner/`--resume` path WF4 already touches, so folding them into WF4 avoids a throwaway PR. Report: `.specs/features/workflows-agent-step/evaluations/P1-workflows-agent-step-20260706T141244Z.md`. |
 | AD-008 | 2026-07-03 | **WF3 (Structured agent step) scope pinned via 4 owner decisions:** (1) **Arm M (MCP) only** — one shared loopback HTTP MCP server, per-step bearer token = auth+routing, forced `emit_result`; Arm N (`--json-schema`) dropped. (2) **ajv** for payload validation (promotes `emit-result-schema` off the spike's minimal checker; `expect` stays a JSON Schema). (3) `ctx.agent()` returns the **full envelope** `{status,data?,question?,sessionId}`; `blocked` is returned **as-is** (no engine pause in WF3 — that's WF4). (4) Permission presets **read/write/bypass**, default **read** (read = read-only tools + `emit_result`, guaranteed non-mutating). | Findings recommended Arm M to keep the `blocked` terminal value + per-step routing first-class for WF4; ajv because the author declares a JSON Schema and the tool `inputSchema` is JSON Schema too; full-envelope return lets WF4 add the pause without breaking the happy path; the preset set is PRD-fixed (US 26). Spec: `.specs/features/workflows-agent-step/spec.md` (WF3-01..25). |
+| AD-013 | 2026-07-29 | **Worktree post-create hook (`worktree-post-create-hook`) scope pinned via 4 owner decisions + a decorator architecture:** (1) The command is declared **repo-locally** in a NEW `<repoPath>\.app\config.json` key `postCreateCommand` (mirrors the existing workspace-level `.app/config.json` reader one level down) — **not** in global settings, so it travels with the repo. (2) A failing hook **keeps the worktree**: `createWorktree` returns `ok:true` plus a `hook` failure payload (exit code + 4000-char output tail); no rollback. (3) The hook runs on **all three create paths** (New Worktree, Start Work, workflow `ctx.worktree.create`). (4) Feedback is **inline in the dialog on failure, silent on success**; the workflow run-timeline detail box is **P2/deferred**. **Architecture:** a `withPostCreateHook(create, deps)` **decorator** (Approach D) wraps `createWorktree` with an identical signature, wired **once** in `index.ts` and assigned to both the IPC handler and `ctxDeps.worktree.create` — so `worktree-manager.ts` (+ its ~40 real-git tests) and `workflow-ctx.ts` are **untouched**, and the run-iff-created rule (`ok && path`) is unit-testable against a fake create with no git and no spawn. The 120 s timeout's process kill stays in the hand-verified `index.ts` spawn seam; only its result *mapping* is unit-tested. | Repo-local won because the init script (`SetupSkills.cmd` in `m:\triade\source\Code`) is already checked in and resolves its own paths from `$PSScriptRoot` — the repo is what knows its init. Keeping the worktree matches the fact that `git worktree add` already succeeded; discarding a valid checkout (plus any base refresh / branch recut) over a fixable script error is the worse failure. All-three-paths because workflow-created worktrees for agents are the case that most needs the skills junctions. The decorator was chosen over a 7th positional param, a trailing options object, and a module-level setter because it is the only option that changes neither the real-git module nor the workflow ctx, and it avoids the parallel-test-hostile global state a setter would introduce. **Accepted trade-off, recorded not buried:** the command is repo content, so cloning an untrusted repo into a registered workspace means its `postCreateCommand` runs on the next create for that repo — no prompt, no allowlist in v1. Spec/design/tasks: `.specs/features/worktree-post-create-hook/` (WPC-01..24; 21 in the P1 slice, WPC-17..19 deferred). |
 
 ## Handoff
 
-**Status (current, 2026-07-06):** **Workflows epic (issue #56) — DONE + CLOSED.** WF1–WF5
-(incl. the WF5 hi-fi rebuild) all **MERGED to `main`**. WF5 + hifi landed via **PR #67**
-(merge commit `668b2d4`); the `feature/workflows-ui` branch is deleted; issue #56 is **CLOSED**.
-The owner-run two-example UI gate **PASSED** (handoff fidelity confirmed). Details of the hifi
-slice below for the record.
+**Status (current, 2026-07-29):** **`worktree-post-create-hook` (AD-013) — EXECUTED +
+VERIFIED (round 2 PASS) — NOT pushed, NO PR, visual/UAT pass OUTSTANDING.** Branch
+`feature/worktree-post-create-hook`, 11 commits (`c846eb0..663e2d3`), **533 tests / 39 files
+green**, typecheck + lint (18 pre-existing warnings) + `build` + `build:win` all clean.
 
-**WF5 hi-fi rebuild (`workflows-ui-hifi`, AD-012): EXECUTED + VERIFIED (PASS) + MERGED.** Built on
-the (now deleted) branch `feature/workflows-ui`. All 11 tasks / 5 phases committed inline via one sub-agent per phase
-(`d256870..c38f996`, 11 atomic commits). **Verifier PASS** (independent, author ≠ verifier):
-10/10 backend unit ACs matched spec outcome (payload/conjunction rule satisfied — every field
-asserted on value), 14/14 renderer ACs data-path present (visual proof deferred to the owner UI
-gate per convention), gate green **486/486 tests / 36 files**, `npm run build` OK, discrimination
-sensor **6/6 mutants killed** (reducer step-finished guard, manager durationMs, stepId
-monotonicity, agent `read` permission default, groupRollup precedence, stepStatus ok-flag), no
-survivors, no gaps. Report: `.specs/features/workflows-ui-hifi/validation.md`. **Merged to `main`**
-via PR #67 (`668b2d4`, `Closes #56`, admin merge per the copilot_code_review ruleset).
+A repo declares `postCreateCommand` in its own NEW `<repo>\.app\config.json`; it runs with
+cwd = the new worktree on **all three create paths**, via a `withPostCreateHook` decorator
+wired once in `index.ts` and handed to both the IPC handler and `ctxDeps.worktree.create`
+(so no caller can opt out). A failed hook keeps the worktree and reports exit code + a
+4000-char output tail; the dialogs show an amber advisory. `worktree-manager.ts` and
+`workflow-ctx.ts` were never touched.
 
-**Commit map (`d256870..c38f996`, in order):**
+**Commit map:**
 | Commit | Task | What |
 | ------ | ---- | ---- |
-| d256870 | T1 | StepEvent enrichment (StepKind/PermissionPreset/StepDetail, `step-finished` kind + stepId/stepKind/durationMs/ok/agent/agentResult/detail) + ipc `workflow:run-started`/blocked `sessionId?` + reducer `step-finished` fold (+4 tests) |
-| ddba92b | T2 | start/finish instrument seam (ctx `startStep`/`finishStep` replace `emitStep`; per-kind detail + agent extractors; onBlocked forwards sessionId) + manager clock/stepId (`#stepSeq`/`#stepStart`, durationMs) (+15) |
-| ba78590 | T3 | manager broadcasts `step-finished`/`run-started`/terminal `failed` (error/stdout/code) + `AgentStepError.detail` surfaced + blocked `sessionId` emit (+5) |
-| 8ca31fb | T4 | `workflow-run-view` fold rebuild — `StepNode[]`, `stepStatus`, `groupRollup` (failed>blocked>running>done>pending), run-started/input/startedAt/blockedSessionId/error seeds; transitional `timeline` kept (+19, replaced 12 WF5 fold tests) |
-| a294d5b | T5 | `relative-time` pure helper extracted from TopBar (+4) |
-| 56022ff | T7 | Icon glyphs (`workflow-nodes`/`play`/`help-circle`/`x-circle`/`stop-square`) + TopBar Workflows segment uses `workflow-nodes` |
-| 899ddc9 | T6 | `use-workflow-runs` consumes `workflow:run-started`, retires `pendingWf` hack |
-| 01461e9 | T8 | hifi `RunDetail` — node timeline+glyphs+connectors, kind tags, durations, group rollup, step + agent detail boxes, header+relative-time, INPUTS strip, hifi respond panel+session note, failed footer; **dropped transitional `timeline`** from RunView+fold (−1 timeline-only fold test) |
-| a7bf88f | T9 | hifi `WorkflowsView` rail — DEFINITIONS cards + RECENT RUNS + relative time + pipeline glyph empty state |
-| 070da74 | T10 | hifi `WorkflowTriggerDialog` (kicker, tile, mono fields, required `*`, play-triangle Run) |
-| c38f996 | T11 | `implement-ticket` fixture wraps worktree.create+agent in one `ctx.step` group (WHF-14 live gate); `notify(JSON)` result line preserved |
+| c846eb0 | plan | spec (WPC-01..24) + design + tasks + AD-013 |
+| 7732a89 | T1 | `repo-config.ts` — repo-local `postCreateCommand` reader (+10) |
+| 4859446 | T2 | `post-create-hook.ts` — `runPostCreateHook` env/tail/timeout mapping + shared types (+12) |
+| bce57f4 | T3 | `withPostCreateHook` run-iff-created decorator (+10) |
+| dd3eeab | T4 | `index.ts` spawn seam + single wiring point |
+| 0ce6177 | T5 | `HookFailureNotice` component + CSS |
+| cd95f5a | T6 | both create dialogs surface hook failure |
+| 0291a70 | F1 | **Verifier blocker** — shell settled on `close` only; extracted to `hook-shell.ts`, settles on `close` OR `exit`+grace (+7) |
+| adff2bb | F2/F3 | pinned the 4000 literal (surviving mutant); real-git end-to-end for WPC-03's on-disk half (+3) |
+| 98034eb | F4 | backdrop dismissal skipped the tree refresh |
+| 663e2d3 | F5 | grace timer un-`unref`'d (paths were not independent); real-seam stderr + large-burst tests; shortened lingering pings (+2) |
 
-**SPEC_DEVIATION (benign, Verifier-confirmed):** `RunDetail.css:14` + `WorkflowsView.css:21`
-materialise `@keyframes pulse` component-locally — the handoff/design assumed a shared `pulse`
-keyframe but `global.css` only had `fadeIn`/`popIn`/`toastIn`. No new named animation beyond the
-handoff's set, no new tokens. Distilled as lesson **L-002** (candidate, `spec_deviation`): grep
-`global.css` to confirm a referenced CSS keyframe exists before a UI design cites it as existing.
+**Verifier (independent, author ≠ verifier) — round 1 FAIL → round 2 PASS, 4/4 findings
+closed.** Round 1 caught a genuine blocker: resolving on `close` waits for stdio EOF, and
+`spawn`'s timeout kills only `cmd.exe`, so a surviving grandchild held the pipes — measured
+`exit` 1665 ms vs `close` 12969 ms, and 21000 ms with a detached grandchild. A hung script
+would never settle: `worktrees:create` never resolved, dialog stuck on `busy`. Round 2
+re-probed the fixed seam with real processes: `pause` +152 ms, infinite loop +94 ms,
+pipe-holding child **+119 ms**, detached grandchild **+467 ms**; output verified complete to a
+1 MB single burst. Report: `.specs/features/worktree-post-create-hook/validation.md`.
 
-**DONE (this session):** owner-run two-example UI gate PASSED → PR #67 created → admin-merged to
-`main` (`668b2d4`) → issue #56 CLOSED → branch deleted. **No open next step for the Workflows epic.**
+**Accepted mutation survivors (reasoned, not oversights):** `HOOK_FLUSH_GRACE_MS 250→0` and
+removing the `close` handler are **equivalent mutants** — queued `data` events drain before the
+timer callback either way, so the only observable difference is latency, and asserting
+sub-250 ms latency on this contended box would be flaky. Verified empirically both ways.
 
-**Deferred (spec Out of Scope):** Re-run action; live token-by-token agent stdout tail; persisted-run
-read channel (`workflows:get`); backend `ctx.step` rollup status (renderer-derived); agent kind tag
-shows `agent` (no `agentId` on the stream — box uses the step label as name).
+**NEXT STEP (nothing else outstanding in code):** owner **visual/UAT pass** — WPC-12..16 are
+marked `Built †` in the spec, not Verified: the renderer has no unit tests by convention and
+the dialogs have never been rendered. Then push + PR with `Closes #<issue>` once the feature
+issue exists (the repo's issue = feature = PR pipeline). **Live gate to run:** create a worktree
+for `m:	riade\source\Code` with `.app\config.json` → `{"postCreateCommand": ".\SetupSkills.cmd"}`
+and confirm `.claude\skills` + `.codex\skills` junctions appear; then the same via a workflow.
 
-**Baseline note:** `feature/workflows-ui` now at **486 tests / 36 files** green (was 440 at WF5
-Verifier; T1–T5 added ~+47 unit tests, T6–T11 added 0 per renderer/fixture hand-verify convention;
-T4 replaced WF5's 12 fold tests, T8 dropped 1 timeline-only fold test). Gate:
-`npm run typecheck && npm run lint && npm test` (+ `npm run build`). AD-005 `tree.test.ts` real-git
-Windows flake did not fire in the Verifier's full run; re-run in isolation if a future gate flakes on it.
+**Deferred (spec Out of Scope):** WPC-17..19 — the workflow run-timeline hook detail box (needs a
+new `StepDetail` variant + a `RunDetail` branch); `result.hook` is already reachable by an author.
+Also: multiple/ordered commands, other lifecycle hooks, Settings UI, trust prompt/allowlist,
+process-tree kill, in-app re-run.
 
-**Prior context:** `worktree-existing-branch` (PR #62), `topbar-version-indicator` (PR #63),
-WF1–WF4 all merged. Pre-existing quirk: `src/main/ado-gateway.ts` is UTF-16 (git treats it as binary).
-Open follow-ups: 3 transitive dev advisories (esbuild/form-data/undici); App.tsx
-`useTasks`/`useConfig` extraction deferred (AD-004).
+**Two environment findings (NOT code issues), worth acting on separately:**
+1. **`npm test` is unreliable on this machine.** Real-git tests in `tree.test.ts` /
+   `worktree-manager.test.ts` intermittently exceed their **5000 ms default** timeout under load
+   (observed 5.1 / 6.1 / 8.4 / 44 s), then cascade to `EPERM` in `afterEach` because the
+   timed-out git child still holds the temp dir. The failing subset differs per run and both
+   files pass 71/71 in isolation. `--maxWorkers=2` is reliable AND faster (81–125 s vs 300 s) —
+   vitest oversubscribes this box. **Recommend a `testTimeout` bump and/or `maxWorkers` in
+   `vitest.config.ts`** (deliberately not changed here — out of feature scope).
+2. **`NoDefaultCurrentDirectoryInExePath=1`** in the agent session env makes a bare
+   `SetupSkills.cmd` fail with code 1; it is not a persistent User/Machine variable. Harness
+   artifact, not a product bug — but it's why the README example uses `.\SetupSkills.cmd`.
+   (Same variable already noted for node-gyp builds.)
+
+**Prior context:** Workflows epic (#56) DONE + CLOSED; WF1–WF5 + hifi merged (PR #67). Baseline
+before this feature: 489 tests / 36 files on `main`. Pre-existing quirk:
+`src/main/ado-gateway.ts` is UTF-16 (git treats it as binary). Open follow-ups: 3 transitive dev
+advisories (esbuild/form-data/undici); App.tsx `useTasks`/`useConfig` extraction deferred
+(AD-004).

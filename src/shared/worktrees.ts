@@ -49,6 +49,27 @@ export function worktreePathFor(repoPath: string, branch: string, template?: str
   return `${parent}${sep}${worktreeNameFor(repoPath, branch, template)}`
 }
 
+/**
+ * Outcome of the repo-declared post-create command (WPC-02..05). Present on a
+ * create result only when a command actually ran: absent means the repo declared
+ * none, so a consumer distinguishes "no hook" from "hook succeeded" (WPC-06).
+ *
+ * A failed hook never invalidates the create — the worktree is kept and the
+ * enclosing result stays `ok: true` (WPC-03).
+ */
+export interface PostCreateHookResult {
+  /** Whether the command exited 0. */
+  ok: boolean
+  /** The command as declared in the repo's `.app/config.json`. */
+  command: string
+  /** Exit code; -1 for a spawn failure or a timeout kill. */
+  code: number
+  /** Combined stdout+stderr, last 4000 chars; '' when the command was silent. */
+  output: string
+  /** Set only when the command was killed for exceeding the timeout (WPC-05). */
+  timedOut?: boolean
+}
+
 /** Result of worktrees:create — failures are returned, never thrown. */
 export interface CreateWorktreeResult {
   ok: boolean
@@ -56,6 +77,12 @@ export interface CreateWorktreeResult {
   path?: string
   /** Human-readable failure message, present when ok is false. */
   error?: string
+  /**
+   * The post-create hook's outcome (WPC-01). Present only when a worktree was
+   * created AND the repo declared a `postCreateCommand`; absent otherwise, which
+   * keeps the pre-feature result shape byte-identical (WPC-06).
+   */
+  hook?: PostCreateHookResult
   /**
    * Set (with `ok: false` and no `error`) when a local branch of the requested
    * name already exists and the caller must choose to reuse or recreate it
