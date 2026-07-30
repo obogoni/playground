@@ -325,6 +325,28 @@ describe('removeDirTree against the real filesystem', () => {
     expect(elapsed).toBeLessThan(5000)
   }, 30000)
 
+  it('counts the leftovers recursively, not just the direct children of the root', async () => {
+    // WRFT-04 AC 3: `remaining` is the count of entries still present *under* the
+    // worktree root. The exact-count tests above drive the injected `readEntries`
+    // fake, so only a real-fs fixture can pin the real `readdir` wiring.
+    //
+    // The residue is deterministic by construction: the tree is directories only,
+    // so a failed attempt deletes nothing, and the holder's cwd is nested three
+    // levels down. A recursive read therefore reports 3 (`keep`, `keep\a`,
+    // `keep\a\b`) where a non-recursive read of the root would report 1.
+    const worktree = join(root, 'wt')
+    const held = join(worktree, 'keep', 'a', 'b')
+    mkdirSync(held, { recursive: true })
+    await holdCwd(held)
+
+    const result = await removeDirTree(worktree)
+
+    expect(result.ok).toBe(false)
+    expect(result.leftover).toEqual({ blockedPath: held, remaining: 3 })
+    // The residue really is nested — which is what makes 3 distinguishable from 1.
+    expect(existsSync(held)).toBe(true)
+  }, 30000)
+
   it('succeeds on a retry once the holding process is gone', async () => {
     // WRFT-02 AC 2: the still-present tree is its own retry handle.
     const worktree = makeTree('sub/deep.txt')

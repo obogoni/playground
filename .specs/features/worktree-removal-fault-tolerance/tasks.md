@@ -653,3 +653,53 @@ byte-identical backup (`git diff src/main/worktree-manager.ts` empty) before the
 **Tests**: unit
 **Gate**: full — `npm run typecheck && npm run lint && npm test`
 **Commit**: `test(worktree): assert the leftover payload the renderer branches on`
+
+---
+
+### F2: Pin the recursive leftover count against real fs
+
+**Gap**: WRFT-04 AC 3e — the real recursive `remaining` count was unpinned. The exact-count assertions at
+`dir-remover.test.ts:148` / `:156` drive the **injected fake** `readEntries`, so they cannot see a change to
+the real-fs wiring; `:323`'s `toBeGreaterThanOrEqual(1)` was the only real-filesystem check and is satisfied
+by any non-zero count. Mutation **M13** — `readdir(path, { recursive: true })` → `readdir(path)` — left all
+**15 tests green**, so a wrong-but-plausible number could reach the user's error message undetected.
+
+**Where**: `src/main/dir-remover.test.ts` (test-only; the `:323` assertion is kept, the new test sits
+alongside it)
+**Requirement**: WRFT-04 AC 3
+
+**Fix**: a new real-fs test, `counts the leftovers recursively, not just the direct children of the root`
+(`:328-348`), asserting `expect(result.leftover).toEqual({ blockedPath: held, remaining: 3 })`.
+
+The fixture is built so the two readings **cannot coincide**: the tree is directories only
+(`wt/keep/a/b`), so a failed attempt deletes nothing and the residue is deterministic, and the external
+holder's cwd sits three levels down. A recursive read reports **3** (`keep`, `keep\a`, `keep\a\b`) where a
+non-recursive read of the root reports **1**. Verified out-of-band with a standalone probe before the
+literal was written: `{ code: 'EBUSY', pathIsHeld: true, recCount: 3, topCount: 1 }`.
+
+**Mutation evidence (M13 — `readEntries: (path) => readdir(path)`)**:
+
+```
+FAIL src/main/dir-remover.test.ts > removeDirTree against the real filesystem > counts the
+     leftovers recursively, not just the direct children of the root
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+  { "blockedPath": "…\wt\keep\a\b",
+  -   "remaining": 3,
+  +   "remaining": 1, }
+Tests  1 failed | 15 passed (16)
+```
+
+Before: `15 passed (15)` — **survived**. After: **1 failed — killed**. Production file restored from a
+byte-identical backup (`git diff src/main/dir-remover.ts` empty) before the gate and the commit.
+
+**Test count**: 564 → 565 (+1 test, +0 files, zero deletions)
+**Tests**: unit
+**Gate**: full — `npm run typecheck && npm run lint && npm test`
+**Commit**: `test(worktree): pin the recursive leftover count against real fs`
+
+---
+
+**Not done in this round, deliberately:** Verifier Fix 3 (amend WRFT-04 AC 3 to say the count is
+*recursive*, spec-precision gap P2) touches `spec.md`, which is outside this round's scope. F2's fixture
+makes the recursive reading the only one that passes, so the ambiguity is now pinned by test even though
+the prose still allows both readings. WRFT-06 remains blocked on the owner's live smoke run.
