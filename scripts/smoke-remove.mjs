@@ -1,16 +1,24 @@
 /* CDP smoke for delete-worktree (DLWT-01..04) + force-remove-worktree
- * (FRWT-01..04). Assumes the app is running with --remote-debugging-port=9222
+ * (FRWT-01..04) + worktree-removal-fault-tolerance (WRFT-06).
+ * Assumes the app is running with --remote-debugging-port=9222
  * and a seeded workspace named wtm-smoke-* containing repo `api` (branch main)
- * plus a clean linked worktree `api-feature-42` (branch feature/42) and a dirty
- * linked worktree `api-chore-wip` (branch chore/wip). For the fullest FRWT
- * coverage, seed chore/wip with mixed dirt — a modified tracked file, an added
- * untracked file, and a deleted tracked file — so the confirm dialog renders
- * Modified/Added/Deleted rows; any non-empty dirt also passes.
+ * plus a clean linked worktree `api-feature-42` (branch feature/42), a dirty
+ * linked worktree `api-chore-wip` (branch chore/wip) and a clean linked
+ * worktree `api-lock-me` (branch lock/me) holding an empty `sub/`. For the
+ * fullest FRWT coverage, seed chore/wip with mixed dirt — a modified tracked
+ * file, an added untracked file, and a deleted tracked file — so the confirm
+ * dialog renders Modified/Added/Deleted rows; any non-empty dirt also passes.
  * Seed it with: node scripts/seed-smoke-remove.mjs   (run before launching the app)
  * Run: node scripts/smoke-remove.mjs
+ *
+ * MANUAL ONLY — never CI (TESTING.md): this drives a live Electron app over CDP
+ * on a real desktop session, against real on-disk state that the run destroys.
+ * Every removal here is one-shot; re-seed before each run.
  */
 
+import { spawn } from 'node:child_process'
 import { existsSync } from 'fs'
+import { join } from 'node:path'
 
 const PORT = 9222
 
@@ -68,6 +76,10 @@ const selectExpr = (branch) => `(async () => {
     note: document.querySelector('.detail-danger-note')?.textContent ?? null
   }
 })()`
+
+/* Git's porcelain paths and the path Node reports inside an fs error can differ
+ * in separators and case, so compare them the way the main process does. */
+const norm = (p) => p.replaceAll('/', '\\').replace(/\\+$/, '').toLowerCase()
 
 const checks = []
 function check(name, ok, detail = '') {
@@ -246,6 +258,112 @@ check(
   JSON.stringify(forced.toast)
 )
 check('dirty worktree folder gone from disk (FRWT-03)', !existsSync(dirtyWt.path))
+
+// WRFT-06: a removal blocked by a live lock names what blocked it, keeps the
+// row (git is never asked to deregister anything), and the same button is a
+// working retry once the holder is gone. The fixture is an external process
+// whose cwd sits inside the worktree — the real agent-terminal case, and the
+// only honest one, since Node's own handles never block a delete.
+const lockWt = api.worktrees.find((w) => w.branch === 'lock/me')
+check('seeded lock/me worktree present for the blocked-removal flow', Boolean(lockWt))
+const heldDir = join(lockWt.path, 'sub')
+
+const holder = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)'], {
+  cwd: heldDir,
+  stdio: 'ignore'
+})
+try {
+  await new Promise((r) => setTimeout(r, 400)) // measured settle before the lock is held
+
+  // First Remove: the deleter exhausts its 3 s budget and gives up before git
+  // runs, so the Danger section gets the structured leftover block.
+  await evaluate(ws, selectExpr('lock/me'))
+  const blocked = await evaluate(
+    ws,
+    `(async () => {
+       document.querySelector('.detail-remove-btn').click()
+       await new Promise((r) => setTimeout(r, 6000)) // 3s retry budget + IPC round-trip
+       return {
+         note: document.querySelector('.detail-danger-leftover .detail-danger-note')
+           ?.textContent ?? null,
+         path: document.querySelector('.detail-danger-path')?.textContent ?? null,
+         disabled: document.querySelector('.detail-remove-btn')?.disabled ?? null
+       }
+     })()`
+  )
+  check(
+    'blocked removal names the blocked path inline (WRFT-06 AC 1)',
+    blocked.path !== null && norm(blocked.path) === norm(heldDir),
+    JSON.stringify({ shown: blocked.path, expected: heldDir })
+  )
+  check(
+    'blocked removal reports what is left and that it stays registered (WRFT-06 AC 1)',
+    /\d+ items? still on disk/.test(blocked.note ?? '') &&
+      /still registered/.test(blocked.note ?? ''),
+    JSON.stringify(blocked.note)
+  )
+  check(
+    'remove button is enabled again after the failure (WRFT-06 AC 3)',
+    blocked.disabled === false,
+    JSON.stringify(blocked.disabled)
+  )
+
+  // The row must survive a real tree refresh — the defect this feature fixes is
+  // that it used to vanish while the folder stayed on disk.
+  const survived = await evaluate(
+    ws,
+    `(async () => {
+       document.querySelector('.topbar-icon-btn').click()
+       await new Promise((r) => setTimeout(r, 1500))
+       return [...document.querySelectorAll('.sidebar-worktree-branch')]
+         .some((b) => b.textContent === 'lock/me')
+     })()`
+  )
+  check('blocked worktree is still listed after a tree refresh (WRFT-06 AC 1)', survived === true)
+  check('blocked worktree folder is still on disk (WRFT-02 AC 1)', existsSync(heldDir))
+
+  // Release the lock and retry from the same row — no restart, no cleanup.
+  await new Promise((resolve) => {
+    holder.once('exit', resolve)
+    holder.kill()
+  })
+  await evaluate(ws, selectExpr('lock/me'))
+  const retried = await evaluate(
+    ws,
+    `(async () => {
+       document.querySelector('.detail-remove-btn').click()
+       await new Promise((r) => setTimeout(r, 1000))
+       // The blocked attempt already deleted everything it could reach, the
+       // worktree's .git link included, so the row can read either clean (direct
+       // remove) or dirty (confirm dialog). Confirm it if it opened.
+       document.querySelector('.dialog-btn-danger')?.click()
+       await new Promise((r) => setTimeout(r, 2500))
+       return {
+         rowGone: ![...document.querySelectorAll('.sidebar-worktree-branch')]
+           .some((b) => b.textContent === 'lock/me'),
+         toast: document.querySelector('.toast')?.textContent ?? null
+       }
+     })()`
+  )
+  check(
+    'retry after the holder exits removes the row (WRFT-06 AC 2)',
+    retried.rowGone === true,
+    JSON.stringify(retried)
+  )
+  check(
+    'retry toast names the branch (WRFT-06 AC 2)',
+    /Removed lock\/me/.test(retried.toast ?? ''),
+    JSON.stringify(retried.toast)
+  )
+  check(
+    'blocked worktree folder gone from disk after the retry (WRFT-06 AC 2)',
+    !existsSync(lockWt.path)
+  )
+} finally {
+  // A failed check above must not leave a node.exe parked in the worktree —
+  // it would block every later run and the seed's own rmSync.
+  holder.kill()
+}
 
 ws.close()
 const failed = checks.filter((c) => !c.ok).length

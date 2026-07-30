@@ -369,13 +369,28 @@ moment `stop` became async. A comment was added at that line recording why the `
 
 **Done when**:
 
-- [ ] Smoke spawns a holder process inside a seeded worktree, clicks Remove, asserts the inline error names
+- [x] Smoke spawns a holder process inside a seeded worktree, clicks Remove, asserts the inline error names
       the blocked path and that the row survives a tree refresh
-- [ ] Kills the holder, clicks Remove again, asserts the row disappears and the toast shows the branch
-- [ ] Holder process is killed even when the script fails (no leaked processes on a failed run)
-- [ ] Script documents that it needs a live session (never CI), per TESTING.md
-- [ ] Gate check: `node scripts/smoke-remove.mjs` passes on a live session (owner-run)
-- [ ] Test count: unchanged (smoke is not part of `npm test`)
+- [x] Kills the holder, clicks Remove again, asserts the row disappears and the toast shows the branch
+- [x] Holder process is killed even when the script fails (no leaked processes on a failed run) — the whole
+      WRFT-06 section sits in `try`/`finally`
+- [x] Script documents that it needs a live session (never CI), per TESTING.md
+- [ ] **OUTSTANDING (owner-run)**: `node scripts/smoke-remove.mjs` passes on a live session. Not run here —
+      a CDP smoke needs a live desktop session and a seeded workspace, and launching the app from an agent
+      would interfere with the owner's desktop. Verified instead by `node --check` on both scripts and by
+      reading them against the T5 renderer markup (`.detail-danger-leftover`, `.detail-danger-path`)
+- [x] Test count: unchanged (smoke is not part of `npm test`) — **564 passed / 40 files**
+
+**Seeding change**: the two existing seeded worktrees are both removed by the earlier checks, so the seed
+gained a third — `api-lock-me` (branch `lock/me`) with an empty `sub/`. Empty directories are invisible to
+`git status`, so the worktree still reads clean and the first Remove click takes the direct path rather than
+the confirm dialog. The holder parks its cwd in `sub/`, which makes `sub` the reported `blockedPath` and
+leaves `remaining: 1` — mirroring the real-lock unit test at `dir-remover.test.ts:322`.
+
+**Known consequence, asserted around**: a blocked deletion still removes everything it *could* reach,
+including the worktree's `.git` link file, so on the retry the row may read clean (direct remove) or dirty
+(confirm dialog) depending on what survived. The retry step clicks `.dialog-btn-danger` optionally so either
+shape passes — the requirement is that the retry succeeds, not which path it takes.
 
 **Tests**: none (manual smoke — matrix: renderer layer)
 **Gate**: manual
