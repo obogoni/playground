@@ -9,6 +9,7 @@ import type {
   RemoveWorktreeResult
 } from '../shared/worktrees'
 import { worktreeNameFor, worktreePathFor } from '../shared/worktrees'
+import { removeDirTree, type DirRemovalResult } from './dir-remover'
 
 const run = promisify(execFile)
 
@@ -254,20 +255,66 @@ function ffFailureLine(err: unknown, baseBranch: string, upstream: string): stri
   return gitFailureLine(err)
 }
 
+/** The deleter, injected with the real implementation as the default. */
+export interface WorktreeRemoveDeps {
+  removeDirTree(path: string): Promise<DirRemovalResult>
+}
+
+const realRemoveDeps: WorktreeRemoveDeps = { removeDirTree }
+
 /**
- * `git worktree remove` with the PRD guards (DLWT-01): refuses the repo's
- * primary checkout, and refuses a dirty worktree unless force — dirtiness is
- * re-checked fresh here, not trusted from the renderer's tree snapshot.
+ * Delete-then-deregister removal (WRFT-01, WRFT-02). **The app deletes the
+ * worktree directory itself and only then asks git to drop the bookkeeping** —
+ * git is never the deleter. Two defects drove the inversion: `git worktree
+ * remove` deletes its admin dir even when its own deletion failed ("no going
+ * back from here"), leaving a folder on disk that no longer belongs to any
+ * worktree and that `scanRepos` cannot see; and git for Windows recurses into
+ * directory junctions, emptying the AD-013 skills targets while reporting
+ * success. Under this order a failed deletion leaves the worktree fully
+ * registered — visible, and retryable by simply clicking Remove again.
+ *
+ * The guard order is the contract: primary → registered → locked → dirty →
+ * delete → bookkeeping. **Every guard refuses before a single byte is deleted**,
+ * because after the reorder nothing downstream can veto the deletion: git's own
+ * lock refusal would arrive only after the files were gone, and the registered
+ * check is what stops an unvalidated path reaching a recursive delete.
+ * `force` keeps its FRWT meaning — skip the dirty check, nothing else.
+ *
  * Failures (guards included) are returned, never thrown.
  */
 export async function removeWorktree(
   repoPath: string,
   worktreePath: string,
-  opts: { force?: boolean } = {}
+  opts: { force?: boolean } = {},
+  deps: WorktreeRemoveDeps = realRemoveDeps
 ): Promise<RemoveWorktreeResult> {
+  // 1. Primary checkout (DLWT-01) — message unchanged.
   if (samePath(repoPath, worktreePath)) {
     return { ok: false, error: "This is the repo's primary checkout — it can't be removed here." }
   }
+  // 2. Registered worktree of *this* repo. Also the anti-`rm -rf` guard, so a
+  //    git failure here refuses rather than guessing: fail closed.
+  let blocks: PorcelainBlock[]
+  try {
+    const { stdout } = await git(repoPath, ['worktree', 'list', '--porcelain'])
+    blocks = parsePorcelainBlocks(stdout)
+  } catch (err) {
+    return { ok: false, error: gitFailureLine(err) }
+  }
+  const entry = blocks.find((block) => samePath(block.path, worktreePath))
+  if (!entry) {
+    return { ok: false, error: `${worktreePath} is not a registered worktree of this repo.` }
+  }
+  // 3. `git worktree lock` (WRFT-01 AC 3). Presence of the line is the lock —
+  //    a bare `locked` parses to '', which is still locked.
+  if (entry.locked !== undefined) {
+    const reason = entry.locked === '' ? '' : `: ${entry.locked}`
+    return {
+      ok: false,
+      error: `This worktree is locked${reason} — unlock it before removing (git worktree unlock).`
+    }
+  }
+  // 4. Dirty (FRWT) — message unchanged; the only check `force` skips.
   if (!opts.force) {
     const { dirty, changes } = await statusOf(worktreePath)
     if (dirty) {
@@ -277,15 +324,31 @@ export async function removeWorktree(
       }
     }
   }
-  const args = opts.force
-    ? ['worktree', 'remove', '--force', worktreePath]
-    : ['worktree', 'remove', worktreePath]
+  // 5. Delete. On give-up we return *before touching git*, which is what keeps
+  //    the worktree registered and the removal retryable (WRFT-02 AC 1).
+  const removal = await deps.removeDirTree(worktreePath)
+  if (!removal.ok) {
+    const { blockedPath, remaining } = removal.leftover ?? {
+      blockedPath: worktreePath,
+      remaining: 0
+    }
+    return { ok: false, error: leftoverMessage(blockedPath, remaining) }
+  }
+  // 6. Bookkeeping only — the directory is already gone, so plain `remove`
+  //    suffices (`--force` would protect nothing) and a failure self-heals on
+  //    retry, since git accepts removing a worktree whose directory is missing.
   try {
-    await git(repoPath, args)
+    await git(repoPath, ['worktree', 'remove', worktreePath])
     return { ok: true }
   } catch (err) {
     return { ok: false, error: gitFailureLine(err) }
   }
+}
+
+/** What the user needs to act on: what blocked it, how much is left, and that retrying works. */
+function leftoverMessage(blockedPath: string, remaining: number): string {
+  const items = `${remaining} item${remaining === 1 ? '' : 's'}`
+  return `Couldn't delete ${blockedPath} — ${items} still on disk. The worktree is still registered, so you can retry the removal once nothing is using it.`
 }
 
 /** Paths from the tree snapshot and the registry may differ in case/separators. */

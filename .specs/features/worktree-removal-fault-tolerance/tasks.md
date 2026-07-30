@@ -260,23 +260,26 @@ defaulted 4th param.
 
 **Done when**:
 
-- [ ] Guard order is primary → registered → locked → dirty → delete → bookkeeping; **every** guard refuses
+- [x] Guard order is primary → registered → locked → dirty → delete → bookkeeping; **every** guard refuses
       before any deletion
-- [ ] Unregistered path refuses and deletes nothing (the anti-`rm -rf` guard); `git worktree list` failure
+- [x] Unregistered path refuses and deletes nothing (the anti-`rm -rf` guard); `git worktree list` failure
       fails **closed**
-- [ ] Locked worktree refuses with git's reason, under plain **and** `force: true` calls
-- [ ] Primary refuses under `force: true`; dirty refuses without force — both messages byte-identical to
+- [x] Locked worktree refuses with git's reason, under plain **and** `force: true` calls (plus a bare
+      `locked` line, whose reason parses to `''` and must still refuse)
+- [x] Primary refuses under `force: true`; dirty refuses without force — both messages byte-identical to
       today's (DLWT/FRWT regression)
-- [ ] Deletion failure returns `{ ok: false, leftover }` and `git worktree remove` is **never invoked** —
-      asserted by checking the worktree is still in `git worktree list --porcelain`
-- [ ] Bookkeeping runs only after the directory is gone; a bookkeeping failure returns git's first line and
+- [x] Deletion failure returns `{ ok: false }` whose `error` names the blocked path + remaining count, and
+      `git worktree remove` is **never invoked** — asserted by checking the worktree is still in
+      `git worktree list --porcelain`. The **structured `leftover` field lands in T5** with its renderer
+      consumer, per lesson L-001 (do not ship the field with no consumer)
+- [x] Bookkeeping runs only after the directory is gone; a bookkeeping failure returns git's first line and
       a retry succeeds
-- [ ] 3-arg call sites (`index.ts`, `workflow-ctx`) compile unchanged
-- [ ] Unit tests on real temp repos for each guard + the ordering + the already-absent path; retry-policy
+- [x] 3-arg call sites (`index.ts`, `workflow-ctx`) compile unchanged
+- [x] Unit tests on real temp repos for each guard + the ordering + the already-absent path; retry-policy
       cases use an injected fake deleter
-- [ ] All existing `removeWorktree` tests still pass **unmodified**
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: baseline + 18 + 10 (no silent deletions)
+- [x] All existing `removeWorktree` tests still pass **unmodified**
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: baseline + 18 + 10 (no silent deletions) — **561 passed / 40 files**
 
 **Tests**: unit
 **Gate**: full
