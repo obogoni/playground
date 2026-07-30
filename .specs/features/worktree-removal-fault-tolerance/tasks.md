@@ -410,14 +410,20 @@ shape passes — the requirement is that the retry succeeds, not which path it t
 
 **Done when**:
 
-- [ ] AD-014 states: worktree removal is delete-first; no surface may use `git worktree remove --force` as a
-      *deleter*; the junction rationale is recorded (git for Windows recurses into junctions); and records
-      that **WRFT-07 is deferred to a follow-up PR** (owner decision at Tasks approval)
-- [ ] Spec traceability rows for WRFT-01..06 move to their real status; **WRFT-07 is marked Deferred** with
-      a pointer to the follow-up; the WRFT-07 AC 1 wording is corrected (the app's own `existsSync` guard
-      fires before git's `fatal`, so this upgrades an existing flat error rather than replacing a git error)
-- [ ] Handoff section updated with the commit map
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] AD-014 states: worktree removal is delete-first; no surface may use `git worktree remove --force` as a
+      *deleter*; the junction rationale is recorded (git for Windows recurses into junctions); the guard
+      order (primary → registered → locked → dirty) and why the lock check must be ours (git's own refusal
+      would arrive *after* deletion); and records that **WRFT-07 is deferred to a follow-up PR** (owner
+      decision at Tasks approval)
+- [x] Spec traceability rows for WRFT-01..06 move to their real status — **`⚙ Implemented — pending
+      Verifier`**, not Verified: the independent Verifier has not run. **WRFT-07 is marked Deferred** with a
+      pointer to the follow-up; the WRFT-07 AC 1 wording is corrected (the app's own `existsSync` guard at
+      `worktree-manager.ts:87-89` fires before git's `fatal`, so this upgrades an existing flat error rather
+      than replacing a git error)
+- [x] Handoff section updated with the commit map — **section-scoped write**: only the `## Decisions` row
+      append and the `## Handoff` body changed; `git diff` confirms no existing AD row was touched
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` — **564 passed / 40 files**, 0 lint
+      errors / 18 pre-existing warnings
 
 **Tests**: none (docs)
 **Gate**: quick

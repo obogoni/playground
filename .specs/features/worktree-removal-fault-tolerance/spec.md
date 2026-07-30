@@ -345,7 +345,10 @@ manual `git worktree remove`), I want the app to offer to clear it, so that I am
 
 1. WHEN a create targets a path that exists, is non-empty, is not a registered worktree of any repo, and does
    not contain a `.git` directory THEN the create SHALL return `conflict: 'path-exists'` with the entry count,
-   instead of git's `fatal: '<path>' already exists`
+   **upgrading the app's own existing flat refusal** — `createWorktree` already guards the target at
+   `worktree-manager.ts:87-89` with `Target path already exists: <target>`, so git's
+   `fatal: '<path>' already exists` is never actually reached and this AC replaces a dead-end app message,
+   not a raw git error *(wording corrected during T8: the original AC named the git error)*
 2. WHEN the user confirms cleanup THEN the app SHALL delete the leftover using the same junction-safe bounded
    deleter and then proceed with the create; the resulting worktree SHALL be created normally (post-create
    hook included, per AD-013)
@@ -382,19 +385,29 @@ worktree; a folder containing a `.git` directory refuses without offering cleanu
 
 ## Requirement Traceability
 
-| Requirement ID | Story | Phase | Status |
+| Requirement ID | Story | Phase (tasks) | Status |
 | --- | --- | --- | --- |
-| WRFT-01 | P1: Delete-then-deregister with pre-flight guards | Pending | — |
-| WRFT-02 | P1: Never deregister while files remain | Pending | — |
-| WRFT-03 | P1: No data destroyed outside the worktree (junctions) | Pending | — |
-| WRFT-04 | P1: Bounded retry + actionable leftover report | Pending | — |
-| WRFT-05 | P1: Sessions really exited before deletion starts | Pending | — |
-| WRFT-06 | P1: Failure visible in the UI, row stays, retry works | Pending | — |
-| WRFT-07 | P2: Create over a leftover folder offers clean-and-continue | Pending | — |
+| WRFT-01 | P1: Delete-then-deregister with pre-flight guards | Phase 2 (T3, T4) | ⚙ Implemented — pending Verifier |
+| WRFT-02 | P1: Never deregister while files remain | Phase 1–2 (T1, T4) | ⚙ Implemented — pending Verifier |
+| WRFT-03 | P1: No data destroyed outside the worktree (junctions) | Phase 1 (T1, T2) | ⚙ Implemented — pending Verifier |
+| WRFT-04 | P1: Bounded retry + actionable leftover report | Phase 1–2 (T1, T2, T4, T5) | ⚙ Implemented — pending Verifier |
+| WRFT-05 | P1: Sessions really exited before deletion starts | Phase 2 (T6) | ⚙ Implemented — pending Verifier |
+| WRFT-06 | P1: Failure visible in the UI, row stays, retry works | Phase 2–3 (T5, T7) | ⚙ Implemented — pending Verifier **and** the owner's live smoke + visual pass |
+| WRFT-07 | P2: Create over a leftover folder offers clean-and-continue | Deferred — follow-up PR (T9–T11) | ⏸ Deferred by owner decision (AD-014) |
+
+**Status legend:** `⚙ Implemented — pending Verifier` means the code and its unit tests are committed and the
+full gate is green, but the independent Verifier (author ≠ verifier) has **not** run yet — nothing here is
+claimed Verified. `⏸ Deferred` means specified but deliberately not built on this branch.
+
+**WRFT-07 pointer:** deferred to a follow-up PR at the owner's decision during Tasks approval, and recorded
+in **AD-014**. Its tasks stay written verbatim as T9–T11 in `tasks.md` so the follow-up can lift them; they
+build on the seams this branch creates (`removeDirTree`, and the `createWorktree` target guard at
+`worktree-manager.ts:87-89` that `classifyTargetPath` replaces).
 
 **Coverage target:** 7 requirements. WRFT-01..05 and WRFT-07's backend half are unit-testable
 (`worktree-manager.test.ts`, `session-manager.test.ts`); WRFT-06 and WRFT-07's dialog follow the project's
-renderer convention (hand-verified + CDP smoke).
+renderer convention (hand-verified + CDP smoke). WRFT-06's smoke (`scripts/smoke-remove.mjs`) is **written
+but not yet run** — a CDP smoke needs a live desktop session and is hand-run by the owner, never automated.
 
 ---
 
