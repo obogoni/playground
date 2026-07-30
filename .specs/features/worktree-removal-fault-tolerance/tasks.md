@@ -65,14 +65,22 @@ load. Every new real-process/real-git test must set an explicit generous timeout
 | **Build** | After phase completion | `npm run build:win` |
 | **Manual** | Renderer/user-facing behavior | `node scripts/smoke-remove.mjs` (live session) |
 
-**Baseline:** `<BASELINE>` tests / `<FILES>` files green at task start (verify with `npm test` before T1 and
-substitute the real numbers; STATE.md records 533/39 after the post-create-hook merge). Every task's
-expected count is `baseline + N` with **zero deletions**. Note TESTING.md's own header still cites the stale
-125/11 figure — anchor to the live run, not to that line.
+**Baseline:** **533 tests / 39 files green** — established *after* T0; the two runs before it were red
+(`2 failed`, then `14 failed`) purely from timeout starvation. Every task's expected count is
+`533 + N` with **zero deletions**. Note TESTING.md's own header still cites the stale 125/11 figure —
+anchor to the live run, not to that line.
 
 ---
 
 ## Execution Plan
+
+### Phase 0: Make the gate trustworthy (Sequential)
+
+Added during Execute, before T1, after two baseline runs of untouched `main` came back red.
+
+```
+T0
+```
 
 ### Phase 1: The deleter (Sequential)
 
@@ -107,6 +115,41 @@ follow-up ships WRFT-07 on top of the deleter and classification seams this bran
 ---
 
 ## Task Breakdown
+
+### T0: Stabilize the test gate (added during Execute)
+
+**What**: Raise Vitest's global test/hook timeouts and widen one racing fixture window, so the gate is
+deterministic before this feature adds more real-git and real-process tests.
+**Where**: `vitest.config.ts`, `src/main/hook-shell.test.ts`
+**Depends on**: None
+**Reuses**: the local precedent at `worktree-manager.test.ts:445` (`vi.setConfig({ testTimeout: 30000 })`)
+**Requirement**: none — enabling work for every task's gate
+
+**Why it exists**: two full runs of untouched `main` failed — `2 failed | 531 passed`, then
+`14 failed | 519 passed` across 5 files. Every failure was a duration overrun against the 5 s default
+(11 430–15 557 ms), and `tree.test.ts` passed alone in 9.3 s. This is candidate lesson **L-005 recurring on
+a second feature** (first seen in `worktree-post-create-hook`), which qualifies it for promotion to
+confirmed. With a gate failing 2–14 random tests per run, no task's "gate passes" claim means anything.
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+
+- [x] `vitest.config.ts` sets `testTimeout: 30000` and `hookTimeout: 30000`, with a comment recording the
+      measurement that motivated it
+- [x] `hook-shell.test.ts:96` passes `timeoutMs: 1500` instead of `500` (owner-approved fixture fix): under
+      load `ping` emitted nothing before the kill, so the output-tail assertion saw `''`. `ping -n 5` still
+      runs ~4 s, so the command is still killed mid-flight — **no assertion weakened, no production code
+      touched**
+- [x] Full suite green: **533 passed / 39 files, 0 failed** (149.5 s) — typecheck clean, lint 0 errors /
+      18 pre-existing warnings (unchanged count)
+- [x] No test deleted, skipped, or weakened
+
+**Tests**: none (test infrastructure)
+**Gate**: full — `npm run typecheck && npm run lint && npm test`
+**Commit**: `test(infra): stop the real-git suites racing the default timeout`
+
+---
 
 ### T1: Create the junction-safe bounded deleter
 

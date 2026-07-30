@@ -97,7 +97,11 @@ describe('runHookShell', () => {
     const result = await runHookShell('ping -n 5 127.0.0.1', {
       cwd: tmpdir(),
       env,
-      timeoutMs: 500
+      // 1500ms, not 500ms: under full-suite load ping had not emitted its first
+      // line before the kill, so the output-tail assertion below saw ''. `ping
+      // -n 5` still runs ~4s, so the command is still killed mid-flight — this
+      // widens the fixture's margin without weakening what is asserted.
+      timeoutMs: 1500
     })
 
     expect(result.timedOut).toBe(true)
