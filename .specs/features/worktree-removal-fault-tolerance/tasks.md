@@ -164,22 +164,22 @@ confirmed. With a gate failing 2–14 random tests per run, no task's "gate pass
 
 **Done when**:
 
-- [ ] `removeDirTree` implements the design's loop: `maxRetries: 0` per attempt, retry only on
+- [x] `removeDirTree` implements the design's loop: `maxRetries: 0` per attempt, retry only on
       `EBUSY`/`EPERM`/`ENOTEMPTY`/`EACCES`, `DELETE_RETRY_INTERVAL_MS = 250` between attempts, giving up at
       `DELETE_RETRY_BUDGET_MS = 3000`
-- [ ] A code comment states **why** `maxRetries: 0` is mandatory (measured 21 599 ms for `maxRetries: 5`)
+- [x] A code comment states **why** `maxRetries: 0` is mandatory (measured 21 599 ms for `maxRetries: 5`)
       so a future reader does not raise it
-- [ ] Returns `{ ok: true }` immediately when the path does not exist (WRFT-02 AC 4)
-- [ ] On give-up returns `{ ok: false, code, leftover: { blockedPath, remaining } }`; `remaining` counts
+- [x] Returns `{ ok: true }` immediately when the path does not exist (WRFT-02 AC 4)
+- [x] On give-up returns `{ ok: false, code, leftover: { blockedPath, remaining } }`; `remaining` counts
       entries still under the root
-- [ ] Non-retryable codes return immediately without consuming the budget
-- [ ] `deps` (`rm`, `exists`, `readEntries`) default to the real fs functions; no `vi.mock` anywhere
-- [ ] Unit tests with fake deps + `vi.useFakeTimers()`: retry cadence (assert the **literal** 250 ms
+- [x] Non-retryable codes return immediately without consuming the budget
+- [x] `deps` (`rm`, `exists`, `readEntries`) default to the real fs functions; no `vi.mock` anywhere
+- [x] Unit tests with fake deps + `vi.useFakeTimers()`: retry cadence (assert the **literal** 250 ms
       spacing), budget exhaustion (**literal** 3000 ms), success after N transient failures, non-retryable
       immediate return, missing-path no-op, leftover payload contents
-- [ ] One test pins the exported constants to their literal values (`250`, `3000`) — lesson L-004
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: baseline + 9 (no silent deletions)
+- [x] One test pins the exported constants to their literal values (`250`, `3000`) — lesson L-004
+- [x] Gate check passes: `npm test`
+- [x] Test count: baseline + 9 (no silent deletions) — **542 passed / 40 files**
 
 **Tests**: unit
 **Gate**: quick
