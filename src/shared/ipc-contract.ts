@@ -55,12 +55,16 @@ export interface IpcContract {
     }
     res: CreateWorktreeResult
   }
-  /** git worktree remove with dirty/primary guards; failures are returned, never thrown. */
+  /**
+   * Delete-first worktree removal (WRFT-01): the app deletes the directory, then
+   * git drops the bookkeeping. Failures are returned, never thrown — and a `res`
+   * carrying `leftover` means nothing was deregistered, so the same call retries.
+   */
   'worktrees:remove': {
     req: {
       repoPath: string
       worktreePath: string
-      /** Override the dirty guard with `git worktree remove --force` (FRWT-01); absent = off. */
+      /** Skip the dirty guard (FRWT-01); absent = off. Never skips primary/registered/locked. */
       force?: boolean
     }
     res: RemoveWorktreeResult

@@ -300,16 +300,19 @@ blocked path + count in the Danger section. **Producer and consumer land togethe
 
 **Done when**:
 
-- [ ] `RemoveWorktreeResult.leftover?: RemovalLeftover`; `worktrees:remove` res widened; no `any`
-- [ ] The failure message names the blocked path, the remaining count, and says the worktree is still
+- [x] `RemoveWorktreeResult.leftover?: RemovalLeftover`; `worktrees:remove` res widened; no `any`
+- [x] The failure message names the blocked path, the remaining count, and says the worktree is still
       registered and can be retried; count pluralizes (`1 item` / `N items`)
-- [ ] `WorktreeDetail` stores and clears `removeLeftover` on every new attempt, and renders the path in
-      monospace with `word-break: break-all` plus the count
-- [ ] Button returns to enabled after failure (verify the existing `setRemoving(false)` path — no
+- [x] `WorktreeDetail` stores and clears `removeLeftover` on every new attempt, and renders the path in
+      monospace with `word-break: break-all` plus the count. **Deviation from design.md:** the structured
+      block *replaces* the flat error line rather than sitting below it — T4's main-side `error` is
+      self-contained (WRFT-04 AC 3 needs it for non-interactive callers), so rendering both would print
+      the long path twice. Every non-leftover failure still renders the flat line
+- [x] Button returns to enabled after failure (verify the existing `setRemoving(false)` path — no
       regression); the row is still present after a refresh
-- [ ] Typecheck passes across node + web projects
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: baseline + 28 + 0 (renderer untested by convention; no deletions)
+- [x] Typecheck passes across node + web projects
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: baseline + 28 + 0 (renderer untested by convention; no deletions) — **561 passed / 40 files**
 
 **Tests**: none (renderer + shared types — matrix says build gate / smoke)
 **Gate**: full

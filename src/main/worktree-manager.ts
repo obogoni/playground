@@ -332,7 +332,11 @@ export async function removeWorktree(
       blockedPath: worktreePath,
       remaining: 0
     }
-    return { ok: false, error: leftoverMessage(blockedPath, remaining) }
+    return {
+      ok: false,
+      error: leftoverMessage(blockedPath, remaining),
+      leftover: { blockedPath, remaining }
+    }
   }
   // 6. Bookkeeping only — the directory is already gone, so plain `remove`
   //    suffices (`--force` would protect nothing) and a failure self-heals on

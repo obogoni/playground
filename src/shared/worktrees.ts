@@ -109,6 +109,12 @@ export interface RemoveWorktreeResult {
   ok: boolean
   /** Human-readable refusal/failure message, present when ok is false. */
   error?: string
+  /**
+   * Present only when the *deletion* gave up (WRFT-04 AC 3) — never on a guard
+   * refusal or a bookkeeping failure. Its presence is the renderer's signal that
+   * the worktree is still registered and the Remove button is a working retry.
+   */
+  leftover?: RemovalLeftover
 }
 
 /**
