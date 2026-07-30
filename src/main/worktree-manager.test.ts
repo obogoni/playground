@@ -711,6 +711,10 @@ describe('removeWorktree', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error).toContain('1 uncommitted change')
+    // WRFT-04 AC 3: a guard refusal carries no leftover — nothing was deleted,
+    // and WorktreeDetail branches on the field to offer a retry that this
+    // refusal can never satisfy.
+    expect(result.leftover).toBeUndefined()
     expect(existsSync(sibling)).toBe(true)
     expect(await listWorktrees(repo)).toHaveLength(2)
   })
@@ -729,6 +733,8 @@ describe('removeWorktree', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error).toMatch(/primary checkout/i)
+    // WRFT-04 AC 3: a guard refusal carries no leftover (see the dirty case).
+    expect(result.leftover).toBeUndefined()
     expect(existsSync(repo)).toBe(true)
   })
 
@@ -905,6 +911,8 @@ describe('removeWorktree', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error).toMatch(/not a registered worktree of this repo/i)
+    // WRFT-04 AC 3: a guard refusal carries no leftover (see the dirty case).
+    expect(result.leftover).toBeUndefined()
     expect(deleter.calls).toEqual([])
     expect(readFileSync(join(stranger, 'precious.txt'), 'utf8')).toBe('keep me')
   })

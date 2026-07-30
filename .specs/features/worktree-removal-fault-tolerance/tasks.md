@@ -759,3 +759,42 @@ otherwise fail EPERM on the very file the test held. Production file restored fr
 **Tests**: unit
 **Gate**: full — `npm run typecheck && npm run lint && npm test`
 **Commit**: `test(worktree): pin the leftover count against a mixed file and directory residue`
+
+---
+
+### F4: Assert that no guard refusal reports a leftover
+
+**Gap**: WRFT-04 AC 3e — the amended AC names **four** guards (primary / unregistered / locked / dirty) that
+must refuse without a `leftover`, but F1 added `expect(result.leftover).toBeUndefined()` to the *locked*
+test only; `toBeUndefined` on `leftover` occurred exactly once in the file. Mutation **N6** — a
+`leftover: { blockedPath, remaining: 0 }` on the primary-checkout guard's return — left all **80 tests
+green**. It is not cosmetic: `WorktreeDetail.tsx:334` branches on `removeLeftover` to render the
+structured "…still registered, so you can retry" block, so a spurious payload tells the user to retry a
+refusal that can never succeed.
+
+**Where**: `src/main/worktree-manager.test.ts` (test-only, three added assertions)
+**Requirement**: WRFT-04 AC 3
+
+**Fix**: the same one-line assertion on the three unasserted guards — the dirty-without-force test, the
+primary-checkout test and the unregistered-path test — leaving the locked one from F1 in place. All four
+refusal paths now pin the absence.
+
+**Mutation evidence** — all three guard returns given a stray `leftover` in one run:
+
+```
+FAIL  refuses a dirty worktree and leaves it intact
+FAIL  refuses the repo's primary checkout                                  ← N6
+FAIL  refuses a path that is not a registered worktree of this repo and deletes nothing
+AssertionError: expected { …(2) } to be undefined   (×3)
+Tests  3 failed | 77 passed (80)
+```
+
+N6 alone, run first and on its own: `1 failed | 79 passed (80)` — before the fix it was `80 passed (80)`,
+**survived**. Each of the three new assertions is therefore load-bearing, not just the one the Verifier
+probed. Production file restored from a byte-identical backup (`git diff src/main/worktree-manager.ts`
+empty) before the gate and the commit.
+
+**Test count**: 566 → 566 (assertions added to existing tests, so the count does not move; zero deletions)
+**Tests**: unit
+**Gate**: full — `npm run typecheck && npm run lint && npm test`
+**Commit**: `test(worktree): assert no guard refusal reports a leftover`
