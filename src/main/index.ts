@@ -253,6 +253,10 @@ app.whenReady().then(() => {
   handle('sessions:spawn', ({ agentName, cwd, adhocCommand }) =>
     sessions.spawn(agentName, cwd, adhocCommand)
   )
+  // Returning the promise is load-bearing: ipcMain.handle awaits it, so the
+  // renderer's `sessions:stop` only resolves once the PTY has really exited
+  // (WRFT-05) — which is what lets a worktree removal start without racing
+  // handles the agent's children still hold.
   handle('sessions:stop', ({ id }) => sessions.stop(id))
   handle('sessions:respawn', ({ id }) => sessions.respawn(id))
   handle('sessions:rename', ({ id, title }) => sessions.rename(id, title))

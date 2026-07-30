@@ -333,19 +333,23 @@ blocked path + count in the Danger section. **Producer and consumer land togethe
 
 **Done when**:
 
-- [ ] `#start` stores an `exited` promise resolved from the existing `onExit` callback; `stop` captures it
+- [x] `#start` stores an `exited` promise resolved from the existing `onExit` callback; `stop` captures it
       before `#finalize` drops the Map entry
-- [ ] `stop` still finalizes **immediately** (status flips to stopped synchronously — all 7 existing
+- [x] `stop` still finalizes **immediately** (status flips to stopped synchronously — all 7 existing
       `manager.stop(...)` call sites keep passing unmodified)
-- [ ] The wait is capped at 3000 ms; the timer is cleared in `finally` and `unref`'d, with a comment
+- [x] The wait is capped at 3000 ms; the timer is cleared in `finally` and `unref`'d, with a comment
       distinguishing this from lesson L-003's grace timer (here the promise is awaited by a live caller, so
       `unref` cannot skip work)
-- [ ] `killAll()` stays synchronous (`void this.stop(id)`) with a comment stating why (quit must not stall
+- [x] `killAll()` stays synchronous (`void this.stop(id)`) with a comment stating why (quit must not stall
       up to 3 s per session)
-- [ ] Unit tests with a fake PTY port: resolves only after the fake's exit fires; resolves anyway after the
+- [x] Unit tests with a fake PTY port: resolves only after the fake's exit fires; resolves anyway after the
       cap for a port that never exits (fake timers, real constant); existing session tests unmodified
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: baseline + 28 + 3 (no silent deletions)
+- [x] Gate check passes: `npm test`
+- [x] Test count: baseline + 28 + 3 (no silent deletions) — **564 passed / 40 files**
+
+**Note on `index.ts`**: no code change was needed — `handle('sessions:stop', ({ id }) => sessions.stop(id))`
+already returns the promise and `ipcMain.handle` awaits it, so the channel resolves on the real exit the
+moment `stop` became async. A comment was added at that line recording why the `return` is load-bearing.
 
 **Tests**: unit
 **Gate**: quick
