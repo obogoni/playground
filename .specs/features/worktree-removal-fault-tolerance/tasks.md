@@ -200,19 +200,20 @@ targets, read-only content, and a genuinely locked directory.
 
 **Done when**:
 
-- [ ] **Junction test asserts the TARGET's contents survive** (`precious.txt` + `nested/deep.txt` still
+- [x] **Junction test asserts the TARGET's contents survive** (`precious.txt` + `nested/deep.txt` still
       readable after removal) — not merely that the worktree folder is gone. Written so it would FAIL
-      against a git-based deleter
-- [ ] Dangling-junction test: target deleted first, removal still succeeds (WRFT-03 AC 3)
-- [ ] Read-only file (`chmod 0o444` + `attrib +R`) and a nested real git repo (`0444` object store) both
+      against a git-based deleter (it also reads through the junction *before* removing, so the assertion
+      cannot pass vacuously)
+- [x] Dangling-junction test: target deleted first, removal still succeeds (WRFT-03 AC 3)
+- [x] Read-only file (`chmod 0o444` + `attrib +R`) and a nested real git repo (`0444` object store) both
       delete successfully
-- [ ] Real-lock test: a child process with `cwd` inside the tree (`spawn(process.execPath, ['-e',
+- [x] Real-lock test: a child process with `cwd` inside the tree (`spawn(process.execPath, ['-e',
       'setTimeout(…)'], { cwd })`) blocks deletion → asserts `ok: false`, the `leftover` payload, and that
       the call returns within 5000 ms (WRFT-04 AC 5); after killing the holder a retry succeeds
-- [ ] Every test in this task sets an **explicit** timeout (lesson L-005); the holder process is killed in
-      `afterEach` even when the test fails
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: baseline + 9 + 6 (no silent deletions)
+- [x] Every test in this task sets an **explicit** timeout (lesson L-005) — 30000, matching T0's new global
+      so the ceiling is unchanged; the holder process is killed in `afterEach` even when the test fails
+- [x] Gate check passes: `npm test`
+- [x] Test count: baseline + 9 + 6 (no silent deletions) — **548 passed / 40 files**
 
 **Tests**: unit (real-fs)
 **Gate**: quick
