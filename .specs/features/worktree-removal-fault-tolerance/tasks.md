@@ -602,3 +602,54 @@ T4/T10 unit tests below and by the T7 smoke above.
 
 **Scope of the three validation tables:** rows T9–T11 describe the deferred follow-up work and are kept for
 that PR to lift verbatim. This branch's approval covers T1–T8 only.
+
+---
+
+## Fix round 1 (from `validation.md`, Verifier round 1 — both gaps are test-strength, not defects)
+
+The Verifier returned FAIL with **2 surviving mutants** (M6, M13). Both survivors were *unasserted
+outcomes*, not wrong behavior: the implementation is correct on every path examined, so **no production
+code changed in this round**. Each fix is proved by re-running the exact mutation the Verifier used and
+observing the new assertion fail.
+
+### F1: Assert the leftover payload the renderer branches on
+
+**Gap**: WRFT-04 AC 3c — `RemoveWorktreeResult.leftover` was never asserted. The three `leftover:`
+occurrences in `worktree-manager.test.ts` (`:844`, `:867`, `:882`) are fixture **inputs** handed to
+`spyDeleter`, never expectations on the value `removeWorktree` returns. Mutation **M6** — dropping
+`leftover` from the failure result at `worktree-manager.ts:335-339` — left all **80 tests green**. This is
+exactly the payload/conjunction trap: the value goes in and nothing checks it comes back out.
+`WorktreeDetail.tsx:135` branches on `result.leftover`, so losing it silently degrades the UI from the
+structured two-row block (WRFT-06 AC 1/AC 4) to the flat error line.
+
+**Where**: `src/main/worktree-manager.test.ts` (test-only; additions only, nothing weakened or removed)
+**Requirement**: WRFT-04 AC 3
+
+**Fix**:
+
+- `:852` — `expect(failed.leftover).toEqual({ blockedPath: blocked, remaining: 3 })` in the give-up test
+- `:880-882` — `expect(result.leftover).toEqual({ blockedPath: blocked, remaining: 3 })` plus a per-field
+  check on `.blockedPath` and `.remaining` in the failure-message test (message **and** payload)
+- `:936` — `expect(result.leftover).toBeUndefined()` on the locked-guard refusal: `shared/worktrees.ts:110-116`
+  documents "never on a guard refusal", and that half was unasserted too
+
+**Mutation evidence (M6 — `leftover: { blockedPath, remaining }` removed from the returned object)**:
+
+```
+FAIL src/main/worktree-manager.test.ts > removeWorktree > never invokes git and keeps the
+     worktree registered when deletion gives up
+FAIL src/main/worktree-manager.test.ts > removeWorktree > names the blocked path, the remaining
+     count and the retry in the failure message
+AssertionError: expected undefined to deeply equal { …(2) }
+  - Expected: { "blockedPath": "…\repo-feature-x\a.txt", "remaining": 3 }
+  + Received: undefined
+Tests  2 failed | 18 passed | 60 skipped (80)
+```
+
+Before: `80 passed (80)` — **survived**. After: **2 failed — killed**. Production file restored from a
+byte-identical backup (`git diff src/main/worktree-manager.ts` empty) before the gate and the commit.
+
+**Test count**: 564 → 564 (assertions added to existing tests; no new test cases, no deletions)
+**Tests**: unit
+**Gate**: full — `npm run typecheck && npm run lint && npm test`
+**Commit**: `test(worktree): assert the leftover payload the renderer branches on`

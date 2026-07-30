@@ -847,6 +847,9 @@ describe('removeWorktree', () => {
     const failed = await removeWorktree(repo, sibling, {}, stuck)
 
     expect(failed.ok).toBe(false)
+    // WRFT-04 AC 3: the structured payload must come back out of removeWorktree,
+    // not merely go into the deleter — it is what WorktreeDetail branches on.
+    expect(failed.leftover).toEqual({ blockedPath: blocked, remaining: 3 })
     expect(existsSync(sibling)).toBe(true)
     expect(porcelainOf()).toContain(sibling.replaceAll('\\', '/'))
     expect(await listWorktrees(repo)).toHaveLength(2)
@@ -873,6 +876,10 @@ describe('removeWorktree', () => {
     expect(result.error).toContain('3 items still on disk')
     expect(result.error).toMatch(/still registered/i)
     expect(result.error).toMatch(/retry/i)
+    // WRFT-04 AC 3: message *and* payload — the renderer needs both fields by value.
+    expect(result.leftover).toEqual({ blockedPath: blocked, remaining: 3 })
+    expect(result.leftover?.blockedPath).toBe(blocked)
+    expect(result.leftover?.remaining).toBe(3)
   })
 
   it('pluralizes a single leftover entry as "1 item"', async () => {
@@ -924,6 +931,9 @@ describe('removeWorktree', () => {
     expect(result.ok).toBe(false)
     expect(result.error).toMatch(/locked/i)
     expect(result.error).toContain('held for review')
+    // A guard refusal never carries a leftover: nothing was deleted, so there is
+    // nothing left over, and the renderer must fall back to the flat error line.
+    expect(result.leftover).toBeUndefined()
     expect(deleter.calls).toEqual([])
     expect(existsSync(sibling)).toBe(true)
     expect(await listWorktrees(repo)).toHaveLength(2)
