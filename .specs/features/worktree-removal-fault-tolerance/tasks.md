@@ -234,12 +234,12 @@ targets, read-only content, and a genuinely locked directory.
 
 **Done when**:
 
-- [ ] `locked` with a reason yields the reason string; bare `locked` yields `''`; absent yields `undefined`
+- [x] `locked` with a reason yields the reason string; bare `locked` yields `''`; absent yields `undefined`
       (the three cases are distinguishable — `''` must not read as "unlocked")
-- [ ] `listWorktrees` and `worktreeHosting` behavior is unchanged (additive field only)
-- [ ] Unit tests on a real temp repo using `git worktree lock --reason …` and a bare `git worktree lock`
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: baseline + 15 + 3 (no silent deletions)
+- [x] `listWorktrees` and `worktreeHosting` behavior is unchanged (additive field only)
+- [x] Unit tests on a real temp repo using `git worktree lock --reason …` and a bare `git worktree lock`
+- [x] Gate check passes: `npm test`
+- [x] Test count: baseline + 15 + 3 (no silent deletions) — **551 passed / 40 files**
 
 **Tests**: unit
 **Gate**: quick

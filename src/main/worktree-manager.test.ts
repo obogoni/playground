@@ -18,6 +18,7 @@ import {
   GitError,
   listWorktrees,
   parseChangedFiles,
+  parsePorcelainBlocks,
   removeWorktree
 } from './worktree-manager'
 
@@ -112,6 +113,66 @@ describe('listWorktrees', () => {
     mkdirSync(plain)
 
     await expect(listWorktrees(plain)).rejects.toBeInstanceOf(GitError)
+  })
+})
+
+describe('parsePorcelainBlocks — locked line (WRFT-01 AC 3)', () => {
+  let root: string
+  let repo: string
+  let locked: string
+  let unlocked: string
+
+  beforeEach(() => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-lock-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+    locked = join(root, 'repo-locked')
+    unlocked = join(root, 'repo-unlocked')
+    git(repo, 'worktree', 'add', locked, '-b', 'feature/locked')
+    git(repo, 'worktree', 'add', unlocked, '-b', 'feature/unlocked')
+  })
+
+  afterEach(() => {
+    // A git lock is bookkeeping only — it holds no OS handle, so the tree removes
+    // without unlocking first.
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  const porcelain = (): string => git(repo, 'worktree', 'list', '--porcelain')
+
+  it("yields git's lock reason for a worktree locked with --reason", async () => {
+    git(repo, 'worktree', 'lock', '--reason', 'held for review', locked)
+
+    const block = parsePorcelainBlocks(porcelain()).find((b) => b.path === locked)
+
+    expect(block?.locked).toBe('held for review')
+    // Additive only: the fields listWorktrees reads are untouched (Done-when 2).
+    const listed = (await listWorktrees(repo)).find((w) => w.path === locked)
+    expect(listed).toMatchObject({ branch: 'feature/locked', isDefault: false })
+  })
+
+  it('yields an empty reason for a bare locked line — not undefined', () => {
+    git(repo, 'worktree', 'lock', locked)
+
+    const block = parsePorcelainBlocks(porcelain()).find((b) => b.path === locked)
+
+    expect(block?.locked).toBe('')
+    expect(block?.locked).not.toBeUndefined()
+  })
+
+  it('leaves locked undefined for a worktree that is not locked', () => {
+    git(repo, 'worktree', 'lock', '--reason', 'held for review', locked)
+
+    const blocks = parsePorcelainBlocks(porcelain())
+
+    expect(blocks.find((b) => b.path === unlocked)?.locked).toBeUndefined()
+    expect(blocks.find((b) => b.path === repo)?.locked).toBeUndefined()
   })
 })
 

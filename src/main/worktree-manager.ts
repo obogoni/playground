@@ -302,9 +302,15 @@ function gitFailureLine(err: unknown): string {
   return err instanceof Error ? err.message.split('\n')[0] : String(err)
 }
 
-interface PorcelainBlock {
+export interface PorcelainBlock {
   path: string
   branch: string
+  /**
+   * Git's `git worktree lock` reason, or `''` for a bare `locked` line. Absent
+   * (`undefined`) means the worktree is not locked at all — the three cases must
+   * stay distinguishable, because `''` is a *locked* worktree (WRFT-01 AC 3).
+   */
+  locked?: string
 }
 
 /**
@@ -312,8 +318,12 @@ interface PorcelainBlock {
  *   worktree <path>
  *   HEAD <sha>
  *   branch refs/heads/<name>   (or `detached`, or `bare`)
+ *   locked [reason]            (only when the worktree is locked)
+ *
+ * Exported for unit tests (same stance as `parseChangedFiles`): the parse is the
+ * pure half of the locked guard, testable against real porcelain without a remove.
  */
-function parsePorcelainBlocks(stdout: string): PorcelainBlock[] {
+export function parsePorcelainBlocks(stdout: string): PorcelainBlock[] {
   const blocks: PorcelainBlock[] = []
   for (const raw of stdout.split(/\r?\n\r?\n/)) {
     const lines = raw.split(/\r?\n/).filter(Boolean)
@@ -333,7 +343,14 @@ function parsePorcelainBlocks(stdout: string): PorcelainBlock[] {
     } else {
       branch = `(detached ${head ? head.slice(0, 7) : '?'})`
     }
-    blocks.push({ path, branch })
+    // `locked` alone and `locked <reason>` are both lock markers; only the
+    // absence of the line means unlocked.
+    const lockedLine = lines.find((l) => l === 'locked' || l.startsWith('locked '))
+    blocks.push({
+      path,
+      branch,
+      ...(lockedLine === undefined ? {} : { locked: lockedLine.slice('locked'.length).trim() })
+    })
   }
   return blocks
 }
