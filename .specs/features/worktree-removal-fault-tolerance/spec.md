@@ -277,9 +277,12 @@ exactly what is blocking, so that I never have to guess why a removal failed.
 2. WHEN the lock is released within the budget THEN removal SHALL proceed to the bookkeeping step and return
    `{ ok: true }`
 3. WHEN the budget is exhausted THEN the result SHALL be `{ ok: false }` with a `leftover` payload carrying
-   `blockedPath` (the path of the entry that could not be deleted) and `remaining` (the count of entries
-   still present under the worktree root), and the `error` message SHALL name `blockedPath`, state the
-   remaining count, and say the worktree is still registered and the removal can be retried
+   `blockedPath` (the path of the entry that could not be deleted) and `remaining` (the **recursive** count
+   of every entry still present anywhere under the worktree root, not just its top level), and the `error`
+   message SHALL name `blockedPath`, state the remaining count, and say the worktree is still registered and
+   the removal can be retried. The `leftover` payload SHALL be present on the returned result itself — the
+   renderer branches on it (`WorktreeDetail.tsx`), so it is part of the contract, not an internal detail.
+   Guard refusals (primary / unregistered / locked / dirty) carry **no** `leftover`, since nothing was deleted
 4. WHEN a deletion attempt fails with any other error code THEN the app SHALL report it immediately in the
    same shape without consuming the retry budget
 5. WHEN removal fails for any reason THEN it SHALL return within **5000 ms** of the call
