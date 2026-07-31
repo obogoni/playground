@@ -146,22 +146,29 @@ Medium scope — dimensions obviously present for this domain are covered; the r
 
 ## Requirement Traceability
 
+**Status after execution:** all 14 ACs are **Verified** — T1–T3 plus the T4 docs commit, checked
+by a standalone fresh-eyes pass (9/12 mutants killed, 3 accepted equivalence survivors; see
+`validation.md`). The one outstanding item is the last Success Criterion: a real worktree create
+from the dialog has not been run (owner action). Note the validation was **not** performed by an
+independent Verifier sub-agent — the harness is configured without them — so author ≠ verifier is
+unmet and the sensor is the compensating control.
+
 | Requirement ID | Story                          | Phase | Status  |
 | -------------- | ------------------------------ | ----- | ------- |
-| HWC-01         | P1: Declared outside the repo  | Tasks | Pending |
-| HWC-02         | P1: Declared outside the repo  | Tasks | Pending |
-| HWC-03         | P1: Declared outside the repo  | Tasks | Pending |
-| HWC-04         | P1: Declared outside the repo  | Tasks | Pending |
-| HWC-05         | P1: Declared outside the repo  | Tasks | Pending |
-| HWC-06         | P1: Declared outside the repo  | Tasks | Pending |
-| HWC-07         | P1: Declared outside the repo  | Tasks | Pending |
-| HWC-08         | P1: Declared outside the repo  | Tasks | Pending |
-| HWC-09         | P1: Declared outside the repo  | Tasks | Pending |
-| HWC-10         | P1: Declared outside the repo  | Tasks | Pending |
-| HWC-11         | P1: Declared outside the repo  | Tasks | Pending |
-| HWC-12         | P1: Declared outside the repo  | Tasks | Pending |
-| HWC-13         | P1: Declared outside the repo  | Tasks | Pending |
-| HWC-14         | P1: Declared outside the repo  | Tasks | Pending |
+| HWC-01         | P1: Declared outside the repo  | Done  | Verified |
+| HWC-02         | P1: Declared outside the repo  | Done  | Verified |
+| HWC-03         | P1: Declared outside the repo  | Done  | Verified |
+| HWC-04         | P1: Declared outside the repo  | Done  | Verified |
+| HWC-05         | P1: Declared outside the repo  | Done  | Verified |
+| HWC-06         | P1: Declared outside the repo  | Done  | Verified |
+| HWC-07         | P1: Declared outside the repo  | Done  | Verified |
+| HWC-08         | P1: Declared outside the repo  | Done  | Verified |
+| HWC-09         | P1: Declared outside the repo  | Done  | Verified |
+| HWC-10         | P1: Declared outside the repo  | Done  | Verified |
+| HWC-11         | P1: Declared outside the repo  | Done  | Verified |
+| HWC-12         | P1: Declared outside the repo  | Done  | Verified |
+| HWC-13         | P1: Declared outside the repo  | Done  | Verified |
+| HWC-14         | P1: Declared outside the repo  | Done  | Verified |
 
 **ID format:** `HWC-[NUMBER]` (Hook Workspace Config)
 
