@@ -85,9 +85,11 @@ their wording is not (the Verifier recommends **not** fixing this).
    been rendered).
 3. **Create the GitHub issue** for this feature (issue = feature = PR), then push and open the PR with
    `Closes #<n>` in the body.
-4. **Lessons store has no writer.** `.specs/LESSONS.md` declares itself machine-owned by
-   `scripts/lessons.py`, which does not exist in this repo. Unrecorded signal: **L-005 recurred on a
-   second feature** (qualifies for promotion to confirmed under `promote_threshold=2`), plus two new
-   candidates — *payload asserted as fixture input only* and *a fixture shaped around the known
-   mutation* (the latter demonstrated twice in one feature).
+4. **Lessons store has no writer — entries below were HAND-MAINTAINED.** `.specs/LESSONS.md` declares
+   itself machine-owned by `scripts/lessons.py`, which does not exist in this repo. With the owner's
+   approval `lessons.json` was edited directly and `LESSONS.md` re-rendered by hand in the script's
+   exact format: **L-005 promoted to `confirmed`** (recurred on a second feature, meeting
+   `promote_threshold=2`), and **L-006** (*payload asserted as fixture input only*) and **L-007**
+   (*a fixture shaped around the known mutation*) added as candidates. If `lessons.py` is ever
+   restored, verify its rendering still matches these blocks byte-for-byte.
 5. **Follow-up PR** for WRFT-07 (T9–T11 are specified verbatim in `tasks.md`).
