@@ -390,17 +390,30 @@ worktree; a folder containing a `.git` directory refuses without offering cleanu
 
 | Requirement ID | Story | Phase (tasks) | Status |
 | --- | --- | --- | --- |
-| WRFT-01 | P1: Delete-then-deregister with pre-flight guards | Phase 2 (T3, T4) | ⚙ Implemented — pending Verifier |
-| WRFT-02 | P1: Never deregister while files remain | Phase 1–2 (T1, T4) | ⚙ Implemented — pending Verifier |
-| WRFT-03 | P1: No data destroyed outside the worktree (junctions) | Phase 1 (T1, T2) | ⚙ Implemented — pending Verifier |
-| WRFT-04 | P1: Bounded retry + actionable leftover report | Phase 1–2 (T1, T2, T4, T5) | ⚙ Implemented — pending Verifier |
-| WRFT-05 | P1: Sessions really exited before deletion starts | Phase 2 (T6) | ⚙ Implemented — pending Verifier |
-| WRFT-06 | P1: Failure visible in the UI, row stays, retry works | Phase 2–3 (T5, T7) | ⚙ Implemented — pending Verifier **and** the owner's live smoke + visual pass |
+| WRFT-01 | P1: Delete-then-deregister with pre-flight guards | Phase 2 (T3, T4) | ✅ Verified (round 3) |
+| WRFT-02 | P1: Never deregister while files remain | Phase 1–2 (T1, T4) | ✅ Verified (round 3) |
+| WRFT-03 | P1: No data destroyed outside the worktree (junctions) | Phase 1 (T1, T2) | ✅ Verified (round 3) |
+| WRFT-04 | P1: Bounded retry + actionable leftover report | Phase 1–2 (T1, T2, T4, T5) + F1–F4 | ✅ Verified (round 3, all five AC 3 clauses pinned) |
+| WRFT-05 | P1: Sessions really exited before deletion starts | Phase 2 (T6) | ✅ Verified (round 3) |
+| WRFT-06 | P1: Failure visible in the UI, row stays, retry works | Phase 2–3 (T5, T7) | ⏳ Unverified — awaits the owner's live smoke run + visual pass |
 | WRFT-07 | P2: Create over a leftover folder offers clean-and-continue | Deferred — follow-up PR (T9–T11) | ⏸ Deferred by owner decision (AD-014) |
 
-**Status legend:** `⚙ Implemented — pending Verifier` means the code and its unit tests are committed and the
-full gate is green, but the independent Verifier (author ≠ verifier) has **not** run yet — nothing here is
-claimed Verified. `⏸ Deferred` means specified but deliberately not built on this branch.
+**Status legend:** `✅ Verified` means the independent Verifier (author ≠ verifier) confirmed the AC against
+`file:line` assertion evidence **and** the discrimination sensor killed mutations of that behavior.
+`⏳ Unverified` means implemented with a green gate but with **no executed evidence** — WRFT-06 is renderer
+behavior, which this project does not unit-test by convention (AD-004/AD-011), and its CDP smoke has been
+written but never run. `⏸ Deferred` means specified but deliberately not built on this branch.
+
+**Verification history:** three rounds. Round 1 FAIL (14/16 mutants killed; `leftover` never asserted, the
+recursive count unpinned), round 2 FAIL (8/10; the round-1 fix's fixture was directories-only and so blind
+to *what* it counted, and guard-refusal absence was pinned on one guard of four), round 3 **PASS** (12/15,
+3 survivors all non-blocking). Every fix was test-only: `git diff --name-only dcc50dc..HEAD` touches no
+production file. Full evidence in `validation.md`.
+
+**Known non-blocking survivors** (recorded, deliberately not fixed): a guard `leftover` conditioned on
+`force: true`; `blockedPath` naming the first rather than the last failing attempt (spec leaves it open, and
+a discriminating fixture would be racy); and the two guard message literals, whose *behavior* is pinned
+while their wording is not.
 
 **WRFT-07 pointer:** deferred to a follow-up PR at the owner's decision during Tasks approval, and recorded
 in **AD-014**. Its tasks stay written verbatim as T9–T11 in `tasks.md` so the follow-up can lift them; they

@@ -24,11 +24,12 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current, 2026-07-30):** **`worktree-removal-fault-tolerance` (AD-014) — all 9 tasks
-EXECUTED and committed; the independent Verifier has NOT run yet.** Branch
-`feature/worktree-removal-fault-tolerance`, 10 commits (`16d2c2f..HEAD`), **564 tests / 40 files
-green**, typecheck clean, lint 0 errors / 18 pre-existing warnings (unchanged count). Not pushed,
-no PR. WRFT-01..06 are **Implemented (pending verification)** — no requirement is claimed Verified.
+**Status (current, 2026-07-30):** **`worktree-removal-fault-tolerance` (AD-014) — EXECUTED and
+independently VERIFIED (round 3 PASS). NOT pushed, no PR, no GitHub issue yet; the owner's live smoke
+run and visual pass are OUTSTANDING.** Branch `feature/worktree-removal-fault-tolerance`, 15 commits
+(`16d2c2f..HEAD`), **566 tests / 40 files green**, typecheck clean, lint 0 errors / 18 pre-existing
+warnings (unchanged count). WRFT-01..05 are **Verified**; WRFT-06 is **Unverified** (renderer — no
+executed evidence); WRFT-07 is **Deferred** to a follow-up PR.
 
 Removal is now **delete-first**: the app deletes the worktree directory itself with a junction-safe,
 deadline-bounded deleter and calls `git worktree remove` only to drop bookkeeping. A blocked deletion
@@ -37,60 +38,56 @@ Danger section names the blocked path and the remaining entry count. Guard order
 registered → locked → dirty, all refusing before any deletion. `SessionManager.stop` now resolves on
 the PTY's real exit (capped at 3000 ms), so removal no longer races the terminals it just killed.
 
+This also closed a **latent data-loss bug** found while probing: git for Windows treats a junction as
+a directory and recurses into it, so `git worktree remove --force` was emptying the shared target of
+AD-013's skills junctions **while reporting success**. Node's `fs.rm` unlinks junctions instead, so
+delete-first fixes it as a side effect. Worth checking whether any real shared-skills folder was
+already emptied by a past removal.
+
 **Commit map:**
 | Commit | Task | What |
 | ------ | ---- | ---- |
 | 16d2c2f | plan | spec (WRFT-01..07) + design + tasks |
-| 34f8970 | T0 | gate stabilization — `testTimeout`/`hookTimeout` 30000, one racing fixture window widened (added during Execute after two runs of untouched `main` came back red) |
+| 34f8970 | T0 | gate stabilization — `testTimeout`/`hookTimeout` 30000, one racing fixture window widened (added during Execute after two runs of untouched `main` came back red: `2 failed`, then `14 failed`) |
 | b286a46 | T1 | `dir-remover.ts` — `removeDirTree` + `DELETE_RETRY_INTERVAL_MS`/`DELETE_RETRY_BUDGET_MS`, DI'd fs deps (+9) |
 | bdc32fe | T2 | real-fs hazard tests — junction target survives, dangling junction, read-only + nested repo, real external-holder lock (+6) |
 | 32eb539 | T3 | porcelain `locked` parsing — reason / `''` / `undefined` are distinguishable (+3) |
 | dd7f31c | T4 | `removeWorktree` reordered to delete-then-deregister, 6-step guard table, deleter injected (+10) |
 | f8a4af8 | T5 | `leftover` through `shared/worktrees.ts` → IPC → `WorktreeDetail` (producer + consumer together, L-001) |
 | b090c6f | T6 | `SessionManager.stop` awaits the real PTY exit, capped at `SESSION_EXIT_WAIT_MS = 3000`; `killAll` stays fire-and-forget (+3) |
-| ac71cfb | T7 | `smoke-remove.mjs` + seed extended with the WRFT-06 blocked-then-retry flow (**written, not run** — see below) |
-| (this commit) | T8 | AD-014 + spec traceability + this handoff |
+| ac71cfb | T7 | `smoke-remove.mjs` + seed extended with the WRFT-06 blocked-then-retry flow (**written, never run**) |
+| dcc50dc | T8 | AD-014 + spec traceability + handoff |
+| 124340c | F1 | **Verifier r1 gap** — assert `RemoveWorktreeResult.leftover` by value (it was only ever a spy *input*) |
+| 5aafb90 | F2 | **Verifier r1 gap** — pin the recursive `remaining` count against real fs |
+| 6f3af8a | — | spec precision: `remaining` is the **recursive** count; `leftover` is part of the returned contract; guard refusals carry none |
+| 1abe8aa | F3 | **Verifier r2 gap** — mixed file+directory residue fixture (one locked chain, `pwsh` `FileShare.None` holder) so 3/2/1/1 separates four readings |
+| 45c27d5 | F4 | **Verifier r2 gap** — `leftover` absence asserted on all four guard refusal paths, not just `locked` |
+
+**Verification (independent, author ≠ verifier) — 3 rounds, ending PASS.** Round 1 FAIL (14/16 mutants
+killed): `leftover` never asserted, recursive count unpinned. Round 2 FAIL (8/10): the round-1 fix's
+fixture was directories-only and therefore blind to *what* it counted, and guard-refusal absence was
+pinned on one guard of four. Round 3 **PASS** (12/15; 3 survivors, all non-blocking and recorded).
+**Every fix was test-only** — `git diff --name-only dcc50dc..HEAD` touches no production file.
+Report: `.specs/features/worktree-removal-fault-tolerance/validation.md`.
+
+**Accepted non-blocking survivors (reasoned, not oversights):** a guard `leftover` conditioned on
+`force: true` (contrived; every guard is pinned on its non-force path); `blockedPath` naming the first
+rather than the last failing attempt (the spec leaves it open and a discriminating fixture needs two
+holders releasing mid-loop — racy); and the two guard message literals, whose behavior is pinned while
+their wording is not (the Verifier recommends **not** fixing this).
 
 **OUTSTANDING — owner tasks, in order:**
-1. **Run the T7 live smoke.** `scripts/smoke-remove.mjs` was written and syntax-checked but **never
-   executed**: a CDP smoke needs a live desktop session and a seeded workspace, is hand-run by the
-   owner and never automated (TESTING.md), and launching the Electron app from an agent would
-   interfere with the desktop. Re-seed first (`node scripts/seed-smoke-remove.mjs` — it now creates a
-   third worktree, `api-lock-me` / `lock/me`, with an empty `sub/` for the holder process), launch
-   with `--remote-debugging-port=9222`, then `node scripts/smoke-remove.mjs`. Every removal in that
-   script is one-shot, so re-seed before each run.
-2. **Visual pass on the Danger section.** WRFT-06 AC 4 (a long blocked path wraps inside the section
-   instead of stretching it) is a renderer concern with no unit tests by convention — the
-   `.detail-danger-leftover` / `.detail-danger-path` block has never been rendered.
-3. **The independent Verifier has not run.** It is the closing step of Execute and is dispatched by
-   the orchestrator, not by a phase worker.
-4. **No GitHub issue exists for this feature yet**, so the PR body's `Closes #<n>` cannot be written.
-   Create the feature issue first (repo pipeline: issue = feature = PR), then push + open the PR.
-
-**Deferred by owner decision (follow-up PR, specified but not executed):** WRFT-07 — the create-time
-leftover collision. Tasks T9–T11 stay written verbatim in
-`.specs/features/worktree-removal-fault-tolerance/tasks.md` for that PR to lift: `classifyTargetPath`
-(`free | empty | leftover | occupied`), the guarded `worktrees:clean-path` channel, and the
-`LeftoverPathChoice` UI in both create dialogs. T9 carries the one intentional edit to an existing
-test (`worktree-manager.test.ts:428` uses an *empty* target dir, which must now pass through).
-
-**Notable deviations recorded during Execute:**
-- **T0 was added mid-Execute.** Two baseline runs of untouched `main` failed (`2 failed`, then
-  `14 failed`) purely on 5 s-default timeout starvation, so the gate was stabilized before any
-  feature code landed. This is lesson **L-005 recurring on a second feature**.
-- **T5 deviated from `design.md`**: the structured leftover block *replaces* the flat error line
-  rather than sitting below it, because T4's main-side `error` is already self-contained (WRFT-04
-  AC 3 needs it for non-interactive callers) and rendering both printed the long path twice.
-- **T6 needed no `index.ts` change**: `handle('sessions:stop', …)` already returns the promise, so
-  the channel started resolving on the real exit the moment `stop` became async. A comment now
-  records that the `return` is load-bearing.
-- **T7's fixture has a known consequence**: a blocked deletion still removes everything it *could*
-  reach, the worktree's `.git` link included, so on the retry the row may read clean or dirty. The
-  smoke confirms an optional dialog so either shape passes.
-
-**Prior context:** `worktree-post-create-hook` (AD-013) is merged (PR #71); its own visual/UAT pass
-and the live `SetupSkills.cmd` gate were the previous outstanding items. Baseline before this
-feature: 533 tests / 39 files. Environment finding #1 from that handoff (`npm test` unreliable on
-this box) was **acted on here** by T0. Environment finding #2 (`NoDefaultCurrentDirectoryInExePath`)
-still stands. Pre-existing quirks unchanged: `src/main/ado-gateway.ts` is UTF-16; 3 transitive dev
-advisories (esbuild/form-data/undici); App.tsx `useTasks`/`useConfig` extraction deferred (AD-004).
+1. **Live smoke** (discharges WRFT-06): `node scripts/seed-smoke-remove.mjs`, then
+   `npm run dev -- -- --remote-debugging-port=9222`, then `node scripts/smoke-remove.mjs`. One-shot —
+   re-seed before each run. Note a blocked deletion still removes everything it can reach, so the retry
+   click may face either a direct remove or the confirm dialog; the script handles both.
+2. **Visual pass** on the Danger section (WRFT-06 AC 4 — long-path wrapping; that markup has never
+   been rendered).
+3. **Create the GitHub issue** for this feature (issue = feature = PR), then push and open the PR with
+   `Closes #<n>` in the body.
+4. **Lessons store has no writer.** `.specs/LESSONS.md` declares itself machine-owned by
+   `scripts/lessons.py`, which does not exist in this repo. Unrecorded signal: **L-005 recurred on a
+   second feature** (qualifies for promotion to confirmed under `promote_threshold=2`), plus two new
+   candidates — *payload asserted as fixture input only* and *a fixture shaped around the known
+   mutation* (the latter demonstrated twice in one feature).
+5. **Follow-up PR** for WRFT-07 (T9–T11 are specified verbatim in `tasks.md`).
