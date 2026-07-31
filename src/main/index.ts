@@ -16,7 +16,7 @@ import { emit, handle, onSend } from './ipc'
 import { createMcpResultServer } from './mcp-result-server'
 import { withPostCreateHook } from './post-create-hook'
 import { PtyPort } from './pty-port'
-import { repoPostCreateCommand } from './repo-config'
+import { resolvePostCreateCommand } from './repo-config'
 import { SessionManager, type EmitFn } from './session-manager'
 import { ShortcutLauncher } from './shortcut-launcher'
 import { TaskBoard } from './task-board'
@@ -193,7 +193,9 @@ app.whenReady().then(() => {
   // workflow ctx further down. Because both consumers get this same wrapper —
   // never bare `createWorktree` — no call path can skip a repo's init command.
   const createWorktreeWithHook = withPostCreateHook(createWorktree, {
-    readCommand: repoPostCreateCommand,
+    // HWC-01: repo-first, then the workspace's `postCreateCommands[<repoName>]`,
+    // so a repo needs no committed `.app/config.json` to be initialized.
+    readCommand: resolvePostCreateCommand,
     shell: runHookShell
   })
   handle(
