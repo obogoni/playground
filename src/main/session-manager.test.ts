@@ -1,13 +1,13 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SEEDED_AGENTS } from '../shared/agents'
 import type { PersistedSession } from '../shared/config'
 import { ConfigStore } from './config-store'
 import type { PtyHandle, PtyPort } from './pty-port'
 import type { SpawnPlan } from './spawn-plan'
-import { SessionManager, type EmitFn } from './session-manager'
+import { SessionManager, SESSION_EXIT_WAIT_MS, type EmitFn } from './session-manager'
 
 interface FakeHandle extends PtyHandle {
   plan: SpawnPlan
@@ -78,6 +78,12 @@ const dirs: string[] = []
 afterEach(() => {
   for (const dir of dirs) rmSync(dir, { recursive: true, force: true })
   dirs.length = 0
+})
+
+// Only the stop-wait tests below install fake timers; restoring here keeps every
+// other test on the real clock.
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 function makeManager(opts: { fsExists?: (p: string) => boolean; seed?: PersistedSession[] } = {}): {
@@ -345,5 +351,67 @@ describe('SessionManager', () => {
     ]
     const restored = makeManager({ seed })
     expect(restored.manager.list()[0].lastOutput).toBeUndefined()
+  })
+
+  // --- WRFT-05: stop resolves on the PTY's real exit ---
+
+  it('stop finalizes at once but resolves only after the PTY has really exited', async () => {
+    vi.useFakeTimers()
+    const { manager, config, port } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+
+    let settled = false
+    const stopped = manager.stop(view.id).then(() => {
+      settled = true
+    })
+
+    // The status flip stays synchronous — every existing caller keeps working.
+    expect(port.handles[0].killed).toBe(true)
+    expect(manager.list()[0].status).toBe('stopped')
+    expect(config.get().sessions[0].status).toBe('stopped')
+
+    await vi.advanceTimersByTimeAsync(2999)
+    expect(settled).toBe(false) // the kill alone is not "really gone"
+
+    port.handles[0].emitExit(0)
+    await stopped
+    expect(settled).toBe(true)
+  })
+
+  it('stop resolves anyway once the 3000 ms wait elapses for a PTY that never exits', async () => {
+    vi.useFakeTimers()
+    expect(SESSION_EXIT_WAIT_MS).toBe(3000) // pin the literal, not the constant
+    const { manager, port } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+
+    let settled = false
+    const stopped = manager.stop(view.id).then(() => {
+      settled = true
+    })
+
+    await vi.advanceTimersByTimeAsync(2999)
+    expect(settled).toBe(false)
+
+    await vi.advanceTimersByTimeAsync(1)
+    await stopped
+    expect(settled).toBe(true)
+    expect(port.handles[0].killed).toBe(true) // proceeded without an exit event
+  })
+
+  it('killAll stays synchronous so quit never stalls on a PTY that never exits', async () => {
+    vi.useFakeTimers()
+    const { manager, config, port } = makeManager()
+    manager.spawn('Claude', CWD)
+    manager.spawn('Codex', 'C:\\work\\other')
+
+    // void, not a promise: awaiting it would add up to 3 s per session to quit.
+    expect(manager.killAll()).toBeUndefined()
+
+    expect(port.handles.every((h) => h.killed)).toBe(true)
+    expect(manager.list().every((s) => s.status === 'stopped')).toBe(true)
+    expect(config.get().sessions.every((s) => s.status === 'stopped')).toBe(true)
+
+    // Drain the two pending waits so nothing outlives the test.
+    await vi.advanceTimersByTimeAsync(SESSION_EXIT_WAIT_MS)
   })
 })

@@ -7,6 +7,10 @@
  *     api-feature-42/   clean worktree, branch feature/42
  *     api-chore-wip/    dirty worktree, branch chore/wip — mixed dirt:
  *                        a.txt modified, b.txt deleted, c.txt untracked
+ *     api-lock-me/      clean worktree, branch lock/me, holding an empty sub/
+ *                        for the WRFT-06 blocked-removal flow (the smoke parks
+ *                        a holder process's cwd there). Empty directories are
+ *                        invisible to git status, so the worktree stays clean.
  *
  * Usage:
  *   node scripts/seed-smoke-remove.mjs [baseDir]
@@ -32,6 +36,7 @@ const wsPath = join(base, 'wtm-smoke-seed')
 const repo = join(wsPath, 'api')
 const cleanWt = join(wsPath, 'api-feature-42')
 const dirtyWt = join(wsPath, 'api-chore-wip')
+const lockWt = join(wsPath, 'api-lock-me')
 
 // Fresh on every run so the dirty state is deterministic.
 rmSync(wsPath, { recursive: true, force: true })
@@ -53,6 +58,14 @@ git(repo, 'worktree', 'add', dirtyWt, '-b', 'chore/wip')
 writeFileSync(join(dirtyWt, 'a.txt'), 'alpha edited\n') // modified
 rmSync(join(dirtyWt, 'b.txt')) // deleted
 writeFileSync(join(dirtyWt, 'c.txt'), 'scratch\n') // untracked
+
+// Clean sibling worktree (lock/me) for the WRFT-06 blocked-removal flow. `sub`
+// is the directory the smoke's holder process sits in: an external cwd is the
+// only honest lock fixture (Node's own handles open with FILE_SHARE_DELETE and
+// never block a delete). It stays empty so git still reports the worktree clean,
+// which keeps the first Remove click on the direct path, not the confirm dialog.
+git(repo, 'worktree', 'add', lockWt, '-b', 'lock/me')
+mkdirSync(join(lockWt, 'sub'))
 
 // Register the workspace folder in the app config. Mirrors WorkspaceRegistry.add:
 // id = lowercased absolute path, displayName = folder basename.
@@ -83,6 +96,7 @@ console.log(
   dirtyWt,
   '(chore/wip — a.txt modified, b.txt deleted, c.txt untracked)'
 )
+console.log('  lock worktree:   ', lockWt, '(lock/me — empty sub/ for the holder process)')
 console.log('Registered in:     ', configPath)
 console.log('')
 console.log('Next: start the app with --remote-debugging-port=9222, then run')

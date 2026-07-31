@@ -20,77 +20,76 @@ Handoff snapshot.
 | AD-009 | 2026-07-06 | **WF3 MERGED to `main` (PR #65).** Independent SDD eval (author≠judge, `spec-driven-eval`): **Final 0.98 — "Spec-complete"** (S=PASS, E recall/precision/justified ≈1.0, gates build/lint/unit green; live smoke owner-PASS 6/6). Two minor gaps merged as-is and **carried into WF4** (WF3-04 generic retry prompt; WF3-10 unasserted server reuse). **WF4 planning deferred to the next session.** | The two gaps are cheap polish on the same runner/`--resume` path WF4 already touches, so folding them into WF4 avoids a throwaway PR. Report: `.specs/features/workflows-agent-step/evaluations/P1-workflows-agent-step-20260706T141244Z.md`. |
 | AD-008 | 2026-07-03 | **WF3 (Structured agent step) scope pinned via 4 owner decisions:** (1) **Arm M (MCP) only** — one shared loopback HTTP MCP server, per-step bearer token = auth+routing, forced `emit_result`; Arm N (`--json-schema`) dropped. (2) **ajv** for payload validation (promotes `emit-result-schema` off the spike's minimal checker; `expect` stays a JSON Schema). (3) `ctx.agent()` returns the **full envelope** `{status,data?,question?,sessionId}`; `blocked` is returned **as-is** (no engine pause in WF3 — that's WF4). (4) Permission presets **read/write/bypass**, default **read** (read = read-only tools + `emit_result`, guaranteed non-mutating). | Findings recommended Arm M to keep the `blocked` terminal value + per-step routing first-class for WF4; ajv because the author declares a JSON Schema and the tool `inputSchema` is JSON Schema too; full-envelope return lets WF4 add the pause without breaking the happy path; the preset set is PRD-fixed (US 26). Spec: `.specs/features/workflows-agent-step/spec.md` (WF3-01..25). |
 | AD-013 | 2026-07-29 | **Worktree post-create hook (`worktree-post-create-hook`) scope pinned via 4 owner decisions + a decorator architecture:** (1) The command is declared **repo-locally** in a NEW `<repoPath>\.app\config.json` key `postCreateCommand` (mirrors the existing workspace-level `.app/config.json` reader one level down) — **not** in global settings, so it travels with the repo. (2) A failing hook **keeps the worktree**: `createWorktree` returns `ok:true` plus a `hook` failure payload (exit code + 4000-char output tail); no rollback. (3) The hook runs on **all three create paths** (New Worktree, Start Work, workflow `ctx.worktree.create`). (4) Feedback is **inline in the dialog on failure, silent on success**; the workflow run-timeline detail box is **P2/deferred**. **Architecture:** a `withPostCreateHook(create, deps)` **decorator** (Approach D) wraps `createWorktree` with an identical signature, wired **once** in `index.ts` and assigned to both the IPC handler and `ctxDeps.worktree.create` — so `worktree-manager.ts` (+ its ~40 real-git tests) and `workflow-ctx.ts` are **untouched**, and the run-iff-created rule (`ok && path`) is unit-testable against a fake create with no git and no spawn. The 120 s timeout's process kill stays in the hand-verified `index.ts` spawn seam; only its result *mapping* is unit-tested. | Repo-local won because the init script (`SetupSkills.cmd` in `m:\triade\source\Code`) is already checked in and resolves its own paths from `$PSScriptRoot` — the repo is what knows its init. Keeping the worktree matches the fact that `git worktree add` already succeeded; discarding a valid checkout (plus any base refresh / branch recut) over a fixable script error is the worse failure. All-three-paths because workflow-created worktrees for agents are the case that most needs the skills junctions. The decorator was chosen over a 7th positional param, a trailing options object, and a module-level setter because it is the only option that changes neither the real-git module nor the workflow ctx, and it avoids the parallel-test-hostile global state a setter would introduce. **Accepted trade-off, recorded not buried:** the command is repo content, so cloning an untrusted repo into a registered workspace means its `postCreateCommand` runs on the next create for that repo — no prompt, no allowlist in v1. Spec/design/tasks: `.specs/features/worktree-post-create-hook/` (WPC-01..24; 21 in the P1 slice, WPC-17..19 deferred). |
+| AD-014 | 2026-07-30 | **Worktree removal is delete-first, project-wide.** The app deletes the worktree directory **itself** — `dir-remover.ts`'s `removeDirTree` (junction-safe, `maxRetries: 0` per attempt inside a 250 ms / 3000 ms deadline-bounded loop) — and only then calls `git worktree remove <path>` **purely to drop bookkeeping**. **No surface may use `git worktree remove --force` as a *deleter*** — not `WorktreeManager`, not `workflow-ctx`, not the deferred create-time cleanup. `force` keeps its FRWT meaning (**skip the dirty check only**) and never reaches git. The guard order is fixed at **primary → registered → locked → dirty → delete → bookkeeping**, and **every guard refuses before anything is deleted**; the registered check is also the anti-`rm -rf` guard and fails **closed** when git itself fails. **`git worktree lock` is checked by us**, from the porcelain `locked` line (a bare `locked` parses to `''`, which is still locked). **WRFT-07 (create-time leftover collision) is deferred to a follow-up PR** (owner decision at Tasks approval); this branch ships WRFT-01..06 plus the deleter and classification seams the follow-up lifts. | Two measured findings forced the inversion, one on each path. **(1) The success path destroyed data.** Git for Windows treats a directory junction as an ordinary directory and **recurses into it**, so `git worktree remove --force` emptied the shared *target* of AD-013's skills junctions and **reported success** — and because every hook-created worktree reads dirty (`?? .skills/`), the UI routed exactly those worktrees down the force path. Node's `fs.rm` lstats a junction as a link and **unlinks** it, leaving the target byte-identical (measured both ways). **(2) The failure path failed open.** Git deletes its bookkeeping even when the tree deletion fails — its own source comments *"continue on even if ret is non-zero, there's no going back from here"* — so one locked file left an **invisible orphan**: no `.git`, so `scanRepos` skips it, the row vanished on the next refresh, the folder later blocked recreating that worktree, and a retry answered `fatal: '<path>' is not a working tree`. Delete-first inverts that failure mode: git is never invoked, the worktree stays **registered**, and the still-visible row *is* the retry handle — which is also why no pending-cleanup persistence was needed. The lock guard has to be ours precisely because git's own refusal would arrive **after** we had already deleted the tree. WRFT-07 was deferred as P2 that rides on this branch's seams rather than blocking it. Spec/design/tasks: `.specs/features/worktree-removal-fault-tolerance/` (WRFT-01..07). |
 
 ## Handoff
 
-**Status (current, 2026-07-29):** **`worktree-post-create-hook` (AD-013) — EXECUTED +
-VERIFIED (round 2 PASS) — NOT pushed, NO PR, visual/UAT pass OUTSTANDING.** Branch
-`feature/worktree-post-create-hook`, 11 commits (`c846eb0..663e2d3`), **533 tests / 39 files
-green**, typecheck + lint (18 pre-existing warnings) + `build` + `build:win` all clean.
+**Status (current, 2026-07-30):** **`worktree-removal-fault-tolerance` (AD-014) — EXECUTED and
+independently VERIFIED (round 3 PASS). NOT pushed, no PR, no GitHub issue yet; the owner's live smoke
+run and visual pass are OUTSTANDING.** Branch `feature/worktree-removal-fault-tolerance`, 15 commits
+(`16d2c2f..HEAD`), **566 tests / 40 files green**, typecheck clean, lint 0 errors / 18 pre-existing
+warnings (unchanged count). WRFT-01..05 are **Verified**; WRFT-06 is **Unverified** (renderer — no
+executed evidence); WRFT-07 is **Deferred** to a follow-up PR.
 
-A repo declares `postCreateCommand` in its own NEW `<repo>\.app\config.json`; it runs with
-cwd = the new worktree on **all three create paths**, via a `withPostCreateHook` decorator
-wired once in `index.ts` and handed to both the IPC handler and `ctxDeps.worktree.create`
-(so no caller can opt out). A failed hook keeps the worktree and reports exit code + a
-4000-char output tail; the dialogs show an amber advisory. `worktree-manager.ts` and
-`workflow-ctx.ts` were never touched.
+Removal is now **delete-first**: the app deletes the worktree directory itself with a junction-safe,
+deadline-bounded deleter and calls `git worktree remove` only to drop bookkeeping. A blocked deletion
+returns before git runs, so the worktree stays **registered** and its row is the retry handle; the
+Danger section names the blocked path and the remaining entry count. Guard order is primary →
+registered → locked → dirty, all refusing before any deletion. `SessionManager.stop` now resolves on
+the PTY's real exit (capped at 3000 ms), so removal no longer races the terminals it just killed.
+
+This also closed a **latent data-loss bug** found while probing: git for Windows treats a junction as
+a directory and recurses into it, so `git worktree remove --force` was emptying the shared target of
+AD-013's skills junctions **while reporting success**. Node's `fs.rm` unlinks junctions instead, so
+delete-first fixes it as a side effect. Worth checking whether any real shared-skills folder was
+already emptied by a past removal.
 
 **Commit map:**
 | Commit | Task | What |
 | ------ | ---- | ---- |
-| c846eb0 | plan | spec (WPC-01..24) + design + tasks + AD-013 |
-| 7732a89 | T1 | `repo-config.ts` — repo-local `postCreateCommand` reader (+10) |
-| 4859446 | T2 | `post-create-hook.ts` — `runPostCreateHook` env/tail/timeout mapping + shared types (+12) |
-| bce57f4 | T3 | `withPostCreateHook` run-iff-created decorator (+10) |
-| dd3eeab | T4 | `index.ts` spawn seam + single wiring point |
-| 0ce6177 | T5 | `HookFailureNotice` component + CSS |
-| cd95f5a | T6 | both create dialogs surface hook failure |
-| 0291a70 | F1 | **Verifier blocker** — shell settled on `close` only; extracted to `hook-shell.ts`, settles on `close` OR `exit`+grace (+7) |
-| adff2bb | F2/F3 | pinned the 4000 literal (surviving mutant); real-git end-to-end for WPC-03's on-disk half (+3) |
-| 98034eb | F4 | backdrop dismissal skipped the tree refresh |
-| 663e2d3 | F5 | grace timer un-`unref`'d (paths were not independent); real-seam stderr + large-burst tests; shortened lingering pings (+2) |
+| 16d2c2f | plan | spec (WRFT-01..07) + design + tasks |
+| 34f8970 | T0 | gate stabilization — `testTimeout`/`hookTimeout` 30000, one racing fixture window widened (added during Execute after two runs of untouched `main` came back red: `2 failed`, then `14 failed`) |
+| b286a46 | T1 | `dir-remover.ts` — `removeDirTree` + `DELETE_RETRY_INTERVAL_MS`/`DELETE_RETRY_BUDGET_MS`, DI'd fs deps (+9) |
+| bdc32fe | T2 | real-fs hazard tests — junction target survives, dangling junction, read-only + nested repo, real external-holder lock (+6) |
+| 32eb539 | T3 | porcelain `locked` parsing — reason / `''` / `undefined` are distinguishable (+3) |
+| dd7f31c | T4 | `removeWorktree` reordered to delete-then-deregister, 6-step guard table, deleter injected (+10) |
+| f8a4af8 | T5 | `leftover` through `shared/worktrees.ts` → IPC → `WorktreeDetail` (producer + consumer together, L-001) |
+| b090c6f | T6 | `SessionManager.stop` awaits the real PTY exit, capped at `SESSION_EXIT_WAIT_MS = 3000`; `killAll` stays fire-and-forget (+3) |
+| ac71cfb | T7 | `smoke-remove.mjs` + seed extended with the WRFT-06 blocked-then-retry flow (**written, never run**) |
+| dcc50dc | T8 | AD-014 + spec traceability + handoff |
+| 124340c | F1 | **Verifier r1 gap** — assert `RemoveWorktreeResult.leftover` by value (it was only ever a spy *input*) |
+| 5aafb90 | F2 | **Verifier r1 gap** — pin the recursive `remaining` count against real fs |
+| 6f3af8a | — | spec precision: `remaining` is the **recursive** count; `leftover` is part of the returned contract; guard refusals carry none |
+| 1abe8aa | F3 | **Verifier r2 gap** — mixed file+directory residue fixture (one locked chain, `pwsh` `FileShare.None` holder) so 3/2/1/1 separates four readings |
+| 45c27d5 | F4 | **Verifier r2 gap** — `leftover` absence asserted on all four guard refusal paths, not just `locked` |
 
-**Verifier (independent, author ≠ verifier) — round 1 FAIL → round 2 PASS, 4/4 findings
-closed.** Round 1 caught a genuine blocker: resolving on `close` waits for stdio EOF, and
-`spawn`'s timeout kills only `cmd.exe`, so a surviving grandchild held the pipes — measured
-`exit` 1665 ms vs `close` 12969 ms, and 21000 ms with a detached grandchild. A hung script
-would never settle: `worktrees:create` never resolved, dialog stuck on `busy`. Round 2
-re-probed the fixed seam with real processes: `pause` +152 ms, infinite loop +94 ms,
-pipe-holding child **+119 ms**, detached grandchild **+467 ms**; output verified complete to a
-1 MB single burst. Report: `.specs/features/worktree-post-create-hook/validation.md`.
+**Verification (independent, author ≠ verifier) — 3 rounds, ending PASS.** Round 1 FAIL (14/16 mutants
+killed): `leftover` never asserted, recursive count unpinned. Round 2 FAIL (8/10): the round-1 fix's
+fixture was directories-only and therefore blind to *what* it counted, and guard-refusal absence was
+pinned on one guard of four. Round 3 **PASS** (12/15; 3 survivors, all non-blocking and recorded).
+**Every fix was test-only** — `git diff --name-only dcc50dc..HEAD` touches no production file.
+Report: `.specs/features/worktree-removal-fault-tolerance/validation.md`.
 
-**Accepted mutation survivors (reasoned, not oversights):** `HOOK_FLUSH_GRACE_MS 250→0` and
-removing the `close` handler are **equivalent mutants** — queued `data` events drain before the
-timer callback either way, so the only observable difference is latency, and asserting
-sub-250 ms latency on this contended box would be flaky. Verified empirically both ways.
+**Accepted non-blocking survivors (reasoned, not oversights):** a guard `leftover` conditioned on
+`force: true` (contrived; every guard is pinned on its non-force path); `blockedPath` naming the first
+rather than the last failing attempt (the spec leaves it open and a discriminating fixture needs two
+holders releasing mid-loop — racy); and the two guard message literals, whose behavior is pinned while
+their wording is not (the Verifier recommends **not** fixing this).
 
-**NEXT STEP (nothing else outstanding in code):** owner **visual/UAT pass** — WPC-12..16 are
-marked `Built †` in the spec, not Verified: the renderer has no unit tests by convention and
-the dialogs have never been rendered. Then push + PR with `Closes #<issue>` once the feature
-issue exists (the repo's issue = feature = PR pipeline). **Live gate to run:** create a worktree
-for `m:	riade\source\Code` with `.app\config.json` → `{"postCreateCommand": ".\SetupSkills.cmd"}`
-and confirm `.claude\skills` + `.codex\skills` junctions appear; then the same via a workflow.
-
-**Deferred (spec Out of Scope):** WPC-17..19 — the workflow run-timeline hook detail box (needs a
-new `StepDetail` variant + a `RunDetail` branch); `result.hook` is already reachable by an author.
-Also: multiple/ordered commands, other lifecycle hooks, Settings UI, trust prompt/allowlist,
-process-tree kill, in-app re-run.
-
-**Two environment findings (NOT code issues), worth acting on separately:**
-1. **`npm test` is unreliable on this machine.** Real-git tests in `tree.test.ts` /
-   `worktree-manager.test.ts` intermittently exceed their **5000 ms default** timeout under load
-   (observed 5.1 / 6.1 / 8.4 / 44 s), then cascade to `EPERM` in `afterEach` because the
-   timed-out git child still holds the temp dir. The failing subset differs per run and both
-   files pass 71/71 in isolation. `--maxWorkers=2` is reliable AND faster (81–125 s vs 300 s) —
-   vitest oversubscribes this box. **Recommend a `testTimeout` bump and/or `maxWorkers` in
-   `vitest.config.ts`** (deliberately not changed here — out of feature scope).
-2. **`NoDefaultCurrentDirectoryInExePath=1`** in the agent session env makes a bare
-   `SetupSkills.cmd` fail with code 1; it is not a persistent User/Machine variable. Harness
-   artifact, not a product bug — but it's why the README example uses `.\SetupSkills.cmd`.
-   (Same variable already noted for node-gyp builds.)
-
-**Prior context:** Workflows epic (#56) DONE + CLOSED; WF1–WF5 + hifi merged (PR #67). Baseline
-before this feature: 489 tests / 36 files on `main`. Pre-existing quirk:
-`src/main/ado-gateway.ts` is UTF-16 (git treats it as binary). Open follow-ups: 3 transitive dev
-advisories (esbuild/form-data/undici); App.tsx `useTasks`/`useConfig` extraction deferred
-(AD-004).
+**OUTSTANDING — owner tasks, in order:**
+1. **Live smoke** (discharges WRFT-06): `node scripts/seed-smoke-remove.mjs`, then
+   `npm run dev -- -- --remote-debugging-port=9222`, then `node scripts/smoke-remove.mjs`. One-shot —
+   re-seed before each run. Note a blocked deletion still removes everything it can reach, so the retry
+   click may face either a direct remove or the confirm dialog; the script handles both.
+2. **Visual pass** on the Danger section (WRFT-06 AC 4 — long-path wrapping; that markup has never
+   been rendered).
+3. **Create the GitHub issue** for this feature (issue = feature = PR), then push and open the PR with
+   `Closes #<n>` in the body.
+4. **Lessons store has no writer — entries below were HAND-MAINTAINED.** `.specs/LESSONS.md` declares
+   itself machine-owned by `scripts/lessons.py`, which does not exist in this repo. With the owner's
+   approval `lessons.json` was edited directly and `LESSONS.md` re-rendered by hand in the script's
+   exact format: **L-005 promoted to `confirmed`** (recurred on a second feature, meeting
+   `promote_threshold=2`), and **L-006** (*payload asserted as fixture input only*) and **L-007**
+   (*a fixture shaped around the known mutation*) added as candidates. If `lessons.py` is ever
+   restored, verify its rendering still matches these blocks byte-for-byte.
+5. **Follow-up PR** for WRFT-07 (T9–T11 are specified verbatim in `tasks.md`).

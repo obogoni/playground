@@ -92,11 +92,29 @@ export interface CreateWorktreeResult {
   conflict?: 'branch-exists'
 }
 
+/**
+ * What a deletion that gave up left behind (WRFT-04 AC 3). Its presence means
+ * the worktree is still registered with git, so the removal can simply be
+ * retried once whatever holds the path lets go.
+ */
+export interface RemovalLeftover {
+  /** The path the deleter could not remove (absolute). */
+  blockedPath: string
+  /** Entries still present under the removal root after the failed attempt. */
+  remaining: number
+}
+
 /** Result of worktrees:remove — failures (guards included) are returned, never thrown. */
 export interface RemoveWorktreeResult {
   ok: boolean
   /** Human-readable refusal/failure message, present when ok is false. */
   error?: string
+  /**
+   * Present only when the *deletion* gave up (WRFT-04 AC 3) — never on a guard
+   * refusal or a bookkeeping failure. Its presence is the renderer's signal that
+   * the worktree is still registered and the Remove button is a working retry.
+   */
+  leftover?: RemovalLeftover
 }
 
 /**

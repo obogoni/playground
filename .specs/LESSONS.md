@@ -14,6 +14,12 @@ Corroborated across multiple features. Safe to apply as guidance.
 - evidence: src/main/workflow-ctx.ts:82,106 (CtxDeps.agent / CtxRuntime.signal SPEC_DEVIATION) (workflow-ctx) (+1 more)
 - last seen: 2026-07-06T16:15:40Z
 
+### L-005 — Before adding real-process or real-git tests, check whether existing suites already sit near the default per-test timeout: the extra parallel load alone can push them over it, turning a green gate red without any production change
+- signal: `gate_fail` · recurrence: 2 feature(s) · scope: `testing` · harmful: 0
+- features: worktree-post-create-hook, worktree-removal-fault-tolerance
+- evidence: validation.md round-2 gate section; tree.test.ts / worktree-manager.test.ts timeouts (testing) (+1 more)
+- last seen: 2026-07-31T12:27:40Z
+
 ## Candidates (under observation — do NOT load as guidance yet)
 
 Seen once or not yet corroborated. Tracked, not trusted.
@@ -36,11 +42,17 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: mutant R1/M7; post-create-hook.test.ts output-tail test (testing)
 - last seen: 2026-07-29T22:37:04Z
 
-### L-005 — Before adding real-process or real-git tests, check whether existing suites already sit near the default per-test timeout: the extra parallel load alone can push them over it, turning a green gate red without any production change
-- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
-- features: worktree-post-create-hook
-- evidence: validation.md round-2 gate section; tree.test.ts / worktree-manager.test.ts timeouts (testing)
-- last seen: 2026-07-29T22:37:06Z
+### L-006 — Assert a returned payload field by its value, not by the value you handed an injected fake: a field that appears in the test only as a spy's input reads like coverage in review, but a mutation dropping it from the real return still passes
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: worktree-removal-fault-tolerance
+- evidence: round-1 mutant M6; worktree-manager.test.ts leftover: at :844/:867/:882 were spyDeleter inputs, not assertions - dropping the field from worktree-manager.ts:335-339 left all 80 tests green; closed by F1 124340c (testing)
+- last seen: 2026-07-31T12:27:40Z
+
+### L-007 — When writing a test to kill a specific surviving mutant, check the fixture does not encode that mutant's own blind spot: pick one whose readings differ under every wrong implementation, not just the one you saw. A directories-only residue pinned the recursive count yet let a directories-only count survive
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: worktree-removal-fault-tolerance
+- evidence: round-2 mutant N3 survived the round-1 fix F2 (dir-remover.test.ts:328-348 fixture wt/keep/a/b was directories-only); closed by F3 1abe8aa with a mixed chain giving 3/2/1/1 for every-entry/dirs-only/files-only/top-level (testing)
+- last seen: 2026-07-31T12:27:40Z
 
 ## Quarantined (failed when applied — ignore)
 

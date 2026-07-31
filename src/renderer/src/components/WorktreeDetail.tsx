@@ -4,7 +4,7 @@ import type { SessionView } from '../../../shared/config'
 import type { ShortcutTool } from '../../../shared/shortcuts'
 import type { PinnedTaskView } from '../../../shared/tasks'
 import type { WorktreeNode } from '../../../shared/tree'
-import type { ChangedFile } from '../../../shared/worktrees'
+import type { ChangedFile, RemovalLeftover } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
@@ -84,6 +84,10 @@ export function WorktreeDetail({
   const [copied, setCopied] = useState(false)
   const [removing, setRemoving] = useState(false)
   const [removeError, setRemoveError] = useState<string | null>(null)
+  /** What a blocked deletion left on disk (WRFT-06) — set only when the removal
+   * itself was blocked, so the worktree is still registered and this row is the
+   * retry handle. Cleared on every new attempt alongside removeError. */
+  const [removeLeftover, setRemoveLeftover] = useState<RemovalLeftover | null>(null)
   /** When set, the removal confirmation is open — agents and/or dirty (AGCF-05, FRWT-03). */
   const [confirmOpen, setConfirmOpen] = useState(false)
   /** Fresh changed-file list for the confirm dialog when the worktree is dirty (FRWT-03). */
@@ -118,6 +122,7 @@ export function WorktreeDetail({
   const doRemove = (): void => {
     setRemoving(true)
     setRemoveError(null)
+    setRemoveLeftover(null)
     api
       .invoke('worktrees:remove', { repoPath, worktreePath: worktree.path, force: worktree.dirty })
       .then((result) => {
@@ -127,6 +132,7 @@ export function WorktreeDetail({
         } else {
           setRemoving(false)
           setRemoveError(result.error ?? 'Removal failed')
+          setRemoveLeftover(result.leftover ?? null)
         }
       })
       .catch((err) => {
@@ -165,6 +171,7 @@ export function WorktreeDetail({
   const confirmRemove = (): void => {
     setRemoving(true)
     setRemoveError(null)
+    setRemoveLeftover(null)
     Promise.all(runningSessions.map((s) => api.invoke('sessions:stop', { id: s.id })))
       .then(() => {
         setConfirmOpen(false)
@@ -317,7 +324,23 @@ export function WorktreeDetail({
             Remove worktree
           </button>
           {guardNote && <span className="detail-danger-note">{guardNote}</span>}
-          {removeError && <span className="detail-danger-note error">{removeError}</span>}
+          {/* A blocked deletion gets the structured treatment instead of the flat
+              line: the same facts, but with the blocked path on its own row so a
+              long path wraps inside the section instead of stretching it (WRFT-06
+              AC 4). Any other failure keeps the plain error line. */}
+          {removeError && !removeLeftover && (
+            <span className="detail-danger-note error">{removeError}</span>
+          )}
+          {removeLeftover && (
+            <span className="detail-danger-leftover">
+              <span className="detail-danger-note error">
+                Couldn’t delete this worktree — {removeLeftover.remaining} item
+                {removeLeftover.remaining === 1 ? '' : 's'} still on disk. It’s still registered, so
+                you can retry once nothing is using it.
+              </span>
+              <span className="detail-danger-path">{removeLeftover.blockedPath}</span>
+            </span>
+          )}
         </div>
       </div>
       {confirmOpen && (

@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 6,
+  "next_id": 8,
   "lessons": [
     {
       "id": "L-001",
@@ -85,17 +85,55 @@
       "text": "Before adding real-process or real-git tests, check whether existing suites already sit near the default per-test timeout: the extra parallel load alone can push them over it, turning a green gate red without any production change",
       "signal": "gate_fail",
       "scope": "testing",
+      "status": "confirmed",
+      "features": [
+        "worktree-post-create-hook",
+        "worktree-removal-fault-tolerance"
+      ],
+      "recurrence": 2,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round-2 gate section; tree.test.ts / worktree-manager.test.ts timeouts (testing)",
+        "two full runs of untouched main red (2 failed, then 14 failed across 5 files), all duration overruns 11430-15557ms; fixed by vitest.config.ts testTimeout/hookTimeout 30000 in 34f8970 (testing)"
+      ],
+      "created": "2026-07-29T22:37:06Z",
+      "last_seen": "2026-07-31T12:27:40Z"
+    },
+    {
+      "id": "L-006",
+      "key": "surviving_mutant::assert a returned payload field by its value not by the value you handed an injected fake a field that appears in the test only as a spy s input reads like coverage in review but a mutation dropping it from the real return still passes",
+      "text": "Assert a returned payload field by its value, not by the value you handed an injected fake: a field that appears in the test only as a spy's input reads like coverage in review, but a mutation dropping it from the real return still passes",
+      "signal": "surviving_mutant",
+      "scope": "testing",
       "status": "candidate",
       "features": [
-        "worktree-post-create-hook"
+        "worktree-removal-fault-tolerance"
       ],
       "recurrence": 1,
       "harmful": 0,
       "evidence": [
-        "validation.md round-2 gate section; tree.test.ts / worktree-manager.test.ts timeouts (testing)"
+        "round-1 mutant M6; worktree-manager.test.ts leftover: at :844/:867/:882 were spyDeleter inputs, not assertions - dropping the field from worktree-manager.ts:335-339 left all 80 tests green; closed by F1 124340c (testing)"
       ],
-      "created": "2026-07-29T22:37:06Z",
-      "last_seen": "2026-07-29T22:37:06Z"
+      "created": "2026-07-31T12:27:40Z",
+      "last_seen": "2026-07-31T12:27:40Z"
+    },
+    {
+      "id": "L-007",
+      "key": "surviving_mutant::when writing a test to kill a specific surviving mutant check the fixture does not encode that mutant s own blind spot pick one whose readings differ under every wrong implementation not just the one you saw a directories only residue pinned the recursive count yet let a directories only count survive",
+      "text": "When writing a test to kill a specific surviving mutant, check the fixture does not encode that mutant's own blind spot: pick one whose readings differ under every wrong implementation, not just the one you saw. A directories-only residue pinned the recursive count yet let a directories-only count survive",
+      "signal": "surviving_mutant",
+      "scope": "testing",
+      "status": "candidate",
+      "features": [
+        "worktree-removal-fault-tolerance"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "round-2 mutant N3 survived the round-1 fix F2 (dir-remover.test.ts:328-348 fixture wt/keep/a/b was directories-only); closed by F3 1abe8aa with a mixed chain giving 3/2/1/1 for every-entry/dirs-only/files-only/top-level (testing)"
+      ],
+      "created": "2026-07-31T12:27:40Z",
+      "last_seen": "2026-07-31T12:27:40Z"
     }
   ]
 }

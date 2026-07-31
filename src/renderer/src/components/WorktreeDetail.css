@@ -358,6 +358,25 @@
   color: var(--red);
 }
 
+/* Blocked-removal report (WRFT-06): the reason, then the offending path on its
+   own row. min-width:0 lets the flex item shrink so break-all can act. */
+.detail-danger-leftover {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.detail-danger-path {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+  /* A worktree path can be far longer than the section — wrap it mid-token
+     rather than letting it push the Danger row's layout (WRFT-06 AC 4). */
+  word-break: break-all;
+}
+
 /* AGENTS section (AGSN-06): spawn button + existing-session chips. */
 .detail-agents {
   display: flex;

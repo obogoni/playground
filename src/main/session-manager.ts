@@ -21,11 +21,21 @@ export interface SessionManagerDeps {
 /** Stored on ad-hoc sessions in place of a registry agent name. */
 const ADHOC_AGENT = 'Ad-hoc'
 
+/**
+ * How long `stop` waits for the PTY's *real* exit before giving up and letting
+ * the caller proceed (WRFT-05 AC 1/2). A wedged child must not block a worktree
+ * removal forever — the deleter's own retry loop and leftover report cover the
+ * residue.
+ */
+export const SESSION_EXIT_WAIT_MS = 3000
+
 /** A session with a live PTY. Stopped/restored sessions live only in config. */
 interface RunningSession {
   meta: PersistedSession
   handle: PtyHandle
   buffer: SessionRingBuffer
+  /** Resolves when the PTY's own onExit fires — what `stop` actually waits on. */
+  exited: Promise<void>
 }
 
 /**
@@ -115,11 +125,40 @@ export class SessionManager {
     return this.#toView(meta)
   }
 
-  stop(id: string): void {
+  /**
+   * Kill the PTY and resolve once it has **really exited** (WRFT-05). Killing a
+   * shell does not kill its children, so a caller that deletes files the moment
+   * `stop` returns used to race handles that were still open — the removal then
+   * failed on a lock the app itself was holding.
+   *
+   * The status flip stays synchronous: `#finalize` runs before the first await,
+   * so every existing caller that reads `list()` right after `stop` still sees
+   * `stopped`. Only the returned promise is new, and it means "really gone".
+   */
+  async stop(id: string): Promise<void> {
     const session = this.#running.get(id)
     if (!session) return
+    // Captured before #finalize drops the Map entry.
+    const exited = session.exited
     session.handle.kill()
     this.#finalize(id)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      await Promise.race([
+        exited,
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, SESSION_EXIT_WAIT_MS)
+          // Unlike lesson L-003's grace timer — whose unref let real work be
+          // skipped when the process was free to exit — this timer only races a
+          // promise a live caller is already awaiting, so unref cannot skip
+          // anything. It just stops a PTY that never exits from pinning the
+          // event loop open.
+          timer.unref?.()
+        })
+      ])
+    } finally {
+      clearTimeout(timer)
+    }
   }
 
   respawn(id: string): SessionView {
@@ -170,7 +209,13 @@ export class SessionManager {
     // stop() each session (not Map.clear()) so every status is finalized,
     // persisted, and emitted — otherwise config stays stale until the next
     // restart, observable on macOS where closing the last window doesn't quit.
-    for (const id of [...this.#running.keys()]) this.stop(id)
+    //
+    // Deliberately fire-and-forget: stop() now waits up to SESSION_EXIT_WAIT_MS
+    // for a real exit, and quit must not stall 3 s per session. Nothing is lost
+    // by not awaiting — the kill is issued and #finalize has already persisted
+    // every status synchronously before stop() suspends. Only the *removal*
+    // path needs the exit guarantee; quit does not.
+    for (const id of [...this.#running.keys()]) void this.stop(id)
     this.#activeId = null
   }
 
@@ -192,8 +237,15 @@ export class SessionManager {
       buffer.append(data)
       if (this.#activeId === meta.id) this.deps.emit('session:data', { id: meta.id, data })
     })
-    handle.onExit(({ exitCode }) => this.#finalize(meta.id, exitCode))
-    this.#running.set(meta.id, { meta: { ...meta, status: 'running' }, handle, buffer })
+    let markExited = (): void => {}
+    const exited = new Promise<void>((resolve) => {
+      markExited = resolve
+    })
+    handle.onExit(({ exitCode }) => {
+      markExited()
+      this.#finalize(meta.id, exitCode)
+    })
+    this.#running.set(meta.id, { meta: { ...meta, status: 'running' }, handle, buffer, exited })
   }
 
   /** Idempotent transition to stopped: drop the Map entry, persist, push status. */

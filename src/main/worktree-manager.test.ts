@@ -12,12 +12,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sanitizeBranch, worktreeNameFor, worktreePathFor } from '../shared/worktrees'
+import type { DirRemovalResult } from './dir-remover'
 import {
   changedFilesOf,
   createWorktree,
   GitError,
   listWorktrees,
   parseChangedFiles,
+  parsePorcelainBlocks,
   removeWorktree
 } from './worktree-manager'
 
@@ -112,6 +114,66 @@ describe('listWorktrees', () => {
     mkdirSync(plain)
 
     await expect(listWorktrees(plain)).rejects.toBeInstanceOf(GitError)
+  })
+})
+
+describe('parsePorcelainBlocks — locked line (WRFT-01 AC 3)', () => {
+  let root: string
+  let repo: string
+  let locked: string
+  let unlocked: string
+
+  beforeEach(() => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-lock-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+    locked = join(root, 'repo-locked')
+    unlocked = join(root, 'repo-unlocked')
+    git(repo, 'worktree', 'add', locked, '-b', 'feature/locked')
+    git(repo, 'worktree', 'add', unlocked, '-b', 'feature/unlocked')
+  })
+
+  afterEach(() => {
+    // A git lock is bookkeeping only — it holds no OS handle, so the tree removes
+    // without unlocking first.
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  const porcelain = (): string => git(repo, 'worktree', 'list', '--porcelain')
+
+  it("yields git's lock reason for a worktree locked with --reason", async () => {
+    git(repo, 'worktree', 'lock', '--reason', 'held for review', locked)
+
+    const block = parsePorcelainBlocks(porcelain()).find((b) => b.path === locked)
+
+    expect(block?.locked).toBe('held for review')
+    // Additive only: the fields listWorktrees reads are untouched (Done-when 2).
+    const listed = (await listWorktrees(repo)).find((w) => w.path === locked)
+    expect(listed).toMatchObject({ branch: 'feature/locked', isDefault: false })
+  })
+
+  it('yields an empty reason for a bare locked line — not undefined', () => {
+    git(repo, 'worktree', 'lock', locked)
+
+    const block = parsePorcelainBlocks(porcelain()).find((b) => b.path === locked)
+
+    expect(block?.locked).toBe('')
+    expect(block?.locked).not.toBeUndefined()
+  })
+
+  it('leaves locked undefined for a worktree that is not locked', () => {
+    git(repo, 'worktree', 'lock', '--reason', 'held for review', locked)
+
+    const blocks = parsePorcelainBlocks(porcelain())
+
+    expect(blocks.find((b) => b.path === unlocked)?.locked).toBeUndefined()
+    expect(blocks.find((b) => b.path === repo)?.locked).toBeUndefined()
   })
 })
 
@@ -649,6 +711,10 @@ describe('removeWorktree', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error).toContain('1 uncommitted change')
+    // WRFT-04 AC 3: a guard refusal carries no leftover — nothing was deleted,
+    // and WorktreeDetail branches on the field to offer a retry that this
+    // refusal can never satisfy.
+    expect(result.leftover).toBeUndefined()
     expect(existsSync(sibling)).toBe(true)
     expect(await listWorktrees(repo)).toHaveLength(2)
   })
@@ -667,6 +733,8 @@ describe('removeWorktree', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error).toMatch(/primary checkout/i)
+    // WRFT-04 AC 3: a guard refusal carries no leftover (see the dirty case).
+    expect(result.leftover).toBeUndefined()
     expect(existsSync(repo)).toBe(true)
   })
 
@@ -733,6 +801,193 @@ describe('removeWorktree', () => {
     const result = await removeWorktree(repo, sibling)
 
     expect(result).toEqual({ ok: true })
+    expect(await listWorktrees(repo)).toHaveLength(1)
+  })
+
+  // --- WRFT: delete-first ordering, pre-deletion guards, leftover reporting ---
+
+  /** A deleter that records every call and never touches the disk. */
+  const spyDeleter = (
+    result: DirRemovalResult = { ok: true }
+  ): { removeDirTree: (p: string) => Promise<DirRemovalResult>; calls: string[] } => {
+    const calls: string[] = []
+    return {
+      calls,
+      removeDirTree: async (p: string) => {
+        calls.push(p)
+        return result
+      }
+    }
+  }
+
+  const porcelainOf = (): string => git(repo, 'worktree', 'list', '--porcelain')
+
+  it('deletes the directory itself before git drops the bookkeeping', async () => {
+    // The deleter observes the world at deletion time: git must not have run yet.
+    const seen: { registered?: boolean; present?: boolean } = {}
+    const deleter = {
+      removeDirTree: async (p: string): Promise<DirRemovalResult> => {
+        seen.registered = porcelainOf().includes(sibling.replaceAll('\\', '/'))
+        seen.present = existsSync(p)
+        rmSync(p, { recursive: true, force: true })
+        return { ok: true }
+      }
+    }
+
+    const result = await removeWorktree(repo, sibling, {}, deleter)
+
+    expect(seen).toEqual({ registered: true, present: true })
+    expect(result).toEqual({ ok: true })
+    expect(existsSync(sibling)).toBe(false)
+    expect(await listWorktrees(repo)).toHaveLength(1)
+  })
+
+  it('never invokes git and keeps the worktree registered when deletion gives up', async () => {
+    const blocked = join(sibling, 'a.txt')
+    const stuck = spyDeleter({
+      ok: false,
+      code: 'EBUSY',
+      leftover: { blockedPath: blocked, remaining: 3 }
+    })
+
+    const failed = await removeWorktree(repo, sibling, {}, stuck)
+
+    expect(failed.ok).toBe(false)
+    // WRFT-04 AC 3: the structured payload must come back out of removeWorktree,
+    // not merely go into the deleter — it is what WorktreeDetail branches on.
+    expect(failed.leftover).toEqual({ blockedPath: blocked, remaining: 3 })
+    expect(existsSync(sibling)).toBe(true)
+    expect(porcelainOf()).toContain(sibling.replaceAll('\\', '/'))
+    expect(await listWorktrees(repo)).toHaveLength(2)
+
+    // …and the still-registered worktree is itself the retry handle (WRFT-02 AC 2).
+    const retried = await removeWorktree(repo, sibling)
+
+    expect(retried).toEqual({ ok: true })
+    expect(existsSync(sibling)).toBe(false)
+    expect(await listWorktrees(repo)).toHaveLength(1)
+  })
+
+  it('names the blocked path, the remaining count and the retry in the failure message', async () => {
+    const blocked = join(sibling, 'sub', 'deep.txt')
+    const stuck = spyDeleter({
+      ok: false,
+      code: 'EBUSY',
+      leftover: { blockedPath: blocked, remaining: 3 }
+    })
+
+    const result = await removeWorktree(repo, sibling, {}, stuck)
+
+    expect(result.error).toContain(blocked)
+    expect(result.error).toContain('3 items still on disk')
+    expect(result.error).toMatch(/still registered/i)
+    expect(result.error).toMatch(/retry/i)
+    // WRFT-04 AC 3: message *and* payload — the renderer needs both fields by value.
+    expect(result.leftover).toEqual({ blockedPath: blocked, remaining: 3 })
+    expect(result.leftover?.blockedPath).toBe(blocked)
+    expect(result.leftover?.remaining).toBe(3)
+  })
+
+  it('pluralizes a single leftover entry as "1 item"', async () => {
+    const stuck = spyDeleter({
+      ok: false,
+      code: 'EPERM',
+      leftover: { blockedPath: sibling, remaining: 1 }
+    })
+
+    const result = await removeWorktree(repo, sibling, {}, stuck)
+
+    expect(result.error).toContain('1 item still on disk')
+    expect(result.error).not.toContain('1 items')
+  })
+
+  it('refuses a path that is not a registered worktree of this repo and deletes nothing', async () => {
+    const stranger = join(root, 'not-a-worktree')
+    mkdirSync(stranger)
+    writeFileSync(join(stranger, 'precious.txt'), 'keep me', 'utf8')
+    const deleter = spyDeleter()
+
+    const result = await removeWorktree(repo, stranger, { force: true }, deleter)
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/not a registered worktree of this repo/i)
+    // WRFT-04 AC 3: a guard refusal carries no leftover (see the dirty case).
+    expect(result.leftover).toBeUndefined()
+    expect(deleter.calls).toEqual([])
+    expect(readFileSync(join(stranger, 'precious.txt'), 'utf8')).toBe('keep me')
+  })
+
+  it('fails closed when git worktree list itself fails', async () => {
+    const notARepo = join(root, 'plain-folder')
+    mkdirSync(notARepo)
+    const deleter = spyDeleter()
+
+    const result = await removeWorktree(notARepo, sibling, { force: true }, deleter)
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toBeTruthy()
+    expect(deleter.calls).toEqual([])
+    expect(existsSync(sibling)).toBe(true)
+  })
+
+  it("refuses a locked worktree with git's lock reason and deletes nothing", async () => {
+    git(repo, 'worktree', 'lock', '--reason', 'held for review', sibling)
+    const deleter = spyDeleter()
+
+    const result = await removeWorktree(repo, sibling, {}, deleter)
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/locked/i)
+    expect(result.error).toContain('held for review')
+    // A guard refusal never carries a leftover: nothing was deleted, so there is
+    // nothing left over, and the renderer must fall back to the flat error line.
+    expect(result.leftover).toBeUndefined()
+    expect(deleter.calls).toEqual([])
+    expect(existsSync(sibling)).toBe(true)
+    expect(await listWorktrees(repo)).toHaveLength(2)
+  })
+
+  it('refuses a locked worktree under force too', async () => {
+    git(repo, 'worktree', 'lock', '--reason', 'held for review', sibling)
+    const deleter = spyDeleter()
+
+    const result = await removeWorktree(repo, sibling, { force: true }, deleter)
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/locked/i)
+    expect(deleter.calls).toEqual([])
+    expect(existsSync(sibling)).toBe(true)
+  })
+
+  it('refuses a bare-locked worktree, whose reason parses to an empty string', async () => {
+    git(repo, 'worktree', 'lock', sibling)
+    const deleter = spyDeleter()
+
+    const result = await removeWorktree(repo, sibling, {}, deleter)
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/locked/i)
+    expect(deleter.calls).toEqual([])
+    expect(existsSync(sibling)).toBe(true)
+  })
+
+  it("returns git's first line when the bookkeeping step fails, and a retry heals it", async () => {
+    // A deleter that reports success without deleting is the deterministic stand-in
+    // for git's own bookkeeping failure: git then still sees a populated, dirty
+    // worktree and refuses. The branch under test is "deletion ok, git failed".
+    writeFileSync(join(sibling, 'untracked.txt'), 'wip', 'utf8')
+    const liar = spyDeleter({ ok: true })
+
+    const failed = await removeWorktree(repo, sibling, { force: true }, liar)
+
+    expect(failed.ok).toBe(false)
+    expect(failed.error).toMatch(/^fatal: /)
+    expect(await listWorktrees(repo)).toHaveLength(2)
+
+    const retried = await removeWorktree(repo, sibling, { force: true })
+
+    expect(retried).toEqual({ ok: true })
+    expect(existsSync(sibling)).toBe(false)
     expect(await listWorktrees(repo)).toHaveLength(1)
   })
 })
