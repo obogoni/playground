@@ -85,11 +85,23 @@ their wording is not (the Verifier recommends **not** fixing this).
    been rendered).
 3. **Create the GitHub issue** for this feature (issue = feature = PR), then push and open the PR with
    `Closes #<n>` in the body.
-4. **Lessons store has no writer — entries below were HAND-MAINTAINED.** `.specs/LESSONS.md` declares
-   itself machine-owned by `scripts/lessons.py`, which does not exist in this repo. With the owner's
-   approval `lessons.json` was edited directly and `LESSONS.md` re-rendered by hand in the script's
-   exact format: **L-005 promoted to `confirmed`** (recurred on a second feature, meeting
-   `promote_threshold=2`), and **L-006** (*payload asserted as fixture input only*) and **L-007**
-   (*a fixture shaped around the known mutation*) added as candidates. If `lessons.py` is ever
-   restored, verify its rendering still matches these blocks byte-for-byte.
+4. ~~**Lessons store has no writer.**~~ **RESOLVED 2026-07-31 — the writer exists and the hand
+   edits were verified correct.** `scripts/lessons.py` is not missing: it ships **inside the skill
+   package**, and the docs' `python3 scripts/lessons.py` is relative to the skill directory, not to
+   this repo — which is why it read as absent. It runs here despite `python`/`python3` being dead
+   Microsoft Store aliases, via Azure CLI's bundled interpreter (Python 3.13.11). Note `--root` is a
+   **top-level** argument, before the subcommand:
+
+   ```bash
+   PY="C:/Program Files/Microsoft SDKs/Azure/CLI2/python.exe"
+   SK="C:/Users/<user>/.claude/skills/tlc-spec-driven"
+   "$PY" "$SK/scripts/lessons.py" --root "M:/obogoni/playground" list --status confirmed
+   ```
+
+   The hand-maintained entries (**L-005 promoted to `confirmed`** on `promote_threshold=2`, plus
+   candidates **L-006** *payload asserted as fixture input only* and **L-007** *a fixture shaped
+   around the known mutation*) were checked against the script: `status` reports 7 lessons /
+   confirmed=2, and re-rendering a scratch copy of `lessons.json` reproduces both `LESSONS.md` and
+   `lessons.json` **identically** (modulo CRLF, which `.gitattributes eol=lf` normalizes on add). So
+   the format is correct and future writes can go through the script.
 5. **Follow-up PR** for WRFT-07 (T9–T11 are specified verbatim in `tasks.md`).
