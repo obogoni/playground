@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
+import { workspacePostCreateCommand } from './workspace-config'
 
 /**
  * Per-repo config (WPC-01): a hand-authored, optionally checked-in
@@ -31,6 +32,32 @@ export function repoPostCreateCommand(repoPath: string): string | null {
     console.error(`Ignoring malformed repo config ${filePath}:`, err)
     return null
   }
+}
+
+/**
+ * The command a freshly created worktree runs — from the repo's own declaration
+ * or, failing that, from the workspace that contains it (HWC-01, HWC-02). This is
+ * what `withPostCreateHook` is wired to.
+ *
+ * `readCommand`'s signature is unchanged because both levels are derivable from
+ * `repoPath` alone: `scanRepos` only ever finds a repo as a **direct child** of
+ * its workspace (`repo-scanner.ts`), so the workspace is `dirname(repoPath)` and
+ * the repo's key is `basename(repoPath)` (HWC-03). Trailing separators fold away
+ * with them (HWC-11).
+ *
+ * The repo wins whenever it declares anything, so AD-013's behaviour is untouched
+ * and **exactly one** command ever runs (HWC-01). Derivation is purely lexical —
+ * no lookup against the registered workspaces — so a `repoPath` that is not a
+ * workspace child simply finds no key and no command runs (HWC-13). Neither level
+ * is cached, so an on-disk edit lands on the next create (HWC-14).
+ */
+export function resolvePostCreateCommand(repoPath: string): string | null {
+  const own = repoPostCreateCommand(repoPath)
+  if (own !== null) return own
+  // A drive root or an empty path has no name to key on (HWC-12); `dirname` would
+  // hand back the root itself, so bail rather than look up an empty repo name.
+  const repoName = basename(repoPath)
+  return repoName === '' ? null : workspacePostCreateCommand(dirname(repoPath), repoName)
 }
 
 /** Trimmed non-empty string, else null (numbers/objects/blank all collapse to null). */
