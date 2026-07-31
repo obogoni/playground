@@ -179,12 +179,13 @@ describe('resolvePostCreateCommand', () => {
   })
 
   // HWC-12: a path with no repo name to key on resolves to nothing, not a throw.
-  it.each([['a drive root', 'M:\\'], ['an empty string', ''], ['a root slash', sep]])(
-    'returns null without throwing for %s',
-    (_label, degenerate) => {
-      expect(resolvePostCreateCommand(degenerate)).toBeNull()
-    }
-  )
+  it.each([
+    ['a drive root', 'M:\\'],
+    ['an empty string', ''],
+    ['a root slash', sep]
+  ])('returns null without throwing for %s', (_label, degenerate) => {
+    expect(resolvePostCreateCommand(degenerate)).toBeNull()
+  })
 
   // HWC-13: derivation is lexical — a repo outside any configured workspace is
   // simply unmatched, with no registry lookup and no error.

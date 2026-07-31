@@ -54,10 +54,7 @@ export function workspaceTemplates(workspacePath: string): WorkspaceTemplates {
  * absent / unreadable / wrong-typed / blank — in which case no hook runs at all
  * (HWC-05..08). Malformed JSON also yields null, but is logged (HWC-06).
  */
-export function workspacePostCreateCommand(
-  workspacePath: string,
-  repoName: string
-): string | null {
+export function workspacePostCreateCommand(workspacePath: string, repoName: string): string | null {
   const filePath = join(workspacePath, '.app', 'config.json')
   let raw: string
   try {
