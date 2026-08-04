@@ -137,7 +137,47 @@ Repro scripts: `scratchpad/repro-{mixed-dirt,variants,deep,rm,sep,product,shapes
 | The real resolver returns that command for the real repo | ✅ production `resolvePostCreateCommand` bundled with esbuild and run against the real files: `M:\Triade\source\Code` → `".\\SetupSkills.cmd < NUL"`; with a trailing `\` → same; `…\Library` → `null`; `M:\obogoni\playground` → `null`; `M:\` → `null` |
 | A repo with neither config behaves byte-identically | ✅ `repo-config`, `workspace-config`, `post-create-hook` and `worktree-manager` suites pass unmodified apart from the added describes |
 | README documents both sites and the precedence | ✅ `38b0cc1` |
-| **Creating a worktree from the dialog leaves the junctions in place** | ⬜ **OUTSTANDING — owner action.** Not exercised: it needs the packaged/dev app and a real worktree create for a 3 GB repo. The command itself was measured green end-to-end earlier (exit 0 in 3.2 s, both junctions created, spaced path), and the resolver now returns it — but the two halves have not been run as one flow. |
+| **Creating a worktree from the dialog leaves the junctions in place** | ✅ **DISCHARGED 2026-08-04** — see the end-to-end run below. |
+
+---
+
+## End-to-end run (2026-08-04) — the last Success Criterion
+
+Driven over CDP against the dev app (`npm run dev -- -- --remote-debugging-port=9222`), the same
+technique the `scripts/smoke-*.mjs` files use. The dev build reads its own userData
+(`%APPDATA%\playground`, distinct from the installed nightly's `%APPDATA%\playground-nightly`), so
+that directory was seeded with a copy of the nightly `config.json` to get the real workspaces.
+
+| Step | Result |
+| ---- | ------ |
+| Workspace `M:\Triade\source` with repo `Code` visible via `tree:get` | ✅ |
+| New Worktree dialog opens from the sidebar, `Code` chip pre-selected, base `develop` | ✅ |
+| Base refresh **unchecked** — `develop` is dirty in that repo, so `refreshBaseFromRemote`'s in-place ff-merge would abort and block the create | ✅ deliberate |
+| Branch `chore/99999-hook-check` → path preview `M:\Triade\source\Code-99999` | ✅ |
+| Create completes with **no** `HookFailureNotice` and no inline error (~75 s: worktree add on a 3 GB repo + the script) | ✅ |
+| Dialog closes and the new worktree is selected in the sidebar | ✅ (`.sidebar-worktree.selected` → `chore/99999-hook-check`) |
+| `<worktree>\.claude\skills` is a reparse point → `M:\Triade\source\Code-99999\.github\skills`, 14 entries | ✅ |
+| `<worktree>\.codex\skills` is a reparse point → the same target, 14 entries | ✅ |
+
+This is the first time the two halves ran as one flow: the workspace-level declaration was the
+**only** source of the command (`M:\Triade\source\Code\.app\config.json` stays deleted), so the
+junctions landing in the new worktree is direct evidence that `resolvePostCreateCommand`'s
+workspace fallback reached `withPostCreateHook` through the real dialog path.
+
+**Incidental finding, not a defect.** The first attempt used branch `chore/hook-check` and the
+create was refused with `Target path already exists: M:\Triade\source\Code`. Cause: the global
+`ado.worktreeTemplate` is `{repo}-{id}`, and a branch with no task number renders `{id}` to `''`,
+so `worktreeNameFor` sanitizes `Code-` down to `Code` — the repo's own folder. The existing
+empty-render / collision guard caught it and kept the dialog open with a readable error, which is
+the documented behaviour of `worktreeNameFor` ("May render to '' — callers guard that"). Worth
+knowing when hand-testing: with that template, always use a branch carrying a 2+ digit number.
+
+**Cleanup.** `M:\Triade\source\Code-99999` was deleted with async `fs.rm` (delete-first, per
+AD-014 — never `git worktree remove` as the deleter, since git for Windows recurses into
+junctions), then `git worktree prune --expire now` (the bare `prune` is a no-op here:
+`gc.worktreePruneExpire` defaults to 3 months) and `git branch -D chore/99999-hook-check`. The
+`Code` repo is back to its original 10 worktrees and its own `.github\skills` still holds 14
+entries.
 
 ---
 

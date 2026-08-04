@@ -32,8 +32,9 @@ Handoff snapshot.
    `feature/worktree-hook-workspace-config`, **branched off the removal branch** (not `main`) so
    AD-014 is present and the AD numbering / STATE edits do not collide. 7 commits
    (`da7ea07..38b0cc1`), **605 tests passing / 1 pre-existing failure**, typecheck clean, lint 0
-   errors / 18 warnings. All 14 ACs Verified; the last Success Criterion (a real worktree create
-   from the dialog) is **outstanding owner action**. Validated by a **standalone fresh-eyes pass,
+   errors / 18 warnings. All 14 ACs Verified and **all four Success Criteria met** — the last one
+   (a real worktree create from the New Worktree dialog against `M:\Triade\source\Code`) was run
+   end-to-end on **2026-08-04**; see `validation.md`. Validated by a **standalone fresh-eyes pass,
    not an independent Verifier sub-agent** (the harness is configured without them), so
    author ≠ verifier is unmet — 9/12 mutants killed is the compensating control. No PR, no issue.
 2. **`worktree-removal-fault-tolerance` (AD-014) — EXECUTED and independently VERIFIED (round 3
@@ -116,12 +117,19 @@ holders releasing mid-loop — racy); and the two guard message literals, whose 
 their wording is not (the Verifier recommends **not** fixing this).
 
 **OUTSTANDING — owner tasks, in order:**
-0. **`worktree-hook-workspace-config` (AD-015), in order:** (a) create a worktree for
-   `M:\Triade\source\Code` from the New Worktree dialog and confirm `.claude\skills` +
-   `.codex\skills` land in it — the last unverified Success Criterion, and the only end-to-end
-   proof that the resolver and the measured-green command work as one flow; (b) create the GitHub
-   issue, then push and open the PR with `Closes #<n>`. **Base the PR on the removal branch** while
-   that one is open, then retarget to `main` after it merges (this branch is stacked on it).
+0. **`worktree-hook-workspace-config` (AD-015):** ~~(a) create a worktree for
+   `M:\Triade\source\Code` from the New Worktree dialog and confirm the junctions land.~~
+   **DONE 2026-08-04** — driven over CDP against the dev app; create succeeded with no hook-failure
+   advisory and both junctions landed in `Code-99999` pointing at its own `.github\skills`. The
+   throwaway worktree and branch were removed (delete-first per AD-014) and `Code` is back to its
+   original 10 worktrees. Full run + an incidental `{repo}-{id}` template finding in
+   `validation.md`. **Remaining: (b) create the GitHub issue, then push and open the PR with
+   `Closes #<n>`. Base the PR on the removal branch** while that one is open, then retarget to
+   `main` after it merges (this branch is stacked on it).
+
+   Note for any future hand-testing of the dialog: the dev build reads
+   `%APPDATA%\playground`, **not** the installed nightly's `%APPDATA%\playground-nightly`, so it
+   starts with no workspaces until that config is seeded.
 1. **Live smoke** (discharges WRFT-06): `node scripts/seed-smoke-remove.mjs`, then
    `npm run dev -- -- --remote-debugging-port=9222`, then `node scripts/smoke-remove.mjs`. One-shot —
    re-seed before each run. Note a blocked deletion still removes everything it can reach, so the retry

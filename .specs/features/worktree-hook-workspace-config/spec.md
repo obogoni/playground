@@ -148,10 +148,11 @@ Medium scope — dimensions obviously present for this domain are covered; the r
 
 **Status after execution:** all 14 ACs are **Verified** — T1–T3 plus the T4 docs commit, checked
 by a standalone fresh-eyes pass (9/12 mutants killed, 3 accepted equivalence survivors; see
-`validation.md`). The one outstanding item is the last Success Criterion: a real worktree create
-from the dialog has not been run (owner action). Note the validation was **not** performed by an
-independent Verifier sub-agent — the harness is configured without them — so author ≠ verifier is
-unmet and the sensor is the compensating control.
+`validation.md`). **All four Success Criteria are now met** — the last one, a real worktree create
+from the New Worktree dialog against `M:\Triade\source\Code`, was run end-to-end on 2026-08-04 and
+is recorded in `validation.md`. Note the validation was **not** performed by an independent Verifier
+sub-agent — the harness is configured without them — so author ≠ verifier is unmet and the sensor is
+the compensating control.
 
 | Requirement ID | Story                          | Phase | Status  |
 | -------------- | ------------------------------ | ----- | ------- |
@@ -184,12 +185,13 @@ existing `worktree-manager` / `post-create-hook` suites staying green unmodified
 
 ## Success Criteria
 
-- [ ] `M:\Triade\source\Code\.app\config.json` is **deleted** — `git status` in that repo is clean
+- [x] `M:\Triade\source\Code\.app\config.json` is **deleted** — `git status` in that repo is clean
       again — and `M:\Triade\source\.app\config.json` declares
       `postCreateCommands: { "Code": ".\\SetupSkills.cmd < NUL" }`.
-- [ ] Creating a worktree for `M:\Triade\source\Code` from the New Worktree dialog leaves
+- [x] Creating a worktree for `M:\Triade\source\Code` from the New Worktree dialog leaves
       `.claude\skills` and `.codex\skills` junctions in the new worktree, with the command coming
-      from the workspace file.
-- [ ] A repo with neither config file behaves byte-identically to today (the existing
+      from the workspace file. **Discharged 2026-08-04** — see the end-to-end run recorded in
+      `validation.md`.
+- [x] A repo with neither config file behaves byte-identically to today (the existing
       `worktree-manager`, `post-create-hook` and `repo-config` suites pass unmodified).
-- [ ] `README.md` documents both declaration sites and the repo-wins precedence.
+- [x] `README.md` documents both declaration sites and the repo-wins precedence.
