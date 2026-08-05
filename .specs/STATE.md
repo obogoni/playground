@@ -22,14 +22,56 @@ Handoff snapshot.
 | AD-013 | 2026-07-29 | **Worktree post-create hook (`worktree-post-create-hook`) scope pinned via 4 owner decisions + a decorator architecture:** (1) The command is declared **repo-locally** in a NEW `<repoPath>\.app\config.json` key `postCreateCommand` (mirrors the existing workspace-level `.app/config.json` reader one level down) — **not** in global settings, so it travels with the repo. (2) A failing hook **keeps the worktree**: `createWorktree` returns `ok:true` plus a `hook` failure payload (exit code + 4000-char output tail); no rollback. (3) The hook runs on **all three create paths** (New Worktree, Start Work, workflow `ctx.worktree.create`). (4) Feedback is **inline in the dialog on failure, silent on success**; the workflow run-timeline detail box is **P2/deferred**. **Architecture:** a `withPostCreateHook(create, deps)` **decorator** (Approach D) wraps `createWorktree` with an identical signature, wired **once** in `index.ts` and assigned to both the IPC handler and `ctxDeps.worktree.create` — so `worktree-manager.ts` (+ its ~40 real-git tests) and `workflow-ctx.ts` are **untouched**, and the run-iff-created rule (`ok && path`) is unit-testable against a fake create with no git and no spawn. The 120 s timeout's process kill stays in the hand-verified `index.ts` spawn seam; only its result *mapping* is unit-tested. | Repo-local won because the init script (`SetupSkills.cmd` in `m:\triade\source\Code`) is already checked in and resolves its own paths from `$PSScriptRoot` — the repo is what knows its init. Keeping the worktree matches the fact that `git worktree add` already succeeded; discarding a valid checkout (plus any base refresh / branch recut) over a fixable script error is the worse failure. All-three-paths because workflow-created worktrees for agents are the case that most needs the skills junctions. The decorator was chosen over a 7th positional param, a trailing options object, and a module-level setter because it is the only option that changes neither the real-git module nor the workflow ctx, and it avoids the parallel-test-hostile global state a setter would introduce. **Accepted trade-off, recorded not buried:** the command is repo content, so cloning an untrusted repo into a registered workspace means its `postCreateCommand` runs on the next create for that repo — no prompt, no allowlist in v1. Spec/design/tasks: `.specs/features/worktree-post-create-hook/` (WPC-01..24; 21 in the P1 slice, WPC-17..19 deferred). |
 | AD-014 | 2026-07-30 | **Worktree removal is delete-first, project-wide.** The app deletes the worktree directory **itself** — `dir-remover.ts`'s `removeDirTree` (junction-safe, `maxRetries: 0` per attempt inside a 250 ms / 3000 ms deadline-bounded loop) — and only then calls `git worktree remove <path>` **purely to drop bookkeeping**. **No surface may use `git worktree remove --force` as a *deleter*** — not `WorktreeManager`, not `workflow-ctx`, not the deferred create-time cleanup. `force` keeps its FRWT meaning (**skip the dirty check only**) and never reaches git. The guard order is fixed at **primary → registered → locked → dirty → delete → bookkeeping**, and **every guard refuses before anything is deleted**; the registered check is also the anti-`rm -rf` guard and fails **closed** when git itself fails. **`git worktree lock` is checked by us**, from the porcelain `locked` line (a bare `locked` parses to `''`, which is still locked). **WRFT-07 (create-time leftover collision) is deferred to a follow-up PR** (owner decision at Tasks approval); this branch ships WRFT-01..06 plus the deleter and classification seams the follow-up lifts. | Two measured findings forced the inversion, one on each path. **(1) The success path destroyed data.** Git for Windows treats a directory junction as an ordinary directory and **recurses into it**, so `git worktree remove --force` emptied the shared *target* of AD-013's skills junctions and **reported success** — and because every hook-created worktree reads dirty (`?? .skills/`), the UI routed exactly those worktrees down the force path. Node's `fs.rm` lstats a junction as a link and **unlinks** it, leaving the target byte-identical (measured both ways). **(2) The failure path failed open.** Git deletes its bookkeeping even when the tree deletion fails — its own source comments *"continue on even if ret is non-zero, there's no going back from here"* — so one locked file left an **invisible orphan**: no `.git`, so `scanRepos` skips it, the row vanished on the next refresh, the folder later blocked recreating that worktree, and a retry answered `fatal: '<path>' is not a working tree`. Delete-first inverts that failure mode: git is never invoked, the worktree stays **registered**, and the still-visible row *is* the retry handle — which is also why no pending-cleanup persistence was needed. The lock guard has to be ours precisely because git's own refusal would arrive **after** we had already deleted the tree. WRFT-07 was deferred as P2 that rides on this branch's seams rather than blocking it. Spec/design/tasks: `.specs/features/worktree-removal-fault-tolerance/` (WRFT-01..07). |
 
+| AD-015 | 2026-07-31 | **The post-create hook command can be declared OUTSIDE the repo, amending AD-013 decision 1 (which is extended, not reversed).** Three owner decisions: (1) the out-of-repo home is the existing **`<workspace>\.app\config.json`**, under a new `postCreateCommands` map **keyed by repo folder name** — not app-global settings, not a third config file; (2) **the repo still wins** — `<repo>\.app\config.json`'s `postCreateCommand` takes precedence and the workspace entry is the fallback, so WPC-01/WPC-06 keep holding verbatim and no existing behaviour changes; (3) **per-repo keys only** — no `"*"` default and no bare workspace-level string, so a newly cloned repo runs nothing until it is named. **Architecture:** a `resolvePostCreateCommand(repoPath)` composer in `repo-config.ts` wraps the two readers and is wired into `withPostCreateHook`'s `readCommand` — **the signature is unchanged**, because `scanRepos` only ever finds a repo as a *direct child* of its workspace (`repo-scanner.ts`), so the workspace is `dirname(repoPath)` and the key is `basename(repoPath)`. Derivation is purely **lexical**: no lookup against `AppConfig.workspaces`. Key matching is exact first, then a *unique* case-insensitive match (Windows folder names are case-insensitive, AD-005), with ≥2 variants and no exact match resolving to **no command plus one log** rather than an arbitrary winner. | The motivation is concrete: `m:\Triade\source\Code` is a shared team repo, so AD-013's in-repo file meant either a permanent `?? .app/` in `git status` or a PR into the team repo to record one developer's local automation. The workspace file already exists as a concept and is already hand-authored for `branchTemplate`/`worktreeTemplate`, so nothing new has to be discovered; app-global settings were rejected because they are per-machine, invisible to teammates and would need a settings-dialog surface to be editable at all. Repo-wins keeps the change additive — every pre-existing test passes unmodified. Per-repo keys were chosen over a workspace default because silently inheriting a command is the opposite of what moving the declaration out of the repo is for. Lexical derivation avoids coupling a pure file reader to app state, and it degrades safely: a `repoPath` that is not a workspace child simply finds no key. **Side benefit, recorded:** the workspace-level declaration does **not** carry AD-013's accepted untrusted-repo-content risk, because you author it yourself. Spec/validation: `.specs/features/worktree-hook-workspace-config/` (HWC-01..14). |
+
 ## Handoff
 
-**Status (current, 2026-07-30):** **`worktree-removal-fault-tolerance` (AD-014) — EXECUTED and
-independently VERIFIED (round 3 PASS). NOT pushed, no PR, no GitHub issue yet; the owner's live smoke
-run and visual pass are OUTSTANDING.** Branch `feature/worktree-removal-fault-tolerance`, 15 commits
-(`16d2c2f..HEAD`), **566 tests / 40 files green**, typecheck clean, lint 0 errors / 18 pre-existing
-warnings (unchanged count). WRFT-01..05 are **Verified**; WRFT-06 is **Unverified** (renderer — no
-executed evidence); WRFT-07 is **Deferred** to a follow-up PR.
+**Status (current, 2026-08-05): ONE feature in flight.**
+
+1. **`worktree-hook-workspace-config` (AD-015) — EXECUTED, validated (PASS), issue + PR open.**
+   Branch `feature/worktree-hook-workspace-config`, originally **branched off the removal branch**
+   (not `main`) so AD-014 was present and the AD numbering / STATE edits did not collide. 8 commits,
+   **605 tests passing / 1 pre-existing failure**, typecheck clean, lint 0 errors / 18 warnings. All
+   14 ACs Verified and **all four Success Criteria met** — the last one (a real worktree create from
+   the New Worktree dialog against `M:\Triade\source\Code`) was run end-to-end on **2026-08-04**;
+   see `validation.md`. Validated by a **standalone fresh-eyes pass, not an independent Verifier
+   sub-agent** (the harness is configured without them), so author ≠ verifier is unmet — 9/12
+   mutants killed is the compensating control. **Issue #74, PR #75, based on `main`.**
+2. **`worktree-removal-fault-tolerance` (AD-014) — MERGED to `main` 2026-07-31 via PR #73
+   (issue #72, closed).** Independently VERIFIED, round 3 PASS. **Correction:** earlier revisions of
+   this handoff said "NOT pushed, no PR, no GitHub issue yet" — that was already stale when written
+   or shortly after; `origin/main` (`7cc8c76`) is the PR #73 merge. WRFT-01..05 are **Verified**;
+   WRFT-06 was **Unverified** (renderer — no executed evidence) at merge time and the live smoke +
+   Danger-section visual pass were never recorded as run, so they remain open follow-ups against
+   merged code rather than release gates. WRFT-07 is **Deferred** to a follow-up PR.
+   One removal-branch commit, `5e22450` (*docs(specs): correct the lessons-store note*), was made
+   **after** PR #73 merged and never reached `main` — it rides into `main` on PR #75 instead.
+
+**The hook command now resolves repo-first, workspace-second** (AD-015):
+`<repo>\.app\config.json`'s `postCreateCommand` wins; otherwise
+`<workspace>\.app\config.json`'s `postCreateCommands[<repoName>]` applies, with the workspace
+derived lexically as `dirname(repoPath)`. The real declaration was **moved out of the Code repo**:
+`M:\Triade\source\Code\.app\config.json` is deleted and
+`M:\Triade\source\.app\config.json` now holds `{"postCreateCommands":{"Code":".\\SetupSkills.cmd < NUL"}}`
+— outside version control, since `M:\Triade\source` is not itself a git repo. The command shape was
+measured: the leading `.\` is required (`NoDefaultCurrentDirectoryInExePath`) and `< NUL` feeds EOF
+to `SetupSkills.cmd`'s trailing `pause`, which otherwise hangs until the 120 s timeout. Note the
+wrapper `.cmd` masks `SetupSkills.ps1`'s exit code (measured: inner `exit /b 7` → wrapper exits 0),
+so a failing script would report success; switching the value to
+`powershell -NoProfile -ExecutionPolicy Bypass -File .\SetupSkills.ps1` restores real failure
+reporting.
+
+⚠️ **Environment defect found while validating — `fs.rmSync` is broken on this machine.** On Node
+**v24.9.0**, **every** `rmSync` shape silently no-ops (returns without error, file remains) when
+**any component of the path contains a non-ASCII character**; `unlinkSync` and every **async** `rm`
+shape work. Because the test fixtures root at `realpathSync.native(tmpdir())` =
+`C:\Users\OtávioBogoni\…`, this makes `worktree-manager.test.ts > removeWorktree > force-removes a
+worktree with mixed dirt` fail **on a clean tree** — the fixture's `rmSync(b.txt)` never deletes, so
+git correctly reports no deletion. **This is the 1 failure in the counts above and it is not a
+regression.** The product is unaffected: no production file uses `rmSync` (`dir-remover.ts:77` uses
+async `rm`, re-measured correct on non-ASCII trees). Consequence to keep in mind: the 17 test files
+using `rmSync` for teardown silently leak temp dirs under `%LOCALAPPDATA%\Temp`. Repros in the
+session scratchpad; full write-up in `worktree-hook-workspace-config/validation.md`.
 
 Removal is now **delete-first**: the app deletes the worktree directory itself with a junction-safe,
 deadline-bounded deleter and calls `git worktree remove` only to drop bookkeeping. A blocked deletion
@@ -77,19 +119,52 @@ holders releasing mid-loop — racy); and the two guard message literals, whose 
 their wording is not (the Verifier recommends **not** fixing this).
 
 **OUTSTANDING — owner tasks, in order:**
-1. **Live smoke** (discharges WRFT-06): `node scripts/seed-smoke-remove.mjs`, then
+0. **`worktree-hook-workspace-config` (AD-015):** ~~(a) create a worktree for
+   `M:\Triade\source\Code` from the New Worktree dialog and confirm the junctions land.~~
+   **DONE 2026-08-04** — driven over CDP against the dev app; create succeeded with no hook-failure
+   advisory and both junctions landed in `Code-99999` pointing at its own `.github\skills`. The
+   throwaway worktree and branch were removed (delete-first per AD-014) and `Code` is back to its
+   original 10 worktrees. Full run + an incidental `{repo}-{id}` template finding in
+   `validation.md`. ~~(b) create the GitHub issue, then push and open the PR.~~ **DONE 2026-08-05 —
+   issue #74 + PR #75 (`Closes #74`), based on `main`, not on the removal branch: PR #73 had already
+   merged, so there was nothing left to stack on.** Remaining: **review + merge PR #75.**
+
+   Note for any future hand-testing of the dialog: the dev build reads
+   `%APPDATA%\playground`, **not** the installed nightly's `%APPDATA%\playground-nightly`, so it
+   starts with no workspaces until that config is seeded. And with the global
+   `ado.worktreeTemplate` = `{repo}-{id}`, always hand-test with a branch carrying a 2+ digit
+   number — a numberless branch renders `{id}` to `''` and the create is refused as a collision
+   with the repo's own folder.
+1. **Live smoke** for removal — now a follow-up against **merged** code, not a gate (discharges
+   WRFT-06): `node scripts/seed-smoke-remove.mjs`, then
    `npm run dev -- -- --remote-debugging-port=9222`, then `node scripts/smoke-remove.mjs`. One-shot —
    re-seed before each run. Note a blocked deletion still removes everything it can reach, so the retry
    click may face either a direct remove or the confirm dialog; the script handles both.
 2. **Visual pass** on the Danger section (WRFT-06 AC 4 — long-path wrapping; that markup has never
    been rendered).
-3. **Create the GitHub issue** for this feature (issue = feature = PR), then push and open the PR with
-   `Closes #<n>` in the body.
-4. **Lessons store has no writer — entries below were HAND-MAINTAINED.** `.specs/LESSONS.md` declares
-   itself machine-owned by `scripts/lessons.py`, which does not exist in this repo. With the owner's
-   approval `lessons.json` was edited directly and `LESSONS.md` re-rendered by hand in the script's
-   exact format: **L-005 promoted to `confirmed`** (recurred on a second feature, meeting
-   `promote_threshold=2`), and **L-006** (*payload asserted as fixture input only*) and **L-007**
-   (*a fixture shaped around the known mutation*) added as candidates. If `lessons.py` is ever
-   restored, verify its rendering still matches these blocks byte-for-byte.
+3. ~~**Create the GitHub issue** for the removal feature, then push and open the PR.~~ **DONE —
+   issue #72 + PR #73, merged 2026-07-31** (`origin/main` = `7cc8c76`).
+   Also worth doing: check whether any real shared-skills folder was already emptied by a past
+   `git worktree remove --force` before the delete-first fix landed (AD-014's latent data-loss bug).
+   The AD-015 end-to-end run is mild counter-evidence — those junctions point *inside* each
+   worktree, so the blast radius was smaller than feared — but it is not a clean bill of health.
+4. ~~**Lessons store has no writer.**~~ **RESOLVED 2026-07-31 — the writer exists and the hand
+   edits were verified correct.** `scripts/lessons.py` is not missing: it ships **inside the skill
+   package**, and the docs' `python3 scripts/lessons.py` is relative to the skill directory, not to
+   this repo — which is why it read as absent. It runs here despite `python`/`python3` being dead
+   Microsoft Store aliases, via Azure CLI's bundled interpreter (Python 3.13.11). Note `--root` is a
+   **top-level** argument, before the subcommand:
+
+   ```bash
+   PY="C:/Program Files/Microsoft SDKs/Azure/CLI2/python.exe"
+   SK="C:/Users/<user>/.claude/skills/tlc-spec-driven"
+   "$PY" "$SK/scripts/lessons.py" --root "M:/obogoni/playground" list --status confirmed
+   ```
+
+   The hand-maintained entries (**L-005 promoted to `confirmed`** on `promote_threshold=2`, plus
+   candidates **L-006** *payload asserted as fixture input only* and **L-007** *a fixture shaped
+   around the known mutation*) were checked against the script: `status` reports 7 lessons /
+   confirmed=2, and re-rendering a scratch copy of `lessons.json` reproduces both `LESSONS.md` and
+   `lessons.json` **identically** (modulo CRLF, which `.gitattributes eol=lf` normalizes on add). So
+   the format is correct and future writes can go through the script.
 5. **Follow-up PR** for WRFT-07 (T9–T11 are specified verbatim in `tasks.md`).

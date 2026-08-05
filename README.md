@@ -46,27 +46,45 @@ Going from "task in ADO" to "worktree on disk with tools open on it" is normally
 
 - Light / dark theme, persisted last-session UI state (direction, selection, theme)
 - Per-workspace overrides via `.app/config.json` (branch + worktree-folder templates); global defaults in Settings
-- Per-repo worktree initialization: a repo declares `postCreateCommand` in its own
-  `.app/config.json` and it runs in every new worktree — from the dialogs and from workflows
-  alike. A failing command never costs you the worktree; the exit code and output are reported
-  inline
+- Worktree initialization: a repo's init command runs in every new worktree — from the dialogs
+  and from workflows alike. A failing command never costs you the worktree; the exit code and
+  output are reported inline. The command can be declared **in the repo** or, to keep a shared
+  team repo clean, **in the workspace beside it**
+
+```jsonc
+// <workspace>/.app/config.json — outside the repos, keyed by repo folder name
+{
+  "postCreateCommands": {
+    // Runs with cwd = the new worktree. Note the JSON-escaped backslash; the
+    // leading ".\" matters because some environments set
+    // NoDefaultCurrentDirectoryInExePath, which stops a bare "SetupSkills.cmd"
+    // from resolving; and "< NUL" feeds EOF to a script ending in `pause`, which
+    // would otherwise hang until the 120 s timeout.
+    "Code": ".\\SetupSkills.cmd < NUL"
+  }
+}
+```
 
 ```jsonc
 // <repo>/.app/config.json — checked in, so it travels with the repo
 {
-  // Runs with cwd = the new worktree. Note the JSON-escaped backslash, and that
-  // the leading ".\" matters: some environments set
-  // NoDefaultCurrentDirectoryInExePath, which stops a bare "SetupSkills.cmd"
-  // from resolving.
   "postCreateCommand": ".\\SetupSkills.cmd"
 }
 ```
 
+**Precedence:** the repo's own `postCreateCommand` wins; the workspace's
+`postCreateCommands[<repoName>]` applies only when the repo declares nothing. Exactly one
+command ever runs. Keys are per-repo — a repo the map does not name runs nothing — matched
+exactly, or case-insensitively when that is unambiguous (Windows folder names are
+case-insensitive). The workspace is the repo folder's parent, since a repo is always a direct
+child of its workspace.
+
 The command runs through a shell (so `.cmd`/`.ps1` work), with `PLAYGROUND_WORKTREE_PATH`,
 `PLAYGROUND_REPO_PATH` and `PLAYGROUND_BRANCH` in its environment, and is killed after 120 s.
-A malformed or blank value is ignored (no hook runs). Note the command is repo content: cloning
-an untrusted repo into a registered workspace means its `postCreateCommand` runs on your next
-worktree create for that repo.
+A malformed or blank value is ignored (no hook runs). Note that a repo-declared command is repo
+content: cloning an untrusted repo into a registered workspace means its `postCreateCommand`
+runs on your next worktree create for that repo — the workspace-level declaration does not carry
+that risk, since you author it yourself.
 
 ## Stack
 
