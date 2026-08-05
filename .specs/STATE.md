@@ -26,24 +26,26 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current, 2026-07-31): TWO features in flight, stacked.**
+**Status (current, 2026-08-05): ONE feature in flight.**
 
-1. **`worktree-hook-workspace-config` (AD-015) — EXECUTED and validated (PASS).** Branch
-   `feature/worktree-hook-workspace-config`, **branched off the removal branch** (not `main`) so
-   AD-014 is present and the AD numbering / STATE edits do not collide. 7 commits
-   (`da7ea07..38b0cc1`), **605 tests passing / 1 pre-existing failure**, typecheck clean, lint 0
-   errors / 18 warnings. All 14 ACs Verified and **all four Success Criteria met** — the last one
-   (a real worktree create from the New Worktree dialog against `M:\Triade\source\Code`) was run
-   end-to-end on **2026-08-04**; see `validation.md`. Validated by a **standalone fresh-eyes pass,
-   not an independent Verifier sub-agent** (the harness is configured without them), so
-   author ≠ verifier is unmet — 9/12 mutants killed is the compensating control. No PR, no issue.
-2. **`worktree-removal-fault-tolerance` (AD-014) — EXECUTED and independently VERIFIED (round 3
-   PASS). NOT pushed, no PR, no GitHub issue yet; the owner's live smoke run and visual pass are
-   OUTSTANDING.** Branch `feature/worktree-removal-fault-tolerance`, 15 commits (`16d2c2f..5e22450`,
-   including the lessons-note correction), **566 tests / 40 files green** at the time of its
-   verification, typecheck clean, lint 0 errors / 18 pre-existing warnings. WRFT-01..05 are
-   **Verified**; WRFT-06 is **Unverified** (renderer — no executed evidence); WRFT-07 is
-   **Deferred** to a follow-up PR.
+1. **`worktree-hook-workspace-config` (AD-015) — EXECUTED, validated (PASS), issue + PR open.**
+   Branch `feature/worktree-hook-workspace-config`, originally **branched off the removal branch**
+   (not `main`) so AD-014 was present and the AD numbering / STATE edits did not collide. 8 commits,
+   **605 tests passing / 1 pre-existing failure**, typecheck clean, lint 0 errors / 18 warnings. All
+   14 ACs Verified and **all four Success Criteria met** — the last one (a real worktree create from
+   the New Worktree dialog against `M:\Triade\source\Code`) was run end-to-end on **2026-08-04**;
+   see `validation.md`. Validated by a **standalone fresh-eyes pass, not an independent Verifier
+   sub-agent** (the harness is configured without them), so author ≠ verifier is unmet — 9/12
+   mutants killed is the compensating control. **Issue #74, PR #75, based on `main`.**
+2. **`worktree-removal-fault-tolerance` (AD-014) — MERGED to `main` 2026-07-31 via PR #73
+   (issue #72, closed).** Independently VERIFIED, round 3 PASS. **Correction:** earlier revisions of
+   this handoff said "NOT pushed, no PR, no GitHub issue yet" — that was already stale when written
+   or shortly after; `origin/main` (`7cc8c76`) is the PR #73 merge. WRFT-01..05 are **Verified**;
+   WRFT-06 was **Unverified** (renderer — no executed evidence) at merge time and the live smoke +
+   Danger-section visual pass were never recorded as run, so they remain open follow-ups against
+   merged code rather than release gates. WRFT-07 is **Deferred** to a follow-up PR.
+   One removal-branch commit, `5e22450` (*docs(specs): correct the lessons-store note*), was made
+   **after** PR #73 merged and never reached `main` — it rides into `main` on PR #75 instead.
 
 **The hook command now resolves repo-first, workspace-second** (AD-015):
 `<repo>\.app\config.json`'s `postCreateCommand` wins; otherwise
@@ -123,21 +125,29 @@ their wording is not (the Verifier recommends **not** fixing this).
    advisory and both junctions landed in `Code-99999` pointing at its own `.github\skills`. The
    throwaway worktree and branch were removed (delete-first per AD-014) and `Code` is back to its
    original 10 worktrees. Full run + an incidental `{repo}-{id}` template finding in
-   `validation.md`. **Remaining: (b) create the GitHub issue, then push and open the PR with
-   `Closes #<n>`. Base the PR on the removal branch** while that one is open, then retarget to
-   `main` after it merges (this branch is stacked on it).
+   `validation.md`. ~~(b) create the GitHub issue, then push and open the PR.~~ **DONE 2026-08-05 —
+   issue #74 + PR #75 (`Closes #74`), based on `main`, not on the removal branch: PR #73 had already
+   merged, so there was nothing left to stack on.** Remaining: **review + merge PR #75.**
 
    Note for any future hand-testing of the dialog: the dev build reads
    `%APPDATA%\playground`, **not** the installed nightly's `%APPDATA%\playground-nightly`, so it
-   starts with no workspaces until that config is seeded.
-1. **Live smoke** (discharges WRFT-06): `node scripts/seed-smoke-remove.mjs`, then
+   starts with no workspaces until that config is seeded. And with the global
+   `ado.worktreeTemplate` = `{repo}-{id}`, always hand-test with a branch carrying a 2+ digit
+   number — a numberless branch renders `{id}` to `''` and the create is refused as a collision
+   with the repo's own folder.
+1. **Live smoke** for removal — now a follow-up against **merged** code, not a gate (discharges
+   WRFT-06): `node scripts/seed-smoke-remove.mjs`, then
    `npm run dev -- -- --remote-debugging-port=9222`, then `node scripts/smoke-remove.mjs`. One-shot —
    re-seed before each run. Note a blocked deletion still removes everything it can reach, so the retry
    click may face either a direct remove or the confirm dialog; the script handles both.
 2. **Visual pass** on the Danger section (WRFT-06 AC 4 — long-path wrapping; that markup has never
    been rendered).
-3. **Create the GitHub issue** for the removal feature (issue = feature = PR), then push and open the
-   PR with `Closes #<n>` in the body.
+3. ~~**Create the GitHub issue** for the removal feature, then push and open the PR.~~ **DONE —
+   issue #72 + PR #73, merged 2026-07-31** (`origin/main` = `7cc8c76`).
+   Also worth doing: check whether any real shared-skills folder was already emptied by a past
+   `git worktree remove --force` before the delete-first fix landed (AD-014's latent data-loss bug).
+   The AD-015 end-to-end run is mild counter-evidence — those junctions point *inside* each
+   worktree, so the blast radius was smaller than feared — but it is not a clean bill of health.
 4. ~~**Lessons store has no writer.**~~ **RESOLVED 2026-07-31 — the writer exists and the hand
    edits were verified correct.** `scripts/lessons.py` is not missing: it ships **inside the skill
    package**, and the docs' `python3 scripts/lessons.py` is relative to the skill directory, not to
