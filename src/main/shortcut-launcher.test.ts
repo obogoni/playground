@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ShortcutLauncher,
   VS_EDITIONS,
   buildElevatedOpen,
   buildVswhereArgs,
@@ -151,5 +152,28 @@ describe('vsFailureMessages', () => {
       expect(message).toContain('2026')
       expect(message).not.toContain('2022')
     }
+  })
+})
+
+describe('ShortcutLauncher VS routing', () => {
+  // A path that cannot exist, so openVisualStudio's vanished-path guard returns
+  // before vswhere or any spawn is reached. That makes the *routing* assertable
+  // without popping UAC: the message names whichever edition the tool resolved
+  // to, so a card wired to the wrong Visual Studio fails here.
+  const missing = 'C:\\wtm-no-such-worktree-dir'
+  const launcher = new ShortcutLauncher()
+
+  it('opens 2022 for the vs2022 tool', async () => {
+    await expect(launcher.launch('vs2022', missing)).resolves.toEqual({
+      ok: false,
+      error: "Couldn't launch Visual Studio 2022 — the worktree path no longer exists"
+    })
+  })
+
+  it('opens 2026 for the vs2026 tool, not the 2022 install', async () => {
+    await expect(launcher.launch('vs2026', missing)).resolves.toEqual({
+      ok: false,
+      error: "Couldn't launch Visual Studio 2026 — the worktree path no longer exists"
+    })
   })
 })
