@@ -1,4 +1,4 @@
-export type ShortcutTool = 'explorer' | 'terminal' | 'vscode' | 'vs2022'
+export type ShortcutTool = 'explorer' | 'terminal' | 'vscode' | 'vs2022' | 'vs2026'
 
 export interface LaunchResult {
   ok: boolean

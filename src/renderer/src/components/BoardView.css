@@ -487,6 +487,14 @@
   background: color-mix(in oklab, var(--amber) 16%, transparent);
 }
 
+.board-launch-btn.pink {
+  color: var(--pink);
+}
+
+.board-launch-btn.pink:hover {
+  background: color-mix(in oklab, var(--pink) 16%, transparent);
+}
+
 .board-card-footer-spacer {
   flex: 1;
 }

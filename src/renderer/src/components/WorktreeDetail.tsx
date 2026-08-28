@@ -63,6 +63,14 @@ const LAUNCHERS: {
     icon: 'shield',
     tile: 'amber',
     admin: true
+  },
+  {
+    tool: 'vs2026',
+    label: 'Visual Studio 2026',
+    command: 'devenv.exe',
+    icon: 'shield',
+    tile: 'pink',
+    admin: true
   }
 ]
 
@@ -282,7 +290,9 @@ export function WorktreeDetail({
                 </span>
                 <span className="detail-launcher-labelrow">
                   <span className="detail-launcher-label">{launcher.label}</span>
-                  {launcher.admin && <span className="detail-launcher-admin">admin</span>}
+                  {launcher.admin && (
+                    <span className={`detail-launcher-admin ${launcher.tile}`}>admin</span>
+                  )}
                 </span>
                 <span className="detail-launcher-command">{launcher.command}</span>
               </button>

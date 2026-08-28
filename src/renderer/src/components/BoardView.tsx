@@ -372,6 +372,14 @@ function BoardCard({
         >
           <Icon name="shield" size={15} strokeWidth={1.9} />
         </button>
+        <button
+          type="button"
+          className="board-launch-btn pink"
+          title="Visual Studio 2026 (admin)"
+          onClick={() => launch('vs2026')}
+        >
+          <Icon name="shield" size={15} strokeWidth={1.9} />
+        </button>
         <span className="board-card-footer-divider" />
         <button
           type="button"
