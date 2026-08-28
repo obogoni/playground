@@ -276,6 +276,11 @@
   color: var(--amber);
 }
 
+.detail-launcher-tile.pink {
+  background: color-mix(in oklab, var(--pink) 16%, transparent);
+  color: var(--pink);
+}
+
 .detail-launcher-labelrow {
   display: flex;
   align-items: center;
@@ -287,7 +292,10 @@
   font-weight: 600;
 }
 
-/* Elevation marker — pairs with the shield tile to read as the admin action */
+/* Elevation marker — pairs with the shield tile to read as the admin action. The
+ * tint follows the card's own tile colour so each elevated launcher reads as one
+ * unit; with two VS versions side by side an amber badge on a pink tile would
+ * read as a third, unrelated state. */
 .detail-launcher-admin {
   font-size: 9.5px;
   font-weight: 700;
@@ -295,8 +303,16 @@
   text-transform: uppercase;
   padding: 1px 5px;
   border-radius: 5px;
-  background: color-mix(in oklab, var(--amber) 18%, transparent);
-  color: var(--amber);
+  background: color-mix(in oklab, var(--admin-tint) 18%, transparent);
+  color: var(--admin-tint);
+}
+
+.detail-launcher-admin.amber {
+  --admin-tint: var(--amber);
+}
+
+.detail-launcher-admin.pink {
+  --admin-tint: var(--pink);
 }
 
 .detail-launcher-command {
