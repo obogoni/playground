@@ -211,10 +211,10 @@ naming 2026; app stays alive.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| VS26-01 | P1: VS 2026 (admin) launcher card (detail pane) | Execute | Code-verified — rendering pending owner smoke + visual pass |
+| VS26-01 | P1: VS 2026 (admin) launcher card (detail pane) | Execute | Verified — CDP smoke executed: five cards in order, both VS cards resolve their own tint |
 | VS26-02 | P1: Launch VS 2026 elevated (vswhere `[18.0,19.0)` + RunAs + Open Folder) | Execute | Verified — arg vector unit-tested **and** executed against real vswhere; elevation pending owner UAC pass |
 | VS26-03 | P1: 2022 and 2026 coexist without shadowing | Execute | Verified — disjointness, per-version routing and tool→edition wiring unit-tested; confirmed on the real 2019+2022+2026 machine |
-| VS26-04 | P1: VS 2026 button on board cards | Execute | Code-verified — rendering pending owner smoke + visual pass |
+| VS26-04 | P1: VS 2026 button on board cards | Execute | Partially verified — colour distinguishability owner-confirmed; board-footer smoke block not yet executed |
 | VS26-05 | P2: VS 2026 launch failure feedback (not-installed / UAC-declined / vanished path) | Execute | Verified — all six messages pinned; vanished-path case executed end-to-end |
 
 **Coverage:** 5 total — 3 verified by executed evidence (VS26-02/03/05), 2 code-verified pending the

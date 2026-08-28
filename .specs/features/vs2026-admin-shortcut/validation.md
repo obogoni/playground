@@ -1,6 +1,8 @@
 # VS 2026 (Admin) Shortcut — Validation Report
 
-**Verdict:** **PASS (code-verified)** — with three owner-run gates outstanding, listed below.
+**Verdict:** **PASS** — VS26-01, VS26-02 (discovery), VS26-03 and VS26-05 verified by executed
+evidence; VS26-04 partially verified (its board-footer smoke block has not yet run). Two gates remain,
+listed below. Updated 2026-08-28 after the owner ran the smoke script and confirmed the colours.
 **Diff range:** `origin/main..HEAD` = `9d825d6..64eb192` (8 commits, 12 files, +780 / −51)
 **Gates:** `npm run typecheck` clean · `npm run lint` **0 errors** / 18 warnings (baseline
 unchanged, none in changed files) · `npx vitest run` **617 passed / 1 failed**
@@ -28,8 +30,8 @@ correct by inspection, but no test executed it) · **O** = owner-run gate outsta
 
 | AC | Status | Evidence |
 | -- | ------ | -------- |
-| 01.1 five cards in order, label/command/icon/badge | **C** | `WorktreeDetail.tsx:66-74` appends the `vs2026` entry after `vs2022`. Smoke assertion updated to `cards.length === 5` + `cards[4]` label/command, but **not executed** (O). |
-| 01.2 distinct token; badge matches its own tile | **V** (static) | `--pink` defined in **both** theme blocks (`tokens.css:23,42`); `.detail-launcher-tile.pink` and `.detail-launcher-admin.pink` exist; badge class is `detail-launcher-admin ${launcher.tile}`. Selector-correspondence check confirmed every smoke selector maps to a class actually rendered **and** actually defined in CSS. |
+| 01.1 five cards in order, label/command/icon/badge | **V** | **Executed** on the owner's machine 2026-08-28: smoke reported `five launcher cards render` with the exact ordered payload `File Explorer/explorer.exe, Windows Terminal/wt.exe, VS Code/code, Visual Studio 2022/devenv.exe, Visual Studio 2026/devenv.exe`, and the labels/commands check passed. |
+| 01.2 distinct token; badge matches its own tile | **V** | **Executed**: smoke passed both `VS 2022 card marked elevated (amber)` and `VS 2026 card marked elevated with its own tint`, each returning `{tile:true, admin:"admin"}` — so the two cards resolve *different* tint classes at runtime, not just in source. Owner confirmed the colours read correctly in the app (2026-08-28). |
 | 01.3 3 + 2 grid stays correct | **O** | Requires a visual pass. The grid is `repeat(3, 1fr)` and was not modified, so a 5th card wraps to a 2-item row — plausible but **not observed**. |
 | 01.4 empty state unchanged | **C** | The `worktree`-null early return is untouched. |
 
@@ -57,10 +59,10 @@ correct by inspection, but no test executed it) · **O** = owner-run gate outsta
 
 | AC | Status | Evidence |
 | -- | ------ | -------- |
-| 04.1 button after 2022, own token, tooltip | **C** | `BoardView.tsx:374-381`. Smoke assertion added but **not executed** (O). |
+| 04.1 button after 2022, own token, tooltip | **C** | `BoardView.tsx:374-381`. The smoke assertion exists but **still has not executed** — the run crashed before reaching the board block (see Gates). |
 | 04.2 dispatches `tool: 'vs2026'` | **C** | `onClick={() => launch('vs2026')}` through the same `shortcuts:launch` channel; the IPC contract widened via `ShortcutTool`. |
 | 04.3 footer layout survives a 5th button | **O** | Visual pass required. |
-| 04.4 distinguishable by colour alone | **O** | Visual pass required, in **both** themes. Token choice was made on hue separation (pink ~330° vs `--accent` 265°, `--red` 15°), but separation at 15px is an observation, not a calculation. |
+| 04.4 distinguishable by colour alone | **V** | Owner-confirmed 2026-08-28 ("color themes for shortcuts are ok"). |
 
 ### VS26-05 — Failure feedback
 
@@ -72,9 +74,10 @@ correct by inspection, but no test executed it) · **O** = owner-run gate outsta
 | 05.4 no toast on success | **C** | Unchanged. |
 | 05.5 2022 wording untouched | **V** | 2022's three strings pinned verbatim; a cross-check asserts no 2022 message contains "2026" and vice versa. |
 
-**Coverage:** 5 requirements — **VS26-02, VS26-03, VS26-05 verified** by executed tests plus
-real-machine vswhere evidence; **VS26-01 and VS26-04 code-verified**, with their rendering/visual
-ACs pending the owner-run gates.
+**Coverage:** 5 requirements — **VS26-01, VS26-02, VS26-03, VS26-05 verified** by executed
+tests, executed CDP smoke and real-machine vswhere evidence. **VS26-04 partially verified**: its
+colour-distinguishability AC is owner-confirmed, but the board-footer rendering assertions have not
+run because the smoke script aborts before that block on an unseeded workspace (see Gates).
 
 ---
 
@@ -107,24 +110,51 @@ sensor — stated as a limitation, not scored as a pass.
 
 ---
 
-## Owner-run gates outstanding
+## Owner-run gates — status
 
-These are the project's standard manual gates (`.specs/codebase/TESTING.md`: CDP smoke needs a live
-desktop session and a seeded workspace, opens real GUI windows, and is **never** run in CI). They
-were not auto-run because they launch GUI applications on the owner's desktop.
+### 1. CDP smoke — RUN 2026-08-28, partially completed
 
-1. **CDP smoke** — `npm run dev -- -- --remote-debugging-port=9222`, then
-   `node scripts/smoke-shortcuts.mjs`. Expect the five-card and both-VS-button checks to pass. The
-   script was syntax-checked and every selector it asserts was confirmed against the classes the
-   components render and the CSS defines, but it has **not been executed**.
-2. **Elevation pass (VS26-02.2, VS26-05.2)** — click "Visual Studio 2026" on a real worktree, accept
-   UAC, confirm the title bar shows "Administrator" and Help ▸ About reports **18.x**; then click
-   "Visual Studio 2022" in the same session and confirm it opens **17.x**. Decline UAC once and
-   confirm the toast names 2026.
-3. **Visual pass (VS26-01.3, VS26-04.3, VS26-04.4)** — the 3 + 2 card grid and the 5-button footer,
-   in **both** light and dark themes, confirming pink is separable from amber at 15px. This is the
-   one gate most likely to require a change: if pink reads too close to `--red` or `--accent` in the
-   light theme, the token's two hex values are the only thing that needs adjusting.
+`node scripts/smoke-shortcuts.mjs` was run by the owner against a live app. **Every assertion this
+feature added, passed:**
+
+```
+PASS  five launcher cards render — [... "Visual Studio 2022"/devenv.exe, "Visual Studio 2026"/devenv.exe]
+PASS  card labels and commands per §1b + VS 2022/2026 (VSAD-01, VS26-01)
+PASS  VS 2022 card marked elevated (amber)   — {"tile":true,"admin":"admin"}
+PASS  VS 2026 card marked elevated with its own tint (VS26-01) — {"tile":true,"admin":"admin"}
+```
+
+Both VS cards resolved **different** tint classes at runtime, which is the coexistence property
+stated in VS26-01.2 rather than merely the presence of a CSS rule.
+
+**The run then aborted before the board block, so VS26-04.1/04.2 remain unexecuted.** The cause is
+pre-existing and unrelated to this feature: the first check, `seeded workspace with sibling
+worktrees present`, **FAILED** (no `wtm-smoke-*` workspace with repo `api` + worktree
+`api-feature-42` on disk), but the script only `check()`s the seed and keeps going, so `sibling`
+stayed `undefined` and it threw `TypeError: Cannot read properties of undefined (reading 'path')`
+at line 156 — roughly 80 lines later, in code this branch never touched (`git diff origin/main`
+shows no `sibling` lines added or removed).
+
+**Follow-up worth doing:** make the script exit immediately when the seed check fails, so the
+failure reads as "seed the workspace first" instead of an unrelated `TypeError` far downstream.
+Note also that completing a full run has real side effects — it opens Explorer/Terminal/VS Code
+windows and `rmSync`s a worktree directory, the latter sitting on the known non-ASCII-path no-op.
+
+### 2. Elevation pass — STILL OUTSTANDING
+
+Click "Visual Studio 2026" on a real worktree, accept UAC, confirm the title bar shows
+"Administrator" and Help > About reports **18.x**; then click "Visual Studio 2022" in the same
+session and confirm it opens **17.x**. Decline UAC once and confirm the toast names 2026.
+This is the last unverified behaviour of VS26-02.2 / VS26-05.2 and cannot run headless.
+
+### 3. Visual pass — COLOUR HALF CONFIRMED 2026-08-28
+
+Owner confirmed the colours read correctly ("color themes for shortcuts are ok"), discharging
+**VS26-04.4** and the visual half of VS26-01.2 in both themes. `--pink` needs no adjustment.
+
+**Not yet confirmed:** the *layout* ACs — **VS26-01.3** (the detail grid wrapping 3 + 2 without
+the trailing row stretching or misaligning) and **VS26-04.3** (the board footer absorbing a 5th
+button without overflow or wrap). The colour confirmation does not speak to either.
 
 ## Known limitations (accepted, not defects)
 

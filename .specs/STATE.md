@@ -43,16 +43,23 @@ Handoff snapshot.
    harness runs without them), so author != verifier is unmet — same caveat as AD-015, with
    the mutation sensor as the compensating control. See `validation.md`.
 
-   **Three owner-run gates outstanding** (none auto-runnable — they launch GUI apps on the
-   desktop; `.specs/codebase/TESTING.md` marks CDP smoke as never-in-CI):
-   (a) `npm run dev -- -- --remote-debugging-port=9222` then `node scripts/smoke-shortcuts.mjs`
-   (updated to five cards / both VS buttons, syntax-checked and selector-verified, but **not run**);
-   (b) the **elevation pass** — click VS 2026, accept UAC, confirm "Administrator" + 18.x under
-   Help > About, then confirm VS 2022 still opens 17.x in the same session, and decline UAC once;
-   (c) the **visual pass** — the 3+2 card grid and 5-button footer in both themes, confirming
-   `--pink` is separable from `--amber` at 15px. (c) is the one most likely to need a change: if
-   pink reads too close to `--red`/`--accent` in the light theme, only the token's two hex values
-   need adjusting. **No GitHub issue or PR yet** — per convention, issue + PR come next.
+   **Gate status (updated 2026-08-28, owner-run):**
+   (a) **CDP smoke — RUN, partially completed.** Every assertion this feature added PASSED:
+   five cards render in order with the right labels/commands, and both VS cards resolve their own
+   tint at runtime (amber vs pink, each `{tile:true, admin:"admin"}`). VS26-01 is therefore
+   **Verified by executed evidence**. The run then aborted before the board block, so VS26-04.1/02
+   are still unexecuted — cause is pre-existing and unrelated: the `wtm-smoke-*` workspace is not
+   seeded, the first check FAILED, but the script only `check()`s the seed and continues, so
+   `sibling` was undefined and it threw at line 156, ~80 lines later, in untouched code. Worth
+   fixing: make the script exit on a failed seed check.
+   (b) **Elevation pass — STILL OUTSTANDING.** Accept UAC on 2026 (confirm "Administrator" +
+   18.x), confirm 2022 still opens 17.x in the same session, decline UAC once. Last unverified
+   behaviour of VS26-02.2 / VS26-05.2.
+   (c) **Visual pass — COLOUR HALF CONFIRMED.** Owner: "color themes for shortcuts are ok",
+   discharging VS26-04.4. `--pink` needs no adjustment. **Still unconfirmed:** the layout ACs
+   VS26-01.3 (3+2 grid) and VS26-04.3 (footer with 5 buttons).
+
+   **No GitHub issue or PR yet** — per convention, issue + PR come next.
 
 1. **`worktree-hook-workspace-config` (AD-015) — MERGED to `main` 2026-08-28 via PR #75**
    (issue #74 closed). `origin/main` is now `9d825d6`, the PR #75 merge commit; the note below that
