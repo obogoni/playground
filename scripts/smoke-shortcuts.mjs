@@ -87,9 +87,9 @@ const cards = await evaluate(
      }))
    })()`
 )
-check('four launcher cards render', cards.length === 4, JSON.stringify(cards))
+check('five launcher cards render', cards.length === 5, JSON.stringify(cards))
 check(
-  'card labels and commands per §1b + VS 2022 (VSAD-01)',
+  'card labels and commands per §1b + VS 2022/2026 (VSAD-01, VS26-01)',
   cards[0]?.label === 'File Explorer' &&
     cards[0]?.command === 'explorer.exe' &&
     cards[1]?.label === 'Windows Terminal' &&
@@ -97,23 +97,35 @@ check(
     cards[2]?.label === 'VS Code' &&
     cards[2]?.command === 'code' &&
     cards[3]?.label === 'Visual Studio 2022' &&
-    cards[3]?.command === 'devenv.exe'
+    cards[3]?.command === 'devenv.exe' &&
+    cards[4]?.label === 'Visual Studio 2026' &&
+    cards[4]?.command === 'devenv.exe'
 )
-// VSAD-01: the VS card carries the elevation marker (shield tile + admin badge)
+// VSAD-01 / VS26-01: both VS cards carry the elevation marker (shield tile +
+// admin badge), and each uses its own tile colour — the two are told apart by
+// colour, so a shared tint would make the pair unreadable in the board footer.
 const vsAdmin = await evaluate(
   ws,
   `(() => {
-     const card = document.querySelectorAll('.detail-launcher')[3]
-     return {
-       tile: Boolean(card?.querySelector('.detail-launcher-tile.amber')),
-       admin: card?.querySelector('.detail-launcher-admin')?.textContent
+     const read = (i, tint) => {
+       const card = document.querySelectorAll('.detail-launcher')[i]
+       return {
+         tile: Boolean(card?.querySelector('.detail-launcher-tile.' + tint)),
+         admin: card?.querySelector('.detail-launcher-admin.' + tint)?.textContent
+       }
      }
+     return { vs2022: read(3, 'amber'), vs2026: read(4, 'pink') }
    })()`
 )
 check(
-  'VS card marked elevated',
-  vsAdmin.tile === true && vsAdmin.admin === 'admin',
-  JSON.stringify(vsAdmin)
+  'VS 2022 card marked elevated (amber)',
+  vsAdmin.vs2022.tile === true && vsAdmin.vs2022.admin === 'admin',
+  JSON.stringify(vsAdmin.vs2022)
+)
+check(
+  'VS 2026 card marked elevated with its own tint (VS26-01)',
+  vsAdmin.vs2026.tile === true && vsAdmin.vs2026.admin === 'admin',
+  JSON.stringify(vsAdmin.vs2026)
 )
 
 // LNCH-05: a launch against a vanished path fails with a clear message
@@ -179,17 +191,24 @@ const boardVs = await evaluate(
        .find((b) => /board/i.test(b.textContent || ''))?.click()
      await new Promise((r) => setTimeout(r, 600))
      const cards = [...document.querySelectorAll('.board-card')]
+     const every = (sel) => cards.every((card) => Boolean(card.querySelector(sel)))
      return {
        count: cards.length,
-       allHaveVs: cards.every((card) =>
-         Boolean(card.querySelector('.board-launch-btn.amber[title="Visual Studio 2022 (admin)"]'))
-       )
+       allHaveVs2022: every(
+         '.board-launch-btn.amber[title="Visual Studio 2022 (admin)"]'
+       ),
+       allHaveVs2026: every('.board-launch-btn.pink[title="Visual Studio 2026 (admin)"]')
      }
    })()`
 )
 check(
   'board cards expose VS 2022 (admin) button (VSAD-03)',
-  boardVs.count > 0 && boardVs.allHaveVs === true,
+  boardVs.count > 0 && boardVs.allHaveVs2022 === true,
+  JSON.stringify(boardVs)
+)
+check(
+  'board cards expose VS 2026 (admin) button in its own tint (VS26-04)',
+  boardVs.count > 0 && boardVs.allHaveVs2026 === true,
   JSON.stringify(boardVs)
 )
 
