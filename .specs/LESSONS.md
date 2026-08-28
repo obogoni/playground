@@ -24,12 +24,6 @@ Corroborated across multiple features. Safe to apply as guidance.
 
 Seen once or not yet corroborated. Tracked, not trusted.
 
-### L-002 — Before a UI design references a shared CSS keyframe as 'existing', grep global.css to confirm it exists — the WHF handoff assumed pulse/blink existed but global.css only had fadeIn/popIn/toastIn, forcing a component-local @keyframes pulse.
-- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `src/renderer/**/*.css` · harmful: 0
-- features: workflows-ui-hifi
-- evidence: RunDetail.css:14 / WorkflowsView.css:21 (SPEC_DEVIATION pulse keyframe) (src/renderer/**/*.css)
-- last seen: 2026-07-06T21:57:51Z
-
 ### L-003 — When wrapping a spawned process with a timeout, settle the promise on 'exit' plus a short flush grace period, never on 'close' alone: 'close' waits for stdio EOF and killing a shell does not kill its children, so a surviving grandchild holds the inherited pipes and the promise can lag by seconds or never settle
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `child-process` · harmful: 0
 - features: worktree-post-create-hook
@@ -53,6 +47,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: worktree-removal-fault-tolerance
 - evidence: round-2 mutant N3 survived the round-1 fix F2 (dir-remover.test.ts:328-348 fixture wt/keep/a/b was directories-only); closed by F3 1abe8aa with a mixed chain giving 3/2/1/1 for every-entry/dirs-only/files-only/top-level (testing)
 - last seen: 2026-07-31T12:27:40Z
+
+### L-008 — When a hard-coded value becomes a lookup table keyed by an existing enum, test the wiring from key to entry, not just the table: asserting the table's contents leaves the new key free to silently resolve to the old entry, and a guard that returns before any side effect (a missing-path check) usually makes that routing assertable without touching the real subsystem.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main/**` · harmful: 0
+- features: vs2026-admin-shortcut
+- evidence: M4/M5: launch() -> VS_EDITIONS[tool]; openVisualStudio(edition) (src/main/**)
+- last seen: 2026-08-28T19:48:01Z
 
 ## Quarantined (failed when applied — ignore)
 
