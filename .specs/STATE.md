@@ -30,7 +30,7 @@ Handoff snapshot.
 
 **Status (current, 2026-08-28): ONE feature in flight; AD-015 has since merged.**
 
-0. **`vs2026-admin-shortcut` (AD-016) — EXECUTED, validated (PASS, code-verified), NOT pushed.**
+0. **`vs2026-admin-shortcut` (AD-016) — EXECUTED, validated (PASS), pushed. Issue #76, PR #77.**
    Branch `feature/vs2026-admin-shortcut`, based on **`origin/main` (`9d825d6`, the PR #75 merge)** —
    independent of anything still in flight. 8 commits (`acb12e1..64eb192`), **617 tests passing / 1
    pre-existing failure** (the same `worktree-manager` mixed-dirt case as before), typecheck clean,
@@ -59,7 +59,11 @@ Handoff snapshot.
    discharging VS26-04.4. `--pink` needs no adjustment. **Still unconfirmed:** the layout ACs
    VS26-01.3 (3+2 grid) and VS26-04.3 (footer with 5 buttons).
 
-   **No GitHub issue or PR yet** — per convention, issue + PR come next.
+   **Issue #76, PR #77** (base `main`, MERGEABLE). The CI gate runs
+   `typecheck && lint && test` on windows-latest, which includes the `worktree-manager` mixed-dirt
+   test that fails locally — that failure is plausibly local-only (real-git + `rmSync` under a
+   profile path containing a non-ASCII character), so the gate may be green on CI. Per the recorded
+   ruleset, `main` is gated by copilot_code_review rather than the CI gate.
 
 1. **`worktree-hook-workspace-config` (AD-015) — MERGED to `main` 2026-08-28 via PR #75**
    (issue #74 closed). `origin/main` is now `9d825d6`, the PR #75 merge commit; the note below that
