@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 10,
+  "next_id": 11,
   "lessons": [
     {
       "id": "L-001",
@@ -152,6 +152,24 @@
       ],
       "created": "2026-08-31T22:35:36Z",
       "last_seen": "2026-08-31T22:35:36Z"
+    },
+    {
+      "id": "L-010",
+      "key": "spec_precision_gap::when a spec edge case says empty whitespace guard with trim length 0 not length 0 or whitespace only selections slip past the empty check",
+      "text": "When a spec edge case says 'empty/whitespace', guard with trim().length > 0, not length > 0, or whitespace-only selections slip past the empty check.",
+      "signal": "spec_precision_gap",
+      "scope": "src/renderer/src/components",
+      "status": "candidate",
+      "features": [
+        "terminal-input-fixes"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/renderer/src/components/TerminalPane.tsx:95 (src/renderer/src/components)"
+      ],
+      "created": "2026-09-01T00:11:37Z",
+      "last_seen": "2026-09-01T00:11:37Z"
     }
   ]
 }
