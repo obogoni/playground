@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { typeClass } from './task-pills'
+import { badgeTypeOf, typeClass } from './task-pills'
 
 describe('typeClass', () => {
   it('maps each ADO process type to its tp-* class (TYPE-01)', () => {
@@ -40,5 +40,28 @@ describe('typeClass', () => {
   it('renders empty and whitespace types neutral (TYPE-05)', () => {
     expect(typeClass('')).toBe('muted')
     expect(typeClass('   ')).toBe('muted')
+  })
+})
+
+describe('badgeTypeOf', () => {
+  it('prefers a resolved parentType over the item own type (BPTK-01)', () => {
+    expect(
+      badgeTypeOf({
+        title: 'Task under a Fault',
+        type: 'Task',
+        state: 'Active',
+        parentType: 'Fault'
+      })
+    ).toBe('Fault')
+  })
+
+  it('keeps the item own type when parentType is null (resolution failed)', () => {
+    expect(badgeTypeOf({ title: 'Task', type: 'Task', state: 'Active', parentType: null })).toBe(
+      'Task'
+    )
+  })
+
+  it('keeps the item own type when parentType is absent (non-Task pins)', () => {
+    expect(badgeTypeOf({ title: 'A Bug', type: 'Bug', state: 'Active' })).toBe('Bug')
   })
 })

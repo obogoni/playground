@@ -5,7 +5,7 @@ import type { PinnedTaskView, TasksSnapshot } from '../../../shared/tasks'
 import { taskIdFromBranch } from '../../../shared/tasks'
 import type { RepoNode, WorkspaceNode, WorktreeNode } from '../../../shared/tree'
 import { api } from '../lib/api'
-import { stateClass, typeClass } from '../lib/task-pills'
+import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import './BoardView.css'
 
@@ -325,9 +325,9 @@ function BoardCard({
       ) : (
         <div className="board-card-task">
           <div className="board-card-task-row">
-            <span className={`task-pill ${typeClass(pin.details.type)}`}>
+            <span className={`task-pill ${typeClass(badgeTypeOf(pin.details))}`}>
               <span className="task-pill-dot" />
-              {pin.details.type}
+              {badgeTypeOf(pin.details)}
             </span>
             <span className="board-card-task-id">#{taskId}</span>
             <span className="board-card-task-spacer" />

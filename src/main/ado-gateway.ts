@@ -31,11 +31,12 @@ export type GetWorkItemsResult =
   | { ok: false; reason: 'auth'; error: string }
 
 /**
- * ok:true carries the parent's details plus its Hierarchy-Forward child refs;
- * ok:false/auth mirrors `getWorkItems` — the "run az login" path.
+ * ok:true carries the parent's details plus its Hierarchy-Forward child refs
+ * and Hierarchy-Reverse parent refs; ok:false/auth mirrors `getWorkItems` —
+ * the "run az login" path.
  */
 export type GetWorkItemWithRelationsResult =
-  | { ok: true; item: WorkItemDetails; childRefs: WorkItemRef[] }
+  | { ok: true; item: WorkItemDetails; childRefs: WorkItemRef[]; parentRefs: WorkItemRef[] }
   | { ok: false; reason: 'auth'; error: string }
 
 /** Cache/map key for a work item ref, shared with TaskBoard. */
@@ -62,6 +63,28 @@ export function parseChildRefs(
     children.push({ id, org: parent.org, project: parent.project })
   }
   return children
+}
+
+/**
+ * Pure: map an ADO `relations[]` array to parent `WorkItemRef`s — the mirror
+ * of `parseChildRefs`, keeping only `System.LinkTypes.Hierarchy-Reverse` links
+ * (each points at the work item one level up the hierarchy). Parents inherit
+ * the child's org/project; non-reverse links and non-numeric url tails are
+ * skipped. A work item normally has at most one parent; the array shape keeps
+ * the relation-parsing symmetrical.
+ */
+export function parseParentRefs(
+  relations: { rel: string; url: string }[] | undefined,
+  child: WorkItemRef
+): WorkItemRef[] {
+  const parents: WorkItemRef[] = []
+  for (const relation of relations ?? []) {
+    if (relation.rel !== 'System.LinkTypes.Hierarchy-Reverse') continue
+    const id = Number(relation.url.split('/').pop())
+    if (!Number.isInteger(id)) continue
+    parents.push({ id, org: child.org, project: child.project })
+  }
+  return parents
 }
 
 interface CachedToken {
@@ -174,7 +197,8 @@ export class AdoGateway {
         type: body.fields?.['System.WorkItemType'] ?? '',
         state: body.fields?.['System.State'] ?? ''
       },
-      childRefs: parseChildRefs(body.relations, ref)
+      childRefs: parseChildRefs(body.relations, ref),
+      parentRefs: parseParentRefs(body.relations, ref)
     }
   }
 

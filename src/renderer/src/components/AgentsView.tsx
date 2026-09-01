@@ -6,7 +6,7 @@ import type { PinnedTaskView } from '../../../shared/tasks'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { agentTileStyle } from '../lib/agent-color'
 import { deriveAttribution, linkedPinFor } from '../lib/session-attribution'
-import { stateClass, typeClass } from '../lib/task-pills'
+import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import { SessionRail } from './SessionRail'
 import { TerminalPane } from './TerminalPane'
@@ -227,9 +227,9 @@ function SessionDetail({
             {taskId !== null && <span className="agents-strip-task">#{taskId}</span>}
             {pin?.details && (
               <>
-                <span className={`task-pill ${typeClass(pin.details.type)}`}>
+                <span className={`task-pill ${typeClass(badgeTypeOf(pin.details))}`}>
                   <span className="task-pill-dot" />
-                  {pin.details.type}
+                  {badgeTypeOf(pin.details)}
                 </span>
                 <span className={`task-pill ${stateClass(pin.details.state)}`}>
                   {pin.details.state}

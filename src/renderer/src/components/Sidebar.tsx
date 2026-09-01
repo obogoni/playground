@@ -4,7 +4,7 @@ import type { PinnedTaskView } from '../../../shared/tasks'
 import { taskIdFromBranch } from '../../../shared/tasks'
 import type { RepoNode, WorkspaceNode, WorktreeNode } from '../../../shared/tree'
 import { SIDEBAR_BOUNDS, SIDEBAR_DEFAULT_WIDTH, resolvePaneWidth } from '../lib/pane-layout'
-import { stateClass, typeClass } from '../lib/task-pills'
+import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import { ResizablePane } from './ResizablePane'
 import './Sidebar.css'
@@ -305,9 +305,9 @@ function WorktreeRow({
           </>
         ) : (
           <>
-            <span className={`task-pill ${typeClass(pin.details.type)}`}>
+            <span className={`task-pill ${typeClass(badgeTypeOf(pin.details))}`}>
               <span className="task-pill-dot" />
-              {pin.details.type}
+              {badgeTypeOf(pin.details)}
             </span>
             <span className="sidebar-task-id">#{taskId}</span>
             <span className="sidebar-task-title">{pin.details.title}</span>

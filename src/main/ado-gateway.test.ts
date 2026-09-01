@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AdoGateway, fetchWithTimeout, parseChildRefs } from './ado-gateway'
+import { AdoGateway, fetchWithTimeout, parseChildRefs, parseParentRefs } from './ado-gateway'
 
 /**
  * Seed the private token cache so the real `getToken` short-circuits on it and
@@ -96,7 +96,8 @@ describe('AdoGateway.getWorkItemWithRelations', () => {
       childRefs: [
         { id: 101, org: 'o', project: 'p' },
         { id: 102, org: 'o', project: 'p' }
-      ]
+      ],
+      parentRefs: [{ id: 7, org: 'o', project: 'p' }]
     })
     // $expand=Relations added, api-version=7.1 retained, fields omitted (ADO
     // couples fields/$expand mutually exclusively).
@@ -114,6 +115,7 @@ describe('AdoGateway.getWorkItemWithRelations', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) throw new Error('expected ok')
     expect(result.childRefs).toEqual([])
+    expect(result.parentRefs).toEqual([])
   })
 
   it('clears the cached token and returns auth failure on HTTP 401 (mirrors getWorkItems)', async () => {
@@ -158,5 +160,40 @@ describe('parseChildRefs', () => {
 
   it('returns [] for undefined relations', () => {
     expect(parseChildRefs(undefined, { id: 1, org: 'o', project: 'p' })).toEqual([])
+  })
+})
+
+describe('parseParentRefs', () => {
+  it('maps only Hierarchy-Reverse relations to parent refs — tail id, child org/project', () => {
+    const parents = parseParentRefs(
+      [
+        {
+          rel: 'System.LinkTypes.Hierarchy-Forward',
+          url: 'https://dev.azure.com/o/p/_apis/wit/workItems/5'
+        },
+        {
+          rel: 'System.LinkTypes.Hierarchy-Reverse',
+          url: 'https://dev.azure.com/o/p/_apis/wit/workItems/3'
+        },
+        {
+          rel: 'System.LinkTypes.Related',
+          url: 'https://dev.azure.com/o/p/_apis/wit/workItems/9'
+        },
+        {
+          rel: 'System.LinkTypes.Hierarchy-Reverse',
+          url: 'https://dev.azure.com/o/p/_apis/wit/workItems/4'
+        }
+      ],
+      { id: 2, org: 'acme', project: 'web' }
+    )
+    // Only reverse links; id is the url tail; org/project come from the child.
+    expect(parents).toEqual([
+      { id: 3, org: 'acme', project: 'web' },
+      { id: 4, org: 'acme', project: 'web' }
+    ])
+  })
+
+  it('returns [] for undefined relations', () => {
+    expect(parseParentRefs(undefined, { id: 1, org: 'o', project: 'p' })).toEqual([])
   })
 })
