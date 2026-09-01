@@ -25,7 +25,7 @@ describe('branchNameFor', () => {
       'feature/1-update-api-docs-v2'
     )
     expect(branchNameFor(task(1, 'Task', 'Configuração de ambiente'), null)).toBe(
-      'feature/1-configura-o-de-ambiente'
+      'feature/1-configuracao-de-ambiente'
     )
   })
 
@@ -83,7 +83,7 @@ describe('branchNameFor', () => {
           parent: { id: 10001, title: 'Configuração de ambiente' }
         }
       )
-    ).toBe('user/jdoe/10001-configura-o-de-ambiente/10002-nested-branch')
+    ).toBe('user/jdoe/10001-configuracao-de-ambiente/10002-nested-branch')
   })
 
   it('drops empty parent/alias segments (TEMPLATE-04)', () => {

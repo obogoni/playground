@@ -5,9 +5,12 @@ function branchTypeOf(type: string): string {
   return type.toLowerCase() === 'bug' ? 'bugfix' : 'feature'
 }
 
-/** Title → slug: lowercased, non-alphanumeric runs collapse to '-', ends trimmed. */
+/** Title → slug: accented chars transliterated (NFD, diacritics stripped),
+ * lowercased, non-alphanumeric runs collapse to '-', ends trimmed. */
 function slugOf(title: string): string {
   return title
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
