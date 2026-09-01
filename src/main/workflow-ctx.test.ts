@@ -93,7 +93,8 @@ function makeDeps(): CtxDeps {
       getWorkItemWithRelations: async () => ({
         ok: true,
         item: { title: 'T', type: 'Task', state: 'Active' },
-        childRefs: []
+        childRefs: [],
+        parentRefs: []
       }),
       getWorkItems: async () => ({ ok: true, details: new Map() })
     },
@@ -225,7 +226,8 @@ describe('ctx.ado.getTask (WF2-08)', () => {
     deps.ado.getWorkItemWithRelations = async () => ({
       ok: true,
       item: { title: 'P', type: 'Task', state: 'Active' },
-      childRefs: [{ id: 2, org: 'o', project: 'p' }]
+      childRefs: [{ id: 2, org: 'o', project: 'p' }],
+      parentRefs: []
     })
     deps.ado.getWorkItems = async () => ({ ok: false, reason: 'auth', error: 'token rejected' })
     const ctx = makeCtx(deps, runtime)
@@ -240,7 +242,8 @@ describe('ctx.ado.getTask (WF2-08)', () => {
     deps.ado.getWorkItemWithRelations = async () => ({
       ok: true,
       item: { title: 'Parent', type: 'Task', state: 'Active' },
-      childRefs: [child1, child2]
+      childRefs: [child1, child2],
+      parentRefs: []
     })
     const details = new Map([
       [refKey(child1), { title: 'C1', type: 'Task', state: 'New' }],
@@ -682,7 +685,8 @@ describe('instrument start/finish seam (WHF-01/02/05/06)', () => {
     deps.ado.getWorkItemWithRelations = async () => ({
       ok: true,
       item: { title: 'Parent', type: 'Task', state: 'Active' },
-      childRefs: [child1, child2]
+      childRefs: [child1, child2],
+      parentRefs: []
     })
     deps.ado.getWorkItems = async () => ({
       ok: true,

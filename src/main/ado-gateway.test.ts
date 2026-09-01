@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AdoGateway, fetchWithTimeout, parseChildRefs } from './ado-gateway'
+import { AdoGateway, fetchWithTimeout, parseChildRefs, parseParentRefs } from './ado-gateway'
 
 /**
  * Seed the private token cache so the real `getToken` short-circuits on it and
@@ -96,7 +96,8 @@ describe('AdoGateway.getWorkItemWithRelations', () => {
       childRefs: [
         { id: 101, org: 'o', project: 'p' },
         { id: 102, org: 'o', project: 'p' }
-      ]
+      ],
+      parentRefs: [{ id: 7, org: 'o', project: 'p' }]
     })
     // $expand=Relations added, api-version=7.1 retained, fields omitted (ADO
     // couples fields/$expand mutually exclusively).
@@ -114,6 +115,7 @@ describe('AdoGateway.getWorkItemWithRelations', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) throw new Error('expected ok')
     expect(result.childRefs).toEqual([])
+    expect(result.parentRefs).toEqual([])
   })
 
   it('clears the cached token and returns auth failure on HTTP 401 (mirrors getWorkItems)', async () => {
@@ -158,5 +160,140 @@ describe('parseChildRefs', () => {
 
   it('returns [] for undefined relations', () => {
     expect(parseChildRefs(undefined, { id: 1, org: 'o', project: 'p' })).toEqual([])
+  })
+})
+
+describe('parseParentRefs', () => {
+  it('maps only Hierarchy-Reverse relations to parent refs — tail id, parent org/project', () => {
+    const parents = parseParentRefs(
+      [
+        {
+          rel: 'System.LinkTypes.Hierarchy-Forward',
+          url: 'https://dev.azure.com/o/p/_apis/wit/workItems/5'
+        },
+        {
+          rel: 'System.LinkTypes.Hierarchy-Reverse',
+          url: 'https://dev.azure.com/o/p/_apis/wit/workItems/1'
+        },
+        {
+          rel: 'System.LinkTypes.Related',
+          url: 'https://dev.azure.com/o/p/_apis/wit/workItems/9'
+        },
+        {
+          rel: 'System.LinkTypes.Hierarchy-Reverse',
+          url: 'https://dev.azure.com/o/p/_apis/wit/workItems/2'
+        }
+      ],
+      { id: 3, org: 'acme', project: 'web' }
+    )
+    expect(parents).toEqual([
+      { id: 1, org: 'acme', project: 'web' },
+      { id: 2, org: 'acme', project: 'web' }
+    ])
+  })
+
+  it('returns [] for undefined relations', () => {
+    expect(parseParentRefs(undefined, { id: 1, org: 'o', project: 'p' })).toEqual([])
+  })
+})
+
+describe('AdoGateway.parentOf', () => {
+  /**
+   * Fake fetch routing on the URL: the $expand=Relations call serves the
+   * relations payload; the ids= batch call serves work-item details (with the
+   * batch omitting ids that should be unresolvable, mirroring errorPolicy=omit).
+   */
+  const routedFetch =
+    (
+      relations: { rel: string; url: string }[],
+      batch: { id: number; title: string }[] = []
+    ): typeof fetch =>
+    async (url) => {
+      const u = String(url)
+      if (u.includes('$expand=Relations')) {
+        return new Response(
+          JSON.stringify({
+            id: 42,
+            fields: {
+              'System.Title': 'Task',
+              'System.WorkItemType': 'Task',
+              'System.State': 'Active'
+            },
+            relations
+          })
+        )
+      }
+      const ids =
+        u
+          .match(/ids=([\d,]+)/)?.[1]
+          ?.split(',')
+          .map(Number) ?? []
+      const value = batch
+        .filter((item) => ids.includes(item.id))
+        .map((item) => ({
+          id: item.id,
+          fields: {
+            'System.Title': item.title,
+            'System.WorkItemType': 'User Story',
+            'System.State': 'Active'
+          }
+        }))
+      return new Response(JSON.stringify({ value }))
+    }
+  const parentLink = (id: number): { rel: string; url: string } => ({
+    rel: 'System.LinkTypes.Hierarchy-Reverse',
+    url: `https://dev.azure.com/o/p/_apis/wit/workItems/${id}`
+  })
+
+  it('returns the first parent with id and title (PARENT-02)', async () => {
+    const gw = new AdoGateway()
+    seedToken(gw)
+    const result = await gw.parentOf(
+      { id: 42, org: 'o', project: 'p' },
+      routedFetch([parentLink(7)], [{ id: 7, title: 'Parent story' }])
+    )
+    expect(result).toEqual({ ok: true, parent: { id: 7, title: 'Parent story' } })
+  })
+
+  it('returns null when the item has no Hierarchy-Reverse parent (PARENT-03)', async () => {
+    const gw = new AdoGateway()
+    seedToken(gw)
+    const result = await gw.parentOf({ id: 42, org: 'o', project: 'p' }, routedFetch([]))
+    expect(result).toEqual({ ok: true, parent: null })
+  })
+
+  it('returns the first of several parents (PARENT-05)', async () => {
+    const gw = new AdoGateway()
+    seedToken(gw)
+    const result = await gw.parentOf(
+      { id: 42, org: 'o', project: 'p' },
+      routedFetch(
+        [parentLink(7), parentLink(8)],
+        [
+          { id: 7, title: 'First story' },
+          { id: 8, title: 'Second story' }
+        ]
+      )
+    )
+    expect(result).toEqual({ ok: true, parent: { id: 7, title: 'First story' } })
+  })
+
+  it('returns null when the parent batch omits the item (errorPolicy=omit degradation)', async () => {
+    const gw = new AdoGateway()
+    seedToken(gw)
+    const result = await gw.parentOf(
+      { id: 42, org: 'o', project: 'p' },
+      routedFetch([parentLink(7)], [])
+    )
+    expect(result).toEqual({ ok: true, parent: null })
+  })
+
+  it('surfaces auth failure on HTTP 401 and clears the cached token (PARENT-04)', async () => {
+    const gw = new AdoGateway()
+    seedToken(gw)
+    const authFetch: typeof fetch = async () => new Response('', { status: 401 })
+    const result = await gw.parentOf({ id: 42, org: 'o', project: 'p' }, authFetch)
+    expect(result).toEqual({ ok: false, reason: 'auth', error: expect.stringContaining('401') })
+    expect((gw as unknown as { cached: unknown }).cached).toBeNull()
   })
 })

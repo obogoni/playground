@@ -211,11 +211,13 @@ app.whenReady().then(() => {
   const launcher = new ShortcutLauncher()
   handle('shortcuts:launch', ({ tool, path }) => launcher.launch(tool, path))
 
-  const taskBoard = new TaskBoard(configStore, new AdoGateway())
+  const adoGateway = new AdoGateway()
+  const taskBoard = new TaskBoard(configStore, adoGateway)
   handle('tasks:list', () => taskBoard.list())
   handle('tasks:pin', ({ input }) => taskBoard.pin(input))
   handle('tasks:unpin', (ref) => taskBoard.unpin(ref))
   handle('tasks:refresh', () => taskBoard.refresh())
+  handle('tasks:parent', ({ id, org, project }) => adoGateway.parentOf({ id, org, project }))
 
   // Agent sessions (AM2). SessionManager owns every session's lifecycle,
   // persistence, and stream routing; emit is lazily bound to the live window.

@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import type { WorkItemDetails } from '../shared/tasks'
+import type { ParentOfResult, WorkItemDetails } from '../shared/tasks'
 
 const run = promisify(execFile)
 
@@ -31,11 +31,12 @@ export type GetWorkItemsResult =
   | { ok: false; reason: 'auth'; error: string }
 
 /**
- * ok:true carries the parent's details plus its Hierarchy-Forward child refs;
+ * ok:true carries the parent's details plus its Hierarchy-Forward child refs
+ * and Hierarchy-Reverse parent refs (PARENT-01);
  * ok:false/auth mirrors `getWorkItems` — the "run az login" path.
  */
 export type GetWorkItemWithRelationsResult =
-  | { ok: true; item: WorkItemDetails; childRefs: WorkItemRef[] }
+  | { ok: true; item: WorkItemDetails; childRefs: WorkItemRef[]; parentRefs: WorkItemRef[] }
   | { ok: false; reason: 'auth'; error: string }
 
 /** Cache/map key for a work item ref, shared with TaskBoard. */
@@ -64,6 +65,24 @@ export function parseChildRefs(
   return children
 }
 
+/**
+ * Pure: map an ADO `relations[]` array to parent `WorkItemRef`s — the mirror
+ * of `parseChildRefs` for `System.LinkTypes.Hierarchy-Reverse` links (PARENT-01).
+ */
+export function parseParentRefs(
+  relations: { rel: string; url: string }[] | undefined,
+  parent: WorkItemRef
+): WorkItemRef[] {
+  const parents: WorkItemRef[] = []
+  for (const relation of relations ?? []) {
+    if (relation.rel !== 'System.LinkTypes.Hierarchy-Reverse') continue
+    const id = Number(relation.url.split('/').pop())
+    if (!Number.isInteger(id)) continue
+    parents.push({ id, org: parent.org, project: parent.project })
+  }
+  return parents
+}
+
 interface CachedToken {
   token: string
   expiresAt: number
@@ -78,7 +97,10 @@ interface CachedToken {
 export class AdoGateway {
   private cached: CachedToken | null = null
 
-  async getWorkItems(refs: WorkItemRef[]): Promise<GetWorkItemsResult> {
+  async getWorkItems(
+    refs: WorkItemRef[],
+    fetchFn: typeof fetch = fetch
+  ): Promise<GetWorkItemsResult> {
     if (refs.length === 0) return { ok: true, details: new Map() }
     const token = await this.getToken()
     if (!token.ok) return { ok: false, reason: 'auth', error: token.error }
@@ -94,7 +116,7 @@ export class AdoGateway {
       let res: Response
       try {
         res = await fetchWithTimeout(
-          fetch,
+          fetchFn,
           url,
           { headers: { Authorization: `Bearer ${token.token}` } },
           ADO_FETCH_TIMEOUT_MS
@@ -174,8 +196,27 @@ export class AdoGateway {
         type: body.fields?.['System.WorkItemType'] ?? '',
         state: body.fields?.['System.State'] ?? ''
       },
-      childRefs: parseChildRefs(body.relations, ref)
+      childRefs: parseChildRefs(body.relations, ref),
+      parentRefs: parseParentRefs(body.relations, ref)
     }
+  }
+
+  /**
+   * Resolve the first Hierarchy-Reverse parent of a work item (PARENT-02..05):
+   * fetches the item's relations, then the parent refs' details, and returns
+   * the first parent as `{ id, title }`. No parent or an unresolvable parent
+   * batch yields `parent: null` (errorPolicy=omit can drop the item); an auth
+   * failure surfaces as `{ ok: false, reason: 'auth' }` — the caller degrades.
+   */
+  async parentOf(ref: WorkItemRef, fetchFn: typeof fetch = fetch): Promise<ParentOfResult> {
+    const withRelations = await this.getWorkItemWithRelations(ref, fetchFn)
+    if (!withRelations.ok) return withRelations
+    const first = withRelations.parentRefs[0]
+    if (first === undefined) return { ok: true, parent: null }
+    const fetched = await this.getWorkItems(withRelations.parentRefs, fetchFn)
+    if (!fetched.ok) return fetched
+    const detail = fetched.details.get(refKey(first))
+    return { ok: true, parent: detail ? { id: first.id, title: detail.title } : null }
   }
 
   private async getToken(): Promise<{ ok: true; token: string } | { ok: false; error: string }> {
