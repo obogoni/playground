@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 9,
+  "next_id": 10,
   "lessons": [
     {
       "id": "L-001",
@@ -134,6 +134,24 @@
       ],
       "created": "2026-08-28T19:48:01Z",
       "last_seen": "2026-08-28T19:48:01Z"
+    },
+    {
+      "id": "L-009",
+      "key": "surviving_mutant::a default constant test that asserts resolvepanewidth undefined bounds default against default itself cannot detect a change to that constant pin every spec derived default with a literal assertion not a self referential one",
+      "text": "A default-constant test that asserts resolvePaneWidth(undefined, bounds, DEFAULT) against DEFAULT itself cannot detect a change to that constant — pin every spec-derived default with a literal assertion, not a self-referential one.",
+      "signal": "surviving_mutant",
+      "scope": "renderer/lib",
+      "status": "candidate",
+      "features": [
+        "sidebar-resize-collapse"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/renderer/src/lib/pane-layout.test.ts:41 (renderer/lib)"
+      ],
+      "created": "2026-08-31T22:35:36Z",
+      "last_seen": "2026-08-31T22:35:36Z"
     }
   ]
 }

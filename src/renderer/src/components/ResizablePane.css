@@ -1,0 +1,108 @@
+/* Resizable/collapsible pane wrapper (PANE-02..08) */
+
+.resizable-pane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* Shrinkable down to the pane's min-width when the window is narrow (PANE-12) */
+  flex: 0 1 auto;
+}
+
+/* Drag handle on the pane edge; 7px hit area overlapping the neighbor column */
+.pane-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  z-index: 30;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.pane-right > .pane-handle {
+  right: -3px;
+}
+
+.pane-left > .pane-handle {
+  left: -3px;
+}
+
+.pane-handle:hover,
+.pane-handle:active {
+  background: color-mix(in oklab, var(--accent) 24%, transparent);
+}
+
+/* Collapsed rail: thin column with only the expand chevron (PANE-03, PANE-07) */
+.pane-rail {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: var(--panel);
+  color: var(--text-faint);
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.pane-rail:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+
+.pane-right > .pane-rail {
+  border-right: 1px solid var(--border);
+}
+
+.pane-left > .pane-rail {
+  border-left: 1px solid var(--border);
+}
+
+/* chevron-down rotated: right pane rail expands toward the right */
+.pane-rail .icon {
+  transform: rotate(-90deg);
+}
+
+/* left pane rail expands toward the left */
+.pane-left .pane-rail .icon {
+  transform: rotate(90deg);
+}
+
+/* Header collapse toggle (owned by the pane that renders the header) */
+.pane-toggle-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--text-faint);
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.pane-toggle-btn:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.pane-toggle-btn .icon {
+  display: grid;
+  place-items: center;
+  transition: transform 0.12s;
+}
+
+/* chevron-down rotated 90°: points left (collapse a right-edge pane) */
+.pane-chevron-left {
+  transform: rotate(90deg);
+}
+
+/* points right (collapse a left-edge pane) */
+.pane-chevron-right {
+  transform: rotate(-90deg);
+}

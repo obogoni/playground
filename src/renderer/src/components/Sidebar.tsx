@@ -3,8 +3,10 @@ import type { JSX, MouseEvent } from 'react'
 import type { PinnedTaskView } from '../../../shared/tasks'
 import { taskIdFromBranch } from '../../../shared/tasks'
 import type { RepoNode, WorkspaceNode, WorktreeNode } from '../../../shared/tree'
+import { SIDEBAR_BOUNDS, SIDEBAR_DEFAULT_WIDTH, resolvePaneWidth } from '../lib/pane-layout'
 import { stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
+import { ResizablePane } from './ResizablePane'
 import './Sidebar.css'
 
 interface SidebarProps {
@@ -17,6 +19,12 @@ interface SidebarProps {
   onNewWorktree: (repoPath: string) => void
   /** Opens the New Session dialog pre-filled with a worktree-row cwd. */
   onSpawnAgent: (cwd: string) => void
+  /** Persisted sidebar width; absent = 230px default (PANE-01). */
+  width?: number
+  /** Persisted collapsed state; absent = expanded (PANE-03). */
+  collapsed?: boolean
+  onWidthChange?: (width: number) => void
+  onToggleCollapsed?: () => void
 }
 
 interface RowMenu {
@@ -33,9 +41,14 @@ export function Sidebar({
   onAddWorkspace,
   onRemoveWorkspace,
   onNewWorktree,
-  onSpawnAgent
+  onSpawnAgent,
+  width,
+  collapsed = false,
+  onWidthChange,
+  onToggleCollapsed
 }: SidebarProps): JSX.Element {
   const [menu, setMenu] = useState<RowMenu | null>(null)
+  const paneWidth = resolvePaneWidth(width, SIDEBAR_BOUNDS, SIDEBAR_DEFAULT_WIDTH)
 
   // Any click or Escape dismisses the row context menu.
   useEffect(() => {
@@ -58,56 +71,79 @@ export function Sidebar({
   }
 
   return (
-    <aside className="sidebar">
-      <header className="pane-header">
-        <span className="pane-header-label">Workspaces</span>
-        <button
-          type="button"
-          className="sidebar-add-btn"
-          title="Register workspace folder"
-          onClick={onAddWorkspace}
-        >
-          <Icon name="plus" size={14} />
-        </button>
-      </header>
-      <div className="sidebar-body">
-        {tree.length === 0 ? (
-          <div className="sidebar-empty">
-            <p>No workspaces yet.</p>
-            <p>
-              Register a folder containing your git repos with the <strong>+</strong> button above.
-            </p>
+    <ResizablePane
+      side="right"
+      width={paneWidth}
+      collapsed={collapsed}
+      bounds={SIDEBAR_BOUNDS}
+      onWidthChange={onWidthChange ?? ((): void => {})}
+      onToggleCollapsed={onToggleCollapsed ?? ((): void => {})}
+      railLabel="Expand sidebar"
+    >
+      <aside className="sidebar">
+        <header className="pane-header">
+          <span className="pane-header-label">Workspaces</span>
+          <div className="pane-header-actions">
+            <button
+              type="button"
+              className="sidebar-add-btn"
+              title="Register workspace folder"
+              onClick={onAddWorkspace}
+            >
+              <Icon name="plus" size={14} />
+            </button>
+            <button
+              type="button"
+              className="pane-toggle-btn"
+              title="Collapse sidebar"
+              onClick={onToggleCollapsed}
+            >
+              <span className="icon pane-chevron-left">
+                <Icon name="chevron-down" size={13} />
+              </span>
+            </button>
           </div>
-        ) : (
-          tree.map((workspace) => (
-            <Workspace
-              key={workspace.id}
-              workspace={workspace}
-              tasks={tasks}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              onRemove={() => onRemoveWorkspace(workspace.id)}
-              onNewWorktree={onNewWorktree}
-              onRowContextMenu={openMenu}
-            />
-          ))
-        )}
-      </div>
-      {menu && (
-        <div className="sidebar-ctx-menu" style={{ left: menu.x, top: menu.y }}>
-          <button
-            type="button"
-            className="sidebar-ctx-item"
-            onClick={() => {
-              onSpawnAgent(menu.cwd)
-              setMenu(null)
-            }}
-          >
-            <Icon name="terminal" size={13} /> Spawn agent here
-          </button>
+        </header>
+        <div className="sidebar-body">
+          {tree.length === 0 ? (
+            <div className="sidebar-empty">
+              <p>No workspaces yet.</p>
+              <p>
+                Register a folder containing your git repos with the <strong>+</strong> button
+                above.
+              </p>
+            </div>
+          ) : (
+            tree.map((workspace) => (
+              <Workspace
+                key={workspace.id}
+                workspace={workspace}
+                tasks={tasks}
+                selectedId={selectedId}
+                onSelect={onSelect}
+                onRemove={() => onRemoveWorkspace(workspace.id)}
+                onNewWorktree={onNewWorktree}
+                onRowContextMenu={openMenu}
+              />
+            ))
+          )}
         </div>
-      )}
-    </aside>
+        {menu && (
+          <div className="sidebar-ctx-menu" style={{ left: menu.x, top: menu.y }}>
+            <button
+              type="button"
+              className="sidebar-ctx-item"
+              onClick={() => {
+                onSpawnAgent(menu.cwd)
+                setMenu(null)
+              }}
+            >
+              <Icon name="terminal" size={13} /> Spawn agent here
+            </button>
+          </div>
+        )}
+      </aside>
+    </ResizablePane>
   )
 }
 
