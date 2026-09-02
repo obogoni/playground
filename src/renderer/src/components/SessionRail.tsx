@@ -6,7 +6,7 @@ import type { WorkspaceNode } from '../../../shared/tree'
 import { agentTileStyle } from '../lib/agent-color'
 import { stripAnsi } from '../lib/ansi'
 import { deriveAttribution, linkedPinFor } from '../lib/session-attribution'
-import { stateClass, typeClass } from '../lib/task-pills'
+import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import './SessionRail.css'
 
@@ -150,9 +150,9 @@ function SessionCard({
       {pin?.details && (
         <div className="session-card-task">
           <div className="session-card-task-pills">
-            <span className={`task-pill ${typeClass(pin.details.type)}`}>
+            <span className={`task-pill ${typeClass(badgeTypeOf(pin.details))}`}>
               <span className="task-pill-dot" />
-              {pin.details.type}
+              {badgeTypeOf(pin.details)}
             </span>
             <span className={`task-pill ${stateClass(pin.details.state)}`}>
               {pin.details.state}

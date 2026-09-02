@@ -3,7 +3,7 @@ import type { JSX } from 'react'
 import type { PinnedTaskView, TasksSnapshot } from '../../../shared/tasks'
 import { api } from '../lib/api'
 import { TASKS_BOUNDS, TASKS_DEFAULT_WIDTH, resolvePaneWidth } from '../lib/pane-layout'
-import { stateClass, typeClass } from '../lib/task-pills'
+import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import { ResizablePane } from './ResizablePane'
 import './TasksPane.css'
@@ -158,9 +158,9 @@ function TaskCard({
       <div className="task-card-header">
         {task.details && (
           <>
-            <span className={`task-pill ${typeClass(task.details.type)}`}>
+            <span className={`task-pill ${typeClass(badgeTypeOf(task.details))}`}>
               <span className="task-pill-dot" />
-              {task.details.type}
+              {badgeTypeOf(task.details)}
             </span>
             <span className={`task-pill ${stateClass(task.details.state)}`}>
               {task.details.state}

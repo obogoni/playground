@@ -12,12 +12,31 @@ const acme = { defaultOrg: 'acme', defaultProject: 'platform' }
 
 const FIX_LOGIN: WorkItemDetails = { title: 'Fix login redirect', type: 'Bug', state: 'Active' }
 
-/** Resolves only the items given; records every call's refs. */
+/** Per-ref relations payload for the stub: the item's own details + its links. */
+interface StubRelations {
+  item: WorkItemDetails
+  childRefs: WorkItemRef[]
+  parentRefs: WorkItemRef[]
+}
+
+/**
+ * Resolves only the items given; records every `getWorkItems` call's refs.
+ * `relations` supplies per-ref `getWorkItemWithRelations` responses (defaults
+ * to the item alone, no relations); `failAuth` fails both seams.
+ */
 function stubSource(
   items: Record<string, WorkItemDetails>,
-  opts: { failAuth?: boolean } = {}
+  opts: { failAuth?: boolean; relations?: Record<string, StubRelations> } = {}
 ): WorkItemSource & { calls: WorkItemRef[][] } {
   const calls: WorkItemRef[][] = []
+  const relations =
+    opts.relations ??
+    Object.fromEntries(
+      Object.keys(items).map((key) => [
+        key,
+        { item: items[key], childRefs: [] as WorkItemRef[], parentRefs: [] as WorkItemRef[] }
+      ])
+    )
   return {
     calls,
     getWorkItems: async (refs) => {
@@ -29,6 +48,17 @@ function stubSource(
         if (detail) details.set(refKey(ref), detail)
       }
       return { ok: true, details }
+    },
+    getWorkItemWithRelations: async (ref) => {
+      if (opts.failAuth) return { ok: false, reason: 'auth', error: 'az login required' }
+      const entry = relations[refKey(ref)]
+      if (!entry) return { ok: false, reason: 'auth', error: 'az login required' }
+      return {
+        ok: true,
+        item: entry.item,
+        childRefs: entry.childRefs,
+        parentRefs: entry.parentRefs
+      }
     }
   }
 }
@@ -245,5 +275,129 @@ describe('TaskBoard', () => {
 
     expect(snapshot).toEqual({ tasks: [], auth: 'unknown', lastSyncAt: null })
     expect(source.calls).toHaveLength(0)
+  })
+
+  it('pin resolves a Task badge to its first non-Task ancestor (BPTK-01)', async () => {
+    const faultRef: WorkItemRef = { id: 7, org: 'acme', project: 'platform' }
+    const task: WorkItemDetails = { title: 'Write spec', type: 'Task', state: 'Active' }
+    const fault: WorkItemDetails = { title: 'Billing broken', type: 'Fault', state: 'Active' }
+    const source = stubSource(
+      { [KEY_4821]: task, [refKey(faultRef)]: fault },
+      {
+        relations: {
+          [KEY_4821]: { item: task, childRefs: [], parentRefs: [faultRef] },
+          [refKey(faultRef)]: { item: fault, childRefs: [], parentRefs: [] }
+        }
+      }
+    )
+    const board = new TaskBoard(store, source)
+
+    const result = await board.pin(URL_4821)
+
+    expect(result.ok).toBe(true)
+    expect(result.snapshot?.tasks[0].details).toEqual({ ...task, parentType: 'Fault' })
+  })
+
+  it('pin walks Task chains until a non-Task ancestor is found (BPTK-01)', async () => {
+    const storyRef: WorkItemRef = { id: 9, org: 'acme', project: 'platform' }
+    const taskRef2: WorkItemRef = { id: 10, org: 'acme', project: 'platform' }
+    const task: WorkItemDetails = { title: 'Leaf task', type: 'Task', state: 'Active' }
+    const nested: WorkItemDetails = { title: 'Parent task', type: 'Task', state: 'Active' }
+    const story: WorkItemDetails = { title: 'As a user…', type: 'User Story', state: 'New' }
+    const source = stubSource(
+      {
+        [KEY_4821]: task,
+        [refKey(taskRef2)]: nested,
+        [refKey(storyRef)]: story
+      },
+      {
+        relations: {
+          [KEY_4821]: { item: task, childRefs: [], parentRefs: [taskRef2] },
+          [refKey(taskRef2)]: { item: nested, childRefs: [], parentRefs: [storyRef] },
+          [refKey(storyRef)]: { item: story, childRefs: [], parentRefs: [] }
+        }
+      }
+    )
+    const board = new TaskBoard(store, source)
+
+    const result = await board.pin(URL_4821)
+
+    expect(result.ok).toBe(true)
+    expect(result.snapshot?.tasks[0].details).toEqual({ ...task, parentType: 'User Story' })
+  })
+
+  it('pin keeps a Task badge when the parent chain has no non-Task ancestor', async () => {
+    const task: WorkItemDetails = { title: 'Standalone task', type: 'Task', state: 'Active' }
+    const source = stubSource({ [KEY_4821]: task })
+    const board = new TaskBoard(store, source)
+
+    const result = await board.pin(URL_4821)
+
+    expect(result.ok).toBe(true)
+    expect(result.snapshot?.tasks[0].details).toEqual({ ...task, parentType: null })
+  })
+
+  it('pin keeps a non-Task badge untouched (BPTK-01)', async () => {
+    const source = stubSource({ [KEY_4821]: FIX_LOGIN })
+    const board = new TaskBoard(store, source)
+
+    const result = await board.pin(URL_4821)
+
+    expect(result.ok).toBe(true)
+    expect(result.snapshot?.tasks[0].details).toEqual(FIX_LOGIN)
+  })
+
+  it('refresh re-resolves Task badges from live relations', async () => {
+    store.patch({ pinnedTasks: [{ id: 4821, org: 'acme', project: 'platform', url: URL_4821 }] })
+    const bugRef: WorkItemRef = { id: 7, org: 'acme', project: 'platform' }
+    const task: WorkItemDetails = { title: 'Repro it', type: 'Task', state: 'Active' }
+    const bug: WorkItemDetails = { title: 'It crashes', type: 'Bug', state: 'Active' }
+    const source = stubSource(
+      { [KEY_4821]: task, [refKey(bugRef)]: bug },
+      {
+        relations: {
+          [KEY_4821]: { item: task, childRefs: [], parentRefs: [bugRef] },
+          [refKey(bugRef)]: { item: bug, childRefs: [], parentRefs: [] }
+        }
+      }
+    )
+    const board = new TaskBoard(store, source)
+
+    const snapshot = await board.refresh()
+
+    expect(snapshot.tasks[0].details).toEqual({ ...task, parentType: 'Bug' })
+  })
+
+  it('refresh degrades the Task badge to its own type when the parent fetch fails', async () => {
+    store.patch({ pinnedTasks: [{ id: 4821, org: 'acme', project: 'platform', url: URL_4821 }] })
+    const task: WorkItemDetails = { title: 'Lonely task', type: 'Task', state: 'Active' }
+    const source = stubSource({ [KEY_4821]: task }, { failAuth: true })
+    const board = new TaskBoard(store, source)
+
+    const snapshot = await board.refresh()
+
+    expect(snapshot.auth).toBe('failed')
+    expect(snapshot.tasks[0].details).toBeNull()
+  })
+
+  it('pin resolves the badge before persisting, so a reload keeps parentType', async () => {
+    const faultRef: WorkItemRef = { id: 7, org: 'acme', project: 'platform' }
+    const task: WorkItemDetails = { title: 'Write spec', type: 'Task', state: 'Active' }
+    const fault: WorkItemDetails = { title: 'Billing broken', type: 'Fault', state: 'Active' }
+    const source = stubSource(
+      { [KEY_4821]: task, [refKey(faultRef)]: fault },
+      {
+        relations: {
+          [KEY_4821]: { item: task, childRefs: [], parentRefs: [faultRef] },
+          [refKey(faultRef)]: { item: fault, childRefs: [], parentRefs: [] }
+        }
+      }
+    )
+    const board = new TaskBoard(store, source)
+
+    const result = await board.pin(URL_4821)
+    expect(result.ok).toBe(true)
+    expect(new ConfigStore(dir).get().pinnedTasks).toHaveLength(1)
+    expect(board.list().tasks[0].details).toEqual({ ...task, parentType: 'Fault' })
   })
 })

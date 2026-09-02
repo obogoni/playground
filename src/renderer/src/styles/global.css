@@ -111,6 +111,65 @@ code,
   color: var(--text-muted);
 }
 
+/* ADO process work item type colors (TYPE-01, sourced from
+   wit/workitemtypes 2026-08-31): text in the process hex, tinted background
+   like the state pills — readable on light and dark themes (TYPE-04) */
+.task-pill.tp-bug {
+  background: color-mix(in oklab, #f58b1f 16%, transparent);
+  color: #f58b1f;
+}
+
+.task-pill.tp-task {
+  background: color-mix(in oklab, #fbbc3d 16%, transparent);
+  color: #fbbc3d;
+}
+
+.task-pill.tp-user-story {
+  background: color-mix(in oklab, #0098c7 16%, transparent);
+  color: #0098c7;
+}
+
+.task-pill.tp-feature {
+  background: color-mix(in oklab, #773b93 16%, transparent);
+  color: #773b93;
+}
+
+.task-pill.tp-epic {
+  background: color-mix(in oklab, #e06c00 16%, transparent);
+  color: #e06c00;
+}
+
+.task-pill.tp-issue,
+.task-pill.tp-code-review {
+  background: color-mix(in oklab, #b4009e 16%, transparent);
+  color: #b4009e;
+}
+
+.task-pill.tp-fault {
+  background: color-mix(in oklab, #e60017 16%, transparent);
+  color: #e60017;
+}
+
+.task-pill.tp-initiative {
+  background: color-mix(in oklab, #339947 16%, transparent);
+  color: #339947;
+}
+
+.task-pill.tp-request {
+  background: color-mix(in oklab, #666666 16%, transparent);
+  color: #666666;
+}
+
+.task-pill.tp-test-case,
+.task-pill.tp-test-plan,
+.task-pill.tp-test-suite,
+.task-pill.tp-feedback,
+.task-pill.tp-shared-steps,
+.task-pill.tp-shared-parameter {
+  background: color-mix(in oklab, #004b50 16%, transparent);
+  color: #004b50;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
