@@ -28,7 +28,20 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current, 2026-08-28): ONE feature in flight; AD-015 has since merged.**
+**Status (current, 2026-09-02): v1.0.0 released; first external contributions merged.**
+Nothing in flight from our side. PRs #78 (sidebar resize) and #79 (work item type
+badges) are **merged**; PR #80 (terminal input fixes) is **open**, rebased and clean.
+
+**PENDING — bump the committed `package.json` version on the next delivery.**
+`v1.0.0` shipped 2026-09-02 from `cafb43f` (the PR #77 merge), but stable releases are
+stamped in CI from the tag (`scripts/stamp-version.ts --mode=stable`) and the bump is
+**never committed** — so `package.json` on `main` still reads `0.1.0`. Nightlies derive
+their version from that committed base (`nightlyVersion()` in `scripts/release-version.ts`
+returns `${baseVersion}-alpha.${runNumber}`), so they keep publishing as `0.1.0-alpha.N`,
+which semver-sorts **below** the shipped `1.0.0` and leaves the alpha channel looking
+permanently stale. Bump the committed `version` to the next minor (`1.1.0`) as part of the
+next delivery so nightlies become `1.1.0-alpha.N` and sort ahead of the shipped stable.
+One-line change in `package.json`; the release workflow needs no edit.
 
 0. **`vs2026-admin-shortcut` (AD-016) — EXECUTED, validated (PASS), pushed. Issue #76, PR #77.**
    Branch `feature/vs2026-admin-shortcut`, based on **`origin/main` (`9d825d6`, the PR #75 merge)** —
