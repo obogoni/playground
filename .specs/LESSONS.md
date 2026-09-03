@@ -60,6 +60,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: src/renderer/src/lib/pane-layout.test.ts:41 (renderer/lib)
 - last seen: 2026-08-31T22:35:36Z
 
+### L-010 - When a spec edge case says 'empty/whitespace', guard with trim().length > 0, not length > 0, or whitespace-only selections slip past the empty check.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `src/renderer/src/components` · harmful: 0
+- features: terminal-input-fixes
+- evidence: src/renderer/src/components/TerminalPane.tsx:95 (src/renderer/src/components)
+- last seen: 2026-09-01T00:11:37Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
