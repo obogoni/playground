@@ -32,8 +32,8 @@ export type GetWorkItemsResult =
 
 /**
  * ok:true carries the parent's details plus its Hierarchy-Forward child refs
- * and Hierarchy-Reverse parent refs (PARENT-01);
- * ok:false/auth mirrors `getWorkItems` — the "run az login" path.
+ * and Hierarchy-Reverse parent refs; ok:false/auth mirrors `getWorkItems` —
+ * the "run az login" path.
  */
 export type GetWorkItemWithRelationsResult =
   | { ok: true; item: WorkItemDetails; childRefs: WorkItemRef[]; parentRefs: WorkItemRef[] }
@@ -67,18 +67,22 @@ export function parseChildRefs(
 
 /**
  * Pure: map an ADO `relations[]` array to parent `WorkItemRef`s — the mirror
- * of `parseChildRefs` for `System.LinkTypes.Hierarchy-Reverse` links (PARENT-01).
+ * of `parseChildRefs`, keeping only `System.LinkTypes.Hierarchy-Reverse` links
+ * (each points at the work item one level up the hierarchy). Parents inherit
+ * the child's org/project; non-reverse links and non-numeric url tails are
+ * skipped. A work item normally has at most one parent; the array shape keeps
+ * the relation-parsing symmetrical.
  */
 export function parseParentRefs(
   relations: { rel: string; url: string }[] | undefined,
-  parent: WorkItemRef
+  child: WorkItemRef
 ): WorkItemRef[] {
   const parents: WorkItemRef[] = []
   for (const relation of relations ?? []) {
     if (relation.rel !== 'System.LinkTypes.Hierarchy-Reverse') continue
     const id = Number(relation.url.split('/').pop())
     if (!Number.isInteger(id)) continue
-    parents.push({ id, org: parent.org, project: parent.project })
+    parents.push({ id, org: child.org, project: child.project })
   }
   return parents
 }

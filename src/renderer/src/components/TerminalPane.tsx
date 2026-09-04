@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal, type ITheme } from '@xterm/xterm'
 import { api } from '../lib/api'
+import { classifyTerminalKey } from '../lib/terminal-keys'
 import '@xterm/xterm/css/xterm.css'
 import './TerminalPane.css'
 
@@ -72,7 +73,11 @@ export function TerminalPane({ sessionId }: TerminalPaneProps): JSX.Element {
 
     const term = new Terminal({
       cursorBlink: true,
-      fontFamily: "'JetBrains Mono', monospace",
+      // Cascadia Mono first, always (INPUT-12): Claude Code's boxed TUI uses
+      // corner glyphs (U+23BE/U+23BF) that JetBrains Mono lacks — the browser
+      // fallback breaks the grid at any pane width (UAT 2026-08-31: broken
+      // maximized, correct narrow; the only variable was the font).
+      fontFamily: "'Cascadia Mono', Consolas, 'JetBrains Mono', monospace",
       fontSize: 13,
       theme: readTheme()
     })
@@ -81,16 +86,40 @@ export function TerminalPane({ sessionId }: TerminalPaneProps): JSX.Element {
     term.open(container)
     fit.fit()
 
-    // Copy the selection on Ctrl+Shift+C (symmetric with xterm's built-in
-    // Ctrl+Shift+V paste). xterm renders selection on its own layer, not as a
-    // native DOM selection, so the browser's Ctrl+C copies nothing — we read
-    // term.getSelection() ourselves. Ctrl+C is left untouched so it still
-    // sends SIGINT to the PTY. Returning false stops xterm from forwarding the
-    // chord to the shell.
+    // Key chords (INPUT-04..08): xterm renders selection on its own layer,
+    // not as a native DOM selection, so the browser's Ctrl+C copies nothing —
+    // we read term.getSelection() ourselves. Ctrl+C without a selection is
+    // left untouched so it still sends SIGINT to the PTY. Shift+Enter is
+    // injected as the kitty-protocol CSI-u sequence the Claude CLI needs to
+    // tell newline from submit (the xterm 6.0 we ship cannot emit it).
+    // Ctrl+V is intercepted so paste does not depend on the browser's native
+    // paste event reaching xterm's hidden textarea. Returning false stops
+    // xterm from forwarding the chord to the shell.
     term.attachCustomKeyEventHandler((event) => {
-      if (event.type === 'keydown' && event.ctrlKey && event.shiftKey && event.code === 'KeyC') {
+      const action = classifyTerminalKey(event, term.getSelection().trim().length > 0)
+      if (action === 'copy-selection') {
+        // preventDefault suppresses the browser's follow-up keypress (xterm
+        // 6.0 only calls preventDefault when it processes the keydown itself;
+        // a bare return false lets a keypress of Ctrl+C/Enter through).
+        event.preventDefault()
         const selection = term.getSelection()
         if (selection) navigator.clipboard.writeText(selection).catch(console.error)
+        return false
+      }
+      if (action === 'newline') {
+        event.preventDefault()
+        // Line feed (Ctrl+J byte) — the one newline signal Claude Code and
+        // opencode honor on every terminal. CSI-u (`ESC[13;2u`) was tried
+        // first; Claude's CSI-u parsing on Windows misbehaves (UAT 2026-08-31).
+        term.input('\n')
+        return false
+      }
+      if (action === 'paste') {
+        event.preventDefault()
+        navigator.clipboard
+          .readText()
+          .then((text) => term.paste(text))
+          .catch(console.error)
         return false
       }
       return true

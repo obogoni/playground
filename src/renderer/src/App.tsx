@@ -18,6 +18,13 @@ import { TopBar } from './components/TopBar'
 import { WorkflowsView } from './components/WorkflowsView'
 import { WorktreeDetail, WorktreeDetailEmpty } from './components/WorktreeDetail'
 import { api } from './lib/api'
+import {
+  SIDEBAR_BOUNDS,
+  SIDEBAR_DEFAULT_WIDTH,
+  TASKS_BOUNDS,
+  TASKS_DEFAULT_WIDTH,
+  resolvePaneWidth
+} from './lib/pane-layout'
 import { findWorktree } from './lib/tree-selection'
 import { useSessions } from './lib/use-sessions'
 import { useTree } from './lib/use-tree'
@@ -224,6 +231,11 @@ function App(): JSX.Element {
   // First pin in config order wins when IDs collide across orgs (spec §Edge Cases).
   const linkedPin =
     linkedTaskId === null ? null : (tasks.tasks.find((task) => task.id === linkedTaskId) ?? null)
+  // Persisted pane layout, defaulted and clamped on load (PANE-01, PANE-11, PANE-13).
+  const sidebarWidth = resolvePaneWidth(ui.sidebarWidth, SIDEBAR_BOUNDS, SIDEBAR_DEFAULT_WIDTH)
+  const sidebarCollapsed = ui.sidebarCollapsed ?? false
+  const tasksWidth = resolvePaneWidth(ui.tasksWidth, TASKS_BOUNDS, TASKS_DEFAULT_WIDTH)
+  const tasksCollapsed = ui.tasksCollapsed ?? false
 
   return (
     <>
@@ -255,6 +267,10 @@ function App(): JSX.Element {
               onRemoveWorkspace={removeWorkspace}
               onNewWorktree={setDialogRepoPath}
               onSpawnAgent={(cwd) => openNewSession({ cwd })}
+              width={sidebarWidth}
+              collapsed={sidebarCollapsed}
+              onWidthChange={(w) => update({ sidebarWidth: w })}
+              onToggleCollapsed={() => update({ sidebarCollapsed: !sidebarCollapsed })}
             />
             {selected ? (
               <WorktreeDetail
@@ -280,6 +296,10 @@ function App(): JSX.Element {
               onSnapshot={setTasks}
               onStartWork={setStartWorkTask}
               onSpawnAgent={spawnAgentForTask}
+              width={tasksWidth}
+              collapsed={tasksCollapsed}
+              onWidthChange={(w) => update({ tasksWidth: w })}
+              onToggleCollapsed={() => update({ tasksCollapsed: !tasksCollapsed })}
             />
           </>
         ) : ui.direction === 'agents' ? (

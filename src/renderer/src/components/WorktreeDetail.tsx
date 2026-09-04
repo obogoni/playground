@@ -6,7 +6,7 @@ import type { PinnedTaskView } from '../../../shared/tasks'
 import type { WorktreeNode } from '../../../shared/tree'
 import type { ChangedFile, RemovalLeftover } from '../../../shared/worktrees'
 import { api } from '../lib/api'
-import { stateClass, typeClass } from '../lib/task-pills'
+import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import type { IconName } from './Icon'
 import { RemoveWorktreeConfirm } from './RemoveWorktreeConfirm'
@@ -238,9 +238,9 @@ export function WorktreeDetail({
               <div className="detail-task-header">
                 {linkedPin.details && (
                   <>
-                    <span className={`task-pill ${typeClass(linkedPin.details.type)}`}>
+                    <span className={`task-pill ${typeClass(badgeTypeOf(linkedPin.details))}`}>
                       <span className="task-pill-dot" />
-                      {linkedPin.details.type}
+                      {badgeTypeOf(linkedPin.details)}
                     </span>
                     <span className={`task-pill ${stateClass(linkedPin.details.state)}`}>
                       {linkedPin.details.state}

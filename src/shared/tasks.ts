@@ -72,6 +72,13 @@ export interface WorkItemDetails {
   title: string
   type: string
   state: string
+  /**
+   * Type shown on the badge instead of `type` when the pinned item is a Task:
+   * the first non-Task ancestor's type (walking the Hierarchy-Reverse chain),
+   * or null when no such ancestor exists / resolution failed. Absent for
+   * non-Task pins, whose badge keeps the item's own `type`.
+   */
+  parentType?: string | null
 }
 
 /** A pin as the renderer sees it; details are null until a fetch resolves them. */

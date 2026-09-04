@@ -37,6 +37,14 @@ export interface AppConfig {
     direction: 'tree' | 'board' | 'agents' | 'workflows'
     /** Hosting shell for new agent PTYs; running sessions keep their own (AGCF-02). */
     defaultShell: Shell
+    /** Persisted sidebar width; absent = 230px default (PANE-01). */
+    sidebarWidth?: number
+    /** Persisted sidebar collapsed state; absent = expanded (PANE-03). */
+    sidebarCollapsed?: boolean
+    /** Persisted tasks pane width; absent = 322px default (PANE-08). */
+    tasksWidth?: number
+    /** Persisted tasks pane collapsed state; absent = expanded (PANE-09). */
+    tasksCollapsed?: boolean
   }
   workspaces: WorkspaceEntry[]
   /** Editable coding-agent registry; seeded from `SEEDED_AGENTS` (AGCF-01). */

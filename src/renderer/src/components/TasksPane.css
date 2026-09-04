@@ -1,7 +1,9 @@
 /* Pinned tasks pane — handoff §1c */
 
 .tasks-pane {
-  flex: 0 0 322px;
+  /* Width is owned by the ResizablePane wrapper (PANE-08..09) */
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;

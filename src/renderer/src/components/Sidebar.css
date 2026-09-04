@@ -1,7 +1,9 @@
 /* Sidebar tree — handoff §1a */
 
 .sidebar {
-  flex: 0 0 286px;
+  /* Width is owned by the ResizablePane wrapper (PANE-01..03) */
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -17,6 +19,12 @@
   justify-content: space-between;
   padding: 0 12px;
   border-bottom: 1px solid var(--border);
+}
+
+.pane-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .pane-header-label {

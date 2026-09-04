@@ -6,13 +6,22 @@ import type {
   TasksSnapshot,
   WorkItemDetails
 } from '../shared/tasks'
-import type { GetWorkItemsResult, WorkItemRef } from './ado-gateway'
+import type { GetWorkItemWithRelationsResult, GetWorkItemsResult, WorkItemRef } from './ado-gateway'
 import { refKey } from './ado-gateway'
 import type { ConfigStore } from './config-store'
 
 /** The slice of AdoGateway TaskBoard depends on — tests inject a stub. */
 export interface WorkItemSource {
   getWorkItems(refs: WorkItemRef[]): Promise<GetWorkItemsResult>
+  getWorkItemWithRelations(ref: WorkItemRef): Promise<GetWorkItemWithRelationsResult>
+}
+
+/** Cap on hierarchy hops while resolving a Task's badge type (guards cycles). */
+const MAX_BADGE_HIERARCHY_HOPS = 10
+
+/** Pure: is this ADO type the Task leaf of the hierarchy? */
+function isTask(type: string): boolean {
+  return type.trim().toLowerCase() === 'task'
 }
 
 type ParseResult = { ok: true; ref: PinnedTask } | { ok: false; error: string }
@@ -70,6 +79,35 @@ function sameRef(a: WorkItemRef, b: WorkItemRef): boolean {
 }
 
 /**
+ * Walk the Hierarchy-Reverse chain from a pinned item up to the first non-Task
+ * ancestor and return its type — the badge type (BPTK-01). Returns null when
+ * the pinned item is not a Task, when no such ancestor exists, or when any hop
+ * fails (auth, deleted item, network), so the renderer falls back to the
+ * item's own type.
+ */
+export async function resolveBadgeParentType(
+  source: WorkItemSource,
+  start: WorkItemRef
+): Promise<string | null> {
+  let ref = start
+  for (let hop = 0; hop < MAX_BADGE_HIERARCHY_HOPS; hop++) {
+    try {
+      const result = await source.getWorkItemWithRelations(ref)
+      if (!result.ok) return null
+      if (!isTask(result.item.type)) return hop === 0 ? null : result.item.type
+      const parent = result.parentRefs[0]
+      if (!parent) return null
+      ref = parent
+    } catch {
+      // A deleted ancestor makes getWorkItemWithRelations throw; degrade the
+      // badge to the pinned item's own type rather than failing the pin.
+      return null
+    }
+  }
+  return null
+}
+
+/**
  * Owns the pinned task list (PRD TaskBoard, pin/unpin half — template
  * rendering and branch-ID extraction arrive with start-work). Pins persist via
  * ConfigStore; live details stay in this session's memory cache and are
@@ -118,7 +156,7 @@ export class TaskBoard {
       return { ok: false, error: `Work item #${ref.id} not found in ${ref.org}/${ref.project}.` }
     }
 
-    this.details.set(refKey(ref), detail)
+    this.details.set(refKey(ref), await this.withBadgeType(ref, detail))
     this.lastSyncAt = Date.now()
     this.config.patch({ pinnedTasks: [...pinnedTasks, ref] })
     return { ok: true, snapshot: this.list() }
@@ -142,7 +180,25 @@ export class TaskBoard {
     }
     this.auth = 'ok'
     this.lastSyncAt = Date.now()
-    this.details = fetched.details
+    const resolved = new Map<string, WorkItemDetails>()
+    for (const ref of pinnedTasks) {
+      const detail = fetched.details.get(refKey(ref))
+      if (detail) resolved.set(refKey(ref), await this.withBadgeType(ref, detail))
+    }
+    this.details = resolved
     return this.list()
+  }
+
+  /**
+   * Enriches a pinned item's details with the badge parent type: for a Task,
+   * resolve its first non-Task ancestor's type (walking Hierarchy-Reverse); for
+   * every other type the badge keeps the item's own type (parentType stays
+   * absent). Resolution failures leave parentType null — the badge degrades to
+   * the item's own type rather than failing the pin/refresh.
+   */
+  private async withBadgeType(ref: WorkItemRef, detail: WorkItemDetails): Promise<WorkItemDetails> {
+    if (!isTask(detail.type)) return detail
+    const parentType = await resolveBadgeParentType(this.source, ref)
+    return parentType === null ? { ...detail, parentType: null } : { ...detail, parentType }
   }
 }
