@@ -28,36 +28,195 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current, 2026-09-01): `branch-template-nested` EXECUTED + VALIDATED (PASS); PR not yet pushed.**
+**Status (current, 2026-09-02): v1.0.0 released; first external contributions merged.**
+Nothing in flight from our side. PRs #78 (sidebar resize) and #79 (work item type
+badges) are **merged**; PR #80 (terminal input fixes) is **open**, rebased and clean.
 
-0. **`branch-template-nested` — COMPLETE, Verifier PASS, 662 tests green.**
-   Branch `feature/branch-template-nested` based on `origin/main` (`79d8da7`). 11 commits
-   (`61e648d..9e575d8`): plan + T1..T8 + 2 post-validation fixes + validation record.
-   Feature: `taskIdFromBranch` now reads the **first standalone multi-digit number in the last
-   non-empty path segment** (nested format `user/<dev>/<us-id>-<kw>/<task-id>-<kw>` → leaf task id;
-   single-id formats byte-identical — `feature/123-fix-456` keeps `123`); `branchNameFor` renders
-   `{dev}`/`{usId}`/`{usSlug}` from an optional context (config `ado.devAlias` + the pinned task's
-   parent US); `AdoGateway.parentOf` + `tasks:parent` IPC resolve the parent on Start-work open;
-   dialog re-prefills without overwriting a user-edited branch. Verifier: 23/24 ACs matched,
-   1 spec-precision gap reconciled (PARENT-02 payload = `{id,title}`), 3/3 mutations killed, gate
-   green (typecheck 0, lint 0 errors / 18 pre-existing warnings, 662/662). Report:
-   `.specs/features/branch-template-nested/validation.md`.
+**PENDING — bump the committed `package.json` version on the next delivery.**
+`v1.0.0` shipped 2026-09-02 from `cafb43f` (the PR #77 merge), but stable releases are
+stamped in CI from the tag (`scripts/stamp-version.ts --mode=stable`) and the bump is
+**never committed** — so `package.json` on `main` still reads `0.1.0`. Nightlies derive
+their version from that committed base (`nightlyVersion()` in `scripts/release-version.ts`
+returns `${baseVersion}-alpha.${runNumber}`), so they keep publishing as `0.1.0-alpha.N`,
+which semver-sorts **below** the shipped `1.0.0` and leaves the alpha channel looking
+permanently stale. Bump the committed `version` to the next minor (`1.1.0`) as part of the
+next delivery so nightlies become `1.1.0-alpha.N` and sort ahead of the shipped stable.
+One-line change in `package.json`; the release workflow needs no edit.
 
-   **OUTSTANDING (owner):**
-   - **CDP smoke** for the renderer ACs (DIALOG-01..04 runtime evidence, gap 2 of the Verifier):
-     with `ado.branchTemplate = user/{dev}/{usId}-{usSlug}/{id}-{slug}` + `ado.devAlias` set,
-     pin a Task under a US → Start work → confirm the nested prefill; create → confirm sidebar
-     tag `#<task-id>` (not the US id) and folder `<repo>-<task-id>`.
-   - **Push + PR** (needs explicit go-ahead): branch `feature/branch-template-nested` → `main`,
-     `Closes #<issue>` per CONVENTIONS (a GitHub issue for the feature has not been created yet).
+0. **`vs2026-admin-shortcut` (AD-016) — EXECUTED, validated (PASS), pushed. Issue #76, PR #77.**
+   Branch `feature/vs2026-admin-shortcut`, based on **`origin/main` (`9d825d6`, the PR #75 merge)** —
+   independent of anything still in flight. 8 commits (`acb12e1..64eb192`), **617 tests passing / 1
+   pre-existing failure** (the same `worktree-manager` mixed-dirt case as before), typecheck clean,
+   lint 0 errors / 18 warnings (baseline unchanged). VS26-02/03/05 are **Verified** by executed
+   tests plus real-machine vswhere evidence; VS26-01/04 are **code-verified**, their rendering ACs
+   pending the owner-run gates. Mutation sensor **5/5 killed** — two mutants initially
+   survived (`launch()` routing both VS tools to 2022, and `openVisualStudio` ignoring its edition
+   argument), which would have let the 2026 card silently open 2022; closed in `64eb192`.
+   Validated by a **standalone fresh-eyes pass, not an independent Verifier sub-agent** (this
+   harness runs without them), so author != verifier is unmet — same caveat as AD-015, with
+   the mutation sensor as the compensating control. See `validation.md`.
 
-1. **Merged since the last handoff (main = `79d8da7`):** `worktree-hook-workspace-config` (AD-015,
-   PR #75) and `vs2026-admin-shortcut` (AD-016, PR #77) are in `main`; later small merges
-   (`workitem-type-colors`, `terminal-input-fixes`) are also in. Prior AD-014 removal feature and
-   its follow-ups remain merged as recorded before.
+   **Gate status (updated 2026-08-28, owner-run):**
+   (a) **CDP smoke — RUN, partially completed.** Every assertion this feature added PASSED:
+   five cards render in order with the right labels/commands, and both VS cards resolve their own
+   tint at runtime (amber vs pink, each `{tile:true, admin:"admin"}`). VS26-01 is therefore
+   **Verified by executed evidence**. The run then aborted before the board block, so VS26-04.1/02
+   are still unexecuted — cause is pre-existing and unrelated: the `wtm-smoke-*` workspace is not
+   seeded, the first check FAILED, but the script only `check()`s the seed and continues, so
+   `sibling` was undefined and it threw at line 156, ~80 lines later, in untouched code. Worth
+   fixing: make the script exit on a failed seed check.
+   (b) **Elevation pass — STILL OUTSTANDING.** Accept UAC on 2026 (confirm "Administrator" +
+   18.x), confirm 2022 still opens 17.x in the same session, decline UAC once. Last unverified
+   behaviour of VS26-02.2 / VS26-05.2.
+   (c) **Visual pass — COLOUR HALF CONFIRMED.** Owner: "color themes for shortcuts are ok",
+   discharging VS26-04.4. `--pink` needs no adjustment. **Still unconfirmed:** the layout ACs
+   VS26-01.3 (3+2 grid) and VS26-04.3 (footer with 5 buttons).
 
-**Known environment caveats (unchanged):** the `worktree-manager` mixed-dirt test fails locally on a
-non-ASCII profile path (`fs.rmSync` broken on Node v24.9.0) — 1 pre-existing failure, not a
-regression; the CI gate (windows-latest) is plausibly green. Dev build reads `%APPDATA%\playground`,
-not the nightly's `%APPDATA%\playground-nightly`. Test baseline was re-anchored at **645** (was 125
-in `TESTING.md`, which is stale) and is now **662** with this feature.
+   **Issue #76, PR #77** (base `main`, MERGEABLE). The CI gate runs
+   `typecheck && lint && test` on windows-latest, which includes the `worktree-manager` mixed-dirt
+   test that fails locally — that failure is plausibly local-only (real-git + `rmSync` under a
+   profile path containing a non-ASCII character), so the gate may be green on CI. Per the recorded
+   ruleset, `main` is gated by copilot_code_review rather than the CI gate.
+
+1. **`worktree-hook-workspace-config` (AD-015) — MERGED to `main` 2026-08-28 via PR #75**
+   (issue #74 closed). `origin/main` is now `9d825d6`, the PR #75 merge commit; the note below that
+   the PR was still open is superseded. Earlier detail retained for the record:**
+   Branch `feature/worktree-hook-workspace-config`, originally **branched off the removal branch**
+   (not `main`) so AD-014 was present and the AD numbering / STATE edits did not collide. 8 commits,
+   **605 tests passing / 1 pre-existing failure**, typecheck clean, lint 0 errors / 18 warnings. All
+   14 ACs Verified and **all four Success Criteria met** — the last one (a real worktree create from
+   the New Worktree dialog against `M:\Triade\source\Code`) was run end-to-end on **2026-08-04**;
+   see `validation.md`. Validated by a **standalone fresh-eyes pass, not an independent Verifier
+   sub-agent** (the harness is configured without them), so author ≠ verifier is unmet — 9/12
+   mutants killed is the compensating control. **Issue #74, PR #75, based on `main`.**
+2. **`worktree-removal-fault-tolerance` (AD-014) — MERGED to `main` 2026-07-31 via PR #73
+   (issue #72, closed).** Independently VERIFIED, round 3 PASS. **Correction:** earlier revisions of
+   this handoff said "NOT pushed, no PR, no GitHub issue yet" — that was already stale when written
+   or shortly after; `origin/main` (`7cc8c76`) is the PR #73 merge. WRFT-01..05 are **Verified**;
+   WRFT-06 was **Unverified** (renderer — no executed evidence) at merge time and the live smoke +
+   Danger-section visual pass were never recorded as run, so they remain open follow-ups against
+   merged code rather than release gates. WRFT-07 is **Deferred** to a follow-up PR.
+   One removal-branch commit, `5e22450` (*docs(specs): correct the lessons-store note*), was made
+   **after** PR #73 merged and never reached `main` — it rides into `main` on PR #75 instead.
+
+**The hook command now resolves repo-first, workspace-second** (AD-015):
+`<repo>\.app\config.json`'s `postCreateCommand` wins; otherwise
+`<workspace>\.app\config.json`'s `postCreateCommands[<repoName>]` applies, with the workspace
+derived lexically as `dirname(repoPath)`. The real declaration was **moved out of the Code repo**:
+`M:\Triade\source\Code\.app\config.json` is deleted and
+`M:\Triade\source\.app\config.json` now holds `{"postCreateCommands":{"Code":".\\SetupSkills.cmd < NUL"}}`
+— outside version control, since `M:\Triade\source` is not itself a git repo. The command shape was
+measured: the leading `.\` is required (`NoDefaultCurrentDirectoryInExePath`) and `< NUL` feeds EOF
+to `SetupSkills.cmd`'s trailing `pause`, which otherwise hangs until the 120 s timeout. Note the
+wrapper `.cmd` masks `SetupSkills.ps1`'s exit code (measured: inner `exit /b 7` → wrapper exits 0),
+so a failing script would report success; switching the value to
+`powershell -NoProfile -ExecutionPolicy Bypass -File .\SetupSkills.ps1` restores real failure
+reporting.
+
+⚠️ **Environment defect found while validating — `fs.rmSync` is broken on this machine.** On Node
+**v24.9.0**, **every** `rmSync` shape silently no-ops (returns without error, file remains) when
+**any component of the path contains a non-ASCII character**; `unlinkSync` and every **async** `rm`
+shape work. Because the test fixtures root at `realpathSync.native(tmpdir())` =
+`C:\Users\OtávioBogoni\…`, this makes `worktree-manager.test.ts > removeWorktree > force-removes a
+worktree with mixed dirt` fail **on a clean tree** — the fixture's `rmSync(b.txt)` never deletes, so
+git correctly reports no deletion. **This is the 1 failure in the counts above and it is not a
+regression.** The product is unaffected: no production file uses `rmSync` (`dir-remover.ts:77` uses
+async `rm`, re-measured correct on non-ASCII trees). Consequence to keep in mind: the 17 test files
+using `rmSync` for teardown silently leak temp dirs under `%LOCALAPPDATA%\Temp`. Repros in the
+session scratchpad; full write-up in `worktree-hook-workspace-config/validation.md`.
+
+Removal is now **delete-first**: the app deletes the worktree directory itself with a junction-safe,
+deadline-bounded deleter and calls `git worktree remove` only to drop bookkeeping. A blocked deletion
+returns before git runs, so the worktree stays **registered** and its row is the retry handle; the
+Danger section names the blocked path and the remaining entry count. Guard order is primary →
+registered → locked → dirty, all refusing before any deletion. `SessionManager.stop` now resolves on
+the PTY's real exit (capped at 3000 ms), so removal no longer races the terminals it just killed.
+
+This also closed a **latent data-loss bug** found while probing: git for Windows treats a junction as
+a directory and recurses into it, so `git worktree remove --force` was emptying the shared target of
+AD-013's skills junctions **while reporting success**. Node's `fs.rm` unlinks junctions instead, so
+delete-first fixes it as a side effect. Worth checking whether any real shared-skills folder was
+already emptied by a past removal.
+
+**Commit map:**
+| Commit | Task | What |
+| ------ | ---- | ---- |
+| 16d2c2f | plan | spec (WRFT-01..07) + design + tasks |
+| 34f8970 | T0 | gate stabilization — `testTimeout`/`hookTimeout` 30000, one racing fixture window widened (added during Execute after two runs of untouched `main` came back red: `2 failed`, then `14 failed`) |
+| b286a46 | T1 | `dir-remover.ts` — `removeDirTree` + `DELETE_RETRY_INTERVAL_MS`/`DELETE_RETRY_BUDGET_MS`, DI'd fs deps (+9) |
+| bdc32fe | T2 | real-fs hazard tests — junction target survives, dangling junction, read-only + nested repo, real external-holder lock (+6) |
+| 32eb539 | T3 | porcelain `locked` parsing — reason / `''` / `undefined` are distinguishable (+3) |
+| dd7f31c | T4 | `removeWorktree` reordered to delete-then-deregister, 6-step guard table, deleter injected (+10) |
+| f8a4af8 | T5 | `leftover` through `shared/worktrees.ts` → IPC → `WorktreeDetail` (producer + consumer together, L-001) |
+| b090c6f | T6 | `SessionManager.stop` awaits the real PTY exit, capped at `SESSION_EXIT_WAIT_MS = 3000`; `killAll` stays fire-and-forget (+3) |
+| ac71cfb | T7 | `smoke-remove.mjs` + seed extended with the WRFT-06 blocked-then-retry flow (**written, never run**) |
+| dcc50dc | T8 | AD-014 + spec traceability + handoff |
+| 124340c | F1 | **Verifier r1 gap** — assert `RemoveWorktreeResult.leftover` by value (it was only ever a spy *input*) |
+| 5aafb90 | F2 | **Verifier r1 gap** — pin the recursive `remaining` count against real fs |
+| 6f3af8a | — | spec precision: `remaining` is the **recursive** count; `leftover` is part of the returned contract; guard refusals carry none |
+| 1abe8aa | F3 | **Verifier r2 gap** — mixed file+directory residue fixture (one locked chain, `pwsh` `FileShare.None` holder) so 3/2/1/1 separates four readings |
+| 45c27d5 | F4 | **Verifier r2 gap** — `leftover` absence asserted on all four guard refusal paths, not just `locked` |
+
+**Verification (independent, author ≠ verifier) — 3 rounds, ending PASS.** Round 1 FAIL (14/16 mutants
+killed): `leftover` never asserted, recursive count unpinned. Round 2 FAIL (8/10): the round-1 fix's
+fixture was directories-only and therefore blind to *what* it counted, and guard-refusal absence was
+pinned on one guard of four. Round 3 **PASS** (12/15; 3 survivors, all non-blocking and recorded).
+**Every fix was test-only** — `git diff --name-only dcc50dc..HEAD` touches no production file.
+Report: `.specs/features/worktree-removal-fault-tolerance/validation.md`.
+
+**Accepted non-blocking survivors (reasoned, not oversights):** a guard `leftover` conditioned on
+`force: true` (contrived; every guard is pinned on its non-force path); `blockedPath` naming the first
+rather than the last failing attempt (the spec leaves it open and a discriminating fixture needs two
+holders releasing mid-loop — racy); and the two guard message literals, whose behavior is pinned while
+their wording is not (the Verifier recommends **not** fixing this).
+
+**OUTSTANDING — owner tasks, in order:**
+0. **`worktree-hook-workspace-config` (AD-015):** ~~(a) create a worktree for
+   `M:\Triade\source\Code` from the New Worktree dialog and confirm the junctions land.~~
+   **DONE 2026-08-04** — driven over CDP against the dev app; create succeeded with no hook-failure
+   advisory and both junctions landed in `Code-99999` pointing at its own `.github\skills`. The
+   throwaway worktree and branch were removed (delete-first per AD-014) and `Code` is back to its
+   original 10 worktrees. Full run + an incidental `{repo}-{id}` template finding in
+   `validation.md`. ~~(b) create the GitHub issue, then push and open the PR.~~ **DONE 2026-08-05 —
+   issue #74 + PR #75 (`Closes #74`), based on `main`, not on the removal branch: PR #73 had already
+   merged, so there was nothing left to stack on.** Remaining: **review + merge PR #75.**
+
+   Note for any future hand-testing of the dialog: the dev build reads
+   `%APPDATA%\playground`, **not** the installed nightly's `%APPDATA%\playground-nightly`, so it
+   starts with no workspaces until that config is seeded. And with the global
+   `ado.worktreeTemplate` = `{repo}-{id}`, always hand-test with a branch carrying a 2+ digit
+   number — a numberless branch renders `{id}` to `''` and the create is refused as a collision
+   with the repo's own folder.
+1. **Live smoke** for removal — now a follow-up against **merged** code, not a gate (discharges
+   WRFT-06): `node scripts/seed-smoke-remove.mjs`, then
+   `npm run dev -- -- --remote-debugging-port=9222`, then `node scripts/smoke-remove.mjs`. One-shot —
+   re-seed before each run. Note a blocked deletion still removes everything it can reach, so the retry
+   click may face either a direct remove or the confirm dialog; the script handles both.
+2. **Visual pass** on the Danger section (WRFT-06 AC 4 — long-path wrapping; that markup has never
+   been rendered).
+3. ~~**Create the GitHub issue** for the removal feature, then push and open the PR.~~ **DONE —
+   issue #72 + PR #73, merged 2026-07-31** (`origin/main` = `7cc8c76`).
+   Also worth doing: check whether any real shared-skills folder was already emptied by a past
+   `git worktree remove --force` before the delete-first fix landed (AD-014's latent data-loss bug).
+   The AD-015 end-to-end run is mild counter-evidence — those junctions point *inside* each
+   worktree, so the blast radius was smaller than feared — but it is not a clean bill of health.
+4. ~~**Lessons store has no writer.**~~ **RESOLVED 2026-07-31 — the writer exists and the hand
+   edits were verified correct.** `scripts/lessons.py` is not missing: it ships **inside the skill
+   package**, and the docs' `python3 scripts/lessons.py` is relative to the skill directory, not to
+   this repo — which is why it read as absent. It runs here despite `python`/`python3` being dead
+   Microsoft Store aliases, via Azure CLI's bundled interpreter (Python 3.13.11). Note `--root` is a
+   **top-level** argument, before the subcommand:
+
+   ```bash
+   PY="C:/Program Files/Microsoft SDKs/Azure/CLI2/python.exe"
+   SK="C:/Users/<user>/.claude/skills/tlc-spec-driven"
+   "$PY" "$SK/scripts/lessons.py" --root "M:/obogoni/playground" list --status confirmed
+   ```
+
+   The hand-maintained entries (**L-005 promoted to `confirmed`** on `promote_threshold=2`, plus
+   candidates **L-006** *payload asserted as fixture input only* and **L-007** *a fixture shaped
+   around the known mutation*) were checked against the script: `status` reports 7 lessons /
+   confirmed=2, and re-rendering a scratch copy of `lessons.json` reproduces both `LESSONS.md` and
+   `lessons.json` **identically** (modulo CRLF, which `.gitattributes eol=lf` normalizes on add). So
+   the format is correct and future writes can go through the script.
+5. **Follow-up PR** for WRFT-07 (T9–T11 are specified verbatim in `tasks.md`).
