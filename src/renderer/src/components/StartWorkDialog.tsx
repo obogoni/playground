@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
-import type { PinnedTaskView } from '../../../shared/tasks'
+import type { ParentWorkItem, PinnedTaskView } from '../../../shared/tasks'
 import { branchNameFor } from '../../../shared/tasks'
 import type { WorkspaceNode } from '../../../shared/tree'
 import type { PostCreateHookResult } from '../../../shared/worktrees'
@@ -18,6 +18,8 @@ interface StartWorkDialogProps {
   task: PinnedTaskView
   branchTemplate: string
   worktreeTemplate: string
+  /** `{dev}` placeholder value for the branch template; blank renders an empty segment (TEMPLATE-01). */
+  devAlias?: string
   onClose: () => void
   onCreated: (worktreePath: string) => void
 }
@@ -35,6 +37,7 @@ export function StartWorkDialog({
   task,
   branchTemplate,
   worktreeTemplate,
+  devAlias = '',
   onClose,
   onCreated
 }: StartWorkDialogProps): JSX.Element {
@@ -42,8 +45,13 @@ export function StartWorkDialog({
   const [repoPath, setRepoPath] = useState(repoOptions[0]?.path ?? '')
   const [baseBranch, setBaseBranch] = useState(() => defaultBaseFor(tree, repoPath))
   const [branch, setBranch] = useState(() =>
-    task.details ? branchNameFor({ id: task.id, details: task.details }, branchTemplate) : ''
+    task.details
+      ? branchNameFor({ id: task.id, details: task.details }, branchTemplate, { devAlias })
+      : ''
   )
+  // The pinned task's first Hierarchy-Reverse parent (its US), resolved on open
+  // (DIALOG-01). Absent/failed resolution stays null — empty {usId}/{usSlug}.
+  const [parent, setParent] = useState<ParentWorkItem | null>(null)
   // Workspace worktree-template override (null = use the global one).
   const [worktreeOverride, setWorktreeOverride] = useState<string | null>(null)
   // Fast-forward the base from its remote before cutting the branch (WBR-04, default on).
@@ -77,14 +85,40 @@ export function StartWorkDialog({
         if (stale) return
         setWorktreeOverride(wtOverride)
         if (details && !branchEdited.current) {
-          setBranch(branchNameFor({ id: task.id, details }, branchOverride ?? branchTemplate))
+          setBranch(
+            branchNameFor({ id: task.id, details }, branchOverride ?? branchTemplate, {
+              devAlias,
+              parent
+            })
+          )
         }
       })
       .catch(console.error)
     return () => {
       stale = true
     }
-  }, [workspacePath, task.id, details, branchTemplate])
+    // parent/devAlias included: the re-prefill re-runs when the parent US lands
+    // or the alias changes, still guarded by branchEdited (DIALOG-02).
+  }, [workspacePath, task.id, details, branchTemplate, parent, devAlias])
+
+  // Resolve the parent US once per task; skipped while the pin has no live
+  // details (auth down — the dialog is already disabled). Auth failure / no
+  // parent degrade to null — empty {usId}/{usSlug}, never blocking (PARENT-04).
+  useEffect(() => {
+    if (!details) return
+    let stale = false
+    api
+      .invoke('tasks:parent', { id: task.id, org: task.org, project: task.project })
+      .then((result) => {
+        if (!stale) setParent(result.ok ? result.parent : null)
+      })
+      .catch(() => {
+        if (!stale) setParent(null)
+      })
+    return () => {
+      stale = true
+    }
+  }, [task.id, task.org, task.project, details])
 
   const effectiveWorktreeTemplate = worktreeOverride ?? worktreeTemplate
   // Gate only on a selected repo and a non-empty branch; if the template renders

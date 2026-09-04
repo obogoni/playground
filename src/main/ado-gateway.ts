@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import type { WorkItemDetails } from '../shared/tasks'
+import type { ParentOfResult, WorkItemDetails } from '../shared/tasks'
 
 const run = promisify(execFile)
 
@@ -101,7 +101,10 @@ interface CachedToken {
 export class AdoGateway {
   private cached: CachedToken | null = null
 
-  async getWorkItems(refs: WorkItemRef[]): Promise<GetWorkItemsResult> {
+  async getWorkItems(
+    refs: WorkItemRef[],
+    fetchFn: typeof fetch = fetch
+  ): Promise<GetWorkItemsResult> {
     if (refs.length === 0) return { ok: true, details: new Map() }
     const token = await this.getToken()
     if (!token.ok) return { ok: false, reason: 'auth', error: token.error }
@@ -117,7 +120,7 @@ export class AdoGateway {
       let res: Response
       try {
         res = await fetchWithTimeout(
-          fetch,
+          fetchFn,
           url,
           { headers: { Authorization: `Bearer ${token.token}` } },
           ADO_FETCH_TIMEOUT_MS
@@ -200,6 +203,24 @@ export class AdoGateway {
       childRefs: parseChildRefs(body.relations, ref),
       parentRefs: parseParentRefs(body.relations, ref)
     }
+  }
+
+  /**
+   * Resolve the first Hierarchy-Reverse parent of a work item (PARENT-02..05):
+   * fetches the item's relations, then the parent refs' details, and returns
+   * the first parent as `{ id, title }`. No parent or an unresolvable parent
+   * batch yields `parent: null` (errorPolicy=omit can drop the item); an auth
+   * failure surfaces as `{ ok: false, reason: 'auth' }` — the caller degrades.
+   */
+  async parentOf(ref: WorkItemRef, fetchFn: typeof fetch = fetch): Promise<ParentOfResult> {
+    const withRelations = await this.getWorkItemWithRelations(ref, fetchFn)
+    if (!withRelations.ok) return withRelations
+    const first = withRelations.parentRefs[0]
+    if (first === undefined) return { ok: true, parent: null }
+    const fetched = await this.getWorkItems(withRelations.parentRefs, fetchFn)
+    if (!fetched.ok) return fetched
+    const detail = fetched.details.get(refKey(first))
+    return { ok: true, parent: detail ? { id: first.id, title: detail.title } : null }
   }
 
   private async getToken(): Promise<{ ok: true; token: string } | { ok: false; error: string }> {

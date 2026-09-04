@@ -57,6 +57,8 @@ export interface AppConfig {
     branchTemplate: string
     /** Worktree folder-name template; blank falls back to {repo}-{branch} at render time. */
     worktreeTemplate: string
+    /** Developer alias for the `{dev}` branch-template placeholder; blank renders an empty segment. */
+    devAlias: string
   }
   pinnedTasks: PinnedTask[]
   /** Agent sessions; restored as `stopped` on load. */
@@ -85,7 +87,8 @@ export const DEFAULT_CONFIG: AppConfig = {
     defaultOrg: null,
     defaultProject: null,
     branchTemplate: DEFAULT_BRANCH_TEMPLATE,
-    worktreeTemplate: DEFAULT_WORKTREE_TEMPLATE
+    worktreeTemplate: DEFAULT_WORKTREE_TEMPLATE,
+    devAlias: ''
   },
   pinnedTasks: [],
   sessions: []

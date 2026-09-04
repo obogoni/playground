@@ -1,5 +1,6 @@
 import * as pty from 'node-pty'
 import type { SpawnPlan } from './spawn-plan'
+import { buildPtyEnv } from './terminal-env'
 
 /**
  * Live handle on one running PTY. Deliberately tiny — the surface AM2's
@@ -26,9 +27,9 @@ export class PtyPort {
    */
   spawn(plan: SpawnPlan, env?: NodeJS.ProcessEnv): PtyHandle {
     const proc = pty.spawn(plan.file, plan.args, {
-      name: 'xterm-color',
+      name: 'xterm-256color',
       cwd: plan.cwd,
-      env: { ...process.env, ...env } as Record<string, string>,
+      env: buildPtyEnv({ ...process.env, ...env }),
       useConpty: true
     })
 

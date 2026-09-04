@@ -25,7 +25,7 @@ describe('branchNameFor', () => {
       'feature/1-update-api-docs-v2'
     )
     expect(branchNameFor(task(1, 'Task', 'Configuração de ambiente'), null)).toBe(
-      'feature/1-configura-o-de-ambiente'
+      'feature/1-configuracao-de-ambiente'
     )
   })
 
@@ -51,6 +51,73 @@ describe('branchNameFor', () => {
   it('passes unknown placeholders through literally', () => {
     expect(branchNameFor(task(3, 'Task', 'Thing'), '{user}/{id}-{slug}')).toBe('{user}/3-thing')
   })
+
+  it('renders {dev} from the devAlias context (TEMPLATE-01)', () => {
+    expect(
+      branchNameFor(task(10002, 'Task', 'Nested branch'), 'user/{dev}/{id}-{slug}', {
+        devAlias: 'jdoe'
+      })
+    ).toBe('user/jdoe/10002-nested-branch')
+  })
+
+  it('renders {usId}/{usSlug} from the parent context (TEMPLATE-02)', () => {
+    expect(
+      branchNameFor(
+        task(10002, 'Task', 'Nested branch'),
+        'user/{dev}/{usId}-{usSlug}/{id}-{slug}',
+        {
+          devAlias: 'jdoe',
+          parent: { id: 10001, title: 'User story' }
+        }
+      )
+    ).toBe('user/jdoe/10001-user-story/10002-nested-branch')
+  })
+
+  it('renders the full nested format and slugifies the US title (TEMPLATE-03)', () => {
+    expect(
+      branchNameFor(
+        task(10002, 'Task', 'Nested branch'),
+        'user/{dev}/{usId}-{usSlug}/{id}-{slug}',
+        {
+          devAlias: 'jdoe',
+          parent: { id: 10001, title: 'Configuração de ambiente' }
+        }
+      )
+    ).toBe('user/jdoe/10001-configuracao-de-ambiente/10002-nested-branch')
+  })
+
+  it('drops empty parent/alias segments (TEMPLATE-04)', () => {
+    const task10002 = task(10002, 'Task', 'Nested branch')
+    const nested = 'user/{dev}/{usId}-{usSlug}/{id}-{slug}'
+    expect(branchNameFor(task10002, nested, { devAlias: 'jdoe' })).toBe(
+      'user/jdoe/10002-nested-branch'
+    )
+    expect(
+      branchNameFor(task10002, nested, {
+        parent: { id: 10001, title: 'User story' }
+      })
+    ).toBe('user/10001-user-story/10002-nested-branch')
+    expect(branchNameFor(task10002, 'user/{dev}/{id}-{slug}', { devAlias: '   ' })).toBe(
+      'user/10002-nested-branch'
+    )
+  })
+
+  it('keeps legacy templates byte-identical with context present (TEMPLATE-05)', () => {
+    const ctx = { devAlias: 'jdoe', parent: { id: 10001, title: 'User story' } }
+    expect(
+      branchNameFor(task(4821, 'Feature', 'Add OAuth refresh-token rotation!'), null, ctx)
+    ).toBe('feature/4821-add-oauth-refresh-token-rotation')
+    expect(branchNameFor(task(42, 'Bug', 'Crash on save'), 'task/{id}', ctx)).toBe('task/42')
+  })
+
+  it('still passes unknown placeholders through literally with context (TEMPLATE-06)', () => {
+    expect(
+      branchNameFor(task(3, 'Task', 'Thing'), '{user}/{id}-{slug}', {
+        devAlias: 'jdoe',
+        parent: { id: 7, title: 'Story' }
+      })
+    ).toBe('{user}/3-thing')
+  })
 })
 
 describe('taskIdFromBranch', () => {
@@ -59,8 +126,26 @@ describe('taskIdFromBranch', () => {
     expect(taskIdFromBranch('bugfix/12-fix-login')).toBe(12)
   })
 
-  it('takes the first of multiple standalone numbers', () => {
+  it('takes the first standalone number within the last segment (BRANCH-04)', () => {
     expect(taskIdFromBranch('feature/123-fix-456')).toBe(123)
+  })
+
+  it('extracts the leaf task id from the nested user format (BRANCH-01)', () => {
+    expect(
+      taskIdFromBranch('user/jdoe/10001-user-story/10002-nested-branch')
+    ).toBe(10002)
+  })
+
+  it('tags a parent-only nested branch with its last-segment number (edge case)', () => {
+    expect(taskIdFromBranch('user/jdoe/10001-user-story')).toBe(10001)
+  })
+
+  it('returns null when the last segment has no number (BRANCH-05)', () => {
+    expect(taskIdFromBranch('user/jdoe/user-story')).toBeNull()
+  })
+
+  it('tolerates trailing slashes by reading the last non-empty segment', () => {
+    expect(taskIdFromBranch('feature/4821/')).toBe(4821)
   })
 
   it('works for hand-typed names with extra segments', () => {
