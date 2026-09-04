@@ -6,7 +6,7 @@ import type {
   WorkspaceTemplates
 } from './config'
 import type { LaunchResult, ShortcutTool } from './shortcuts'
-import type { PinTaskResult, TasksSnapshot } from './tasks'
+import type { ParentOfResult, PinTaskResult, TasksSnapshot } from './tasks'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'
 import type {
   BlockerQuestion,
@@ -78,6 +78,8 @@ export interface IpcContract {
   'tasks:unpin': { req: { id: number; org: string; project: string }; res: TasksSnapshot }
   /** Re-fetches live details for every pin (app focus + manual refresh). */
   'tasks:refresh': { req: void; res: TasksSnapshot }
+  /** Resolves the first Hierarchy-Reverse parent (the US) of a pinned task; null when absent (PARENT-02). */
+  'tasks:parent': { req: { id: number; org: string; project: string }; res: ParentOfResult }
   /** Persisted ∪ running sessions, reconciled with pathMissing (no network/spawn). */
   'sessions:list': { req: void; res: SessionView[] }
   /** Resolve agent (or run `adhocCommand` raw) + cwd, shell-host the PTY, persist, return the view. */

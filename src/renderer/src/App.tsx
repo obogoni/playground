@@ -76,6 +76,7 @@ function App(): JSX.Element {
   const [adoOrg, setAdoOrg] = useState<string | null>(null)
   const [branchTemplate, setBranchTemplate] = useState('')
   const [worktreeTemplate, setWorktreeTemplate] = useState('')
+  const [devAlias, setDevAlias] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
   /** Editable agent registry from config (AGCF-01); threaded to the agent UIs. */
   const [agents, setAgents] = useState<AgentDef[]>([])
@@ -125,6 +126,7 @@ function App(): JSX.Element {
         setAdoOrg(config.ado.defaultOrg)
         setBranchTemplate(config.ado.branchTemplate)
         setWorktreeTemplate(config.ado.worktreeTemplate)
+        setDevAlias(config.ado.devAlias)
         setAgents(config.agents)
       })
       .catch((err) => {
@@ -356,6 +358,7 @@ function App(): JSX.Element {
           task={startWorkTask}
           branchTemplate={branchTemplate}
           worktreeTemplate={worktreeTemplate}
+          devAlias={devAlias}
           onClose={() => setStartWorkTask(null)}
           onCreated={worktreeCreated}
         />
@@ -367,6 +370,7 @@ function App(): JSX.Element {
             setAdoOrg(config.ado.defaultOrg)
             setBranchTemplate(config.ado.branchTemplate)
             setWorktreeTemplate(config.ado.worktreeTemplate)
+            setDevAlias(config.ado.devAlias)
             setAgents(config.agents)
             setSettingsOpen(false)
           }}
