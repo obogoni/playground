@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/time-tracking/design.md`
-**Status**: Draft — awaiting approval to Execute
+**Status**: Executing (approved 2026-09-16)
 **Branch**: `feature/time-tracking` (cut from `origin/main`)
 **Test baseline**: measured green on the branch before T1 (call it **B**). Every "Test count" below is written as `B + N`, cumulative.
 **Before T17**: record AD-021 (design §Proposed project decisions) in `.specs/STATE.md` — it amends RAIL-12, which T17 would otherwise violate.
@@ -132,9 +132,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Types exported with the doc comments from the design
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B tests pass (no silent deletions)
+- [x] Types exported with the doc comments from the design
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B tests pass (no silent deletions)
 
 **Tests**: none
 **Gate**: build
