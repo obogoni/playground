@@ -1,4 +1,10 @@
-import type { OpenPeriod, PeriodSnapshotFields, TimePeriod, TimeSnapshot } from '../shared/time'
+import type {
+  OpenPeriod,
+  PeriodSnapshotFields,
+  TimeEditResult,
+  TimePeriod,
+  TimeSnapshot
+} from '../shared/time'
 import type { TimeLogStore } from './time-log-store'
 
 /** A period shorter than this is noise (spawn failure, instant exit) and is discarded (TIME-11). */
@@ -141,6 +147,36 @@ export class TimeTracker {
     this.#changed()
   }
 
+  /** Removes a closed period and rewrites the log atomically (TIME-44, TIME-48). */
+  deletePeriod(id: string): TimeEditResult {
+    const rejected = this.#editTarget(id)
+    if (rejected) return rejected
+    this.#periods = this.#periods.filter((p) => p.id !== id)
+    return this.#rewritten()
+  }
+
+  /** Replaces a closed period's bounds after validating them against now (TIME-45, TIME-46). */
+  adjustPeriod(id: string, start: string, end: string): TimeEditResult {
+    const rejected = this.#editTarget(id)
+    if (rejected) return rejected
+    const startMs = Date.parse(start)
+    const endMs = Date.parse(end)
+    if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+      return { ok: false, error: 'Start and end must be valid dates.' }
+    }
+    if (startMs >= endMs) return { ok: false, error: 'Start must be before end.' }
+    if (endMs > this.deps.now()) return { ok: false, error: 'End cannot be in the future.' }
+    if (endMs - startMs < MIN_PERIOD_MS) {
+      return { ok: false, error: 'A period must last at least 1 second.' }
+    }
+    this.#periods = this.#periods.map((p) =>
+      p.id === id
+        ? { ...p, start: new Date(startMs).toISOString(), end: new Date(endMs).toISOString() }
+        : p
+    )
+    return this.#rewritten()
+  }
+
   snapshot(): TimeSnapshot {
     const runs = [...this.#runs.entries()]
     return {
@@ -171,6 +207,23 @@ export class TimeTracker {
     const period: TimePeriod = { ...fields, end }
     this.#periods.push(period)
     this.deps.store.append(period)
+  }
+
+  /** Rejects an id that is open or no longer in the log (TIME-47, TIME-49); null when editable. */
+  #editTarget(id: string): TimeEditResult | null {
+    if (this.snapshot().open.some((p) => p.id === id)) {
+      return { ok: false, error: 'This period is still open.' }
+    }
+    if (!this.#periods.some((p) => p.id === id)) {
+      return { ok: false, error: 'This period no longer exists.' }
+    }
+    return null
+  }
+
+  #rewritten(): TimeEditResult {
+    this.deps.store.rewrite([...this.#periods])
+    this.deps.emit()
+    return { ok: true }
   }
 
   #changed(): void {

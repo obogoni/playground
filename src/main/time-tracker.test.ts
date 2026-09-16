@@ -361,3 +361,100 @@ describe('TimeTracker lifecycle', () => {
     expect(api.filter((name) => /lock/i.test(name))).toEqual([])
   })
 })
+
+describe('TimeTracker edits', () => {
+  /** Closed p1 (T0 → +1 h) and p2 (+1h30 → +2h30), open p3 since +2h30; now = T0 + 3 h. */
+  function withHistory(): Harness {
+    const t = setup()
+    t.tracker.started(meta('s1'))
+    t.advance(60 * MIN)
+    t.tracker.pause('s1')
+    t.advance(30 * MIN)
+    t.tracker.resume('s1')
+    t.advance(60 * MIN)
+    t.tracker.pause('s1')
+    t.tracker.resume('s1')
+    t.advance(30 * MIN)
+    return t
+  }
+
+  const ok = { ok: true }
+
+  it('delete removes the period from the log and rewrites it (TIME-44, TIME-48)', () => {
+    const t = withHistory()
+    const emits = t.emits()
+
+    expect(t.tracker.deletePeriod('p1')).toEqual(ok)
+
+    expect(t.tracker.snapshot().periods.map((p) => p.id)).toEqual(['p2'])
+    expect(t.store.rewrites).toHaveLength(1)
+    expect(t.store.rewrites[0].map((p) => p.id)).toEqual(['p2'])
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it('adjust persists the new bounds (TIME-45, TIME-48)', () => {
+    const t = withHistory()
+    const emits = t.emits()
+    const start = iso(T0 + 5 * MIN)
+    const end = iso(T0 + 30 * MIN)
+
+    expect(t.tracker.adjustPeriod('p1', start, end)).toEqual(ok)
+
+    const p1 = t.tracker.snapshot().periods.find((p) => p.id === 'p1')
+    expect([p1?.start, p1?.end]).toEqual([start, end])
+    expect(t.store.rewrites).toHaveLength(1)
+    expect(t.store.rewrites[0].find((p) => p.id === 'p1')).toMatchObject({ start, end })
+    expect(t.store.rewrites[0].map((p) => p.id)).toEqual(['p1', 'p2'])
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it('adjust accepts an end exactly at now and bounds on different days', () => {
+    const t = withHistory()
+    const now = T0 + 3 * 60 * MIN
+    expect(t.tracker.adjustPeriod('p1', iso(T0 - 24 * 60 * MIN), iso(now))).toEqual(ok)
+  })
+
+  it.each([
+    ['start equal to end', 60 * MIN, 60 * MIN, 'Start must be before end.'],
+    ['start after end', 90 * MIN, 60 * MIN, 'Start must be before end.'],
+    ['end in the future', 60 * MIN, 3 * 60 * MIN + 1, 'End cannot be in the future.'],
+    ['length under 1 s', 60 * MIN, 60 * MIN + 999, 'A period must last at least 1 second.']
+  ])('adjust rejects %s and persists nothing (TIME-46)', (_name, startOffset, endOffset, error) => {
+    const t = withHistory()
+    const before = t.tracker.snapshot()
+    const emits = t.emits()
+
+    expect(t.tracker.adjustPeriod('p1', iso(T0 + startOffset), iso(T0 + endOffset))).toEqual({
+      ok: false,
+      error
+    })
+
+    expect(t.tracker.snapshot()).toEqual(before)
+    expect(t.store.rewrites).toEqual([])
+    expect(t.emits()).toBe(emits)
+  })
+
+  it('rejects editing or deleting the open period (TIME-47)', () => {
+    const t = withHistory()
+    const openId = t.tracker.snapshot().open[0].id
+    const rejected = { ok: false, error: 'This period is still open.' }
+
+    expect(t.tracker.deletePeriod(openId)).toEqual(rejected)
+    expect(t.tracker.adjustPeriod(openId, iso(T0), iso(T0 + MIN))).toEqual(rejected)
+    expect(t.tracker.snapshot().open.map((p) => p.id)).toEqual([openId])
+    expect(t.store.rewrites).toEqual([])
+  })
+
+  it('rejects a period that is no longer in the log (TIME-49)', () => {
+    const t = withHistory()
+    t.tracker.deletePeriod('p1')
+    const rewrites = t.store.rewrites.length
+    const emits = t.emits()
+    const rejected = { ok: false, error: 'This period no longer exists.' }
+
+    expect(t.tracker.deletePeriod('p1')).toEqual(rejected)
+    expect(t.tracker.adjustPeriod('unknown', iso(T0), iso(T0 + MIN))).toEqual(rejected)
+    expect(t.store.rewrites).toHaveLength(rewrites)
+    expect(t.emits()).toBe(emits)
+  })
+})

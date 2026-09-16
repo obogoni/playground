@@ -422,9 +422,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Tests: delete removes and rewrites; adjust persists bounds; start ≥ end rejected; end in future rejected; < 1 s rejected; open period id rejected; unknown id rejected; rejected edit rewrites nothing; each success emits once
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: B + 88 tests pass
+- [x] Tests: delete removes and rewrites; adjust persists bounds; start ≥ end rejected; end in future rejected; < 1 s rejected; open period id rejected; unknown id rejected; rejected edit rewrites nothing; each success emits once
+- [x] Gate check passes: `npm test`
+- [x] Test count: B + 88 tests pass
 
 **Tests**: unit
 **Gate**: full
