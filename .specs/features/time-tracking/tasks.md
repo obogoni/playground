@@ -316,9 +316,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Tests: the owner's preview reproduced byte-for-byte (`16/09/2026 (qua) — total 6h42` + two padded lines); chronological order across groups; `Task #<id>` without title; `No task · <leaf>` label; single-line day has no padding surplus
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/hours-copy.test.ts`
-- [ ] Test count: B + 46 tests pass
+- [x] Tests: the owner's preview reproduced byte-for-byte (`16/09/2026 (qua) — total 6h42` + two padded lines); chronological order across groups; `Task #<id>` without title; `No task · <leaf>` label; single-line day has no padding surplus
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/hours-copy.test.ts`
+- [x] Test count: B + 46 tests pass
 
 **Tests**: unit
 **Gate**: quick
