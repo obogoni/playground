@@ -5,6 +5,10 @@
 > (`working` / `waiting`) inferred from the terminal screen. There are now seven states
 > carrying detail, and the notification a user actually wants — "your agent is blocked on
 > you" — was not expressible before. Every change is marked **[rev2]**.
+>
+> Revised 2026-09-16 after the owner answered the open assumptions: one master switch **plus
+> a switch per notifiable state**, all enabled by default. P3 grows accordingly. Changes are
+> marked **[rev3]**.
 
 ## Problem Statement
 
@@ -28,6 +32,7 @@ nothing to notify about.
 - [ ] A notification takes them straight to the session that raised it
 - [ ] Notifications stay quiet when the user is already looking at the answer
 - [ ] The whole behaviour can be turned off
+- [ ] **[rev3]** Each notifiable state can be turned off on its own
 
 ## Out of Scope
 
@@ -38,8 +43,8 @@ nothing to notify about.
 | **[rev2]** Notifying on `exited` (agent quit, shell alive) | Nothing is waiting: the user typed `/exit` themselves, or the agent crashed and the row already says `shell`. A crash notification is a different feature with its own decision |
 | Notifying when a session's shell exits | A different signal on a different axis (`session:exit` already exists) |
 | Notifications for ad-hoc sessions, or for agents that publish no hooks | They carry no activity state at all — inherited from `session-activity-status`, not re-litigated here |
-| **[rev2]** A separate switch per state ("tell me when blocked but not when finished") | One switch until there is evidence one is not enough. Recorded as the first thing to add if the finished-notifications prove noisy |
-| Per-agent or per-session notification settings | Same reason |
+| Per-agent or per-session notification settings | **[rev3]** The per-state switches cover "which notifications"; "for which session" waits for evidence it is needed |
+| **[rev3]** Separate switches per surface (OS notification vs in-app toast) | The surface follows from focus, not preference; a state switch silences both |
 | Sound, urgency levels, notification actions/buttons | The existing notifier surfaces title + body + click; matching it keeps one code path |
 | Batching or rate-limiting several at once | One per session, bounded by how many agents the user chose to run |
 | **[rev2]** Notifying that a usage limit paused a session | `StopFailure` reports `rate_limit` as an `error`, which this feature does notify. The `quota_auto_resume_*` notifications that say the wait ended are not consumed by `session-activity-status` yet; see its follow-up |
@@ -50,15 +55,18 @@ nothing to notify about.
 
 | Assumption / decision | Chosen default | Rationale | Confirmed? |
 | --------------------- | -------------- | --------- | ---------- |
-| **[rev2]** Which transitions notify | Entering `waiting`, `needs-approval`, `needs-input` or `error`. Never `working`, `compacting` or `exited` | Those four are exactly the states where the agent has stopped and the next move is the user's | n |
-| **[rev2]** Two tiers, one switch | `needs-approval` / `needs-input` are **blocked**; `waiting` / `error` are **finished**. The tier changes only the wording, not whether it fires | A blocked agent is idle while the user believes it is working, which is the costlier miss; but two switches before any evidence of noise is premature configurability | n |
+| **[rev2]** Which transitions notify | Entering `waiting`, `needs-approval`, `needs-input` or `error`. Never `working`, `compacting` or `exited` | Those four are exactly the states where the agent has stopped and the next move is the user's | y |
+| **[rev3]** Two tiers are wording only | `needs-approval` / `needs-input` are **blocked**; `waiting` / `error` are **finished**. The tier changes the wording and the priority of the story, never whether it fires | A blocked agent is idle while the user believes it is working, which is the costlier miss | y |
+| **[rev3]** Switches | One **master** switch plus **one switch per notifiable state** (`needs-approval`, `needs-input`, `waiting`, `error`). A notification fires only when the master and that state's switch are both on. Per state, not per tier | Owner decision: the user picks which states notify, or turns them all off at once | y |
+| **[rev3]** Defaults | Master and all four states **on** when absent from the config | Owner decision. A fresh install notifies; the user turns off what is noise | y |
+| **[rev3]** Master off keeps the state choices | Turning the master off does not change the four state switches; turning it back on restores them | Otherwise "pause all notifications" destroys the selection the user made | n |
 | When a notification fires | When the app window is **not focused** OR the session is **not the attached one** | Owner decision. Those are the two cases where the rail's indicator cannot be seen | y |
-| Which surface each case uses | Window unfocused → **OS notification**. Window focused but session not attached → **in-app toast** | An OS toast thrown at someone already looking at the app duplicates a signal the app can deliver itself; an in-app toast is invisible when the app is behind another window. **Still the agent's reading of the owner's "unfocused OR not visible" answer — confirm before Design** | n |
+| Which surface each case uses | Window unfocused → **OS notification**. Window focused but session not attached → **in-app toast** | An OS toast thrown at someone already looking at the app duplicates a signal the app can deliver itself; an in-app toast is invisible when the app is behind another window. **[rev3]** Confirmed by the owner 2026-09-16 | y |
 | The attached session is exempt while focused | No notification of either kind | Its row and its terminal are both on screen | y |
-| **[rev2]** Where the decision is made | Main, which already holds the attached session (`SessionManager.#activeId`) and can read window focus. The in-app toast is a push to the renderer | Keeping one decision in one place stops the two surfaces from disagreeing about whether a transition was notifiable. **Design may split it; that is a Design call, not a spec one** | n |
-| **[rev2]** Setting name | `ui.notifyOnAgentActivity?: boolean`, absent = enabled, persisted immediately on toggle | The original `notifyOnAgentIdle` no longer describes what it gates, and nothing has shipped, so the rename is free. Persist-on-change matches `defaultShell` | n |
+| **[rev2]** Where the decision is made | Main, which already holds the attached session (`SessionManager.#activeId`) and can read window focus. The in-app toast is a push to the renderer | Keeping one decision in one place stops the two surfaces from disagreeing about whether a transition was notifiable. **Design may split it; that is a Design call, not a spec one** | Design |
+| **[rev3]** Setting shape | Under `ui`, absent keys = enabled, persisted immediately on toggle via `config:patch`, edited in the settings dialog. The exact key shape is a Design call — note `ConfigPatch` merges `ui` one level deep, so a nested object is replaced whole | Persist-on-change matches `defaultShell`. Replaces the single `ui.notifyOnAgentActivity` boolean of rev2 | Design |
 | Click target | Show and focus the window, switch to the agents direction, select the session | Mirrors the `workflow:focus-run` path already shipped | y |
-| **[rev2]** Notification content | Title: agent + session title. Body: the state, plus the detail the activity already carries — the tool for an approval, the error type for a failure | `SessionActivity` carries `tool` and `error`, so "needs approval to run Bash" and "turn failed: rate_limit" cost nothing extra. A body that only says "waiting" makes the user open the app to learn what it wants | n |
+| **[rev2]** Notification content | Title: agent + session title. Body: the state, plus the detail the activity already carries — the tool for an approval, the error type for a failure | `SessionActivity` carries `tool` and `error`, so "needs approval to run Bash" and "turn failed: rate_limit" cost nothing extra. A body that only says "waiting" makes the user open the app to learn what it wants. **[rev3]** Confirmed by the owner | y |
 | Several sessions at once | One notification per session, no batching | Bounded by how many agents the user chose to run |
 | Notifications unsupported by the OS | Skip silently | The existing `isSupported()` guard already does this | y |
 | **[rev2]** Idempotency | Inherited: `session-activity-status` emits nothing when the view is unchanged (**ACTV-06**), so a notification cannot repeat without a real transition | Corrects the original citation, which pointed at ACTV-07 before the renumbering | y |
@@ -68,10 +76,11 @@ nothing to notify about.
 | Data lifecycle | N/A | Fire-and-forget; the only persisted datum is the boolean setting | y |
 | Observability | N/A | The notifier is an existing, exercised path; this adds a caller | y |
 
-**Open questions:** none blocking, but six rows are the agent's defaults rather than owner
-decisions and are marked `n`: which transitions notify, the two-tier wording, the OS-toast /
-in-app-toast split, where the decision is made, the setting rename, and the body content.
-They need a yes/no before Design.
+**Open questions:** none. **[rev3]** The owner confirmed the triggers, the surface
+split, the body content, and replaced the single switch with a master plus per-state
+switches, all on by default. Two rows are left to Design (where the decision is made, the
+config key shape). One row stays `n` as the agent's default: the master switch preserves
+the per-state choices.
 
 ---
 
@@ -124,23 +133,31 @@ the middle produces nothing.
 
 ---
 
-### P3: Turn notifications off
+### P3: Choose which notifications to get **[rev3]**
 
-**User Story**: As a user who finds them intrusive, I want one switch that stops them, so
-that the rail's indicators remain without the interruptions.
+**User Story**: As a user who finds some of them intrusive, I want to pick which states
+notify me, or switch them all off at once, so that I keep the alerts I value and the rail's
+indicators stay either way.
 
 **Why P3**: A notification the user cannot silence is a feature they turn off by
-uninstalling it.
+uninstalling it. Per-state switches let "tell me when blocked, not when finished" exist
+without giving up the rest.
 
 **Acceptance Criteria**:
 
-1. WHERE `ui.notifyOnAgentActivity` is false the app SHALL show neither an OS notification nor an in-app toast on any activity transition.  <!-- optional-feature -->
-2. WHEN the user toggles the setting THEN the app SHALL persist it immediately via `config:patch`.  <!-- event-driven -->
-3. WHERE `ui.notifyOnAgentActivity` is absent from the config the app SHALL treat notifications as enabled.  <!-- optional-feature -->
+1. WHERE the master notification switch is off the app SHALL show neither an OS notification nor an in-app toast on any activity transition.  <!-- optional-feature -->
+2. WHERE the master switch is on and the switch for a state is off, WHEN a session enters that state THEN the app SHALL show neither an OS notification nor an in-app toast.  <!-- complex -->
+3. WHERE the master switch is on and the switch for a state is on, WHEN a session enters that state THEN the app SHALL notify as P1 and P2 specify.  <!-- complex -->
+4. WHEN the user toggles the master switch or a state switch in the settings dialog THEN the app SHALL persist it immediately via `config:patch`.  <!-- event-driven -->
+5. WHERE the master switch or a state switch is absent from the config the app SHALL treat it as on.  <!-- optional-feature -->
+6. The settings dialog SHALL offer one switch per notifiable state: `needs-approval`, `needs-input`, `waiting` and `error`.  <!-- ubiquitous -->
+7. WHEN the user turns the master switch off and back on THEN the app SHALL keep each state switch as it was.  <!-- event-driven -->
+8. WHILE the master switch is off the settings dialog SHALL show the state switches as disabled.  <!-- state-driven -->
 
-**Independent Test**: Turn the setting off, put the app in the background, let an agent
-finish — nothing. Turn it back on, repeat — the notification appears. Restart the app and
-the setting holds.
+**Independent Test**: Turn `waiting` off, put the app in the background, let an agent finish
+— nothing; trigger a permission prompt — one notification. Turn the master off, trigger the
+prompt again — nothing. Turn the master back on: `waiting` is still off. Restart the app and
+every switch holds.
 
 ---
 
@@ -171,21 +188,26 @@ the setting holds.
 | NOTF-10 | P2: Told when an agent finishes or fails | - | Pending |
 | NOTF-11 | P2: Told when an agent finishes or fails | - | Pending |
 | NOTF-12 | P2: Told when an agent finishes or fails | - | Pending |
-| NOTF-13 | P3: Turn notifications off | - | Pending |
-| NOTF-14 | P3: Turn notifications off | - | Pending |
-| NOTF-15 | P3: Turn notifications off | - | Pending |
-| NOTF-16 | Edge cases | - | Pending |
-| NOTF-17 | Edge cases | - | Pending |
-| NOTF-18 | Edge cases | - | Pending |
-| NOTF-19 | Edge cases | - | Pending |
-| NOTF-20 | Edge cases | - | Pending |
+| NOTF-13 | P3: Choose which notifications to get | - | Pending |
+| NOTF-14 | P3: Choose which notifications to get | - | Pending |
+| NOTF-15 | P3: Choose which notifications to get | - | Pending |
+| NOTF-16 | P3: Choose which notifications to get | - | Pending |
+| NOTF-17 | P3: Choose which notifications to get | - | Pending |
+| NOTF-18 | P3: Choose which notifications to get | - | Pending |
+| NOTF-19 | P3: Choose which notifications to get | - | Pending |
+| NOTF-20 | P3: Choose which notifications to get | - | Pending |
 | NOTF-21 | Edge cases | - | Pending |
+| NOTF-22 | Edge cases | - | Pending |
+| NOTF-23 | Edge cases | - | Pending |
+| NOTF-24 | Edge cases | - | Pending |
+| NOTF-25 | Edge cases | - | Pending |
+| NOTF-26 | Edge cases | - | Pending |
 
 **ID format:** `NOTF-[NUMBER]`
 
 **Status values:** Pending → In Design → In Tasks → Implementing → Verified
 
-**Coverage:** 21 total, 0 mapped to tasks (Tasks phase not yet run), 0 unmapped
+**Coverage:** 26 total, 0 mapped to tasks (Tasks phase not yet run), 0 unmapped
 
 ---
 
@@ -197,3 +219,4 @@ the setting holds.
 - [ ] Working at the attached session's terminal produces no notifications at all
 - [ ] **[rev2]** A turn that compacts, runs ten tools and finishes produces exactly one notification
 - [ ] The off switch silences both surfaces and survives a restart
+- [ ] **[rev3]** Turning one state off silences only that state, and survives toggling the master switch and a restart
