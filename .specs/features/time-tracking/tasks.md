@@ -238,9 +238,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Tests: 0 → `00:00:00`/`00:00`/`0h00`; 59 999 ms floors to `00:00:59`/`00:00`; 2h28m → `2h28`; ≥ 100 h renders `100:00`; header for 2026-09-16 is `16/09/2026 (qua)`; all seven weekdays
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/time-format.test.ts`
-- [ ] Test count: B + 20 tests pass
+- [x] Tests: 0 → `00:00:00`/`00:00`/`0h00`; 59 999 ms floors to `00:00:59`/`00:00`; 2h28m → `2h28`; ≥ 100 h renders `100:00`; header for 2026-09-16 is `16/09/2026 (qua)`; all seven weekdays
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/time-format.test.ts`
+- [x] Test count: B + 20 tests pass
 
 **Tests**: unit
 **Gate**: quick
