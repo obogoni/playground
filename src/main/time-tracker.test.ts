@@ -246,6 +246,40 @@ describe('TimeTracker lifecycle', () => {
     expect(t.tracker.snapshot().open.map((p) => p.start)).toEqual([iso(T0 + 2 * MIN)])
   })
 
+  it('rewrites the sidecar with the open periods on every transition, so recovery never re-closes a closed period (TIME-04, TIME-05)', () => {
+    const t = setup()
+    t.tracker.started(meta())
+    t.advance(MIN)
+    const written = (): Array<[string, string]> => {
+      const last = t.store.openWrites.at(-1) ?? []
+      return last.map((p) => [p.id, p.start])
+    }
+    const writes = (fn: () => void): number => {
+      const before = t.store.openWrites.length
+      fn()
+      return t.store.openWrites.length - before
+    }
+
+    expect(writes(() => t.tracker.pause('s1'))).toBe(1)
+    expect(written()).toEqual([])
+
+    t.advance(MIN)
+    expect(writes(() => t.tracker.resume('s1'))).toBe(1)
+    expect(written()).toEqual([['p2', iso(T0 + 2 * MIN)]])
+
+    t.advance(MIN)
+    expect(writes(() => t.tracker.suspend())).toBe(1)
+    expect(written()).toEqual([])
+
+    t.advance(MIN)
+    expect(writes(() => t.tracker.resumeFromSuspend())).toBe(1)
+    expect(written()).toEqual([['p3', iso(T0 + 4 * MIN)]])
+
+    t.advance(MIN)
+    expect(writes(() => t.tracker.ended('s1'))).toBe(1)
+    expect(written()).toEqual([])
+  })
+
   it('heartbeat advances lastSeen on every open period and writes the sidecar (TIME-04)', () => {
     const t = setup()
     t.tracker.started(meta('s1'))
