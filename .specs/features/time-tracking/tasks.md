@@ -212,9 +212,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Tests: disjoint, overlapping, nested, identical, touching, gap = 60 s merges, gap = 61 s does not, empty input, clip outside/partial, split across one midnight and across two, interval ending exactly at midnight
-- [ ] Gate check passes: `npx vitest run src/shared/time-intervals.test.ts`
-- [ ] Test count: B + 12 tests pass
+- [x] Tests: disjoint, overlapping, nested, identical, touching, gap = 60 s merges, gap = 61 s does not, empty input, clip outside/partial, split across one midnight and across two, interval ending exactly at midnight
+- [x] Gate check passes: `npx vitest run src/shared/time-intervals.test.ts`
+- [x] Test count: B + 12 tests pass
 
 **Tests**: unit
 **Gate**: quick
