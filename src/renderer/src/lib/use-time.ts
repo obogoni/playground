@@ -57,10 +57,16 @@ export function useNow(intervalMs: number | null): number {
   const [now, setNow] = useState(Date.now)
 
   useEffect(() => {
-    setNow(Date.now())
-    if (intervalMs === null) return
-    const timer = setInterval(() => setNow(Date.now()), intervalMs)
-    return () => clearInterval(timer)
+    const tick = (): void => setNow(Date.now())
+    // Catch up at once when ticking (re)starts, so a counter that stood still
+    // does not show a stale value for a whole interval. Deferred, not called
+    // synchronously, so the effect never sets state in its own body.
+    const catchUp = setTimeout(tick, 0)
+    const timer = intervalMs === null ? undefined : setInterval(tick, intervalMs)
+    return () => {
+      clearTimeout(catchUp)
+      clearInterval(timer)
+    }
   }, [intervalMs])
 
   return now

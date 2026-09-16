@@ -510,6 +510,8 @@ T25 -> T26
 **Tests**: none
 **Gate**: build
 
+**Gate correction (Verifier, fix 1)**: this task was ticked on a red lint gate — `useNow` set state synchronously in its effect (`react-hooks/set-state-in-effect`). The gate had been read from a filtered output line instead of the exit code. Fixed in `fix(time): clear the react-hooks lint errors`.
+
 **Commit**: `feat(time): add the renderer time snapshot hook`
 
 ---
@@ -757,6 +759,8 @@ T25 -> T26
 
 **Tests**: none
 **Gate**: build
+
+**Gate correction (Verifier, fix 1)**: this task was ticked on a red lint gate — `Date.now()` during render (`react-hooks/purity`). Fixed in `fix(time): clear the react-hooks lint errors`.
 
 **Commit**: `feat(time): add the weekly Hours view`
 

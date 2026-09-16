@@ -50,7 +50,9 @@ export function HoursView({
 }: HoursViewProps): JSX.Element {
   const [weekStart, setWeekStart] = useState(() => weekRange(new Date()).start)
   const week = weekRange(new Date(weekStart))
-  const live = snapshot.open.some((p) => Date.parse(p.start) < week.end && Date.now() >= week.start)
+  // Open periods always run in the present, so any of them keeps the report
+  // refreshing; for a past or future week the extra minute ticks change nothing.
+  const live = snapshot.open.length > 0
   const now = useNow(live ? LIVE_REFRESH_MS : null)
   const report = useMemo(
     () => buildWeekReport(snapshot, now, weekStart, liveTitles),
