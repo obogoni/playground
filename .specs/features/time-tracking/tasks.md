@@ -646,7 +646,7 @@ T25 -> T26
 **Tests**: none
 **Gate**: build
 
-**Deviation (executed)**: `time` threaded from `App` here (L-001).
+**Deviation (executed)**: `time` threaded from `App` here (L-001). **Amended during T21 verification**: the total moved from the footer to the card header, beside `#id` — in the footer it overflowed the card by 20 px at the pane's default width (footer 335 px of content in 315 px).
 
 **Commit**: `feat(time): show task total on pinned task cards`
 

@@ -272,9 +272,9 @@
   cursor: default;
 }
 
-/* Task time total (TIME-26): pushed right, next to the card's actions. */
+/* Task time total (TIME-26): in the header beside the id — the footer has no
+   room left for it at the pane's default width. */
 .task-card-time {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 4px;

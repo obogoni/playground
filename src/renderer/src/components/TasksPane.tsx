@@ -177,6 +177,11 @@ function TaskCard({
           </>
         )}
         <span className="task-card-spacer" />
+        <TotalClock
+          className="task-card-time"
+          totalAt={(now) => taskTotalMs(time, task.id, now)}
+          live={time.open.some((p) => p.taskId === task.id)}
+        />
         <span className="task-card-id">#{task.id}</span>
         <button type="button" className="task-unpin-btn" title="Unpin" onClick={onUnpin}>
           <Icon name="x" size={12} strokeWidth={2.2} />
@@ -196,11 +201,6 @@ function TaskCard({
         ) : (
           <span className="task-card-wt none">No worktree yet</span>
         )}
-        <TotalClock
-          className="task-card-time"
-          totalAt={(now) => taskTotalMs(time, task.id, now)}
-          live={time.open.some((p) => p.taskId === task.id)}
-        />
         <button
           type="button"
           className={`task-start-btn ${worktreeCount > 0 ? 'ghost' : 'primary'}`}
