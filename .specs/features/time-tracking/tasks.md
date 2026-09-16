@@ -751,9 +751,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Both themes readable; long task titles ellipsize
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B + 93 tests pass
+- [x] Both themes readable; long task titles ellipsize
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B + 93 tests pass
 
 **Tests**: none
 **Gate**: build
