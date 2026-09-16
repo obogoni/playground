@@ -172,6 +172,14 @@ describe('TimeLogStore', () => {
     store.append(period('c'))
 
     expect(new TimeLogStore(dir, log).readPeriods().periods).toEqual([period('b'), period('c')])
+
+    // Once the retry lands, appends go back to appending: nothing since is lost.
+    store.append(period('d'))
+    expect(new TimeLogStore(dir, log).readPeriods().periods).toEqual([
+      period('b'),
+      period('c'),
+      period('d')
+    ])
   })
 
   it('keeps retrying a failed rewrite across further failing appends (TIME-14)', () => {
