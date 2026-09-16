@@ -180,18 +180,18 @@ every switch holds.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| NOTF-01 | P1: Told when an agent is blocked | - | Pending |
-| NOTF-02 | P1: Told when an agent is blocked | - | Pending |
-| NOTF-03 | P1: Told when an agent is blocked | - | Pending |
-| NOTF-04 | P1: Told when an agent is blocked | - | Pending |
+| NOTF-01 | P1: Told when an agent is blocked | Execute | Implementing |
+| NOTF-02 | P1: Told when an agent is blocked | Execute | Implementing |
+| NOTF-03 | P1: Told when an agent is blocked | Execute | Implementing |
+| NOTF-04 | P1: Told when an agent is blocked | Execute | Implementing |
 | NOTF-05 | P1: Told when an agent is blocked | - | Pending |
 | NOTF-06 | P1: Told when an agent is blocked | - | Pending |
-| NOTF-07 | P2: Told when an agent finishes or fails | - | Pending |
-| NOTF-08 | P2: Told when an agent finishes or fails | - | Pending |
-| NOTF-09 | P2: Told when an agent finishes or fails | - | Pending |
-| NOTF-10 | P2: Told when an agent finishes or fails | - | Pending |
-| NOTF-11 | P2: Told when an agent finishes or fails | - | Pending |
-| NOTF-12 | P2: Told when an agent finishes or fails | - | Pending |
+| NOTF-07 | P2: Told when an agent finishes or fails | Execute | Implementing |
+| NOTF-08 | P2: Told when an agent finishes or fails | Execute | Implementing |
+| NOTF-09 | P2: Told when an agent finishes or fails | Execute | Implementing |
+| NOTF-10 | P2: Told when an agent finishes or fails | Execute | Implementing |
+| NOTF-11 | P2: Told when an agent finishes or fails | Execute | Implementing |
+| NOTF-12 | P2: Told when an agent finishes or fails | Execute | Implementing |
 | NOTF-13 | P3: Choose which notifications to get | Execute | Implementing |
 | NOTF-14 | P3: Choose which notifications to get | Execute | Implementing |
 | NOTF-15 | P3: Choose which notifications to get | Execute | Implementing |
@@ -204,9 +204,9 @@ every switch holds.
 | NOTF-22 | Edge cases | - | Pending |
 | NOTF-23 | Edge cases | - | Pending |
 | NOTF-24 | Edge cases | - | Pending |
-| NOTF-25 | Edge cases | - | Pending |
+| NOTF-25 | Edge cases | Execute | Implementing |
 | NOTF-26 | Edge cases | - | Pending |
-| NOTF-27 | Edge cases | - | Pending |
+| NOTF-27 | Edge cases | Execute | Implementing |
 | NOTF-28 | P3: Choose which notifications to get (AC 9, added after the edge cases were numbered) | - | Pending |
 | NOTF-29 | P3: Choose which notifications to get (AC 10) | - | Pending |
 

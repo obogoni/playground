@@ -178,7 +178,9 @@ T12 → T13
 
 ---
 
-### T4: Deciding and describing a notification
+### T4: Deciding and describing a notification ✅ COMPLETE
+
+**Status**: Done — `activity-notification.ts` (`ActivityChange`, `decideNotification`, `describeNotification`) + 43 tests: each of the four states × surface, attached, master, own switch, first event; the three silent states; no activity; answered approval; detail-only change; wording and title prefix. Quick gate green; lint clean. Suite 927 → 970.
 
 **What**: Implement `src/main/activity-notification.ts` with `ActivityChange` (the type `SessionManager` will report), `decideNotification` (the seven ordered rules of the design) and `describeNotification` (title and body wording).
 **Where**: `src/main/activity-notification.ts`
@@ -193,11 +195,11 @@ T12 → T13
 
 **Done when**:
 
-- [ ] No I/O, no Electron import; imports only from `src/shared`
-- [ ] `decideNotification` tests, one per rule and per state: each of the four notifiable states entered from `working` → `'os'` when unfocused, `'in-app'` when focused and not attached, `null` when focused and attached (NOTF-01/02/03, 07/08/09); entering `working`, `compacting`, `exited` → `null` (NOTF-10); `after` null → `null` (NOTF-11); `before` null → `null` even for `waiting` (NOTF-27); `needs-approval` → `working` → `null` (NOTF-25); same state with a different tool or subagent count → `null`; master off → `null` on both surfaces (NOTF-13); one state off → `null` for it and still notifies the other three (NOTF-14); unfocused + attached → `'os'` (minimized is unfocused, NOTF-24)
-- [ ] `describeNotification` tests: approval with and without a tool (NOTF-04); input; waiting; error with and without an error type (NOTF-08); title carries the agent and title, with no doubled `"<agent> · "` prefix when the title already starts with it, and a renamed title gets the prefix (NOTF-12)
-- [ ] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
-- [ ] Test count: ~925 → ~955 (+~30; no silent deletions)
+- [x] No I/O, no Electron import; imports only from `src/shared`
+- [x] `decideNotification` tests, one per rule and per state: each of the four notifiable states entered from `working` → `'os'` when unfocused, `'in-app'` when focused and not attached, `null` when focused and attached (NOTF-01/02/03, 07/08/09); entering `working`, `compacting`, `exited` → `null` (NOTF-10); `after` null → `null` (NOTF-11); `before` null → `null` even for `waiting` (NOTF-27); `needs-approval` → `working` → `null` (NOTF-25); same state with a different tool or subagent count → `null`; master off → `null` on both surfaces (NOTF-13); one state off → `null` for it and still notifies the other three (NOTF-14); unfocused + attached → `'os'` (minimized is unfocused, NOTF-24)
+- [x] `describeNotification` tests: approval with and without a tool (NOTF-04); input; waiting; error with and without an error type (NOTF-08); title carries the agent and title, with no doubled `"<agent> · "` prefix when the title already starts with it, and a renamed title gets the prefix (NOTF-12)
+- [x] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
+- [x] Test count: ~925 → ~955 (+~30; no silent deletions)
 
 **Tests**: unit
 **Gate**: quick
