@@ -1,4 +1,4 @@
-import { app, shell, dialog, BrowserWindow, Notification } from 'electron'
+import { app, shell, dialog, BrowserWindow, Notification, powerMonitor } from 'electron'
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
@@ -20,6 +20,9 @@ import { resolvePostCreateCommand } from './repo-config'
 import { SessionManager, type EmitFn } from './session-manager'
 import { ShortcutLauncher } from './shortcut-launcher'
 import { TaskBoard } from './task-board'
+import { TimeLogStore } from './time-log-store'
+import { buildSnapshot, readGit } from './time-snapshot'
+import { TimeTracker } from './time-tracker'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
 import type { CtxDeps, GitFetchOptions, ShellResult } from './workflow-ctx'
@@ -108,6 +111,7 @@ const spawnAgent: AgentSpawn = (bin, argv, { cwd, env }): AgentChild => {
 // emit() (the app is single-window) and window-all-closed can killAll().
 let mainWindow: BrowserWindow | null = null
 let sessionManager: SessionManager | null = null
+let timeTracker: TimeTracker | null = null
 
 function createWindow(): void {
   // Create the browser window.
@@ -246,11 +250,47 @@ app.whenReady().then(() => {
     notification.show()
   }
 
+  // Time tracking (AD-021). The tracker must recover the periods a crash left
+  // open before SessionManager exists, so no new run can mix with them.
+  const tracker = new TimeTracker({
+    store: new TimeLogStore(app.getPath('userData')),
+    now: Date.now,
+    newId: randomUUID,
+    resolveSnapshot: (cwd) => {
+      const pinnedTitles = new Map<number, string>()
+      for (const task of taskBoard.list().tasks) {
+        if (task.details && !pinnedTitles.has(task.id))
+          pinnedTitles.set(task.id, task.details.title)
+      }
+      return buildSnapshot({
+        cwd,
+        ...readGit(cwd),
+        workspacePaths: registry.list().map((ws) => ws.path),
+        pinnedTitles
+      })
+    },
+    emit: () => emitToWindow('time:changed', { at: new Date().toISOString() })
+  })
+  tracker.recover()
+  timeTracker = tracker
+  handle('time:snapshot', () => tracker.snapshot())
+  handle('time:pause', ({ sessionId }) => tracker.pause(sessionId))
+  handle('time:resume', ({ sessionId }) => tracker.resume(sessionId))
+  handle('time:delete', ({ id }) => tracker.deletePeriod(id))
+  handle('time:adjust', ({ id, start, end }) => tracker.adjustPeriod(id, start, end))
+  // The sidecar heartbeat bounds what a crash can lose to 60 s (TIME-04); unref'd
+  // so it never keeps the process alive.
+  setInterval(() => tracker.heartbeat(), 60_000).unref()
+  powerMonitor.on('suspend', () => tracker.suspend())
+  powerMonitor.on('resume', () => tracker.resumeFromSuspend())
+  // lock-screen / unlock-screen are deliberately not subscribed (TIME-08).
+
   sessionManager = new SessionManager({
     port: new PtyPort(),
     config: configStore,
     emit: emitToWindow,
-    fsExists: existsSync
+    fsExists: existsSync,
+    lifecycle: tracker
   })
   const sessions = sessionManager
   handle('sessions:list', () => sessions.list())
@@ -384,6 +424,9 @@ app.on('window-all-closed', () => {
   // PTYs die on quit — no daemon (PRD Out of Scope). Kill every live session
   // so no orphaned shell/agent survives the window closing.
   sessionManager?.killAll()
+  // After killAll: its synchronous finalize already ended each run, so this only
+  // closes whatever is still open, at the quit instant (TIME-09).
+  timeTracker?.closeAll()
   if (process.platform !== 'darwin') {
     app.quit()
   }

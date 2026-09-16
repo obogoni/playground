@@ -474,10 +474,10 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] No `lock-screen`/`unlock-screen` subscription exists
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
-- [ ] Test count: B + 93 tests pass
-- [ ] Hand-verified in dev: spawn + stop writes one line to `%APPDATA%/playground/time-log.jsonl`
+- [x] No `lock-screen`/`unlock-screen` subscription exists
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
+- [x] Test count: B + 93 tests pass
+- [x] Hand-verified in dev: spawn + stop writes one line to `%APPDATA%/playground/time-log.jsonl`
 
 **Tests**: none
 **Gate**: build
