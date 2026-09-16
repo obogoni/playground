@@ -184,9 +184,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Union includes `'hours'`; `config-store.test.ts` untouched and green
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B tests pass
+- [x] Union includes `'hours'`; `config-store.test.ts` untouched and green
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B tests pass
 
 **Tests**: none
 **Gate**: build

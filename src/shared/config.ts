@@ -34,7 +34,7 @@ export interface SessionView extends PersistedSession {
 export interface AppConfig {
   ui: {
     theme: 'dark' | 'light'
-    direction: 'tree' | 'board' | 'agents' | 'workflows'
+    direction: 'tree' | 'board' | 'agents' | 'workflows' | 'hours'
     /** Hosting shell for new agent PTYs; running sessions keep their own (AGCF-02). */
     defaultShell: Shell
     /** Persisted sidebar width; absent = 230px default (PANE-01). */
