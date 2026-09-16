@@ -1,7 +1,7 @@
 # Session Activity Notifications Design
 
 **Spec**: `.specs/features/session-idle-notifications/spec.md`
-**Status**: Draft
+**Status**: Approved
 
 ---
 
@@ -122,7 +122,7 @@ graph TD
 - **Location**: `src/main/session-manager.ts`
 - **Interfaces**:
   - `SessionManagerDeps.onActivityChange?: (change: ActivityChange) => void`
-  - `interface ActivityChange { id: string; agent: string; title: string; before: SessionActivity | null; after: SessionActivity | null; attached: boolean }`
+  - `interface ActivityChange { id: string; agent: string; title: string; before: SessionActivity | null; after: SessionActivity | null; attached: boolean }` — declared in `activity-notification.ts`, so the pure module owns the shape and `SessionManager` imports it
 - **Behaviour**: called in `#setActivity` right after the `session:activity` emit, so only on a changed view. `#finalize` clears activity directly and never calls it, so a stopping PTY cannot notify (NOTF-26). `title` reads `session.meta`, which `rename` keeps current.
 - **Reuses**: existing emit gate
 
