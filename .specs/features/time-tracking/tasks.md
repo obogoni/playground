@@ -290,9 +290,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Tests: Monday start for a Sunday and a Monday date; day union with two tasks in parallel; group per task id; No-task grouped per cwd with folder leaf; overlap merge; 60 s adjacency merge; midnight split lands on both days; open period clipped to `now`; periods outside the week excluded; empty week → no days; raw periods attached to their block
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/hours-report.test.ts`
-- [ ] Test count: B + 41 tests pass
+- [x] Tests: Monday start for a Sunday and a Monday date; day union with two tasks in parallel; group per task id; No-task grouped per cwd with folder leaf; overlap merge; 60 s adjacency merge; midnight split lands on both days; open period clipped to `now`; periods outside the week excluded; empty week → no days; raw periods attached to their block
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/hours-report.test.ts`
+- [x] Test count: B + 41 tests pass
 
 **Tests**: unit
 **Gate**: quick
