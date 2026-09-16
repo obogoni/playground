@@ -667,12 +667,14 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Counters visible in dev on all four surfaces; App does not re-render every second (React profiler)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
-- [ ] Test count: B + 93 tests pass
+- [x] Counters visible in dev on all four surfaces; App does not re-render every second (React profiler)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
+- [x] Test count: B + 93 tests pass
 
 **Tests**: none
 **Gate**: build
+
+**Executed**: the prop threading this task described landed in T17–T20 (see their deviations). Verified in dev over CDP (2026-09-16): rail row `hh:mm:ss` ticks (`00:00:35 → 00:00:37`); task and orphan group heads show `hh:mm`; detail bar counter with `current run` tooltip; Pause time freezes the total (`00:00:37`, current run `00:00:00`) and swaps to Resume time; the control is hidden on a stopped session; input reaches the PTY while paused (TIME-20); rail rows stay 36 px with or without the counter at 344 px; worktree pill `00:02`; pinned cards `00:00` (overflow found and fixed). App re-render: by construction — the only intervals are `useNow` inside `SessionClock` / `TotalClock`; `App` holds no per-second state (no profiler run). Light theme not captured.
 
 **Commit**: `feat(time): connect time totals to the app surfaces`
 
