@@ -456,3 +456,10 @@
 .detail-session-dot.faint {
   background: var(--text-faint);
 }
+
+/* Worktree time total (TIME-25): a neutral pill in the status row, digits tabular. */
+.detail-time {
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

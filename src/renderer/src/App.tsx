@@ -299,6 +299,7 @@ function App(): JSX.Element {
                 linkedTaskId={linkedTaskId}
                 linkedPin={linkedPin}
                 sessions={sessions.filter((s) => s.cwd === selected.worktree.path)}
+                time={time.snapshot}
                 onSpawnAgent={() => openNewSession({ cwd: selected.worktree.path })}
                 onOpenSession={openSession}
                 onToast={setToast}

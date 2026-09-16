@@ -611,12 +611,14 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Renders `00:00` for a worktree with no time
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B + 93 tests pass
+- [x] Renders `00:00` for a worktree with no time
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B + 93 tests pass
 
 **Tests**: none
 **Gate**: build
+
+**Deviation (executed)**: the total renders as a neutral pill at the end of the status row under the branch title, not inline in the `<h1>` (a long branch wraps, and a pill inside the heading would wrap with it); `time` threaded from `App` here (L-001).
 
 **Commit**: `feat(time): show worktree total in the worktree detail`
 
