@@ -777,9 +777,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Direction persists across restart
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
-- [ ] Test count: B + 93 tests pass
+- [x] Direction persists across restart
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
+- [x] Test count: B + 93 tests pass
 
 **Tests**: none
 **Gate**: build

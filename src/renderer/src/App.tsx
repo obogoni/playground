@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { AgentDef } from '../../shared/agents'
 import type { AppConfig } from '../../shared/config'
@@ -7,6 +7,7 @@ import { taskIdFromBranch } from '../../shared/tasks'
 import type { WorkspaceNode } from '../../shared/tree'
 import { AgentsView } from './components/AgentsView'
 import { BoardView } from './components/BoardView'
+import { HoursView } from './components/HoursView'
 import { NewSessionDialog, type NewSessionSource } from './components/NewSessionDialog'
 import { NewWorktreeDialog } from './components/NewWorktreeDialog'
 import { SettingsDialog } from './components/SettingsDialog'
@@ -118,6 +119,14 @@ function App(): JSX.Element {
   // Time snapshot (AD-021): refetched on time:changed; counters tick in their own
   // components, so App does not re-render every second.
   const time = useTime()
+  // Live pinned titles for the Hours labels; the first pin of an id wins, like the rail (TIME-40).
+  const liveTitles = useMemo(() => {
+    const titles = new Map<number, string>()
+    for (const task of tasks.tasks) {
+      if (task.details && !titles.has(task.id)) titles.set(task.id, task.details.title)
+    }
+    return titles
+  }, [tasks.tasks])
 
   const refreshTasks = useCallback((): void => {
     api.invoke('tasks:refresh').then(setTasks).catch(console.error)
@@ -353,6 +362,13 @@ function App(): JSX.Element {
             onReload={workflows.refresh}
             onScaffold={workflows.scaffold}
             onSelectRun={workflows.selectRun}
+          />
+        ) : ui.direction === 'hours' ? (
+          <HoursView
+            snapshot={time.snapshot}
+            liveTitles={liveTitles}
+            onDelete={time.deletePeriod}
+            onAdjust={time.adjustPeriod}
           />
         ) : (
           <BoardView
