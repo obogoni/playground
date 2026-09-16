@@ -149,7 +149,9 @@ T12 → T13
 
 ---
 
-### T3: `session:notice` and `session:focus` channels
+### T3: `session:notice` and `session:focus` channels ✅ COMPLETE
+
+**Status**: Done — `session:notice` and `session:focus` declared next to `session:activity`; `workflow:focus-run` untouched. Build gate green (phase 1 close): typecheck 0, lint 0 errors, 927 tests.
 
 **What**: Declare the two main→renderer events in `IpcEvents`: `'session:notice': { id: string; title: string; body: string }` and `'session:focus': { id: string }`.
 **Where**: `src/shared/ipc-contract.ts`
@@ -164,10 +166,10 @@ T12 → T13
 
 **Done when**:
 
-- [ ] Both events declared with a one-line comment each, next to the other `session:*` events
-- [ ] `workflow:focus-run` untouched
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] Both events declared with a one-line comment each, next to the other `session:*` events
+- [x] `workflow:focus-run` untouched
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none (type-only contract layer)
 **Gate**: build

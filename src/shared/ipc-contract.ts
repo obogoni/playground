@@ -136,6 +136,11 @@ export interface IpcEvents {
   /** What the session's agent is doing, folded from its lifecycle hooks; `null`
    *  clears it back to the plain `running` rendering (ACTV-05). */
   'session:activity': { id: string; activity: SessionActivity | null }
+  /** An activity transition to show as an in-app notice: the window is focused
+   *  but another session is on screen (NOTF-02). */
+  'session:notice': { id: string; title: string; body: string }
+  /** A session notification was clicked: open this session in the agents direction (NOTF-05). */
+  'session:focus': { id: string }
   /** A run's folded lifecycle status changed (WF2-12). */
   'workflow:status': { runId: string; status: RunStatus }
   /** A `step-started` event — an executed `ctx.*` primitive / `ctx.step` group (WF2-10). */
