@@ -1,17 +1,22 @@
 import { useState } from 'react'
 import type { JSX } from 'react'
 import type { PinnedTaskView, TasksSnapshot } from '../../../shared/tasks'
+import type { TimeSnapshot } from '../../../shared/time'
 import { api } from '../lib/api'
 import { TASKS_BOUNDS, TASKS_DEFAULT_WIDTH, resolvePaneWidth } from '../lib/pane-layout'
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
+import { taskTotalMs } from '../lib/time-totals'
 import { Icon } from './Icon'
 import { ResizablePane } from './ResizablePane'
+import { TotalClock } from './TimeCounter'
 import './TasksPane.css'
 
 interface TasksPaneProps {
   snapshot: TasksSnapshot
   /** Worktree count per extracted task ID, from the current tree snapshot. */
   worktreeCounts: Map<number, number>
+  /** Time snapshot for each card's task total (TIME-26). */
+  time: TimeSnapshot
   onSnapshot: (snapshot: TasksSnapshot) => void
   onStartWork: (task: PinnedTaskView) => void
   /** Opens the New Session dialog for a task (0/1/many worktree resolution). */
@@ -27,6 +32,7 @@ interface TasksPaneProps {
 export function TasksPane({
   snapshot,
   worktreeCounts,
+  time,
   onSnapshot,
   onStartWork,
   onSpawnAgent,
@@ -127,6 +133,7 @@ export function TasksPane({
               key={`${task.org}/${task.project}/${task.id}`}
               task={task}
               worktreeCount={worktreeCounts.get(task.id) ?? 0}
+              time={time}
               onUnpin={() => unpin(task)}
               onStartWork={() => onStartWork(task)}
               onSpawnAgent={() => onSpawnAgent(task)}
@@ -141,6 +148,7 @@ export function TasksPane({
 interface TaskCardProps {
   task: PinnedTaskView
   worktreeCount: number
+  time: TimeSnapshot
   onUnpin: () => void
   onStartWork: () => void
   onSpawnAgent: () => void
@@ -149,6 +157,7 @@ interface TaskCardProps {
 function TaskCard({
   task,
   worktreeCount,
+  time,
   onUnpin,
   onStartWork,
   onSpawnAgent
@@ -187,6 +196,11 @@ function TaskCard({
         ) : (
           <span className="task-card-wt none">No worktree yet</span>
         )}
+        <TotalClock
+          className="task-card-time"
+          totalAt={(now) => taskTotalMs(time, task.id, now)}
+          live={time.open.some((p) => p.taskId === task.id)}
+        />
         <button
           type="button"
           className={`task-start-btn ${worktreeCount > 0 ? 'ghost' : 'primary'}`}

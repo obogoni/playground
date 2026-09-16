@@ -311,6 +311,7 @@ function App(): JSX.Element {
             <TasksPane
               snapshot={tasks}
               worktreeCounts={worktreeCounts}
+              time={time.snapshot}
               onSnapshot={setTasks}
               onStartWork={setStartWorkTask}
               onSpawnAgent={spawnAgentForTask}
