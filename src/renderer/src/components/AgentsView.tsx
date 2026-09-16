@@ -4,6 +4,7 @@ import type { AgentDef } from '../../../shared/agents'
 import { undoByteFor } from '../lib/terminal-keys'
 import type { SessionView } from '../../../shared/config'
 import type { PinnedTaskView } from '../../../shared/tasks'
+import type { TimeSnapshot } from '../../../shared/time'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { agentTileStyle } from '../lib/agent-color'
 import { deriveAttribution, linkedPinFor } from '../lib/session-attribution'
@@ -18,6 +19,7 @@ interface AgentsViewProps {
   tree: WorkspaceNode[]
   agents: AgentDef[]
   tasks: PinnedTaskView[]
+  time: TimeSnapshot
   selectedId: string | null
   onSelect: (id: string) => void
   onStop: (id: string) => void
@@ -40,6 +42,7 @@ export function AgentsView({
   tree,
   agents,
   tasks,
+  time,
   selectedId,
   onSelect,
   onStop,
@@ -59,6 +62,7 @@ export function AgentsView({
         tree={tree}
         agents={agents}
         tasks={tasks}
+        time={time}
         selectedId={active?.id ?? null}
         onSelect={onSelect}
         onStop={onStop}

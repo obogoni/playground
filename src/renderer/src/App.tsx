@@ -28,6 +28,7 @@ import {
 import { findWorktree } from './lib/tree-selection'
 import { dropCollapsedId, isCollapsed, toggleCollapsedId } from './lib/workspace-collapse'
 import { useSessions } from './lib/use-sessions'
+import { useTime } from './lib/use-time'
 import { useTree } from './lib/use-tree'
 import { useWorkflowRuns } from './lib/use-workflow-runs'
 import './App.css'
@@ -114,6 +115,9 @@ function App(): JSX.Element {
   // Always mounted (above the direction switch) so runs accumulate from the
   // workflow:* stream even while another direction is active (WF5-04, AD-011).
   const workflows = useWorkflowRuns()
+  // Time snapshot (AD-021): refetched on time:changed; counters tick in their own
+  // components, so App does not re-render every second.
+  const time = useTime()
 
   const refreshTasks = useCallback((): void => {
     api.invoke('tasks:refresh').then(setTasks).catch(console.error)
@@ -321,6 +325,7 @@ function App(): JSX.Element {
             tree={tree}
             agents={agents}
             tasks={tasks.tasks}
+            time={time.snapshot}
             selectedId={selectedSessionId}
             onSelect={setSelectedSessionId}
             onStop={stopSession}

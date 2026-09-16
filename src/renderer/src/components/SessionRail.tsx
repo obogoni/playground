@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import type { AgentDef } from '../../../shared/agents'
 import type { SessionView } from '../../../shared/config'
 import type { PinnedTaskView } from '../../../shared/tasks'
+import type { TimeSnapshot } from '../../../shared/time'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { agentTileStyle } from '../lib/agent-color'
 import {
@@ -15,7 +16,9 @@ import {
   type RowAction
 } from '../lib/rail-groups'
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
+import { taskTotalMs, worktreeTotalMs } from '../lib/time-totals'
 import { Icon } from './Icon'
+import { SessionClock, TotalClock } from './TimeCounter'
 import './SessionRail.css'
 
 /** Above this many live sessions the rail warns about resource use (AGCF-06). */
@@ -26,6 +29,8 @@ interface SessionRailProps {
   tree: WorkspaceNode[]
   agents: AgentDef[]
   tasks: PinnedTaskView[]
+  /** Time snapshot for the row counters and group totals (TIME-22, TIME-26, TIME-27). */
+  time: TimeSnapshot
   selectedId: string | null
   onSelect: (id: string) => void
   onStop: (id: string) => void
@@ -42,6 +47,7 @@ export function SessionRail({
   tree,
   agents,
   tasks,
+  time,
   selectedId,
   onSelect,
   onStop,
@@ -112,6 +118,7 @@ export function SessionRail({
               key={group.key}
               group={group}
               agents={agents}
+              time={time}
               selectedId={selectedId}
               tabStopId={tabStopId}
               registerRow={registerRow}
@@ -131,6 +138,7 @@ export function SessionRail({
 interface TaskGroupCardProps {
   group: RailGroup
   agents: AgentDef[]
+  time: TimeSnapshot
   selectedId: string | null
   tabStopId: string | null
   registerRow: (id: string, node: HTMLDivElement | null) => void
@@ -146,6 +154,7 @@ interface TaskGroupCardProps {
 function TaskGroupCard({
   group,
   agents,
+  time,
   selectedId,
   tabStopId,
   registerRow,
@@ -156,6 +165,19 @@ function TaskGroupCard({
   onRemove
 }: TaskGroupCardProps): JSX.Element {
   const holdsSelection = group.rows.some((row) => row.id === selectedId)
+  // Task groups total by task id; an orphan group is one session, totalled by its cwd.
+  const total =
+    group.kind === 'task'
+      ? {
+          totalAt: (now: number) => taskTotalMs(time, group.taskId, now),
+          live: time.open.some((p) => p.taskId === group.taskId)
+        }
+      : {
+          totalAt: (now: number) => worktreeTotalMs(time, group.rows[0].session.cwd, now),
+          live: time.open.some(
+            (p) => p.cwd.toLowerCase() === group.rows[0].session.cwd.toLowerCase()
+          )
+        }
 
   return (
     <div
@@ -174,6 +196,7 @@ function TaskGroupCard({
             )}
             <span className="rail-group-id">#{group.taskId}</span>
             <span className="rail-group-spacer" />
+            <TotalClock className="rail-group-time" {...total} />
             {group.details && (
               <span className={`task-pill ${stateClass(group.details.state)}`}>
                 {group.details.state}
@@ -191,6 +214,7 @@ function TaskGroupCard({
           <div className="rail-group-head-row">
             <Icon name="git-fork" size={12} />
             <span className="rail-group-name">{group.label}</span>
+            <TotalClock className="rail-group-time" {...total} />
           </div>
           <span className={`rail-group-note ${group.reason}`}>{group.note}</span>
         </div>
@@ -201,6 +225,7 @@ function TaskGroupCard({
             key={row.id}
             row={row}
             agents={agents}
+            time={time}
             selected={row.id === selectedId}
             tabStop={row.id === tabStopId}
             registerRow={registerRow}
@@ -219,6 +244,7 @@ function TaskGroupCard({
 interface SessionRowProps {
   row: RailRow
   agents: AgentDef[]
+  time: TimeSnapshot
   selected: boolean
   tabStop: boolean
   registerRow: (id: string, node: HTMLDivElement | null) => void
@@ -239,6 +265,7 @@ const ACTION_ICON = {
 function SessionRow({
   row,
   agents,
+  time,
   selected,
   tabStop,
   registerRow,
@@ -282,6 +309,8 @@ function SessionRow({
       </span>
       <span className="rail-row-label">{row.label}</span>
       <span className={`rail-row-status ${statusClass(row.status)}`}>{row.status}</span>
+      {/* The one addition AD-021 allows on a row beyond RAIL-12's list. */}
+      <SessionClock className="rail-row-time" snapshot={time} sessionId={row.id} />
       <span className={`rail-row-dot ${statusClass(row.status)}`} />
       <span className="rail-row-actions">
         {row.actions.map((action) => (

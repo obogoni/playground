@@ -555,12 +555,14 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Row keeps its ~34px height at 344px rail width with the counter
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B + 93 tests pass
+- [x] Row keeps its ~34px height at 344px rail width with the counter
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B + 93 tests pass
 
 **Tests**: none
 **Gate**: build
+
+**Deviation (executed)**: the `time` prop is threaded through `AgentsView` and `App` (mounting `useTime`) in this task, not in T21 — a required prop on `SessionRail` alone breaks typecheck until T21, and lesson L-001 rules out relaxing it to optional. The shared `SessionClock` / `TotalClock` live in `components/TimeCounter.tsx` so T18–T20 reuse the tick instead of repeating it.
 
 **Commit**: `feat(time): show session and group time in the agents rail`
 

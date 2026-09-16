@@ -359,3 +359,27 @@
   color: var(--red);
   border-color: color-mix(in oklab, var(--red) 42%, var(--border));
 }
+
+/* AD-021: the session's time counter sits after the status; tabular digits keep
+   the row from jittering as the seconds tick. */
+.rail-row-time {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.rail-group-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
