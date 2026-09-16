@@ -158,9 +158,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Channels typed with doc comments; no handler yet (typecheck still green, lesson L-001: nothing optional-ized to get there)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B tests pass
+- [x] Channels typed with doc comments; no handler yet (typecheck still green, lesson L-001: nothing optional-ized to get there)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B tests pass
 
 **Tests**: none
 **Gate**: build

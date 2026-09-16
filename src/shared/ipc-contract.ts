@@ -7,6 +7,7 @@ import type {
 } from './config'
 import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type { ParentOfResult, PinTaskResult, TasksSnapshot } from './tasks'
+import type { TimeEditResult, TimeSnapshot } from './time'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'
 import type {
   BlockerQuestion,
@@ -101,6 +102,16 @@ export interface IpcContract {
   'sessions:attach': { req: { id: string }; res: void }
   /** Stop streaming this session; its PTY + buffer keep running in main. */
   'sessions:detach': { req: { id: string }; res: void }
+  /** Closed periods from the log, open periods and paused session ids. */
+  'time:snapshot': { req: void; res: TimeSnapshot }
+  /** Close the session's open period and mark it paused (TIME-16). */
+  'time:pause': { req: { sessionId: string }; res: void }
+  /** Open a new period for a paused session and clear the mark (TIME-18). */
+  'time:resume': { req: { sessionId: string }; res: void }
+  /** Remove a closed period from the log; stale or open ids are rejected (TIME-44, TIME-49). */
+  'time:delete': { req: { id: string }; res: TimeEditResult }
+  /** Replace a closed period's UTC ISO bounds; invalid bounds are rejected (TIME-45, TIME-46). */
+  'time:adjust': { req: { id: string; start: string; end: string }; res: TimeEditResult }
   /** Native folder picker for a detached (ad-hoc) cwd; null when cancelled. */
   'dialog:pickFolder': { req: void; res: { path: string | null } }
   /** Every discovered workflow, valid (`{id,meta}`) or broken (`{id,error}`) (WF2-01). */
@@ -132,6 +143,8 @@ export interface IpcEvents {
   'session:data': { id: string; data: string }
   'session:exit': { id: string; exitCode: number }
   'session:status': { id: string; status: SessionStatus; pathMissing: boolean }
+  /** The time log, the open periods or the paused set changed; refetch `time:snapshot`. */
+  'time:changed': { at: string }
   /** A run's folded lifecycle status changed (WF2-12). */
   'workflow:status': { runId: string; status: RunStatus }
   /** A `step-started` event — an executed `ctx.*` primitive / `ctx.step` group (WF2-10). */
