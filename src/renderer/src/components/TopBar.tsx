@@ -132,6 +132,16 @@ export function TopBar({
           <Icon name="workflow-nodes" size={14} />
           Workflows
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={direction === 'hours'}
+          className={`topbar-segment${direction === 'hours' ? ' active' : ''}`}
+          onClick={() => onDirectionChange('hours')}
+        >
+          <Icon name="clock" size={14} />
+          Hours
+        </button>
       </div>
 
       <div className="topbar-spacer" />
