@@ -529,9 +529,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Both names in the `IconName` union and rendered at 14px in both themes
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B + 93 tests pass
+- [x] Both names in the `IconName` union and rendered at 14px in both themes
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B + 93 tests pass
 
 **Tests**: none
 **Gate**: build
