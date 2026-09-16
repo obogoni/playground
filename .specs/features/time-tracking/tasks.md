@@ -723,12 +723,14 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Local input values convert to UTC ISO before invoke
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B + 93 tests pass
+- [x] Local input values convert to UTC ISO before invoke
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B + 93 tests pass
 
 **Tests**: none
 **Gate**: build
+
+**Deviation (executed)**: styles live in its own `PeriodRow.css` rather than borrowing dialog button classes from another component's stylesheet. Edit acts on the whole period even when the row is a piece clipped at midnight.
 
 **Commit**: `feat(time): edit and delete a recorded period`
 
