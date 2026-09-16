@@ -16,6 +16,14 @@ export interface SessionManagerDeps {
   emit: EmitFn
   /** Injectable for reconcile tests (fs.existsSync in production). */
   fsExists: (path: string) => boolean
+  /** Told when a session's PTY starts and ends (the time tracker, AD-021); absent = no observer. */
+  lifecycle?: SessionLifecycle
+}
+
+/** Observer of PTY runs: `started` once per spawn/duplicate/respawn, `ended` once per run. */
+export interface SessionLifecycle {
+  started(meta: PersistedSession): void
+  ended(id: string): void
 }
 
 /** Stored on ad-hoc sessions in place of a registry agent name. */
@@ -246,6 +254,7 @@ export class SessionManager {
       this.#finalize(meta.id, exitCode)
     })
     this.#running.set(meta.id, { meta: { ...meta, status: 'running' }, handle, buffer, exited })
+    this.deps.lifecycle?.started(meta)
   }
 
   /** Idempotent transition to stopped: drop the Map entry, persist, push status. */
@@ -258,6 +267,7 @@ export class SessionManager {
     if (session) this.#retained.set(id, session.buffer) // keep scrollback for the preview
     const wasRunning = this.#running.delete(id)
     if (wasRunning) this.#setStatus(id, 'stopped')
+    if (wasRunning) this.deps.lifecycle?.ended(id)
     if (exitCode !== undefined) this.deps.emit('session:exit', { id, exitCode })
   }
 

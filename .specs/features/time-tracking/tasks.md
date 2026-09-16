@@ -448,9 +448,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Tests: spawn, duplicate and respawn each call `started` once; stop calls `ended` once and the later PTY exit does not call it again; natural PTY exit calls `ended`; a spawn that throws calls nothing; no `lifecycle` dep keeps every existing test green unmodified
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: B + 93 tests pass
+- [x] Tests: spawn, duplicate and respawn each call `started` once; stop calls `ended` once and the later PTY exit does not call it again; natural PTY exit calls `ended`; a spawn that throws calls nothing; no `lifecycle` dep keeps every existing test green unmodified
+- [x] Gate check passes: `npm test`
+- [x] Test count: B + 93 tests pass
 
 **Tests**: unit
 **Gate**: full
