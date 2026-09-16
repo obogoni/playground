@@ -342,9 +342,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Tests (`buildSnapshot` only, no real git — lesson L-005): worktree of a registered workspace; unregistered workspace → null; workspace match case-insensitive; detached `HEAD` → branch and task null; branch without id; pinned title found; git nulls → all nulls
-- [ ] Gate check passes: `npx vitest run src/main/time-snapshot.test.ts`
-- [ ] Test count: B + 53 tests pass
+- [x] Tests (`buildSnapshot` only, no real git — lesson L-005): worktree of a registered workspace; unregistered workspace → null; workspace match case-insensitive; detached `HEAD` → branch and task null; branch without id; pinned title found; git nulls → all nulls
+- [x] Gate check passes: `npx vitest run src/main/time-snapshot.test.ts`
+- [x] Test count: B + 53 tests pass
 
 **Tests**: unit
 **Gate**: quick
