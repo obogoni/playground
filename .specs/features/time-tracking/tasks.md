@@ -264,9 +264,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Tests: session sum across runs incl. open period to `now`; current run only the open period; paused session stops growing; two sessions same worktree 09–10 → 1 h; worktree match case-insensitive; task union across two worktrees; removed session's periods still counted; empty → 0
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/time-totals.test.ts`
-- [ ] Test count: B + 29 tests pass
+- [x] Tests: session sum across runs incl. open period to `now`; current run only the open period; paused session stops growing; two sessions same worktree 09–10 → 1 h; worktree match case-insensitive; task union across two worktrees; removed session's periods still counted; empty → 0
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/time-totals.test.ts`
+- [x] Test count: B + 29 tests pass
 
 **Tests**: unit
 **Gate**: quick
