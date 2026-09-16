@@ -9,6 +9,7 @@
  *   4. stopping the session closes the open period (TIME-02)
  *   5. the Hours direction lists today with a `No task · Windows` group, and the
  *      direction survives a reload (TIME-31, TIME-34, TIME-35)
+ *   5b. ◀ and ▶ show the previous and next week, This week returns (TIME-33)
  *   6. Copy writes today's text with the exact header line and shows `Copied`
  *      (TIME-39, TIME-41)
  *   7. expanding a line lists its raw periods, each closed one with Edit and
@@ -120,6 +121,19 @@ const pad = (n) => String(n).padStart(2, '0')
 const today = new Date()
 const todayHeader = `${pad(today.getDate())}/${pad(today.getMonth() + 1)}/${today.getFullYear()} (${WEEKDAYS[today.getDay()]})`
 
+/** The Hours header range `dd/MM – dd/MM/yyyy` of the week `offset` weeks from this one. */
+function weekLabel(offset) {
+  const sinceMonday = (today.getDay() + 6) % 7
+  const monday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() - sinceMonday + 7 * offset
+  )
+  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6)
+  const dm = (d) => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`
+  return `${dm(monday)} – ${dm(sunday)}/${sunday.getFullYear()}`
+}
+
 const target = await pageTarget()
 ws = new WebSocket(target.webSocketDebuggerUrl)
 await new Promise((resolve, reject) => {
@@ -228,6 +242,25 @@ try {
     )
   )
   await shot('time-hours-dark.png')
+
+  // 5b. Week navigation.
+  const range = () => evaluate(`document.querySelector('.hours-head-range').textContent`)
+  const nav = (label) =>
+    evaluate(
+      `[...document.querySelectorAll('.hours-nav-btn')].find(b => (b.getAttribute('aria-label') ?? b.textContent) === ${JSON.stringify(label)}).click(), true`
+    )
+  check('Hours opens on the current week', (await range()) === weekLabel(0), await range())
+  await nav('Previous week')
+  await sleep(200)
+  check('◀ shows the previous week', (await range()) === weekLabel(-1), await range())
+  await nav('This week')
+  await sleep(200)
+  check('This week returns to the current week', (await range()) === weekLabel(0), await range())
+  await nav('Next week')
+  await sleep(200)
+  check('▶ shows the next week', (await range()) === weekLabel(1), await range())
+  await nav('This week')
+  await sleep(200)
 
   // 6. Copy writes the exact header and confirms.
   await evaluate(`window.focus(), true`)

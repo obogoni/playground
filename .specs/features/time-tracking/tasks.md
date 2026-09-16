@@ -816,6 +816,8 @@ T25 -> T26
 
 **Executed (agent-run, 2026-09-16)**: `node scripts/smoke-time.mjs` 22/22 against the dev app (session is ad-hoc `pwsh` in `C:/Windows`; the script deletes its own periods and restores direction and theme). Both themes captured with `SMOKE_SHOTS` and reviewed. Crash recovery by hand: a `pwsh` session ran 70 s, the heartbeat advanced `lastSeen` to 22:16:14Z, Electron was killed at 22:16:48Z, and on relaunch the period was closed at 22:16:14Z (34 s before the kill, within 60 s) with the sidecar emptied (TIME-04, TIME-05). Suspend/resume and screen lock (TIME-06..08) not exercised. **Owner run still pending** for `validation.md`. Smoke fix found on the way: the Windows clipboard reads back with CRLF, so the script splits on `/\r?\n/`.
 
+**Rerun after Verifier fixes (agent-run, 2026-09-16)**: 26/26, exit 0 — the smoke now also clicks ◀ / This week / ▶ and asserts the header range (TIME-33), and exercises the `useNow` lint fix (counter ticks, pause freezes).
+
 **Commit**: `test(time): add a CDP smoke for time tracking`
 
 ---
