@@ -59,6 +59,7 @@ nothing to notify about.
 | **[rev3]** Two tiers are wording only | `needs-approval` / `needs-input` are **blocked**; `waiting` / `error` are **finished**. The tier changes the wording and the priority of the story, never whether it fires | A blocked agent is idle while the user believes it is working, which is the costlier miss | y |
 | **[rev3]** Switches | One **master** switch plus **one switch per notifiable state** (`needs-approval`, `needs-input`, `waiting`, `error`). A notification fires only when the master and that state's switch are both on. Per state, not per tier | Owner decision: the user picks which states notify, or turns them all off at once | y |
 | **[rev3]** Defaults | Master and all four states **on** when absent from the config | Owner decision. A fresh install notifies; the user turns off what is noise | y |
+| **[rev3]** Settings tabs | The settings dialog gets a **General** tab with everything it shows today and a **Notifications** tab with the five switches | Owner request 2026-09-16: keep notification settings apart from the general ones | y |
 | **[rev3]** Master off keeps the state choices | Turning the master off does not change the four state switches; turning it back on restores them | Otherwise "pause all notifications" destroys the selection the user made | n |
 | When a notification fires | When the app window is **not focused** OR the session is **not the attached one** | Owner decision. Those are the two cases where the rail's indicator cannot be seen | y |
 | Which surface each case uses | Window unfocused → **OS notification**. Window focused but session not attached → **in-app toast** | An OS toast thrown at someone already looking at the app duplicates a signal the app can deliver itself; an in-app toast is invisible when the app is behind another window. **[rev3]** Confirmed by the owner 2026-09-16 | y |
@@ -153,6 +154,8 @@ without giving up the rest.
 6. The settings dialog SHALL offer one switch per notifiable state: `needs-approval`, `needs-input`, `waiting` and `error`.  <!-- ubiquitous -->
 7. WHEN the user turns the master switch off and back on THEN the app SHALL keep each state switch as it was.  <!-- event-driven -->
 8. WHILE the master switch is off the settings dialog SHALL show the state switches as disabled.  <!-- state-driven -->
+9. **[rev3]** The settings dialog SHALL separate its content into a **General** tab (Azure DevOps defaults, templates, agents, shell) and a **Notifications** tab (the master and state switches), opening on General.  <!-- ubiquitous -->
+10. **[rev3]** WHEN the user switches tabs THEN the settings dialog SHALL keep unsaved General edits and an open agent form as they were.  <!-- event-driven -->
 
 **Independent Test**: Turn `waiting` off, put the app in the background, let an agent finish
 — nothing; trigger a permission prompt — one notification. Turn the master off, trigger the
@@ -204,12 +207,14 @@ every switch holds.
 | NOTF-25 | Edge cases | - | Pending |
 | NOTF-26 | Edge cases | - | Pending |
 | NOTF-27 | Edge cases | - | Pending |
+| NOTF-28 | P3: Choose which notifications to get (AC 9, added after the edge cases were numbered) | - | Pending |
+| NOTF-29 | P3: Choose which notifications to get (AC 10) | - | Pending |
 
 **ID format:** `NOTF-[NUMBER]`
 
 **Status values:** Pending → In Design → In Tasks → Implementing → Verified
 
-**Coverage:** 27 total, 0 mapped to tasks (Tasks phase not yet run), 0 unmapped
+**Coverage:** 29 total, 0 mapped to tasks (Tasks phase not yet run), 0 unmapped
 
 ---
 

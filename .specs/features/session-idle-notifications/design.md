@@ -152,8 +152,11 @@ graph TD
 
 ### `SettingsDialog` change
 
-- **Purpose**: The five switches (NOTF-18, NOTF-20).
-- A "Notifications" section: master checkbox, then four checkboxes labelled *Needs approval*, *Needs input*, *Finished its turn*, *Turn failed*, `disabled` while the master is off. Each toggle sets local state and `config:patch({ ui: { <key>: value } })` immediately (NOTF-16). Toggling the master never writes a state key (NOTF-19).
+- **Purpose**: Split the dialog into tabs and add the five switches (NOTF-18, NOTF-20, NOTF-28, NOTF-29).
+- **Tabs**: a `role="tablist"` row under the header with **General** and **Notifications**, reusing the `TopBar` segmented look (`topbar-segmented` / `topbar-segment` styles, copied into `SettingsDialog.css` as `set-tabs` / `set-tab` so the top bar stays untouched). Local `tab` state, not persisted; the dialog always opens on General (NOTF-28). The header title follows the tab: *Azure DevOps, agents & shell* / *Agent notifications*.
+- **General tab**: today's body, unchanged. All field state already lives in the dialog component, and only the tab body is swapped, so unsaved ADO/template edits and an open agent form survive a tab switch (NOTF-29).
+- **Notifications tab**: master checkbox, then four checkboxes labelled *Needs approval*, *Needs input*, *Finished its turn*, *Turn failed*, `disabled` while the master is off. Each toggle sets local state and `config:patch({ ui: { <key>: value } })` immediately (NOTF-16). Toggling the master never writes a state key (NOTF-19).
+- **Footer**: unchanged on both tabs. *Save* only commits the General text fields; the switches never need it. Keeping it on the Notifications tab means a pending General edit can still be saved from there instead of being lost.
 
 ---
 
@@ -212,7 +215,7 @@ interface NotificationPrefs {
 | Fragile: an unreferenced Electron `Notification` can be garbage-collected before the user clicks it, silently dropping the `click` handler (widely reported for Windows toasts; not verified against Electron docs — flagged uncertain) | `src/main/index.ts:241` | Clicking a notification does nothing; workflow toasts share the bug | Hold each instance in a `Set` until `click`/`close`/`failed`; applied to the shared `showOs` helper, so workflow toasts get it too. Hand-check the click after a minute in the background |
 | Config patch merges `ui` one level deep | `src/main/config-store.ts:53` | A nested `notifications` object would be replaced whole, so toggling the master could wipe the state switches, breaking NOTF-19 | Flat keys under `ui`; each toggle patches one key |
 | Existing `Toast` is single-slot, 2.2 s, not clickable | `src/renderer/src/components/Toast.tsx:11` | Several sessions would overwrite each other; too short to click | New `SessionNotices` stack; `Toast` untouched |
-| Test gap: renderer components have no unit tests by convention (AD-004) | `src/renderer/src/App.tsx`, `SettingsDialog.tsx` | Click-to-select and the settings switches are not covered by `npm test` | Push all list logic into `lib/session-notices.ts` (unit-tested); cover the settings switches and the `session:focus` path in a CDP smoke (`scripts/smoke-notifications.mjs`) that emits the events rather than spending tokens |
+| Test gap: renderer components have no unit tests by convention (AD-004) | `src/renderer/src/App.tsx`, `SettingsDialog.tsx` | Click-to-select and the settings switches are not covered by `npm test` | Push all list logic into `lib/session-notices.ts` (unit-tested); cover the settings tabs and switches and the `session:focus` path in a CDP smoke (`scripts/smoke-notifications.mjs`) that emits the events rather than spending tokens |
 | Idle-prompt on a fresh session: a Claude session left untouched may report `idle_prompt` as its first event | `src/main/activity-machine.ts:133` | A "finished" notification for a turn that never ran | Rule 2: no notification when there was no prior activity (NOTF-27, added to the spec) |
 | Test-suite timeouts under extra load (lesson L-005) | `src/main/session-manager.test.ts` | New cases could push slow suites past the default timeout | All new tests are pure or fake-driven; no real PTY, git or process |
 
@@ -226,6 +229,7 @@ interface NotificationPrefs {
 | What counts as a transition | A change of `state`, with a prior state present | `session:activity` also fires on tool and subagent changes; notifying those would repeat the same notification within a turn |
 | Config key shape | Five flat optional booleans | Resolves the spec's Design-level row; the one-level-deep merge makes nested objects unsafe for NOTF-19 |
 | Click-through channel | New `session:focus`, not a generalised `workflow:focus-run` | Keeps the shipped workflow contract unchanged; the two handlers select different things |
+| Settings layout | Two tabs inside the existing dialog, not a second dialog | Owner request; one entry point stays, and dialog-level state keeps edits across tabs for free |
 | In-app notice lifetime | 8 s, click or × dismisses | Long enough to read and click; the rail keeps the state after it disappears |
 | Notification wording | English, fixed strings in `describeNotification` | The UI is English; one pure function makes every string a test assertion |
 
