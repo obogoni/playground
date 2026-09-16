@@ -140,4 +140,34 @@ describe('TimeLogStore', () => {
 
     expect(store.readPeriods().periods).toEqual([period('a'), period('b')])
   })
+
+  it('retries a failed rewrite with the next append, so an edit never resurfaces (TIME-14)', () => {
+    const store = new TimeLogStore(dir, log)
+    store.append(period('a'))
+    store.append(period('b'))
+    // A directory where the tmp file goes makes the rewrite fail before the rename.
+    mkdirSync(join(dir, 'time-log.jsonl.tmp'))
+
+    store.rewrite([period('b')])
+    expect(logged.length).toBeGreaterThan(0)
+
+    rmSync(join(dir, 'time-log.jsonl.tmp'), { recursive: true })
+    store.append(period('c'))
+
+    expect(new TimeLogStore(dir, log).readPeriods().periods).toEqual([period('b'), period('c')])
+  })
+
+  it('keeps retrying a failed rewrite across further failing appends (TIME-14)', () => {
+    const store = new TimeLogStore(dir, log)
+    store.append(period('a'))
+    mkdirSync(join(dir, 'time-log.jsonl.tmp'))
+
+    store.rewrite([])
+    store.append(period('b'))
+
+    rmSync(join(dir, 'time-log.jsonl.tmp'), { recursive: true })
+    store.append(period('c'))
+
+    expect(new TimeLogStore(dir, log).readPeriods().periods).toEqual([period('b'), period('c')])
+  })
 })

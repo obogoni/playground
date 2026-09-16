@@ -43,6 +43,8 @@ export class TimeLogStore {
   private readonly openPath: string
   /** Appends that failed, retried before the next write. */
   private pending: TimePeriod[] = []
+  /** The full list of a rewrite that failed; until it lands, every append rewrites instead. */
+  private unwritten: TimePeriod[] | null = null
 
   constructor(
     private readonly dir: string,
@@ -79,6 +81,12 @@ export class TimeLogStore {
 
   /** Appends one period; on failure it is queued and retried with the next write (TIME-14). */
   append(period: TimePeriod): void {
+    // After a failed rewrite the file on disk is stale: appending to it would
+    // bring a deleted or edited period back on the next start (TIME-14).
+    if (this.unwritten !== null) {
+      this.rewrite([...this.unwritten, period])
+      return
+    }
     const batch = [...this.pending, period]
     try {
       mkdirSync(this.dir, { recursive: true })
@@ -90,12 +98,16 @@ export class TimeLogStore {
     }
   }
 
-  /** Replaces the whole log atomically (TIME-48). `periods` is the full list, queued appends included. */
+  /** Replaces the whole log atomically (TIME-48). `periods` is the full list, queued appends
+   * included; on failure it is kept and written by the next append or rewrite (TIME-14). */
   rewrite(periods: TimePeriod[]): void {
     try {
       this.#atomicWrite(this.logPath, periods.map((p) => this.#line(p)).join(''))
       this.pending = []
+      this.unwritten = null
     } catch (err) {
+      this.pending = []
+      this.unwritten = periods
       this.log('Failed to rewrite the time log:', err)
     }
   }
