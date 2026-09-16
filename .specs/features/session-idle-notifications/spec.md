@@ -169,6 +169,7 @@ every switch holds.
 - WHEN a session enters a notifiable state while the app is minimized THEN the app SHALL treat the window as not focused and use the OS notification.  <!-- event-driven -->
 - **[rev2]** WHEN a session moves from `needs-approval` straight to `working` because the user answered the dialog THEN the app SHALL NOT notify.  <!-- event-driven -->
 - **[rev2]** IF a session's PTY stops while it holds a notifiable state THEN the app SHALL NOT notify for the activity being discarded.  <!-- unwanted-behavior -->
+- **[rev3]** WHEN a session's first activity event puts it in a notifiable state (for example an `idle_prompt` on a session never prompted) THEN the app SHALL NOT notify, because no turn ran.  <!-- event-driven -->
 
 ---
 
@@ -202,12 +203,13 @@ every switch holds.
 | NOTF-24 | Edge cases | - | Pending |
 | NOTF-25 | Edge cases | - | Pending |
 | NOTF-26 | Edge cases | - | Pending |
+| NOTF-27 | Edge cases | - | Pending |
 
 **ID format:** `NOTF-[NUMBER]`
 
 **Status values:** Pending → In Design → In Tasks → Implementing → Verified
 
-**Coverage:** 26 total, 0 mapped to tasks (Tasks phase not yet run), 0 unmapped
+**Coverage:** 27 total, 0 mapped to tasks (Tasks phase not yet run), 0 unmapped
 
 ---
 
