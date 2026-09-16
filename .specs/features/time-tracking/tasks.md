@@ -396,9 +396,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Tests: started opens with snapshot; ended appends one period; ended twice appends once; < 1 s discarded; end < start discarded; pause closes and marks; resume opens new; resume when not paused is no-op; suspend closes all; resumeFromSuspend skips paused and stopped; heartbeat advances `lastSeen` and writes sidecar; recover closes sidecar periods at `lastSeen` and empties it; closeAll closes all; started again after ended starts unpaused; double started closes the previous open period; every mutation emits once; no API exists for lock events (TIME-08 asserted by absence in design, noted in test name)
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: B + 79 tests pass
+- [x] Tests: started opens with snapshot; ended appends one period; ended twice appends once; < 1 s discarded; end < start discarded; pause closes and marks; resume opens new; resume when not paused is no-op; suspend closes all; resumeFromSuspend skips paused and stopped; heartbeat advances `lastSeen` and writes sidecar; recover closes sidecar periods at `lastSeen` and empties it; closeAll closes all; started again after ended starts unpaused; double started closes the previous open period; every mutation emits once; no API exists for lock events (TIME-08 asserted by absence in design, noted in test name)
+- [x] Gate check passes: `npm test`
+- [x] Test count: B + 79 tests pass
 
 **Tests**: unit
 **Gate**: full
