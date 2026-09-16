@@ -503,9 +503,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Hook unsubscribes on unmount; `useNow` clears its interval
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B + 93 tests pass
+- [x] Hook unsubscribes on unmount; `useNow` clears its interval
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B + 93 tests pass
 
 **Tests**: none
 **Gate**: build
