@@ -141,6 +141,23 @@ describe('TimeLogStore', () => {
     expect(store.readPeriods().periods).toEqual([period('a'), period('b')])
   })
 
+  it('leaves the previous log and sidecar intact when a write fails before the rename (TIME-48)', () => {
+    const store = new TimeLogStore(dir, log)
+    store.append(period('a'))
+    store.append(period('b'))
+    store.writeOpen([openPeriod('o1')])
+    const logBefore = readFileSync(join(dir, 'time-log.jsonl'), 'utf8')
+    const openBefore = readFileSync(join(dir, 'time-open.json'), 'utf8')
+    mkdirSync(join(dir, 'time-log.jsonl.tmp'))
+    mkdirSync(join(dir, 'time-open.json.tmp'))
+
+    store.rewrite([period('b')])
+    store.writeOpen([])
+
+    expect(readFileSync(join(dir, 'time-log.jsonl'), 'utf8')).toBe(logBefore)
+    expect(readFileSync(join(dir, 'time-open.json'), 'utf8')).toBe(openBefore)
+  })
+
   it('retries a failed rewrite with the next append, so an edit never resurfaces (TIME-14)', () => {
     const store = new TimeLogStore(dir, log)
     store.append(period('a'))
