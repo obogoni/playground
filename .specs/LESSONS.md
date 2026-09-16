@@ -24,30 +24,6 @@ Corroborated across multiple features. Safe to apply as guidance.
 
 Seen once or not yet corroborated. Tracked, not trusted.
 
-### L-003 - When wrapping a spawned process with a timeout, settle the promise on 'exit' plus a short flush grace period, never on 'close' alone: 'close' waits for stdio EOF and killing a shell does not kill its children, so a surviving grandchild holds the inherited pipes and the promise can lag by seconds or never settle
-- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `child-process` · harmful: 0
-- features: worktree-post-create-hook
-- evidence: validation.md round-1 blocker; src/main/hook-shell.ts:71 (child-process)
-- last seen: 2026-07-29T22:37:03Z
-
-### L-004 - Assert a spec-defined bound against its literal value, not against the constant that implements it: expect(x).toHaveLength(MAX_CHARS) is self-referential and survives a mutation of MAX_CHARS itself
-- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
-- features: worktree-post-create-hook
-- evidence: mutant R1/M7; post-create-hook.test.ts output-tail test (testing)
-- last seen: 2026-07-29T22:37:04Z
-
-### L-006 - Assert a returned payload field by its value, not by the value you handed an injected fake: a field that appears in the test only as a spy's input reads like coverage in review, but a mutation dropping it from the real return still passes
-- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
-- features: worktree-removal-fault-tolerance
-- evidence: round-1 mutant M6; worktree-manager.test.ts leftover: at :844/:867/:882 were spyDeleter inputs, not assertions - dropping the field from worktree-manager.ts:335-339 left all 80 tests green; closed by F1 124340c (testing)
-- last seen: 2026-07-31T12:27:40Z
-
-### L-007 - When writing a test to kill a specific surviving mutant, check the fixture does not encode that mutant's own blind spot: pick one whose readings differ under every wrong implementation, not just the one you saw. A directories-only residue pinned the recursive count yet let a directories-only count survive
-- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
-- features: worktree-removal-fault-tolerance
-- evidence: round-2 mutant N3 survived the round-1 fix F2 (dir-remover.test.ts:328-348 fixture wt/keep/a/b was directories-only); closed by F3 1abe8aa with a mixed chain giving 3/2/1/1 for every-entry/dirs-only/files-only/top-level (testing)
-- last seen: 2026-07-31T12:27:40Z
-
 ### L-008 - When a hard-coded value becomes a lookup table keyed by an existing enum, test the wiring from key to entry, not just the table: asserting the table's contents leaves the new key free to silently resolve to the old entry, and a guard that returns before any side effect (a missing-path check) usually makes that routing assertable without touching the real subsystem.
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main/**` · harmful: 0
 - features: vs2026-admin-shortcut
@@ -101,6 +77,42 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: agents-rail-v2
 - evidence: src/renderer/src/components/SessionRail.tsx:264 SPEC_DEVIATION (renderer)
 - last seen: 2026-09-13T16:05:00Z
+
+### L-017 - In renderer components and hooks keep Date.now() out of render and setState out of synchronous effect bodies, because eslint-plugin-react-hooks v7 purity and set-state-in-effect rules fail the lint gate
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: time-tracking
+- evidence: src/renderer/src/components/HoursView.tsx:53, src/renderer/src/lib/use-time.ts:60 (renderer)
+- last seen: 2026-09-16T22:26:36Z
+
+### L-018 - Assert the persisted store or sidecar write after every orchestrator state transition, not only the emitted change event
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `main-orchestrators` · harmful: 0
+- features: time-tracking
+- evidence: M6 src/main/time-tracker.ts:95; M19 src/main/time-tracker.ts:104 (main-orchestrators)
+- last seen: 2026-09-16T22:26:36Z
+
+### L-019 - Test an atomic file rewrite by failing the write or rename through an injected seam and asserting the previous content survives, not by checking that no tmp file remains
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `file-stores` · harmful: 0
+- features: time-tracking
+- evidence: M13 src/main/time-log-store.ts:138 (file-stores)
+- last seen: 2026-09-16T22:26:37Z
+
+### L-020 - When a spec promises retry on the next write, cover every write path of the store with a fail-then-succeed test, including whole-file rewrites
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `file-stores` · harmful: 0
+- features: time-tracking
+- evidence: TIME-14 src/main/time-log-store.ts:98 (file-stores)
+- last seen: 2026-09-16T22:26:37Z
+
+### L-021 - When a spec cites an owner-selected sample output, paste the literal sample into the spec, including line endings, so tests can assert it byte-for-byte
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: time-tracking
+- evidence: TIME-39 / T8 src/renderer/src/lib/hours-copy.test.ts:28 (specs)
+- last seen: 2026-09-16T22:26:37Z
+
+### L-022 - After a test proves a failed write is retried, perform one more write and assert the result, so a retry flag that is never cleared is caught
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `file-stores` · harmful: 0
+- features: time-tracking
+- evidence: M21 src/main/time-log-store.ts:107 (file-stores)
+- last seen: 2026-09-16T22:42:48Z
 
 ## Quarantined (failed when applied - ignore)
 
