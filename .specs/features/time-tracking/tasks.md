@@ -370,9 +370,9 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Tests: missing files → empty; append then read round-trips; invalid JSON line and unknown `v` skipped with count; rewrite replaces content and leaves no `.tmp`; corrupt sidecar backed up and read as `[]`; append to an unwritable dir is queued and flushed by the next successful write
-- [ ] Gate check passes: `npx vitest run src/main/time-log-store.test.ts`
-- [ ] Test count: B + 62 tests pass
+- [x] Tests: missing files → empty; append then read round-trips; invalid JSON line and unknown `v` skipped with count; rewrite replaces content and leaves no `.tmp`; corrupt sidecar backed up and read as `[]`; append to an unwritable dir is queued and flushed by the next successful write
+- [x] Gate check passes: `npx vitest run src/main/time-log-store.test.ts`
+- [x] Test count: B + 62 tests pass
 
 **Tests**: unit
 **Gate**: quick
