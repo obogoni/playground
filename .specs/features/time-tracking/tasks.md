@@ -583,12 +583,14 @@ T25 -> T26
 
 **Done when**:
 
-- [ ] Control hidden while stopped; paused counter frozen; terminal still accepts input while paused
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B + 93 tests pass
+- [x] Control hidden while stopped; paused counter frozen; terminal still accepts input while paused
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B + 93 tests pass
 
 **Tests**: none
 **Gate**: build
+
+**Deviation (executed)**: `onPauseTime` / `onResumeTime` are threaded from `App` in this task (same L-001 reason as T17); `SessionClock` gained `withRunTooltip` for the current-run tooltip.
 
 **Commit**: `feat(time): add session timer and pause to the detail bar`
 

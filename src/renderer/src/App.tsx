@@ -335,6 +335,8 @@ function App(): JSX.Element {
             onDuplicate={duplicateSession}
             onOpenWorktree={openWorktreeForSession}
             onNew={() => openNewSession()}
+            onPauseTime={time.pause}
+            onResumeTime={time.resume}
           />
         ) : ui.direction === 'workflows' ? (
           <WorkflowsView

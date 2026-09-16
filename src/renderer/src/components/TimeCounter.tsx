@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 import type { TimeSnapshot } from '../../../shared/time'
 import { formatHm, formatHms } from '../lib/time-format'
-import { sessionTotalMs } from '../lib/time-totals'
+import { currentRunMs, sessionTotalMs } from '../lib/time-totals'
 import { useNow } from '../lib/use-time'
 import { Icon } from './Icon'
 
@@ -12,7 +12,8 @@ interface SessionClockProps {
   snapshot: TimeSnapshot
   sessionId: string
   className?: string
-  title?: string
+  /** Adds `current run hh:mm:ss` as the tooltip (TIME-23). */
+  withRunTooltip?: boolean
 }
 
 /** A session's total as `hh:mm:ss`, ticking every second only while it has an
@@ -22,12 +23,19 @@ export function SessionClock({
   snapshot,
   sessionId,
   className,
-  title
+  withRunTooltip = false
 }: SessionClockProps): JSX.Element {
   const live = snapshot.open.some((p) => p.sessionId === sessionId)
   const now = useNow(live ? 1000 : null)
   return (
-    <span className={className} title={title}>
+    <span
+      className={className}
+      title={
+        withRunTooltip
+          ? `current run ${formatHms(currentRunMs(snapshot, sessionId, now))}`
+          : undefined
+      }
+    >
       {formatHms(sessionTotalMs(snapshot, sessionId, now))}
     </span>
   )

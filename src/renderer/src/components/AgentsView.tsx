@@ -11,6 +11,7 @@ import { deriveAttribution, linkedPinFor } from '../lib/session-attribution'
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import { SessionRail } from './SessionRail'
+import { SessionClock } from './TimeCounter'
 import { TerminalPane } from './TerminalPane'
 import './AgentsView.css'
 
@@ -29,6 +30,8 @@ interface AgentsViewProps {
   onDuplicate: (id: string) => void
   onOpenWorktree: (cwd: string) => void
   onNew: () => void
+  onPauseTime: (id: string) => void
+  onResumeTime: (id: string) => void
 }
 
 /**
@@ -51,7 +54,9 @@ export function AgentsView({
   onRename,
   onDuplicate,
   onOpenWorktree,
-  onNew
+  onNew,
+  onPauseTime,
+  onResumeTime
 }: AgentsViewProps): JSX.Element {
   const active = sessions.find((s) => s.id === selectedId) ?? sessions[0] ?? null
 
@@ -76,12 +81,15 @@ export function AgentsView({
           tree={tree}
           agents={agents}
           tasks={tasks}
+          time={time}
           onStop={onStop}
           onRespawn={onRespawn}
           onRemove={onRemove}
           onRename={onRename}
           onDuplicate={onDuplicate}
           onOpenWorktree={onOpenWorktree}
+          onPauseTime={onPauseTime}
+          onResumeTime={onResumeTime}
         />
       ) : (
         <div className="agents-detail-empty">
@@ -101,12 +109,15 @@ interface SessionDetailProps {
   tree: WorkspaceNode[]
   agents: AgentDef[]
   tasks: PinnedTaskView[]
+  time: TimeSnapshot
   onStop: (id: string) => void
   onRespawn: (id: string) => void
   onRemove: (id: string) => void
   onRename: (id: string, title: string) => void
   onDuplicate: (id: string) => void
   onOpenWorktree: (cwd: string) => void
+  onPauseTime: (id: string) => void
+  onResumeTime: (id: string) => void
 }
 
 function SessionDetail({
@@ -114,18 +125,23 @@ function SessionDetail({
   tree,
   agents,
   tasks,
+  time,
   onStop,
   onRespawn,
   onRemove,
   onRename,
   onDuplicate,
-  onOpenWorktree
+  onOpenWorktree,
+  onPauseTime,
+  onResumeTime
 }: SessionDetailProps): JSX.Element {
   const { branch, taskId, detached } = deriveAttribution(tree, session.cwd)
   const pin = linkedPinFor(tasks, taskId)
   // The worktree is reachable only when the cwd matched a live worktree (ACTX-04).
   const canOpenWorktree = !detached && !session.pathMissing
   const running = session.status === 'running'
+  // Pausing stops only the count; the PTY keeps running and taking input (TIME-20).
+  const timePaused = time.paused.includes(session.id)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(session.title)
 
@@ -178,7 +194,33 @@ function SessionDetail({
         <span className={`agents-detail-pill ${running ? 'green' : 'faint'}`}>
           {running ? 'running' : 'stopped'}
         </span>
+        <SessionClock
+          className={`agents-detail-time${timePaused ? ' paused' : ''}`}
+          snapshot={time}
+          sessionId={session.id}
+          withRunTooltip
+        />
         <div className="agents-detail-actions">
+          {running &&
+            (timePaused ? (
+              <button
+                type="button"
+                className="agents-detail-btn"
+                title="Resume counting this session's time"
+                onClick={() => onResumeTime(session.id)}
+              >
+                <Icon name="play" size={11} /> Resume time
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="agents-detail-btn"
+                title="Pause counting this session's time; the agent keeps running"
+                onClick={() => onPauseTime(session.id)}
+              >
+                <Icon name="pause" size={11} /> Pause time
+              </button>
+            ))}
           {canOpenWorktree && (
             <button
               type="button"
