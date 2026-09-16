@@ -90,7 +90,9 @@ T12 → T13
 
 ## Task Breakdown
 
-### T1: Notification switches in the config type
+### T1: Notification switches in the config type ✅ COMPLETE
+
+**Status**: Done — five flat optional `ui` booleans on `AppConfig`, `DEFAULT_CONFIG` untouched. Build gate green: typecheck 0, lint 0 errors (18 pre-existing warnings), 917 tests.
 
 **What**: Add the five optional `ui` booleans (`notify`, `notifyNeedsApproval`, `notifyNeedsInput`, `notifyWaiting`, `notifyError`) to `AppConfig`, each documented as "absent = on"; `DEFAULT_CONFIG` stays without them.
 **Where**: `src/shared/config.ts`
@@ -105,10 +107,10 @@ T12 → T13
 
 **Done when**:
 
-- [ ] Five optional booleans on `AppConfig['ui']`, flat (no nested object — design Risks: one-level-deep merge)
-- [ ] `DEFAULT_CONFIG.ui` unchanged, so no migration and `config-store.test.ts:79` still passes unmodified
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged at 917 (no silent deletions)
+- [x] Five optional booleans on `AppConfig['ui']`, flat (no nested object — design Risks: one-level-deep merge)
+- [x] `DEFAULT_CONFIG.ui` unchanged, so no migration and `config-store.test.ts:79` still passes unmodified
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged at 917 (no silent deletions)
 
 **Tests**: none (type-only contract layer — matrix says build gate only)
 **Gate**: build

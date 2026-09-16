@@ -76,6 +76,17 @@ export interface AppConfig {
     tasksCollapsed?: boolean
     /** Workspace ids folded in the sidebar tree; absent = every workspace expanded (WSCL-06). */
     collapsedWorkspaces?: string[]
+    /** Master switch for session activity notifications; absent = on (NOTF-13, NOTF-17).
+     *  Never clears the per-state switches below (NOTF-19). */
+    notify?: boolean
+    /** Notify when a session enters `needs-approval`; absent = on (NOTF-14). */
+    notifyNeedsApproval?: boolean
+    /** Notify when a session enters `needs-input`; absent = on (NOTF-14). */
+    notifyNeedsInput?: boolean
+    /** Notify when a session enters `waiting`; absent = on (NOTF-14). */
+    notifyWaiting?: boolean
+    /** Notify when a session enters `error`; absent = on (NOTF-14). */
+    notifyError?: boolean
   }
   workspaces: WorkspaceEntry[]
   /** Editable coding-agent registry; seeded from `SEEDED_AGENTS` (AGCF-01). */
