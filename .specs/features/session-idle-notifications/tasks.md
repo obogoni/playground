@@ -119,7 +119,9 @@ T12 → T13
 
 ---
 
-### T2: Reading the notification preferences
+### T2: Reading the notification preferences ✅ COMPLETE
+
+**Status**: Done — `src/shared/notifications.ts` + 10 tests (four states, key map, absent = on, explicit true = absent, master off keeps states, each state off alone). Quick gate green; lint clean. Suite 917 → 927.
 
 **What**: Implement `src/shared/notifications.ts` — `NotifiableState`, `NOTIFIABLE_STATES`, `NOTIFY_STATE_KEYS` and `readNotificationPrefs(ui)` applying "absent = on" to the master and each state.
 **Where**: `src/shared/notifications.ts`
@@ -134,11 +136,11 @@ T12 → T13
 
 **Done when**:
 
-- [ ] `NOTIFIABLE_STATES` is exactly `needs-approval`, `needs-input`, `waiting`, `error`
-- [ ] `NOTIFY_STATE_KEYS` maps each state to its `ui` key, typed so a missing state fails typecheck
-- [ ] Tests cover: empty `ui` → master and all four on; each key `false` alone turns off only its own entry; master `false` leaves every state value as configured (NOTF-19 — master never rewrites states); explicit `true` equals absent
-- [ ] Gate check passes: `npx vitest run src/shared/notifications.test.ts`
-- [ ] Test count: 917 → ~925 (+~8; no silent deletions)
+- [x] `NOTIFIABLE_STATES` is exactly `needs-approval`, `needs-input`, `waiting`, `error`
+- [x] `NOTIFY_STATE_KEYS` maps each state to its `ui` key, typed so a missing state fails typecheck
+- [x] Tests cover: empty `ui` → master and all four on; each key `false` alone turns off only its own entry; master `false` leaves every state value as configured (NOTF-19 — master never rewrites states); explicit `true` equals absent
+- [x] Gate check passes: `npx vitest run src/shared/notifications.test.ts`
+- [x] Test count: 917 → ~925 (+~8; no silent deletions)
 
 **Tests**: unit
 **Gate**: quick

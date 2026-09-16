@@ -192,13 +192,13 @@ every switch holds.
 | NOTF-10 | P2: Told when an agent finishes or fails | - | Pending |
 | NOTF-11 | P2: Told when an agent finishes or fails | - | Pending |
 | NOTF-12 | P2: Told when an agent finishes or fails | - | Pending |
-| NOTF-13 | P3: Choose which notifications to get | - | Pending |
-| NOTF-14 | P3: Choose which notifications to get | - | Pending |
+| NOTF-13 | P3: Choose which notifications to get | Execute | Implementing |
+| NOTF-14 | P3: Choose which notifications to get | Execute | Implementing |
 | NOTF-15 | P3: Choose which notifications to get | Execute | Implementing |
 | NOTF-16 | P3: Choose which notifications to get | - | Pending |
 | NOTF-17 | P3: Choose which notifications to get | Execute | Implementing |
 | NOTF-18 | P3: Choose which notifications to get | - | Pending |
-| NOTF-19 | P3: Choose which notifications to get | - | Pending |
+| NOTF-19 | P3: Choose which notifications to get | Execute | Implementing |
 | NOTF-20 | P3: Choose which notifications to get | - | Pending |
 | NOTF-21 | Edge cases | - | Pending |
 | NOTF-22 | Edge cases | - | Pending |
