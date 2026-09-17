@@ -202,7 +202,7 @@ every switch holds.
 | NOTF-20 | P3: Choose which notifications to get | - | Pending |
 | NOTF-21 | Edge cases | Execute | Implementing |
 | NOTF-22 | Edge cases | Execute | Implementing |
-| NOTF-23 | Edge cases | - | Pending |
+| NOTF-23 | Edge cases | Execute | Implementing |
 | NOTF-24 | Edge cases | Execute | Implementing |
 | NOTF-25 | Edge cases | Execute | Implementing |
 | NOTF-26 | Edge cases | Execute | Implementing |

@@ -355,7 +355,9 @@ T12 → T13
 
 ---
 
-### T10: App subscribes to session notices and focus
+### T10: App subscribes to session notices and focus ✅ COMPLETE
+
+**Status**: Done — notice list state, `session:notice` (upsert with a ref-counted key) and `session:focus` subscriptions, `openNotifiedSession` shared by both surfaces. Named apart from the existing chip `openSession` because the subscription needs a stable callback. Build gate green: typecheck 0, lint 0 errors, electron-vite build ok, 990 tests.
 
 **What**: In `App.tsx`, hold the notice list, subscribe `session:notice` (upsert) and `session:focus` (open), and add `openSession(id)`: direction `agents` with `config:patch`, `setSelectedSessionId(id)`, drop that session's notice.
 **Where**: `src/renderer/src/App.tsx`
@@ -370,10 +372,10 @@ T12 → T13
 
 **Done when**:
 
-- [ ] Clicking an in-app notice and clicking an OS notification run the same `openSession`
-- [ ] A stopped session is selected as-is (NOTF-23)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] Clicking an in-app notice and clicking an OS notification run the same `openSession`
+- [x] A stopped session is selected as-is (NOTF-23)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none (renderer component — hand-verified in T13)
 **Gate**: build
