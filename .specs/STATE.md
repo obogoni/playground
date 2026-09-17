@@ -52,7 +52,7 @@ Handoff snapshot.
   window is hidden), fixed in `d641837` and `57d88fc`. Still hand-verify: a notification clicked
   after a minute, a minimized window, and the two-theme pass of tabs and notices.
 - **rev4 increment (2026-09-16), P4 NOTF-30..36:** the notification names the session's task —
-  title `#<id> · <pinned task title>` (or `#<id>`) clipped to 60 characters, agent and session
+  title `#<id> · <pinned task title>` (or `#<id>`), clipped to 60 characters until rev5 removed the cut; agent and session
   as a second body line; branch read with `git symbolic-ref --short HEAD` (2 s), no ADO call.
   T14–T20 `ec0d66b`..`d1d5f94`, fix round `b522d5f` (also catches async notifier failures).
   Suite 990 → **1006**; Verifier round 3 FAIL on evidence, round 4 PASS (18/18 mutants).
