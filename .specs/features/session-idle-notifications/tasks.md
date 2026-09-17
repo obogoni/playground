@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/session-idle-notifications/design.md`
-**Status**: T1–T13 Done (Verifier PASS, owner smoke 34/34); rev4 T14–T20 Done (Verifier round 4 PASS, 18/18 mutants); rev5 T21–T23 Draft — approved, executing
+**Status**: T1–T13 Done (Verifier PASS, owner smoke 34/34); rev4 T14–T20 Done (Verifier round 4 PASS, 18/18 mutants); rev5 T21–T23 executed — Verifier pending
 **Branch**: `feature/session-idle-notifications` (stacked on `feature/session-activity-status` `65de9fd`, PR #88)
 **Test baseline**: **917 tests / 52 files**, measured green on this branch before any task.
 
@@ -760,7 +760,9 @@ T22 → T23
 
 ---
 
-### T23: Smoke header expects the whole title
+### T23: Smoke header expects the whole title ✅ COMPLETE
+
+**Status**: Done — smoke header's hand check now expects the whole title wrapping in the in-app notice with no `…`, and notes Windows may shorten its own toast title. Build gate green (phase 7 close): typecheck 0, lint 0 errors, electron-vite build ok, 1005 tests.
 
 **What**: Update the NOTF-36 hand-verify line in the smoke header: a long pinned task title must wrap in full, with no `…`, in the in-app notice.
 **Where**: `scripts/smoke-notifications.mjs`
@@ -775,9 +777,9 @@ T22 → T23
 
 **Done when**:
 
-- [ ] Header names the whole-title check for the in-app notice and notes Windows may shorten its own toast title
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] Header names the whole-title check for the in-app notice and notes Windows may shorten its own toast title
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none (smoke script — owner-run)
 **Gate**: build

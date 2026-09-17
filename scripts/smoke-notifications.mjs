@@ -27,10 +27,12 @@
  *   - no OS notification and no notice while focused on the session itself (NOTF-03)
  *   - the two-theme visual pass of the tabs, the switches (disabled state) and
  *     the notice stack
- *   - NOTF-36, title half: pin a task with a long title, run an agent in a worktree
- *     on its branch, and trigger a notice while another session is on screen. The
- *     title must wrap to two lines and end in `…` (this smoke's task is unpinned,
- *     so its `#<id>` title never wraps)
+ *   - NOTF-33/36, whole title: pin a task with a long title, run an agent in a
+ *     worktree on its branch, and trigger a notice while another session is on
+ *     screen. The in-app title must wrap over as many lines as it needs, whole,
+ *     with no `…` (this smoke's task is unpinned, so its `#<id>` title never wraps).
+ *     Repeat with the app in the background: the Windows toast gets the whole
+ *     title, but Windows itself may shorten how much of it shows
  *
  * CODE READING ONLY (not reproducible on a Windows desktop):
  *   - NOTF-06: an OS without notification support. `showOs` returns before
