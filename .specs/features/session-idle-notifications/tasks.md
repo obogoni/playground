@@ -550,7 +550,9 @@ T19 → T20
 
 ---
 
-### T16: Report the session cwd with each transition
+### T16: Report the session cwd with each transition ✅ COMPLETE
+
+**Status**: Done — `ActivityChange.cwd` filled from `session.meta.cwd` in `#setActivity`; the first-state test now asserts `cwd`; the notifier test fixture gained the field. Full gate green: typecheck 0, lint clean, 1002 tests.
 
 **What**: Add `cwd` to `ActivityChange` and fill it in `SessionManager.#setActivity`.
 **Where**: `src/main/session-manager.ts`
@@ -565,9 +567,9 @@ T19 → T20
 
 **Done when**:
 
-- [ ] The first-state test in `session-manager.test.ts` asserts `cwd` in the reported change (the `ActivityChange` type gains the field in `activity-notification.ts` in this same task)
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: unchanged or +1 (no silent deletions)
+- [x] The first-state test in `session-manager.test.ts` asserts `cwd` in the reported change (the `ActivityChange` type gains the field in `activity-notification.ts` in this same task)
+- [x] Gate check passes: `npm test`
+- [x] Test count: unchanged or +1 (no silent deletions)
 
 **Tests**: unit
 **Gate**: full

@@ -345,7 +345,7 @@ export class SessionManager {
     const after = next?.view ?? null
     session.activity = next
     if (sameView(before, after)) return
-    const { id, agent, title } = session.meta
+    const { id, agent, title, cwd } = session.meta
     this.deps.emit('session:activity', { id, activity: after })
     // Only transitions reach the listener: #finalize drops the activity without
     // coming through here, so a stopping PTY never notifies (NOTF-26).
@@ -354,6 +354,7 @@ export class SessionManager {
         id,
         agent,
         title,
+        cwd,
         before,
         after,
         attached: this.#activeId === id

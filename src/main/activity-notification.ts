@@ -17,6 +17,8 @@ export interface ActivityChange {
   id: string
   agent: string
   title: string
+  /** The session's working directory; its branch names the linked task (NOTF-30). */
+  cwd: string
   before: SessionActivity | null
   after: SessionActivity | null
   /** Whether this session's terminal is the one on screen. */

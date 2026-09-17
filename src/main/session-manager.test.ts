@@ -666,6 +666,7 @@ describe('SessionManager activity transitions', () => {
         id: view.id,
         agent: 'Claude',
         title: view.title,
+        cwd: CWD,
         before: null,
         after: { state: 'working', subagents: 0 },
         attached: false

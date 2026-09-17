@@ -58,6 +58,7 @@ function change(overrides: Partial<ActivityChange> = {}): ActivityChange {
     id: 's1',
     agent: 'Claude',
     title: 'Claude · feature-login',
+    cwd: 'C:\\work\\repo-feature-login',
     before: activity('working'),
     after: activity('needs-approval', { tool: 'Bash' }),
     attached: false,
