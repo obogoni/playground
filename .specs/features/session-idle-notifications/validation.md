@@ -1,13 +1,13 @@
-# Session Activity Notifications Validation — Round 2
+# Session Activity Notifications Validation — Rounds 1–4
 
-## Validation: session-idle-notifications — PASS ✅
+## Round 2 verdict: PASS ✅ (NOTF-01..29; superseded by round 3 for the rev4 increment)
 
 **Date**: 2026-09-16
 **Spec**: `.specs/features/session-idle-notifications/spec.md` (29 ACs, NOTF-01..29)
 **Diff range**: `65de9fd..HEAD` (`b3a00b3`), 19 commits; feature code from `2e6bf64`; fix round 1 = `b3a00b3`
 **Verifier**: independent sub-agent (author ≠ verifier), read-only over the real tree
 **Round**: re-verification 2 of a maximum 3. Round 1 (at `40ab12f`) returned ❌ FAIL on evidence only.
-**Result**: PASS — every round-1 evidence gap is closed or accepted under the project convention;
+**Round 2 outcome**: PASS — every round-1 evidence gap is closed or accepted under the project convention;
 the only open item is the owner-run smoke, owner-pending by design.
 
 ---
@@ -394,3 +394,258 @@ now say so and compare effective values.
 **Still hand-verify only:** clicking an OS notification left on screen a minute or more, a
 minimized window, no notification while focused on the attached session (NOTF-03 is unit-tested
 at `activity-notification.test.ts:33`), and the two-theme visual pass.
+
+---
+
+## Round 3 verdict (rev4 increment, NOTF-30..36): FAIL ❌ (superseded by round 4)
+
+**Date**: 2026-09-16
+**Spec**: `.specs/features/session-idle-notifications/spec.md` rev4 (P4, NOTF-30..36; assumption rows at `spec.md:75-77`; Out of Scope `spec.md:52-53`)
+**Design**: `design.md` "Increment rev4" (`design.md:240-293`)
+**Tasks**: T14–T20 in `tasks.md`
+**Diff range**: `0f6212b..d1d5f94` (plan `0f6212b`; code `ec0d66b`..`d1d5f94`, 7 commits)
+**Verifier**: independent sub-agent (author ≠ verifier); read-only over the real tree; mutations in a detached scratch worktree at `d1d5f94`
+**Round 3 outcome**: FAIL — the behaviour is correct and discriminatingly tested (17/17 mutants killed, all gates exit 0), but two evidence/spec
+items are open: the title half of NOTF-36 has no check that can fail and no named hand-verify line, and the confirmed
+spec row that names the branch command (`spec.md:75`) disagrees with the shipped command without a recorded deviation — and
+the smoke's expectations depend on the difference. Both are documentation/smoke-header fixes; no production code change.
+
+### R3 · Task completion
+
+| Task | Status | Notes |
+| ---- | ------ | ----- |
+| T14 `linkTask` | ✅ Done | `src/main/activity-notification.ts:108-114`, 6 tests |
+| T15 `describeNotification` + `clip` | ✅ Done | `src/main/activity-notification.ts:69-95`, 6 tests |
+| T16 `ActivityChange.cwd` | ✅ Done | `src/main/session-manager.ts:348,357`; `session-manager.test.ts:669` |
+| T17 async notifier + `linkedTask` | ✅ Done | `src/main/session-notifier.ts:41-43`, +4 tests. Its recorded SPEC_DEVIATION placeholder (`linkedTask: async () => null`) is **gone** at `d1d5f94`: `src/main/index.ts:317` wires the real lookup |
+| T18 `readBranch` + wiring | ✅ Done | `src/main/index.ts:79-91,317` (build-gated, code reading) |
+| T19 notice CSS | ✅ Done | `SessionNotices.css:53,64` |
+| T20 smoke | ⚠️ Written, **not yet run** for rev4 | owner-pending by convention (the rev3 run recorded above predates it) |
+
+### R3 · Spec-anchored acceptance criteria
+
+AN = `src/main/activity-notification.test.ts`, SN = `src/main/session-notifier.test.ts`, SMOKE = `scripts/smoke-notifications.mjs`.
+
+| ID | Criterion (short) | Spec-defined outcome | `file:line` + assertion | Result |
+| -- | ----------------- | -------------------- | ----------------------- | ------ |
+| NOTF-30 | branch number + pinned task with cached details → title `#<id> · <task title>` | exact `#12345 · Fix login redirect` | `src/main/activity-notification.test.ts:164` `linkTask('user/dev/4821-login/12345-fix-login', [pin]) toEqual({ id: 12345, title: 'Fix login redirect' })` (last segment wins over the story number); `:205` `describeNotification(…) toEqual({ title: '#12345 · Fix login redirect', … })`; `src/main/session-notifier.test.ts:161` OS payload, `:160` lookup used the change's cwd; `:196` first pin wins. Wiring `src/main/index.ts:317` (code reading) | ✅ PASS |
+| NOTF-31 | number not pinned / no cached details → title `#<id>` | exact `#12345` | `src/main/activity-notification.test.ts:173` uncached pin → `title: null`; `:180` unpinned → `title: null`; `:214` `title: '#12345'`; `src/main/session-notifier.test.ts:173` in-app payload `title: '#12345'`; SMOKE:596 in-app notice text `NOTICE_A(...)` = `#<id>` + state + session line (owner-pending) | ✅ PASS |
+| NOTF-32 | with a task, body = state line + `<agent> · <session title>` | `Needs approval to run Bash\nClaude · feature-login` | `src/main/activity-notification.test.ts:205` exact body; `:241` agent prefix added to a renamed session; `src/main/session-notifier.test.ts:161,173` both surfaces | ✅ PASS |
+| NOTF-33 | title ≤ 60 chars, cut with trailing `…` | length 60, first 59 + `…`; exactly 60 kept whole | `src/main/activity-notification.test.ts:223` `toHaveLength(60)`, `:224` `slice(0, 59) + '…'`; `:230` exactly-60 kept; `:236` no-task title cut too | ✅ PASS |
+| NOTF-34 | branch unreadable (not git, detached HEAD, git failing, > 2 s) → no-task layout | rev3 layout | Decision half: `src/main/activity-notification.test.ts:191` `linkTask(null, …) toBeNull()`; `src/main/session-notifier.test.ts:196` rejected lookup → `{ title: 'Claude · feature-login', body: 'Needs approval to run Bash' }`. Shell half, code reading: `src/main/index.ts:81` `symbolic-ref --short HEAD` (fails on detached HEAD and outside git), `:83` `timeout: 2000`, `:89` any error → `null`, `:87` empty → `null`. Not named in the smoke header's code-reading list (see gap 3) | ✅ PASS (unit + code reading) |
+| NOTF-35 | no Azure DevOps call to build a notification | only cached data | Code reading: `src/main/index.ts:317` uses `taskBoard.list().tasks`; `src/main/task-board.ts:127-136` `list()` maps `config.pinnedTasks` over the in-memory `details` map and touches no gateway; `readBranch` is local git only (`index.ts:79-91`) | ✅ PASS (code reading, thin shell per `.specs/codebase/TESTING.md:43`) |
+| NOTF-36 | in-app notice: title up to two lines, each body line on its own line | two-line title clamp; two rendered body lines | Body half: SMOKE:603 `bodyLines === 2` over `.session-notice-body` `innerText` — can fail (without `white-space: pre-line`, `SessionNotices.css:64`, `innerText` collapses the `\n` to one line). **Title half: CSS only** (`SessionNotices.css:49-53` `-webkit-line-clamp: 2`); the smoke's task is unpinned so its title is the short `#<id>` and never wraps, and the hand-verify header does not name a long-title visual check | ⚠️ Partial (gap 1) |
+
+**Status**: 6/7 fully evidenced (3 of them partly by owner-pending smoke / code reading as the project convention allows); 1 partial.
+
+### R3 · Spec-precision / consistency findings
+
+- **Gap 2 — confirmed spec row vs shipped mechanism.** `spec.md:75` (`Confirmed? y`) says the branch is read with
+  `git rev-parse --abbrev-ref HEAD`; design (`design.md:273-275,291`) and code (`src/main/index.ts:81`) use
+  `git symbolic-ref --short HEAD`, with no `SPEC_DEVIATION` marker and no spec edit. The two differ observably: on an
+  **unborn branch** `rev-parse --abbrev-ref HEAD` fails (→ no task) while `symbolic-ref` answers (→ `#<id>`), and the rev4
+  smoke builds exactly that case (`git init -b feature/<id>-notify-smoke` with no commit, SMOKE:150-153), so SMOKE:596
+  only holds under the shipped command (probed: on an unborn `feature/12345-notify-smoke`, `rev-parse --abbrev-ref HEAD`
+  exits 128, `symbolic-ref --short HEAD` prints the branch and exits 0). On a detached HEAD both end in the no-task layout (`HEAD` carries no number), so
+  NOTF-34 is met either way. The code's choice is the better one; the spec row is stale.
+- Cosmetic: `spec.md:256` still reads "NOTF-30..36 pending Tasks" although T14–T20 map them.
+
+### R3 · Smoke script static checks
+
+- `node --check scripts/smoke-notifications.mjs` → exit 0.
+- Every in-page expression passed to `evaluate`/`waitFor` (50 of them) was extracted with acorn, its `${…}` interpolations
+  stubbed, and compiled with `new Function` → **0 failures** (this catches a literal newline inside a quoted in-page string,
+  the earlier bug class). The new line-count expression avoids a literal newline with `String.fromCharCode(10)` (SMOKE:601).
+- Can-fail check of the changed assertions:
+  - SMOKE:596 / :643 — before rev4 the title was `Claude (notifications smoke) · <A>` with a one-line body; the expectation is
+    `#<id>` + state + `\n` + session line, so a missing task, a missing `#`, or a missing second line fails it.
+  - SMOKE:603 — without `pre-line` the rendered body is one line → fails.
+  - `TASK_ID` is chosen to avoid every existing pin (SMOKE:146-149), so the expected `#<id>` with no title is deterministic;
+    `taskIdFromBranch('feature/<id>-notify-smoke')` yields `<id>` (`src/shared/tasks.ts:53-59`).
+  - The owner y/n check for the Windows toast (SMOKE:690-702) only runs on a TTY; when skipped, the toast wording falls
+    back to the header's hand-verify line ("the OS notification's wording as Windows shows it").
+- Cleanup removes the temp repository with retries (SMOKE:185-193).
+
+### R3 · Discrimination sensor
+
+Scratch: `git worktree add --detach <scratchpad>/verify-wt3 d1d5f94`, `node_modules` by junction; unmutated baseline of the
+three files 116/116, exit 0. Each mutant applied by exact anchor, run with `npx vitest run <files>`, restored in `finally`.
+
+| # | File:line | Mutation | Tests | Killed? |
+| - | --------- | -------- | ----- | ------- |
+| R1 | `src/main/activity-notification.ts:113` | `linkTask` ignores the cached title | AN+SN | ✅ (2 failed) |
+| R2 | `src/main/activity-notification.ts:112` | `linkTask` takes the last pin with the id | AN+SN | ✅ (1) |
+| R3 | `src/main/activity-notification.ts:111` | no `null` when the branch has no number | AN+SN | ✅ (1) |
+| R4 | `src/main/activity-notification.ts:109` | a null branch still links a task | AN+SN | ✅ (1) |
+| R5 | `src/main/activity-notification.ts:72` | `clip` cuts at exactly 60 (`>=`) | AN+SN | ✅ (1) |
+| R6 | `src/main/activity-notification.ts:72` | `clip` keeps 60 + `…` = 61 | AN+SN | ✅ (2) |
+| R7 | `src/main/activity-notification.ts:90` | task title without `#` | AN+SN | ✅ (6) |
+| R8 | `src/main/activity-notification.ts:93` | body without the session line | AN+SN | ✅ (5) |
+| R9 | `src/main/activity-notification.ts:93` | second line without the agent-prefix rule | AN+SN | ✅ (1) |
+| R10 | `src/main/activity-notification.ts:90` | untitled task rendered `#id · null` | AN+SN | ✅ (2) |
+| R11 | `src/main/activity-notification.ts:88` | no-task title not clipped | AN+SN | ✅ (1) |
+| R12 | `src/main/activity-notification.ts:92` | task title not clipped | AN+SN | ✅ (1) |
+| R13 | `src/main/session-notifier.ts:33` | `linkedTask` called before / regardless of the decision | SN | ✅ (2) |
+| R14 | `src/main/session-notifier.ts:42` | lookup rejection not caught | SN | ✅ (1) |
+| R15 | `src/main/session-notifier.ts:42` | lookup with the session id instead of its cwd | SN | ✅ (1) |
+| R16 | `src/main/session-notifier.ts:43` | linked task dropped from `describeNotification` | SN | ✅ (2) |
+| R17 | `src/main/session-manager.ts:356` | `cwd` not passed in `ActivityChange` | SM | ✅ (1) |
+
+**Sensor depth**: expanded (17 behaviour-level mutants over every new branch)
+**Sensor result**: 17/17 killed
+
+### R3 · Gate check (real tree at `d1d5f94`, judged by exit code)
+
+| Gate | Command | Exit | Detail |
+| ---- | ------- | ---- | ------ |
+| Typecheck | `npm run typecheck` | **0** | — |
+| Lint | `npm run lint` | **0** | 0 errors, 18 pre-existing warnings |
+| Tests | `npm test` | **0** | **1006 passed / 56 files**, 0 failed, 0 skipped |
+
+Delta from round 2: 990 → 1006 (+16 = AN 12 + SN 4; the SM change edits an existing assertion). No deletions; the 7 existing
+SessionNotifier tests keep their assertions and only `await` the now-async `handle`.
+
+### R3 · Code quality
+
+| Principle | Status |
+| --------- | ------ |
+| Minimum code / surgical | ✅ `linkTask` + `clip` pure; notifier +3 lines; manager +2; `readBranch` one call |
+| Matches patterns | ✅ reuses `taskIdFromBranch` (rail rule) and `TaskBoard.list()`; DI fake for `linkedTask` |
+| No scope creep | ✅ no network, no new settings; Out of Scope rows (`spec.md:52-53`) respected — no ADO fetch, no tree scan |
+| Every test maps to a requirement | ✅ unlabelled `linkTask` "no number" / "first pin" tests map to design `design.md:261-264` |
+| Documented guidelines | ✅ `.specs/codebase/TESTING.md` (thin shell + renderer by smoke/code reading) |
+| Observation | `SessionManager` calls `void sessionNotifier.handle(change)` (`src/main/index.ts:357`): a throw *after* the lookup (e.g. in `showOs`) becomes an unhandled rejection instead of reaching `#setActivity`'s try/catch. Design accepts fire-and-forget (`design.md:271-272`); not a gap, noted for awareness |
+
+### R3 · Fix plans
+
+1. **(Minor) NOTF-36 title half** — add a hand-verify line to the smoke header ("an in-app notice with a long task title wraps
+   to at most two lines, ending in an ellipsis"), or give the smoke a pinned-looking long title path. Preferably both: the
+   header line is enough under the convention.
+2. **(Minor) Spec row drift** — update `spec.md:75` to `git symbolic-ref --short HEAD` (and why: an unborn branch still
+   answers, a detached HEAD fails), or record a `SPEC_DEVIATION` in `index.ts` at `readBranch`. Also refresh `spec.md:256`.
+3. **(Minor) NOTF-34 shell half** — name NOTF-34 in the smoke header's "CODE READING ONLY" list with its guards
+   (`symbolic-ref` fails on detached HEAD / outside git, `timeout: 2000`, any error → `null`), as was done for NOTF-06/21.
+4. **(Owner)** run `node scripts/smoke-notifications.mjs` for rev4, including the TTY y/n check of the Windows toast's
+   three lines (the design's newline risk, `design.md:283`).
+
+### R3 · Requirement traceability (proposed; `spec.md` not modified by the Verifier)
+
+| Requirement | New status |
+| ----------- | ---------- |
+| NOTF-30..33, NOTF-35 | ✅ Verified (unit / code reading), smoke owner-pending |
+| NOTF-34 | ✅ Verified (unit + code reading) · header line pending (fix 3) |
+| NOTF-36 | ⚠️ Needs Fix (title half, fix 1) |
+
+### R3 · Summary
+
+**Overall**: ❌ Not Ready — behaviour sound; three cheap evidence/documentation fixes.
+**Spec-anchored check**: 6/7 ACs fully evidenced, 1 partial; 1 spec-row drift, 1 cosmetic
+**Sensor**: 17/17 killed
+**Gate**: typecheck 0, lint 0, tests 0 (1006 passed)
+
+---
+
+## Validation (round 4 — rev4 increment re-verification, NOTF-30..36): PASS ✅
+
+**Date**: 2026-09-16
+**Diff range**: `0f6212b..b522d5f`; fix round 2 = `b522d5f` (on top of round 3's `d1d5f94`)
+**Iteration**: 2 of a maximum 3 for the rev4 increment
+**Verifier**: independent sub-agent (author ≠ verifier); read-only over the real tree; probes and mutants in a detached scratch worktree at `b522d5f`
+**Result**: PASS — all three round-3 gaps are closed and re-confirmed; the only production change (`src/main/index.ts:359-363`) is
+correct and leaves notification behaviour unchanged; gates exit 0 with 1006 tests; the rev4 mutants were re-run at `b522d5f`
+and all 17 are still killed. The rev4 owner smoke remains owner-pending by convention.
+
+### R4 · What changed in `b522d5f`
+
+`git diff --stat d1d5f94 b522d5f -- src` → only `src/main/index.ts` (+7/−1). Otherwise `spec.md` (2 lines),
+`tasks.md` (fix-round record) and the header comment of `scripts/smoke-notifications.mjs` (+8 lines, no executable change).
+
+### R4 · Round-3 gap disposition
+
+| # | Round-3 gap | Status | Proof |
+| - | ----------- | ------ | ----- |
+| 1 | NOTF-36 title half: CSS only, no named hand-verify | ✅ **CLOSED** (hand-verify, owner-pending) | `scripts/smoke-notifications.mjs:30-33` names the check: pin a long-titled task, run on its branch, notice must wrap to two lines ending in `…`, and says why this smoke's `#<id>` title cannot show it. Satisfies the project's hand-verify convention for renderer CSS (`.specs/codebase/TESTING.md:42,68`); the CSS it verifies is `src/renderer/src/components/SessionNotices.css:49-53` |
+| 2 | Confirmed spec row named `rev-parse --abbrev-ref`; code uses `symbolic-ref --short` | ✅ **CLOSED** | `spec.md:75` now names `git symbolic-ref --short HEAD` and the reason (answers on a branch with no commits, fails on a detached HEAD) — matches `src/main/index.ts:81` and my round-3 probe (unborn branch: `rev-parse` exit 128, `symbolic-ref` exit 0). `spec.md:256` coverage line now maps NOTF-30..36 to T14–T20 + fix round 2 |
+| 3 | NOTF-34 git half not named as code reading | ✅ **CLOSED** | `scripts/smoke-notifications.mjs:42-45` lists it under CODE READING ONLY; each named guard re-checked: any git error / outside git / detached HEAD → `catch` → `null` (`src/main/index.ts:81,89`), empty stdout → `null` (`:87`), `timeout: 2000` (`:83`, execFile kills and rejects → `null`); the null-branch consequence is unit-tested at `src/main/activity-notification.test.ts:191` and `src/main/session-notifier.test.ts:196` |
+| 4 | Owner has not run the rev4 smoke | ⏳ **OWNER-PENDING** (by convention) | unchanged; includes the TTY y/n check of the Windows toast's three lines |
+
+### R4 · The production change: `onActivityChange` catches the async notifier
+
+Shipped at `src/main/index.ts:359-363`:
+`onActivityChange: (change) => { sessionNotifier.handle(change).catch((err) => console.error('[notifications] session notification failed', err)) }`
+
+**Code reading.**
+- Since rev4, `SessionNotifier.handle` is `async` (`src/main/session-notifier.ts:32`), so *every* throw inside it, including
+  a throw from `prefs()`/`windowFocused()` before the first `await`, becomes a rejection, not a synchronous throw.
+  `SessionManager`'s `try/catch` around the listener (`src/main/session-manager.ts:352-362`) therefore never saw notifier
+  failures after rev4; with `void` they were unhandled rejections. The `.catch` restores the "a notifier bug is logged and
+  never breaks activity" guarantee that round 1 verified for the synchronous notifier.
+- The arrow still returns `undefined` synchronously, as the `void` form did, so `SessionManager` behaviour
+  (`session:activity` emit first, listener second) is unchanged.
+- The success path is untouched: `.catch` only runs on rejection. No NOTF outcome (decision, surface, wording, task
+  lookup, click routing) passes through the handler.
+- `SessionNotifier.handle` already absorbs a failed task lookup (`session-notifier.ts:42` `.catch(() => null)`,
+  NOTF-34), so the new handler only sees failures *after* the lookup (`describeNotification`, `showOs`, `emit`) or in the
+  synchronous prefix. That is the intended scope: log it and drop that one notification.
+
+**Scratch probe** (not committed; a throwaway test file in the scratch worktree that imports the real `SessionNotifier` and
+reproduces the shipped wrapper verbatim):
+
+| Probe | Result |
+| ----- | ------ |
+| `showOs` throws → `handle()` does not throw synchronously, it rejects | ✅ confirmed |
+| `prefs()` throws (before any `await`) → also a rejection, so `SessionManager`'s try/catch cannot catch it | ✅ confirmed |
+| Shipped wrapper: returns `undefined` synchronously, logs the failure, **no `unhandledRejection`** | ✅ passed |
+| Shipped wrapper, success path: exactly one OS notification `Claude · repo` / `Finished its turn`, nothing logged | ✅ passed |
+| **Mutant W1**: wrapper reverted to the round-3 `void notifier.handle(c)` | ✅ **killed**: the no-unhandled-rejection probe fails (1 failed / 3 passed) |
+
+Verdict on the change: correct, necessary for the async notifier, no NOTF behaviour change. It lives in the thin Electron
+wiring that `.specs/codebase/TESTING.md:43,67` exempts from unit tests, so this code reading plus the probe is the evidence;
+no committed test is expected.
+
+### R4 · Spec-anchored acceptance criteria (rev4)
+
+Source and unit tests of the decision layer are byte-identical to round 3 (only `index.ts` changed), so round 3's
+`file:line` evidence for NOTF-30..35 stands unchanged. The partial row is now complete:
+
+| ID | Round 3 | Round 4 | Evidence |
+| -- | ------- | ------- | -------- |
+| NOTF-30, 31, 32, 33 | ✅ PASS | ✅ PASS | unchanged (`src/main/activity-notification.test.ts:164,173,180,205,214,223,224,230,236,241`; `src/main/session-notifier.test.ts:160,161,173`) |
+| NOTF-34 | ✅ PASS (unit + code reading) | ✅ PASS, now named in the smoke header | `src/main/activity-notification.test.ts:191`; `src/main/session-notifier.test.ts:196`; `src/main/index.ts:81,83,87,89`; `scripts/smoke-notifications.mjs:42-45` |
+| NOTF-35 | ✅ PASS (code reading) | ✅ PASS | `src/main/index.ts:317`; `src/main/task-board.ts:127-136` |
+| NOTF-36 | ⚠️ Partial | ✅ PASS (body: smoke check; title: named hand-verify) | `scripts/smoke-notifications.mjs:611` (`bodyLines === 2`, can fail); `scripts/smoke-notifications.mjs:30-33` hand-verify; `SessionNotices.css:49-53,64` |
+
+**Status**: ✅ 7/7 ACs evidenced at the level the project convention requires; 0 spec-precision gaps.
+
+### R4 · Smoke static checks
+
+- `node --check scripts/smoke-notifications.mjs` → exit 0.
+- The acorn check of all 50 in-page `evaluate`/`waitFor` expressions → 0 failures (only header comments changed).
+
+### R4 · Discrimination sensor
+
+- Rev4 mutants R1–R17 (table in round 3) **re-run at `b522d5f`**: **17/17 killed**.
+- W1 (the `.catch` reverted to `void`): killed by the scratch probe above. No committed test targets it, which is by
+  convention for `index.ts` wiring.
+
+**Sensor result**: 18/18 killed (17 committed-suite mutants + 1 scratch-probe mutant)
+
+### R4 · Gate check (real tree at `b522d5f`, judged by exit code)
+
+| Gate | Command | Exit | Detail |
+| ---- | ------- | ---- | ------ |
+| Typecheck | `npm run typecheck` | **0** | — |
+| Lint | `npm run lint` | **0** | 0 errors, 18 pre-existing warnings |
+| Tests | `npm test` | **0** | **1006 passed / 56 files**, 0 failed, 0 skipped (unchanged from round 3) |
+
+### R4 · Lessons
+
+No new grounded failure this round, so nothing new was recorded. L-019 and L-022 (round 3) stay as candidates; this fix
+applied them rather than contradicting them.
+
+### R4 · Summary
+
+**Overall**: ✅ Ready — pending the owner's rev4 smoke run and the named hand-verify items, by convention.
+**Spec-anchored check**: NOTF-30..36 all evidenced; 0 gaps
+**Sensor**: 17/17 rev4 mutants still killed; W1 killed by probe
+**Gate**: typecheck 0, lint 0, tests 0 (1006 passed)

@@ -93,8 +93,8 @@ Seen once or not yet corroborated. Tracked, not trusted.
 ### L-019 - Every acceptance criterion left to hand-verification must appear as a named line in the owner smoke script's hand-verify header or as a smoke check
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-scripts` · harmful: 0
 - features: session-idle-notifications
-- evidence: NOTF-23, NOTF-06, NOTF-21 (validation.md AC table; src/main/index.ts:237,256; src/renderer/src/App.tsx:174) (smoke-scripts)
-- last seen: 2026-09-17T00:29:17Z
+- evidence: NOTF-23, NOTF-06, NOTF-21 (validation.md AC table; src/main/index.ts:237,256; src/renderer/src/App.tsx:174) (smoke-scripts) (+1 more)
+- last seen: 2026-09-17T01:30:15Z
 
 ### L-020 - A smoke check for a state change must start from a different state, or it cannot fail
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-scripts` · harmful: 0
@@ -107,6 +107,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: session-idle-notifications
 - evidence: validation.md spec-precision gaps (src/main/activity-notification.test.ts:116,122,126,136) (notifications)
 - last seen: 2026-09-17T00:29:17Z
+
+### L-022 - When the design replaces a mechanism a confirmed spec row names, update that spec row in the same change or mark a SPEC_DEVIATION at the code
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: session-idle-notifications
+- evidence: spec.md:75 vs src/main/index.ts:81 (rev-parse --abbrev-ref vs symbolic-ref --short) — validation.md round 3 gap 2 (spec)
+- last seen: 2026-09-17T01:30:16Z
 
 ## Quarantined (failed when applied - ignore)
 

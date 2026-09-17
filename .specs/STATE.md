@@ -51,7 +51,15 @@ Handoff snapshot.
   Two earlier runs stopped on smoke defects (rail v2 row labels; xterm not rendering while the
   window is hidden), fixed in `d641837` and `57d88fc`. Still hand-verify: a notification clicked
   after a minute, a minimized window, and the two-theme pass of tabs and notices.
-- **Lessons collide again:** this branch added candidates **L-019..L-021** (`next_id` 22), but
+- **rev4 increment (2026-09-16), P4 NOTF-30..36:** the notification names the session's task —
+  title `#<id> · <pinned task title>` (or `#<id>`) clipped to 60 characters, agent and session
+  as a second body line; branch read with `git symbolic-ref --short HEAD` (2 s), no ADO call.
+  T14–T20 `ec0d66b`..`d1d5f94`, fix round `b522d5f` (also catches async notifier failures).
+  Suite 990 → **1006**; Verifier round 3 FAIL on evidence, round 4 PASS (18/18 mutants).
+  **Owner-pending:** re-run the smoke and answer its y/n on whether the Windows toast shows the
+  three lines separately (if not, join the body with ` — ` for the OS surface only); hand-check a
+  long pinned task title wrapping in the in-app notice.
+- **Lessons collide again:** this branch added candidates **L-019..L-022** (`next_id` 23), but
   `develop` already holds time-tracking's L-019..L-024. Renumber when merging into `develop`.
 - **Next:** after the owner smoke, open the PR upstream with "depends on #88"; when #88 merges,
   `git rebase --onto origin/main feature/session-activity-status feature/session-idle-notifications`.

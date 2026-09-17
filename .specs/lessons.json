@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 22,
+  "next_id": 23,
   "lessons": [
     {
       "id": "L-001",
@@ -256,10 +256,11 @@
       "recurrence": 1,
       "harmful": 0,
       "evidence": [
-        "NOTF-23, NOTF-06, NOTF-21 (validation.md AC table; src/main/index.ts:237,256; src/renderer/src/App.tsx:174) (smoke-scripts)"
+        "NOTF-23, NOTF-06, NOTF-21 (validation.md AC table; src/main/index.ts:237,256; src/renderer/src/App.tsx:174) (smoke-scripts)",
+        "NOTF-36 title half (src/renderer/src/components/SessionNotices.css:49-53); NOTF-34 shell half (src/main/index.ts:79-91) — validation.md round 3 (smoke-scripts)"
       ],
       "created": "2026-09-17T00:29:17Z",
-      "last_seen": "2026-09-17T00:29:17Z"
+      "last_seen": "2026-09-17T01:30:15Z"
     },
     {
       "id": "L-020",
@@ -296,6 +297,24 @@
       ],
       "created": "2026-09-17T00:29:17Z",
       "last_seen": "2026-09-17T00:29:17Z"
+    },
+    {
+      "id": "L-022",
+      "key": "spec_deviation::when the design replaces a mechanism a confirmed spec row names update that spec row in the same change or mark a spec deviation at the code",
+      "text": "When the design replaces a mechanism a confirmed spec row names, update that spec row in the same change or mark a SPEC_DEVIATION at the code",
+      "signal": "spec_deviation",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "session-idle-notifications"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "spec.md:75 vs src/main/index.ts:81 (rev-parse --abbrev-ref vs symbolic-ref --short) — validation.md round 3 gap 2 (spec)"
+      ],
+      "created": "2026-09-17T01:30:16Z",
+      "last_seen": "2026-09-17T01:30:16Z"
     }
   ]
 }
