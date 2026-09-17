@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import type { RendererApi } from '../shared/ipc-contract'
@@ -16,9 +16,10 @@ const api = {
     return () => ipcRenderer.removeListener(channel, handler)
   },
   send: (channel: string, payload: unknown) => ipcRenderer.send(channel, payload),
-  // Declared with the contract so the cast stays honest instead of optional
-  // (L-001); the real `webUtils.getPathForFile` lands with the drop handler.
-  pathForFile: () => ''
+  // A dropped `File` carries no path in the renderer since Electron 32; only
+  // `webUtils` in the preload can resolve one. It returns '' for an item with no
+  // file behind it, e.g. a dragged link, which the drop handler skips (TSP-27).
+  pathForFile: (file: File) => webUtils.getPathForFile(file)
 } as RendererApi
 
 if (process.contextIsolated) {

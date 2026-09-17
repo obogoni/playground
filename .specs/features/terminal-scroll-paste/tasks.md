@@ -330,7 +330,7 @@ T18 → T19
 
 ---
 
-### T8: Preload `pathForFile`
+### T8: Preload `pathForFile` ✅
 
 **What**: Expose `pathForFile: (file) => webUtils.getPathForFile(file)` on the bridged `api`.
 **Where**: `src/preload/index.ts`
@@ -345,9 +345,9 @@ T18 → T19
 
 **Done when**:
 
-- [ ] Method present; `as RendererApi` cast typechecks without `@ts-ignore`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] Method present; `as RendererApi` cast typechecks without `@ts-ignore`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none
 **Gate**: build
