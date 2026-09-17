@@ -455,7 +455,7 @@ chunk's settled state, while the raw params stay per-event and in order.
 
 ---
 
-### T12: Paste from the clipboard over IPC
+### T12: Paste from the clipboard over IPC ✅
 
 **What**: Replace both `readText` paste paths with one `pasteFromClipboard` (invoke → `planPaste` → serialized, disposable queue with `PASTE_GAP_MS` gaps), and show "Não foi possível colar" on `error`.
 **Where**: `src/renderer/src/components/TerminalPane.tsx`
@@ -470,16 +470,35 @@ chunk's settled state, while the raw params stay per-event and in order.
 
 **Done when**:
 
-- [ ] Ctrl+V and right-click paste both call `pasteFromClipboard`; no `navigator.clipboard.readText` remains in the pane
-- [ ] A second paste waits for the running sequence (TSP-23); cleanup sets the disposed flag and clears the pending timer (TSP-24)
-- [ ] `agentOwnsMouse` right-click behavior untouched (TSP-40)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] Ctrl+V and right-click paste both call `pasteFromClipboard`; no `navigator.clipboard.readText` remains in the pane
+- [x] A second paste waits for the running sequence (TSP-23); cleanup sets the disposed flag and clears the pending timer (TSP-24)
+- [x] `agentOwnsMouse` right-click behavior untouched (TSP-40)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (819 tests / 51 files, no silent deletions)
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `feat(terminal): paste images and copied files as quoted paths`
+
+**Hand-verification at T14** (the pane only wires; every decision it wires sits in a tested seam):
+
+| Criterion | How T14 verifies it | Tested seam behind it |
+| --------- | ------------------- | --------------------- |
+| TSP-12 text pastes verbatim in one chunk | Copy a line of text, Ctrl+V in opencode | `paste.test.ts` - `expect(planPaste({ kind: 'text', text })).toEqual([text])`; `clipboard-reader.test.ts` text precedence |
+| TSP-13 text wins over an image | Copy from a browser page holding both; only the text arrives | `clipboard-reader.test.ts` - classifier returns `'text'` with an image present |
+| TSP-14 image → quoted temp PNG path | Win+Shift+S, then Ctrl+V; the agent attaches the image | `clipboard-reader.test.ts` (writer called once, `paste-yyyyMMdd-HHmmss-<rand>.png`), `paste.test.ts` (quoting) |
+| TSP-15 nothing on the clipboard → zero bytes | Clear the clipboard, Ctrl+V; no byte reaches the prompt | `paste.test.ts` - `expect(planPaste({ kind: 'empty' })).toEqual([])` |
+| TSP-16 failure → chip + zero bytes | Copy files, kill `powershell.exe` mid-read (or copy from a locked share); chip reads "Não foi possível colar" | `clipboard-reader.test.ts` runner/writer rejection → `{ kind: 'error' }`; the pane maps `error` to the chip |
+| TSP-20 right-click uses the same path | Right-click with no selection after copying an image; same result as Ctrl+V | one `pasteFromClipboard` for both gestures (`TerminalPane.tsx`) |
+| TSP-21/22 one quoted path per paste, 100 ms apart | Copy three files (one with a space), Ctrl+V; three quoted paths arrive in order | `paste.test.ts` order + quoting, `PASTE_GAP_MS === 100` |
+| TSP-23 a second paste waits | Ctrl+V twice in quick succession with three files each; the six paths stay in two ordered blocks | serialized on one promise chain |
+| TSP-24 unmount/session switch stops the rest | Ctrl+V a multi-file paste and switch session immediately; the new session receives nothing | disposed flag checked before every chunk |
+| TSP-40 agent owns the mouse → right-click reaches the agent | Right-click inside opencode with no selection; the agent's own menu answers | `terminal-keys.test.ts` `classifyTerminalMouse` → `'none'` |
+
+**Spec-precision note (TSP-16):** the spec says the failure chip sits "next to" the "Copiado" chip but
+also that it reuses that element and timing. The element is reused with the failure text, per the
+design, so the failure message inherits the chip's green background.
 
 ---
 

@@ -250,19 +250,19 @@ mouse movement, and the wheel scrolls pwsh's scrollback.
 | TSP-09 | P1: Replay modes | T3 | Implementing |
 | TSP-10 | P1: Replay modes | T4 | Implementing |
 | TSP-11 | P1: Replay modes | T4 | Implementing |
-| TSP-12 | P1: Image paste | T1, T5 | Implementing |
-| TSP-13 | P1: Image paste | T5 | Implementing |
-| TSP-14 | P1: Image paste | T2, T5, T7 | Implementing |
-| TSP-15 | P1: Image paste | T1, T5 | Implementing |
-| TSP-16 | P1: Image paste | T5, T7 | Implementing |
+| TSP-12 | P1: Image paste | T1, T5, T12 | Implementing |
+| TSP-13 | P1: Image paste | T5, T12 | Implementing |
+| TSP-14 | P1: Image paste | T2, T5, T7, T12 | Implementing |
+| TSP-15 | P1: Image paste | T1, T5, T12 | Implementing |
+| TSP-16 | P1: Image paste | T5, T7, T12 | Implementing |
 | TSP-17 | P1: Image paste | T10 | Implementing |
 | TSP-18 | P1: Image paste | T6, T7 | Implementing |
 | TSP-19 | P1: Image paste | T6, T7 | Implementing |
-| TSP-20 | P1: Image paste | Tasks | Pending |
-| TSP-21 | P1: File paste | T1, T5 | Implementing |
-| TSP-22 | P1: File paste | T1 | Implementing |
-| TSP-23 | P1: File paste | Tasks | Pending |
-| TSP-24 | P1: File paste | Tasks | Pending |
+| TSP-20 | P1: Image paste | T12 | Implementing |
+| TSP-21 | P1: File paste | T1, T5, T12 | Implementing |
+| TSP-22 | P1: File paste | T1, T12 | Implementing |
+| TSP-23 | P1: File paste | T12 | Implementing |
+| TSP-24 | P1: File paste | T12 | Implementing |
 | TSP-25 | P1: Drop | T2, T8 | Implementing |
 | TSP-26 | P1: Drop | Tasks | Pending |
 | TSP-27 | P1: Drop | T1 | Implementing |
@@ -278,7 +278,7 @@ mouse movement, and the wheel scrolls pwsh's scrollback.
 | TSP-37 | Edge | T1 | Implementing |
 | TSP-38 | Edge | T5 | Implementing |
 | TSP-39 | Edge | T6 | Implementing |
-| TSP-40 | Edge | Tasks | Pending |
+| TSP-40 | Edge | T12 | Implementing |
 
 **Coverage:** 40 total (6 conditional), 40 mapped to tasks, 0 unmapped.
 

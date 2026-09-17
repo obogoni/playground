@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 import { UnicodeGraphemesAddon } from '@xterm/addon-unicode-graphemes'
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal, type ITheme } from '@xterm/xterm'
+import { PASTE_GAP_MS, planPaste } from '../../../shared/paste'
 import { api } from '../lib/api'
 import {
   classifyTerminalKey,
@@ -20,6 +21,14 @@ interface TerminalPaneProps {
    * by `undoByteFor` — TUIs disagree on it (TCU-01). */
   undoByte: string
 }
+
+/**
+ * What the chip says when a paste could not be read: the clipboard read failed,
+ * the PNG could not be written, or the file-list shell timed out. Nothing reaches
+ * the PTY in any of those cases, so without the chip the gesture is silent and
+ * indistinguishable from a broken one (TSP-16).
+ */
+const PASTE_FAILED_TEXT = 'Não foi possível colar'
 
 /** Reads a CSS custom property off <html>, falling back when unset. */
 function token(name: string, fallback: string): string {
@@ -92,18 +101,20 @@ export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.El
     // what the user picked (TCU-25).
     let rememberedSelection = ''
 
-    // Transient confirmation for a right-click copy. Without it the action is
-    // invisible — the selection is already cleared by then — and a successful
-    // copy is indistinguishable from nothing happening (TCU-28).
-    const copied = document.createElement('div')
-    copied.className = 'terminal-copied'
-    copied.textContent = 'Copiado'
-    container.appendChild(copied)
-    let copiedTimer: ReturnType<typeof setTimeout> | undefined
-    const flashCopied = (): void => {
-      copied.classList.add('is-visible')
-      clearTimeout(copiedTimer)
-      copiedTimer = setTimeout(() => copied.classList.remove('is-visible'), COPIED_FEEDBACK_MS)
+    // Transient confirmation for a right-click copy, and the same element for a
+    // paste that failed. Without it either action is invisible — the selection is
+    // already cleared by copy time, and a refused paste sends no byte at all — so
+    // success and a broken gesture look identical (TCU-28, TSP-16).
+    const chip = document.createElement('div')
+    chip.className = 'terminal-copied'
+    chip.textContent = 'Copiado'
+    container.appendChild(chip)
+    let chipTimer: ReturnType<typeof setTimeout> | undefined
+    const flashChip = (text: string): void => {
+      chip.textContent = text
+      chip.classList.add('is-visible')
+      clearTimeout(chipTimer)
+      chipTimer = setTimeout(() => chip.classList.remove('is-visible'), COPIED_FEEDBACK_MS)
     }
 
     const term = new Terminal({
@@ -175,6 +186,65 @@ export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.El
         ]
       : []
 
+    // Rich paste (TSP-12..24). Paths go out one per `term.paste`, PASTE_GAP_MS
+    // apart: opencode attaches only when the whole paste is one path, and Claude
+    // Code merges chunks that arrive within 50 ms. The chunks run on one promise
+    // chain, so a second Ctrl+V starts only after the running sequence sent its
+    // last path instead of interleaving with it (TSP-22, TSP-23).
+    let pasteDisposed = false
+    let gapTimer: ReturnType<typeof setTimeout> | undefined
+    let pasteQueue: Promise<void> = Promise.resolve()
+    const pasteGap = (): Promise<void> =>
+      new Promise((resolve) => {
+        gapTimer = setTimeout(resolve, PASTE_GAP_MS)
+      })
+    const enqueuePaste = (chunks: string[]): void => {
+      if (chunks.length === 0) return
+      // The tail is always a resolved promise: a rejection left in the chain
+      // would skip every sequence queued after it for the pane's whole life.
+      pasteQueue = pasteQueue
+        .then(async () => {
+          for (const chunk of chunks) {
+            // Checked before every paste, which is also after every gap: the
+            // pane may have unmounted or switched session mid-sequence, and the
+            // rest of the paths must not reach a terminal that is gone (TSP-24).
+            if (pasteDisposed) return
+            // `term.paste` and not `api.send`: it brackets the paste when the
+            // TUI asked for bracketed mode, which is what keeps a path from
+            // being read as keystrokes.
+            term.paste(chunk)
+            // Held after the last chunk too, so a sequence queued behind this
+            // one cannot glue its first path onto this one's last.
+            await pasteGap()
+          }
+        })
+        .catch(console.error)
+    }
+    // The clipboard is read in main: the renderer's `clipboard` is deprecated
+    // from Electron 40 and the Explorer file list needs a child process. Text
+    // wins over files and files over an image, and an image arrives as the path
+    // of a PNG main has already written (TSP-12..15). One reader for Ctrl+V and
+    // the right-click paste both, so the two gestures cannot drift apart
+    // (TSP-20); an empty clipboard plans no chunk, so it emits no byte (TCU-18).
+    const pasteFromClipboard = (): void => {
+      api
+        .invoke('clipboard:read-paste')
+        .then((paste) => {
+          if (pasteDisposed) return
+          if (paste.kind === 'error') {
+            console.error('[paste] reading the clipboard failed:', paste.message)
+            flashChip(PASTE_FAILED_TEXT)
+            return
+          }
+          enqueuePaste(planPaste(paste))
+        })
+        .catch((err) => {
+          if (pasteDisposed) return
+          console.error(err)
+          flashChip(PASTE_FAILED_TEXT)
+        })
+    }
+
     // Key chords (INPUT-04..08): xterm renders selection on its own layer,
     // not as a native DOM selection, so the browser's Ctrl+C copies nothing —
     // we read term.getSelection() ourselves. Ctrl+C without a selection is
@@ -237,10 +307,7 @@ export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.El
       }
       if (action === 'paste') {
         event.preventDefault()
-        navigator.clipboard
-          .readText()
-          .then((text) => term.paste(text))
-          .catch(console.error)
+        pasteFromClipboard()
         return false
       }
       return true
@@ -340,17 +407,14 @@ export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.El
         // Clearing is what lets the next right-click reach the paste branch,
         // and it matches Windows Terminal (TCU-11).
         term.clearSelection()
-        flashCopied()
+        flashChip('Copiado')
         navigator.clipboard.writeText(selection).catch(console.error)
         return
       }
-      navigator.clipboard
-        .readText()
-        // An empty clipboard must not emit a byte to the PTY (TCU-18).
-        .then((text) => {
-          if (text) term.paste(text)
-        })
-        .catch(console.error)
+      // Same reader and same queue as Ctrl+V, so the right-click gesture gains
+      // images and copied files with it (TSP-20). An empty clipboard plans no
+      // chunk, so it still emits no byte to the PTY (TCU-18).
+      pasteFromClipboard()
     }
     const onContextMenu = (event: MouseEvent): void => {
       // Suppressed for everything that reaches this listener, so a Shift+F10
@@ -376,8 +440,13 @@ export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.El
       api.invoke('sessions:detach', { id: sessionId }).catch(console.error)
       container.removeEventListener('mousedown', onRightMouseDown, true)
       container.removeEventListener('contextmenu', onContextMenu, true)
-      clearTimeout(copiedTimer)
-      copied.remove()
+      clearTimeout(chipTimer)
+      chip.remove()
+      // Stops a paste sequence that is still walking its paths and drops the gap
+      // timer it is waiting on, so no path reaches the disposed terminal and no
+      // queue survives a session switch (TSP-24).
+      pasteDisposed = true
+      clearTimeout(gapTimer)
       selectionSub.dispose()
       for (const handler of probeHandlers) handler.dispose()
       observer.disconnect()
