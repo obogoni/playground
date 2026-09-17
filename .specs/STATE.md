@@ -33,7 +33,7 @@ Handoff snapshot.
 ## Handoff
 
 **Status (current, 2026-09-16): `session-idle-notifications` EXECUTED + independent Verifier PASS
-(round 2 of 3). Owner smoke 34/34. Local only — not pushed, no PR.**
+(round 2 of 3). Owner smoke 36/36 (rev5). Local only — not pushed, no PR.**
 
 - **Branch:** `feature/session-idle-notifications`, stacked on `feature/session-activity-status`
   (`65de9fd`, PR #88 still open upstream). Spec/design/tasks `c5e2304`..`4e7e69a`, code
@@ -56,8 +56,8 @@ Handoff snapshot.
   as a second body line; branch read with `git symbolic-ref --short HEAD` (2 s), no ADO call.
   T14–T20 `ec0d66b`..`d1d5f94`, fix round `b522d5f` (also catches async notifier failures).
   Suite 990 → **1006**; Verifier round 3 FAIL on evidence, round 4 PASS (18/18 mutants).
-  **Owner-pending:** re-run the smoke and answer its y/n on whether the Windows toast shows the
-  three lines separately (if not, join the body with ` — ` for the OS surface only); hand-check (see rev5 below).
+  **Owner smoke 2026-09-16: 36/36 PASS**, and the Windows toast shows the three lines separately
+  (no ` — ` fallback needed).
 - **rev5 (2026-09-16), whole titles:** owner decided the app never cuts a title — no 60-character
   limit, no `…`; the in-app title wraps freely. T21–T23 `133794e`..`39a589c`, fix round `ffc773c`
   (test for a long session title on the body's second line). Suite **1006**; Verifier round 5

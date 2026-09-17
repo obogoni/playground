@@ -833,3 +833,24 @@ No new grounded failure. L-023 (round 5, surviving mutant) and L-022 stay as can
 **Spec-anchored check**: NOTF-33 and NOTF-36 evidenced; 0 gaps
 **Sensor**: 8/8 killed
 **Gate**: typecheck 0, lint 0, tests 0 (**1006 passed / 56 files**, 0 failed, 0 skipped)
+
+---
+
+## Owner smoke run (rev4 + rev5) — 2026-09-16, 36/36 PASS
+
+`node scripts/smoke-notifications.mjs`, run by the owner at `42b1b6e`. Beyond the checks of the
+earlier 34/34 run, it observed:
+
+- session A in a throwaway git repo on `feature/12345-notify-smoke`: the in-app notice titled
+  `#12345` with body `Needs approval to run Bash` / `Claude (notifications smoke) · Notify smoke A`
+  (NOTF-31, NOTF-32), and the rendered body on two lines (NOTF-36, body half);
+- **the Windows toast showing `#id`, the state and the session on three separate lines** — owner
+  answered `y` (NOTF-30, NOTF-32). This closes the design's rev4 newline risk: no ` — ` fallback
+  is needed;
+- cleanup removed the sessions, the agent and the temp repository (no `notify-smoke-*` left in
+  `%TEMP%`), and restored the switches.
+
+**Still hand-verify only:** a long pinned task title shown whole in the in-app notice (NOTF-33,
+NOTF-36 title half), a notification clicked after a minute, a minimized window, and the two-theme
+visual pass.
+

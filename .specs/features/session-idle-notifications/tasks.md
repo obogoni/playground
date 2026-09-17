@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/session-idle-notifications/design.md`
-**Status**: T1–T13 Done (Verifier PASS, owner smoke 34/34); rev4 T14–T20 Done (Verifier round 4 PASS, 18/18 mutants); rev5 T21–T23 Done (Verifier round 6 PASS, 8/8 mutants); owner smoke + hand checks pending
+**Status**: T1–T13 Done (Verifier PASS, owner smoke 34/34); rev4 T14–T20 Done (Verifier round 4 PASS, 18/18 mutants); rev5 T21–T23 Done (Verifier round 6 PASS, 8/8 mutants); owner smoke 36/36; long-title hand check pending
 **Branch**: `feature/session-idle-notifications` (stacked on `feature/session-activity-status` `65de9fd`, PR #88)
 **Test baseline**: **917 tests / 52 files**, measured green on this branch before any task.
 
