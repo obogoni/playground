@@ -493,7 +493,9 @@ T19 → T20
 
 ---
 
-### T14: Link a branch to a task
+### T14: Link a branch to a task ✅ COMPLETE
+
+**Status**: Done — `LinkedTask` + `linkTask` in `activity-notification.ts` + 6 tests (titled pin, uncached pin, unpinned number, no number, no branch, first of two same-id pins). Quick gate green; lint clean. Suite 990 → 996.
 
 **What**: Add `LinkedTask` and `linkTask(branch, tasks)` to `activity-notification.ts`: the number from `taskIdFromBranch`, the first pin with that id, its cached title or `null`.
 **Where**: `src/main/activity-notification.ts`
@@ -508,9 +510,9 @@ T19 → T20
 
 **Done when**:
 
-- [ ] Tests: pinned with details → `{ id, title }`; pinned without details → `{ id, title: null }`; number not pinned → `{ id, title: null }`; branch without a number → `null`; `null` branch → `null`; two pins with the same id → the first
-- [ ] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
-- [ ] Test count: 990 → ~996 (no silent deletions)
+- [x] Tests: pinned with details → `{ id, title }`; pinned without details → `{ id, title: null }`; number not pinned → `{ id, title: null }`; branch without a number → `null`; `null` branch → `null`; two pins with the same id → the first
+- [x] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
+- [x] Test count: 990 → ~996 (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick

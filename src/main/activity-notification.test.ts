@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { ActivityState, SessionActivity } from '../shared/config'
 import { NOTIFIABLE_STATES, type NotificationPrefs } from '../shared/notifications'
-import { decideNotification, describeNotification } from './activity-notification'
+import type { PinnedTaskView } from '../shared/tasks'
+import { decideNotification, describeNotification, linkTask } from './activity-notification'
 
 function activity(state: ActivityState, extra: Partial<SessionActivity> = {}): SessionActivity {
   return { state, subagents: 0, ...extra }
@@ -145,5 +146,53 @@ describe('describeNotification', () => {
     expect(describeNotification(renamed, activity('waiting')).title).toBe(
       'Claude · Fix login redirect'
     )
+  })
+})
+
+describe('linkTask', () => {
+  function pin(id: number, title: string | null, org = 'acme'): PinnedTaskView {
+    return {
+      id,
+      org,
+      project: 'platform',
+      url: `https://dev.azure.com/${org}/platform/_workitems/edit/${id}`,
+      details: title === null ? null : { title, type: 'Task', state: 'Active' }
+    }
+  }
+
+  it('names a pinned task with cached details by number and title (NOTF-30)', () => {
+    expect(
+      linkTask('user/dev/4821-login/12345-fix-login', [pin(12345, 'Fix login redirect')])
+    ).toEqual({
+      id: 12345,
+      title: 'Fix login redirect'
+    })
+  })
+
+  it('keeps only the number of a pinned task whose details are not cached (NOTF-31)', () => {
+    expect(linkTask('feature/12345-fix-login', [pin(12345, null)])).toEqual({
+      id: 12345,
+      title: null
+    })
+  })
+
+  it('keeps only the number of a task that is not pinned (NOTF-31)', () => {
+    expect(linkTask('feature/12345-fix-login', [pin(777, 'Other work')])).toEqual({
+      id: 12345,
+      title: null
+    })
+  })
+
+  it('links nothing when the branch carries no task number', () => {
+    expect(linkTask('main', [pin(12345, 'Fix login redirect')])).toBeNull()
+  })
+
+  it('links nothing when there is no branch (NOTF-34)', () => {
+    expect(linkTask(null, [pin(12345, 'Fix login redirect')])).toBeNull()
+  })
+
+  it('takes the first pin when two orgs pin the same number', () => {
+    const tasks = [pin(12345, 'From acme', 'acme'), pin(12345, 'From contoso', 'contoso')]
+    expect(linkTask('feature/12345-x', tasks)).toEqual({ id: 12345, title: 'From acme' })
   })
 })

@@ -10,6 +10,7 @@ import {
   type NotifiableState,
   type NotificationPrefs
 } from '../shared/notifications'
+import { taskIdFromBranch, type PinnedTaskView } from '../shared/tasks'
 
 /** One activity transition, as `SessionManager` reports it. */
 export interface ActivityChange {
@@ -69,4 +70,23 @@ export function describeNotification(
   const prefix = `${session.agent} · `
   const title = session.title.startsWith(prefix) ? session.title : prefix + session.title
   return { title, body: describeBody(activity) }
+}
+
+/** The task a session works on: its number, and its title when a pin has it cached. */
+export interface LinkedTask {
+  id: number
+  title: string | null
+}
+
+/**
+ * The task a branch names, by the rail's own rules: the number in the last branch
+ * segment, and the first pin with that id for the title (NOTF-30, NOTF-31). No
+ * network: an unpinned or not-yet-fetched task is just its number.
+ */
+export function linkTask(branch: string | null, tasks: PinnedTaskView[]): LinkedTask | null {
+  if (branch === null) return null
+  const id = taskIdFromBranch(branch)
+  if (id === null) return null
+  const pin = tasks.find((task) => task.id === id)
+  return { id, title: pin?.details?.title ?? null }
 }
