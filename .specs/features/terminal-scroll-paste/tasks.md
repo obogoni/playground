@@ -209,7 +209,7 @@ T18 → T19
 
 ---
 
-### T4: Ring buffer replays head modes
+### T4: Ring buffer replays head modes ✅
 
 **What**: Feed every trimmed head segment of `SessionRingBuffer` to a private `TerminalModeTracker` and prepend its prefix in `snapshot()`, leaving `tail()` unprefixed.
 **Where**: `src/main/session-ring-buffer.ts`
@@ -224,14 +224,14 @@ T18 → T19
 
 **Done when**:
 
-- [ ] Buffer `maxLines: 3` fed `\x1b[?1049h\x1b[?1003h\x1b[?1006h\x1b[?2004h\n` + 5 lines → `snapshot()` starts with those four sets, then the retained 3 lines (TSP-06, TSP-07)
-- [ ] Same via the byte cap (`maxBytes` small) (TSP-06)
-- [ ] Modes set then reset inside the dropped head → no prefix (TSP-07)
-- [ ] Nothing dropped → `snapshot()` byte-equal to appended content (TSP-10)
-- [ ] `tail(2)` never contains the prefix (TSP-11)
-- [ ] Existing `session-ring-buffer.test.ts` and `session-manager.test.ts` pass unmodified
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: +~5 (no silent deletions)
+- [x] Buffer `maxLines: 3` fed `\x1b[?1049h\x1b[?1003h\x1b[?1006h\x1b[?2004h\n` + 5 lines → `snapshot()` starts with those four sets, then the retained 3 lines (TSP-06, TSP-07)
+- [x] Same via the byte cap (`maxBytes` small) (TSP-06)
+- [x] Modes set then reset inside the dropped head → no prefix (TSP-07)
+- [x] Nothing dropped → `snapshot()` byte-equal to appended content (TSP-10)
+- [x] `tail(2)` never contains the prefix (TSP-11)
+- [x] Existing `session-ring-buffer.test.ts` and `session-manager.test.ts` pass unmodified
+- [x] Gate check passes: `npm test`
+- [x] Test count: +~5 (no silent deletions)
 
 **Tests**: unit
 **Gate**: full

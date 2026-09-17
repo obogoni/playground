@@ -244,12 +244,12 @@ mouse movement, and the wheel scrolls pwsh's scrollback.
 | TSP-03 | P1: Probe | Tasks | Pending |
 | TSP-04 | P1: Probe | Tasks | Pending |
 | TSP-05 | P1: Probe | Tasks | Pending |
-| TSP-06 | P1: Replay modes | T3 | Implementing |
-| TSP-07 | P1: Replay modes | T3 | Implementing |
+| TSP-06 | P1: Replay modes | T3, T4 | Implementing |
+| TSP-07 | P1: Replay modes | T3, T4 | Implementing |
 | TSP-08 | P1: Replay modes | T3 | Implementing |
 | TSP-09 | P1: Replay modes | T3 | Implementing |
-| TSP-10 | P1: Replay modes | Tasks | Pending |
-| TSP-11 | P1: Replay modes | Tasks | Pending |
+| TSP-10 | P1: Replay modes | T4 | Implementing |
+| TSP-11 | P1: Replay modes | T4 | Implementing |
 | TSP-12 | P1: Image paste | T1 | Implementing |
 | TSP-13 | P1: Image paste | Tasks | Pending |
 | TSP-14 | P1: Image paste | T2 | Implementing |

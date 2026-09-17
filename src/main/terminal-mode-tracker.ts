@@ -15,15 +15,21 @@
  * Pure (string ops only) and therefore fully unit-tested.
  */
 
+// Both patterns are built from strings (not regex literals) so no raw control
+// character lives in the source; they still target the ESC introducer, hence the
+// no-control-regex exception — same convention as `renderer/src/lib/ansi.ts`.
+
 /** `CSI ? <params> h|l` — the only sequences that change a tracked mode. */
-const MODE_SEQUENCE = /\x1b\[\?([0-9;]*)([hl])/g
+// eslint-disable-next-line no-control-regex
+const MODE_SEQUENCE = new RegExp('\\u001b\\[\\?([0-9;]*)([hl])', 'g')
 
 /**
  * Trailing bytes that could still grow into a `CSI ? … h|l`: a lone `ESC`, an
  * `ESC [`, an `ESC [ ?`, or an `ESC [ ?` with its params so far. Kept for the
  * next `feed` so a sequence cut mid-flight is applied once it completes.
  */
-const PARTIAL_SEQUENCE = /\x1b(?:\[(?:\?[0-9;]*)?)?$/
+// eslint-disable-next-line no-control-regex
+const PARTIAL_SEQUENCE = new RegExp('\\u001b(?:\\[(?:\\?[0-9;]*)?)?$')
 
 /** Mouse-tracking protocols; the last one set wins, any reset clears them all. */
 const TRACKING = [9, 1000, 1002, 1003]
