@@ -411,7 +411,7 @@ T18 → T19
 
 ---
 
-### T11: Wire the mode probe into the pane
+### T11: Wire the mode probe into the pane ✅
 
 **What**: When `isProbeEnabled` at mount, register observing `?h`/`?l` CSI handlers (return `false`), log each Ctrl+C classification, and log one `replay` line after the first `session:data` write.
 **Where**: `src/renderer/src/components/TerminalPane.tsx`
@@ -426,16 +426,32 @@ T18 → T19
 
 **Done when**:
 
-- [ ] Handlers disposed on effect cleanup
-- [ ] Flag off → no handler registered (code path inspected: registration is inside the `isProbeEnabled` branch)
-- [ ] `localStorage` read wrapped in try/catch
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] Handlers disposed on effect cleanup
+- [x] Flag off → no handler registered (code path inspected: registration is inside the `isProbeEnabled` branch)
+- [x] `localStorage` read wrapped in try/catch
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (819 tests / 51 files, no silent deletions)
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `feat(terminal): log terminal mode changes behind a debug flag`
+
+**Hand-verification at T14** (renderer components are not unit-tested; the decisions sit in the
+already-tested seam `terminal-modes.ts`):
+
+| Criterion | How T14 verifies it | Tested seam behind it |
+| --------- | ------------------- | --------------------- |
+| TSP-01 one `[term-modes]` line per `CSI ? Pm h`/`l`, with id, raw params, names, tracking, buffer | Flag on, open an opencode session, read the DevTools console | `terminal-modes.test.ts:47` - `expect(line).toBe('[term-modes] s-1 CSI ?1049;1003;1006h alt-screen,any,sgr-mouse tracking=any buffer=alternate')`; `:54` pins the `l` form |
+| TSP-02 one line per Ctrl+C classification with action, tracking, buffer | Press Ctrl+C in opencode; one `ctrl-c <action>` line per press | action comes from `classifyTerminalKey` (`terminal-keys.test.ts:48`, `:56`, `:64`) |
+| TSP-03 one `replay` line after the first `session:data` chunk | Switch sessions; exactly one `replay` line per attach | replay content itself pinned by `session-ring-buffer.test.ts` (T4) |
+| TSP-04 flag absent/not `'1'` → no handler, zero lines | Clear the key, reload, reproduce: console stays silent | `terminal-modes.test.ts:68-80` - `expect(isProbeEnabled(() => '0')).toBe(false)` etc. |
+| Probe never changes terminal behavior | Wheel, mouse and paste behave the same with the flag on | handlers `return false` unconditionally (`TerminalPane.tsx:165`) |
+
+**Spec-precision note (TSP-01):** xterm exposes no per-sequence post-apply hook, so the tracking and
+buffer readouts are taken in a microtask after the write chunk is parsed. For a mode change that
+arrives alone (the diagnostic case) they are exact; several changes inside one chunk all report that
+chunk's settled state, while the raw params stay per-event and in order.
 
 ---
 

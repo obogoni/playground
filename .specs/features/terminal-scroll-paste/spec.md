@@ -239,10 +239,10 @@ mouse movement, and the wheel scrolls pwsh's scrollback.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| TSP-01 | P1: Probe | T9 | Implementing |
-| TSP-02 | P1: Probe | T9 | Implementing |
-| TSP-03 | P1: Probe | T9 | Implementing |
-| TSP-04 | P1: Probe | T9 | Implementing |
+| TSP-01 | P1: Probe | T9, T11 | Implementing |
+| TSP-02 | P1: Probe | T9, T11 | Implementing |
+| TSP-03 | P1: Probe | T9, T11 | Implementing |
+| TSP-04 | P1: Probe | T9, T11 | Implementing |
 | TSP-05 | P1: Probe | T9 | Implementing |
 | TSP-06 | P1: Replay modes | T3, T4 | Implementing |
 | TSP-07 | P1: Replay modes | T3, T4 | Implementing |

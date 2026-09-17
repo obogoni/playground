@@ -10,6 +10,7 @@ import {
   COPIED_FEEDBACK_MS,
   selectionForRightClick
 } from '../lib/terminal-keys'
+import { formatModeLog, isProbeEnabled, PROBE_FLAG_KEY } from '../lib/terminal-modes'
 import '@xterm/xterm/css/xterm.css'
 import './TerminalPane.css'
 
@@ -133,6 +134,47 @@ export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.El
     term.open(container)
     fit.fit()
 
+    // Terminal-mode probe (TSP-01..04). The dead wheel after a Ctrl+C has three
+    // candidate causes pointing at opposite fixes, so the pane logs what xterm
+    // parses and the owner reads which one happens. Nothing is registered unless
+    // the flag is set at mount, keeping the parser's hot path untouched on a
+    // normal run (TSP-04); isProbeEnabled swallows a throwing storage read.
+    const probing = isProbeEnabled(() => localStorage.getItem(PROBE_FLAG_KEY))
+    const trackingNow = (): string => term.modes.mouseTrackingMode
+    const bufferNow = (): string => term.buffer.active.type
+    const logModeChange = (final: 'h' | 'l', params: (number | number[])[]): boolean => {
+      const flat = params.flat()
+      // The state is read in a microtask, not here: this handler runs BEFORE
+      // xterm's own DECSET/DECRST (the newest handler goes first), so reading now
+      // would report the state the sequence is about to change. The microtask
+      // fires once the chunk being parsed has applied, which is what TSP-01
+      // asks for, and queue order keeps the lines in sequence order.
+      queueMicrotask(() => {
+        console.debug(
+          formatModeLog({
+            sessionId,
+            final,
+            params: flat,
+            tracking: trackingNow(),
+            buffer: bufferNow()
+          })
+        )
+      })
+      // Always false. Returning true would consume the sequence and stop xterm
+      // applying it, so the probe would itself break the terminal it measures.
+      return false
+    }
+    const probeHandlers = probing
+      ? [
+          term.parser.registerCsiHandler({ prefix: '?', final: 'h' }, (params) =>
+            logModeChange('h', params)
+          ),
+          term.parser.registerCsiHandler({ prefix: '?', final: 'l' }, (params) =>
+            logModeChange('l', params)
+          )
+        ]
+      : []
+
     // Key chords (INPUT-04..08): xterm renders selection on its own layer,
     // not as a native DOM selection, so the browser's Ctrl+C copies nothing —
     // we read term.getSelection() ourselves. Ctrl+C without a selection is
@@ -147,6 +189,14 @@ export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.El
         now: Date.now(),
         lastCopyAt: lastCopyAt.current
       })
+      // Which way a Ctrl+C went, next to the modes it left behind (TSP-02): a
+      // `pass` that reaches the PTY is the press cause 1 and cause 2 blame, and
+      // the tracking/buffer pair right at that moment is what tells them apart.
+      if (probing && event.type === 'keydown' && event.ctrlKey && event.code === 'KeyC') {
+        console.debug(
+          `[term-modes] ${sessionId} ctrl-c ${action} tracking=${trackingNow()} buffer=${bufferNow()}`
+        )
+      }
       if (action === 'copy-selection') {
         // preventDefault suppresses the browser's follow-up keypress (xterm
         // 6.0 only calls preventDefault when it processes the keydown itself;
@@ -197,8 +247,24 @@ export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.El
     })
 
     // PTY output → terminal.
+    //
+    // The first chunk after attach is the ring buffer's replay, and the modes it
+    // leaves behind are the whole of cause 3: a replay that lost the mode prefix
+    // lands on the normal buffer with no tracking (TSP-03). Logged from the write
+    // callback, which fires once that chunk is parsed.
+    let replayPending = probing
     const offData = api.on('session:data', (payload) => {
-      if (payload.id === sessionId) term.write(payload.data)
+      if (payload.id !== sessionId) return
+      if (!replayPending) {
+        term.write(payload.data)
+        return
+      }
+      replayPending = false
+      term.write(payload.data, () => {
+        console.debug(
+          `[term-modes] ${sessionId} replay tracking=${trackingNow()} buffer=${bufferNow()} bracketed-paste=${term.modes.bracketedPasteMode}`
+        )
+      })
     })
     // Become the active stream target; the buffered scrollback replays as the
     // first session:data chunk (same ordered channel as live → no seam race),
@@ -313,6 +379,7 @@ export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.El
       clearTimeout(copiedTimer)
       copied.remove()
       selectionSub.dispose()
+      for (const handler of probeHandlers) handler.dispose()
       observer.disconnect()
       themeObserver.disconnect()
       offData()
