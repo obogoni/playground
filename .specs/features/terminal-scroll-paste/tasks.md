@@ -302,7 +302,7 @@ T18 → T19
 
 ---
 
-### T7: Main wiring for clipboard paste and purge
+### T7: Main wiring for clipboard paste and purge ✅
 
 **What**: Register `clipboard:read-paste` with real deps (Electron `clipboard`, `execFile('powershell.exe', …, {timeout: 5000, windowsHide: true})`, `mkdir` + `writeFile`) and call `purgePasteDir` once in `whenReady`.
 **Where**: `src/main/index.ts`
@@ -317,11 +317,11 @@ T18 → T19
 
 **Done when**:
 
-- [ ] PowerShell command sets UTF-8 output and runs `-NoProfile -STA`
-- [ ] `pasteDir = join(tmpdir(), 'playground-paste')`
-- [ ] Purge call wrapped so a throw is logged, never propagated
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] PowerShell command sets UTF-8 output and runs `-NoProfile -STA`
+- [x] `pasteDir = join(tmpdir(), 'playground-paste')`
+- [x] Purge call wrapped so a throw is logged, never propagated
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none
 **Gate**: build
