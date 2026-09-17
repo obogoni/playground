@@ -365,3 +365,32 @@ NOTF-05 direction check can't fail. NOTF-29's agent-form half is unexercised. Th
 
 **Next steps**: apply Fixes 1-5 (smoke script and its header only), have the owner run the smoke,
 then re-dispatch the Verifier (round 2 of 3).
+
+---
+
+## Owner smoke run — 2026-09-16, 34/34 PASS
+
+`node scripts/smoke-notifications.mjs` against the dev app, run by the owner. Three earlier
+runs stopped early on **smoke defects, not feature defects**, each fixed before the passing run:
+
+| Run | Stopped at | Cause | Fix |
+| --- | ---------- | ----- | --- |
+| 1 | version check | Rows were matched by `.rail-row-label`, but rail v2 labels a row with the agent name; the session title only leads the tooltip | `d641837`: select by tooltip; stop with the rows seen when a session is missing |
+| 2 | version check | With the window covered the page is `hidden`, `requestAnimationFrame` stops and xterm renders nothing, so the DOM never showed the version the PTY had printed (confirmed by capturing `session:data`) | `57d88fc`: read output from `session:data` |
+| 3 | — | 34/34 PASS | — |
+
+The passing run observed, beyond the settings checks: the first event staying silent
+(NOTF-27); the in-app approval notice naming the tool (NOTF-02, NOTF-04) and its click
+selecting the session (NOTF-05); a switched-off state staying silent and notifying once back on
+(NOTF-14); self-dismissal; **a real Windows notification while unfocused, no in-app notice at
+the same time, and its click bringing the window forward with the session selected (NOTF-01,
+NOTF-05)**; and a notice for a stopped session clicked from the Tree direction opening it in
+Agents (NOTF-05, NOTF-23).
+
+Found after the run: `config:patch` cannot delete a key, so the smoke's cleanup restores an
+absent switch as `true` (same behaviour, absent means on). The comment and the cleanup check
+now say so and compare effective values.
+
+**Still hand-verify only:** clicking an OS notification left on screen a minute or more, a
+minimized window, no notification while focused on the attached session (NOTF-03 is unit-tested
+at `activity-notification.test.ts:33`), and the two-theme visual pass.

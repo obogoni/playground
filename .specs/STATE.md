@@ -33,7 +33,7 @@ Handoff snapshot.
 ## Handoff
 
 **Status (current, 2026-09-16): `session-idle-notifications` EXECUTED + independent Verifier PASS
-(round 2 of 3). Local only — not pushed, no PR.**
+(round 2 of 3). Owner smoke 34/34. Local only — not pushed, no PR.**
 
 - **Branch:** `feature/session-idle-notifications`, stacked on `feature/session-activity-status`
   (`65de9fd`, PR #88 still open upstream). Spec/design/tasks `c5e2304`..`4e7e69a`, code
@@ -47,10 +47,10 @@ Handoff snapshot.
 - **Verification:** suite 917 → **990**. Round 1 FAIL on evidence only (NOTF-05 direction half,
   06, 21, 23, 29 agent form) with 20/21 mutants killed (1 equivalent); round 2 PASS after smoke
   and spec fixes. Report: `.specs/features/session-idle-notifications/validation.md`.
-- **Owner-pending:** run `node scripts/smoke-notifications.mjs` with the dev app focused (zero
-  tokens; removes only its own sessions, restores the switches and direction); hand-check the OS
-  notification in the background, its click after a minute, a minimized window, and the
-  two-theme pass of tabs and notices.
+- **Owner smoke 2026-09-16: 34/34 PASS**, including a real Windows notification and its click.
+  Two earlier runs stopped on smoke defects (rail v2 row labels; xterm not rendering while the
+  window is hidden), fixed in `d641837` and `57d88fc`. Still hand-verify: a notification clicked
+  after a minute, a minimized window, and the two-theme pass of tabs and notices.
 - **Lessons collide again:** this branch added candidates **L-019..L-021** (`next_id` 22), but
   `develop` already holds time-tracking's L-019..L-024. Renumber when merging into `develop`.
 - **Next:** after the owner smoke, open the PR upstream with "depends on #88"; when #88 merges,

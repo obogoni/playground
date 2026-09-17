@@ -11,7 +11,8 @@
  *
  * SAFE ON REAL DATA: the dev app shares %APPDATA%\playground. The script never
  * stops or removes a session it did not create, and it puts every notification
- * switch back the way it found it.
+ * switch back to the value it found (an absent switch comes back as `true`, which
+ * means the same thing).
  *
  * The in-app checks need the playground window FOCUSED: an unfocused window
  * takes the OS-notification path instead, which is correct but not what these
@@ -139,10 +140,11 @@ const VERSION_PATTERN = /\d+\.\d+\.\d+ \(Claude Code\)/
 const created = []
 
 async function cleanup() {
-  // null marks a switch that was absent; it goes back as undefined, which the
-  // config file drops, so an absent key stays absent.
+  // `config:patch` cannot delete a key (an undefined value does not survive the
+  // IPC hop), so a switch that was absent goes back as `true`: absent means on,
+  // so the behaviour is the same even though the file now names the key.
   const restore = JSON.stringify(
-    Object.fromEntries(SWITCH_KEYS.map((k) => [k, originalSwitches[k] ?? null]))
+    Object.fromEntries(SWITCH_KEYS.map((k) => [k, originalSwitches[k] ?? true]))
   )
   const ids = JSON.stringify(created)
   await evaluate(
@@ -155,7 +157,7 @@ async function cleanup() {
        await window.api.invoke('config:patch', {
          agents: cfg.agents.filter((a) => a.name !== ${JSON.stringify(SMOKE_AGENT)}),
          ui: {
-           ...Object.fromEntries(Object.entries(${restore}).map(([k, v]) => [k, v ?? undefined])),
+           ...${restore},
            direction: ${JSON.stringify(originalDirection)}
          }
        })
@@ -744,7 +746,8 @@ check(
   'cleanup removed only the smoke sessions and agent, and restored the switches',
   state.leftover === 0 &&
     !state.agent &&
-    JSON.stringify(state.switches) === JSON.stringify(originalSwitches),
+    // Compared as effective values: an absent switch is restored as `true`.
+    SWITCH_KEYS.every((k) => (state.switches[k] ?? true) === (originalSwitches[k] ?? true)),
   after
 )
 
