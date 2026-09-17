@@ -30,9 +30,11 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current, 2026-09-17): `terminal-scroll-paste` Phases 1-5 EXECUTED (T1-T13) on branch
-`feature/terminal-scroll-paste`, cut from `origin/main` `fa78f78`. Nothing uncommitted. Not pushed
--- push and PR need an explicit go-ahead. BLOCKED ON THE OWNER at T14.**
+**Status (current, 2026-09-17): `terminal-scroll-paste` T1-T14 EXECUTED on branch
+`feature/terminal-scroll-paste`, cut from `origin/main` `fa78f78`. Phases 6 and 7 SKIPPED (Q2
+verdict: cause 3 only; TSP-29..34 `Withdrawn`). Verifier round 1 **FAIL on evidence, no code
+defect** -- 18/18 mutants killed, gate green -- fix round applied, round 2 pending. Nothing
+uncommitted. Not pushed -- push and PR need an explicit go-ahead.**
 
 - **Commits:** `194aa4f` spec, `b3b41e3` + `1467c64` requirement-id realignment, then T1-T13 in
   `90830f3`..`02f1413` (one per task). Suite **748 -> 819** (46 -> 51 files); `typecheck`, `lint`
@@ -46,22 +48,51 @@ Handoff snapshot.
   the flag-gated mode probe, one serialized paste queue behind both Ctrl+V and right-click, and
   file drop.
 
-**BLOCKING: T14 is an owner UAT gate.** The probe must run on `npm run build && npm start` --
-**an installed/packaged build cannot run it**, because `optimizer.watchWindowShortcuts`
-(`src/main/index.ts:202`) only wires F12 to DevTools while unpackaged and blocks Ctrl+Shift+I when
-packaged, so there is no way to set the flag or read the log there. Set
+**T14 verdict (owner UAT, 2026-09-17): cause 3 only.** The probe logged, and the scroll never died
+in any scenario the owner tried, including repeated Ctrl+C in opencode. T4 had already fixed cause 3
+unconditionally, and the original intermittent symptom matches it. **The evidence is a
+non-reproduction, not a measured difference:** the A/B against the pre-T4 1.1.1 install was offered
+and declined in favour of shipping, so this does not prove causes 1 and 2 cannot happen. The probe
+stays behind `playground.debug.terminalModes` so a returning defect is diagnosed against evidence.
+
+**To run the probe again:** `npm run build && npm start` -- **an installed/packaged build cannot run
+it**, because `optimizer.watchWindowShortcuts` (`src/main/index.ts:202`) only wires F12 to DevTools
+while unpackaged and blocks Ctrl+Shift+I when packaged. Set
 `localStorage.setItem('playground.debug.terminalModes', '1')`, enable **Verbose** in the console
-level dropdown (the probe uses `console.debug`, hidden by default), remount the pane, then press
-Ctrl+C in opencode until the wheel dies and read the `[term-modes]` lines.
+level dropdown (the probe uses `console.debug`, hidden by default), then remount the pane.
 
-Phases 6 and 7 are **mutually exclusive** and stay blocked until that verdict:
+**Verifier round 1 FAIL -- what it found and what was done (owner decided: record honestly, do not
+refactor for testability):**
 
-- reset lines for mouse params while `buffer=alternate` and no alt-screen exit -> **cause 1**,
-  build Phase 6 (T15-T16, TSP-29..32), withdraw TSP-33..34.
-- `ctrl-c pass` with no mode-change line, then `[<...M` garbage at the pwsh prompt -> **cause 2**,
-  build Phase 7 (T17-T19, TSP-33..34), withdraw TSP-29..32.
-- `?1049h`/`?1003h`/`?2004h` present in the replay and the wheel still scrolling -> **cause 3
-  only**, already fixed by T4; both conditional phases are skipped and TSP-29..34 withdrawn.
+- **7 ACs had no evidence of any kind and were missing from T14's owner-pending list**, so they read
+  as verified in Traceability: TSP-02, 03, 20, 23, 24, 26, 28, all pane-local. Now enumerated under
+  T14. The riskiest are **TSP-23/24** -- the serialized paste queue and its cancel-on-unmount, the
+  most intricate new logic here, shipping source-verified with no test by owner decision.
+- **TSP-38's assertion was tautological** (proved only that `pasteImageName` embeds the `rand` it is
+  handed; a suffix cached per module would have survived it). Replaced with a `readClipboardPaste`
+  test that pastes twice under one fixed `now` and asserts both paths and `randCalls === 2`.
+  Mutation-checked: caching `rand` now fails the test. Suite 819 -> 820.
+- **TSP-16's 5 s timeout and the exact chip text stay unasserted literals** (`src/main/index.ts:94`,
+  `TerminalPane.tsx:31`) while `PASTE_GAP_MS`/`COPIED_FEEDBACK_MS`/`PASTE_MAX_AGE_MS` were all pulled
+  into tested seams. Same convention, three exceptions -- accepted, not fixed.
+- **Third TSP-citation drift on this feature**, swept: the coverage matrix cited withdrawn ids and
+  `design.md` had no withdrawal marker. Citations inside the T15..T19 bodies are intentional.
+- Cleanup audit passed: the probe's CSI handlers `return false` unconditionally (returning `true`
+  would swallow every DECSET/DECRST and manufacture a superset of the bug, on flagged machines only,
+  with nothing in the suite to catch it), and no path writes to a disposed terminal. **One narrow
+  real defect left unfixed:** the replay `term.write(data, cb)` callback reads `term.modes` and can
+  fire after `dispose()` -- probe-only, so flag-gated. The Verifier's other note, that the cleared
+  `gapTimer` permanently retains the disposed terminal, **does not hold**: a pending promise is not a
+  GC root, so the closure graph is collectable once unreachable.
+
+**A HOLE IN THE SKILL'S OWN CLOSING GATE -- do not trust `validate_state.py` blindly.** Reproduced
+this session with a synthetic report: a `validation.md` whose verdict reads `**Verdict: FAIL**` in
+prose **passes with exit 0**. `_verdict()` builds its haystack only from lines matching
+`^#{1,4}\s*validation\b` or an unanchored `\*{0,2}result\*{0,2}\s*:`, so the Discrimination
+Sensor's own `**Result**: ... killed ... PASS` line -- which `validate.md`'s template prescribes --
+becomes the only match and reads as a pass. This feature's report only exits 1 because its heading
+happens to be `## Validation: ... FAIL`. The owner decided 2026-09-17 not to patch the skill; verify
+a verdict by reading the report, not by the exit code.
 
 **Spec-precision gaps recorded during Execute (in `tasks.md`, not silently absorbed):**
 

@@ -22,14 +22,21 @@ interface FakeOpts {
   writeError?: Error
   now?: Date
   rand?: string
+  /** Successive `rand()` results, so a test can prove the name is drawn per paste. */
+  rands?: string[]
 }
 
 /** Records every port call so a test can assert what was (and was not) spawned. */
 function fakeDeps(
   opts: FakeOpts = {}
-): ClipboardReaderDeps & { listCalls: number; writes: { path: string; data: Buffer }[] } {
+): ClipboardReaderDeps & {
+  listCalls: number
+  randCalls: number
+  writes: { path: string; data: Buffer }[]
+} {
   const deps = {
     listCalls: 0,
+    randCalls: 0,
     writes: [] as { path: string; data: Buffer }[],
     pasteDir: PASTE_DIR,
     readText: () => opts.text ?? '',
@@ -45,7 +52,11 @@ function fakeDeps(
       deps.writes.push({ path, data })
     },
     now: () => opts.now ?? NOW,
-    rand: () => opts.rand ?? 'a1b2c3'
+    rand: () => {
+      deps.randCalls++
+      if (opts.rands) return opts.rands[deps.randCalls - 1] ?? opts.rands[opts.rands.length - 1]
+      return opts.rand ?? 'a1b2c3'
+    }
   }
   return deps
 }
@@ -110,8 +121,8 @@ describe('pasteImageName', () => {
     )
   })
 
-  it('differs for two images pasted in the same second (TSP-38)', () => {
-    expect(pasteImageName(NOW, 'a1b2c3')).not.toBe(pasteImageName(NOW, 'd4e5f6'))
+  it('spells the whole name as the spec does, with 6 hex (TSP-14)', () => {
+    expect(pasteImageName(NOW, 'a1b2c3')).toMatch(/^paste-\d{8}-\d{6}-[0-9a-f]{6}\.png$/)
   })
 })
 
@@ -167,6 +178,35 @@ describe('readClipboardPaste', () => {
 
     expect(await readClipboardPaste(deps)).toEqual({ kind: 'paths', paths: [expected] })
     expect(deps.writes).toEqual([{ path: expected, data: PNG }])
+  })
+
+  it('draws a fresh suffix per paste, so two images in one second differ (TSP-38)', async () => {
+    // Same `now` for both pastes: the second's timestamp is identical, so only a
+    // per-paste `rand()` can keep the names apart. A suffix drawn once and reused
+    // would collide here and overwrite the first PNG.
+    const deps = fakeDeps({
+      formats: ['image/png'],
+      png: PNG,
+      now: NOW,
+      rands: ['a1b2c3', 'd4e5f6']
+    })
+
+    const first = await readClipboardPaste(deps)
+    const second = await readClipboardPaste(deps)
+
+    expect(first).toEqual({
+      kind: 'paths',
+      paths: [join(PASTE_DIR, 'paste-20260917-184530-a1b2c3.png')]
+    })
+    expect(second).toEqual({
+      kind: 'paths',
+      paths: [join(PASTE_DIR, 'paste-20260917-184530-d4e5f6.png')]
+    })
+    expect(deps.randCalls).toBe(2)
+    expect(deps.writes.map((write) => write.path)).toEqual([
+      join(PASTE_DIR, 'paste-20260917-184530-a1b2c3.png'),
+      join(PASTE_DIR, 'paste-20260917-184530-d4e5f6.png')
+    ])
   })
 
   it('treats an empty image buffer as no image at all (TSP-15)', async () => {

@@ -27,9 +27,9 @@ both are skipped.
 
 | Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
 | ---------- | ------------------ | -------------------- | ---------------- | ----------- |
-| Shared pure helpers (`src/shared/paste.ts`) | unit | All branches; 1:1 to TSP-12/15/21/22/27/34 | `src/shared/<module>.test.ts` | `npx vitest run <file>` |
+| Shared pure helpers (`src/shared/paste.ts`) | unit | All branches; 1:1 to TSP-12/15/21/22/27/37 | `src/shared/<module>.test.ts` | `npx vitest run <file>` |
 | Main pure / DI modules (`terminal-mode-tracker`, `session-ring-buffer`, `clipboard-reader`, `paste-temp`) | unit | All branches; 1:1 to spec ACs; every listed edge case (TSP-09, 36-39); DI fakes hand-rolled, temp dirs real (TESTING.md patterns 2 and 3) | `src/main/<module>.test.ts` | `npx vitest run <file>` |
-| Renderer pure libs (`terminal-modes.ts`, `terminal-keys.ts`) | unit | All branches; 1:1 to TSP-04/05/17/29-33 | `src/renderer/src/lib/<module>.test.ts` | `npx vitest run <file>` |
+| Renderer pure libs (`terminal-modes.ts`, `terminal-keys.ts`) | unit | All branches; 1:1 to TSP-04/05/17 (TSP-29-33 withdrawn: Q2 verdict cause 3 only) | `src/renderer/src/lib/<module>.test.ts` | `npx vitest run <file>` |
 | Type-only contract (`src/shared/ipc-contract.ts`) | none | Build gate only | - | build gate only |
 | Thin Electron shells (`src/main/index.ts`, `src/preload/index.ts`) | none | Hand-verified (TESTING.md) | - | build gate only |
 | Renderer components (`TerminalPane.tsx`, `AgentsView.tsx`) | none | Hand-verified in the owner UAT (TESTING.md) | - | build gate only |
@@ -592,6 +592,21 @@ design, so the failure message inherits the chip's green background.
 - The paste-failure chip, "Não foi possível colar" (TSP-16).
 - The manual half of P1/cause 3 (TSP-06..11): switch away from a busy opencode session and back and
   the wheel still scrolls. The unit tests cover the buffer; the owner did not report this gesture.
+- **Added after the Verifier's round-1 FAIL — seven ACs this list originally omitted.** They are
+  pane-local, carry no test by the Coverage Matrix's `none` for renderer components, and were
+  source-verified by the Verifier but never exercised by the owner. Omitting them made them read as
+  verified in Traceability, which is the reason they are enumerated here:
+  - **TSP-02** the Ctrl+C probe line and **TSP-03** the replay line (`TerminalPane.tsx:267`, `:332`).
+    Both are hand-built template literals, not routed through the tested `formatModeLog` that TSP-01
+    uses. The owner confirmed only that `[term-modes]` lines appeared, not their contents.
+  - **TSP-20** Ctrl+V and the right-click share one paste path (`pasteFromClipboard`, single call site).
+  - **TSP-23** a second paste arriving mid-queue does not interleave, and **TSP-24** a paste in flight
+    is cancelled on unmount or session change (`:196`, `:205`, `:211`, `:473-474`, `:484`). This is the
+    most intricate new logic in the feature — promise chain, disposal flag, cancelled timer — and it
+    has no test. The owner decided on 2026-09-17 to ship it source-verified rather than extract it
+    into a tested seam.
+  - **TSP-26** `dragover`/`drop` both `preventDefault` so the window never navigates (`:437`, `:441`).
+  - **TSP-28** the terminal takes focus after a drop (`:450`).
 
 **Evidence quality, stated plainly:** the verdict rests on a **non-reproduction**, not on a
 measured difference. The A/B against the pre-T4 1.1.1 install was offered and declined in favour of

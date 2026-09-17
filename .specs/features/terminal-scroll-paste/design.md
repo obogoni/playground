@@ -12,7 +12,11 @@ Three independent tracks share one pane:
 1. **Diagnose, then fix the dead scroll.**
    - A flag-gated probe logs every DEC private mode change the pane parses (TSP-01..05).
    - Replay always restores the modes the ring buffer trimmed. This is cause 3, fixed unconditionally (TSP-06..11).
-   - Exactly one of two conditional fixes follows the probe's verdict: a deferred-reset guard for cause 1 (TSP-29..32) or a local reset button for cause 2 (TSP-33..34).
+   - ~~Exactly one of two conditional fixes follows the probe's verdict: a deferred-reset guard for cause 1 (TSP-29..32) or a local reset button for cause 2 (TSP-33..34).~~
+   - **Withdrawn 2026-09-17.** The owner UAT answered Q2 as **cause 3 only**, so neither
+     conditional fix was built: TSP-29..34 are `Withdrawn` and every section below marked
+     *conditional* describes a design that was never implemented. Kept as the record of what
+     would be built if the dead scroll returns and the probe names cause 1 or cause 2.
 2. **Rich paste.**
    - Main reads the clipboard: text, then files, then image.
    - Main writes images to a temp PNG.
