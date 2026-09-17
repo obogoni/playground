@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/session-idle-notifications/design.md`
-**Status**: Draft — awaiting approval to Execute
+**Status**: Executed — all 13 tasks committed; Verifier pending
 **Branch**: `feature/session-idle-notifications` (stacked on `feature/session-activity-status` `65de9fd`, PR #88)
 **Test baseline**: **917 tests / 52 files**, measured green on this branch before any task.
 
@@ -443,7 +443,9 @@ T12 → T13
 
 ---
 
-### T13: Owner smoke script
+### T13: Owner smoke script ✅ COMPLETE
+
+**Status**: Done — `scripts/smoke-notifications.mjs` written and linted — **NOT YET RUN; owner-run pending**. Zero tokens: the `claude --version` agent runs in `C:/Windows` and no input is typed until the version line shows (the dev app's registry agent is the real CLI). Unlike `smoke-activity.mjs` it removes only the sessions it created and restores the five switches and `ui.direction`. Build gate green: typecheck 0, lint 0 errors, electron-vite build ok, 990 tests.
 
 **What**: Write `scripts/smoke-notifications.mjs`, a zero-token CDP smoke: settings tabs and switches round-tripped through `config:get`, and the in-app notice path driven by POSTing documentation-shaped hook payloads to the loopback hook server for a session whose token it reads from the session's own shell.
 **Where**: `scripts/smoke-notifications.mjs`
@@ -458,12 +460,12 @@ T12 → T13
 
 **Done when**:
 
-- [ ] Spends no tokens: the throwaway agent runs `claude --version` so the hooked launch exits and leaves the shell holding `PLAYGROUND_ACTIVITY_TOKEN`; the hook URL comes from the generated settings file
-- [ ] Checks: dialog opens on General; an unsaved template edit survives a tab round trip; each switch persists; master off disables the state switches and keeps their values; with session B attached, `working` → `needs-approval` on session A shows one in-app notice naming the tool; with `waiting` switched off, `working` → `waiting` shows nothing; clicking the notice selects A in the agents direction
-- [ ] Header lists what is hand-verified: the OS notification while the app is in the background, its click after a minute (the GC risk), minimized window, two-theme visual pass of the tabs and notices
-- [ ] Restores every switch it changed and removes the agent and sessions it created
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] Spends no tokens: the throwaway agent runs `claude --version` so the hooked launch exits and leaves the shell holding `PLAYGROUND_ACTIVITY_TOKEN`; the hook URL comes from the generated settings file
+- [x] Checks: dialog opens on General; an unsaved template edit survives a tab round trip; each switch persists; master off disables the state switches and keeps their values; with session B attached, `working` → `needs-approval` on session A shows one in-app notice naming the tool; with `waiting` switched off, `working` → `waiting` shows nothing; clicking the notice selects A in the agents direction
+- [x] Header lists what is hand-verified: the OS notification while the app is in the background, its click after a minute (the GC risk), minimized window, two-theme visual pass of the tabs and notices
+- [x] Restores every switch it changed and removes the agent and sessions it created
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none (smoke script — owner-run, never in CI)
 **Gate**: build
