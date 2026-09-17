@@ -118,7 +118,7 @@ T18 → T19
 
 ## Task Breakdown
 
-### T1: Shared paste plan
+### T1: Shared paste plan ✅
 
 **What**: Create `ClipboardPaste`, `quotePath`, `planPaste` and `PASTE_GAP_MS` so every paste source (clipboard text, file list, image, drop) resolves to one ordered list of `term.paste` chunks.
 **Where**: `src/shared/paste.ts`
@@ -133,13 +133,13 @@ T18 → T19
 
 **Done when**:
 
-- [ ] `planPaste({kind:'text'})` → `[text]` verbatim, multi-line included (TSP-12)
-- [ ] `planPaste({kind:'empty'})` and `{kind:'error'}` → `[]` (TSP-15)
-- [ ] `planPaste({kind:'paths'})` → one `"<path>"` per path, order kept, paths with spaces and non-ASCII (`relatório.png`) unchanged inside the quotes (TSP-21, TSP-34)
-- [ ] Empty-string paths skipped; all-empty → `[]` (TSP-27)
-- [ ] `PASTE_GAP_MS === 100` asserted (TSP-22)
-- [ ] Gate check passes: `npx vitest run src/shared/paste.test.ts`
-- [ ] Test count: baseline + ~8 (no silent deletions)
+- [x] `planPaste({kind:'text'})` → `[text]` verbatim, multi-line included (TSP-12)
+- [x] `planPaste({kind:'empty'})` and `{kind:'error'}` → `[]` (TSP-15)
+- [x] `planPaste({kind:'paths'})` → one `"<path>"` per path, order kept, paths with spaces and non-ASCII (`relatório.png`) unchanged inside the quotes (TSP-21, TSP-34)
+- [x] Empty-string paths skipped; all-empty → `[]` (TSP-27)
+- [x] `PASTE_GAP_MS === 100` asserted (TSP-22)
+- [x] Gate check passes: `npx vitest run src/shared/paste.test.ts`
+- [x] Test count: baseline + ~8 (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick

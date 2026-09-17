@@ -250,22 +250,22 @@ mouse movement, and the wheel scrolls pwsh's scrollback.
 | TSP-09 | P1: Replay modes | Tasks | Pending |
 | TSP-10 | P1: Replay modes | Tasks | Pending |
 | TSP-11 | P1: Replay modes | Tasks | Pending |
-| TSP-12 | P1: Image paste | Tasks | Pending |
+| TSP-12 | P1: Image paste | T1 | Implementing |
 | TSP-13 | P1: Image paste | Tasks | Pending |
 | TSP-14 | P1: Image paste | Tasks | Pending |
-| TSP-15 | P1: Image paste | Tasks | Pending |
+| TSP-15 | P1: Image paste | T1 | Implementing |
 | TSP-16 | P1: Image paste | Tasks | Pending |
 | TSP-17 | P1: Image paste | Tasks | Pending |
 | TSP-18 | P1: Image paste | Tasks | Pending |
 | TSP-19 | P1: Image paste | Tasks | Pending |
 | TSP-20 | P1: Image paste | Tasks | Pending |
-| TSP-21 | P1: File paste | Tasks | Pending |
-| TSP-22 | P1: File paste | Tasks | Pending |
+| TSP-21 | P1: File paste | T1 | Implementing |
+| TSP-22 | P1: File paste | T1 | Implementing |
 | TSP-23 | P1: File paste | Tasks | Pending |
 | TSP-24 | P1: File paste | Tasks | Pending |
 | TSP-25 | P1: Drop | Tasks | Pending |
 | TSP-26 | P1: Drop | Tasks | Pending |
-| TSP-27 | P1: Drop | Tasks | Pending |
+| TSP-27 | P1: Drop | T1 | Implementing |
 | TSP-28 | P1: Drop | Tasks | Pending |
 | TSP-29 | P2: Cause-1 guard (conditional) | Tasks | Pending |
 | TSP-30 | P2: Cause-1 guard (conditional) | Tasks | Pending |
@@ -275,7 +275,7 @@ mouse movement, and the wheel scrolls pwsh's scrollback.
 | TSP-34 | P2: Cause-2 reset (conditional) | Tasks | Pending |
 | TSP-35 | Edge | Tasks | Pending |
 | TSP-36 | Edge | Tasks | Pending |
-| TSP-37 | Edge | Tasks | Pending |
+| TSP-37 | Edge | T1 | Implementing |
 | TSP-38 | Edge | Tasks | Pending |
 | TSP-39 | Edge | Tasks | Pending |
 | TSP-40 | Edge | Tasks | Pending |
