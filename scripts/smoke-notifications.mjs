@@ -419,18 +419,39 @@ const selectRow = (title) =>
   waitFor(
     ws,
     `(() => {
-       const row = [...document.querySelectorAll('.rail-row')].find((r) => r.querySelector('.rail-row-label')?.textContent === ${JSON.stringify(title)})
+       // The row label is the agent name (rail v2); the session title leads the tooltip.
+       const row = [...document.querySelectorAll('.rail-row')].find((r) => (r.title || '').startsWith(${JSON.stringify(title + ' · ')}))
        row?.click()
        return Boolean(row)
      })()`,
     10000
   )
 
+/** The selected row's session title, read from the front of its tooltip. */
 const selectedLabel = () =>
-  evaluate(ws, `document.querySelector('.rail-row.selected .rail-row-label')?.textContent ?? ''`)
+  evaluate(ws, `(document.querySelector('.rail-row.selected')?.title ?? '').split(' · ')[0]`)
+
+/** Put a smoke session on screen, or stop here saying which rows the rail holds. */
+async function showSession(title) {
+  await selectRow(title)
+  await sleep(300)
+  const selected = await selectedLabel()
+  const ok = selected === title
+  const rows = ok
+    ? ''
+    : await evaluate(
+        ws,
+        `JSON.stringify([...document.querySelectorAll('.rail-row')].map((r) => r.title))`
+      )
+  check(`${title} is the session on screen`, ok, ok ? '' : `selected "${selected}", rows ${rows}`)
+  if (!ok) {
+    await cleanup()
+    finish()
+  }
+}
 
 // Read session A's token from its own shell.
-await selectRow(TITLE_A)
+await showSession(TITLE_A)
 // Type nothing until `claude --version` has printed and exited: before that the
 // input would reach the real CLI as a prompt.
 const versionShown = await waitFor(
@@ -438,7 +459,17 @@ const versionShown = await waitFor(
   `new RegExp(${JSON.stringify(VERSION_PATTERN.source)}).test(document.querySelector('.xterm-rows')?.textContent ?? '')`,
   20000
 )
-check('the smoke agent printed its version and left the shell', Boolean(versionShown))
+check(
+  'the smoke agent printed its version and left the shell',
+  Boolean(versionShown),
+  versionShown
+    ? ''
+    : `terminal ends with: ${JSON.stringify(
+        (await evaluate(ws, `document.querySelector('.xterm-rows')?.textContent ?? ''`))
+          .replace(/\s+/g, ' ')
+          .slice(-200)
+      )}`
+)
 if (!versionShown) {
   await cleanup()
   finish()
@@ -474,7 +505,7 @@ async function hook(name, extra = {}) {
 }
 
 // Put B on screen, so A is not the attached session.
-await selectRow(TITLE_B)
+await showSession(TITLE_B)
 await sleep(500)
 
 const focused = await evaluate(ws, `document.hasFocus()`)
@@ -533,7 +564,7 @@ check(
 check('the clicked notice is gone', (await noticeText()).length === 0)
 
 // --- 6. A state switched off stays silent; switched on, it notifies (NOTF-14) ---
-await selectRow(TITLE_B)
+await showSession(TITLE_B)
 await sleep(500)
 await evaluate(
   ws,
@@ -619,7 +650,7 @@ const opened2 = JSON.parse(
     ws,
     `JSON.stringify({
        direction: document.querySelector('.topbar-segment.active')?.textContent?.trim() ?? null,
-       selected: document.querySelector('.rail-row.selected .rail-row-label')?.textContent ?? null
+       selected: (document.querySelector('.rail-row.selected')?.title ?? '').split(' · ')[0] || null
      })`
   )
 )
