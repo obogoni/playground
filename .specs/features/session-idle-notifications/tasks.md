@@ -635,7 +635,9 @@ T19 → T20
 
 ---
 
-### T19: Notice layout for longer titles
+### T19: Notice layout for longer titles ✅ COMPLETE
+
+**Status**: Done — notice title clamped to two lines (`-webkit-line-clamp: 2`, `overflow-wrap: anywhere`), body `white-space: pre-line`. Build gate green: typecheck 0, lint 0 errors, 1006 tests. Visual pass rides T20.
 
 **What**: In `SessionNotices.css`, clamp the title to two lines and render body line breaks.
 **Where**: `src/renderer/src/components/SessionNotices.css`
@@ -650,9 +652,9 @@ T19 → T20
 
 **Done when**:
 
-- [ ] Title uses a two-line clamp instead of `white-space: nowrap`; body uses `white-space: pre-line`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] Title uses a two-line clamp instead of `white-space: nowrap`; body uses `white-space: pre-line`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none (renderer component — hand-verified in T20)
 **Gate**: build
