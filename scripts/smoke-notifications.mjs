@@ -5,7 +5,8 @@
  *
  * COST: zero tokens. The throwaway agent runs `claude --version`, so the hooked
  * launch prints a version and exits, and the hosting shell keeps the session's
- * PLAYGROUND_ACTIVITY_TOKEN. The script reads that token from the terminal and
+ * PLAYGROUND_ACTIVITY_TOKEN. The script reads that token from the session's output
+ * stream (`session:data`, which keeps flowing while the window is covered) and
  * POSTs documentation-shaped hook payloads to the app's loopback endpoint itself.
  *
  * SAFE ON REAL DATA: the dev app shares %APPDATA%\playground. The script never
@@ -17,9 +18,8 @@
  * checks read. The script waits for you to click the window when it is not.
  *
  * NOT automatable here (hand-verify):
- *   - the OS notification with the app in the background, its wording, and that
- *     clicking it brings the window forward with the session selected (NOTF-01,
- *     NOTF-05, NOTF-07, NOTF-08)
+ *   - the OS notification's wording as Windows shows it (step 7b guides you
+ *     through one and asserts what its click does, not what it says)
  *   - clicking an OS notification left on screen for a minute or more: the
  *     notification is held against garbage collection (design Risks)
  *   - a minimized window takes the OS path and is restored by the click (NOTF-24)
@@ -36,7 +36,7 @@
  *     Windows closing the last window quits the app, so the click cannot outlive it
  *
  * Requires: `claude` on PATH. Sessions run in C:/Windows, never in a repo, and no
- * input is typed until the terminal shows `claude --version` has printed: on this
+ * input is typed until the output shows `claude --version` has printed: on this
  * machine a registry agent is the real CLI, and text sent to it is a prompt.
  *
  * Run: npm run dev -- -- --remote-debugging-port=9222   (in one shell)
@@ -148,6 +148,7 @@ async function cleanup() {
   await evaluate(
     ws,
     `(async () => {
+       try { window.__smokeOff?.() } catch {}
        for (const id of ${ids}) { try { await window.api.invoke('sessions:stop', { id }) } catch {} }
        for (const id of ${ids}) { try { await window.api.invoke('sessions:remove', { id }) } catch {} }
        const cfg = await window.api.invoke('config:get')
@@ -450,13 +451,29 @@ async function showSession(title) {
   }
 }
 
-// Read session A's token from its own shell.
+// Read session A's token from its own shell. The output is captured from the
+// session:data stream, not from the terminal's DOM: while the window is covered
+// the page is hidden, requestAnimationFrame stops, and xterm renders nothing.
+await evaluate(
+  ws,
+  `(() => {
+     window.__smokeData = ''
+     window.__smokeOff = window.api.on('session:data', (p) => {
+       if (p.id === '${idA}') window.__smokeData += p.data
+     })
+     return true
+   })()`
+)
+/** Session A's output so far, without escape sequences. */
+// eslint-disable-next-line no-control-regex
+const ESCAPES = /\u001b\][^\u0007]*\u0007|\u001b\[[0-9;?]*[A-Za-z]/
+const OUTPUT_A = `window.__smokeData.replace(new RegExp(${JSON.stringify(ESCAPES.source)}, 'g'), '')`
 await showSession(TITLE_A)
 // Type nothing until `claude --version` has printed and exited: before that the
 // input would reach the real CLI as a prompt.
 const versionShown = await waitFor(
   ws,
-  `new RegExp(${JSON.stringify(VERSION_PATTERN.source)}).test(document.querySelector('.xterm-rows')?.textContent ?? '')`,
+  `new RegExp(${JSON.stringify(VERSION_PATTERN.source)}).test(${OUTPUT_A})`,
   20000
 )
 check(
@@ -465,9 +482,7 @@ check(
   versionShown
     ? ''
     : `terminal ends with: ${JSON.stringify(
-        (await evaluate(ws, `document.querySelector('.xterm-rows')?.textContent ?? ''`))
-          .replace(/\s+/g, ' ')
-          .slice(-200)
+        (await evaluate(ws, OUTPUT_A)).replace(/\s+/g, ' ').slice(-200)
       )}`
 )
 if (!versionShown) {
@@ -483,7 +498,7 @@ await evaluate(
 const token = await waitFor(
   ws,
   `(() => {
-     const text = document.querySelector('.xterm-rows')?.textContent ?? ''
+     const text = ${OUTPUT_A}
      const m = text.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/)
      return m ? m[0] : null
    })()`,
@@ -599,8 +614,53 @@ check(
 const gone = await waitFor(ws, `document.querySelectorAll('.session-notice').length === 0`, 10000)
 check('an unclicked notice dismisses itself after a few seconds', Boolean(gone))
 
+// --- 7b. Guided: the OS notification while the window is not focused
+//         (NOTF-01, NOTF-04, NOTF-05) ---
+// The script cannot see an OS notification, but it can see what its click does.
+console.log(
+  '\n>>> Click another window (e.g. this terminal) so the playground loses focus (30 s).\n'
+)
+const blurred = await waitFor(ws, `!document.hasFocus()`, 30000)
+check('the playground window lost focus for the OS notification check', Boolean(blurred))
+if (blurred) {
+  await sleep(800)
+  await hook('UserPromptSubmit', { prompt: 'smoke' })
+  await hook('PermissionRequest', { tool_name: 'Bash', tool_input: { command: 'echo ok' } })
+  await sleep(1000)
+  const inAppWhileBlurred = (await noticeText()).length
+  check(
+    'an unfocused window gets no in-app notice (the OS notification is used instead)',
+    inAppWhileBlurred === 0,
+    `${inAppWhileBlurred} in-app notice(s)`
+  )
+  console.log(
+    `\n>>> A Windows notification should now read "Claude (notifications smoke) · ${TITLE_A}" / "Needs approval to run Bash".` +
+      '\n>>> Click it (60 s). If none appeared, wait for the timeout: the check below fails and says so.\n'
+  )
+  const cameBack = await waitFor(
+    ws,
+    `document.hasFocus() && (document.querySelector('.rail-row.selected')?.title ?? '').startsWith(${JSON.stringify(TITLE_A + ' · ')})`,
+    60000
+  )
+  check(
+    'clicking the OS notification brings the window forward with its session selected (NOTF-01, NOTF-05)',
+    Boolean(cameBack),
+    cameBack
+      ? ''
+      : 'no click reached the app: either no notification was shown or it was not clicked'
+  )
+}
+
 // --- 8. From another direction, a notice for a stopped session still opens it
 //        in the agents direction (NOTF-05, NOTF-23) ---
+if (!(await evaluate(ws, `document.hasFocus()`))) {
+  console.log('\n>>> Click the playground window again: the last checks need it focused (30 s).\n')
+}
+check(
+  'the playground window is focused again for the last in-app checks',
+  Boolean(await waitFor(ws, `document.hasFocus()`, 30000))
+)
+await showSession(TITLE_B)
 await hook('UserPromptSubmit', { prompt: 'smoke' })
 await hook('Stop')
 const lateNotice = await waitFor(
