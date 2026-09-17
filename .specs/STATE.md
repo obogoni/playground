@@ -33,7 +33,7 @@ Handoff snapshot.
 ## Handoff
 
 **Status (current, 2026-09-16): `session-idle-notifications` EXECUTED + independent Verifier PASS
-(round 2 of 3). Owner smoke 36/36 (rev5). Local only — not pushed, no PR.**
+(round 2 of 3). Owner smoke 36/36 (rev5). PR #94 open upstream (`viniciussaide:feature/session-idle-notifications` → `obogoni:main`, "depends on #88"). Not yet merged into `develop`.**
 
 - **Branch:** `feature/session-idle-notifications`, stacked on `feature/session-activity-status`
   (`65de9fd`, PR #88 still open upstream). Spec/design/tasks `c5e2304`..`4e7e69a`, code
@@ -65,7 +65,7 @@ Handoff snapshot.
   whole in the in-app notice; Windows may shorten its own toast title.
 - **Lessons collide again:** this branch added candidates **L-019..L-023** (`next_id` 24), but
   `develop` already holds time-tracking's L-019..L-024. Renumber when merging into `develop`.
-- **Next:** after the owner smoke, open the PR upstream with "depends on #88"; when #88 merges,
+- **Next:** merge into `develop` locally (renumber lessons L-019..L-023 past develop's L-024); when #88 merges,
   `git rebase --onto origin/main feature/session-activity-status feature/session-idle-notifications`.
 
 **STILL TRUE from earlier handoffs (carried over):**
