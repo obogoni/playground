@@ -46,12 +46,8 @@
   background: var(--panel-2);
 }
 
-/* A task title can be long: up to two lines, then an ellipsis (NOTF-36). */
+/* A task title can be long: it wraps whole, never cut (NOTF-33, NOTF-36). */
 .session-notice-title {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
   font-size: 13px;
   font-weight: 600;
   overflow-wrap: anywhere;

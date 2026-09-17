@@ -732,7 +732,9 @@ T22 → T23
 
 ---
 
-### T22: Let the notice title wrap freely
+### T22: Let the notice title wrap freely ✅ COMPLETE
+
+**Status**: Done — title clamp removed (`-webkit-box`, `-webkit-line-clamp`, `overflow: hidden`); `overflow-wrap: anywhere` kept. Build gate green: typecheck 0, lint 0 errors, 1005 tests.
 
 **What**: In `SessionNotices.css`, drop the two-line clamp from the title and keep `overflow-wrap: anywhere`.
 **Where**: `src/renderer/src/components/SessionNotices.css`
@@ -747,9 +749,9 @@ T22 → T23
 
 **Done when**:
 
-- [ ] No `-webkit-line-clamp`, `-webkit-box` or `overflow: hidden` on `.session-notice-title`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] No `-webkit-line-clamp`, `-webkit-box` or `overflow: hidden` on `.session-notice-title`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none (renderer component — hand-verified per T23)
 **Gate**: build
