@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 23,
+  "next_id": 24,
   "lessons": [
     {
       "id": "L-001",
@@ -311,10 +311,29 @@
       "recurrence": 1,
       "harmful": 0,
       "evidence": [
-        "spec.md:75 vs src/main/index.ts:81 (rev-parse --abbrev-ref vs symbolic-ref --short) — validation.md round 3 gap 2 (spec)"
+        "spec.md:75 vs src/main/index.ts:81 (rev-parse --abbrev-ref vs symbolic-ref --short) — validation.md round 3 gap 2 (spec)",
+        "design.md:267-268,276-277 still describe the rev4 clip and clamp after rev5 (validation.md round 5) (spec)"
       ],
       "created": "2026-09-17T01:30:16Z",
-      "last_seen": "2026-09-17T01:30:16Z"
+      "last_seen": "2026-09-17T01:50:57Z"
+    },
+    {
+      "id": "L-023",
+      "key": "surviving_mutant::when a rule says a value is never cut test it with a long value at every place the value is rendered not only the first",
+      "text": "When a rule says a value is never cut, test it with a long value at every place the value is rendered, not only the first",
+      "signal": "surviving_mutant",
+      "scope": "notifications",
+      "status": "candidate",
+      "features": [
+        "session-idle-notifications"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "V7 src/main/activity-notification.ts:86 (validation.md round 5) (notifications)"
+      ],
+      "created": "2026-09-17T01:50:57Z",
+      "last_seen": "2026-09-17T01:50:57Z"
     }
   ]
 }

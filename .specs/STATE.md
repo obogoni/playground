@@ -57,9 +57,13 @@ Handoff snapshot.
   T14–T20 `ec0d66b`..`d1d5f94`, fix round `b522d5f` (also catches async notifier failures).
   Suite 990 → **1006**; Verifier round 3 FAIL on evidence, round 4 PASS (18/18 mutants).
   **Owner-pending:** re-run the smoke and answer its y/n on whether the Windows toast shows the
-  three lines separately (if not, join the body with ` — ` for the OS surface only); hand-check a
-  long pinned task title wrapping in the in-app notice.
-- **Lessons collide again:** this branch added candidates **L-019..L-022** (`next_id` 23), but
+  three lines separately (if not, join the body with ` — ` for the OS surface only); hand-check (see rev5 below).
+- **rev5 (2026-09-16), whole titles:** owner decided the app never cuts a title — no 60-character
+  limit, no `…`; the in-app title wraps freely. T21–T23 `133794e`..`39a589c`, fix round `ffc773c`
+  (test for a long session title on the body's second line). Suite **1006**; Verifier round 5
+  FAIL (1 surviving mutant), round 6 PASS (8/8). Owner hand check: a long pinned task title shown
+  whole in the in-app notice; Windows may shorten its own toast title.
+- **Lessons collide again:** this branch added candidates **L-019..L-023** (`next_id` 24), but
   `develop` already holds time-tracking's L-019..L-024. Renumber when merging into `develop`.
 - **Next:** after the owner smoke, open the PR upstream with "depends on #88"; when #88 merges,
   `git rebase --onto origin/main feature/session-activity-status feature/session-idle-notifications`.

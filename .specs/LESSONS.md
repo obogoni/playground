@@ -111,8 +111,14 @@ Seen once or not yet corroborated. Tracked, not trusted.
 ### L-022 - When the design replaces a mechanism a confirmed spec row names, update that spec row in the same change or mark a SPEC_DEVIATION at the code
 - signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
 - features: session-idle-notifications
-- evidence: spec.md:75 vs src/main/index.ts:81 (rev-parse --abbrev-ref vs symbolic-ref --short) — validation.md round 3 gap 2 (spec)
-- last seen: 2026-09-17T01:30:16Z
+- evidence: spec.md:75 vs src/main/index.ts:81 (rev-parse --abbrev-ref vs symbolic-ref --short) — validation.md round 3 gap 2 (spec) (+1 more)
+- last seen: 2026-09-17T01:50:57Z
+
+### L-023 - When a rule says a value is never cut, test it with a long value at every place the value is rendered, not only the first
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `notifications` · harmful: 0
+- features: session-idle-notifications
+- evidence: V7 src/main/activity-notification.ts:86 (validation.md round 5) (notifications)
+- last seen: 2026-09-17T01:50:57Z
 
 ## Quarantined (failed when applied - ignore)
 

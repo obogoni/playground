@@ -247,16 +247,16 @@ just `#<id>`. Repeat in a folder that is not a git repository: the rev3 layout.
 | NOTF-30 | P4: Told which task the agent is on | Execute | Verified |
 | NOTF-31 | P4: Told which task the agent is on | Execute | Verified |
 | NOTF-32 | P4: Told which task the agent is on | Execute | Verified |
-| NOTF-33 | P4: Told which task the agent is on | Execute | Implementing |
+| NOTF-33 | P4: Told which task the agent is on | Execute | Verified |
 | NOTF-34 | P4: Told which task the agent is on | Execute | Verified |
 | NOTF-35 | P4: Told which task the agent is on | Execute | Verified |
-| NOTF-36 | P4: Told which task the agent is on | Execute | Implementing |
+| NOTF-36 | P4: Told which task the agent is on | Execute | Verified |
 
 **ID format:** `NOTF-[NUMBER]`
 
 **Status values:** Pending → In Design → In Tasks → Implementing → Verified
 
-**Coverage:** 36 total; NOTF-01..29 mapped to T1–T13 + fix round 1, NOTF-30..36 mapped to T14–T20 + fix round 2
+**Coverage:** 36 total; NOTF-01..29 mapped to T1–T13 + fix round 1, NOTF-30..36 mapped to T14–T20 + fix round 2, NOTF-33/36 reworded by rev5 (T21–T23 + fix round 3)
 
 ---
 

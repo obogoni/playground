@@ -1,4 +1,4 @@
-# Session Activity Notifications Validation — Rounds 1–4
+# Session Activity Notifications Validation — Rounds 1–6
 
 ## Round 2 verdict: PASS ✅ (NOTF-01..29; superseded by round 3 for the rev4 increment)
 
@@ -545,13 +545,13 @@ SessionNotifier tests keep their assertions and only `await` the now-async `hand
 
 ---
 
-## Validation (round 4 — rev4 increment re-verification, NOTF-30..36): PASS ✅
+## Round 4 verdict (rev4 increment, NOTF-30..36): PASS ✅ (superseded by round 5 for rev5)
 
 **Date**: 2026-09-16
 **Diff range**: `0f6212b..b522d5f`; fix round 2 = `b522d5f` (on top of round 3's `d1d5f94`)
 **Iteration**: 2 of a maximum 3 for the rev4 increment
 **Verifier**: independent sub-agent (author ≠ verifier); read-only over the real tree; probes and mutants in a detached scratch worktree at `b522d5f`
-**Result**: PASS — all three round-3 gaps are closed and re-confirmed; the only production change (`src/main/index.ts:359-363`) is
+**Round 4 outcome**: PASS — all three round-3 gaps are closed and re-confirmed; the only production change (`src/main/index.ts:359-363`) is
 correct and leaves notification behaviour unchanged; gates exit 0 with 1006 tests; the rev4 mutants were re-run at `b522d5f`
 and all 17 are still killed. The rev4 owner smoke remains owner-pending by convention.
 
@@ -649,3 +649,187 @@ applied them rather than contradicting them.
 **Spec-anchored check**: NOTF-30..36 all evidenced; 0 gaps
 **Sensor**: 17/17 rev4 mutants still killed; W1 killed by probe
 **Gate**: typecheck 0, lint 0, tests 0 (1006 passed)
+
+---
+
+## Round 5 verdict (rev5 whole titles, NOTF-33 / NOTF-36): FAIL ❌ (superseded by round 6)
+
+**Date**: 2026-09-16
+**Spec**: `.specs/features/session-idle-notifications/spec.md` rev5 — header note `spec.md:16-17`, Length row `spec.md:80`, NOTF-33 `spec.md:190`, NOTF-36 `spec.md:193`
+**Tasks**: T21–T23 (`tasks.md:706-790`)
+**Diff range**: `67ffe6a..39a589c` (plan `8b22918`; T21 `133794e`, T22 `627926c`, T23 `39a589c`)
+**Verifier**: independent sub-agent (author ≠ verifier); read-only over the real tree; mutants in a detached scratch worktree at `39a589c`
+**Round 5 outcome**: FAIL — the change itself is correct, minimal and its two title tests are discriminating (6/7 mutants killed, all gates
+exit 0), but one mutant survives: the session title on the **second body line** of the task layout can be cut without any test
+failing, which rev5's "the session title is sent whole" (`spec.md:80`) forbids; and `design.md`'s rev4 section still specifies
+the removed 60-character `clip` and two-line clamp with no rev5 note. Both fixes are a test and a doc note; no production change.
+
+### R5 · Task completion
+
+| Task | Status | Notes |
+| ---- | ------ | ----- |
+| T21 whole title | ✅ Done | `clip`/`MAX_TITLE_LENGTH` gone; `src/main/activity-notification.ts:81` `title: sessionLine`, `:85` `title: taskLine` |
+| T22 no clamp | ✅ Done | `SessionNotices.css:50-54` keeps only `overflow-wrap: anywhere`; no ancestor sets `overflow: hidden`, `white-space: nowrap` or a max height (`SessionNotices.css:3-43` read in full) |
+| T23 smoke header | ✅ Done | `scripts/smoke-notifications.mjs:30-35` hand check expects the whole title wrapping, no `…`, and notes Windows may shorten its own toast |
+
+### R5 · The replaced tests, judged against the new spec
+
+Rev4 had three cut tests (60 + `…`; exactly-60 kept; long session title cut). T21 replaces them with two:
+
+- `src/main/activity-notification.test.ts:224` `expect(title).toBe(`#12345 · ${long}`)` — an 89-character task title arrives
+  whole: exact equality, so any cut or appended `…` fails. Matches NOTF-33 (`spec.md:190`).
+- `src/main/activity-notification.test.ts:230` `expect(title).toBe(`Claude · ${'y'.repeat(120)}`)` — a 120-character session
+  title (no-task layout) arrives whole. Matches NOTF-33.
+- The dropped "exactly 60 kept whole" test has no rev5 meaning (there is no boundary any more); its removal loses nothing the
+  new spec requires. Count 1006 → 1005 matches 3 replaced by 2. **The replacement is correct for rev5.**
+- What neither test covers: a long session title in the **task** layout, where it lives on the body's second line
+  (`src/main/activity-notification.ts:86`). The only assertions there use short titles (`:204` block, `:233` block). See gap 1.
+
+### R5 · Spec-anchored acceptance criteria
+
+| ID | Criterion (rev5) | Spec-defined outcome | `file:line` + assertion | Result |
+| -- | ---------------- | -------------------- | ----------------------- | ------ |
+| NOTF-33 | title sent with task title and session title whole, never cut, no app-added `…` | exact whole string | `src/main/activity-notification.test.ts:224` task title whole; `:230` session title whole (no task); mutants V1–V6 killed | ✅ PASS for the title · ⚠️ session title in the task-layout body unguarded (gap 1) |
+| NOTF-36 | in-app title wraps over as many lines as needed; each body line on its own line | no clamp; two body lines | Title: `SessionNotices.css:50-54` (no clamp/overflow/nowrap) + named hand check `scripts/smoke-notifications.mjs:30-35` (owner-pending). Body: `scripts/smoke-notifications.mjs:613` `bodyLines === 2` (can fail without `pre-line`, `SessionNotices.css:60`) | ✅ PASS (smoke + hand-verify, by convention) |
+| NOTF-30..32, 34, 35 | unchanged by rev5 | — | round 3/4 evidence; the decision/lookup code is untouched by `67ffe6a..39a589c` (only `describeNotification`'s two `clip` calls removed) | ✅ PASS |
+
+### R5 · Leftover references to the removed limit
+
+`grep` over `src/`, `scripts/smoke-notifications.mjs`, `spec.md`, `design.md` for `MAX_TITLE_LENGTH`, `clip(`, `line-clamp`,
+`60 char`, `two lines`, `…`:
+
+- Code and CSS: **none** left in the notification path. (`-webkit-line-clamp: 2` at `src/renderer/src/components/SessionRail.css:199`
+  belongs to the rail row, unrelated.)
+- Smoke: `scripts/smoke-notifications.mjs:33` mentions `…` only to say there must be none; `:613` "two lines" is the body check. Correct.
+- Spec: only the rev5 header note (`spec.md:16-17`) mentions the 60-character limit, as removed history. Correct.
+- **design.md: stale.** `design.md:267-268` still says "Title cut by `clip(text, 60)`: longer text keeps its first 59 characters
+  plus `…` (NOTF-33)" and `design.md:276-277` still specifies the title `-webkit-line-clamp: 2`. There is no rev5 section or note in
+  `design.md` (`grep rev5` → none). **Gap 2.**
+
+### R5 · Discrimination sensor
+
+Scratch at `39a589c`, `node_modules` junction; baseline of the two files 65/65. Each mutant applied to
+`src/main/activity-notification.ts`, run with `npx vitest run src/main/activity-notification.test.ts src/main/session-notifier.test.ts`,
+restored in `finally`.
+
+| # | File:line | Mutation | Killed? |
+| - | --------- | -------- | ------- |
+| V1 | `src/main/activity-notification.ts:85` | rev4 cut (60 + `…`) reintroduced on the task title only | ✅ Killed (1 failed) |
+| V2 | `src/main/activity-notification.ts:81` | rev4 cut reintroduced on the no-task session title only | ✅ Killed (1) |
+| V3 | `src/main/activity-notification.ts:85` | app appends `…` to the task title | ✅ Killed (5) |
+| V4 | `src/main/activity-notification.ts:81` | session title cut at 100 characters | ✅ Killed (1) |
+| V5 | `src/main/activity-notification.ts:83` | task title cut at 80 characters (above the old limit) | ✅ Killed (1) |
+| V6 | `src/main/activity-notification.ts:81` | no-task title drops its last word | ✅ Killed (8) |
+| V7 | `src/main/activity-notification.ts:86` | task layout: session line in the body cut to 60 + `…` | ❌ **Survived** (65/65 pass) → gap 1 |
+
+**Sensor result**: 6/7 killed (V7 survived; round-5 sensor did not pass)
+
+### R5 · Gate check (real tree at `39a589c`, judged by exit code)
+
+| Gate | Command | Exit | Detail |
+| ---- | ------- | ---- | ------ |
+| Typecheck | `npm run typecheck` | **0** | — |
+| Lint | `npm run lint` | **0** | 0 errors, 18 pre-existing warnings |
+| Tests | `npm test` | **0** | **1005 passed / 56 files**, 0 failed, 0 skipped |
+
+Delta: 1006 → 1005 (−1 = three rev4 cut tests replaced by two whole-title tests, owner-approved spec change). No other test touched.
+
+### R5 · Fix plans
+
+1. **(Minor, surviving mutant V7) Session title whole in the task layout.** Add to `src/main/activity-notification.test.ts`
+   (`describeNotification with a linked task`): a session titled with 120+ characters and a task →
+   `expect(body).toBe('Needs approval to run Bash\nClaude · ' + long)`. Optionally reword NOTF-33 (`spec.md:190`) so it plainly
+   covers the session title wherever it appears (title in the no-task layout, second body line with a task) — today it says
+   "the notification **title** with … the session title whole", while with a task the session title is not in the title.
+2. **(Minor, doc drift) design.md rev5 note.** Mark `design.md:267-268` and `:276-277` as superseded by rev5 (no `clip`, no clamp;
+   `overflow-wrap: anywhere` only), or add a short "Increment rev5" section.
+3. **(Owner)** run the rev5 hand check at `scripts/smoke-notifications.mjs:30-35` (long pinned title, in-app and Windows toast).
+
+### R5 · Requirement traceability (proposed; `spec.md` not modified)
+
+| Requirement | Status |
+| ----------- | ------ |
+| NOTF-33 | ⚠️ Needs Fix (fix 1) |
+| NOTF-36 | ✅ Verified (smoke + hand-verify, owner-pending) |
+
+### R5 · Summary
+
+**Overall**: ❌ Not Ready — correct change; one unguarded half of the rev5 rule and a stale design section.
+**Spec-anchored check**: NOTF-36 evidenced; NOTF-33 evidenced for titles, body half unguarded; 1 spec wording ambiguity
+**Sensor**: 6/7 killed (V7 survived)
+**Gate**: typecheck 0, lint 0, tests 0 (**1005 passed / 56 files**, 0 failed, 0 skipped)
+
+---
+
+## Validation (round 6 — rev5 re-verification, NOTF-33 / NOTF-36): PASS ✅
+
+**Date**: 2026-09-16
+**Diff range**: `67ffe6a..ffc773c`; fix round 3 = `ffc773c` (on top of round 5's `39a589c`)
+**Iteration**: 2 of a maximum 3 for rev5
+**Verifier**: independent sub-agent (author ≠ verifier); read-only over the real tree; mutants in a detached scratch worktree at `ffc773c`
+**Result**: PASS — both round-5 gaps are closed and re-confirmed: the surviving mutant V7 is now killed by a new test, the
+round-5 mutants V1–V6 stay killed, a new variant V8 is killed too, NOTF-33's wording covers both places the session title
+appears, and design.md marks the removed cut and clamp as superseded with an Increment rev5 section. Gates exit 0 with 1006
+tests. The rev5 hand check remains owner-pending by convention.
+
+### R6 · What changed in `ffc773c`
+
+`git diff --stat 39a589c ffc773c -- src` → only `src/main/activity-notification.test.ts` (+6). No production code changed.
+Docs: `spec.md` (1 line), `design.md` (+16/−3), `tasks.md` (fix-round record).
+
+### R6 · Round-5 gap disposition
+
+| # | Round-5 gap | Status | Proof |
+| - | ----------- | ------ | ----- |
+| 1 | V7 survived: session title on the task layout's second body line could be cut | ✅ **CLOSED** | `src/main/activity-notification.test.ts:240` "sends a long session title whole on the second body line (NOTF-33)"; `:243` `expect(body).toBe(`Needs approval to run Bash\nClaude · ${'z'.repeat(120)}`)` — exact equality on a 129-character session line (120 + agent prefix), with an untitled task so the task layout is taken. Re-ran V7 myself in scratch: **killed** (1 failed / 65 passed). Spec: `spec.md:190` now reads "send the task title and the session title whole **wherever the notification carries them (its title, or the body's second line)**" — the ambiguity is resolved and the new test anchors to it |
+| 2 | design.md still specified `clip(text, 60)` and the two-line clamp | ✅ **CLOSED** | `design.md:267-269` strikes the `clip` sentence and marks it **Superseded by rev5**; `design.md:277-278` strikes the clamp and names the rev5 rule (`overflow-wrap: anywhere`); `design.md:299-306` "Increment rev5: whole titles" states the removal of `clip`/`MAX_TITLE_LENGTH`, whole titles in all three places and the Windows-toast caveat. `grep 60\|clip\|line-clamp\|MAX_TITLE design.md` → only the struck text (`:267`, `:277`) and the rev5 section (`:301`) |
+| 3 | Owner has not run the rev5 hand check | ⏳ **OWNER-PENDING** (by convention) | `scripts/smoke-notifications.mjs:30-35`, unchanged |
+
+### R6 · Spec-anchored acceptance criteria
+
+| ID | Criterion (rev5, as reworded) | Spec-defined outcome | `file:line` + assertion | Result |
+| -- | ----------------------------- | -------------------- | ----------------------- | ------ |
+| NOTF-33 | task title and session title whole wherever carried (title, or body's second line), no cut, no app-added `…` | exact whole strings in all three places | task title in the title: `src/main/activity-notification.test.ts:224` `expect(title).toBe(`#12345 · ${long}`)`; session title in the title (no task): `:230` `expect(title).toBe(`Claude · ${'y'.repeat(120)}`)`; session title on the body's second line (task): `:243` exact body | ✅ PASS |
+| NOTF-36 | in-app title wraps over as many lines as needed; each body line on its own line | no clamp; two body lines | `src/renderer/src/components/SessionNotices.css:50-54` (no clamp/overflow/nowrap); hand check `scripts/smoke-notifications.mjs:30-35` (owner-pending); body `scripts/smoke-notifications.mjs:613` `bodyLines === 2` | ✅ PASS (smoke + hand-verify, by convention) |
+| NOTF-30..32, 34, 35 | unchanged | — | round 3/4 evidence; production code unchanged since round 5 | ✅ PASS |
+
+**Status**: ✅ all rev5 ACs evidenced; 0 spec-precision gaps.
+
+### R6 · Discrimination sensor
+
+Scratch at `ffc773c`, `node_modules` junction. Each mutant applied to `src/main/activity-notification.ts`, run with
+`npx vitest run src/main/activity-notification.test.ts src/main/session-notifier.test.ts` (66 tests), restored in `finally`.
+
+| # | File:line | Mutation | Killed? |
+| - | --------- | -------- | ------- |
+| V1 | `src/main/activity-notification.ts:85` | 60 + `…` cut on the task title only | ✅ Killed (1 failed) |
+| V2 | `src/main/activity-notification.ts:81` | 60 + `…` cut on the no-task session title only | ✅ Killed (1) |
+| V3 | `src/main/activity-notification.ts:85` | app appends `…` to the task title | ✅ Killed (5) |
+| V4 | `src/main/activity-notification.ts:81` | session title cut at 100 characters | ✅ Killed (1) |
+| V5 | `src/main/activity-notification.ts:83` | task title cut at 80 characters | ✅ Killed (1) |
+| V6 | `src/main/activity-notification.ts:81` | no-task title drops its last word | ✅ Killed (8) |
+| V7 | `src/main/activity-notification.ts:86` | task layout: body session line cut to 60 + `…` (round-5 survivor) | ✅ **Killed** (1) |
+| V8 | `src/main/activity-notification.ts:86` | task layout: body session line cut at 100, no `…` (new; checks the new test is not tied to the old 60 boundary) | ✅ Killed (1) |
+
+**Sensor result**: 8/8 killed
+
+### R6 · Gate check (real tree at `ffc773c`, judged by exit code)
+
+| Gate | Command | Exit | Detail |
+| ---- | ------- | ---- | ------ |
+| Typecheck | `npm run typecheck` | **0** | — |
+| Lint | `npm run lint` | **0** | 0 errors, 18 pre-existing warnings |
+| Tests | `npm test` | **0** | **1006 passed / 56 files**, 0 failed, 0 skipped |
+
+Delta: 1005 → 1006 (+1, the new body-line test). No test removed or weakened.
+
+### R6 · Lessons
+
+No new grounded failure. L-023 (round 5, surviving mutant) and L-022 stay as candidates; this fix applied them.
+
+### R6 · Summary
+
+**Overall**: ✅ Ready — pending the owner's rev5 hand check, by convention.
+**Spec-anchored check**: NOTF-33 and NOTF-36 evidenced; 0 gaps
+**Sensor**: 8/8 killed
+**Gate**: typecheck 0, lint 0, tests 0 (**1006 passed / 56 files**, 0 failed, 0 skipped)
