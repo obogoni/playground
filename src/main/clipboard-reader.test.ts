@@ -27,9 +27,7 @@ interface FakeOpts {
 }
 
 /** Records every port call so a test can assert what was (and was not) spawned. */
-function fakeDeps(
-  opts: FakeOpts = {}
-): ClipboardReaderDeps & {
+function fakeDeps(opts: FakeOpts = {}): ClipboardReaderDeps & {
   listCalls: number
   randCalls: number
   writes: { path: string; data: Buffer }[]

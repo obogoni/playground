@@ -30,11 +30,25 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current, 2026-09-17): `terminal-scroll-paste` T1-T14 EXECUTED on branch
-`feature/terminal-scroll-paste`, cut from `origin/main` `fa78f78`. Phases 6 and 7 SKIPPED (Q2
-verdict: cause 3 only; TSP-29..34 `Withdrawn`). Verifier round 1 **FAIL on evidence, no code
-defect** -- 18/18 mutants killed, gate green -- fix round applied, round 2 pending. Nothing
-uncommitted. Not pushed -- push and PR need an explicit go-ahead.**
+**Status (current, 2026-09-17): `terminal-scroll-paste` COMPLETE -- T1-T14 executed and
+independent Verifier **PASS** (round 2 of 3) on branch `feature/terminal-scroll-paste`, cut from
+`origin/main` `fa78f78`. Phases 6 and 7 SKIPPED (Q2 verdict: cause 3 only; TSP-29..34 `Withdrawn`).
+Nothing uncommitted. **Not pushed -- push and PR need an explicit go-ahead.** Report:
+`.specs/features/terminal-scroll-paste/validation.md`; `validate_state.py` exit 0.**
+
+- **Verification:** suite **748 -> 820** (46 -> 51 files); typecheck/lint/test and
+  `npx electron-vite build` all exit 0. Round 1 **FAIL on evidence, no code defect** (18/18 mutants
+  killed); round 2 **PASS** with **23/23 mutants killed** -- the 18 re-run verbatim plus 6 new ones
+  on the changed test. 26/34 non-withdrawn ACs fully matched, 4 spec-precision, **7 owner-accepted
+  hand-verification items enumerated, 0 silent passes.**
+- **The Verifier ran a counterfactual on the one code change rather than trusting the claim:** the
+  memoised-`rand` mutant and a constant-suffix mutant both **survived** the old TSP-38 assertion
+  (exit 0, 20 passed) and both **die** against the new one. The second mutant keeps `randCalls === 2`
+  honest and would defeat a call-counter-only assertion; the path assertions catch it.
+- **Lint baseline moved and exit code hid it.** The fix round added a 19th prettier warning in its
+  own file against a baseline of 18, invisible at exit 0 because warnings do not fail the gate.
+  Fixed with `npx eslint --fix src/main/clipboard-reader.test.ts`; back to 18. **Record the count and
+  diff the count -- judging lint by exit code alone is correct for errors and blind to drift.**
 
 - **Commits:** `194aa4f` spec, `b3b41e3` + `1467c64` requirement-id realignment, then T1-T13 in
   `90830f3`..`02f1413` (one per task). Suite **748 -> 819** (46 -> 51 files); `typecheck`, `lint`
@@ -61,8 +75,8 @@ while unpackaged and blocks Ctrl+Shift+I when packaged. Set
 `localStorage.setItem('playground.debug.terminalModes', '1')`, enable **Verbose** in the console
 level dropdown (the probe uses `console.debug`, hidden by default), then remount the pane.
 
-**Verifier round 1 FAIL -- what it found and what was done (owner decided: record honestly, do not
-refactor for testability):**
+**Verifier round 1 FAIL -- what it found and what was done, all resolved or accepted (owner decided:
+record honestly, do not refactor for testability):**
 
 - **7 ACs had no evidence of any kind and were missing from T14's owner-pending list**, so they read
   as verified in Traceability: TSP-02, 03, 20, 23, 24, 26, 28, all pane-local. Now enumerated under
@@ -82,8 +96,34 @@ refactor for testability):**
   with nothing in the suite to catch it), and no path writes to a disposed terminal. **One narrow
   real defect left unfixed:** the replay `term.write(data, cb)` callback reads `term.modes` and can
   fire after `dispose()` -- probe-only, so flag-gated. The Verifier's other note, that the cleared
-  `gapTimer` permanently retains the disposed terminal, **does not hold**: a pending promise is not a
-  GC root, so the closure graph is collectable once unreachable.
+  `gapTimer` permanently retains the disposed terminal, **does not hold and was withdrawn in round
+  2**: a pending promise is not a GC root, so the closure graph is collectable once unreachable. The
+  mechanism is inverted -- **not** clearing the timer is the retaining case, since a live timer holds
+  `resolve` -> promise -> continuation -> `term` for up to `PASTE_GAP_MS`.
+
+**What the PASS does not claim, stated because it is the accepted risk:** nothing is verified about
+`TerminalPane.tsx`. **TSP-23/24** -- the serialized paste queue and its cancel-on-session-change, the
+most intricate new logic here -- ship on source review alone, and the 23/23 kill rate does not extend
+to them. The Verifier re-read the disposal path in both rounds and found no route where a disposed
+queue writes to a dead terminal.
+
+**Deliberately left as-is (cosmetic, recorded not fixed):**
+
+- `spec.md` Traceability reads `Implementing` for all 34 non-withdrawn ACs, so it does not
+  distinguish the 26 verified from the 7 accepted-pending. **This matches the project convention** --
+  `agents-rail-v2` is merged and Verifier-PASS and still reads `Implementing` throughout -- and it
+  under-claims, so nothing is falsely green. Introducing a per-AC status scheme on this branch alone
+  would diverge from every other feature.
+- The post-dispose replay callback: `term.write(data, cb)`'s callback reads `term.modes` and can fire
+  after `dispose()`. Probe-only (`replayPending = probing`), worst case a console throw on a terminal
+  that is already gone, no PTY or data consequence. A one-line `if (pasteDisposed) return` would close
+  it by reusing the existing flag.
+
+**Next:** the branch is ready for `git push fork feature/terminal-scroll-paste` and a PR to
+`obogoni:main` titled per the fork workflow -- **both need an explicit owner go-ahead.** `origin/main`
+is still `fa78f78`, so no rebase is needed. After the upstream merge: `git fetch origin` -> `main`
+fast-forward -> merge `main` into `develop`. Expect a Handoff conflict and the lessons renumbering
+that `time-tracking` (#93) and `session-idle-notifications` (#94) also need.
 
 **A HOLE IN THE SKILL'S OWN CLOSING GATE -- do not trust `validate_state.py` blindly.** Reproduced
 this session with a synthetic report: a `validation.md` whose verdict reads `**Verdict: FAIL**` in
