@@ -297,7 +297,9 @@ T12 → T13
 
 ---
 
-### T8: Session notice list logic
+### T8: Session notice list logic ✅ COMPLETE
+
+**Status**: Done — `session-notices.ts` (`upsertNotice`, `dropNotice`) + 6 tests: first add, stacking order, in-place replace with the new key, no mutation, drop one, drop unknown. Quick gate green; lint clean. Suite 984 → 990.
 
 **What**: Implement `upsertNotice` and `dropNotice` over `Notice { id, title, body, key }`: a newer notice for a session replaces its old one in place, different sessions stack in arrival order.
 **Where**: `src/renderer/src/lib/session-notices.ts`
@@ -312,10 +314,10 @@ T12 → T13
 
 **Done when**:
 
-- [ ] Pure; returns new arrays, never mutates the input
-- [ ] Tests: upsert into empty; two sessions stack in order; a second notice for the same session replaces the first in place and changes `key` (so its timer restarts); drop removes only that session; drop of an unknown id returns an equal list
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/session-notices.test.ts`
-- [ ] Test count: ~968 → ~974 (+~6; no silent deletions)
+- [x] Pure; returns new arrays, never mutates the input
+- [x] Tests: upsert into empty; two sessions stack in order; a second notice for the same session replaces the first in place and changes `key` (so its timer restarts); drop removes only that session; drop of an unknown id returns an equal list
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/session-notices.test.ts`
+- [x] Test count: ~968 → ~974 (+~6; no silent deletions)
 
 **Tests**: unit
 **Gate**: quick
