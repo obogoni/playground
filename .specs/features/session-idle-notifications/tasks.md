@@ -607,7 +607,9 @@ T19 → T20
 
 ---
 
-### T18: Read the session branch in main
+### T18: Read the session branch in main ✅ COMPLETE
+
+**Status**: Done — `readBranch(cwd)` (`git symbolic-ref --short HEAD`, 2 s timeout, `windowsHide`, any error → null) and `linkedTask` wired to `linkTask(branch, taskBoard.list().tasks)`, replacing T17's placeholder. Checked by hand: a branch answers, `C:/Windows` exits 128 (→ null), an unborn `feature/12345-notify-smoke` answers. Build gate green (phase 5 close): typecheck 0, lint 0 errors, electron-vite build ok, 1006 tests.
 
 **What**: In `index.ts`, add `readBranch(cwd)` (`git symbolic-ref --short HEAD`, 2 s timeout, `windowsHide`, any error → `null`) and wire `linkedTask: async (cwd) => linkTask(await readBranch(cwd), taskBoard.list().tasks)`.
 **Where**: `src/main/index.ts`
@@ -622,9 +624,9 @@ T19 → T20
 
 **Done when**:
 
-- [ ] No Azure DevOps call on the notification path (`taskBoard.list()` only)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] No Azure DevOps call on the notification path (`taskBoard.list()` only)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none (Electron/main wiring — covered by T20's smoke)
 **Gate**: build

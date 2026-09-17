@@ -12,6 +12,7 @@ import { readNotificationPrefs } from '../shared/notifications'
 import { AdoGateway } from './ado-gateway'
 import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-runner'
 import { createActivityHookServer } from './activity-hook-server'
+import { linkTask } from './activity-notification'
 import { buildClaudeHookSettings } from './claude-hook-settings'
 import { ConfigStore } from './config-store'
 import { runHookShell } from './hook-shell'
@@ -67,6 +68,26 @@ async function gitFetch({ cwd, remote, branch }: GitFetchOptions): Promise<void>
     windowsHide: true,
     env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
   })
+}
+
+/**
+ * The branch a session's cwd has checked out, which names its task in a
+ * notification (NOTF-30). `symbolic-ref` answers on an unborn branch and fails
+ * on a detached HEAD; that, a folder outside git, or git taking over 2 s all
+ * mean no branch (NOTF-34).
+ */
+async function readBranch(cwd: string): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync('git', ['symbolic-ref', '--short', 'HEAD'], {
+      cwd,
+      timeout: 2000,
+      windowsHide: true,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
+    })
+    return stdout.trim() || null
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -292,8 +313,8 @@ app.whenReady().then(() => {
   const sessionNotifier = new SessionNotifier({
     prefs: () => readNotificationPrefs(configStore.get().ui),
     windowFocused,
-    // Filled by the branch lookup in the next task; no task until then.
-    linkedTask: async () => null,
+    // Cached pins only: a notification never waits on Azure DevOps (NOTF-35).
+    linkedTask: async (cwd) => linkTask(await readBranch(cwd), taskBoard.list().tasks),
     showOs,
     reveal: revealWindow,
     emit: emitToWindow
