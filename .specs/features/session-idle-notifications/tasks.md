@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/session-idle-notifications/design.md`
-**Status**: Executed — all 13 tasks committed; Verifier pending
+**Status**: Executed — Verifier round 1 FAIL (evidence gaps), fix round 1 applied; re-verify pending
 **Branch**: `feature/session-idle-notifications` (stacked on `feature/session-activity-status` `65de9fd`, PR #88)
 **Test baseline**: **917 tests / 52 files**, measured green on this branch before any task.
 
@@ -550,3 +550,25 @@ No dependency points to a later phase.
 | T11 | Renderer component | none | none | ✅ OK |
 | T12 | Renderer component | none | none | ✅ OK |
 | T13 | Smoke script | none | none | ✅ OK |
+
+---
+
+## Fix round 1 (Verifier FAIL, 2026-09-16)
+
+Round 1: gates green (990 tests), 20/21 mutants killed (the survivor is equivalent). FAIL on evidence only; no production code changed.
+
+### F1: NOTF-23 and the direction half of NOTF-05 ✅ COMPLETE
+
+Smoke step 8: raise a notice for A, switch to Tree, stop A, click the notice; assert the direction is Agents and A is selected. The old NOTF-05 check started in Agents and could not fail.
+
+### F2: NOTF-29 agent form ✅ COMPLETE
+
+Smoke opens the agent form, types a name, round-trips the tabs and asserts the form and its value are still there.
+
+### F3: NOTF-06 and NOTF-21 named as code reading ✅ COMPLETE
+
+Both are unreachable on a Windows desktop (notifications are supported; closing the last window quits). The smoke header now lists them with the guard each relies on.
+
+### F4: Spec precision ✅ COMPLETE
+
+Notification wording pinned in the spec's content row; NOTF-19's assumption row marked accepted; "attached" defined for directions other than agents.

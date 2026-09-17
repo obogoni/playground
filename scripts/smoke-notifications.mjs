@@ -27,6 +27,14 @@
  *   - the two-theme visual pass of the tabs, the switches (disabled state) and
  *     the notice stack
  *
+ * CODE READING ONLY (not reproducible on a Windows desktop):
+ *   - NOTF-06: an OS without notification support. `showOs` returns before
+ *     constructing anything when `Notification.isSupported()` is false
+ *     (`src/main/index.ts`, the `showOs` helper)
+ *   - NOTF-21: a click after the window was destroyed. `revealWindow` returns on
+ *     a missing or destroyed window and `emitToWindow` on a missing one; on
+ *     Windows closing the last window quits the app, so the click cannot outlive it
+ *
  * Requires: `claude` on PATH. Sessions run in C:/Windows, never in a repo, and no
  * input is typed until the terminal shows `claude --version` has printed: on this
  * machine a registry agent is the real CLI, and text sent to it is a prompt.
@@ -234,6 +242,34 @@ const kept = await evaluate(
   `[...document.querySelectorAll('.dialog-input')].find((i) => i.placeholder && i.placeholder.includes('{'))?.value ?? ''`
 )
 check('an unsaved General edit survives a tab round trip (NOTF-29)', kept === EDIT, kept)
+
+// An open agent form is the other piece of General state that must survive.
+const FORM_NAME = 'Unsaved smoke agent'
+await evaluate(ws, `(document.querySelector('.set-agent-add')?.click(), true)`)
+await sleep(150)
+await evaluate(
+  ws,
+  `(() => {
+     const name = document.querySelector('.set-agent-form input')
+     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+     setter.call(name, ${JSON.stringify(FORM_NAME)})
+     name.dispatchEvent(new Event('input', { bubbles: true }))
+     return Boolean(name)
+   })()`
+)
+await clickTab('Notifications')
+await sleep(150)
+await clickTab('General')
+await sleep(150)
+const formKept = await evaluate(
+  ws,
+  `document.querySelector('.set-agent-form input')?.value ?? null`
+)
+check(
+  'an open agent form survives a tab round trip (NOTF-29)',
+  formKept === FORM_NAME,
+  String(formKept)
+)
 
 // --- 2. Settings: switches (NOTF-16, NOTF-18, NOTF-19, NOTF-20) ---
 await clickTab('Notifications')
@@ -531,6 +567,72 @@ check(
 // --- 7. The notice dismisses itself ---
 const gone = await waitFor(ws, `document.querySelectorAll('.session-notice').length === 0`, 10000)
 check('an unclicked notice dismisses itself after a few seconds', Boolean(gone))
+
+// --- 8. From another direction, a notice for a stopped session still opens it
+//        in the agents direction (NOTF-05, NOTF-23) ---
+await hook('UserPromptSubmit', { prompt: 'smoke' })
+await hook('Stop')
+const lateNotice = await waitFor(
+  ws,
+  `document.querySelectorAll('.session-notice-open').length === 1`,
+  5000
+)
+check('a new transition raises a notice again', Boolean(lateNotice))
+
+await evaluate(
+  ws,
+  `(() => {
+     const seg = [...document.querySelectorAll('.topbar-segment')].find((b) => /Tree/.test(b.textContent))
+     seg?.click()
+     return true
+   })()`
+)
+await evaluate(
+  ws,
+  `(async () => { try { await window.api.invoke('sessions:stop', { id: '${idA}' }) } catch {} return true })()`
+)
+const stoppedInTree = JSON.parse(
+  await evaluate(
+    ws,
+    `(async () => {
+       const s = (await window.api.invoke('sessions:list')).find((s) => s.id === '${idA}')
+       return JSON.stringify({
+         status: s?.status ?? null,
+         direction: document.querySelector('.topbar-segment.active')?.textContent?.trim() ?? null,
+         notice: document.querySelectorAll('.session-notice-open').length
+       })
+     })()`
+  )
+)
+check(
+  'the setup is a stopped session, the Tree direction and its notice still up',
+  stoppedInTree.status === 'stopped' &&
+    stoppedInTree.direction === 'Tree' &&
+    stoppedInTree.notice === 1,
+  JSON.stringify(stoppedInTree)
+)
+
+await evaluate(ws, `(document.querySelector('.session-notice-open')?.click(), true)`)
+await sleep(600)
+const opened2 = JSON.parse(
+  await evaluate(
+    ws,
+    `JSON.stringify({
+       direction: document.querySelector('.topbar-segment.active')?.textContent?.trim() ?? null,
+       selected: document.querySelector('.rail-row.selected .rail-row-label')?.textContent ?? null
+     })`
+  )
+)
+check(
+  'clicking it switches to the agents direction (NOTF-05)',
+  opened2.direction === 'Agents',
+  JSON.stringify(opened2)
+)
+check(
+  'and selects the session even though it was stopped (NOTF-23)',
+  opened2.selected === TITLE_A,
+  JSON.stringify(opened2)
+)
 
 // --- Cleanup ---
 await cleanup()
