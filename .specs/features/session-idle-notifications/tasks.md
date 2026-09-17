@@ -237,7 +237,9 @@ T12 → T13
 
 ---
 
-### T6: SessionManager reports activity transitions
+### T6: SessionManager reports activity transitions ✅ COMPLETE
+
+**Status**: Done — `onActivityChange` dep called from `#setActivity` after the push, guarded by try/catch; +7 tests (first state, before/after, attached, renamed title, unchanged view, PTY exit while blocked, throwing listener). Existing 43 SessionManager tests unmodified. Full gate green: typecheck 0, 984 tests.
 
 **What**: Add the optional `onActivityChange` dep and call it from `#setActivity` after the `session:activity` emit, with `id`, `agent`, `title`, `before`, `after` and `attached`, guarded by `try/catch`.
 **Where**: `src/main/session-manager.ts`
@@ -252,11 +254,11 @@ T12 → T13
 
 **Done when**:
 
-- [ ] Called only when the view changed; never from `#finalize`
-- [ ] Tests in `session-manager.test.ts` with the existing fakes: a hook event reports `before` null and `after` set; a second event reports the previous view as `before`; `attached` is true after `attach(id)` and false after `detach(id)`; a renamed session reports the new title; an unchanged view reports nothing; stopping a PTY that holds `needs-approval` reports nothing (NOTF-26); a throwing callback does not stop the `session:activity` emit
-- [ ] Existing `session-manager.test.ts` cases pass unmodified
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: ~961 → ~968 (+~7; no silent deletions)
+- [x] Called only when the view changed; never from `#finalize`
+- [x] Tests in `session-manager.test.ts` with the existing fakes: a hook event reports `before` null and `after` set; a second event reports the previous view as `before`; `attached` is true after `attach(id)` and false after `detach(id)`; a renamed session reports the new title; an unchanged view reports nothing; stopping a PTY that holds `needs-approval` reports nothing (NOTF-26); a throwing callback does not stop the `session:activity` emit
+- [x] Existing `session-manager.test.ts` cases pass unmodified
+- [x] Gate check passes: `npm test`
+- [x] Test count: ~961 → ~968 (+~7; no silent deletions)
 
 **Tests**: unit
 **Gate**: full
