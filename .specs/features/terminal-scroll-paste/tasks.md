@@ -240,7 +240,7 @@ T18 → T19
 
 ---
 
-### T5: Clipboard reader
+### T5: Clipboard reader ✅
 
 **What**: Implement `classifyClipboard`, `parseFileDropList`, `pasteImageName` and `readClipboardPaste(deps)` producing a `ClipboardPaste` from injected clipboard, file-list runner and writer ports.
 **Where**: `src/main/clipboard-reader.ts`
@@ -255,16 +255,16 @@ T18 → T19
 
 **Done when**:
 
-- [ ] Text non-empty wins over files and image (TSP-12, TSP-13); whitespace-only text is still text (it is what the user copied)
-- [ ] No text + `text/uri-list` → runner called once, `{kind:'paths'}` in runner order (TSP-21); directories pass through (TSP-32)
-- [ ] No text, no `text/uri-list` → runner **never** called
-- [ ] No text, no files, non-empty image → writer called once with `<pasteDir>\paste-yyyyMMdd-HHmmss-<rand>.png`, result `{kind:'paths', paths:[that]}` (TSP-14)
-- [ ] Nothing → `{kind:'empty'}` (TSP-15)
-- [ ] Runner reject / writer reject → `{kind:'error'}`, never throws (TSP-16)
-- [ ] `parseFileDropList` drops blank lines and trailing CRLF, keeps non-ASCII intact (TSP-33, TSP-34)
-- [ ] `pasteImageName` differs for two calls with the same second and different `rand` (TSP-35)
-- [ ] Gate check passes: `npx vitest run src/main/clipboard-reader.test.ts`
-- [ ] Test count: +~14 (no silent deletions)
+- [x] Text non-empty wins over files and image (TSP-12, TSP-13); whitespace-only text is still text (it is what the user copied)
+- [x] No text + `text/uri-list` → runner called once, `{kind:'paths'}` in runner order (TSP-21); directories pass through (TSP-32)
+- [x] No text, no `text/uri-list` → runner **never** called
+- [x] No text, no files, non-empty image → writer called once with `<pasteDir>\paste-yyyyMMdd-HHmmss-<rand>.png`, result `{kind:'paths', paths:[that]}` (TSP-14)
+- [x] Nothing → `{kind:'empty'}` (TSP-15)
+- [x] Runner reject / writer reject → `{kind:'error'}`, never throws (TSP-16)
+- [x] `parseFileDropList` drops blank lines and trailing CRLF, keeps non-ASCII intact (TSP-33, TSP-34)
+- [x] `pasteImageName` differs for two calls with the same second and different `rand` (TSP-35)
+- [x] Gate check passes: `npx vitest run src/main/clipboard-reader.test.ts`
+- [x] Test count: +~14 (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick
