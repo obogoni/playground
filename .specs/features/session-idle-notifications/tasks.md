@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/session-idle-notifications/design.md`
-**Status**: Executed — Verifier round 1 FAIL (evidence gaps), fix round 1 applied; re-verify pending
+**Status**: Done — Verifier round 2 PASS (`validation.md`); owner smoke pending
 **Branch**: `feature/session-idle-notifications` (stacked on `feature/session-activity-status` `65de9fd`, PR #88)
 **Test baseline**: **917 tests / 52 files**, measured green on this branch before any task.
 

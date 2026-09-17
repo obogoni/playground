@@ -181,41 +181,41 @@ every switch holds.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| NOTF-01 | P1: Told when an agent is blocked | Execute | Implementing |
-| NOTF-02 | P1: Told when an agent is blocked | Execute | Implementing |
-| NOTF-03 | P1: Told when an agent is blocked | Execute | Implementing |
-| NOTF-04 | P1: Told when an agent is blocked | Execute | Implementing |
-| NOTF-05 | P1: Told when an agent is blocked | Execute | Implementing |
-| NOTF-06 | P1: Told when an agent is blocked | Execute | Implementing |
-| NOTF-07 | P2: Told when an agent finishes or fails | Execute | Implementing |
-| NOTF-08 | P2: Told when an agent finishes or fails | Execute | Implementing |
-| NOTF-09 | P2: Told when an agent finishes or fails | Execute | Implementing |
-| NOTF-10 | P2: Told when an agent finishes or fails | Execute | Implementing |
-| NOTF-11 | P2: Told when an agent finishes or fails | Execute | Implementing |
-| NOTF-12 | P2: Told when an agent finishes or fails | Execute | Implementing |
-| NOTF-13 | P3: Choose which notifications to get | Execute | Implementing |
-| NOTF-14 | P3: Choose which notifications to get | Execute | Implementing |
-| NOTF-15 | P3: Choose which notifications to get | Execute | Implementing |
-| NOTF-16 | P3: Choose which notifications to get | Execute | Implementing |
-| NOTF-17 | P3: Choose which notifications to get | Execute | Implementing |
-| NOTF-18 | P3: Choose which notifications to get | Execute | Implementing |
-| NOTF-19 | P3: Choose which notifications to get | Execute | Implementing |
-| NOTF-20 | P3: Choose which notifications to get | Execute | Implementing |
-| NOTF-21 | Edge cases | Execute | Implementing |
-| NOTF-22 | Edge cases | Execute | Implementing |
-| NOTF-23 | Edge cases | Execute | Implementing |
-| NOTF-24 | Edge cases | Execute | Implementing |
-| NOTF-25 | Edge cases | Execute | Implementing |
-| NOTF-26 | Edge cases | Execute | Implementing |
-| NOTF-27 | Edge cases | Execute | Implementing |
-| NOTF-28 | P3: Choose which notifications to get (AC 9, added after the edge cases were numbered) | Execute | Implementing |
-| NOTF-29 | P3: Choose which notifications to get (AC 10) | Execute | Implementing |
+| NOTF-01 | P1: Told when an agent is blocked | Execute | Verified |
+| NOTF-02 | P1: Told when an agent is blocked | Execute | Verified |
+| NOTF-03 | P1: Told when an agent is blocked | Execute | Verified |
+| NOTF-04 | P1: Told when an agent is blocked | Execute | Verified |
+| NOTF-05 | P1: Told when an agent is blocked | Execute | Verified |
+| NOTF-06 | P1: Told when an agent is blocked | Execute | Verified |
+| NOTF-07 | P2: Told when an agent finishes or fails | Execute | Verified |
+| NOTF-08 | P2: Told when an agent finishes or fails | Execute | Verified |
+| NOTF-09 | P2: Told when an agent finishes or fails | Execute | Verified |
+| NOTF-10 | P2: Told when an agent finishes or fails | Execute | Verified |
+| NOTF-11 | P2: Told when an agent finishes or fails | Execute | Verified |
+| NOTF-12 | P2: Told when an agent finishes or fails | Execute | Verified |
+| NOTF-13 | P3: Choose which notifications to get | Execute | Verified |
+| NOTF-14 | P3: Choose which notifications to get | Execute | Verified |
+| NOTF-15 | P3: Choose which notifications to get | Execute | Verified |
+| NOTF-16 | P3: Choose which notifications to get | Execute | Verified |
+| NOTF-17 | P3: Choose which notifications to get | Execute | Verified |
+| NOTF-18 | P3: Choose which notifications to get | Execute | Verified |
+| NOTF-19 | P3: Choose which notifications to get | Execute | Verified |
+| NOTF-20 | P3: Choose which notifications to get | Execute | Verified |
+| NOTF-21 | Edge cases | Execute | Verified |
+| NOTF-22 | Edge cases | Execute | Verified |
+| NOTF-23 | Edge cases | Execute | Verified |
+| NOTF-24 | Edge cases | Execute | Verified |
+| NOTF-25 | Edge cases | Execute | Verified |
+| NOTF-26 | Edge cases | Execute | Verified |
+| NOTF-27 | Edge cases | Execute | Verified |
+| NOTF-28 | P3: Choose which notifications to get (AC 9, added after the edge cases were numbered) | Execute | Verified |
+| NOTF-29 | P3: Choose which notifications to get (AC 10) | Execute | Verified |
 
 **ID format:** `NOTF-[NUMBER]`
 
 **Status values:** Pending → In Design → In Tasks → Implementing → Verified
 
-**Coverage:** 29 total, 0 mapped to tasks (Tasks phase not yet run), 0 unmapped
+**Coverage:** 29 total, 29 mapped to tasks T1–T13 + fix round 1, 0 unmapped
 
 ---
 

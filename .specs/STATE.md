@@ -32,99 +32,41 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current, 2026-09-15): `session-activity-status` EXECUTED + independent Verifier
-**PASS** (round 2) on branch `feature/session-activity-status`, cut from `origin/main`
-`fa78f78`. 14 commits. Nothing uncommitted except the next feature's spec. PR not opened —
-push needs an explicit go-ahead.**
+**Status (current, 2026-09-16): `session-idle-notifications` EXECUTED + independent Verifier PASS
+(round 2 of 3). Local only — not pushed, no PR.**
 
-Each Claude session now launches with `--settings` pointing at a generated hook file, reports
-its lifecycle to a loopback endpoint in main, and the rail shows `working` / `waiting` /
-`approval` / `input` / `error` / `compacting` / `shell` with the running tool, the subagent
-count and the API error type in the tooltip and the detail pane. Suite 748 → **916** tests,
-typecheck + lint clean, `electron-vite build` green. Verifier: 31/35 ACs unit-evidenced, 4
-convention-exempt visual ACs with a named hand-verify path, 26 mutations injected across two
-rounds and 24 killed. Report: `.specs/features/session-activity-status/validation.md`.
+- **Branch:** `feature/session-idle-notifications`, stacked on `feature/session-activity-status`
+  (`65de9fd`, PR #88 still open upstream). Spec/design/tasks `c5e2304`..`4e7e69a`, code
+  `2e6bf64`..`40ab12f` (13 tasks), fix round `b3a00b3`.
+- **What shipped:** main decides (`activity-notification.ts` pure rules + `SessionNotifier`);
+  `SessionManager` reports each activity transition; OS notification when the window is
+  unfocused, in-app notice stack when focused on another session, nothing for the attached one;
+  a first event never notifies (NOTF-27). Settings dialog split into General / Notifications
+  tabs with a master switch plus one per state, flat `ui.notify*` keys, absent = on. Shared
+  `showOs` now holds each `Notification` until click/close, which also covers workflow toasts.
+- **Verification:** suite 917 → **990**. Round 1 FAIL on evidence only (NOTF-05 direction half,
+  06, 21, 23, 29 agent form) with 20/21 mutants killed (1 equivalent); round 2 PASS after smoke
+  and spec fixes. Report: `.specs/features/session-idle-notifications/validation.md`.
+- **Owner-pending:** run `node scripts/smoke-notifications.mjs` with the dev app focused (zero
+  tokens; removes only its own sessions, restores the switches and direction); hand-check the OS
+  notification in the background, its click after a minute, a minimized window, and the
+  two-theme pass of tabs and notices.
+- **Lessons collide again:** this branch added candidates **L-019..L-021** (`next_id` 22), but
+  `develop` already holds time-tracking's L-019..L-024. Renumber when merging into `develop`.
+- **Next:** after the owner smoke, open the PR upstream with "depends on #88"; when #88 merges,
+  `git rebase --onto origin/main feature/session-activity-status feature/session-idle-notifications`.
 
-**OWNER SMOKE RUN 2026-09-15 — 19/19 PASS** (`node scripts/smoke-activity.mjs`), plus the
-documented ACTV-07 SKIP. The first run failed one check and that failure was a real defect,
-now AD-020 + `e157495`: Claude Code never delivers `SessionStart` to an http hook. T8's
-deferred dev hand-verification rides this run.
+**STILL TRUE from earlier handoffs (carried over):**
 
-**OWNER ACTION OUTSTANDING (user-run):**
-1. The two-theme visual pass: the spinning green loader, the blue waiting dot, the pink
-   approval dot, the red error dot, the amber `shell` dot at 344px in light and dark, plus
-   `prefers-reduced-motion` freezing the loader (ACTV-14/15/17/20).
-
-**KNOWN FOLLOW-UP, owner deferred it 2026-09-15:** the three `quota_auto_resume_*`
-notification types are not consumed. A session paused by a claude.ai usage limit reports
-`error` (`StopFailure` `rate_limit`) and stays there after Claude resumes on its own, because
-Claude Code sends no `idle_prompt` while it waits for the reset. Fix is three rows in the
-transition table: `_fired` → `working`, `_stale` → `needs-input` (it waits for Enter),
-`_disabled` → `waiting`. Requires Claude Code v2.1.234+.
-
-**NEXT FEATURE SPEC REWRITTEN, uncommitted:** `.specs/features/session-idle-notifications/`
-(now titled *Session Activity Notifications*, NOTF-01..21) was rebuilt on the seven states:
-P1 is now "told when an agent is blocked on you", P2 is the old finish/fail case, and six
-assumption rows are the agent's defaults awaiting an owner yes/no before Design.
-
-**PRIOR, still true — the two-theme visual pass for `agents-rail-v2`** (`RAIL-26`, `RAIL-27`)
-remains code-verified only, and `opencode` and `Ad-hoc` still both resolve to `--amber` at
-22×22.
-
-**UNRELATED WORK PARKED IN A STASH — GONE:** the earlier handoff pointed at `stash@{0}`
-("wip(reconciler-core)") holding the AD-017 Reconciler line plus an untracked
-`.specs/features/reconciler-core/`. As of 2026-09-15 `git stash list` is **empty** and no
-dangling commit in this clone carries that tree. If it is not in another clone it is lost.
-
-0. **`agents-rail-v2` (RAIL-01..28) — EXECUTED, independent Verifier PASS.** Branch
-   `feature/agents-rail-v2`, 12 commits (`9bc144d..789468b`). Grouping is derived at render time
-   in a new pure module `src/renderer/src/lib/rail-groups.ts` (`buildRailGroups`, `statusClass`,
-   `flatRows`, `adjacentRowId`); `SessionRail.tsx` was rewritten to render that model and derives
-   nothing — a grep for `deriveAttribution|linkedPinFor|taskIdFromBranch|sort(|stripAnsi` in the
-   component returns nothing. **748 tests (712 baseline + 36), 747 passing**, the single failure
-   being the known local `worktree-manager` mixed-dirt `rmSync` case. Lint 0 errors / 18
-   pre-existing warnings. `npm run build:win` green. **Mutation sensor 6/6 killed** (both
-   precedence orders reversed, ordinal suffixing dropped, `adjacentRowId` wrapping instead of
-   clamping, header taken from the last session instead of the first, and a `.sort()` injected so
-   status changes reorder) — each killed by the test carrying the matching `RAIL-NN`, so the kills
-   are attributable rather than incidental. Unlike AD-015/AD-016, **author ≠ verifier was actually
-   met**: batch workers and the Verifier were separate agents. See `validation.md`.
-   Three owner decisions are recorded as confirmed spec assumptions: the `shell`/`agentLive`
-   sub-status stays out of scope (it was never built — `SessionStatus` is still `running|stopped`),
-   duplicate agent names inside a group get a per-group ordinal suffix, and the ACs are gated by
-   the extracted pure module rather than a new jsdom harness. One `SPEC_DEVIATION` at
-   `SessionRail.tsx:264`: rows are `div role="option"`, not `<button>`, because a row contains its
-   own action buttons. **AD-018** records that RAIL-12 retires AGCF-08 AC-2 only.
-
-1. **`dev-alias-setting` (DEVA-01..10) — EXECUTED, independent Verifier PASS 10/10.** 5
-   commits (`84e3601` docs spec, `3c432b6` docs defer undoByte, `3e82229` feat,
-   `915e78e` docs validation, `c675198` feat visibility). **Dev
-   alias** field in the ADO block of `SettingsDialog`: state populated from
-   `ado.devAlias ?? ''` (`SettingsDialog.tsx:73`), saved in the **same** `config:patch`
-   as org/project/templates with `devAlias.trim()` (`:121`), label "fills the {dev}
-   placeholder" (`:210-224`); `App.tsx:373` already re-threads it in `onSaved` (zero new
-   plumbing, DEVA-03). Gate: **667 tests / 44 files** (main baseline — the 706 from the
-   previous handoff were the develop tree with PR #83/84 unmerged), typecheck clean, lint
-   0 errors / 19 warnings (main baseline, measured on a throwaway worktree). Verifier:
-   8/8 ACs (3 executed-tested in `tasks.test.ts` — `{dev}` and segment-drop; 5
-   hand-verified per `TESTING.md:42`), sensor 2/4 killed — 2 survivors (M3: save-patch
-   without `devAlias`; M4: without `?? ''`) are renderer logic with no test seam by
-   convention, a documented gap, not a defect; optional future seam = extract the
-   save-patch builder into `src/shared`. Report:
-   `.specs/features/dev-alias-setting/validation.md`.
-   **Post-review increment (owner, `c675198`):** the Dev alias field is now **hidden
-   unless** an effective template (branch or worktree, blank = default) contains
-   `{dev}` (DEVA-09/10); re-verified PASS by an independent Verifier (5/5 checks,
-   sensor 3/4 killed, 1 equivalent mutant).
-   **Owner decision (AD-017):** the pre-existing `commitForm` `undoByte`-drop defect was
-   first included, then **REVERTED** from this branch — `AgentDef.undoByte` exists only in
-   PR #83 (open upstream); on the `main` base it does not compile (TS2353). **Follow-up
-   after #83 merges:** a one-line fix preserving `undoByte` in `commitForm` (recorded in
-   the spec's Out of Scope).
-1. **NEXT STEP:** open the PR `feature/dev-alias-setting` → upstream `main` (owner
-   go-ahead for push), then integrate locally into `develop` after merge. Untracked specs
-   awaiting their own session: `session-activity-status`, `session-idle-notifications`,
-   `sidebar-node-collapse` (stay in the working tree).
+- `session-activity-status` (PR #88): owner smoke 19/19 PASS; the two-theme visual pass of the
+  activity dots/loader and `prefers-reduced-motion` (ACTV-14/15/17/20) is still owner-pending.
+- Deferred follow-up: the three `quota_auto_resume_*` notification types are not consumed, so a
+  session paused by a usage limit stays `error` after Claude resumes (`_fired` → `working`,
+  `_stale` → `needs-input`, `_disabled` → `waiting`; Claude Code v2.1.234+).
+- `agents-rail-v2` two-theme visual pass (RAIL-26/27) is code-verified only; `opencode` and
+  `Ad-hoc` both resolve to `--amber` at 22×22.
+- The `wip(reconciler-core)` stash is gone from this clone; if it is not in another clone it is lost.
+- AD-017 follow-up: preserve `undoByte` in `SettingsDialog` `commitForm` (PR #83 has merged).
 
 **PENDING — bump the committed `package.json` version on the next delivery:** `v1.0.0`
 shipped 2026-09-02 from `cafb43f` (the PR #77 merge), but the bump is **never committed**
