@@ -414,7 +414,9 @@ T12 → T13
 
 ---
 
-### T12: Notifications tab switches
+### T12: Notifications tab switches ✅ COMPLETE
+
+**Status**: Done — Notifications tab: master checkbox and the four state checkboxes (`dialog-check` pattern), read via `readNotificationPrefs`, each toggle patching only its own `ui` key; state checkboxes disabled and dimmed while the master is off, keeping their values. Build gate green: typecheck 0, lint 0 errors, electron-vite build ok, 990 tests.
 
 **What**: Fill the Notifications tab: master checkbox and four state checkboxes (*Needs approval*, *Needs input*, *Finished its turn*, *Turn failed*), read through `readNotificationPrefs`, each persisted immediately with a one-key `config:patch`, state checkboxes disabled while the master is off.
 **Where**: `src/renderer/src/components/SettingsDialog.tsx`
@@ -429,10 +431,10 @@ T12 → T13
 
 **Done when**:
 
-- [ ] Toggling the master writes only `notify`; toggling a state writes only its key (NOTF-16, NOTF-19)
-- [ ] State checkboxes `disabled` while the master is off and keep their checked value (NOTF-20)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] Toggling the master writes only `notify`; toggling a state writes only its key (NOTF-16, NOTF-19)
+- [x] State checkboxes `disabled` while the master is off and keep their checked value (NOTF-20)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none (renderer component — hand-verified in T13)
 **Gate**: build
