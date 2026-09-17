@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/session-idle-notifications/design.md`
-**Status**: T1–T13 Done (Verifier PASS, owner smoke 34/34); rev4 T14–T20 Done (Verifier round 4 PASS, 18/18 mutants); rev4 owner smoke pending
+**Status**: T1–T13 Done (Verifier PASS, owner smoke 34/34); rev4 T14–T20 Done (Verifier round 4 PASS, 18/18 mutants); rev5 T21–T23 Draft — approved, executing
 **Branch**: `feature/session-idle-notifications` (stacked on `feature/session-activity-status` `65de9fd`, PR #88)
 **Test baseline**: **917 tests / 52 files**, measured green on this branch before any task.
 
@@ -103,6 +103,16 @@ T17 → T18
 T9 → T19
 T18 → T20
 T19 → T20
+```
+
+### Phase 7: Whole titles (rev5)
+
+```
+T15 → T21
+T19 → T22
+T20 → T23
+T21 → T23
+T22 → T23
 ```
 
 ---
@@ -693,6 +703,85 @@ T19 → T20
 
 ---
 
+### T21: Send the title whole
+
+**What**: Remove `clip` and `MAX_TITLE_LENGTH` from `describeNotification`, so the task line and the session line are titles as they are.
+**Where**: `src/main/activity-notification.ts`
+**Depends on**: T15
+**Reuses**: nothing new
+**Requirement**: NOTF-33
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] The three rev4 tests that pinned the 60-character cut (long task title cut, exactly 60 kept, long session title cut) are replaced — owner-approved spec change — by tests that a long task title and a long session title arrive whole with no `…`
+- [ ] Every other `activity-notification.test.ts` test passes unmodified
+- [ ] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
+- [ ] Test count: 1006 → ~1005 (3 replaced by 2; no silent deletions)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(main): send session notification titles whole`
+
+---
+
+### T22: Let the notice title wrap freely
+
+**What**: In `SessionNotices.css`, drop the two-line clamp from the title and keep `overflow-wrap: anywhere`.
+**Where**: `src/renderer/src/components/SessionNotices.css`
+**Depends on**: T19
+**Reuses**: existing notice styles
+**Requirement**: NOTF-36
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] No `-webkit-line-clamp`, `-webkit-box` or `overflow: hidden` on `.session-notice-title`
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [ ] Test count: unchanged (no silent deletions)
+
+**Tests**: none (renderer component — hand-verified per T23)
+**Gate**: build
+
+**Commit**: `style(renderer): wrap the whole session notice title`
+
+---
+
+### T23: Smoke header expects the whole title
+
+**What**: Update the NOTF-36 hand-verify line in the smoke header: a long pinned task title must wrap in full, with no `…`, in the in-app notice.
+**Where**: `scripts/smoke-notifications.mjs`
+**Depends on**: T20, T21, T22
+**Reuses**: the existing header list
+**Requirement**: NOTF-33, NOTF-36
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] Header names the whole-title check for the in-app notice and notes Windows may shorten its own toast title
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [ ] Test count: unchanged (no silent deletions)
+
+**Tests**: none (smoke script — owner-run)
+**Gate**: build
+
+**Commit**: `test(notifications): expect whole titles in the smoke hand checks`
+
+---
+
 ## Phase Execution Map
 
 Phases run in sequence; within a phase the tasks run in the order listed.
@@ -705,6 +794,7 @@ Phases run in sequence; within a phase the tasks run in the order listed.
 | 4 | Renderer and smoke | T8, T9, T10, T11, T12, T13 |
 | 5 | Task in the notification — main (rev4) | T14, T15, T16, T17, T18 |
 | 6 | Task in the notification — renderer and smoke (rev4) | T19, T20 |
+| 7 | Whole titles (rev5) | T21, T22, T23 |
 
 Execution is strictly sequential - there is no intra-phase parallelism. A single agent (or batch worker) works one task at a time, in order.
 
@@ -736,6 +826,9 @@ Packing for Execute: 13 tasks at ~7 per batch → **2 batches** (Phases 1–3 = 
 | T18: `readBranch` wiring | 1 file | ✅ Granular |
 | T19: notice CSS | 1 stylesheet | ✅ Granular |
 | T20: smoke update | 1 script | ✅ Granular |
+| T21: whole title | 1 function change | ✅ Granular |
+| T22: notice CSS | 1 rule | ✅ Granular |
+| T23: smoke header | 1 comment block | ✅ Granular |
 
 ---
 
@@ -763,6 +856,9 @@ Packing for Execute: 13 tasks at ~7 per batch → **2 batches** (Phases 1–3 = 
 | T18 | T17 | T17 → T18 | ✅ Match |
 | T19 | T9 | T9 → T19 | ✅ Match |
 | T20 | T18, T19 | T18 → T20, T19 → T20 | ✅ Match |
+| T21 | T15 | T15 → T21 | ✅ Match |
+| T22 | T19 | T19 → T22 | ✅ Match |
+| T23 | T20, T21, T22 | T20 → T23, T21 → T23, T22 → T23 | ✅ Match |
 
 No dependency points to a later phase.
 
@@ -792,6 +888,9 @@ No dependency points to a later phase.
 | T18 | Electron/main wiring | none | none | ✅ OK |
 | T19 | Renderer component (CSS) | none | none | ✅ OK |
 | T20 | Smoke script | none | none | ✅ OK |
+| T21 | Pure main logic | unit | unit | ✅ OK |
+| T22 | Renderer component (CSS) | none | none | ✅ OK |
+| T23 | Smoke script | none | none | ✅ OK |
 
 ---
 

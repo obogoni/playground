@@ -12,6 +12,9 @@
 >
 > Revised again 2026-09-16 after the owner smoke passed: the notification names the **task**
 > the session works on, as P4. Changes are marked **[rev4]**.
+>
+> **[rev5]** Same day, owner decision: the app never cuts the title. The 60-character limit and
+> its `…` are gone, and the in-app notice wraps the title over as many lines as it needs.
 
 ## Problem Statement
 
@@ -74,7 +77,7 @@ nothing to notify about.
 | **[rev3]** Setting shape | Under `ui`, absent keys = enabled, persisted immediately on toggle via `config:patch`, edited in the settings dialog. The exact key shape is a Design call — note `ConfigPatch` merges `ui` one level deep, so a nested object is replaced whole | Persist-on-change matches `defaultShell`. Replaces the single `ui.notifyOnAgentActivity` boolean of rev2 | Design |
 | **[rev4]** Where the task comes from | The number is the last branch segment's number (`taskIdFromBranch`, as the rail does) of the session cwd's current branch, read with `git symbolic-ref --short HEAD` (unlike `rev-parse`, it answers on a branch with no commits yet and fails on a detached HEAD). The title is the pinned task's cached details, no network | Same number the rail groups by; the cache is what the tasks pane already shows | y |
 | **[rev4]** Layout with a task | Title `#<id> · <task title>` (or `#<id>` with no cached title); body line 1 the state, line 2 `<agent> · <session title>`. Without a task the rev3 layout stands | Owner decision 2026-09-16 | y |
-| **[rev4]** Length | The title is cut to 60 characters ending in `…`; the in-app notice lets it wrap to two lines | Owner decision: task titles can be long, and the Windows title line does not wrap | y |
+| **[rev5]** Length | The app never cuts the title: the task title and the session title are sent whole, and the in-app notice wraps the title over as many lines as it needs. Replaces rev4's 60-character cut | Owner decision 2026-09-16: losing part of a task title is worse than a taller notice. Windows may still shorten the title line of its own toast; the app does not control that | y |
 | Click target | Show and focus the window, switch to the agents direction, select the session | Mirrors the `workflow:focus-run` path already shipped | y |
 | **[rev2]** Notification content | Title: agent + session title. Body: the state, plus the detail the activity already carries — the tool for an approval, the error type for a failure | `SessionActivity` carries `tool` and `error`, so "needs approval to run Bash" and "turn failed: rate_limit" cost nothing extra. A body that only says "waiting" makes the user open the app to learn what it wants. **[rev3]** Confirmed by the owner. Pinned wording: title `<agent> · <title>` (no doubled prefix when the title already starts with it); body `Needs approval to run <tool>` / `Needs your approval`, `Needs your input`, `Finished its turn`, `Turn failed: <error>` / `Turn failed` | y |
 | Several sessions at once | One notification per session, no batching | Bounded by how many agents the user chose to run |
@@ -184,10 +187,10 @@ It builds on P1–P3 and changes only the wording.
 1. WHERE the session's cwd is on a branch whose last segment carries a task number and that task is pinned with cached details, the notification title SHALL be `#<id> · <task title>`.  <!-- optional-feature -->
 2. WHERE the branch carries a task number that is not pinned or has no cached details, the notification title SHALL be `#<id>`.  <!-- optional-feature -->
 3. WHERE the notification names a task, its body SHALL be the state line followed by a line `<agent> · <session title>`.  <!-- optional-feature -->
-4. The notification title SHALL be at most 60 characters, cut with a trailing `…` when longer.  <!-- ubiquitous -->
+4. **[rev5]** The app SHALL send the notification title with the task title and the session title whole, never cut or ending in an app-added `…`.  <!-- ubiquitous -->
 5. IF the branch cannot be read (not a git directory, a detached HEAD, git failing or taking longer than 2 seconds) THEN the notification SHALL use the layout without a task.  <!-- unwanted-behavior -->
 6. The app SHALL NOT call Azure DevOps to build a notification.  <!-- ubiquitous -->
-7. The in-app notice SHALL show the title on up to two lines and each body line on its own line.  <!-- ubiquitous -->
+7. **[rev5]** The in-app notice SHALL wrap the title over as many lines as it needs and show each body line on its own line.  <!-- ubiquitous -->
 
 **Independent Test**: Start an agent in a worktree whose branch ends in a pinned task's number,
 switch away, trigger a permission prompt: the notification reads `#<id> · <task title>`,
@@ -244,10 +247,10 @@ just `#<id>`. Repeat in a folder that is not a git repository: the rev3 layout.
 | NOTF-30 | P4: Told which task the agent is on | Execute | Verified |
 | NOTF-31 | P4: Told which task the agent is on | Execute | Verified |
 | NOTF-32 | P4: Told which task the agent is on | Execute | Verified |
-| NOTF-33 | P4: Told which task the agent is on | Execute | Verified |
+| NOTF-33 | P4: Told which task the agent is on | - | Pending |
 | NOTF-34 | P4: Told which task the agent is on | Execute | Verified |
 | NOTF-35 | P4: Told which task the agent is on | Execute | Verified |
-| NOTF-36 | P4: Told which task the agent is on | Execute | Verified |
+| NOTF-36 | P4: Told which task the agent is on | - | Pending |
 
 **ID format:** `NOTF-[NUMBER]`
 
@@ -266,4 +269,4 @@ just `#<id>`. Repeat in a folder that is not a git repository: the rev3 layout.
 - [ ] **[rev2]** A turn that compacts, runs ten tools and finishes produces exactly one notification
 - [ ] The off switch silences both surfaces and survives a restart
 - [ ] **[rev3]** Turning one state off silences only that state, and survives toggling the master switch and a restart
-- [ ] **[rev4]** A notification from a session on a pinned task's branch names that task, and a long task title never overflows
+- [ ] **[rev4]** A notification from a session on a pinned task's branch names that task, and a long task title arrives whole
