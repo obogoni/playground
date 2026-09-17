@@ -502,7 +502,7 @@ design, so the failure message inherits the chip's green background.
 
 ---
 
-### T13: Drop files on the terminal
+### T13: Drop files on the terminal ✅
 
 **What**: Add `dragover`/`drop` listeners on the pane container that `preventDefault`, resolve `dataTransfer.files` via `api.pathForFile`, enqueue `planPaste({kind:'paths'})` and focus the terminal.
 **Where**: `src/renderer/src/components/TerminalPane.tsx`
@@ -517,15 +517,26 @@ design, so the failure message inherits the chip's green background.
 
 **Done when**:
 
-- [ ] `dragover` sets `dropEffect = 'copy'`; both events `preventDefault` (TSP-26)
-- [ ] Listeners removed on cleanup
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] `dragover` sets `dropEffect = 'copy'`; both events `preventDefault` (TSP-26)
+- [x] Listeners removed on cleanup
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+- [x] Test count: unchanged (819 tests / 51 files, no silent deletions)
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `feat(terminal): paste the paths of files dropped on the terminal`
+
+**Hand-verification at T14:**
+
+| Criterion | How T14 verifies it | Tested seam behind it |
+| --------- | ------------------- | --------------------- |
+| TSP-25 dropped files paste as quoted paths in drop order | Drag two files from Explorer onto an opencode session | `paste.test.ts` order + quoting (the drop builds `{ kind: 'paths' }` and reuses the T12 queue) |
+| TSP-26 the window never navigates to the dropped file | After the drop the app is still on the Agents view | `preventDefault` on both `dragover` and `drop` |
+| TSP-27 an item with no path is skipped; none → zero bytes | Drag a link from a browser onto the pane: nothing is pasted | `paste.test.ts` - `expect(planPaste({ kind: 'paths', paths: ['', ''] })).toEqual([])` |
+| TSP-28 the terminal takes focus after a drop | Type right after dropping, without clicking | `term.focus()` at the end of the drop handler |
+
+**Phase 5 build gate:** `npx electron-vite build` exit 0 (main, preload and renderer bundles).
 
 ---
 

@@ -263,10 +263,10 @@ mouse movement, and the wheel scrolls pwsh's scrollback.
 | TSP-22 | P1: File paste | T1, T12 | Implementing |
 | TSP-23 | P1: File paste | T12 | Implementing |
 | TSP-24 | P1: File paste | T12 | Implementing |
-| TSP-25 | P1: Drop | T2, T8 | Implementing |
-| TSP-26 | P1: Drop | Tasks | Pending |
-| TSP-27 | P1: Drop | T1 | Implementing |
-| TSP-28 | P1: Drop | Tasks | Pending |
+| TSP-25 | P1: Drop | T2, T8, T13 | Implementing |
+| TSP-26 | P1: Drop | T13 | Implementing |
+| TSP-27 | P1: Drop | T1, T13 | Implementing |
+| TSP-28 | P1: Drop | T13 | Implementing |
 | TSP-29 | P2: Cause-1 guard (conditional) | Tasks | Pending |
 | TSP-30 | P2: Cause-1 guard (conditional) | Tasks | Pending |
 | TSP-31 | P2: Cause-1 guard (conditional) | Tasks | Pending |

@@ -428,8 +428,31 @@ export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.El
       const current = term.getSelection()
       if (current.trim()) rememberedSelection = current
     })
+    // Files dragged from Explorer paste as their paths (TSP-25..28), in the same
+    // quoted one-path-per-paste form as Ctrl+V, through the same queue.
+    //
+    // preventDefault is needed on BOTH events: without it Electron's default takes
+    // over and navigates the whole window to the dropped file, which loses the app.
+    const onDragOver = (event: DragEvent): void => {
+      event.preventDefault()
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+    }
+    const onDrop = (event: DragEvent): void => {
+      event.preventDefault()
+      // A dropped File has carried no path in the renderer since Electron 32, so
+      // only the preload's webUtils can resolve one. An item with no file behind
+      // it (a dragged link, dragged text) resolves to '' and planPaste drops it,
+      // which is also how a drop carrying nothing sends zero bytes (TSP-27).
+      const files = Array.from(event.dataTransfer?.files ?? [])
+      enqueuePaste(planPaste({ kind: 'paths', paths: files.map((file) => api.pathForFile(file)) }))
+      // The drag started somewhere else, so the terminal does not have focus when
+      // the paths land; the point of dropping here is to keep typing (TSP-28).
+      term.focus()
+    }
     container.addEventListener('mousedown', onRightMouseDown, true)
     container.addEventListener('contextmenu', onContextMenu, true)
+    container.addEventListener('dragover', onDragOver)
+    container.addEventListener('drop', onDrop)
 
     term.focus()
 
@@ -440,6 +463,8 @@ export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.El
       api.invoke('sessions:detach', { id: sessionId }).catch(console.error)
       container.removeEventListener('mousedown', onRightMouseDown, true)
       container.removeEventListener('contextmenu', onContextMenu, true)
+      container.removeEventListener('dragover', onDragOver)
+      container.removeEventListener('drop', onDrop)
       clearTimeout(chipTimer)
       chip.remove()
       // Stops a paste sequence that is still walking its paths and drops the gap
