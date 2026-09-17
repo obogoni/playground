@@ -521,7 +521,9 @@ T19 → T20
 
 ---
 
-### T15: Describe a notification with its task
+### T15: Describe a notification with its task ✅ COMPLETE
+
+**Status**: Done — `describeNotification(session, activity, task?)` + `clip` at `MAX_TITLE_LENGTH` 60; +6 tests (titled task layout, number-only title, long title cut to 60 with …, exactly 60 kept, long session title cut without a task, renamed session on the second line). Existing describe tests unmodified. Quick gate green; lint clean. Suite 996 → 1002.
 
 **What**: Give `describeNotification` an optional `task`: title `#<id> · <title>` or `#<id>`, body `<state>\n<agent> · <session title>`; clip every title to 60 characters with `…`.
 **Where**: `src/main/activity-notification.ts`
@@ -536,10 +538,10 @@ T19 → T20
 
 **Done when**:
 
-- [ ] Existing `describeNotification` tests pass unmodified (the no-task layout is unchanged)
-- [ ] Tests: title and two-line body with a titled task; `#<id>` title with an untitled task; a 100-character task title gives a 60-character title ending in `…`; a title of exactly 60 characters is not cut; the second body line applies the agent prefix to a renamed session
-- [ ] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
-- [ ] Test count: ~996 → ~1001 (no silent deletions)
+- [x] Existing `describeNotification` tests pass unmodified (the no-task layout is unchanged)
+- [x] Tests: title and two-line body with a titled task; `#<id>` title with an untitled task; a 100-character task title gives a 60-character title ending in `…`; a title of exactly 60 characters is not cut; the second body line applies the agent prefix to a renamed session
+- [x] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
+- [x] Test count: ~996 → ~1001 (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick

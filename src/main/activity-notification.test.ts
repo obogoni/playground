@@ -196,3 +196,50 @@ describe('linkTask', () => {
     expect(linkTask('feature/12345-x', tasks)).toEqual({ id: 12345, title: 'From acme' })
   })
 })
+
+describe('describeNotification with a linked task', () => {
+  const session = { agent: 'Claude', title: 'Claude · feature-login' }
+  const approval = activity('needs-approval', { tool: 'Bash' })
+
+  it('leads with the task and moves the session to a second body line (NOTF-30, NOTF-32)', () => {
+    expect(
+      describeNotification(session, approval, { id: 12345, title: 'Fix login redirect' })
+    ).toEqual({
+      title: '#12345 · Fix login redirect',
+      body: 'Needs approval to run Bash\nClaude · feature-login'
+    })
+  })
+
+  it('titles an untitled task by its number alone (NOTF-31)', () => {
+    expect(describeNotification(session, activity('waiting'), { id: 12345, title: null })).toEqual({
+      title: '#12345',
+      body: 'Finished its turn\nClaude · feature-login'
+    })
+  })
+
+  it('cuts a long title to 60 characters ending in an ellipsis (NOTF-33)', () => {
+    const long = 'Fix login redirect when the session expires during checkout on mobile devices'
+    const { title } = describeNotification(session, approval, { id: 12345, title: long })
+    expect(title).toHaveLength(60)
+    expect(title).toBe(`#12345 · ${long}`.slice(0, 59) + '…')
+  })
+
+  it('leaves a title of exactly 60 characters whole (NOTF-33)', () => {
+    const exact = 'x'.repeat(60 - '#12345 · '.length)
+    const { title } = describeNotification(session, approval, { id: 12345, title: exact })
+    expect(title).toBe(`#12345 · ${exact}`)
+  })
+
+  it('cuts a long session title without a task too (NOTF-33)', () => {
+    const renamed = { agent: 'Claude', title: 'y'.repeat(80) }
+    const { title } = describeNotification(renamed, approval)
+    expect(title).toBe(`Claude · ${'y'.repeat(80)}`.slice(0, 59) + '…')
+  })
+
+  it('adds the agent to a renamed session on the second body line (NOTF-32)', () => {
+    const renamed = { agent: 'Claude', title: 'Fix login redirect' }
+    expect(describeNotification(renamed, approval, { id: 12345, title: null }).body).toBe(
+      'Needs approval to run Bash\nClaude · Fix login redirect'
+    )
+  })
+})

@@ -63,13 +63,33 @@ function describeBody(activity: SessionActivity): string {
   }
 }
 
+/** The longest notification title; the Windows title line does not wrap (NOTF-33). */
+export const MAX_TITLE_LENGTH = 60
+
+function clip(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text
+}
+
+/**
+ * Title and body of a notification. With a task, the task leads the title and the
+ * session moves to a second body line (NOTF-30..32); without one, the session is
+ * the title.
+ */
 export function describeNotification(
   session: { agent: string; title: string },
-  activity: SessionActivity
+  activity: SessionActivity,
+  task: LinkedTask | null = null
 ): { title: string; body: string } {
   const prefix = `${session.agent} · `
-  const title = session.title.startsWith(prefix) ? session.title : prefix + session.title
-  return { title, body: describeBody(activity) }
+  const sessionLine = session.title.startsWith(prefix) ? session.title : prefix + session.title
+  if (task === null) {
+    return { title: clip(sessionLine, MAX_TITLE_LENGTH), body: describeBody(activity) }
+  }
+  const taskLine = task.title === null ? `#${task.id}` : `#${task.id} · ${task.title}`
+  return {
+    title: clip(taskLine, MAX_TITLE_LENGTH),
+    body: `${describeBody(activity)}\n${sessionLine}`
+  }
 }
 
 /** The task a session works on: its number, and its title when a pin has it cached. */

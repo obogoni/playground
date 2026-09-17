@@ -241,10 +241,10 @@ just `#<id>`. Repeat in a folder that is not a git repository: the rev3 layout.
 | NOTF-27 | Edge cases | Execute | Verified |
 | NOTF-28 | P3: Choose which notifications to get (AC 9, added after the edge cases were numbered) | Execute | Verified |
 | NOTF-29 | P3: Choose which notifications to get (AC 10) | Execute | Verified |
-| NOTF-30 | P4: Told which task the agent is on | - | Pending |
-| NOTF-31 | P4: Told which task the agent is on | - | Pending |
-| NOTF-32 | P4: Told which task the agent is on | - | Pending |
-| NOTF-33 | P4: Told which task the agent is on | - | Pending |
+| NOTF-30 | P4: Told which task the agent is on | Execute | Implementing |
+| NOTF-31 | P4: Told which task the agent is on | Execute | Implementing |
+| NOTF-32 | P4: Told which task the agent is on | Execute | Implementing |
+| NOTF-33 | P4: Told which task the agent is on | Execute | Implementing |
 | NOTF-34 | P4: Told which task the agent is on | - | Pending |
 | NOTF-35 | P4: Told which task the agent is on | - | Pending |
 | NOTF-36 | P4: Told which task the agent is on | - | Pending |
