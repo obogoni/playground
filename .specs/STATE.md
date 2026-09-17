@@ -30,84 +30,78 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current, 2026-09-13): `agents-rail-v2` EXECUTED + independent Verifier PASS on
-branch `feature/agents-rail-v2` (based on `origin/main` `83e67ce`, the PR #86 merge). Nothing
-uncommitted. PR not opened — push needs an explicit go-ahead.**
+**Status (current, 2026-09-17): `terminal-scroll-paste` Phases 1-5 EXECUTED (T1-T13) on branch
+`feature/terminal-scroll-paste`, cut from `origin/main` `fa78f78`. Nothing uncommitted. Not pushed
+-- push and PR need an explicit go-ahead. BLOCKED ON THE OWNER at T14.**
 
-**OWNER SMOKE GATES RUN 2026-09-14 — ALL PASS.** `smoke-rail-v2.mjs` **16/16**,
-`smoke-agents.mjs` **16/16**, `smoke-agent-config.mjs` pass. 6 of the 8 class-2 ACs (RAIL-17, 18,
-20, 23, 24 + the rendering halves of 07/08/11/12) now carry executed evidence. Two first-run
-failures were both harness defects, not rail defects, and are fixed: the smoke read `aria-selected`
-before React re-rendered (`f3f330d`), and a pre-existing stale assertion counted `.ns-agent-chip`
-as 3 when that selector also matches the Ad-hoc chip and `SEEDED_AGENTS` has grown to four
-(`3453f42`, unrelated to this feature). Seed was `user/otavio/20754-monitor-acesso/23688-patch-14.0.3`
-→ `#23688`, which incidentally confirmed PR #81's last-segment `taskIdFromBranch` end-to-end.
+- **Commits:** `194aa4f` spec, `b3b41e3` + `1467c64` requirement-id realignment, then T1-T13 in
+  `90830f3`..`02f1413` (one per task). Suite **748 -> 819** (46 -> 51 files); `typecheck`, `lint`
+  and `npm test` exit 0, `npx electron-vite build` exit 0, verified by the orchestrator at the
+  phase boundary, not only by the workers.
+- **What shipped:** `src/shared/paste.ts` (`planPaste`, `quotePath`, `PASTE_GAP_MS`), the
+  `clipboard:read-paste` channel and the `pathForFile` bridge, `TerminalModeTracker`, a
+  `SessionRingBuffer` whose `snapshot()` prepends the modes its trimmed head carried (`tail()`
+  stays unprefixed -- cause 3, unconditional), `clipboard-reader`, `paste-temp` purge,
+  `terminal-modes.ts` (`modeName`, `formatModeLog`, `isProbeEnabled`), and in `TerminalPane.tsx`
+  the flag-gated mode probe, one serialized paste queue behind both Ctrl+V and right-click, and
+  file drop.
 
-**STILL OUTSTANDING — the two-theme visual pass.** `RAIL-26` (long task title clamps at 2 lines,
-no horizontal overflow at 344px) and `RAIL-27` (a session whose stored agent matches no registry
-entry still renders a tinted tile) are **not decidable by any script** and remain code-verified
-only. The same pass should report how `opencode` and `Ad-hoc` read at 22×22 now both resolve to
-`--amber` — a pre-existing collision this feature surfaces but does not fix.
+**BLOCKING: T14 is an owner UAT gate.** The probe must run on `npm run build && npm start` --
+**an installed/packaged build cannot run it**, because `optimizer.watchWindowShortcuts`
+(`src/main/index.ts:202`) only wires F12 to DevTools while unpackaged and blocks Ctrl+Shift+I when
+packaged, so there is no way to set the flag or read the log there. Set
+`localStorage.setItem('playground.debug.terminalModes', '1')`, enable **Verbose** in the console
+level dropdown (the probe uses `console.debug`, hidden by default), remount the pane, then press
+Ctrl+C in opencode until the wheel dies and read the `[term-modes]` lines.
 
-**UNRELATED WORK PARKED IN A STASH:** `stash@{0}` ("wip(reconciler-core)") holds the AD-017
-Reconciler line for `.specs/STATE.md` plus the untracked `.specs/features/reconciler-core/`
-spec/design/context. It was set aside when this feature branched so it would not be swept into a
-rail commit. **Its AD-017 collides with the `dev-alias-setting` AD-017 already merged on `main`
-— renumber it (AD-019 or later) when it lands.** `git stash pop` on `docs/state-v1-release-note`
-restores it.
+Phases 6 and 7 are **mutually exclusive** and stay blocked until that verdict:
 
-0. **`agents-rail-v2` (RAIL-01..28) — EXECUTED, independent Verifier PASS.** Branch
-   `feature/agents-rail-v2`, 12 commits (`9bc144d..789468b`). Grouping is derived at render time
-   in a new pure module `src/renderer/src/lib/rail-groups.ts` (`buildRailGroups`, `statusClass`,
-   `flatRows`, `adjacentRowId`); `SessionRail.tsx` was rewritten to render that model and derives
-   nothing — a grep for `deriveAttribution|linkedPinFor|taskIdFromBranch|sort(|stripAnsi` in the
-   component returns nothing. **748 tests (712 baseline + 36), 747 passing**, the single failure
-   being the known local `worktree-manager` mixed-dirt `rmSync` case. Lint 0 errors / 18
-   pre-existing warnings. `npm run build:win` green. **Mutation sensor 6/6 killed** (both
-   precedence orders reversed, ordinal suffixing dropped, `adjacentRowId` wrapping instead of
-   clamping, header taken from the last session instead of the first, and a `.sort()` injected so
-   status changes reorder) — each killed by the test carrying the matching `RAIL-NN`, so the kills
-   are attributable rather than incidental. Unlike AD-015/AD-016, **author ≠ verifier was actually
-   met**: batch workers and the Verifier were separate agents. See `validation.md`.
-   Three owner decisions are recorded as confirmed spec assumptions: the `shell`/`agentLive`
-   sub-status stays out of scope (it was never built — `SessionStatus` is still `running|stopped`),
-   duplicate agent names inside a group get a per-group ordinal suffix, and the ACs are gated by
-   the extracted pure module rather than a new jsdom harness. One `SPEC_DEVIATION` at
-   `SessionRail.tsx:264`: rows are `div role="option"`, not `<button>`, because a row contains its
-   own action buttons. **AD-018** records that RAIL-12 retires AGCF-08 AC-2 only.
+- reset lines for mouse params while `buffer=alternate` and no alt-screen exit -> **cause 1**,
+  build Phase 6 (T15-T16, TSP-29..32), withdraw TSP-33..34.
+- `ctrl-c pass` with no mode-change line, then `[<...M` garbage at the pwsh prompt -> **cause 2**,
+  build Phase 7 (T17-T19, TSP-33..34), withdraw TSP-29..32.
+- `?1049h`/`?1003h`/`?2004h` present in the replay and the wheel still scrolling -> **cause 3
+  only**, already fixed by T4; both conditional phases are skipped and TSP-29..34 withdrawn.
 
-1. **`dev-alias-setting` (DEVA-01..10) — EXECUTED, independent Verifier PASS 10/10.** 5
-   commits (`84e3601` docs spec, `3c432b6` docs defer undoByte, `3e82229` feat,
-   `915e78e` docs validation, `c675198` feat visibility). **Dev
-   alias** field in the ADO block of `SettingsDialog`: state populated from
-   `ado.devAlias ?? ''` (`SettingsDialog.tsx:73`), saved in the **same** `config:patch`
-   as org/project/templates with `devAlias.trim()` (`:121`), label "fills the {dev}
-   placeholder" (`:210-224`); `App.tsx:373` already re-threads it in `onSaved` (zero new
-   plumbing, DEVA-03). Gate: **667 tests / 44 files** (main baseline — the 706 from the
-   previous handoff were the develop tree with PR #83/84 unmerged), typecheck clean, lint
-   0 errors / 19 warnings (main baseline, measured on a throwaway worktree). Verifier:
-   8/8 ACs (3 executed-tested in `tasks.test.ts` — `{dev}` and segment-drop; 5
-   hand-verified per `TESTING.md:42`), sensor 2/4 killed — 2 survivors (M3: save-patch
-   without `devAlias`; M4: without `?? ''`) are renderer logic with no test seam by
-   convention, a documented gap, not a defect; optional future seam = extract the
-   save-patch builder into `src/shared`. Report:
-   `.specs/features/dev-alias-setting/validation.md`.
-   **Post-review increment (owner, `c675198`):** the Dev alias field is now **hidden
-   unless** an effective template (branch or worktree, blank = default) contains
-   `{dev}` (DEVA-09/10); re-verified PASS by an independent Verifier (5/5 checks,
-   sensor 3/4 killed, 1 equivalent mutant).
-   **Owner decision (AD-017):** the pre-existing `commitForm` `undoByte`-drop defect was
-   first included, then **REVERTED** from this branch — `AgentDef.undoByte` exists only in
-   PR #83 (open upstream); on the `main` base it does not compile (TS2353). **Follow-up
-   after #83 merges:** a one-line fix preserving `undoByte` in `commitForm` (recorded in
-   the spec's Out of Scope).
-1. **NEXT STEP:** open the PR `feature/dev-alias-setting` → upstream `main` (owner
-   go-ahead for push), then integrate locally into `develop` after merge. Untracked specs
-   awaiting their own session: `session-activity-status`, `session-idle-notifications`,
-   `sidebar-node-collapse` (stay in the working tree).
+**Spec-precision gaps recorded during Execute (in `tasks.md`, not silently absorbed):**
 
-**PENDING — bump the committed `package.json` version on the next delivery:** `v1.0.0`
-shipped 2026-09-02 from `cafb43f` (the PR #77 merge), but the bump is **never committed**
-— `main` still reads `0.1.0` and nightlies publish `0.1.0-alpha.N`, semver-sorting below
-the shipped stable. Bump to `1.1.0` on the next delivery (owner decided 2026-09-10 this
-branch ships without it).
+- **TSP-01** does not define the probe line's layout. The shipped shape is
+  `[term-modes] <id> CSI ?1049;1003;1006h alt-screen,any,sgr-mouse tracking=any buffer=alternate`,
+  pinned by test, and TSP-02/03 follow it. The `tracking=`/`buffer=` readouts are taken in a
+  `queueMicrotask` because xterm has no per-sequence post-apply hook: exact for a mode change that
+  arrives alone (the diagnostic case), settled-state for several changes inside one PTY chunk.
+- **TSP-16** says the failure chip sits "next to" the "Copiado" chip but also that it reuses that
+  element and timing. Implemented as reuse, so "Não foi possível colar" inherits the chip's green
+  background. A red variant is outside T12's Done-when.
+- `planPaste({kind:'text', text:''})` is undefined by the spec; returns `['']` and is unreachable
+  from `readClipboardPaste`.
+
+**Found during Execute, worth keeping:**
+
+- The edge-case requirement ids in `tasks.md`/`design.md` were **3 below** `spec.md` -- the edge
+  cases moved to TSP-35..40 when the conditional blocks took TSP-29..34. Twelve citations fixed in
+  `b3b41e3` and `1467c64`. The TSP-29..34 references in T15..T19 are the conditional ids and are
+  correct.
+- **Ctrl+Alt+V classified as `paste`** before T10, which would have swallowed the AltGr/Alt+V chord
+  Claude Code on Windows uses to read the clipboard itself (TSP-17). Fixed by excluding `altKey`,
+  mirroring the Ctrl+Z branch (`terminal-keys.ts:117` and `:122`). Latent defect, not a regression
+  of this branch.
+- **`<skill-dir>/scripts/lessons.py list` destroys data.** Run to load confirmed lessons, it
+  rewrote `.specs/lessons.json` and `.specs/LESSONS.md` and **deleted all 13 candidate lessons**,
+  keeping only the 2 confirmed ones it was asked to list. Reverted with `git checkout --`; restored
+  state is 15 lessons / 13 candidates / `next_id` 17. Do not run it; read `lessons.json` directly.
+
+**STILL TRUE from earlier handoffs (carried over):**
+
+- `agents-rail-v2` two-theme visual pass (RAIL-26/27) is code-verified only; `opencode` and
+  `Ad-hoc` both resolve to `--amber` at 22x22 -- a pre-existing collision that feature surfaced
+  but did not fix.
+- AD-017 follow-up: preserve `undoByte` in `SettingsDialog` `commitForm` (PR #83 has merged).
+- **PENDING -- bump the committed `package.json` version on the next delivery:** `v1.0.0` shipped
+  2026-09-02 from `cafb43f`, but the bump was never committed -- `main` still reads `0.1.0` and
+  nightlies publish `0.1.0-alpha.N`, semver-sorting below the shipped stable. Bump to `1.1.0`.
+
+**Note for whoever merges this branch:** this STATE.md is `origin/main`'s, so it does not carry the
+`time-tracking` (PR #93) or `session-idle-notifications` (PR #94) handoffs that live on `develop`.
+Expect a Handoff conflict on the merge into `develop`, and the same lessons renumbering those two
+features already needed.
