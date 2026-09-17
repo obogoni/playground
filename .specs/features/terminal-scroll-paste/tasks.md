@@ -384,7 +384,7 @@ T18 → T19
 
 ---
 
-### T10: Pin Alt+V and Ctrl+V classification
+### T10: Pin Alt+V and Ctrl+V classification ✅
 
 **What**: Add classifier tests pinning Alt+V → `pass` and Ctrl+V → `paste`, so the native Alt+V path to the agent can never be swallowed.
 **Where**: `src/renderer/src/lib/terminal-keys.test.ts`
@@ -399,10 +399,10 @@ T18 → T19
 
 **Done when**:
 
-- [ ] Alt+V (`altKey`, `code: 'KeyV'`, no ctrl) → `pass`; Ctrl+Alt+V (AltGr) → `pass`; Ctrl+V → `paste`
-- [ ] No production change needed; if one is, it is limited to `terminal-keys.ts` and noted in the commit body
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/terminal-keys.test.ts`
-- [ ] Test count: +~3 (no silent deletions)
+- [x] Alt+V (`altKey`, `code: 'KeyV'`, no ctrl) → `pass`; Ctrl+Alt+V (AltGr) → `pass`; Ctrl+V → `paste` (the last already pinned at `terminal-keys.test.ts:48`, not duplicated)
+- [x] One production change was needed and is limited to `terminal-keys.ts`: the `paste` branch now excludes `altKey`, because Ctrl+Alt+V classified as `paste`. Noted in the commit body
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/terminal-keys.test.ts`
+- [x] Test count: +2, 817 → 819 (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick

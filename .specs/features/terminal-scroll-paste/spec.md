@@ -255,7 +255,7 @@ mouse movement, and the wheel scrolls pwsh's scrollback.
 | TSP-14 | P1: Image paste | T2, T5, T7 | Implementing |
 | TSP-15 | P1: Image paste | T1, T5 | Implementing |
 | TSP-16 | P1: Image paste | T5, T7 | Implementing |
-| TSP-17 | P1: Image paste | Tasks | Pending |
+| TSP-17 | P1: Image paste | T10 | Implementing |
 | TSP-18 | P1: Image paste | T6, T7 | Implementing |
 | TSP-19 | P1: Image paste | T6, T7 | Implementing |
 | TSP-20 | P1: Image paste | Tasks | Pending |
