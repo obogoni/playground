@@ -356,7 +356,7 @@ T18 → T19
 
 ---
 
-### T9: Terminal mode names and probe helpers
+### T9: Terminal mode names and probe helpers ✅
 
 **What**: Create `modeName`, `formatModeLog` and `isProbeEnabled` for the flag-gated mode probe.
 **Where**: `src/renderer/src/lib/terminal-modes.ts`
@@ -371,11 +371,11 @@ T18 → T19
 
 **Done when**:
 
-- [ ] `modeName` maps every number in TSP-05 to its name, and an unknown number `n` to `?n`
-- [ ] `formatModeLog` output starts with `[term-modes]` and contains session id, `h`/`l`, raw params, decoded names, tracking and buffer (TSP-01)
-- [ ] `isProbeEnabled` true only for exactly `'1'`; `null`, `'0'`, `'true'` and a throwing reader → false (TSP-04)
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/terminal-modes.test.ts`
-- [ ] Test count: +~8 (no silent deletions)
+- [x] `modeName` maps every number in TSP-05 to its name, and an unknown number `n` to `?n`
+- [x] `formatModeLog` output starts with `[term-modes]` and contains session id, `h`/`l`, raw params, decoded names, tracking and buffer (TSP-01)
+- [x] `isProbeEnabled` true only for exactly `'1'`; `null`, `'0'`, `'true'` and a throwing reader → false (TSP-04)
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/terminal-modes.test.ts`
+- [x] Test count: +11, 806 → 817 (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick
