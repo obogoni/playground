@@ -267,7 +267,9 @@ T12 → T13
 
 ---
 
-### T7: Electron wiring for session notifications
+### T7: Electron wiring for session notifications ✅ COMPLETE
+
+**Status**: Done — `revealWindow` (destroyed-safe, restores minimized), `windowFocused` (minimized = unfocused), shared `showOs` holding each `Notification` until click/close/failed; the workflow toast now rides both; `SessionNotifier` wired as `onActivityChange`. Build gate green (phase 3 close): typecheck 0, lint 0 errors, electron-vite build ok, 984 tests. OS path hand-verified in T13.
 
 **What**: In `index.ts`, extract `revealWindow()` (destroyed-safe, restores a minimized window), add `windowFocused()`, make `showOs` hold each `Notification` until `click`/`close`/`failed`, reuse both for the workflow toast, construct `SessionNotifier`, and pass `onActivityChange` to `SessionManager`.
 **Where**: `src/main/index.ts`
@@ -282,11 +284,11 @@ T12 → T13
 
 **Done when**:
 
-- [ ] `Notification.isSupported()` false → nothing shown, no throw (NOTF-06)
-- [ ] `revealWindow` and `windowFocused` no-op / false on a missing or destroyed window (NOTF-21); a minimized window counts as unfocused (NOTF-24)
-- [ ] Workflow lifecycle toasts still click through to `workflow:focus-run` (unchanged behaviour, now via the shared helpers)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] `Notification.isSupported()` false → nothing shown, no throw (NOTF-06)
+- [x] `revealWindow` and `windowFocused` no-op / false on a missing or destroyed window (NOTF-21); a minimized window counts as unfocused (NOTF-24)
+- [x] Workflow lifecycle toasts still click through to `workflow:focus-run` (unchanged behaviour, now via the shared helpers)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none (Electron/main wiring — hand-verified; the OS notification and its click ride T13's hand checks)
 **Gate**: build

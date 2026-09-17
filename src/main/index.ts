@@ -8,6 +8,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
+import { readNotificationPrefs } from '../shared/notifications'
 import { AdoGateway } from './ado-gateway'
 import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-runner'
 import { createActivityHookServer } from './activity-hook-server'
@@ -20,6 +21,7 @@ import { withPostCreateHook } from './post-create-hook'
 import { PtyPort } from './pty-port'
 import { resolvePostCreateCommand } from './repo-config'
 import { SessionManager, type ActivityHooks, type EmitFn } from './session-manager'
+import { SessionNotifier } from './session-notifier'
 import { ShortcutLauncher } from './shortcut-launcher'
 import { TaskBoard } from './task-board'
 import { buildTree } from './tree'
@@ -229,6 +231,43 @@ app.whenReady().then(() => {
     if (mainWindow) emit(mainWindow.webContents, channel, payload)
   }
 
+  /** Bring the window forward; a click on a stale notification after the window
+   *  is gone does nothing (NOTF-21). */
+  const revealWindow = (): void => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  }
+
+  /** A minimized window counts as not focused: its rail cannot be seen (NOTF-24). */
+  const windowFocused = (): boolean =>
+    !!mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused() && !mainWindow.isMinimized()
+
+  /**
+   * Notifications still on screen. An unreferenced `Notification` can be
+   * garbage-collected before the user clicks it, silently dropping the click
+   * handler, so each one is held until it is clicked, closed or fails.
+   */
+  const liveNotifications = new Set<Notification>()
+
+  /** Show a native notification; skipped silently where the OS has none (NOTF-06). */
+  const showOs = (title: string, body: string, onClick?: () => void): void => {
+    if (!Notification.isSupported()) return
+    const notification = new Notification({ title, body })
+    liveNotifications.add(notification)
+    const release = (): void => {
+      liveNotifications.delete(notification)
+    }
+    notification.on('click', () => {
+      release()
+      onClick?.()
+    })
+    notification.on('close', release)
+    notification.on('failed', release)
+    notification.show()
+  }
+
   /**
    * WF2 author `ctx.notify({ toast })` sink (WF2-09) AND WF4 manager lifecycle toast
    * (WF4-13): a native OS toast. A lifecycle toast (`opts.runId`) attaches a `click`
@@ -237,18 +276,26 @@ app.whenReady().then(() => {
    * notification, behaviour unchanged.
    */
   const notifier = (title: string, body: string, opts?: { runId?: string }): void => {
-    if (!Notification.isSupported()) return
-    const notification = new Notification({ title, body })
-    if (opts?.runId) {
-      const runId = opts.runId
-      notification.on('click', () => {
-        mainWindow?.show()
-        mainWindow?.focus()
-        emitToWindow('workflow:focus-run', { runId })
-      })
-    }
-    notification.show()
+    const runId = opts?.runId
+    showOs(
+      title,
+      body,
+      runId
+        ? () => {
+            revealWindow()
+            emitToWindow('workflow:focus-run', { runId })
+          }
+        : undefined
+    )
   }
+
+  const sessionNotifier = new SessionNotifier({
+    prefs: () => readNotificationPrefs(configStore.get().ui),
+    windowFocused,
+    showOs,
+    reveal: revealWindow,
+    emit: emitToWindow
+  })
 
   // Claude Code activity hooks (AD-019). The loopback server takes a moment to
   // bind, so `settingsPath` starts null and is filled once it is listening;
@@ -283,7 +330,8 @@ app.whenReady().then(() => {
     config: configStore,
     emit: emitToWindow,
     fsExists: existsSync,
-    hooks: activityHooks
+    hooks: activityHooks,
+    onActivityChange: (change) => sessionNotifier.handle(change)
   })
   const sessions = sessionManager
   hookServer.onEvent((sessionId, payload) => sessions.handleHookEvent(sessionId, payload))

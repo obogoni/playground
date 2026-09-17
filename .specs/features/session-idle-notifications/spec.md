@@ -185,7 +185,7 @@ every switch holds.
 | NOTF-03 | P1: Told when an agent is blocked | Execute | Implementing |
 | NOTF-04 | P1: Told when an agent is blocked | Execute | Implementing |
 | NOTF-05 | P1: Told when an agent is blocked | Execute | Implementing |
-| NOTF-06 | P1: Told when an agent is blocked | - | Pending |
+| NOTF-06 | P1: Told when an agent is blocked | Execute | Implementing |
 | NOTF-07 | P2: Told when an agent finishes or fails | Execute | Implementing |
 | NOTF-08 | P2: Told when an agent finishes or fails | Execute | Implementing |
 | NOTF-09 | P2: Told when an agent finishes or fails | Execute | Implementing |
@@ -200,10 +200,10 @@ every switch holds.
 | NOTF-18 | P3: Choose which notifications to get | - | Pending |
 | NOTF-19 | P3: Choose which notifications to get | Execute | Implementing |
 | NOTF-20 | P3: Choose which notifications to get | - | Pending |
-| NOTF-21 | Edge cases | - | Pending |
+| NOTF-21 | Edge cases | Execute | Implementing |
 | NOTF-22 | Edge cases | Execute | Implementing |
 | NOTF-23 | Edge cases | - | Pending |
-| NOTF-24 | Edge cases | - | Pending |
+| NOTF-24 | Edge cases | Execute | Implementing |
 | NOTF-25 | Edge cases | Execute | Implementing |
 | NOTF-26 | Edge cases | Execute | Implementing |
 | NOTF-27 | Edge cases | Execute | Implementing |
