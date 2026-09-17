@@ -36,7 +36,12 @@
  *     a missing or destroyed window and `emitToWindow` on a missing one; on
  *     Windows closing the last window quits the app, so the click cannot outlive it
  *
- * Requires: `claude` on PATH. Sessions run in C:/Windows, never in a repo, and no
+ * TASK IN THE NOTIFICATION (P4): session A runs in a throwaway git repository
+ * under %TEMP% on branch `feature/<id>-notify-smoke`, with an id nobody has pinned,
+ * so its notifications must be titled `#<id>` and carry the session as a second
+ * body line. Session B runs in C:/Windows. The repository is deleted at the end.
+ *
+ * Requires: `claude` and `git` on PATH. Sessions never run in a real repo, and no
  * input is typed until the output shows `claude --version` has printed: on this
  * machine a registry agent is the real CLI, and text sent to it is a prompt.
  *
@@ -44,7 +49,9 @@
  *      node scripts/smoke-notifications.mjs              (in another)
  */
 
-import { readFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const PORT = Number(process.env.SMOKE_PORT) || 9222
@@ -136,6 +143,17 @@ const originalSwitches = Object.fromEntries(SWITCH_KEYS.map((k) => [k, config.ui
 const shell = config.ui.defaultShell
 const originalDirection = config.ui.direction
 const CWD = 'C:/Windows'
+// An id no pin uses, so the notification title must be the bare number (NOTF-31).
+const pinnedIds = new Set(config.pinnedTasks.map((t) => t.id))
+let TASK_ID = 12345
+while (pinnedIds.has(TASK_ID)) TASK_ID++
+const REPO = mkdtempSync(join(tmpdir(), 'notify-smoke-'))
+execFileSync('git', ['init', '-q', '-b', `feature/${TASK_ID}-notify-smoke`], {
+  cwd: REPO,
+  windowsHide: true
+})
+/** Title + body of every in-app notice for session A, as `textContent` joins them. */
+const NOTICE_A = (state) => `#${TASK_ID}${state}\nClaude (notifications smoke) · ${TITLE_A}`
 const VERSION_PATTERN = /\d+\.\d+\.\d+ \(Claude Code\)/
 const created = []
 
@@ -164,6 +182,15 @@ async function cleanup() {
        return true
      })()`
   )
+  // The PTYs are gone; give Windows a moment to release the folder handle.
+  for (let attempt = 0; attempt < 10; attempt++) {
+    try {
+      rmSync(REPO, { recursive: true, force: true })
+      break
+    } catch {
+      await sleep(500)
+    }
+  }
 }
 
 function finish() {
@@ -383,11 +410,11 @@ await evaluate(
    })()`
 )
 
-async function spawn(title) {
+async function spawn(title, cwd) {
   const id = await evaluate(
     ws,
     `(async () => {
-       const view = await window.api.invoke('sessions:spawn', { agentName: ${JSON.stringify(SMOKE_AGENT)}, cwd: ${JSON.stringify(CWD)} })
+       const view = await window.api.invoke('sessions:spawn', { agentName: ${JSON.stringify(SMOKE_AGENT)}, cwd: ${JSON.stringify(cwd)} })
        await window.api.invoke('sessions:rename', { id: view.id, title: ${JSON.stringify(title)} })
        return view.id
      })()`
@@ -396,8 +423,8 @@ async function spawn(title) {
   return id
 }
 
-const idA = await spawn(TITLE_A)
-await spawn(TITLE_B)
+const idA = await spawn(TITLE_A, REPO)
+await spawn(TITLE_B, CWD)
 // A direct-IPC spawn pushes no event; a status change makes the renderer re-fetch.
 const nudge = await evaluate(
   ws,
@@ -565,10 +592,15 @@ const approvalNotice = await waitFor(
   5000
 )
 check(
-  'a blocked session not on screen raises one in-app notice naming the tool (NOTF-02, NOTF-04)',
-  approvalNotice === `Claude (notifications smoke) · ${TITLE_A}Needs approval to run Bash`,
-  approvalNotice ?? '(none)'
+  'a blocked session not on screen raises one in-app notice titled by its task and naming the tool (NOTF-02, NOTF-04, NOTF-31, NOTF-32)',
+  approvalNotice === NOTICE_A('Needs approval to run Bash'),
+  JSON.stringify(approvalNotice ?? '(none)')
 )
+const bodyLines = await evaluate(
+  ws,
+  `(document.querySelector('.session-notice-body')?.innerText ?? '').split(String.fromCharCode(10)).length`
+)
+check('the notice body renders its two lines (NOTF-36)', bodyLines === 2, `${bodyLines} line(s)`)
 
 // --- 5. Clicking the notice opens the session (NOTF-05) ---
 await evaluate(ws, `(document.querySelector('.session-notice-open')?.click(), true)`)
@@ -608,8 +640,8 @@ const finishedNotice = await waitFor(
 )
 check(
   'the same transition notifies once its switch is back on',
-  finishedNotice === `Claude (notifications smoke) · ${TITLE_A}Finished its turn`,
-  finishedNotice ?? '(none)'
+  finishedNotice === NOTICE_A('Finished its turn'),
+  JSON.stringify(finishedNotice ?? '(none)')
 )
 
 // --- 7. The notice dismisses itself ---
@@ -636,8 +668,12 @@ if (blurred) {
     `${inAppWhileBlurred} in-app notice(s)`
   )
   console.log(
-    `\n>>> A Windows notification should now read "Claude (notifications smoke) · ${TITLE_A}" / "Needs approval to run Bash".` +
-      '\n>>> Click it (60 s). If none appeared, wait for the timeout: the check below fails and says so.\n'
+    `\n>>> A Windows notification should now read:` +
+      `\n>>>   #${TASK_ID}` +
+      `\n>>>   Needs approval to run Bash` +
+      `\n>>>   Claude (notifications smoke) · ${TITLE_A}` +
+      '\n>>> Note whether the last line is on its own line, then click it (60 s).' +
+      '\n>>> If none appeared, wait for the timeout: the check below fails and says so.\n'
   )
   const cameBack = await waitFor(
     ws,
@@ -651,6 +687,19 @@ if (blurred) {
       ? ''
       : 'no click reached the app: either no notification was shown or it was not clicked'
   )
+  if (cameBack && process.stdin.isTTY) {
+    const { createInterface } = await import('node:readline/promises')
+    const rl = createInterface({ input: process.stdin, output: process.stdout })
+    const answer = await rl.question(
+      '>>> Did the Windows notification show "#id", the state and the session on three separate lines? [y/n] '
+    )
+    rl.close()
+    check(
+      'owner: the Windows notification shows the task title and both body lines (NOTF-30, NOTF-32)',
+      /^y/i.test(answer.trim()),
+      answer.trim()
+    )
+  }
 }
 
 // --- 8. From another direction, a notice for a stopped session still opens it

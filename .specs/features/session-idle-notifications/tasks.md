@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/session-idle-notifications/design.md`
-**Status**: T1–T13 Done (Verifier PASS, owner smoke 34/34); rev4 T14–T20 Draft — awaiting approval
+**Status**: T1–T13 Done (Verifier PASS, owner smoke 34/34); rev4 T14–T20 executed — Verifier pending
 **Branch**: `feature/session-idle-notifications` (stacked on `feature/session-activity-status` `65de9fd`, PR #88)
 **Test baseline**: **917 tests / 52 files**, measured green on this branch before any task.
 
@@ -663,7 +663,9 @@ T19 → T20
 
 ---
 
-### T20: Smoke the task in the notification
+### T20: Smoke the task in the notification ✅ COMPLETE
+
+**Status**: Done — smoke: session A runs in a throwaway `%TEMP%` git repo on `feature/<id>-notify-smoke` with an unpinned id; in-app notices expect `#<id>` + two body lines and the rendered body is checked for two lines; the guided OS step lists the three lines and asks the owner y/n whether the toast shows them separately; the repo is deleted in cleanup. **Not yet run — owner-run pending.** Build gate green: typecheck 0, lint 0 errors, electron-vite build ok, 1006 tests.
 
 **What**: Run session A in a throwaway git repo under the scratch temp folder on branch `feature/12345-notify-smoke`, and update the notice checks to expect title `#12345` and the `<agent> · <session>` body line; remove the repo afterwards.
 **Where**: `scripts/smoke-notifications.mjs`
@@ -678,11 +680,11 @@ T19 → T20
 
 **Done when**:
 
-- [ ] The in-app approval notice check expects title `#12345` and a body with both lines; session B stays in `C:/Windows` and its notices (if any) keep the no-task layout
-- [ ] The guided OS step asks the owner to confirm the task title and the second body line in the Windows toast (the newline risk)
-- [ ] The temp repo is removed in cleanup; still zero tokens
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] The in-app approval notice check expects title `#12345` and a body with both lines; session B stays in `C:/Windows` and its notices (if any) keep the no-task layout
+- [x] The guided OS step asks the owner to confirm the task title and the second body line in the Windows toast (the newline risk)
+- [x] The temp repo is removed in cleanup; still zero tokens
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none (smoke script — owner-run)
 **Gate**: build
