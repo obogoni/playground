@@ -326,7 +326,9 @@ T12 → T13
 
 ---
 
-### T9: SessionNotices component
+### T9: SessionNotices component ✅ COMPLETE
+
+**Status**: Done — `SessionNotices` + CSS: stack bottom-right, open button carrying title and body, separate × with `aria-label=\"Dismiss\"`, 8 s timer restarted by `key`, theme tokens only. Build gate green: typecheck 0, lint 0 errors, 990 tests. Visual pass rides T13.
 
 **What**: Render the notice stack bottom-right: title, body, click opens, × dismisses, each auto-dismisses after 8 s keyed on `key`.
 **Where**: `src/renderer/src/components/SessionNotices.tsx` (+ `SessionNotices.css`)
@@ -341,10 +343,10 @@ T12 → T13
 
 **Done when**:
 
-- [ ] Each notice is a `button` with an accessible name carrying title and body; × has `aria-label="Dismiss"` and does not trigger open
-- [ ] Uses theme tokens only, readable in light and dark
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] Each notice is a `button` with an accessible name carrying title and body; × has `aria-label="Dismiss"` and does not trigger open
+- [x] Uses theme tokens only, readable in light and dark
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none (renderer component — hand-verified in T13)
 **Gate**: build
