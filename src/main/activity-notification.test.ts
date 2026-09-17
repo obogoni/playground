@@ -217,23 +217,17 @@ describe('describeNotification with a linked task', () => {
     })
   })
 
-  it('cuts a long title to 60 characters ending in an ellipsis (NOTF-33)', () => {
-    const long = 'Fix login redirect when the session expires during checkout on mobile devices'
+  it('sends a long task title whole, with no ellipsis (NOTF-33)', () => {
+    const long =
+      'Fix login redirect when the session expires during checkout on mobile devices and tablets'
     const { title } = describeNotification(session, approval, { id: 12345, title: long })
-    expect(title).toHaveLength(60)
-    expect(title).toBe(`#12345 · ${long}`.slice(0, 59) + '…')
+    expect(title).toBe(`#12345 · ${long}`)
   })
 
-  it('leaves a title of exactly 60 characters whole (NOTF-33)', () => {
-    const exact = 'x'.repeat(60 - '#12345 · '.length)
-    const { title } = describeNotification(session, approval, { id: 12345, title: exact })
-    expect(title).toBe(`#12345 · ${exact}`)
-  })
-
-  it('cuts a long session title without a task too (NOTF-33)', () => {
-    const renamed = { agent: 'Claude', title: 'y'.repeat(80) }
+  it('sends a long session title whole when there is no task (NOTF-33)', () => {
+    const renamed = { agent: 'Claude', title: 'y'.repeat(120) }
     const { title } = describeNotification(renamed, approval)
-    expect(title).toBe(`Claude · ${'y'.repeat(80)}`.slice(0, 59) + '…')
+    expect(title).toBe(`Claude · ${'y'.repeat(120)}`)
   })
 
   it('adds the agent to a renamed session on the second body line (NOTF-32)', () => {

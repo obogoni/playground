@@ -703,7 +703,9 @@ T22 → T23
 
 ---
 
-### T21: Send the title whole
+### T21: Send the title whole ✅ COMPLETE
+
+**Status**: Done — `clip` and `MAX_TITLE_LENGTH` removed; both titles sent as they are. The three rev4 cut tests were replaced (owner-approved spec change) by two: a long task title and a long session title arrive whole. Other tests unmodified. Quick gate green; node typecheck clean; lint clean. Suite 1006 → 1005.
 
 **What**: Remove `clip` and `MAX_TITLE_LENGTH` from `describeNotification`, so the task line and the session line are titles as they are.
 **Where**: `src/main/activity-notification.ts`
@@ -718,10 +720,10 @@ T22 → T23
 
 **Done when**:
 
-- [ ] The three rev4 tests that pinned the 60-character cut (long task title cut, exactly 60 kept, long session title cut) are replaced — owner-approved spec change — by tests that a long task title and a long session title arrive whole with no `…`
-- [ ] Every other `activity-notification.test.ts` test passes unmodified
-- [ ] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
-- [ ] Test count: 1006 → ~1005 (3 replaced by 2; no silent deletions)
+- [x] The three rev4 tests that pinned the 60-character cut (long task title cut, exactly 60 kept, long session title cut) are replaced — owner-approved spec change — by tests that a long task title and a long session title arrive whole with no `…`
+- [x] Every other `activity-notification.test.ts` test passes unmodified
+- [x] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
+- [x] Test count: 1006 → ~1005 (3 replaced by 2; no silent deletions)
 
 **Tests**: unit
 **Gate**: quick
