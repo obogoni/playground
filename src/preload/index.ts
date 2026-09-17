@@ -15,7 +15,10 @@ const api = {
     ipcRenderer.on(channel, handler)
     return () => ipcRenderer.removeListener(channel, handler)
   },
-  send: (channel: string, payload: unknown) => ipcRenderer.send(channel, payload)
+  send: (channel: string, payload: unknown) => ipcRenderer.send(channel, payload),
+  // Declared with the contract so the cast stays honest instead of optional
+  // (L-001); the real `webUtils.getPathForFile` lands with the drop handler.
+  pathForFile: () => ''
 } as RendererApi
 
 if (process.contextIsolated) {

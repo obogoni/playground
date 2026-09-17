@@ -148,7 +148,7 @@ T18 → T19
 
 ---
 
-### T2: `clipboard:read-paste` channel and `pathForFile` bridge type
+### T2: `clipboard:read-paste` channel and `pathForFile` bridge type ✅
 
 **What**: Declare `'clipboard:read-paste': { req: void; res: ClipboardPaste }` in `IpcContract` and `pathForFile(file: File): string` on `RendererApi`.
 **Where**: `src/shared/ipc-contract.ts`
@@ -163,10 +163,10 @@ T18 → T19
 
 **Done when**:
 
-- [ ] Channel and bridge method declared with doc comments
-- [ ] Typecheck fails nowhere else. `pathForFile` is optional-free, so T8 must land before any renderer consumer; the preload typecheck is covered because the preload casts `as RendererApi`. If the cast fails, add a stub in this task (lesson L-001: wire producer and consumer together rather than relaxing to optional)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] Channel and bridge method declared with doc comments
+- [x] Typecheck fails nowhere else. `pathForFile` is optional-free, so T8 must land before any renderer consumer; the preload typecheck is covered because the preload casts `as RendererApi`. If the cast fails, add a stub in this task (lesson L-001: wire producer and consumer together rather than relaxing to optional)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none
 **Gate**: build

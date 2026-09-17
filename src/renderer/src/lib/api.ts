@@ -33,5 +33,8 @@ export const api: RendererApi = {
   },
   send<S extends IpcSend>(channel: S, payload: IpcSends[S]): void {
     window.api.send(channel, payload)
+  },
+  pathForFile(file: File): string {
+    return window.api.pathForFile(file)
   }
 }

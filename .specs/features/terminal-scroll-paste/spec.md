@@ -252,7 +252,7 @@ mouse movement, and the wheel scrolls pwsh's scrollback.
 | TSP-11 | P1: Replay modes | Tasks | Pending |
 | TSP-12 | P1: Image paste | T1 | Implementing |
 | TSP-13 | P1: Image paste | Tasks | Pending |
-| TSP-14 | P1: Image paste | Tasks | Pending |
+| TSP-14 | P1: Image paste | T2 | Implementing |
 | TSP-15 | P1: Image paste | T1 | Implementing |
 | TSP-16 | P1: Image paste | Tasks | Pending |
 | TSP-17 | P1: Image paste | Tasks | Pending |
@@ -263,7 +263,7 @@ mouse movement, and the wheel scrolls pwsh's scrollback.
 | TSP-22 | P1: File paste | T1 | Implementing |
 | TSP-23 | P1: File paste | Tasks | Pending |
 | TSP-24 | P1: File paste | Tasks | Pending |
-| TSP-25 | P1: Drop | Tasks | Pending |
+| TSP-25 | P1: Drop | T2 | Implementing |
 | TSP-26 | P1: Drop | Tasks | Pending |
 | TSP-27 | P1: Drop | T1 | Implementing |
 | TSP-28 | P1: Drop | Tasks | Pending |
