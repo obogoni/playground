@@ -9,7 +9,8 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/terminal-scroll-paste/design.md`
-**Status**: Executing (approved 2026-09-17). Q2 unanswered by the owner, so the probe path applies: T14 records the verdict.
+**Status**: T1–T14 Done (2026-09-17). The owner UAT answered Q2: **cause 3 only**, so Phases 6
+and 7 are skipped and TSP-29..34 are `Withdrawn`. Awaiting the Verifier.
 **Branch**: `feature/terminal-scroll-paste` (cut from `origin/main`)
 **Test baseline**: measured green on the branch before T1 — 748 tests / 46 files, `typecheck` and `lint` exit 0 (18 prettier warnings, 0 errors).
 
@@ -96,7 +97,7 @@ T11 → T14
 T13 → T14
 ```
 
-### Phase 6: Cause-1 guard (conditional)
+### Phase 6: Cause-1 guard (conditional) — **SKIPPED** (Q2: cause 3 only)
 
 ```
 T9 → T15
@@ -105,7 +106,7 @@ T11 → T16
 T15 → T16
 ```
 
-### Phase 7: Cause-2 reset (conditional)
+### Phase 7: Cause-2 reset (conditional) — **SKIPPED** (Q2: cause 3 only)
 
 ```
 T9 → T17
@@ -555,20 +556,54 @@ design, so the failure message inherits the chip's green background.
 
 **Done when**:
 
-- [ ] Owner's `[term-modes]` excerpt quoted in the Q2 assumption row, with the verdict set to `y`
-- [ ] Phase 6 or Phase 7 (or both) marked skipped in this file; withdrawn IDs updated in Traceability
-- [ ] Paste image / files / drop / session-switch replay confirmed in both opencode and Claude Code, or failures turned into fix tasks
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] Q2 assumption row set to `y` with the verdict recorded. **No excerpt quoted — the owner
+      confirmed the lines appeared but did not capture one, and an invented excerpt would be
+      fabricated evidence**
+- [x] Phases 6 and 7 marked skipped below; TSP-29..34 `Withdrawn` in Traceability
+- [~] Image paste, PrintScreen paste and file drop confirmed by the owner. The agent split,
+      multi-file ordering, text+image, link drop, failure chip and the session-switch replay
+      gesture are **not** confirmed — listed as owner-pending below. No failures reported
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` — all exit 0
+- [x] Test count unchanged at 819 / 51 files (docs-only task)
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `docs(specs): record the terminal scroll probe verdict`
 
+**Status**: Done 2026-09-17 — owner UAT run, verdict **cause 3 only**.
+
+**Confirmed by the owner (executed evidence):**
+
+- The probe logs: `[term-modes]` lines appeared in the console with the flag set (TSP-01..05).
+- **The scroll never died** in any scenario tried, including repeated Ctrl+C in opencode, so
+  neither the cause-1 nor the cause-2 signature appeared.
+- Ctrl+V with an image on the clipboard attaches it, and a PrintScreen capture pastes the same way
+  (TSP-14).
+- Dragging files onto the pane pastes their paths (TSP-25..28).
+
+**Owner-pending — recorded as unverified rather than claimed:**
+
+- Which agent the paste checks ran against. The owner did not say opencode, Claude Code or both, so
+  TSP-14/TSP-21's "in opencode and Claude Code" wording is only half-evidenced.
+- Several files in one paste, in order, one with a space in the name (TSP-21, TSP-22).
+- Clipboard holding both text and an image, where only the text should paste (TSP-13).
+- Dragging a link, where nothing should paste (TSP-27).
+- The paste-failure chip, "Não foi possível colar" (TSP-16).
+- The manual half of P1/cause 3 (TSP-06..11): switch away from a busy opencode session and back and
+  the wheel still scrolls. The unit tests cover the buffer; the owner did not report this gesture.
+
+**Evidence quality, stated plainly:** the verdict rests on a **non-reproduction**, not on a
+measured difference. The A/B against the pre-T4 1.1.1 install was offered and declined in favour of
+shipping. The original defect was intermittent, so this does not prove cause 1 and cause 2 cannot
+happen — it establishes that neither appeared once cause 3 was fixed. The probe stays on the branch
+behind `playground.debug.terminalModes`, so if the dead scroll returns the owner captures the log
+and the right conditional fix is built then, against evidence.
+
+
 ---
 
-### T15: Mouse reset guard (conditional: cause 1)
+### T15: Mouse reset guard (conditional: cause 1) — **SKIPPED**, TSP-29..32 `Withdrawn`
 
 **What**: Implement `MouseResetGuard` (`onReset(params, altActive)`, `onAltExit()`), which defers mouse-tracking and mouse-encoding resets while the alternate screen is active and releases them on exit.
 **Where**: `src/renderer/src/lib/terminal-modes.ts`
@@ -598,7 +633,7 @@ design, so the failure message inherits the chip's green background.
 
 ---
 
-### T16: Wire the guard into the pane (conditional: cause 1)
+### T16: Wire the guard into the pane (conditional: cause 1) — **SKIPPED**, TSP-29..32 `Withdrawn`
 
 **What**: Register a consuming `?l` CSI handler driven by `MouseResetGuard`. It re-writes `passThrough` params as their own `CSI ? … l`, and it writes the deferred resets after an observed alt-screen exit.
 **Where**: `src/renderer/src/components/TerminalPane.tsx`
@@ -625,7 +660,7 @@ design, so the failure message inherits the chip's green background.
 
 ---
 
-### T17: Mode reset sequence (conditional: cause 2)
+### T17: Mode reset sequence (conditional: cause 2) — **SKIPPED**, TSP-33..34 `Withdrawn`
 
 **What**: Export `MODE_RESET_SEQUENCE`, the local reset of mouse tracking, encodings, focus and bracketed paste followed by alt-screen exit.
 **Where**: `src/renderer/src/lib/terminal-modes.ts`
@@ -651,7 +686,7 @@ design, so the failure message inherits the chip's green background.
 
 ---
 
-### T18: Pane accepts a reset signal (conditional: cause 2)
+### T18: Pane accepts a reset signal (conditional: cause 2) — **SKIPPED**, TSP-33..34 `Withdrawn`
 
 **What**: Add an optional `resetNonce: number` prop to `TerminalPane`. On change (not on mount), it calls `term.write(MODE_RESET_SEQUENCE)` and never `session:input`.
 **Where**: `src/renderer/src/components/TerminalPane.tsx`
@@ -678,7 +713,7 @@ design, so the failure message inherits the chip's green background.
 
 ---
 
-### T19: Reset button in the session detail bar (conditional: cause 2)
+### T19: Reset button in the session detail bar (conditional: cause 2) — **SKIPPED**, TSP-33..34 `Withdrawn`
 
 **What**: Add a "Reset terminal modes" icon button to `SessionDetail`'s bar, shown while the session is running, that bumps the nonce passed to `TerminalPane`.
 **Where**: `src/renderer/src/components/AgentsView.tsx`

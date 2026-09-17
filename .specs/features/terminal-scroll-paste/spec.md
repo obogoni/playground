@@ -56,7 +56,7 @@ default is to navigate the window to the dropped file.
 
 | Assumption / decision | Chosen default | Rationale | Confirmed? |
 | --------------------- | -------------- | --------- | ---------- |
-| **Which scroll cause happens (Q2)** | **Open.** The spec ships a debug probe first (TSP-01..05). The cause-1 fix (TSP-29..32) and the cause-2 fix (TSP-33..34) are **conditional**: at Execute only the one the probe or the owner's Q2 answer confirms is built, and the other's IDs are marked `Withdrawn` | The two fixes point in opposite directions: cause 1 needs resets suppressed, cause 2 needs resets applied. Building both blind risks turning one into the other | n |
+| **Which scroll cause happens (Q2)** | **Cause 3 only, resolved 2026-09-17.** The probe shipped and logged (owner confirmed `[term-modes]` lines in the console), and across every scenario the owner tried — including repeated Ctrl+C in opencode — **the scroll never died**. T4 had already fixed cause 3 unconditionally before that test, and the original symptom ("de vez em quando, aparentemente depois de um Ctrl+C") matches cause 3: intermittent and tied to leaving and re-entering a session, which reads as Ctrl+C-adjacent. Causes 1 and 2 would be deterministic after a Ctrl+C and did not appear. **Phases 6 and 7 are skipped; TSP-29..34 are `Withdrawn`.** The owner did not capture a log excerpt, so none is quoted here. **Evidence is a non-reproduction, not a measured difference:** the A/B against the pre-T4 1.1.1 install was offered and declined in favour of shipping. The probe stays on the branch behind `playground.debug.terminalModes`, so if the dead scroll returns the owner captures the log and the right conditional fix is built then | The two fixes point in opposite directions: cause 1 needs resets suppressed, cause 2 needs resets applied. Building both blind risks turning one into the other | y |
 | Cause 3 (replay drops the mode prefix) is fixed regardless of Q2 | In scope, unconditional (TSP-06..11) | It is deterministic from the code (`session-ring-buffer.ts:54-77` trims the head; `session-manager.ts:213` replays what is left). It is cheap, and the paste feature depends on it: bracketed paste (DECSET 2004) is one of the modes lost, and without it `term.paste` sends paths unbracketed, which opencode reads as keystrokes | y |
 | The probe stays in the product | Kept, behind `localStorage['playground.debug.terminalModes'] === '1'`, and silent otherwise | Terminal-mode bugs have come up three times (INPUT, TCU, this one). A flag-gated log is cheaper than re-instrumenting each time | y |
 | Text wins over image (Q5) | Clipboard text present means only the text is pasted | Owner decision. Copying from a browser, Word or Teams puts both on the clipboard, and attaching an image by accident is the expensive error | y |
@@ -267,12 +267,12 @@ mouse movement, and the wheel scrolls pwsh's scrollback.
 | TSP-26 | P1: Drop | T13 | Implementing |
 | TSP-27 | P1: Drop | T1, T13 | Implementing |
 | TSP-28 | P1: Drop | T13 | Implementing |
-| TSP-29 | P2: Cause-1 guard (conditional) | Tasks | Pending |
-| TSP-30 | P2: Cause-1 guard (conditional) | Tasks | Pending |
-| TSP-31 | P2: Cause-1 guard (conditional) | Tasks | Pending |
-| TSP-32 | P2: Cause-1 guard (conditional) | Tasks | Pending |
-| TSP-33 | P2: Cause-2 reset (conditional) | Tasks | Pending |
-| TSP-34 | P2: Cause-2 reset (conditional) | Tasks | Pending |
+| TSP-29 | P2: Cause-1 guard (conditional) | — | Withdrawn (Q2: cause 3 only) |
+| TSP-30 | P2: Cause-1 guard (conditional) | — | Withdrawn (Q2: cause 3 only) |
+| TSP-31 | P2: Cause-1 guard (conditional) | — | Withdrawn (Q2: cause 3 only) |
+| TSP-32 | P2: Cause-1 guard (conditional) | — | Withdrawn (Q2: cause 3 only) |
+| TSP-33 | P2: Cause-2 reset (conditional) | — | Withdrawn (Q2: cause 3 only) |
+| TSP-34 | P2: Cause-2 reset (conditional) | — | Withdrawn (Q2: cause 3 only) |
 | TSP-35 | Edge | T5 | Implementing |
 | TSP-36 | Edge | T5 | Implementing |
 | TSP-37 | Edge | T1 | Implementing |
