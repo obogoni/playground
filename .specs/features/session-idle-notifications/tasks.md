@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/session-idle-notifications/design.md`
-**Status**: Done — Verifier round 2 PASS (`validation.md`); owner smoke pending
+**Status**: T1–T13 Done (Verifier PASS, owner smoke 34/34); rev4 T14–T20 Draft — awaiting approval
 **Branch**: `feature/session-idle-notifications` (stacked on `feature/session-activity-status` `65de9fd`, PR #88)
 **Test baseline**: **917 tests / 52 files**, measured green on this branch before any task.
 
@@ -84,6 +84,25 @@ T11 → T12
 T7 → T13
 T10 → T13
 T12 → T13
+```
+
+### Phase 5: Task in the notification — main (rev4)
+
+```
+T14 → T15
+T4 → T14
+T6 → T16
+T15 → T17
+T16 → T17
+T17 → T18
+```
+
+### Phase 6: Task in the notification — renderer and smoke (rev4)
+
+```
+T9 → T19
+T18 → T20
+T19 → T20
 ```
 
 ---
@@ -474,6 +493,192 @@ T12 → T13
 
 ---
 
+### T14: Link a branch to a task
+
+**What**: Add `LinkedTask` and `linkTask(branch, tasks)` to `activity-notification.ts`: the number from `taskIdFromBranch`, the first pin with that id, its cached title or `null`.
+**Where**: `src/main/activity-notification.ts`
+**Depends on**: T4
+**Reuses**: `taskIdFromBranch` (`src/shared/tasks.ts:53`); the first-match rule of `linkedPinFor` (`src/renderer/src/lib/session-attribution.ts`)
+**Requirement**: NOTF-30, NOTF-31
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] Tests: pinned with details → `{ id, title }`; pinned without details → `{ id, title: null }`; number not pinned → `{ id, title: null }`; branch without a number → `null`; `null` branch → `null`; two pins with the same id → the first
+- [ ] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
+- [ ] Test count: 990 → ~996 (no silent deletions)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(main): link a session branch to its pinned task`
+
+---
+
+### T15: Describe a notification with its task
+
+**What**: Give `describeNotification` an optional `task`: title `#<id> · <title>` or `#<id>`, body `<state>\n<agent> · <session title>`; clip every title to 60 characters with `…`.
+**Where**: `src/main/activity-notification.ts`
+**Depends on**: T14
+**Reuses**: the rev3 agent-prefix rule, now applied to the body's second line
+**Requirement**: NOTF-30, NOTF-31, NOTF-32, NOTF-33
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] Existing `describeNotification` tests pass unmodified (the no-task layout is unchanged)
+- [ ] Tests: title and two-line body with a titled task; `#<id>` title with an untitled task; a 100-character task title gives a 60-character title ending in `…`; a title of exactly 60 characters is not cut; the second body line applies the agent prefix to a renamed session
+- [ ] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
+- [ ] Test count: ~996 → ~1001 (no silent deletions)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(main): name the task in session notifications`
+
+---
+
+### T16: Report the session cwd with each transition
+
+**What**: Add `cwd` to `ActivityChange` and fill it in `SessionManager.#setActivity`.
+**Where**: `src/main/session-manager.ts`
+**Depends on**: T6
+**Reuses**: `session.meta.cwd`
+**Requirement**: NOTF-30
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] The first-state test in `session-manager.test.ts` asserts `cwd` in the reported change (the `ActivityChange` type gains the field in `activity-notification.ts` in this same task)
+- [ ] Gate check passes: `npm test`
+- [ ] Test count: unchanged or +1 (no silent deletions)
+
+**Tests**: unit
+**Gate**: full
+
+**Commit**: `feat(main): report the session cwd with activity transitions`
+
+---
+
+### T17: SessionNotifier looks the task up after deciding
+
+**What**: Add `linkedTask(cwd)` to `SessionNotifierDeps`; make `handle` async, call the dep only when the decision is not `null`, treat a rejection as no task, and pass the task to `describeNotification`.
+**Where**: `src/main/session-notifier.ts`
+**Depends on**: T15, T16
+**Reuses**: the existing fake harness in `session-notifier.test.ts`
+**Requirement**: NOTF-30, NOTF-34, NOTF-35
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] Existing tests await `handle` and keep their assertions
+- [ ] Tests: a linked task reaches both surfaces' title and body; a silent transition never calls `linkedTask`; a rejecting `linkedTask` still notifies with the no-task layout
+- [ ] Gate check passes: `npx vitest run src/main/session-notifier.test.ts`
+- [ ] Test count: ~1001 → ~1004 (no silent deletions)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(main): look up the linked task only for notifying transitions`
+
+---
+
+### T18: Read the session branch in main
+
+**What**: In `index.ts`, add `readBranch(cwd)` (`git symbolic-ref --short HEAD`, 2 s timeout, `windowsHide`, any error → `null`) and wire `linkedTask: async (cwd) => linkTask(await readBranch(cwd), taskBoard.list().tasks)`.
+**Where**: `src/main/index.ts`
+**Depends on**: T17
+**Reuses**: `execFile`/`promisify` already imported in `index.ts`; `taskBoard`
+**Requirement**: NOTF-30, NOTF-34, NOTF-35
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] No Azure DevOps call on the notification path (`taskBoard.list()` only)
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
+- [ ] Test count: unchanged (no silent deletions)
+
+**Tests**: none (Electron/main wiring — covered by T20's smoke)
+**Gate**: build
+
+**Commit**: `feat(main): read the session branch to name its task`
+
+---
+
+### T19: Notice layout for longer titles
+
+**What**: In `SessionNotices.css`, clamp the title to two lines and render body line breaks.
+**Where**: `src/renderer/src/components/SessionNotices.css`
+**Depends on**: T9
+**Reuses**: existing notice tokens
+**Requirement**: NOTF-36
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] Title uses a two-line clamp instead of `white-space: nowrap`; body uses `white-space: pre-line`
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [ ] Test count: unchanged (no silent deletions)
+
+**Tests**: none (renderer component — hand-verified in T20)
+**Gate**: build
+
+**Commit**: `style(renderer): let session notices show a task title and two body lines`
+
+---
+
+### T20: Smoke the task in the notification
+
+**What**: Run session A in a throwaway git repo under the scratch temp folder on branch `feature/12345-notify-smoke`, and update the notice checks to expect title `#12345` and the `<agent> · <session>` body line; remove the repo afterwards.
+**Where**: `scripts/smoke-notifications.mjs`
+**Depends on**: T18, T19
+**Reuses**: the smoke's cleanup and notice helpers
+**Requirement**: NOTF-31, NOTF-32, NOTF-36
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] The in-app approval notice check expects title `#12345` and a body with both lines; session B stays in `C:/Windows` and its notices (if any) keep the no-task layout
+- [ ] The guided OS step asks the owner to confirm the task title and the second body line in the Windows toast (the newline risk)
+- [ ] The temp repo is removed in cleanup; still zero tokens
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [ ] Test count: unchanged (no silent deletions)
+
+**Tests**: none (smoke script — owner-run)
+**Gate**: build
+
+**Commit**: `test(notifications): smoke the task named in notifications`
+
+---
+
 ## Phase Execution Map
 
 Phases run in sequence; within a phase the tasks run in the order listed.
@@ -484,6 +689,8 @@ Phases run in sequence; within a phase the tasks run in the order listed.
 | 2 | Main-process decision | T4, T5 |
 | 3 | Main-process integration | T6, T7 |
 | 4 | Renderer and smoke | T8, T9, T10, T11, T12, T13 |
+| 5 | Task in the notification — main (rev4) | T14, T15, T16, T17, T18 |
+| 6 | Task in the notification — renderer and smoke (rev4) | T19, T20 |
 
 Execution is strictly sequential - there is no intra-phase parallelism. A single agent (or batch worker) works one task at a time, in order.
 
@@ -508,6 +715,13 @@ Packing for Execute: 13 tasks at ~7 per batch → **2 batches** (Phases 1–3 = 
 | T11: settings tabs | 1 component change (+ its CSS) | ✅ Granular |
 | T12: notification switches | 1 tab body | ✅ Granular |
 | T13: smoke | 1 script | ✅ Granular |
+| T14: `linkTask` | 1 function | ✅ Granular |
+| T15: describe with task | 1 function change + `clip` | ✅ Granular |
+| T16: `cwd` on the change | 1 field, 1 call site | ✅ Granular |
+| T17: async lookup in notifier | 1 method | ✅ Granular |
+| T18: `readBranch` wiring | 1 file | ✅ Granular |
+| T19: notice CSS | 1 stylesheet | ✅ Granular |
+| T20: smoke update | 1 script | ✅ Granular |
 
 ---
 
@@ -528,6 +742,13 @@ Packing for Execute: 13 tasks at ~7 per batch → **2 batches** (Phases 1–3 = 
 | T11 | None | none | ✅ Match |
 | T12 | T2, T11 | T2 → T12, T11 → T12 | ✅ Match |
 | T13 | T7, T10, T12 | T7 → T13, T10 → T13, T12 → T13 | ✅ Match |
+| T14 | T4 | T4 → T14 | ✅ Match |
+| T15 | T14 | T14 → T15 | ✅ Match |
+| T16 | T6 | T6 → T16 | ✅ Match |
+| T17 | T15, T16 | T15 → T17, T16 → T17 | ✅ Match |
+| T18 | T17 | T17 → T18 | ✅ Match |
+| T19 | T9 | T9 → T19 | ✅ Match |
+| T20 | T18, T19 | T18 → T20, T19 → T20 | ✅ Match |
 
 No dependency points to a later phase.
 
@@ -550,6 +771,13 @@ No dependency points to a later phase.
 | T11 | Renderer component | none | none | ✅ OK |
 | T12 | Renderer component | none | none | ✅ OK |
 | T13 | Smoke script | none | none | ✅ OK |
+| T14 | Pure main logic | unit | unit | ✅ OK |
+| T15 | Pure main logic | unit | unit | ✅ OK |
+| T16 | DI orchestrator (`SessionManager`) | unit | unit | ✅ OK |
+| T17 | DI orchestrator (`SessionNotifier`) | unit | unit | ✅ OK |
+| T18 | Electron/main wiring | none | none | ✅ OK |
+| T19 | Renderer component (CSS) | none | none | ✅ OK |
+| T20 | Smoke script | none | none | ✅ OK |
 
 ---
 

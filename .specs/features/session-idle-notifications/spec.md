@@ -9,6 +9,9 @@
 > Revised 2026-09-16 after the owner answered the open assumptions: one master switch **plus
 > a switch per notifiable state**, all enabled by default. P3 grows accordingly. Changes are
 > marked **[rev3]**.
+>
+> Revised again 2026-09-16 after the owner smoke passed: the notification names the **task**
+> the session works on, as P4. Changes are marked **[rev4]**.
 
 ## Problem Statement
 
@@ -46,6 +49,8 @@ nothing to notify about.
 | Per-agent or per-session notification settings | **[rev3]** The per-state switches cover "which notifications"; "for which session" waits for evidence it is needed |
 | **[rev3]** Separate switches per surface (OS notification vs in-app toast) | The surface follows from focus, not preference; a state switch silences both |
 | Sound, urgency levels, notification actions/buttons | The existing notifier surfaces title + body + click; matching it keeps one code path |
+| **[rev4]** Fetching a task title from Azure DevOps to build a notification | A notification must not wait on the network or fail with it; an unpinned task shows its number only. Owner decision |
+| **[rev4]** Resolving the task through the registered worktree tree | Scanning every workspace per notification is too heavy; the session's own cwd branch answers the same question |
 | Batching or rate-limiting several at once | One per session, bounded by how many agents the user chose to run |
 | **[rev2]** Notifying that a usage limit paused a session | `StopFailure` reports `rate_limit` as an `error`, which this feature does notify. The `quota_auto_resume_*` notifications that say the wait ended are not consumed by `session-activity-status` yet; see its follow-up |
 
@@ -67,6 +72,9 @@ nothing to notify about.
 | **[rev3]** What "attached" means | The session whose terminal is mounted in the agents direction. In any other direction no session is attached, so a focused window gets an in-app notice for every session | Leaving the agents direction unmounts the terminal and detaches it; its row is not on screen either | y |
 | **[rev2]** Where the decision is made | Main, which already holds the attached session (`SessionManager.#activeId`) and can read window focus. The in-app toast is a push to the renderer | Keeping one decision in one place stops the two surfaces from disagreeing about whether a transition was notifiable. **Design may split it; that is a Design call, not a spec one** | Design |
 | **[rev3]** Setting shape | Under `ui`, absent keys = enabled, persisted immediately on toggle via `config:patch`, edited in the settings dialog. The exact key shape is a Design call — note `ConfigPatch` merges `ui` one level deep, so a nested object is replaced whole | Persist-on-change matches `defaultShell`. Replaces the single `ui.notifyOnAgentActivity` boolean of rev2 | Design |
+| **[rev4]** Where the task comes from | The number is the last branch segment's number (`taskIdFromBranch`, as the rail does) of the session cwd's current branch, read with `git rev-parse --abbrev-ref HEAD`. The title is the pinned task's cached details, no network | Same number the rail groups by; the cache is what the tasks pane already shows | y |
+| **[rev4]** Layout with a task | Title `#<id> · <task title>` (or `#<id>` with no cached title); body line 1 the state, line 2 `<agent> · <session title>`. Without a task the rev3 layout stands | Owner decision 2026-09-16 | y |
+| **[rev4]** Length | The title is cut to 60 characters ending in `…`; the in-app notice lets it wrap to two lines | Owner decision: task titles can be long, and the Windows title line does not wrap | y |
 | Click target | Show and focus the window, switch to the agents direction, select the session | Mirrors the `workflow:focus-run` path already shipped | y |
 | **[rev2]** Notification content | Title: agent + session title. Body: the state, plus the detail the activity already carries — the tool for an approval, the error type for a failure | `SessionActivity` carries `tool` and `error`, so "needs approval to run Bash" and "turn failed: rate_limit" cost nothing extra. A body that only says "waiting" makes the user open the app to learn what it wants. **[rev3]** Confirmed by the owner. Pinned wording: title `<agent> · <title>` (no doubled prefix when the title already starts with it); body `Needs approval to run <tool>` / `Needs your approval`, `Needs your input`, `Finished its turn`, `Turn failed: <error>` / `Turn failed` | y |
 | Several sessions at once | One notification per session, no batching | Bounded by how many agents the user chose to run |
@@ -163,6 +171,29 @@ without giving up the rest.
 prompt again — nothing. Turn the master back on: `waiting` is still off. Restart the app and
 every switch holds.
 
+### P4: Told which task the agent is on **[rev4]**
+
+**User Story**: As a user running agents on several tasks, I want the notification to name the
+task, so that I know which work is waiting without opening the app.
+
+**Why P4**: The session title defaults to the worktree folder, which rarely says what the work is.
+It builds on P1–P3 and changes only the wording.
+
+**Acceptance Criteria**:
+
+1. WHERE the session's cwd is on a branch whose last segment carries a task number and that task is pinned with cached details, the notification title SHALL be `#<id> · <task title>`.  <!-- optional-feature -->
+2. WHERE the branch carries a task number that is not pinned or has no cached details, the notification title SHALL be `#<id>`.  <!-- optional-feature -->
+3. WHERE the notification names a task, its body SHALL be the state line followed by a line `<agent> · <session title>`.  <!-- optional-feature -->
+4. The notification title SHALL be at most 60 characters, cut with a trailing `…` when longer.  <!-- ubiquitous -->
+5. IF the branch cannot be read (not a git directory, a detached HEAD, git failing or taking longer than 2 seconds) THEN the notification SHALL use the layout without a task.  <!-- unwanted-behavior -->
+6. The app SHALL NOT call Azure DevOps to build a notification.  <!-- ubiquitous -->
+7. The in-app notice SHALL show the title on up to two lines and each body line on its own line.  <!-- ubiquitous -->
+
+**Independent Test**: Start an agent in a worktree whose branch ends in a pinned task's number,
+switch away, trigger a permission prompt: the notification reads `#<id> · <task title>`,
+`Needs approval to run Bash`, `<agent> · <session>`. Unpin the task and repeat: the title is
+just `#<id>`. Repeat in a folder that is not a git repository: the rev3 layout.
+
 ---
 
 ## Edge Cases
@@ -210,12 +241,19 @@ every switch holds.
 | NOTF-27 | Edge cases | Execute | Verified |
 | NOTF-28 | P3: Choose which notifications to get (AC 9, added after the edge cases were numbered) | Execute | Verified |
 | NOTF-29 | P3: Choose which notifications to get (AC 10) | Execute | Verified |
+| NOTF-30 | P4: Told which task the agent is on | - | Pending |
+| NOTF-31 | P4: Told which task the agent is on | - | Pending |
+| NOTF-32 | P4: Told which task the agent is on | - | Pending |
+| NOTF-33 | P4: Told which task the agent is on | - | Pending |
+| NOTF-34 | P4: Told which task the agent is on | - | Pending |
+| NOTF-35 | P4: Told which task the agent is on | - | Pending |
+| NOTF-36 | P4: Told which task the agent is on | - | Pending |
 
 **ID format:** `NOTF-[NUMBER]`
 
 **Status values:** Pending → In Design → In Tasks → Implementing → Verified
 
-**Coverage:** 29 total, 29 mapped to tasks T1–T13 + fix round 1, 0 unmapped
+**Coverage:** 36 total; NOTF-01..29 mapped to T1–T13 + fix round 1, NOTF-30..36 pending Tasks
 
 ---
 
@@ -228,3 +266,4 @@ every switch holds.
 - [ ] **[rev2]** A turn that compacts, runs ten tools and finishes produces exactly one notification
 - [ ] The off switch silences both surfaces and survives a restart
 - [ ] **[rev3]** Turning one state off silences only that state, and survives toggling the master switch and a restart
+- [ ] **[rev4]** A notification from a session on a pinned task's branch names that task, and a long task title never overflows

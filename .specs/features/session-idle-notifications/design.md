@@ -234,3 +234,60 @@ interface NotificationPrefs {
 | Notification wording | English, fixed strings in `describeNotification` | The UI is English; one pure function makes every string a test assertion |
 
 > No new project-level `AD-NNN`: every choice here is local to this feature.
+
+---
+
+## Increment rev4: the task in the notification (NOTF-30..36)
+
+### Flow
+
+`SessionNotifier.handle` keeps deciding synchronously, and only a transition that notifies looks
+the task up, so a silent transition never runs git:
+
+```mermaid
+graph TD
+    SM[SessionManager onActivityChange + cwd] --> SN[SessionNotifier.handle]
+    SN --> D{decideNotification}
+    D -->|null| X[nothing, no git]
+    D -->|os / in-app| LT[deps.linkedTask cwd]
+    LT --> RB[readBranch: git symbolic-ref --short HEAD, 2 s]
+    RB --> LK[linkTask branch, taskBoard.list]
+    LK --> DN[describeNotification session, activity, task]
+    DN --> OUT[showOs / session:notice]
+```
+
+### Components
+
+- **`linkTask(branch: string | null, tasks: PinnedTaskView[]): LinkedTask | null`** — pure, in
+  `src/main/activity-notification.ts`. `taskIdFromBranch` (shared, the rail's rule) gives the
+  number; the first pin with that id (the rail's `linkedPinFor` first-match rule) gives
+  `details.title` when cached, else `null`. `LinkedTask = { id: number; title: string | null }`.
+- **`describeNotification(session, activity, task?)`** — with a task: title `#<id> · <title>` or
+  `#<id>`, body `<state line>\n<agent> · <session title>` (the rev3 agent-prefix rule applied to
+  the second line); without one, unchanged. Title cut by `clip(text, 60)`: longer text keeps its
+  first 59 characters plus `…` (NOTF-33).
+- **`ActivityChange.cwd`** — `SessionManager` adds the session's cwd.
+- **`SessionNotifierDeps.linkedTask(cwd: string): Promise<LinkedTask | null>`** — `handle`
+  becomes `async`; the dep is awaited after the decision and any rejection means no task
+  (NOTF-34). `SessionManager` keeps calling it fire-and-forget.
+- **`readBranch(cwd)`** in `index.ts` — `execFile('git', ['symbolic-ref', '--short', 'HEAD'], {
+  cwd, timeout: 2000, windowsHide: true })`. `symbolic-ref` answers on an unborn branch and fails
+  on a detached HEAD, which is exactly "no branch". Any error resolves `null`.
+- **`SessionNotices.css`** — title `-webkit-line-clamp: 2` instead of one-line ellipsis; body
+  `white-space: pre-line` so its two lines stay two lines (NOTF-36).
+
+### Risks & Concerns (rev4)
+
+| Concern | Location | Impact | Mitigation |
+| ------- | -------- | ------ | ---------- |
+| A newline in an Electron `Notification` body on Windows is not documented to render as a line break (uncertain) | `src/main/index.ts` `showOs` | The two body lines could run together in the Windows toast | Smoke step 7b already shows a real toast; the owner checks the second line there. Fallback if it runs together: join with ` — ` for the OS surface only |
+| The task lookup makes delivery asynchronous | `session-notifier.ts` | Two notifications for one session within a few ms could arrive out of order | Bounded by the 2 s git timeout; transitions that notify are seconds apart in practice. Accepted |
+| A git call per notification | `index.ts` `readBranch` | A slow disk delays the notification | 2 s timeout, then the no-task layout (NOTF-34); only notifying transitions pay it |
+
+### Tech Decisions (rev4)
+
+| Decision | Choice | Rationale |
+| -------- | ------ | --------- |
+| Branch source | `git symbolic-ref --short HEAD` in the session cwd | One cheap call per notification instead of `buildTree` over every workspace; unborn branch still works |
+| Task title source | `TaskBoard.list()` cached details | Already in memory, no network (NOTF-35) |
+| Lookup after the decision | `linkedTask` only for a notifying transition | Keeps git off the hot path of every tool call |
