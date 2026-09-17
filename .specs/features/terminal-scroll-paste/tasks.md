@@ -273,7 +273,7 @@ T18 → T19
 
 ---
 
-### T6: Paste temp purge
+### T6: Paste temp purge ✅
 
 **What**: Implement `PASTE_MAX_AGE_MS`, `selectExpired` and `purgePasteDir` that deletes pasted images strictly older than 7 days and never throws.
 **Where**: `src/main/paste-temp.ts`
@@ -288,12 +288,12 @@ T18 → T19
 
 **Done when**:
 
-- [ ] `selectExpired`: older than max → selected; exactly max → kept (TSP-36); newer → kept
-- [ ] `purgePasteDir` on a `mkdtempSync` dir with `utimesSync`-aged files deletes only the expired ones (TSP-18)
-- [ ] Missing dir → no throw, no side effect (TSP-19)
-- [ ] An undeletable entry (e.g. a non-empty subdirectory named like a file) is skipped and the rest still purged (TSP-19)
-- [ ] Gate check passes: `npx vitest run src/main/paste-temp.test.ts`
-- [ ] Test count: +~6 (no silent deletions)
+- [x] `selectExpired`: older than max → selected; exactly max → kept (TSP-36); newer → kept
+- [x] `purgePasteDir` on a `mkdtempSync` dir with `utimesSync`-aged files deletes only the expired ones (TSP-18)
+- [x] Missing dir → no throw, no side effect (TSP-19)
+- [x] An undeletable entry (e.g. a non-empty subdirectory named like a file) is skipped and the rest still purged (TSP-19)
+- [x] Gate check passes: `npx vitest run src/main/paste-temp.test.ts`
+- [x] Test count: +~6 (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick

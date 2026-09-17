@@ -256,8 +256,8 @@ mouse movement, and the wheel scrolls pwsh's scrollback.
 | TSP-15 | P1: Image paste | T1, T5 | Implementing |
 | TSP-16 | P1: Image paste | T5 | Implementing |
 | TSP-17 | P1: Image paste | Tasks | Pending |
-| TSP-18 | P1: Image paste | Tasks | Pending |
-| TSP-19 | P1: Image paste | Tasks | Pending |
+| TSP-18 | P1: Image paste | T6 | Implementing |
+| TSP-19 | P1: Image paste | T6 | Implementing |
 | TSP-20 | P1: Image paste | Tasks | Pending |
 | TSP-21 | P1: File paste | T1, T5 | Implementing |
 | TSP-22 | P1: File paste | T1 | Implementing |
@@ -277,7 +277,7 @@ mouse movement, and the wheel scrolls pwsh's scrollback.
 | TSP-36 | Edge | T5 | Implementing |
 | TSP-37 | Edge | T1 | Implementing |
 | TSP-38 | Edge | T5 | Implementing |
-| TSP-39 | Edge | Tasks | Pending |
+| TSP-39 | Edge | T6 | Implementing |
 | TSP-40 | Edge | Tasks | Pending |
 
 **Coverage:** 40 total (6 conditional), 40 mapped to tasks, 0 unmapped.
