@@ -354,7 +354,13 @@ app.whenReady().then(() => {
     emit: emitToWindow,
     fsExists: existsSync,
     hooks: activityHooks,
-    onActivityChange: (change) => void sessionNotifier.handle(change)
+    // handle() is async since it looks the task up; a failure after the lookup
+    // (in showOs, say) must be logged, not left as an unhandled rejection.
+    onActivityChange: (change) => {
+      sessionNotifier
+        .handle(change)
+        .catch((err) => console.error('[notifications] session notification failed', err))
+    }
   })
   const sessions = sessionManager
   hookServer.onEvent((sessionId, payload) => sessions.handleHookEvent(sessionId, payload))

@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/session-idle-notifications/design.md`
-**Status**: T1–T13 Done (Verifier PASS, owner smoke 34/34); rev4 T14–T20 executed — Verifier pending
+**Status**: T1–T13 Done (Verifier PASS, owner smoke 34/34); rev4 T14–T20 executed; Verifier round 3 FAIL (evidence), fix round 2 applied — re-verify pending
 **Branch**: `feature/session-idle-notifications` (stacked on `feature/session-activity-status` `65de9fd`, PR #88)
 **Test baseline**: **917 tests / 52 files**, measured green on this branch before any task.
 
@@ -814,3 +814,25 @@ Both are unreachable on a Windows desktop (notifications are supported; closing 
 ### F4: Spec precision ✅ COMPLETE
 
 Notification wording pinned in the spec's content row; NOTF-19's assumption row marked accepted; "attached" defined for directions other than agents.
+
+---
+
+## Fix round 2 (Verifier round 3 FAIL on the rev4 increment, 2026-09-16)
+
+Round 3: gates green (1006 tests), 17/17 mutants killed. FAIL on evidence and documentation only.
+
+### F5: NOTF-36 title half named for hand-verification ✅ COMPLETE
+
+The smoke's task is unpinned, so its `#<id>` title never wraps. The smoke header now names a long pinned task title as a hand check.
+
+### F6: Spec row names the shipped git command ✅ COMPLETE
+
+The rev4 source row said `git rev-parse --abbrev-ref HEAD`; the code uses `git symbolic-ref --short HEAD`, which answers on an unborn branch (the smoke's temp repo) and fails on a detached HEAD. Row corrected; stale coverage line updated.
+
+### F7: NOTF-34 git half named as code reading ✅ COMPLETE
+
+Added to the smoke header's CODE READING ONLY list, next to NOTF-06 and NOTF-21.
+
+### F8: No unhandled rejection from the async notifier ✅ COMPLETE
+
+`index.ts` catches and logs a failure of `sessionNotifier.handle` instead of `void`-ing the promise (Verifier observation: a throw in `showOs` after the lookup no longer reached `#setActivity`'s try/catch).

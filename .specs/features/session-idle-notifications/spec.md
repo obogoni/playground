@@ -72,7 +72,7 @@ nothing to notify about.
 | **[rev3]** What "attached" means | The session whose terminal is mounted in the agents direction. In any other direction no session is attached, so a focused window gets an in-app notice for every session | Leaving the agents direction unmounts the terminal and detaches it; its row is not on screen either | y |
 | **[rev2]** Where the decision is made | Main, which already holds the attached session (`SessionManager.#activeId`) and can read window focus. The in-app toast is a push to the renderer | Keeping one decision in one place stops the two surfaces from disagreeing about whether a transition was notifiable. **Design may split it; that is a Design call, not a spec one** | Design |
 | **[rev3]** Setting shape | Under `ui`, absent keys = enabled, persisted immediately on toggle via `config:patch`, edited in the settings dialog. The exact key shape is a Design call — note `ConfigPatch` merges `ui` one level deep, so a nested object is replaced whole | Persist-on-change matches `defaultShell`. Replaces the single `ui.notifyOnAgentActivity` boolean of rev2 | Design |
-| **[rev4]** Where the task comes from | The number is the last branch segment's number (`taskIdFromBranch`, as the rail does) of the session cwd's current branch, read with `git rev-parse --abbrev-ref HEAD`. The title is the pinned task's cached details, no network | Same number the rail groups by; the cache is what the tasks pane already shows | y |
+| **[rev4]** Where the task comes from | The number is the last branch segment's number (`taskIdFromBranch`, as the rail does) of the session cwd's current branch, read with `git symbolic-ref --short HEAD` (unlike `rev-parse`, it answers on a branch with no commits yet and fails on a detached HEAD). The title is the pinned task's cached details, no network | Same number the rail groups by; the cache is what the tasks pane already shows | y |
 | **[rev4]** Layout with a task | Title `#<id> · <task title>` (or `#<id>` with no cached title); body line 1 the state, line 2 `<agent> · <session title>`. Without a task the rev3 layout stands | Owner decision 2026-09-16 | y |
 | **[rev4]** Length | The title is cut to 60 characters ending in `…`; the in-app notice lets it wrap to two lines | Owner decision: task titles can be long, and the Windows title line does not wrap | y |
 | Click target | Show and focus the window, switch to the agents direction, select the session | Mirrors the `workflow:focus-run` path already shipped | y |
@@ -253,7 +253,7 @@ just `#<id>`. Repeat in a folder that is not a git repository: the rev3 layout.
 
 **Status values:** Pending → In Design → In Tasks → Implementing → Verified
 
-**Coverage:** 36 total; NOTF-01..29 mapped to T1–T13 + fix round 1, NOTF-30..36 pending Tasks
+**Coverage:** 36 total; NOTF-01..29 mapped to T1–T13 + fix round 1, NOTF-30..36 mapped to T14–T20 + fix round 2
 
 ---
 

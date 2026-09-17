@@ -27,6 +27,10 @@
  *   - no OS notification and no notice while focused on the session itself (NOTF-03)
  *   - the two-theme visual pass of the tabs, the switches (disabled state) and
  *     the notice stack
+ *   - NOTF-36, title half: pin a task with a long title, run an agent in a worktree
+ *     on its branch, and trigger a notice while another session is on screen. The
+ *     title must wrap to two lines and end in `…` (this smoke's task is unpinned,
+ *     so its `#<id>` title never wraps)
  *
  * CODE READING ONLY (not reproducible on a Windows desktop):
  *   - NOTF-06: an OS without notification support. `showOs` returns before
@@ -35,6 +39,10 @@
  *   - NOTF-21: a click after the window was destroyed. `revealWindow` returns on
  *     a missing or destroyed window and `emitToWindow` on a missing one; on
  *     Windows closing the last window quits the app, so the click cannot outlive it
+ *   - NOTF-34, git half: `readBranch` in `src/main/index.ts` returns null on any git
+ *     error, a detached HEAD (`symbolic-ref` fails), a folder outside git and after
+ *     its 2 s timeout; what a null branch does is unit-tested (`linkTask`,
+ *     `SessionNotifier` with a failing lookup)
  *
  * TASK IN THE NOTIFICATION (P4): session A runs in a throwaway git repository
  * under %TEMP% on branch `feature/<id>-notify-smoke`, with an id nobody has pinned,
