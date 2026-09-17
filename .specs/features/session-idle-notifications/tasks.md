@@ -384,7 +384,9 @@ T12 → T13
 
 ---
 
-### T11: Settings dialog tabs
+### T11: Settings dialog tabs ✅ COMPLETE
+
+**Status**: Done — `set-tabs` tablist under the header (General / Notifications, `role=tab` + `aria-selected`), header title follows the tab, unpersisted `tab` state opening on General, General body untouched, Notifications panel empty until T12. Build gate green: typecheck 0, lint 0 errors, 990 tests.
 
 **What**: Add a `role="tablist"` with **General** and **Notifications** under the dialog header; General holds today's body unchanged, the header title follows the tab, and the dialog opens on General.
 **Where**: `src/renderer/src/components/SettingsDialog.tsx` (+ `SettingsDialog.css`)
@@ -399,11 +401,11 @@ T12 → T13
 
 **Done when**:
 
-- [ ] Tabs carry `role="tab"` + `aria-selected`; the Notifications panel is an empty placeholder until T12
-- [ ] Field state stays at dialog level, so an unsaved template edit and an open agent form survive General → Notifications → General (NOTF-29)
-- [ ] Footer unchanged on both tabs
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged (no silent deletions)
+- [x] Tabs carry `role="tab"` + `aria-selected`; the Notifications panel is an empty placeholder until T12
+- [x] Field state stays at dialog level, so an unsaved template edit and an open agent form survive General → Notifications → General (NOTF-29)
+- [x] Footer unchanged on both tabs
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
 
 **Tests**: none (renderer component — hand-verified in T13)
 **Gate**: build

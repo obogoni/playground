@@ -207,8 +207,8 @@ every switch holds.
 | NOTF-25 | Edge cases | Execute | Implementing |
 | NOTF-26 | Edge cases | Execute | Implementing |
 | NOTF-27 | Edge cases | Execute | Implementing |
-| NOTF-28 | P3: Choose which notifications to get (AC 9, added after the edge cases were numbered) | - | Pending |
-| NOTF-29 | P3: Choose which notifications to get (AC 10) | - | Pending |
+| NOTF-28 | P3: Choose which notifications to get (AC 9, added after the edge cases were numbered) | Execute | Implementing |
+| NOTF-29 | P3: Choose which notifications to get (AC 10) | Execute | Implementing |
 
 **ID format:** `NOTF-[NUMBER]`
 

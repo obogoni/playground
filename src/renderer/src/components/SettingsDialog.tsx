@@ -33,6 +33,13 @@ interface AgentForm {
   color: string
 }
 
+type SettingsTab = 'general' | 'notifications'
+
+const TABS: { id: SettingsTab; label: string; title: string }[] = [
+  { id: 'general', label: 'General', title: 'Azure DevOps, agents & shell' },
+  { id: 'notifications', label: 'Notifications', title: 'Agent notifications' }
+]
+
 const EMPTY_FORM: Omit<AgentForm, 'editKey'> = {
   name: '',
   command: '',
@@ -61,6 +68,9 @@ export function SettingsDialog({
   const [defaultShell, setDefaultShell] = useState<Shell>('pwsh')
   const [form, setForm] = useState<AgentForm | null>(null)
   const [busy, setBusy] = useState(false)
+  // Not persisted: the dialog always opens on General (NOTF-28). Every field's
+  // state lives here, above the tabs, so switching tabs loses no edit (NOTF-29).
+  const [tab, setTab] = useState<SettingsTab>('general')
 
   useEffect(() => {
     api
@@ -149,11 +159,28 @@ export function SettingsDialog({
         <header className="dialog-header">
           <div className="dialog-kicker">Settings</div>
           <div className="dialog-title-row">
-            <span className="dialog-task-title">Azure DevOps, agents &amp; shell</span>
+            <span className="dialog-task-title">{TABS.find((t) => t.id === tab)?.title}</span>
+          </div>
+          <div className="set-tabs" role="tablist" aria-label="Settings sections">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                className={`set-tab${tab === t.id ? ' active' : ''}`}
+                onClick={() => setTab(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
         </header>
-        {loaded && (
-          <div className="dialog-body">
+        {loaded && tab === 'notifications' && (
+          <div className="dialog-body" role="tabpanel" aria-label="Notifications" />
+        )}
+        {loaded && tab === 'general' && (
+          <div className="dialog-body" role="tabpanel" aria-label="General">
             <div className="dialog-branch-row">
               <div>
                 <div className="dialog-field-label">

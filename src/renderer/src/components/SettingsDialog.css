@@ -164,3 +164,35 @@
   background: var(--accent);
   color: #fff;
 }
+
+/* General / Notifications tabs — the TopBar segmented look (NOTF-28) */
+
+.set-tabs {
+  display: flex;
+  width: fit-content;
+  margin-top: 14px;
+  padding: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.set-tab {
+  padding: 5px 14px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.set-tab:hover:not(.active) {
+  color: var(--text);
+}
+
+.set-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
