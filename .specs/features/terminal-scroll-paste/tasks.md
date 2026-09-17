@@ -27,7 +27,7 @@ both are skipped.
 | Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
 | ---------- | ------------------ | -------------------- | ---------------- | ----------- |
 | Shared pure helpers (`src/shared/paste.ts`) | unit | All branches; 1:1 to TSP-12/15/21/22/27/34 | `src/shared/<module>.test.ts` | `npx vitest run <file>` |
-| Main pure / DI modules (`terminal-mode-tracker`, `session-ring-buffer`, `clipboard-reader`, `paste-temp`) | unit | All branches; 1:1 to spec ACs; every listed edge case (TSP-09, 33-36); DI fakes hand-rolled, temp dirs real (TESTING.md patterns 2 and 3) | `src/main/<module>.test.ts` | `npx vitest run <file>` |
+| Main pure / DI modules (`terminal-mode-tracker`, `session-ring-buffer`, `clipboard-reader`, `paste-temp`) | unit | All branches; 1:1 to spec ACs; every listed edge case (TSP-09, 36-39); DI fakes hand-rolled, temp dirs real (TESTING.md patterns 2 and 3) | `src/main/<module>.test.ts` | `npx vitest run <file>` |
 | Renderer pure libs (`terminal-modes.ts`, `terminal-keys.ts`) | unit | All branches; 1:1 to TSP-04/05/17/29-33 | `src/renderer/src/lib/<module>.test.ts` | `npx vitest run <file>` |
 | Type-only contract (`src/shared/ipc-contract.ts`) | none | Build gate only | - | build gate only |
 | Thin Electron shells (`src/main/index.ts`, `src/preload/index.ts`) | none | Hand-verified (TESTING.md) | - | build gate only |
