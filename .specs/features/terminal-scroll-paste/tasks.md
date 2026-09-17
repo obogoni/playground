@@ -175,7 +175,7 @@ T18 → T19
 
 ---
 
-### T3: Terminal mode tracker
+### T3: Terminal mode tracker ✅
 
 **What**: Implement `TerminalModeTracker` (`feed`, `prefix`) folding DEC private mode sets/resets into the tracked state and encoding the non-default state as a prefix.
 **Where**: `src/main/terminal-mode-tracker.ts`
@@ -190,17 +190,17 @@ T18 → T19
 
 **Done when**:
 
-- [ ] Fresh tracker `prefix()` = `''`
-- [ ] `?1049h`, `?47h`, `?1047h` all → prefix contains `\x1b[?1049h`; a later `?1049l` removes it (TSP-08)
-- [ ] Tracking: `?1000h` then `?1003h` → only `?1003h` in prefix; `?1002l` clears tracking (any reset clears) (TSP-08)
-- [ ] Encoding: `?1006h` then `?1016h` → `?1016h`; any encoding reset clears (TSP-08)
-- [ ] `?1004h`, `?2004h` set; `?25l` → prefix contains `\x1b[?25l` (TSP-08)
-- [ ] Multi-param `\x1b[?1049;1003;1006h` handled (TSP-06)
-- [ ] Sequence split across two `feed` calls at every byte offset applies once (TSP-09)
-- [ ] Non-private CSI (`\x1b[1049h`, SGR) ignored
-- [ ] Prefix order: alt-screen, tracking, encoding, focus, bracketed paste, cursor (TSP-07)
-- [ ] Gate check passes: `npx vitest run src/main/terminal-mode-tracker.test.ts`
-- [ ] Test count: +~14 (no silent deletions)
+- [x] Fresh tracker `prefix()` = `''`
+- [x] `?1049h`, `?47h`, `?1047h` all → prefix contains `\x1b[?1049h`; a later `?1049l` removes it (TSP-08)
+- [x] Tracking: `?1000h` then `?1003h` → only `?1003h` in prefix; `?1002l` clears tracking (any reset clears) (TSP-08)
+- [x] Encoding: `?1006h` then `?1016h` → `?1016h`; any encoding reset clears (TSP-08)
+- [x] `?1004h`, `?2004h` set; `?25l` → prefix contains `\x1b[?25l` (TSP-08)
+- [x] Multi-param `\x1b[?1049;1003;1006h` handled (TSP-06)
+- [x] Sequence split across two `feed` calls at every byte offset applies once (TSP-09)
+- [x] Non-private CSI (`\x1b[1049h`, SGR) ignored
+- [x] Prefix order: alt-screen, tracking, encoding, focus, bracketed paste, cursor (TSP-07)
+- [x] Gate check passes: `npx vitest run src/main/terminal-mode-tracker.test.ts`
+- [x] Test count: +~14 (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick
