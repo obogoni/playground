@@ -187,7 +187,7 @@ It builds on P1–P3 and changes only the wording.
 1. WHERE the session's cwd is on a branch whose last segment carries a task number and that task is pinned with cached details, the notification title SHALL be `#<id> · <task title>`.  <!-- optional-feature -->
 2. WHERE the branch carries a task number that is not pinned or has no cached details, the notification title SHALL be `#<id>`.  <!-- optional-feature -->
 3. WHERE the notification names a task, its body SHALL be the state line followed by a line `<agent> · <session title>`.  <!-- optional-feature -->
-4. **[rev5]** The app SHALL send the notification title with the task title and the session title whole, never cut or ending in an app-added `…`.  <!-- ubiquitous -->
+4. **[rev5]** The app SHALL send the task title and the session title whole wherever the notification carries them (its title, or the body's second line), never cut or ending in an app-added `…`.  <!-- ubiquitous -->
 5. IF the branch cannot be read (not a git directory, a detached HEAD, git failing or taking longer than 2 seconds) THEN the notification SHALL use the layout without a task.  <!-- unwanted-behavior -->
 6. The app SHALL NOT call Azure DevOps to build a notification.  <!-- ubiquitous -->
 7. **[rev5]** The in-app notice SHALL wrap the title over as many lines as it needs and show each body line on its own line.  <!-- ubiquitous -->

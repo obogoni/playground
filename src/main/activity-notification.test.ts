@@ -236,4 +236,10 @@ describe('describeNotification with a linked task', () => {
       'Needs approval to run Bash\nClaude · Fix login redirect'
     )
   })
+
+  it('sends a long session title whole on the second body line (NOTF-33)', () => {
+    const renamed = { agent: 'Claude', title: 'z'.repeat(120) }
+    const { body } = describeNotification(renamed, approval, { id: 12345, title: null })
+    expect(body).toBe(`Needs approval to run Bash\nClaude · ${'z'.repeat(120)}`)
+  })
 })

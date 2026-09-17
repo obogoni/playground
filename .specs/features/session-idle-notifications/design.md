@@ -264,8 +264,9 @@ graph TD
   `details.title` when cached, else `null`. `LinkedTask = { id: number; title: string | null }`.
 - **`describeNotification(session, activity, task?)`** — with a task: title `#<id> · <title>` or
   `#<id>`, body `<state line>\n<agent> · <session title>` (the rev3 agent-prefix rule applied to
-  the second line); without one, unchanged. Title cut by `clip(text, 60)`: longer text keeps its
-  first 59 characters plus `…` (NOTF-33).
+  the second line); without one, unchanged. ~~Title cut by `clip(text, 60)`: longer text keeps
+  its first 59 characters plus `…` (NOTF-33).~~ **Superseded by rev5:** no cut; titles are sent
+  whole.
 - **`ActivityChange.cwd`** — `SessionManager` adds the session's cwd.
 - **`SessionNotifierDeps.linkedTask(cwd: string): Promise<LinkedTask | null>`** — `handle`
   becomes `async`; the dep is awaited after the decision and any rejection means no task
@@ -273,7 +274,8 @@ graph TD
 - **`readBranch(cwd)`** in `index.ts` — `execFile('git', ['symbolic-ref', '--short', 'HEAD'], {
   cwd, timeout: 2000, windowsHide: true })`. `symbolic-ref` answers on an unborn branch and fails
   on a detached HEAD, which is exactly "no branch". Any error resolves `null`.
-- **`SessionNotices.css`** — title `-webkit-line-clamp: 2` instead of one-line ellipsis; body
+- **`SessionNotices.css`** — ~~title `-webkit-line-clamp: 2` instead of one-line ellipsis~~
+  (**superseded by rev5:** the title wraps freely with `overflow-wrap: anywhere`); body
   `white-space: pre-line` so its two lines stay two lines (NOTF-36).
 
 ### Risks & Concerns (rev4)
@@ -291,3 +293,14 @@ graph TD
 | Branch source | `git symbolic-ref --short HEAD` in the session cwd | One cheap call per notification instead of `buildTree` over every workspace; unborn branch still works |
 | Task title source | `TaskBoard.list()` cached details | Already in memory, no network (NOTF-35) |
 | Lookup after the decision | `linkedTask` only for a notifying transition | Keeps git off the hot path of every tool call |
+
+---
+
+## Increment rev5: whole titles (NOTF-33, NOTF-36 reworded)
+
+Owner decision: the app never cuts a task or session title. `clip` and `MAX_TITLE_LENGTH` are
+removed from `describeNotification`; the task title, the session title in the notification title
+and the session title on the body's second line are all sent as they are. `SessionNotices.css`
+drops the two-line clamp, so the in-app title wraps over as many lines as it needs. The rev4
+Windows-title concern moves to Windows: the toast receives the whole title and may shorten what it
+shows; the app does not control that.

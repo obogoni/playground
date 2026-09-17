@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/session-idle-notifications/design.md`
-**Status**: T1–T13 Done (Verifier PASS, owner smoke 34/34); rev4 T14–T20 Done (Verifier round 4 PASS, 18/18 mutants); rev5 T21–T23 executed — Verifier pending
+**Status**: T1–T13 Done (Verifier PASS, owner smoke 34/34); rev4 T14–T20 Done (Verifier round 4 PASS, 18/18 mutants); rev5 T21–T23 executed; Verifier round 5 FAIL (V7 survived), fix round 3 applied — re-verify pending
 **Branch**: `feature/session-idle-notifications` (stacked on `feature/session-activity-status` `65de9fd`, PR #88)
 **Test baseline**: **917 tests / 52 files**, measured green on this branch before any task.
 
@@ -941,3 +941,17 @@ Added to the smoke header's CODE READING ONLY list, next to NOTF-06 and NOTF-21.
 ### F8: No unhandled rejection from the async notifier ✅ COMPLETE
 
 `index.ts` catches and logs a failure of `sessionNotifier.handle` instead of `void`-ing the promise (Verifier observation: a throw in `showOs` after the lookup no longer reached `#setActivity`'s try/catch).
+
+---
+
+## Fix round 3 (Verifier round 5 FAIL on rev5, 2026-09-16)
+
+Round 5: gates green (1005 tests), 6/7 mutants killed. V7 (cutting the session title on the task layout's second body line) survived.
+
+### F9: Kill V7 ✅ COMPLETE
+
+New test: with a task, a 120-character session title arrives whole on the body's second line. NOTF-33 reworded to name both places the session title appears.
+
+### F10: design.md drift ✅ COMPLETE
+
+The rev4 `clip` and line-clamp bullets are marked superseded, and a short rev5 section records the change.
