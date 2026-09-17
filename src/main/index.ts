@@ -292,6 +292,8 @@ app.whenReady().then(() => {
   const sessionNotifier = new SessionNotifier({
     prefs: () => readNotificationPrefs(configStore.get().ui),
     windowFocused,
+    // Filled by the branch lookup in the next task; no task until then.
+    linkedTask: async () => null,
     showOs,
     reveal: revealWindow,
     emit: emitToWindow
@@ -331,7 +333,7 @@ app.whenReady().then(() => {
     emit: emitToWindow,
     fsExists: existsSync,
     hooks: activityHooks,
-    onActivityChange: (change) => sessionNotifier.handle(change)
+    onActivityChange: (change) => void sessionNotifier.handle(change)
   })
   const sessions = sessionManager
   hookServer.onEvent((sessionId, payload) => sessions.handleHookEvent(sessionId, payload))

@@ -245,7 +245,7 @@ just `#<id>`. Repeat in a folder that is not a git repository: the rev3 layout.
 | NOTF-31 | P4: Told which task the agent is on | Execute | Implementing |
 | NOTF-32 | P4: Told which task the agent is on | Execute | Implementing |
 | NOTF-33 | P4: Told which task the agent is on | Execute | Implementing |
-| NOTF-34 | P4: Told which task the agent is on | - | Pending |
+| NOTF-34 | P4: Told which task the agent is on | Execute | Implementing |
 | NOTF-35 | P4: Told which task the agent is on | - | Pending |
 | NOTF-36 | P4: Told which task the agent is on | - | Pending |
 

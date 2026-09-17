@@ -2,7 +2,8 @@ import type { NotificationPrefs } from '../shared/notifications'
 import {
   decideNotification,
   describeNotification,
-  type ActivityChange
+  type ActivityChange,
+  type LinkedTask
 } from './activity-notification'
 import type { EmitFn } from './session-manager'
 
@@ -11,6 +12,8 @@ export interface SessionNotifierDeps {
   prefs(): NotificationPrefs
   /** False when the window is missing, unfocused or minimized (NOTF-24). */
   windowFocused(): boolean
+  /** The task the session's branch names; looked up only for a notifying transition. */
+  linkedTask(cwd: string): Promise<LinkedTask | null>
   /** Show a native notification; `onClick` runs when the user clicks it. */
   showOs(title: string, body: string, onClick: () => void): void
   /** Bring the window forward. */
@@ -26,7 +29,7 @@ export interface SessionNotifierDeps {
 export class SessionNotifier {
   constructor(private readonly deps: SessionNotifierDeps) {}
 
-  handle(change: ActivityChange): void {
+  async handle(change: ActivityChange): Promise<void> {
     const surface = decideNotification({
       before: change.before,
       after: change.after,
@@ -35,7 +38,9 @@ export class SessionNotifier {
       prefs: this.deps.prefs()
     })
     if (surface === null || change.after === null) return
-    const { title, body } = describeNotification(change, change.after)
+    // A failed lookup costs the task, never the notification (NOTF-34).
+    const task = await this.deps.linkedTask(change.cwd).catch(() => null)
+    const { title, body } = describeNotification(change, change.after, task)
     const { id } = change
     if (surface === 'in-app') {
       this.deps.emit('session:notice', { id, title, body })

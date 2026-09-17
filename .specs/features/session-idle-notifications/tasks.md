@@ -578,7 +578,9 @@ T19 → T20
 
 ---
 
-### T17: SessionNotifier looks the task up after deciding
+### T17: SessionNotifier looks the task up after deciding ✅ COMPLETE
+
+**Status**: Done — `linkedTask(cwd)` dep; `handle` is async, looks the task up only after a notifying decision and treats a rejection as no task. Existing 7 tests now await `handle` with unchanged assertions; +4 tests (task on the OS surface, task on the in-app notice, no lookup for silent transitions, failed lookup keeps the no-task layout). SPEC_DEVIATION: `index.ts` gets a placeholder `linkedTask: async () => null` (and `void` on the fire-and-forget call) in this commit so the tree keeps compiling; T18 replaces it. Gates: typecheck 0, lint 0 errors, 1006 tests.
 
 **What**: Add `linkedTask(cwd)` to `SessionNotifierDeps`; make `handle` async, call the dep only when the decision is not `null`, treat a rejection as no task, and pass the task to `describeNotification`.
 **Where**: `src/main/session-notifier.ts`
@@ -593,10 +595,10 @@ T19 → T20
 
 **Done when**:
 
-- [ ] Existing tests await `handle` and keep their assertions
-- [ ] Tests: a linked task reaches both surfaces' title and body; a silent transition never calls `linkedTask`; a rejecting `linkedTask` still notifies with the no-task layout
-- [ ] Gate check passes: `npx vitest run src/main/session-notifier.test.ts`
-- [ ] Test count: ~1001 → ~1004 (no silent deletions)
+- [x] Existing tests await `handle` and keep their assertions
+- [x] Tests: a linked task reaches both surfaces' title and body; a silent transition never calls `linkedTask`; a rejecting `linkedTask` still notifies with the no-task layout
+- [x] Gate check passes: `npx vitest run src/main/session-notifier.test.ts`
+- [x] Test count: ~1001 → ~1004 (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick
