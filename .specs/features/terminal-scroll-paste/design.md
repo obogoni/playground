@@ -123,7 +123,7 @@ graph TD
 - **Location**: `src/main/clipboard-reader.ts`
 - **Interfaces**:
   - `classifyClipboard(s: { text: string; formats: string[]; imageEmpty: boolean }): 'text' | 'files' | 'image' | 'empty'`: precedence text (non-empty) > files (`text/uri-list` in formats) > image (`!imageEmpty`) > empty (TSP-12, 13, 14, 15)
-  - `parseFileDropList(stdout: string): string[]`: split on CRLF/LF, trim, drop blanks (TSP-33, 34)
+  - `parseFileDropList(stdout: string): string[]`: split on CRLF/LF, trim, drop blanks (TSP-36, 37)
   - `pasteImageName(now: Date, rand: string): string`: `paste-yyyyMMdd-HHmmss-<rand>.png` (TSP-14, 35)
   - `readClipboardPaste(deps: ClipboardReaderDeps): Promise<ClipboardPaste>`: runs the classifier, then the file-list runner or the PNG writer; any thrown error or timeout becomes `{ kind: 'error' }` (TSP-16)
   - `interface ClipboardReaderDeps { readText(): string; formats(): string[]; readImagePng(): Buffer | null; readFileDropList(): Promise<string>; writeFile(path: string, data: Buffer): Promise<void>; pasteDir: string; now(): Date; rand(): string }`

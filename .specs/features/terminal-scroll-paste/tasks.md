@@ -124,7 +124,7 @@ T18 → T19
 **Where**: `src/shared/paste.ts`
 **Depends on**: None
 **Reuses**: `terminal-keys.ts` convention (constrained values exported from the tested seam)
-**Requirement**: TSP-12, TSP-15, TSP-21, TSP-22, TSP-27, TSP-34
+**Requirement**: TSP-12, TSP-15, TSP-21, TSP-22, TSP-27, TSP-37
 
 **Tools**:
 
@@ -135,7 +135,7 @@ T18 → T19
 
 - [x] `planPaste({kind:'text'})` → `[text]` verbatim, multi-line included (TSP-12)
 - [x] `planPaste({kind:'empty'})` and `{kind:'error'}` → `[]` (TSP-15)
-- [x] `planPaste({kind:'paths'})` → one `"<path>"` per path, order kept, paths with spaces and non-ASCII (`relatório.png`) unchanged inside the quotes (TSP-21, TSP-34)
+- [x] `planPaste({kind:'paths'})` → one `"<path>"` per path, order kept, paths with spaces and non-ASCII (`relatório.png`) unchanged inside the quotes (TSP-21, TSP-37)
 - [x] Empty-string paths skipped; all-empty → `[]` (TSP-27)
 - [x] `PASTE_GAP_MS === 100` asserted (TSP-22)
 - [x] Gate check passes: `npx vitest run src/shared/paste.test.ts`
@@ -246,7 +246,7 @@ T18 → T19
 **Where**: `src/main/clipboard-reader.ts`
 **Depends on**: T1
 **Reuses**: DI + hand-rolled fakes (TESTING.md pattern 3, `task-board.test.ts`)
-**Requirement**: TSP-12, TSP-13, TSP-14, TSP-15, TSP-16, TSP-21, TSP-32, TSP-33, TSP-34, TSP-35
+**Requirement**: TSP-12, TSP-13, TSP-14, TSP-15, TSP-16, TSP-21, TSP-35, TSP-36, TSP-37, TSP-38
 
 **Tools**:
 
@@ -256,13 +256,13 @@ T18 → T19
 **Done when**:
 
 - [x] Text non-empty wins over files and image (TSP-12, TSP-13); whitespace-only text is still text (it is what the user copied)
-- [x] No text + `text/uri-list` → runner called once, `{kind:'paths'}` in runner order (TSP-21); directories pass through (TSP-32)
+- [x] No text + `text/uri-list` → runner called once, `{kind:'paths'}` in runner order (TSP-21); directories pass through (TSP-35)
 - [x] No text, no `text/uri-list` → runner **never** called
 - [x] No text, no files, non-empty image → writer called once with `<pasteDir>\paste-yyyyMMdd-HHmmss-<rand>.png`, result `{kind:'paths', paths:[that]}` (TSP-14)
 - [x] Nothing → `{kind:'empty'}` (TSP-15)
 - [x] Runner reject / writer reject → `{kind:'error'}`, never throws (TSP-16)
-- [x] `parseFileDropList` drops blank lines and trailing CRLF, keeps non-ASCII intact (TSP-33, TSP-34)
-- [x] `pasteImageName` differs for two calls with the same second and different `rand` (TSP-35)
+- [x] `parseFileDropList` drops blank lines and trailing CRLF, keeps non-ASCII intact (TSP-36, TSP-37)
+- [x] `pasteImageName` differs for two calls with the same second and different `rand` (TSP-38)
 - [x] Gate check passes: `npx vitest run src/main/clipboard-reader.test.ts`
 - [x] Test count: +~14 (no silent deletions)
 
@@ -279,7 +279,7 @@ T18 → T19
 **Where**: `src/main/paste-temp.ts`
 **Depends on**: None
 **Reuses**: real temp-dir tests (TESTING.md pattern 2)
-**Requirement**: TSP-18, TSP-19, TSP-36
+**Requirement**: TSP-18, TSP-19, TSP-39
 
 **Tools**:
 
@@ -288,7 +288,7 @@ T18 → T19
 
 **Done when**:
 
-- [x] `selectExpired`: older than max → selected; exactly max → kept (TSP-36); newer → kept
+- [x] `selectExpired`: older than max → selected; exactly max → kept (TSP-39); newer → kept
 - [x] `purgePasteDir` on a `mkdtempSync` dir with `utimesSync`-aged files deletes only the expired ones (TSP-18)
 - [x] Missing dir → no throw, no side effect (TSP-19)
 - [x] An undeletable entry (e.g. a non-empty subdirectory named like a file) is skipped and the rest still purged (TSP-19)
@@ -445,7 +445,7 @@ T18 → T19
 **Where**: `src/renderer/src/components/TerminalPane.tsx`
 **Depends on**: T1, T7, T10
 **Reuses**: `copied` chip + `COPIED_FEEDBACK_MS` (`TerminalPane.tsx:94-106`), `classifyTerminalMouse` branch (`:271-295`)
-**Requirement**: TSP-12, TSP-13, TSP-14, TSP-15, TSP-16, TSP-20, TSP-21, TSP-22, TSP-23, TSP-24, TSP-37
+**Requirement**: TSP-12, TSP-13, TSP-14, TSP-15, TSP-16, TSP-20, TSP-21, TSP-22, TSP-23, TSP-24, TSP-40
 
 **Tools**:
 
@@ -456,7 +456,7 @@ T18 → T19
 
 - [ ] Ctrl+V and right-click paste both call `pasteFromClipboard`; no `navigator.clipboard.readText` remains in the pane
 - [ ] A second paste waits for the running sequence (TSP-23); cleanup sets the disposed flag and clears the pending timer (TSP-24)
-- [ ] `agentOwnsMouse` right-click behavior untouched (TSP-37)
+- [ ] `agentOwnsMouse` right-click behavior untouched (TSP-40)
 - [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
 - [ ] Test count: unchanged (no silent deletions)
 
