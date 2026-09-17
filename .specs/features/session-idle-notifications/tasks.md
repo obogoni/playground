@@ -208,7 +208,9 @@ T12 → T13
 
 ---
 
-### T5: SessionNotifier
+### T5: SessionNotifier ✅ COMPLETE
+
+**Status**: Done — `SessionNotifier` + 7 fake-driven tests: OS path with title/body, click reveals then emits `session:focus`, in-app notice payload, silent transitions, prefs/focus read per change, one notification per session and each click opens its own. Build gate green (phase 2 close): typecheck 0, lint 0 errors, 977 tests.
 
 **What**: Implement the DI'd `SessionNotifier` that turns one `ActivityChange` into `showOs(...)` with a click that reveals the window and emits `session:focus`, or into an `emit('session:notice', ...)`, or into nothing.
 **Where**: `src/main/session-notifier.ts`
@@ -223,10 +225,10 @@ T12 → T13
 
 **Done when**:
 
-- [ ] Reads `prefs()` and `windowFocused()` on every `handle` call, so a toggle applies to the next transition without a restart
-- [ ] Tests with fakes: unfocused → one `showOs` call with the described title/body and no emit; invoking the captured click calls `reveal` then emits `session:focus` with the session id (NOTF-05); focused + not attached → one `session:notice` emit and no `showOs` (NOTF-02); decision `null` → neither; two changes for two sessions → two notifications, one per session id (NOTF-22)
-- [ ] Gate check passes: `npx vitest run src/main/session-notifier.test.ts`
-- [ ] Test count: ~955 → ~961 (+~6; no silent deletions)
+- [x] Reads `prefs()` and `windowFocused()` on every `handle` call, so a toggle applies to the next transition without a restart
+- [x] Tests with fakes: unfocused → one `showOs` call with the described title/body and no emit; invoking the captured click calls `reveal` then emits `session:focus` with the session id (NOTF-05); focused + not attached → one `session:notice` emit and no `showOs` (NOTF-02); decision `null` → neither; two changes for two sessions → two notifications, one per session id (NOTF-22)
+- [x] Gate check passes: `npx vitest run src/main/session-notifier.test.ts`
+- [x] Test count: ~955 → ~961 (+~6; no silent deletions)
 
 **Tests**: unit
 **Gate**: quick
