@@ -33,7 +33,9 @@ Handoff snapshot.
 **Status (current, 2026-09-17): `terminal-scroll-paste` COMPLETE -- T1-T14 executed and
 independent Verifier **PASS** (round 2 of 3) on branch `feature/terminal-scroll-paste`, cut from
 `origin/main` `fa78f78`. Phases 6 and 7 SKIPPED (Q2 verdict: cause 3 only; TSP-29..34 `Withdrawn`).
-Nothing uncommitted. **Not pushed -- push and PR need an explicit go-ahead.** Report:
+Nothing uncommitted. **Pushed to `fork` and PR #95 open upstream**
+(`viniciussaide:feature/terminal-scroll-paste` -> `obogoni:main`, opened 2026-09-17 with owner
+go-ahead; CI `gate` **pass** in 4m56s, `mergeStateStatus` CLEAN, 24 files / +3247 -117). Report:
 `.specs/features/terminal-scroll-paste/validation.md`; `validate_state.py` exit 0.**
 
 - **Verification:** suite **748 -> 820** (46 -> 51 files); typecheck/lint/test and
@@ -119,9 +121,8 @@ queue writes to a dead terminal.
   that is already gone, no PTY or data consequence. A one-line `if (pasteDisposed) return` would close
   it by reusing the existing flag.
 
-**Next:** the branch is ready for `git push fork feature/terminal-scroll-paste` and a PR to
-`obogoni:main` titled per the fork workflow -- **both need an explicit owner go-ahead.** `origin/main`
-is still `fa78f78`, so no rebase is needed. After the upstream merge: `git fetch origin` -> `main`
+**Next:** PR #95 is open and awaiting review; `origin/main` is still `fa78f78`, so no rebase is
+needed. The feature is **not** merged into `develop` yet. After the upstream merge: `git fetch origin` -> `main`
 fast-forward -> merge `main` into `develop`. Expect a Handoff conflict and the lessons renumbering
 that `time-tracking` (#93) and `session-idle-notifications` (#94) also need.
 
