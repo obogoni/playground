@@ -135,11 +135,11 @@ T5 → T6
 
 **Done when**:
 
-- [ ] Counting: `current run 00:12:34 · click to pause`
-- [ ] Paused: `current run 00:12:34 · click to resume`
-- [ ] The run time is formatted by `formatHms`, so a run past 24 h reads the way the rest of the app reads it
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: 1213 + 3 = **1216**
+- [x] Counting: `current run 00:12:34 · click to pause`
+- [x] Paused: `current run 00:12:34 · click to resume`
+- [x] The run time is formatted by `formatHms`, so a run past 24 h reads the way the rest of the app reads it
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: 1213 + 3 = **1216**
 
 **Tests**: unit
 **Gate**: full

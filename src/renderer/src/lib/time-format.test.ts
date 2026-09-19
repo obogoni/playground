@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { formatDayHeader, formatHm, formatHmCompact, formatHms } from './time-format'
+import {
+  clockToggleTitle,
+  formatDayHeader,
+  formatHm,
+  formatHmCompact,
+  formatHms
+} from './time-format'
 
 const SEC = 1000
 const MIN = 60 * SEC
@@ -73,5 +79,23 @@ describe('formatDayHeader', () => {
 
   it('zero-pads day and month', () => {
     expect(formatDayHeader(new Date(2026, 0, 5))).toBe('05/01/2026 (seg)')
+  })
+})
+
+describe('clockToggleTitle', () => {
+  it('offers to pause a counting clock (STRP-12)', () => {
+    expect(clockToggleTitle(12 * MIN + 34 * SEC, false)).toBe(
+      'current run 00:12:34 · click to pause'
+    )
+  })
+
+  it('offers to resume a paused clock (STRP-12)', () => {
+    expect(clockToggleTitle(12 * MIN + 34 * SEC, true)).toBe(
+      'current run 00:12:34 · click to resume'
+    )
+  })
+
+  it('reads a run past 24 h the way the counter does', () => {
+    expect(clockToggleTitle(25 * HOUR + 999, false)).toBe('current run 25:00:00 · click to pause')
   })
 })
