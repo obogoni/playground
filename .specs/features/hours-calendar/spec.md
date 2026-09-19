@@ -143,7 +143,7 @@ running block to grow, so that the calendar explains itself and stays current.
 | HCAL-08 | P1: See the week as a calendar | Tasks | Pending (T5, T7) |
 | HCAL-09 | P1: See the week as a calendar | Execute | Implemented (T2) |
 | HCAL-10 | P1: See the week as a calendar | Execute | In progress (T3 of T3, T7, T11) |
-| HCAL-11 | P1: See the week as a calendar | Tasks | Pending (T4, T7) |
+| HCAL-11 | P1: See the week as a calendar | Execute | In progress (T4 of T4, T7) |
 | HCAL-12 | P1: See the week as a calendar | Tasks | Pending (T7, T11) |
 | HCAL-13 | P1: See the week as a calendar | Tasks | Pending (T5) |
 | HCAL-14 | P1: See the week as a calendar | Tasks | Pending (T9, T10, T11) |
@@ -153,10 +153,10 @@ running block to grow, so that the calendar explains itself and stays current.
 | HCAL-18 | P1: Get to the detail and the actions | Tasks | Pending (T7, T9, T11) |
 | HCAL-19 | P1: Get to the detail and the actions | Tasks | Pending (T6, T7, T9, T11) |
 | HCAL-20 | P1: Get to the detail and the actions | Tasks | Pending (T7, T11) |
-| HCAL-21 | P2: Read the colours and the live time | Tasks | Pending (T4, T8, T11) |
+| HCAL-21 | P2: Read the colours and the live time | Execute | In progress (T4 of T4, T8, T11) |
 | HCAL-22 | P2: Read the colours and the live time | Tasks | Pending (T7, T11) |
 | HCAL-23 | P2: Read the colours and the live time | Tasks | Pending (T5, T7, T11) |
-| HCAL-24 | P1: See the week as a calendar | Tasks | Pending (T4, T9, T11) |
+| HCAL-24 | P1: See the week as a calendar | Execute | In progress (T4 of T4, T9, T11) |
 
 **Coverage:** 24 total, 24 mapped to tasks, 0 unmapped
 

@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { TimePeriod, TimeSnapshot } from '../../../shared/time'
 import { buildWeekReport, weekRange, type Block, type WeekReport } from './hours-report'
-import { layoutLanes, timeAxis, weekColumns, type LaidOutBlock } from './hours-calendar'
+import {
+  assignColours,
+  layoutLanes,
+  legendEntries,
+  roleOf,
+  timeAxis,
+  weekColumns,
+  type LaidOutBlock
+} from './hours-calendar'
 
 const MIN = 60_000
 const HOUR = 60 * MIN
@@ -222,5 +230,108 @@ describe('layoutLanes', () => {
         expect(a.lane).toBeLessThan(a.lanes)
       }
     }
+  })
+})
+
+describe('assignColours and legendEntries', () => {
+  /** `hours` of task `taskId` (or of a folder when null) on day `d`, from `from` o'clock. */
+  const work = (taskId: number | null, d: number, from: number, hours: number): TimePeriod =>
+    closed({
+      id: `${taskId}-${d}-${from}`,
+      sessionId: `s-${taskId}`,
+      taskId,
+      cwd: taskId === null ? 'D:\\acme\\scratch' : `D:\\acme\\app-${taskId}`,
+      start: at(d, from),
+      end: at(d, from) + hours * HOUR
+    })
+
+  it('gives the three tasks with the most week time the three slots in order (HCAL-11)', () => {
+    const r = report({
+      periods: [
+        work(1, 14, 9, 1),
+        work(2, 14, 11, 2),
+        work(3, 15, 9, 4),
+        // Task 1 also works Thursday: 1 h + 2.5 h = 3.5 h, above task 2's 2 h.
+        work(1, 17, 9, 2.5)
+      ]
+    })
+    const colours = assignColours(r)
+    expect(colours.get('task:3')).toBe('slot1')
+    expect(colours.get('task:1')).toBe('slot2')
+    expect(colours.get('task:2')).toBe('slot3')
+  })
+
+  it('breaks a tie in week time by the earlier first start (HCAL-11)', () => {
+    const r = report({ periods: [work(8, 15, 9, 2), work(9, 14, 13, 2)] })
+    const colours = assignColours(r)
+    expect(colours.get('task:9')).toBe('slot1')
+    expect(colours.get('task:8')).toBe('slot2')
+  })
+
+  it('folds a fourth and fifth task into Other (HCAL-11)', () => {
+    const r = report({
+      periods: [
+        work(1, 14, 8, 5),
+        work(2, 14, 14, 4),
+        work(3, 15, 8, 3),
+        work(4, 15, 12, 2),
+        work(5, 16, 8, 1)
+      ]
+    })
+    const colours = assignColours(r)
+    expect([1, 2, 3, 4, 5].map((id) => colours.get(`task:${id}`))).toEqual([
+      'slot1',
+      'slot2',
+      'slot3',
+      'other',
+      'other'
+    ])
+  })
+
+  it('makes every folder No task however large, and one task uses only slot 1 (HCAL-11)', () => {
+    const r = report({ periods: [work(null, 14, 8, 9), work(7, 15, 9, 1)] })
+    const colours = assignColours(r)
+    expect(colours.get('cwd:d:\\acme\\scratch')).toBe('no-task')
+    expect(colours.get('task:7')).toBe('slot1')
+    expect([...colours.values()].filter((role) => role.startsWith('slot'))).toEqual(['slot1'])
+  })
+
+  it('lists slots, then Other tasks, then folders, each with its week total (HCAL-21)', () => {
+    const r = report({
+      periods: [
+        work(null, 14, 6, 8),
+        work(1, 14, 15, 1),
+        work(2, 15, 9, 2),
+        work(3, 15, 12, 3),
+        work(4, 16, 9, 4),
+        work(4, 17, 9, 1)
+      ]
+    })
+    const legend = legendEntries(r, assignColours(r))
+    expect(legend.map((e) => [e.label, e.role, e.totalMs])).toEqual([
+      ['Task #4', 'slot1', 5 * HOUR],
+      ['Task #3', 'slot2', 3 * HOUR],
+      ['Task #2', 'slot3', 2 * HOUR],
+      ['Task #1', 'other', 1 * HOUR],
+      ['No task · scratch', 'no-task', 8 * HOUR]
+    ])
+  })
+
+  it('keeps frozen colours while live time reorders tasks, new ones neutral (HCAL-24)', () => {
+    const frozen = assignColours(report({ periods: [work(1, 14, 9, 3), work(2, 14, 13, 1)] }))
+    // Later the same week task 2 overtakes task 1 and task 6 and a folder appear.
+    const live = report({
+      periods: [work(1, 14, 9, 3), work(2, 14, 13, 5), work(6, 15, 9, 9), work(null, 15, 19, 1)]
+    })
+    expect(roleOf(frozen, 'task:1')).toBe('slot1')
+    expect(roleOf(frozen, 'task:2')).toBe('slot2')
+    expect(roleOf(frozen, 'task:6')).toBe('other')
+    expect(roleOf(frozen, 'cwd:d:\\acme\\scratch')).toBe('no-task')
+    expect(legendEntries(live, frozen).map((e) => [e.groupKey, e.role, e.totalMs])).toEqual([
+      ['task:1', 'slot1', 3 * HOUR],
+      ['task:2', 'slot2', 5 * HOUR],
+      ['task:6', 'other', 9 * HOUR],
+      ['cwd:d:\\acme\\scratch', 'no-task', 1 * HOUR]
+    ])
   })
 })

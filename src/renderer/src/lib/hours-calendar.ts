@@ -136,3 +136,79 @@ export function layoutLanes(entries: { block: Block; groupKey: string }[]): Laid
   closeCluster()
   return laidOut
 }
+
+/** Which colour treatment a group's bars wear (HCAL-11). */
+export type ColourRole = 'slot1' | 'slot2' | 'slot3' | 'other' | 'no-task'
+
+/** One legend line: a task or folder with its colour and week total (HCAL-21). */
+export interface LegendEntry {
+  groupKey: string
+  label: string
+  role: ColourRole
+  totalMs: number
+}
+
+const SLOTS: ColourRole[] = ['slot1', 'slot2', 'slot3']
+const ROLE_ORDER: ColourRole[] = [...SLOTS, 'other', 'no-task']
+
+const isFolder = (groupKey: string): boolean => groupKey.startsWith('cwd:')
+
+interface WeekGroup {
+  groupKey: string
+  label: string
+  totalMs: number
+  firstStart: number
+}
+
+/** Each group across the week: total of its days, newest label, first block start. */
+function weekGroups(report: WeekReport): WeekGroup[] {
+  const groups = new Map<string, WeekGroup>()
+  for (const day of report.days) {
+    for (const group of day.groups) {
+      const known = groups.get(group.key)
+      if (known) {
+        known.totalMs += group.totalMs
+        known.firstStart = Math.min(known.firstStart, group.blocks[0].start)
+      } else {
+        groups.set(group.key, {
+          groupKey: group.key,
+          label: group.label,
+          totalMs: group.totalMs,
+          firstStart: group.blocks[0].start
+        })
+      }
+    }
+  }
+  return [...groups.values()].sort((a, b) => b.totalMs - a.totalMs || a.firstStart - b.firstStart)
+}
+
+/**
+ * The three tasks with the most time in the week get the three colours, the
+ * other tasks share Other, and task-less folders are No task (HCAL-11).
+ */
+export function assignColours(report: WeekReport): Map<string, ColourRole> {
+  const colours = new Map<string, ColourRole>()
+  let slot = 0
+  for (const { groupKey } of weekGroups(report)) {
+    if (isFolder(groupKey)) colours.set(groupKey, 'no-task')
+    else colours.set(groupKey, SLOTS[slot++] ?? 'other')
+  }
+  return colours
+}
+
+/** A group's role from colours frozen earlier; one that appeared since is neutral (HCAL-24). */
+export function roleOf(colours: Map<string, ColourRole>, groupKey: string): ColourRole {
+  return colours.get(groupKey) ?? (isFolder(groupKey) ? 'no-task' : 'other')
+}
+
+/** Every task and folder of the week, slots first, then Other's tasks, then folders (HCAL-21). */
+export function legendEntries(report: WeekReport, colours: Map<string, ColourRole>): LegendEntry[] {
+  return weekGroups(report)
+    .map(({ groupKey, label, totalMs }) => ({
+      groupKey,
+      label,
+      role: roleOf(colours, groupKey),
+      totalMs
+    }))
+    .sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role))
+}

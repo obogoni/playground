@@ -160,13 +160,13 @@ T9 → T10 → T11
 
 **Done when**:
 
-- [ ] The three task groups with the largest week total get `slot1`, `slot2`, `slot3` in that order; ties by first start
-- [ ] A fourth and fifth task are `other`
-- [ ] Every `cwd:` group is `no-task`, however large
-- [ ] A week with one task uses only `slot1`
-- [ ] The legend lists slots first, then Other's members, then folders, each with its week total
-- [ ] Gate passes: `npm test`
-- [ ] Test count: 881 + 6 = **887**
+- [x] The three task groups with the largest week total get `slot1`, `slot2`, `slot3` in that order; ties by first start
+- [x] A fourth and fifth task are `other`
+- [x] Every `cwd:` group is `no-task`, however large
+- [x] A week with one task uses only `slot1`
+- [x] The legend lists slots first, then Other's members, then folders, each with its week total
+- [x] Gate passes: `npm test`
+- [x] Test count: 881 + 6 = **887**
 
 **Tests**: unit
 **Gate**: quick
