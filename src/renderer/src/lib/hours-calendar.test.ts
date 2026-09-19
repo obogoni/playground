@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { TimePeriod, TimeSnapshot } from '../../../shared/time'
+import type { OpenPeriod, TimePeriod, TimeSnapshot } from '../../../shared/time'
 import { buildWeekReport, weekRange, type Block, type WeekReport } from './hours-report'
 import {
   assignColours,
+  barBox,
+  defaultDay,
   layoutLanes,
   legendEntries,
   roleOf,
@@ -45,6 +47,7 @@ function fields(p: Fields): Omit<TimePeriod, 'end'> {
 }
 
 const closed = (p: Fields & { end: number }): TimePeriod => ({ ...fields(p), end: iso(p.end) })
+const open = (p: Fields): OpenPeriod => ({ ...fields(p), lastSeen: iso(p.start) })
 const report = (s: Partial<TimeSnapshot>, now = LATER): WeekReport =>
   buildWeekReport({ periods: [], open: [], paused: [], ...s }, now, WEEK.start, new Map())
 
@@ -333,5 +336,74 @@ describe('assignColours and legendEntries', () => {
       ['task:6', 'other', 9 * HOUR],
       ['cwd:d:\\acme\\scratch', 'no-task', 1 * HOUR]
     ])
+  })
+})
+
+describe('defaultDay', () => {
+  it("selects today in the current week, even before today's first period (HCAL-16)", () => {
+    const now = at(16, 8)
+    const r = report({ periods: [closed({ start: at(14, 9), end: at(14, 10) })] }, now)
+    expect(defaultDay(weekColumns(r, WEEK.start, now))?.getTime()).toBe(at(16, 0))
+  })
+
+  it('selects the latest day with time in a past week (HCAL-16)', () => {
+    const r = report({
+      periods: [
+        closed({ id: 'a', start: at(14, 9), end: at(14, 10) }),
+        closed({ id: 'b', start: at(19, 9), end: at(19, 10) }),
+        closed({ id: 'c', start: at(16, 9), end: at(16, 10) })
+      ]
+    })
+    expect(defaultDay(weekColumns(r, WEEK.start, LATER))?.getTime()).toBe(at(19, 0))
+  })
+
+  it('selects nothing in a past week without time (HCAL-17)', () => {
+    expect(defaultDay(weekColumns(report({}), WEEK.start, LATER))).toBeNull()
+  })
+})
+
+describe('barBox', () => {
+  const blockOf = (r: WeekReport, d: number): Block => {
+    const day = r.days.find((x) => x.date.getDate() === d)
+    if (!day) throw new Error(`no day ${d}`)
+    return day.groups[0].blocks[0]
+  }
+
+  it('places a block from its start to its end on the axis (HCAL-08)', () => {
+    const r = report({ periods: [closed({ start: at(16, 12), end: at(16, 13, 30) })] })
+    const box = barBox(blockOf(r, 16), { startHour: 9, endHour: 18 }, LATER)
+    expect(box.topPct).toBeCloseTo(100 / 3, 6)
+    expect(box.heightPct).toBeCloseTo(100 / 6, 6)
+    expect(box.ongoing).toBe(false)
+  })
+
+  it('ends an open block at now and marks it ongoing, not its earlier-day part (HCAL-23)', () => {
+    const now = at(16, 14, 30)
+    const r = report({ open: [open({ start: at(15, 22) })] }, now)
+    const axis = { startHour: 0, endHour: 24 }
+
+    const today = barBox(blockOf(r, 16), axis, now)
+    expect(today.ongoing).toBe(true)
+    expect(today.topPct).toBe(0)
+    expect(today.heightPct).toBeCloseTo((14.5 / 24) * 100, 6)
+
+    const yesterday = barBox(blockOf(r, 15), axis, now)
+    expect(yesterday.ongoing).toBe(false)
+    expect(yesterday.topPct).toBeCloseTo((22 / 24) * 100, 6)
+    expect(yesterday.heightPct).toBeCloseTo((2 / 24) * 100, 6)
+  })
+
+  it('draws the part after midnight at the top of its own day (HCAL-13)', () => {
+    const r = report({ periods: [closed({ start: at(14, 23), end: at(15, 1) })] })
+    const axis = timeAxis(r)
+    expect(axis).toEqual({ startHour: 0, endHour: 24 })
+
+    const monday = barBox(blockOf(r, 14), axis, LATER)
+    expect(monday.topPct).toBeCloseTo((23 / 24) * 100, 6)
+    expect(monday.topPct + monday.heightPct).toBeCloseTo(100, 6)
+
+    const tuesday = barBox(blockOf(r, 15), axis, LATER)
+    expect(tuesday.topPct).toBe(0)
+    expect(tuesday.heightPct).toBeCloseTo((1 / 24) * 100, 6)
   })
 })

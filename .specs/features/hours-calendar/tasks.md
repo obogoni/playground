@@ -186,14 +186,14 @@ T9 → T10 → T11
 
 **Done when**:
 
-- [ ] Current week → today, even when today has no time yet
-- [ ] Past week → the latest day with time; an empty week → null
-- [ ] `barBox` on a 09–18 axis for 12:00–13:30 → `topPct` 33.3…, `heightPct` 16.6…
-- [ ] An open block ends at `now` and is marked `ongoing`
-- [ ] A block part after midnight (already split by the report) sits at the top of its own day
-- [ ] Gate passes: `npm test`
-- [ ] Phase gate passes: `npx electron-vite build`
-- [ ] Test count: 887 + 6 = **893**
+- [x] Current week → today, even when today has no time yet
+- [x] Past week → the latest day with time; an empty week → null
+- [x] `barBox` on a 09–18 axis for 12:00–13:30 → `topPct` 33.3…, `heightPct` 16.6…
+- [x] An open block ends at `now` and is marked `ongoing`
+- [x] A block part after midnight (already split by the report) sits at the top of its own day
+- [x] Gate passes: `npm test`
+- [x] Phase gate passes: `npx electron-vite build`
+- [x] Test count: 887 + 6 = **893**
 
 **Tests**: unit
 **Gate**: quick

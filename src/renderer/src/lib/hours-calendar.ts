@@ -212,3 +212,41 @@ export function legendEntries(report: WeekReport, colours: Map<string, ColourRol
     }))
     .sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role))
 }
+
+/**
+ * The day selected when the view opens or the week changes: today when the week
+ * shows it, otherwise the latest day with time, otherwise none (HCAL-16, HCAL-17).
+ */
+export function defaultDay(columns: CalendarColumn[]): Date | null {
+  const today = columns.find((column) => column.isToday)
+  if (today) return today.date
+  const withTime = columns.filter((column) => column.day !== null)
+  return withTime.length > 0 ? withTime[withTime.length - 1].date : null
+}
+
+/** Where a bar sits in its column, as percentages of the axis height (HCAL-08, HCAL-23). */
+export interface BarBox {
+  topPct: number
+  heightPct: number
+  /** The block holds a period still running now: its bar ends at now (HCAL-23). */
+  ongoing: boolean
+}
+
+/**
+ * A block's bar from its start to its end on `axis`. A block holding an open
+ * period that reaches `now` ends at `now`; the report has already split a block
+ * at local midnight, so each part sits in its own day (HCAL-08, HCAL-13).
+ */
+export function barBox(block: Block, axis: TimeAxis, now: number): BarBox {
+  const dayMidnight = localMidnight(block.start)
+  const ongoing = block.periods.some((period) => period.open && period.end >= now)
+  const end = ongoing ? Math.max(block.end, now) : block.end
+  const span = axis.endHour - axis.startHour
+  const from = hourOfDay(block.start, dayMidnight)
+  const to = hourOfDay(end, dayMidnight)
+  return {
+    topPct: ((from - axis.startHour) / span) * 100,
+    heightPct: ((to - from) / span) * 100,
+    ongoing
+  }
+}
