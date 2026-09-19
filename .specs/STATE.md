@@ -428,3 +428,24 @@ branch ships without it).
 ### `time-tracking` (PR #93, merged on 2026-09-25)
 
 Lesson candidates L-017..L-022 of this branch were renumbered **L-035..L-040** at merge time (`origin/main` already held L-017..L-034). AD-021 keeps its number.
+
+### `hours-calendar` (PR #99)
+
+**Status (current, 2026-09-19): `hours-calendar` EXECUTED + independent Verifier PASS (round 2) on
+branch `feature/hours-calendar`, stacked on `feature/time-tracking` (PR #93, still open). Nothing
+uncommitted. Not pushed, no PR — push needs an explicit go-ahead.**
+
+- T1..T11 committed (`19a2504`..`94f107d`); Verifier round 1 FAIL on 4 surviving mutants in
+  `hours-calendar.ts` (test-only gaps, recorded in `82862a0`, lessons L-023..L-026), fixed by
+  `be5d8ab` (3 unit tests + spec precision for HCAL-12 and the narrow-lane edge case). Round 2 PASS:
+  24/24 non-equivalent mutants killed, gate green — typecheck, lint 0 errors / 18 warnings (the
+  baseline), **896 tests**.
+- Live smokes on the dev app, 2026-09-19, owner-approved: `smoke-hours-calendar.mjs` **19/19**,
+  `smoke-time.mjs` unedited **26/26**; cleanup verified.
+- **Open, non-blocking:** smoke check 10 was tightened in `be5d8ab` to assert the tooltip's group
+  label and has not run live since. Confirm it on the next `smoke-hours-calendar.mjs` run.
+- Design deviations, recorded in their commits: `DayCard` takes `focus: { groupKey, start }` (a fresh
+  object per bar click) instead of `focusBlockStart`; `defaultDay(columns)` takes no `now`.
+- **Next:** push `feature/hours-calendar` to `fork` and open the upstream PR with "depends on #93"
+  (owner go-ahead). Once #93 merges: `git rebase --onto origin/main feature/time-tracking
+  feature/hours-calendar`, then force-with-lease to `fork`.
