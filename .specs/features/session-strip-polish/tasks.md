@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Spec**: `.specs/features/session-strip-polish/spec.md` (Medium — no `design.md`; the design decisions live in the spec's Assumptions table)
-**Status**: Draft
+**Status**: In progress
 
 **Branch**: `feature/session-strip-polish`, already cut from `develop` at `9919139` with no commits. `develop` is the only ref holding both halves (the badge from #88/#94, the clock from #93). PR to upstream only after those merge: `git rebase --onto origin/main develop feature/session-strip-polish`.
 
@@ -81,14 +81,14 @@ T5 → T6
 
 **Done when**:
 
-- [ ] `mcp__azure-devops__wit_work_item` → `MCP azure-devops`
-- [ ] `mcp__claude_ai_Claude_Docs__batch` → `MCP claude_ai_Claude_Docs` — underscores and case kept literally (STRP-02)
-- [ ] `mcp__srv__a__b` → `MCP srv` — everything after the second separator is the tool (edge case)
-- [ ] `mcp____tool`, `mcp__srv__` and `mcp__` come back unchanged — an empty segment does not match (STRP-03)
-- [ ] `Bash` comes back unchanged (STRP-04)
-- [ ] Lint warning baseline recorded in the commit body
-- [ ] Gate passes: `npm test`
-- [ ] Test count: 1200 + 7 = **1207** (no deletions)
+- [x] `mcp__azure-devops__wit_work_item` → `MCP azure-devops`
+- [x] `mcp__claude_ai_Claude_Docs__batch` → `MCP claude_ai_Claude_Docs` — underscores and case kept literally (STRP-02)
+- [x] `mcp__srv__a__b` → `MCP srv` — everything after the second separator is the tool (edge case)
+- [x] `mcp____tool`, `mcp__srv__` and `mcp__` come back unchanged — an empty segment does not match (STRP-03)
+- [x] `Bash` comes back unchanged (STRP-04)
+- [x] Lint warning baseline recorded in the commit body
+- [x] Gate passes: `npm test`
+- [x] Test count: 1200 + 7 = **1207** (no deletions)
 
 **Tests**: unit
 **Gate**: quick

@@ -38,6 +38,20 @@ const ACTIVITY_LABEL: Record<ActivityState, string> = {
   exited: 'agent exited · shell'
 }
 
+/**
+ * How the pill names a tool. An MCP tool arrives as `mcp__<server>__<tool>`,
+ * which can run past 30 characters; the pill shows `MCP <server>` instead, the
+ * server spelled exactly as configured (STRP-01, STRP-02). Anything that does
+ * not split into two non-empty segments is shown as received (STRP-03, STRP-04).
+ */
+export function mcpToolLabel(tool: string): string {
+  if (!tool.startsWith('mcp__')) return tool
+  const rest = tool.slice('mcp__'.length)
+  const split = rest.indexOf('__')
+  if (split <= 0 || split + 2 >= rest.length) return tool
+  return `MCP ${rest.slice(0, split)}`
+}
+
 /** Pill colour: green while the agent works, blue while it waits, pink while it
  *  is blocked on the user, red on a failed turn, amber once it has exited to the
  *  shell (ACTV-27). The tokens match the rail's row indicators. */
