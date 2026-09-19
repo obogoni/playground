@@ -12,12 +12,13 @@
  *   4. hovering a bar shows its duration, range and label; the legend chips
  *      list both folders with outlined swatches (HCAL-21, HCAL-22)
  *   5. a header click opens the drawer on its day; a bar click opens it on its
- *      day and focuses and expands its block; one day card only (HCAL-14, 15,
- *      18, 19)
+ *      day and focuses and expands its block; one day card only, with the day's
+ *      total, its counts and a swatch matching each bar (HCAL-14, 15, 18, 19)
  *   6. a running bar grows at the one-minute refresh and keeps its colour
  *      (HCAL-23, HCAL-24)
  *   7. at 1100 × 640 the page does not scroll, with or without the drawer; the
- *      X and Esc close the drawer (HCAL-25, HCAL-26)
+ *      X and Esc close the drawer, and Esc inside a period's field does not
+ *      (HCAL-25, HCAL-26)
  *   8. ◀ closes the drawer; ▶ shows five dimmed, empty future columns that say
  *      there is no time; This week returns with nothing selected (HCAL-05, 06,
  *      07, 16)
@@ -338,6 +339,29 @@ try {
     (await evaluate(`document.querySelectorAll('.hours-day').length`)) === 1 &&
       (await evaluate(`document.querySelectorAll('.hours-drawer .hours-day').length`)) === 1
   )
+  const summary = await evaluate(
+    `(() => { const d = document.querySelector('.hours-drawer'); const groups = [...d.querySelectorAll('.hours-group')]; const tasks = groups.filter(g => !g.querySelector('.hours-group-label.no-task')).length; return { total: d.querySelector('.hours-day-total').textContent, count: d.querySelector('.hours-day-count').textContent, head: ${HEADS}.find(h => h.getAttribute('aria-pressed') === 'true').getAttribute('aria-label'), tasks, folders: groups.length - tasks, blocks: d.querySelectorAll('.hours-block').length } })()`
+  )
+  const expectedCount = [
+    summary.tasks > 0 ? `${summary.tasks} task${summary.tasks === 1 ? '' : 's'}` : null,
+    summary.folders > 0 ? `${summary.folders} folder${summary.folders === 1 ? '' : 's'}` : null,
+    `${summary.blocks} block${summary.blocks === 1 ? '' : 's'}`
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  check(
+    "the summary line states the day's total and what it holds",
+    summary.head.endsWith(`, ${summary.total}`) && summary.count === expectedCount,
+    `${summary.total} / ${summary.count} (expected ${expectedCount})`
+  )
+  const swatches = await evaluate(
+    `(() => { const roleOf = el => [...el.classList].find(c => c.startsWith('role-')); const rows = [...document.querySelectorAll('.hours-drawer .hours-group')].map(g => ({ label: g.querySelector('.hours-group-label').textContent, role: roleOf(g.querySelector('.hours-group-swatch')) })); const bars = [...document.querySelectorAll('.hcal-col.selected .hcal-bar')].map(b => ({ label: b.getAttribute('aria-label').split(', ')[0], role: roleOf(b) })); return rows.map(r => [r.role, bars.find(b => b.label === r.label)?.role ?? 'no-bar']) })()`
+  )
+  check(
+    "each group's swatch wears its bar's colour",
+    swatches.length > 0 && swatches.every(([row, bar]) => row === bar),
+    JSON.stringify(swatches)
+  )
 
   // 6. Live growth with a stable colour.
   const grow0 = await rectOf(winBar)
@@ -471,12 +495,12 @@ try {
     await clickHead(wedHeader)
     await sleep(400)
     const emptyDrawer = await evaluate(
-      `(() => { const d = document.querySelector('.hours-drawer'); return d ? { head: !!d.querySelector('.hours-day-head'), empty: d.querySelector('.hours-empty')?.textContent ?? null, groups: d.querySelectorAll('.hours-group').length } : null })()`
+      `(() => { const d = document.querySelector('.hours-drawer'); return d ? { title: d.querySelector('.hours-day-title')?.textContent ?? null, empty: d.querySelector('.hours-empty')?.textContent ?? null, groups: d.querySelectorAll('.hours-group').length } : null })()`
     )
     check(
       'a day with no time opens a drawer whose own text says so',
       emptyDrawer !== null &&
-        emptyDrawer.head &&
+        emptyDrawer.title === wedHeader &&
         emptyDrawer.empty === 'No time recorded on this day.' &&
         emptyDrawer.groups === 0 &&
         (await pressedLabel())?.startsWith(wedHeader),
@@ -496,6 +520,31 @@ try {
       moved.ok === true && armed?.title === wedHeader && armed.groups >= 1,
       JSON.stringify(armed)
     )
+    // Esc inside that period's field belongs to the field, not to the drawer (HCAL-25).
+    await evaluate(`document.querySelector('.hours-drawer .hours-block-line')?.click(), true`)
+    await sleep(300)
+    const editing = await evaluate(
+      `(() => { const b = document.querySelector('.hours-drawer [aria-label="Edit period"]'); if (!b) return false; b.click(); return true })()`
+    )
+    await sleep(300)
+    const fieldFocused = await evaluate(
+      `(() => { const f = document.querySelector('.hours-drawer input'); if (!f) return false; f.focus(); return document.activeElement === f })()`
+    )
+    for (const type of ['keyDown', 'keyUp']) {
+      await send('Input.dispatchKeyEvent', {
+        type,
+        key: 'Escape',
+        code: 'Escape',
+        windowsVirtualKeyCode: 27
+      })
+    }
+    await sleep(300)
+    check(
+      'Esc inside a period field leaves the drawer open',
+      editing && fieldFocused && (await drawerOpen()),
+      `editing ${editing}, focused ${fieldFocused}`
+    )
+
     await invoke('time:delete', { id: sysPeriod.id })
     await sleep(1200)
     check(

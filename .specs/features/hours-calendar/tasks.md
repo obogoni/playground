@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/hours-calendar/design.md`
-**Status**: Phase 5 executed — T17, T18 done; Verifier re-run pending
+**Status**: Phase 5 executed — T17..T19 done; Verifier re-run pending
 
 **Branch**: `feature/hours-calendar`, stacked on `feature/time-tracking` (PR #93). Its PR carries "depends on #93"; once #93 merges, `git rebase --onto origin/main feature/time-tracking feature/hours-calendar`.
 
@@ -70,10 +70,10 @@ T9 → T10 → T11
 T11 → T12 → T13 → T14 → T15 → T16
 ```
 
-### Phase 5: The drawer's look, and the round-3 verifier gaps
+### Phase 5: The drawer's look, and the verifier gaps
 
 ```
-T16 → T17 → T18
+T16 → T17 → T18 → T19
 ```
 
 ---
@@ -524,6 +524,33 @@ T16 → T17 → T18
 
 ---
 
+### T19: Fix the summary line and pin what it says
+
+**What**: The summary line renders `1 blocks` and counts task-less folders as tasks. Pluralise each count, count tasks and folders apart, and assert the line, the swatches and the Esc exception in the smoke.
+**Where**: `src/renderer/src/components/HoursView.tsx`, `scripts/smoke-hours-calendar.mjs`, `.specs/features/hours-calendar/spec.md`
+**Depends on**: T18
+**Reuses**: The drawer scenario of T16 and T18.
+**Requirement**: HCAL-15, 25, 27
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+
+- [x] A one-block day reads `1 block`, and a task-less day counts folders, not tasks
+- [x] The smoke asserts the day total against its column header and the counts against the rendered groups and blocks (mutants N4, N5)
+- [x] The smoke asserts each group's swatch role equals its bar's (mutant N1)
+- [x] The smoke asserts Esc inside a period's field leaves the drawer open (mutant MB)
+- [x] HCAL-15 says what the counts are; HCAL-27 sits in its own story and the coverage line reads 27
+- [x] Both smokes pass against a live dev app, with the owner's go-ahead; cleanup verified
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **893** (unchanged)
+
+**Tests**: manual
+**Gate**: manual
+**Commit**: `fix(hours): count a day's blocks and folders correctly`
+
+---
+
 ## Phase Execution Map
 
 ```
@@ -533,7 +560,7 @@ Phase 1:  T1 → T2 → T3 → T4 → T5
 Phase 2:  T6 → T7 → T8 → T9
 Phase 3:  T10 → T11
 Phase 4:  T12 → T13 → T14 → T15 → T16
-Phase 5:  T17 → T18
+Phase 5:  T17 → T18 → T19
 ```
 
 Strictly sequential. 11 tasks > 8, so the sub-agent offer applies — offer-then-confirm. **Packing**: Phase 1 (5) = batch 1; Phases 2 + 3 (4 + 2) = batch 2.
@@ -554,7 +581,7 @@ Strictly sequential. 11 tasks > 8, so the sub-agent offer applies — offer-then
 | T12 | 1 spec revision | ✅ |
 | T13, T14 | 1 component / 1 stylesheet pass each | ✅ |
 | T15 | 1 view change (drawer) | ✅ |
-| T16, T18 | 1 smoke pass each | ✅ |
+| T16, T18, T19 | 1 smoke pass each (T19 with a one-line fix) | ✅ |
 | T17 | 1 card layout | ✅ |
 
 ---
@@ -581,6 +608,7 @@ Strictly sequential. 11 tasks > 8, so the sub-agent offer applies — offer-then
 | T16 | T15 | T15 → T16 | ✅ |
 | T17 | T16 | T16 → T17 (boundary) | ✅ |
 | T18 | T17 | T17 → T18 | ✅ |
+| T19 | T18 | T18 → T19 | ✅ |
 
 ---
 
@@ -591,7 +619,7 @@ Strictly sequential. 11 tasks > 8, so the sub-agent offer applies — offer-then
 | T1–T5 | Pure calendar logic | unit | unit | ✅ |
 | T6–T9 | Renderer components | none | none | ✅ |
 | T10 | Docs | none | none | ✅ |
-| T11, T16, T18 | Smoke | manual only | manual | ✅ |
+| T11, T16, T18, T19 | Smoke | manual only | manual | ✅ |
 | T12 | Docs | none | none | ✅ |
 | T13, T14, T15, T17 | Renderer components | none | none | ✅ |
 
@@ -615,7 +643,7 @@ Strictly sequential. 11 tasks > 8, so the sub-agent offer applies — offer-then
 | HCAL-12 | T7, T11 |
 | HCAL-13 | T5 |
 | HCAL-14 | T9, T10, T11 |
-| HCAL-15 | T6, T9, T11, T12, T15, T16, T17, T18 |
+| HCAL-15 | T6, T9, T11, T12, T15, T16, T17, T18, T19 |
 | HCAL-16 | T5, T9, T12, T15, T16 |
 | HCAL-17 | T5, T9, T12, T15, T16, T18 |
 | HCAL-18 | T7, T9, T11, T12, T15, T16 |
@@ -625,8 +653,8 @@ Strictly sequential. 11 tasks > 8, so the sub-agent offer applies — offer-then
 | HCAL-22 | T7, T11 |
 | HCAL-23 | T5, T7, T11 |
 | HCAL-24 | T4, T9, T11 |
-| HCAL-25 | T12, T15, T16, T18 |
+| HCAL-25 | T12, T15, T16, T18, T19 |
 | HCAL-26 | T12, T14, T16 |
-| HCAL-27 | T17, T18 |
+| HCAL-27 | T17, T18, T19 |
 
 All 27 mapped; none unmapped.

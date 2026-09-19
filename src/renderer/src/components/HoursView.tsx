@@ -283,6 +283,24 @@ interface DayCardProps {
   onClose: () => void
 }
 
+const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
+
+/** `2 tasks · 1 folder · 5 blocks`, leaving out what the day does not hold (HCAL-15). */
+function daySummary(day: DayReport): string {
+  const tasks = day.groups.filter((g) => g.taskId !== null).length
+  const folders = day.groups.length - tasks
+  return [
+    tasks > 0 ? plural(tasks, 'task') : null,
+    folders > 0 ? plural(folders, 'folder') : null,
+    plural(
+      day.groups.reduce((n, g) => n + g.blocks.length, 0),
+      'block'
+    )
+  ]
+    .filter((part) => part !== null)
+    .join(' · ')
+}
+
 function DayCard({ day, onDelete, onAdjust, focus, colours, onClose }: DayCardProps): JSX.Element {
   const [copied, setCopied] = useState(false)
 
@@ -305,10 +323,7 @@ function DayCard({ day, onDelete, onAdjust, focus, colours, onClose }: DayCardPr
       <DayHead date={day.date} onClose={onClose} />
       <div className="hours-day-stats">
         <span className="hours-day-total">{formatHmCompact(day.totalMs)}</span>
-        <span className="hours-day-count">
-          {day.groups.length} task{day.groups.length === 1 ? '' : 's'} ·{' '}
-          {day.groups.reduce((n, g) => n + g.blocks.length, 0)} blocks
-        </span>
+        <span className="hours-day-count">{daySummary(day)}</span>
         <span className="hours-head-spacer" />
         <button
           type="button"
