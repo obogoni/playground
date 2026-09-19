@@ -409,9 +409,9 @@ T11 → T12 → T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] At 1100 × 640 the Hours body does not scroll and the calendar ends inside the window
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **896** (unchanged)
+- [ ] At 1100 × 640 the Hours body does not scroll and the calendar ends inside the window — **open: the day card still sits under the grid until T15 moves it into the drawer; checked in the T16 visual pass**
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **896** (unchanged)
 
 **Tests**: none
 **Gate**: full

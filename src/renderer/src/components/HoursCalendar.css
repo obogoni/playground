@@ -17,13 +17,14 @@
   --hcal-slot3: #1baf7a;
 }
 
+/* Takes the height the Hours body leaves; the hour rows divide it (HCAL-26). */
 .hcal {
-  --hcal-hour-px: 36px;
+  flex: 1 1 0;
   width: 100%;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: 44px repeat(var(--hcal-cols), minmax(0, 1fr));
-  grid-template-rows: auto calc(var(--hcal-hours) * var(--hcal-hour-px));
+  grid-template-rows: auto minmax(240px, 1fr);
   column-gap: 4px;
   row-gap: 10px;
   background: var(--panel);
