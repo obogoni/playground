@@ -159,12 +159,12 @@ T5 → T6
 
 **Done when**:
 
-- [ ] Without `toggle`, the markup is unchanged — the rail row (`SessionRail.tsx:338`) and every `TotalClock` render as they do today (STRP-15)
-- [ ] With `toggle`, Tab reaches it and both Enter and Space call `onToggle` (native button behaviour, STRP-11)
-- [ ] `aria-pressed` is `true` while paused and `false` while counting (STRP-10)
-- [ ] The per-second tick is unchanged: it still re-renders only the clock, never its parent
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **1216** (unchanged — renderer component)
+- [x] Without `toggle`, the markup is unchanged — the rail row (`SessionRail.tsx:338`) and every `TotalClock` render as they do today (STRP-15)
+- [x] With `toggle`, Tab reaches it and both Enter and Space call `onToggle` (native button behaviour, STRP-11)
+- [x] `aria-pressed` is `true` while paused and `false` while counting (STRP-10)
+- [x] The per-second tick is unchanged: it still re-renders only the clock, never its parent
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **1216** (unchanged — renderer component)
 
 **Tests**: none
 **Gate**: full
