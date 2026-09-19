@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 41,
+  "next_id": 45,
   "lessons": [
     {
       "id": "L-001",
@@ -640,6 +640,79 @@
       ],
       "created": "2026-09-16T22:42:48Z",
       "last_seen": "2026-09-16T22:42:48Z"
+    },
+    {
+      "id": "L-041",
+      "key": "surviving_mutant::test interval layout logic with several clusters in one input not one cluster per case",
+      "text": "Test interval-layout logic with several clusters in one input, not one cluster per case",
+      "signal": "surviving_mutant",
+      "scope": "renderer/lib",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M12,M13 hours-calendar.ts:127 (renderer/lib)"
+      ],
+      "created": "2026-09-19T20:43:35Z",
+      "last_seen": "2026-09-19T20:43:35Z"
+    },
+    {
+      "id": "L-042",
+      "key": "surviving_mutant::cover the exact boundary case where one interval ends as the next starts for every interval comparison",
+      "text": "Cover the exact-boundary case where one interval ends as the next starts for every interval comparison",
+      "signal": "surviving_mutant",
+      "scope": "renderer/lib",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M10 hours-calendar.ts:128 (renderer/lib)"
+      ],
+      "created": "2026-09-19T20:43:36Z",
+      "last_seen": "2026-09-19T20:43:36Z"
+    },
+    {
+      "id": "L-043",
+      "key": "surviving_mutant::test rounding with inputs on both sides of the half so floor ceil and round are distinguishable",
+      "text": "Test rounding with inputs on both sides of the half so floor, ceil and round are distinguishable",
+      "signal": "surviving_mutant",
+      "scope": "renderer/lib",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M8 hours-calendar.ts:75 (renderer/lib)"
+      ],
+      "created": "2026-09-19T20:43:36Z",
+      "last_seen": "2026-09-19T20:43:36Z"
+    },
+    {
+      "id": "L-044",
+      "key": "spec_precision_gap::state numeric ui thresholds in the spec acceptance criterion not only in the design",
+      "text": "State numeric UI thresholds in the spec acceptance criterion, not only in the design",
+      "signal": "spec_precision_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "HCAL-12",
+        "hours-calendar edge case: narrow lane label"
+      ],
+      "created": "2026-09-19T20:43:36Z",
+      "last_seen": "2026-09-19T20:43:36Z"
     }
   ]
 }

@@ -222,6 +222,30 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: M21 src/main/time-log-store.ts:107 (file-stores)
 - last seen: 2026-09-16T22:42:48Z
 
+### L-041 - Test interval-layout logic with several clusters in one input, not one cluster per case
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer/lib` · harmful: 0
+- features: hours-calendar
+- evidence: M12,M13 hours-calendar.ts:127 (renderer/lib)
+- last seen: 2026-09-19T20:43:35Z
+
+### L-042 - Cover the exact-boundary case where one interval ends as the next starts for every interval comparison
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer/lib` · harmful: 0
+- features: hours-calendar
+- evidence: M10 hours-calendar.ts:128 (renderer/lib)
+- last seen: 2026-09-19T20:43:36Z
+
+### L-043 - Test rounding with inputs on both sides of the half so floor, ceil and round are distinguishable
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer/lib` · harmful: 0
+- features: hours-calendar
+- evidence: M8 hours-calendar.ts:75 (renderer/lib)
+- last seen: 2026-09-19T20:43:36Z
+
+### L-044 - State numeric UI thresholds in the spec acceptance criterion, not only in the design
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-12 (+1 more)
+- last seen: 2026-09-19T20:43:36Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
