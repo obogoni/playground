@@ -513,11 +513,16 @@ try {
     })
     await sleep(1200)
     const armed = await evaluate(
-      `(() => { const d = document.querySelector('.hours-drawer'); return d ? { title: d.querySelector('.hours-day-title')?.textContent ?? null, groups: d.querySelectorAll('.hours-group').length } : null })()`
+      `(() => { const d = document.querySelector('.hours-drawer'); return d ? { title: d.querySelector('.hours-day-title')?.textContent ?? null, groups: d.querySelectorAll('.hours-group').length, count: d.querySelector('.hours-day-count')?.textContent ?? null } : null })()`
     )
     check(
-      'time recorded on the open day fills its drawer',
-      moved.ok === true && armed?.title === wedHeader && armed.groups >= 1,
+      'time recorded on the open day fills its drawer, counted in the singular',
+      moved.ok === true &&
+        armed?.title === wedHeader &&
+        armed.groups === 1 &&
+        // A literal, not a rebuild: this is the one day the smoke sees where
+        // every count is 1, so it is where the singular can be pinned.
+        armed.count === '1 folder · 1 block',
       JSON.stringify(armed)
     )
     // Esc inside that period's field belongs to the field, not to the drawer (HCAL-25).

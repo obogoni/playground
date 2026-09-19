@@ -99,8 +99,8 @@ reading raw periods, correcting them and copying the day for Clockify still work
 19. WHEN the user activates a bar THEN its day SHALL become the selected day, the drawer SHALL open on it, and its block SHALL be highlighted and expanded there <!-- event-driven -->
 20. Column headers and bars SHALL be keyboard-operable buttons with accessible names — the day and its total; the group label and the block's range and duration <!-- ubiquitous -->
 
-27. WHILE the selected day holds no time the drawer SHALL keep its head and say that no time is recorded on that day <!-- state-driven; added 2026-09-19 with HCAL-17's evidence -->
 25. WHEN the user activates the drawer's close button, or presses Esc outside a text field, THEN the drawer SHALL close, no day SHALL be selected, and the grid SHALL take the full width again; Esc inside a text field SHALL belong to that field <!-- event-driven; added by AD-031, the text-field exception stated 2026-09-19 -->
+27. WHILE the selected day holds no time the drawer SHALL keep its head and say that no time is recorded on that day <!-- state-driven; added 2026-09-19 with HCAL-17's evidence -->
 
 **Independent Test**: Open the view: the week fills the width and no drawer shows. Click a Tuesday bar: the drawer opens on Tuesday with that block expanded; edit a raw period there and the bar moves. Press Esc: the drawer closes.
 
@@ -167,7 +167,7 @@ running block to grow, so that the calendar explains itself and stays current.
 | HCAL-26 | P2: Read the colours and the live time | Execute | Implemented (T12, T14, T16) |
 | HCAL-27 | P1: Get to the detail and the actions | Execute | Implemented (T17, T18, T19) |
 
-**Coverage:** 26 total, 26 mapped to tasks, 0 unmapped
+**Coverage:** 27 total, 27 mapped to tasks, 0 unmapped
 
 ---
 
