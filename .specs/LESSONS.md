@@ -246,6 +246,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: HCAL-12 (+1 more)
 - last seen: 2026-09-19T20:43:36Z
 
+### L-045 - A check whose assertion is satisfied by either branch of a conditional render is not evidence for either; drive the branch the criterion names from data the check itself creates.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-17 - scripts/smoke-hours-calendar.mjs:303-313 (smoke)
+- last seen: 2026-09-19T21:43:36Z
+
+### L-046 - A state flag that re-arms a close or cleanup rule needs a check that starts from the state where the flag is still false, not only from the common state where it is already true.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: MH - src/renderer/src/components/HoursView.tsx:123-126 (renderer)
+- last seen: 2026-09-19T21:43:36Z
+
+### L-047 - A global key handler that exempts text fields is behaviour the acceptance criterion must state, or the exemption is untestable and a mutant removing it survives.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-25 - src/renderer/src/components/HoursView.tsx:66-67 (renderer)
+- last seen: 2026-09-19T21:43:36Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
