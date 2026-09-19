@@ -1,20 +1,20 @@
-# Hours Calendar — Verifier Report (round 3)
+# Hours Calendar — Verifier Report (round 4)
 
 **Date**: 2026-09-19
-**Spec**: `.specs/features/hours-calendar/spec.md` (HCAL-01..26 + 5 edge cases, as amended by AD-031)
-**Diff range**: `8b9d191..a9c98f8` (`d7cc3ec`, `ac42a0d`, `0f3ab0b`, `ea99c54`, `37b62f9`, `a9c98f8`)
+**Spec**: `.specs/features/hours-calendar/spec.md` (HCAL-01..27 + 5 edge cases, as amended by AD-031 and the 2026-09-19 mockup pass)
+**Diff range**: `a9c98f8..a81df5b` (`2aff55e`, `68062b2` = T17, `a81df5b` = T18)
 **Verifier**: independent sub-agent (author ≠ verifier); evidence re-derived from the spec, not from `tasks.md` checkmarks or commit messages
 
 ## Validation: hours-calendar — FAIL
 
-The gate is green (893 tests, lint at baseline), the three deleted `defaultDay` tests are exactly the
-ones AD-031 removed the requirement for, and nothing else was weakened. Layout B is implemented as
-specified and 7 of 10 injected drawer mutants die on the recorded smoke run. But the revision's new
-drawer paths are the part the smoke reaches least: **HCAL-17 has no deterministic evidence** (the one
-check that can reach it passes either way, depending on the owner's data that day), and the
-**`hadTime` re-arm branch has none at all** — a mutant that disables it survives every check. One
-spec-precision gap is flagged on HCAL-25. All are small and precisely actionable; none is a defect in
-shipped behaviour that the Verifier could reproduce.
+**All six round-3 gaps are closed, and closed properly** — the empty-drawer scenario is now
+deterministic rather than data-dependent, and the two mutants that round 3 could not kill (MA, MH) die
+on the new checks. What fails is new: **T17 added two `SHALL` clauses to HCAL-15 — the summary line's
+counts and the per-group colour swatch — and neither carries any assertion.** Three mutants survive
+there, and one of them is not hypothetical: the summary line hard-codes the plural, so a day with a
+single block renders **`1 task · 1 blocks`**. That is shipped wrong text on an acceptance criterion,
+found only because nothing checks it. Everything else about T17 is right, including the part most
+likely to have broken — the swatch takes its role from the same frozen map the bars do.
 
 ---
 
@@ -24,7 +24,8 @@ shipped behaviour that the Verifier could reproduce.
 | ----- | ----- | ------- | --- |
 | 1 | `c27b412..94f107d` | not done | 4 surviving mutants in `hours-calendar.ts`: M8 (axis start `floor`→`round`, HCAL-09), M10 (lane reuse at a touching boundary), M12 / M13 (cluster closing, HCAL-10); spec-precision gaps on HCAL-12 and the narrow-lane edge case; HCAL-22 label asserted by code read only. Lessons L-023..L-026 recorded (`82862a0`) |
 | 2 | `c27b412..be5d8ab` | done | `be5d8ab` adds three unit tests, puts 6 px in HCAL-12 and 64 × 36 px in the edge case, extends smoke check 10 to the group label. All round-1 gaps closed |
-| 3 | `8b9d191..a9c98f8` | **not done** | Layout B (AD-031): legend chips, full-height grid, day detail in a drawer, `defaultDay` removed. Gate green at 893; earlier unit kills re-confirmed. Open: HCAL-17 evidence is data-conditional (mutant MA not reliably killed), the `hadTime` re-arm branch is unevidenced (mutant MH survives), HCAL-25 spec-precision on the Esc-in-a-text-field guard (mutant MB survives) |
+| 3 | `8b9d191..a9c98f8` | not done | Layout B (AD-031): legend chips, full-height grid, day detail in a drawer, `defaultDay` removed. Gate green at 893. 6 gaps: HCAL-17 evidence data-conditional (mutant MA not reliably killed), the `hadTime` re-arm branch unevidenced (mutant MH survived), HCAL-25 spec-precision on the Esc-in-a-text-field guard (MB survived), drawer geometry and legend truncation code-only, `tasks.md` tables stopped at T11. Lessons L-027..L-029 recorded (`2aff55e`) |
+| 4 | `a9c98f8..a81df5b` | **not done** | T17 (mockup pass: day head, summary line, group swatches, card fills the drawer; spec gains HCAL-27 and states HCAL-25's text-field exception) + T18 (smoke closes the round-3 gaps). Gate green at 893. **All 6 round-3 gaps verified closed**; MA and MH now die on checks 24 and 26. New: HCAL-15's summary-counts and swatch clauses have no assertion (N1, N4, N5 survive) and the summary renders `1 blocks`; HCAL-25's now-stated exception is still untested (MB survives); spec bookkeeping drifted |
 
 ---
 
@@ -32,137 +33,110 @@ shipped behaviour that the Verifier could reproduce.
 
 | Task | Status | Notes |
 | ---- | ------ | ----- |
-| T12 | ✅ Done | `spec.md` HCAL-15..19, 21 revised and HCAL-25, 26 added, each marked `revised by AD-031` / `added by AD-031`; edge cases revised; AD-031 in `.specs/STATE.md:32` |
-| T13 | ✅ Done | `HoursLegend.tsx:16-30` is now one flat `ul` of chips; `HoursLegend.css:3-25` wrapping row, `max-width: 340px`, ellipsis |
-| T14 | ✅ Done | `HoursView.css:87-95` (`overflow: hidden`), `HoursCalendar.css:21-27` (`flex: 1 1 0`, rows `auto minmax(240px, 1fr)`); the fixed `--hcal-hour-px` is gone and hour lines stay percentage-positioned (`HoursCalendar.tsx:88`) |
-| T15 | ✅ Done | `HoursView.tsx:114-145` selection + Esc, `:215-246` the drawer; `defaultDay` removed from `hours-calendar.ts` |
-| T16 | ✅ Done | `smoke-hours-calendar.mjs` now 22 checks; `smoke-time.mjs:232-239, 272-274` opens today's drawer first. Recorded live run 22/22 and 26/26 (body of `a9c98f8`). **Not re-run by the Verifier** — the smokes spawn sessions and write the owner's real data |
-| — | ⚠️ | `tasks.md`'s Phase Execution Map, Task Granularity Check, Test Co-location Validation and Diagram-Definition Cross-Check still stop at T11 although Phase 4 adds T12..T16 |
+| T17 | ⚠️ Done with a defect | `HoursView.tsx:254-273` `DayHead`, `:303-335` `DayCard` with the summary line and swatch wiring, `:345-357` `GroupSection`; `HoursView.css:143-280`. The card fills the drawer (`.hours-day { min-height: 100% }`) and the inter-group rules are gone. **Defect**: `HoursView.tsx:310` never singularises `blocks` — gap 1 |
+| T18 | ✅ Done | `scripts/smoke-hours-calendar.mjs` now 26 checks; the delete scenario parks the period a day earlier so the drawer provably opens on an **empty** day, then re-records and deletes. `fits()` also returns `gridWidth` |
+| Gap 6 (round 3) | ✅ Closed | `tasks.md:536` Phase Execution Map, `:557-558` granularity, `:582-583` cross-check, `:594-596` co-location all cover T12..T18 |
+| — | ⚠️ | Spec bookkeeping drifted — gap 5 below |
 
 ---
 
 ## Gate Check
 
-- **Commands** (Full gate from tasks.md): `npm run typecheck`, `npm run lint`, `npm test`, run on `a9c98f8`
+- **Commands** (Full gate from tasks.md): `npm run typecheck`, `npm run lint`, `npm test`, run on `a81df5b`
 - typecheck: **exit 0**
 - lint: **exit 0**, **0 errors / 18 warnings** — equals the baseline, no rise
 - test: **exit 0**, **893 passed / 0 failed / 0 skipped** (55 files)
-- **Test count before this revision**: 896 → **after**: 893 → **delta −3**
-- **Test integrity**: `git diff 8b9d191..a9c98f8 -- '*.test.ts'` touches one file, `hours-calendar.test.ts`, and removes exactly the `describe('defaultDay')` block (3 `it`s) plus its import. No other test was deleted, renamed, skipped or weakened; no assertion elsewhere was relaxed. The deletion matches the spec change: HCAL-16 now reads "WHEN the view opens or the shown week changes THEN **no day** SHALL be selected and the drawer SHALL be closed", so the default-day rule those three tests pinned no longer exists, and `defaultDay` itself is gone from `hours-calendar.ts`. Justified.
+- **Test count**: 893 → 893, **delta 0**. `git diff a9c98f8..a81df5b -- '*.test.ts'` is empty — no test file was touched, so nothing could be deleted, skipped or weakened. All of this round's new evidence is in the smoke, per the renderer convention.
 
 ---
 
-## Spec-Anchored Acceptance Criteria (revised and added by AD-031)
+## Round-3 gaps — closure check
 
-Unit = `src/renderer/src/lib/hours-calendar.test.ts`. Smoke = `scripts/smoke-hours-calendar.mjs`, checks
-numbered in execution order: 1 Mon–Fri order · 2 weekend rule · 3 header buttons/names · 4 one today ·
-5 opens with nothing selected · 6 parallel lanes · 7 min height · 8 ongoing/`now` · 9 hover tooltip ·
-10 legend chips · 11 header click opens drawer · 12 bar click focuses block · 13 one day card, in the
-drawer · 14 growth + stable colour · 15 no page scroll at 1100 × 640 · 16 X closes · 17 Esc closes ·
-18 ◀ closes · 19 future columns dimmed · 20 empty week text · 21 This week, nothing selected ·
-22 deleting the day's last period closes. Manual evidence = the recorded 22/22 run on 2026-09-19 with
-the owner's consent. Code = implementation read by the Verifier.
+Smoke = `scripts/smoke-hours-calendar.mjs` at `a81df5b`, checks renumbered by the two insertions:
+1 Mon–Fri order · 2 weekend rule · 3 header names · 4 one today · 5 opens with nothing selected ·
+6 parallel lanes · 7 min height · 8 ongoing/`now` · 9 hover tooltip · **10 chip titles (new)** ·
+11 legend folders · 12 header click · 13 bar click focus · 14 one day card in the drawer ·
+15 growth + stable colour · 16 no page scroll at 1100 × 640 · 17 X closes · **18 grid narrows and
+returns (new)** · 19 Esc closes · 20 ◀ closes · 21 future columns dimmed · 22 empty week text ·
+23 This week nothing selected · **24 empty day opens a drawer that says so (new)** · **25 time on the
+open day fills it (new)** · **26 emptying it closes it (rewritten)**. Manual evidence = the recorded
+26/26 run on 2026-09-19 with the owner's consent.
 
-**Line numbers are at `a9c98f8`.** While this verification ran, an unrelated uncommitted edit
-appeared in the working tree's `src/renderer/src/components/HoursView.tsx` (a `DayHead` component,
-colour swatches beside the group labels and a stats line in the day card — work beyond AD-031, not
-produced by the Verifier and not part of this range). It compiles, it is left untouched, and it
-shifts the line numbers below relative to the working copy. The gate figures and the sensor were
-taken on the clean tree at `a9c98f8`, before it appeared.
+| Round-3 gap | Now | Evidence |
+| ----------- | --- | -------- |
+| 1 — HCAL-17 evidence conditional on the owner's data; MA not reliably killed | ✅ **Closed** | `smoke-hours-calendar.mjs:455-484`. The scenario already asserts the past week is free (`pastBusy === false`, `:447-449`), then parks the only period on the **previous** day (`:457-463` `parked = start - 24 h`), so the clicked Wednesday is empty **by construction**, not by luck. Check 24 asserts `emptyDrawer !== null && emptyDrawer.head && emptyDrawer.empty === 'No time recorded on this day.' && emptyDrawer.groups === 0 && pressedLabel()?.startsWith(wedHeader)`. Under MA the header click sets `hadTime: true` with `shownDay === null`, so `HoursView.tsx:121` closes the selection in the same render and `emptyDrawer` is `null` — **MA killed by check 24** |
+| 2 — the `hadTime` re-arm branch unevidenced; MH survived | ✅ **Closed** | `smoke-hours-calendar.mjs:485-500`. Check 25 moves the period onto the open day and asserts `armed.title === wedHeader && armed.groups >= 1`; check 26 (`:501-505`) then deletes it and asserts `!(await drawerOpen()) && pressedLabel() === null`. Under MH `hadTime` stays `false` for ever, so at the delete `HoursView.tsx:121`'s `selection.hadTime && !shownDay` is false, the drawer stays open on its empty text — **MH killed by check 26**. Check 25 is the bridge that makes 26 mean what it claims: it proves the day really did gain time first |
+| 3 — HCAL-25 did not describe the text-field exception | ⚠️ **Half closed** | `spec.md:102` now reads "…presses Esc **outside a text field**… Esc inside a text field SHALL belong to that field", matching `HoursView.tsx:66-67,142` exactly. The spec-precision gap is resolved. But no check presses Esc inside an input, so mutant **MB still survives** — see gap 4 |
+| 4 — drawer geometry CSS-only | ✅ **Closed** | `fits()` (`:148-152`) now returns `gridWidth`; check 18 (`:380-384`, the check at `:380`) asserts `fitOpen.gridWidth < fitClosed.gridWidth - 100`, measured on the same `.hcal` before and after the X. The drawer is 380 px + a 12 px gap, so a mutant that overlays it instead of narrowing the grid leaves the widths equal and dies. Residual: the drawer's *side* is still structural (flex order), not measured |
+| 5 — legend truncation code-only | ✅ **Mostly closed** | Check 10 (`:296-300`, the check at `:300`) asserts `[...].every(c => c.getAttribute('title') === c.querySelector('.hleg-label').textContent)` — every chip, not a sample. Residual: no chip is verified to actually overflow (`scrollWidth > clientWidth`), so "SHALL be truncated" is still carried by `HoursLegend.css:18,56-62` alone |
+| 6 — `tasks.md` cross-check tables stopped at T11 | ✅ **Closed** | `tasks.md:536`, `:557-558`, `:582-583`, `:594-596` |
+
+---
+
+## Spec-Anchored Acceptance Criteria (this round's ACs)
 
 | AC | Spec-defined outcome | Evidence (`file:line` + assertion) | Outcome |
 | -- | -------------------- | ---------------------------------- | ------- |
-| HCAL-15 | While a day is selected, a drawer **to the right** of the grid, grid narrowing, showing that day's groups, blocks, raw periods, edit, delete, Copy exactly as TIME-35..41 / 44..49 | `HoursView.tsx:215-246` renders the unchanged `DayCard` inside `aside.hours-drawer`; `HoursView.css:102-121` `.hours-main { display: flex }` with `.hcal { min-width: 0 }` then `.hours-drawer { flex: none; width: 380px; overflow-y: auto }`; smoke 13 `document.querySelectorAll('.hours-drawer .hours-day').length === 1` and `.hours-day` total `=== 1`; `smoke-time.mjs:240-332` runs Copy, the raw-period list, the rejected adjust and the delete against `todayCard` **inside the drawer**, 26/26 | ✅ PASS (manual + code) — geometry clause is CSS-only, see gap 4 |
-| HCAL-16 | View opens / week changes → **no day selected, drawer closed** | `HoursView.tsx:114` `useState<Selection \| null>(null)`; `:120-122` `selection.weekStart !== weekStart` → `setSelection(null)`; smoke 5 `(await pressedLabel()) === null && !(await drawerOpen()) && querySelectorAll('.hours-day').length === 0`; smoke 18 `openBeforeNav && !(await drawerOpen()) && (await pressedLabel()) === null` after ◀; smoke 21 same after **This week** | ✅ PASS |
-| HCAL-17 | Selected day holds no time → the drawer **says no time is recorded on that day** | `HoursView.tsx:240-244` `No time recorded on {formatDayHeader(new Date(current.date))}.`; `HoursView.tsx:130` keeps the selection by storing `hadTime: Boolean(column?.day)`; smoke 11 `mondayDetail.includes(monday)` where `mondayDetail = (await detailTitle()) ?? (await emptyTexts()).join(' ')` | ⚠️ **GAP — conditional evidence.** Check 11 passes through either branch: it reaches the empty-drawer string only if that Monday held no time in the owner's data. Mutant MA is therefore not reliably killed. See gap 1 |
-| HCAL-18 | Activating a column header selects that day and opens the drawer on it | `HoursCalendar.tsx:73-75` `<button aria-pressed={selected === date} onClick={() => onSelectDay(date)}>`; `HoursView.tsx:128-131`; smoke 11 `(await pressedLabel())?.startsWith(monday) && (await drawerOpen())`; `smoke-time.mjs:233-238` opens the drawer by header before every Hours step | ✅ PASS (manual + code) |
-| HCAL-19 | Activating a bar selects its day, opens the drawer, **highlights and expands** its block | `HoursCalendar.tsx:125-128` `focused={selected === date && focus?.groupKey === groupKey && focus.start === block.start}`; `HoursView.tsx:132-133` fresh `focus` object per activation; `:352-367` `BlockLine` expands on a new focus and scrolls to it; smoke 12 `pressedLabel()?.startsWith(todayHeader) && drawerOpen() && detailTitle() === todayHeader && focused.group === 'No task · …' && focused.expanded === 'true' && focused.periods >= 1` | ✅ PASS (manual + code) |
-| HCAL-21 | Chips **above the grid**, every task and task-less folder incl. each one folded into Other, with colour and week total; long label truncated, full text on hover | `HoursView.tsx:203` renders `HoursLegend` before `.hours-main`; `HoursLegend.tsx:18-29` one chip per entry, `title={e.label}`, `role-${e.role}` swatch; `HoursLegend.css:14-25,56-62` `max-width: 340px` + `overflow: hidden; text-overflow: ellipsis`; unit `hours-calendar.test.ts:341-347` `toEqual([['Task #4','slot1',5h],['Task #3','slot2',3h],['Task #2','slot3',2h],['Task #1','other',1h],['No task · scratch','no-task',8h]])` — the folded task keeps its own entry and total; smoke 10 `['No task · Windows','No task · System32'].every(l => legend.some(e => e.label === l && e.outlined))` over `.hleg-chip` | ✅ PASS — truncation clause is code-only, see gap 5 |
-| HCAL-25 | Close button **or Esc** → drawer closes, no day selected, grid full width again | `HoursView.tsx:134` `closeDrawer`, `:222-230` the `aria-label="Close details"` button; `:138-145` the `keydown` listener; smoke 16 `closedByX = !(await drawerOpen()) && (await pressedLabel()) === null`; smoke 17 `openedAgain && !(await drawerOpen()) && (await pressedLabel()) === null` after a real `Input.dispatchKeyEvent` Escape; full width follows from `.hours-drawer` unmounting inside the flex row (`HoursView.css:102-108`) | ⚠️ **Spec-precision gap** — the code adds `!isTextField(e.target)` (`HoursView.tsx:66-67,141`), which the AC does not describe. See gap 3 |
-| HCAL-26 | Fits 1100 × 640 with no page scroll; hour height follows the available height; only the drawer's content may scroll | `HoursView.css:87-95` `.hours-body { flex: 1; min-height: 0; overflow: hidden }`, `:112` `.hours-drawer { overflow-y: auto }`; `HoursCalendar.css:21-27` `flex: 1 1 0` + `grid-template-rows: auto minmax(240px, 1fr)` (the fixed `--hcal-hour-px` is gone), `:102` gridlines at `calc(100% / var(--hcal-hours))` and `HoursCalendar.tsx:88` labels at `${(i / hours) * 100}%`, so the hour pitch is a fraction of whatever height the row gets; smoke 15 asserts, under `Emulation.setDeviceMetricsOverride` 1100 × 640, `!fitOpen.scrolls && !fitClosed.scrolls && fitOpen.gridBottom <= fitOpen.height && fitClosed.gridBottom <= fitClosed.height` — **both with the drawer open and closed** | ✅ PASS (manual + code) |
+| HCAL-15 (base) | Drawer right of the grid, grid narrowing, that day's groups, blocks, raw periods, edit, delete, Copy per TIME-35..41 / 44..49 | `HoursView.tsx:216-238` the unchanged `DayCard` inside `aside.hours-drawer`; check 14 `querySelectorAll('.hours-drawer .hours-day').length === 1`; check 18 the narrowing; `smoke-time.mjs:240-332` Copy, raw periods, rejected adjust, delete against `todayCard` **inside the drawer**, 26/26 — the Copy button moved into `.hours-day-stats` but stays a descendant of `.hours-day`, so that selector still finds it | ✅ PASS |
+| HCAL-15 (head) | "SHALL carry the day and its close control in one head" | `HoursView.tsx:254-273` `DayHead` renders `header.hours-day-head` with `.hours-day-title` and the `aria-label="Close details"` button; used by both branches (`:222-235`); check 24 asserts `head` on the empty branch, check 25 asserts `.hours-day-title === wedHeader` on the filled one; check 17 clicks `.hours-drawer-close` and asserts the drawer closes — mutant **N6** (inert `onClick`) dies there | ✅ PASS |
+| HCAL-15 (summary) | "a summary line with the day total, its **task and block counts** and Copy" | `HoursView.tsx:306-322`: total `formatHmCompact(day.totalMs)`, counts `{day.groups.length} task…` / `{day.groups.reduce((n, g) => n + g.blocks.length, 0)} blocks`, Copy. **No check reads `.hours-day-count` or `.hours-day-stats`** (`grep` over both smokes: no match) | ❌ **GAP — no assertion.** Mutants **N4** and **N5** zero the two counts and survive every check. The missing assertion is what let the `1 blocks` defect ship — gaps 1 and 2 |
+| HCAL-15 (swatch) | "each group SHALL wear the swatch of its **calendar colour**" | `HoursView.tsx:327` `role={roleOf(colours, group.key)}` — the *frozen* map, the same object passed to `HoursCalendar` at `:209`, read through `roleOf`, which returns `other` for a task unseen at freeze (HCAL-24). `HoursView.css:250-276` mirrors `HoursLegend.css:26-55` token for token, and `--hcal-slot1..3` are declared on `:root` (`HoursCalendar.css:7-18`), so the drawer inherits them. **The wiring is right**; no check reads `.hours-group-swatch` | ❌ **GAP — no assertion.** Mutant **N1** (`role` forced to `slot1`) survives every check — gap 2 |
+| HCAL-17 | Selected day holds no time → the drawer says no time is recorded on that day | `HoursView.tsx:232-235` `<p className="hours-empty">No time recorded on this day.</p>` inside a `section.hours-day` headed by `DayHead`; check 24's exact-string equality. Note the text is now generic and the day is named by the head, so HCAL-17 is satisfied **together with** HCAL-27 | ✅ PASS — mutant **N3** (text changed) dies on check 24 |
+| HCAL-25 | Close button, **or Esc outside a text field**, closes; Esc **inside** a text field belongs to the field | `HoursView.tsx:135` `closeDrawer`, `:262-270` the button, `:139-146` the listener with `!isTextField(e.target)` (`:66-67`); check 17 (X), check 19 (a real `Input.dispatchKeyEvent` Escape) | ⚠️ **Partial** — the close halves are pinned; the exception clause has no check and mutant **MB** survives (gap 4) |
+| HCAL-26 | Fits 1100 × 640, no page scroll, hour height follows the height, only the drawer's content may scroll | `HoursView.css:87-95` `.hours-body { overflow: hidden }`, `:114-121` `.hours-drawer { overflow-y: auto }`, `:149-151` `.hours-day { min-height: 100% }` fills it without forcing the body to scroll; `HoursCalendar.css:21-27`; check 16 asserts `!fitOpen.scrolls && !fitClosed.scrolls && gridBottom <= height` **both with the drawer open and closed** | ✅ PASS — unchanged by T17/T18 and still asserted after the card grew |
+| HCAL-27 | While the selected day holds no time the drawer SHALL **keep its head** and say so | `HoursView.tsx:232-235`; check 24 `emptyDrawer.head && emptyDrawer.empty === 'No time recorded on this day.' && emptyDrawer.groups === 0` | ✅ PASS — mutant **N2** (head dropped) dies on check 24. Residual: the check asserts the head *exists*, not that it names the selected day; only check 25 reads the title, on the filled branch |
 
-### Unchanged ACs — no regression
+### Unchanged this round
 
-`git diff 8b9d191..a9c98f8 -- src/renderer/src/lib/hours-calendar.ts` removes `defaultDay` and
-nothing else; `HoursCalendar.tsx` is untouched. So HCAL-01..14, 20, 22..24 keep the round-2 evidence
-verbatim, and the 28 remaining unit tests cover them. Spot-confirmed this round:
+`git diff a9c98f8..a81df5b` touches no `.ts` outside `HoursView.tsx`, and neither `hours-calendar.ts`,
+`hours-calendar.test.ts`, `HoursCalendar.tsx` nor `HoursLegend.tsx`. HCAL-01..14, 16, 18..24 keep their
+round-2/3 evidence verbatim; the colour freeze (`HoursView.tsx:103-111`, unit
+`hours-calendar.test.ts:350-366`, check 15 `grow1.bg === grow0.bg`) is untouched, and T17 consumes it
+through `roleOf` rather than reaching past it.
 
-- HCAL-24 (colour freeze) — `HoursView.tsx:102-110` unchanged; unit `hours-calendar.test.ts:350-366`
-  still green; smoke 14 `grow1.bg === grow0.bg` on a live growing bar.
-- HCAL-07 — `HoursView.tsx:202` still renders `No time recorded this week.`; smoke 20 asserts it
-  **and** `!(await drawerOpen())`.
-- HCAL-14 — smoke 13 pins one `.hours-day`, and it is inside `.hours-drawer`.
-- HCAL-06 — header JSX untouched; `smoke-time.mjs:259-268` week navigation 26/26.
-
-### Edge cases (as revised by AD-031)
+### Edge cases
 
 - [x] Four+ overlapping blocks narrow evenly, no direct label under 64 × 36 px — unit
-  `hours-calendar.test.ts:220` `[i, 4]`; `HoursCalendar.css` container query. Untouched this round.
-- [x] **Week change while the drawer is open → the drawer closes** — `HoursView.tsx:120-122`; smoke 18
-  (◀ with the drawer open) and smoke 21 (**This week**).
+  `hours-calendar.test.ts:220`; container query. Untouched.
+- [x] Week change while the drawer is open → closes — `HoursView.tsx:121`; checks 20, 23.
 - [x] Only a sub-minute block → 8 h axis — unit `hours-calendar.test.ts:157-158`. Untouched.
-- [x] Weekend column appears/disappears, order kept — unit `hours-calendar.test.ts:76`, `:85`; smoke 2.
-  A selection on a weekend column that then disappears takes the same
-  `selection.hadTime && !shownDay` path as the delete case (`HoursView.tsx:120`), since the column and
-  its `day` vanish together; covered transitively, not directly.
-- [ ] **Selected day's last period deleted → the drawer closes and no day is selected** — the main path
-  is evidenced: `HoursView.tsx:120` plus smoke 22, which moves a period to a past Wednesday, opens that
-  day, deletes the period and asserts `selectedBefore?.startsWith(wedHeader) && (await pressedLabel())
-  === null && !(await drawerOpen())`. **But the re-arm branch is not**: `HoursView.tsx:123-126` exists
-  precisely so a day selected *while empty* still closes once it has recorded and lost time, and no
-  check reaches it (mutant MH survives). See gap 2.
+- [x] Weekend column appears/disappears, order kept — unit `hours-calendar.test.ts:76`, `:85`; check 2.
+- [x] **Selected day's last period deleted → drawer closes, "including when that day held no time when
+  it was selected"** (clause added this round) — now fully evidenced end to end by checks 24 → 25 → 26,
+  which walk exactly that sequence. This was round 3's gap 2.
 
-**Status**: ❌ 6 of the 8 revised/added ACs fully evidenced; HCAL-17 conditional, HCAL-25 carries a
-spec-precision gap; 4 of 5 edge cases evidenced, 1 partially.
+**Status**: ❌ HCAL-15's summary and swatch clauses carry no assertion (3 surviving mutants, one live
+defect); HCAL-25 partial; HCAL-17, 26, 27 and all five edge cases fully evidenced.
 
 ---
 
 ## Discrimination Sensor
 
-Scratch: `git worktree add …\tmp\verify-wt2 a9c98f8` with a `node_modules` junction to the real tree.
-Real tree `git status --porcelain` **empty before and after**; junction and worktree removed, worktree
-list back to one entry. The real tree's sources were never edited and `git stash` was never used.
+Scratch: `git worktree add …\tmp\verify-wt4 a81df5b` with a `node_modules` junction. Real tree
+`git status --porcelain` **empty before and after**; junction and worktree removed, `git worktree list`
+back to one entry. The real tree's sources were never edited; `git stash` never used.
 
-### A. Pure module — re-confirming the earlier kills
+The renderer has no unit tests by convention, so these are judged **by reading** the smoke. Each was
+still applied in the scratch and confirmed a **compilable behaviour change invisible to the unit
+suite** — `tsc -p tsconfig.web.json` exit 0 and `vitest run src/renderer` **225/225 green for every one
+of the nine**, which is the measurement: the unit layer sees none of this.
 
-Scratch baseline `npx vitest run src/renderer/src/lib/hours-calendar.test.ts` → **28 passed** (31 − 3
-deleted). Each mutant applied to the scratch copy of `hours-calendar.ts`, run, reverted.
+| # | Line (`HoursView.tsx`) | Mutation | Verdict |
+| - | ---------------------- | -------- | ------- |
+| MA | `:131` | `hadTime: Boolean(column?.day)` → `true` (empty day closes itself on selection) | ✅ **Killed by check 24** — was surviving in round 3 |
+| MH | `:124` | the re-arm branch never fires | ✅ **Killed by check 26** — was surviving in round 3 |
+| MB | `:142` | drop `!isTextField(e.target)` | ❌ **Survives** — no check presses Esc in a field (gap 4) |
+| N1 | `:327` | group swatch role forced to `slot1` | ❌ **Survives** — nothing reads `.hours-group-swatch` (gap 2) |
+| N2 | `:233` | empty drawer loses its `DayHead` | ✅ Killed by check 24 (`head`) |
+| N3 | `:234` | empty drawer text changed | ✅ Killed by check 24 (exact string) |
+| N4 | `:309` | summary task count forced to 0 | ❌ **Survives** — nothing reads `.hours-day-count` (gap 2) |
+| N5 | `:310` | summary block count forced to 0 | ❌ **Survives** — same (gap 2) |
+| N6 | `:267` | the head's close button is inert | ✅ Killed by check 17 — confirms the relocated control is still wired and still matched by `.hours-drawer-close` |
 
-| # | Line | Mutation | Result |
-| - | ---- | -------- | ------ |
-| U1 | `hours-calendar.ts:51` | `offset >= 5` → `offset >= 6` (Sunday never dropped) | ✅ Killed (4 fail) |
-| U2 | `hours-calendar.ts:75` | axis start `Math.floor` → `Math.round` (the round-1 M8) | ✅ Killed (1 fail) |
-| U3 | `hours-calendar.ts:128` | lane reuse `end <= block.start` → `end < block.start` (the round-1 M10) | ✅ Killed (1 fail) |
-| U4 | `hours-calendar.ts:182` | colour ranking ascending | ✅ Killed (4 fail) |
-| U5 | `hours-calendar.ts:213` | legend `.sort` by role removed | ✅ Killed (2 fail) |
-
-5/5 killed — removing `defaultDay` cost the suite nothing else; the round-2 kills hold.
-
-### B. Renderer — drawer and selection logic in `HoursView.tsx`
-
-The renderer has no unit tests by project convention, so these cannot be *run* to a verdict. Each
-mutant was still applied in the scratch and confirmed to be a **compilable behaviour change** that the
-unit suite cannot see (`tsc -p tsconfig.web.json` exit 0 and `vitest run src/renderer` 225/225 green
-for every one of them — which is itself the measurement: the unit layer is blind to all ten). The kill
-column is therefore derived **by reading** `scripts/smoke-hours-calendar.mjs` against the recorded
-22/22 run.
-
-| # | Line | Mutation | Verdict (by reading) |
-| - | ---- | -------- | -------------------- |
-| MA | `HoursView.tsx:130` | `hadTime: Boolean(column?.day)` → `hadTime: true` — a day with no time closes itself the instant it is selected, so the drawer never opens empty | ⚠️ **Conditional** — only check 11 can see it, and only if that Monday held no time. Not a reliable kill (gap 1) |
-| MB | `HoursView.tsx:141` | drop `!isTextField(e.target)` — Esc inside a period-edit field also closes the drawer | ❌ **Survives** — no check presses Esc inside an input. Also *equivalent to the literal AC* (gap 3) |
-| MC | `HoursView.tsx:141` | `e.key === 'Escape'` → `'Esc'` | ✅ Killed by check 17 — `openedAgain && !(await drawerOpen()) && pressedLabel() === null` |
-| MD | `HoursView.tsx:134` | `closeDrawer` becomes a no-op (`setSelection(selection)`) | ✅ Killed by check 16 — `closedByX` |
-| ME | `HoursView.tsx:120` | week-change term → `false`: the drawer survives ◀ / ▶ / This week | ✅ Killed by checks 18 and 21 |
-| MF | `HoursView.tsx:114` | seed the selection with the first column: the view opens with a day selected | ✅ Killed by check 5 — `pressedLabel() === null && !drawerOpen() && '.hours-day'.length === 0` |
-| MG | `HoursView.tsx:120` | `hadTime && !shownDay` → `false`: emptying the open day leaves the drawer up | ✅ Killed by check 22 |
-| MH | `HoursView.tsx:123` | the re-arm branch never fires, so a day selected while empty keeps `hadTime: false` for ever | ❌ **Survives** — every check selects a day that already holds time (gap 2) |
-| MI | `HoursView.tsx:133` | bar activation drops `focus` | ✅ Killed by check 12 — `focused.expanded === 'true' && focused.group === …` |
-| MJ | `HoursView.tsx:210` | `selected={current?.date ?? null}` → `selected={null}`: the grid never marks the open day | ✅ Killed by checks 11, 16, 17, 18, 21 (all read `aria-pressed`) |
-
-**Sensor depth**: expanded (15 mutations: 5 unit-run, 10 renderer)
-**Sensor tally**: 5/5 unit mutants killed; renderer **7 killed by reading, 1 conditional, 2 survived** —
-❌ (gaps 1–3)
+**Sensor depth**: lightweight-plus (9 mutations, focused on T17's new surface and the two round-3
+survivors)
+**Sensor tally**: **5 killed, 4 survived** (MB, N1, N4, N5) — ❌. Two of round 3's survivors are now
+killed; three new ones arrived with T17's new clauses.
 
 ---
 
@@ -170,84 +144,82 @@ column is therefore derived **by reading** `scripts/smoke-hours-calendar.mjs` ag
 
 | Principle | Status |
 | --------- | ------ |
-| Minimum code / no scope creep | ✅ — the drawer reuses `DayCard` untouched; `HoursCalendar.tsx` is not edited at all |
-| Surgical changes | ✅ — 128 lines in `HoursView.tsx`, the rest CSS, the legend rewrite and the smokes |
-| No abstraction for single use | ✅ — `isTextField` is a 2-line local helper, not a hook |
-| Matches patterns | ✅ — same render-time state-adjustment idiom the file already used for the frozen colours and `BlockLine`'s focus |
-| Spec-anchored outcome check | ⚠️ — HCAL-17 asserted through a branch that may not execute; HCAL-25 carries unspecified behaviour |
-| Per-layer coverage (pure logic 1:1 to ACs; renderer by smoke) | ⚠️ — two drawer branches unreached by any smoke check |
-| Every test maps to a spec requirement — no unclaimed tests | ✅ — the 3 deleted tests named HCAL-16/17, whose rule AD-031 removed; the 28 that remain each name their HCAL id |
-| Dead code removed with its requirement | ✅ — `defaultDay` deleted, not left unused |
-| Guidelines followed: `.specs/codebase/TESTING.md`, tasks.md Test Coverage Matrix | ✅ |
-| Docs consistent | ⚠️ — `tasks.md`'s four cross-check tables still stop at T11 |
+| Minimum code / no scope creep | ✅ — `DayHead` is extracted because both branches need it, not speculatively |
+| Surgical changes | ✅ — one component file and its CSS; no `.ts` test touched, `HoursCalendar` and `HoursLegend` untouched |
+| Matches patterns | ⚠️ — `HoursView.tsx:310` breaks the file's own singularisation pattern, which `:412` follows (`period{… === 1 ? '' : 's'}`) |
+| Correct reuse of existing state | ✅ — the swatch reads the frozen map through `roleOf`, so HCAL-24 still holds inside the drawer; `HoursView.css:250-276` reuses the `:root` tokens rather than re-declaring hexes |
+| Spec-anchored outcome check | ❌ — two new `SHALL` clauses have no asserted value |
+| Per-layer coverage (pure logic 1:1; renderer by smoke) | ⚠️ — the summary line and the swatch are outside every check |
+| Every test maps to a spec requirement | ✅ — checks 10, 18, 24, 25, 26 each name their AC or edge case in the file header |
+| Documented guidelines followed: `.specs/codebase/TESTING.md`, tasks.md Test Coverage Matrix | ✅ |
+| Spec bookkeeping consistent | ❌ — gap 5 |
 
 ---
 
 ## Ranked gaps
 
-### Gap 1 — HCAL-17 has no deterministic evidence (Major)
+### Gap 1 — the summary line renders `1 blocks` (Major, live defect)
 
-- **Root cause**: smoke check 11 (`scripts/smoke-hours-calendar.mjs:303-313`) reads
-  `detailTitle() ?? emptyTexts().join(' ')` and asserts only that the result contains the day header.
-  Both the `DayCard` branch and the "No time recorded on …" branch satisfy it, so which one ran depends
-  on whether that Monday held time in the owner's data. HCAL-17 is the AC that names the second branch.
-- **Where**: `src/renderer/src/components/HoursView.tsx:240-244`, `HoursView.tsx:130`,
-  `scripts/smoke-hours-calendar.mjs:303-313`.
-- **Fix task**: add a check that opens the drawer on a day that certainly has no time — the future week
-  reached by ▶ already shows five empty weekday headers — and assert both
-  `await drawerOpen()` and that `.hours-drawer .hours-empty` reads exactly
-  `No time recorded on <that day header>.`. Kills MA.
+- **Root cause**: `src/renderer/src/components/HoursView.tsx:308-311` singularises `task` but
+  hard-codes the plural on `blocks`:
+  `{day.groups.length} task{day.groups.length === 1 ? '' : 's'} · {day.groups.reduce(…)} blocks`.
+  A day with a single merged block — one session, the ordinary case — renders **`1 task · 1 blocks`**.
+  The same file gets this right at `:412` for periods.
+- **Why it shipped**: no check reads `.hours-day-count`; mutant N5 zeroes the count and survives.
+- **Fix task**: mirror `:412` — `block{… === 1 ? '' : 's'}`. Verify with the check from gap 2.
+- **Priority**: Major (visible wrong output on an AC clause; trivially fixed).
+
+### Gap 2 — HCAL-15's summary and swatch clauses have no assertion (Major)
+
+- **Root cause**: T17 added two `SHALL` clauses to HCAL-15 — the summary line's total, task and block
+  counts, and each group's calendar swatch — and T18's checks did not follow. Mutants **N1** (swatch
+  role forced to `slot1`), **N4** and **N5** (counts zeroed) all survive 26/26.
+- **Where**: `src/renderer/src/components/HoursView.tsx:306-322` and `:327`;
+  `scripts/smoke-hours-calendar.mjs` (no reference to `.hours-day-count`, `.hours-day-stats` or
+  `.hours-group-swatch`).
+- **Fix task**: in the section that already has the drawer open on today (checks 12–14), assert
+  `.hours-day-total` matches the header's total, `.hours-day-count` matches
+  `<n> task(s) · <m> block(s)` derived from the DOM's own `.hours-group` and `.hours-block` counts, and
+  that each `.hours-group-swatch`'s `role-*` class equals the `role-*` on that group's bars in the grid.
+  The last one also pins HCAL-15's "so a row and its bar match" intent and kills N1.
 - **Priority**: Major.
 
-### Gap 2 — the `hadTime` re-arm branch is unevidenced (Major)
+### Gap 3 — "N tasks" counts groups, including task-less folders (Minor, spec/code disagreement)
 
-- **Root cause**: every smoke check selects a day that already holds time, so `hadTime` is `true` from
-  `selectDay` onwards and `HoursView.tsx:123-126` never runs. Mutant MH disables it with no check
-  failing. The branch is what makes the last-period-deleted edge case hold for a day that was selected
-  while still empty.
-- **Where**: `src/renderer/src/components/HoursView.tsx:123-126`.
-- **Fix task**: extend the gap-1 check — with the drawer open on an empty day, record time on it
-  (spawn a session / `time:adjust` a period into it), assert the drawer swaps to the day card, then
-  delete that period and assert the drawer closes and `pressedLabel()` is `null`. Kills MH.
-- **Priority**: Major.
-
-### Gap 3 — HCAL-25 does not describe the Esc-in-a-text-field guard (Minor, spec-precision)
-
-- **Root cause**: the AC reads "WHEN the user activates the drawer's close button **or presses Esc**
-  THEN the drawer SHALL close", unconditionally. The implementation ignores Esc whose target is inside
-  `input, textarea, select`. The behaviour is reasonable — `PeriodRow`'s `datetime-local` editor has no
-  Esc handler of its own, so Esc there is the browser's — but it is not in the spec, so no test can be
-  required to pin it, and mutant MB (removing the guard) makes the code match the AC literally.
-- **Where**: `src/renderer/src/components/HoursView.tsx:66-67` and `:141`.
-- **Fix task**: decide the rule and write it into HCAL-25 ("…presses Esc outside a text field…"), then
-  add a smoke check that opens a period editor in the drawer, presses Esc and asserts the drawer is
-  still open.
+- **Root cause**: `HoursView.tsx:309` counts `day.groups.length`. A group may be a task-less folder
+  (`No task · <folder>`), which HCAL-11 and HCAL-21 are careful to treat as *not* a task. In the
+  smoke's own scenario every group is task-less, so the drawer reads "2 tasks" for zero tasks.
+- **Fix task**: decide which the AC means — count `group.taskId !== null`, or reword HCAL-15 to say
+  "group counts". Whichever, the gap-2 check should assert the chosen rule.
 - **Priority**: Minor.
 
-### Gap 4 — the drawer geometry clauses are CSS-only (Minor)
+### Gap 4 — HCAL-25's text-field exception is stated but untested (Minor)
 
-- HCAL-15's "to the right of the grid, the grid narrowing to make room" and HCAL-25's "the grid SHALL
-  take the full width again" are evidenced by `HoursView.css:102-121` alone. Smoke 15 measures scroll
-  fit and grid bottom, never grid width or the drawer's x.
-- **Fix task**: in check 15, capture `.hcal` `getBoundingClientRect()` with the drawer open and after
-  closing it, and assert the closed width is the larger and that the drawer's `x` exceeds the grid's
-  right edge. Cheap, and it rides on measurements the check already takes.
+- Round 3's gap 3 is half closed: `spec.md:102` now states the rule, so it is no longer a
+  spec-precision gap — but mutant **MB** (dropping `!isTextField(e.target)`,
+  `HoursView.tsx:66-67,142`) still survives, so the clause has no evidence.
+- **Fix task**: in the drawer, expand a block, click Edit on a raw period, dispatch Escape with the
+  `datetime-local` input focused, and assert the drawer is **still open**; then Escape outside it and
+  assert it closes. `PeriodRow` has no Esc handler of its own, so the guard is the only thing under test.
 - **Priority**: Minor.
 
-### Gap 5 — HCAL-21's truncation clause is code-only (Minor)
+### Gap 5 — spec bookkeeping drifted with HCAL-27 (Cosmetic)
 
-- "a label too long for its chip SHALL be truncated with its full text available on hover" is evidenced
-  by `HoursLegend.tsx:21` (`title={e.label}`) and `HoursLegend.css:18,56-62`. Smoke 10 reads labels and
-  swatch classes, never `title` or an overflowing chip.
-- **Fix task**: extend check 10 to assert every chip's `title` equals its label text and that a chip
-  whose `scrollWidth > clientWidth` still carries it.
-- **Priority**: Minor.
-
-### Gap 6 — `tasks.md` cross-check tables stop at T11 (Cosmetic)
-
-- Phase 4 adds T12..T16, but the Phase Execution Map, Task Granularity Check, Test Co-location
-  Validation and Diagram-Definition Cross-Check were not extended. `.specs/features/hours-calendar/tasks.md`.
+- `.specs/features/hours-calendar/spec.md:170` still reads **"Coverage: 26 total, 26 mapped to tasks,
+  0 unmapped"** though HCAL-27 makes 27.
+- `.specs/features/hours-calendar/spec.md:121` places HCAL-27 inside the **P2** story block (between
+  HCAL-23 and HCAL-26, and out of numeric order) while the traceability table at `:168` assigns it to
+  **P1: Get to the detail and the actions**. HCAL-27 is a drawer criterion; it belongs in the P1 block.
 - **Priority**: Cosmetic.
+
+### Gap 6 — residual assertion edges (Cosmetic)
+
+- Check 10 asserts every chip's `title`, but no chip is verified to actually overflow, so HCAL-21's
+  "SHALL be truncated" rests on `HoursLegend.css:18,56-62`.
+- Check 18 asserts the grid narrows and returns, but not that the drawer is on the **right**.
+- Check 24 asserts the empty drawer *has* a head, but not that the head names the selected day; only
+  check 25 reads `.hours-day-title`, on the filled branch.
+- **Priority**: Cosmetic. Each is one extra expression in a check that already takes the measurement.
 
 ---
 
@@ -255,39 +227,38 @@ column is therefore derived **by reading** `scripts/smoke-hours-calendar.mjs` ag
 
 | Requirement | Previous Status | New Status |
 | ----------- | --------------- | ---------- |
-| HCAL-01..14, 20, 22, 23, 24 | ✅ Verified (round 2) | ✅ Verified — unchanged by this revision |
-| HCAL-15 | Implemented | ✅ Verified (geometry clause code-only — gap 4) |
-| HCAL-16 | Implemented | ✅ Verified |
-| HCAL-17 | Implemented | ❌ Needs Fix — gap 1 |
-| HCAL-18 | Implemented | ✅ Verified |
-| HCAL-19 | Implemented | ✅ Verified |
-| HCAL-21 | Implemented | ✅ Verified (truncation clause code-only — gap 5) |
-| HCAL-25 | Implemented | ⚠️ Spec-precision gap — gap 3 |
-| HCAL-26 | Implemented | ✅ Verified |
-| Edge case: day's last period deleted | Implemented | ⚠️ Partial — gap 2 |
+| HCAL-01..14, 16, 18..24, 26 | ✅ Verified | ✅ Verified — untouched by this range |
+| HCAL-15 | ✅ Verified (round 3, geometry code-only) | ❌ **Needs Fix** — summary and swatch clauses unasserted; `1 blocks` defect (gaps 1–3) |
+| HCAL-17 | ❌ Needs Fix (round 3) | ✅ **Verified** — deterministic, check 24 |
+| HCAL-21 | ✅ Verified (truncation code-only) | ✅ Verified — title clause now asserted (check 10) |
+| HCAL-25 | ⚠️ Spec-precision gap (round 3) | ⚠️ **Partial** — spec fixed, exception untested (gap 4) |
+| HCAL-27 | — (new) | ✅ Verified — check 24 |
+| Edge case: day's last period deleted | ⚠️ Partial (round 3) | ✅ **Verified** — checks 24 → 25 → 26 |
 
 ---
 
 ## Summary
 
-**Overall**: ⚠️ Issues — layout B works and is well built; two drawer branches are untested and one AC
-is under-specified.
+**Overall**: ⚠️ Issues — the round-3 repair work is exemplary; the new mockup pass arrived without its
+own evidence.
 
-**Spec-anchored check**: 6/8 revised ACs fully evidenced, 1 conditional (HCAL-17), 1 spec-precision
-gap (HCAL-25); 4/5 edge cases evidenced, 1 partial
-**Sensor**: unit 5/5 killed; renderer 7 killed / 1 conditional / 2 survived (MA, MB, MH)
+**Spec-anchored check**: all 6 round-3 gaps closed; HCAL-17, 26, 27 and 5/5 edge cases fully evidenced;
+HCAL-15 has two unasserted clauses and one live defect; HCAL-25 partial
+**Sensor**: 9 mutations — 5 killed, 4 survived (MB, N1, N4, N5); round 3's MA and MH now killed by
+checks 24 and 26
 **Gate**: typecheck exit 0; lint exit 0, 0 errors / 18 warnings (baseline); 893 passed, 0 failed,
-0 skipped; −3 tests, justified by AD-031
+0 skipped; no test file touched in this range
 
-**What works**: the drawer opens only on a header or bar click and closes on X, Esc, every week change
-and the loss of the open day's last period; the legend is a wrapping chip row above the grid with every
-task, every folded task and every folder carrying its total; the grid takes the leftover height and the
-hour pitch follows it, so nothing but the drawer scrolls at 1100 × 640; `DayCard`, `HoursCalendar` and
-the whole pure model are untouched, so Copy, edit and delete keep their shipped evidence.
+**What works**: the empty-drawer scenario is deterministic by construction rather than by luck — the
+period is parked off the day first, so checks 24 → 25 → 26 walk empty → filled → emptied and pin both
+branches of the `hadTime` machine; the grid's narrowing and the chips' titles are measured; the
+relocated close control is still wired (N6 dies); the swatch is correctly sourced from the frozen
+colour map through `roleOf`, so the drawer cannot disagree with the bars; the card fills the drawer
+without making the body scroll at 1100 × 640.
 
-**Issues found**: gaps 1–6 above, in rank order. Gaps 1 and 2 are one smoke scenario between them —
-open the drawer on a day with no time, give it time, take the time away.
+**Issues found**: gaps 1–6 above. Gaps 1 and 2 are one fix and one check between them: singularise
+`block`, then assert the summary line and the swatch roles in the section that already has the drawer
+open.
 
-**Next steps**: route gaps 1 and 2 to an implementer as one smoke-check fix task, settle gap 3 in the
-spec, then re-dispatch the Verifier (round 4 of a maximum 3 fix→re-verify iterations; this is the 1st).
-Gaps 4–6 can ride along or be deferred.
+**Next steps**: route gaps 1–3 to an implementer as one task, decide gap 4's check, tidy gap 5's spec
+bookkeeping, then re-dispatch the Verifier. This is fix→re-verify iteration 2 of the maximum 3.

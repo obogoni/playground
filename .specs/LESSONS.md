@@ -264,6 +264,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: HCAL-25 - src/renderer/src/components/HoursView.tsx:66-67 (renderer)
 - last seen: 2026-09-19T21:43:36Z
 
+### L-048 - When an acceptance criterion gains a clause about rendered text or a visual token, add its assertion in the same change; a clause no check reads is where wrong output ships unnoticed.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: N1, N4, N5 - src/renderer/src/components/HoursView.tsx:306-327 (renderer)
+- last seen: 2026-09-19T22:02:37Z
+
+### L-049 - A count shown to the user must count what its label names; do not label a group count as a task count when a group may carry no task.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-15 - src/renderer/src/components/HoursView.tsx:309 (renderer)
+- last seen: 2026-09-19T22:02:37Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

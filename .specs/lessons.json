@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 48,
+  "next_id": 50,
   "lessons": [
     {
       "id": "L-001",
@@ -767,6 +767,42 @@
       ],
       "created": "2026-09-19T21:43:36Z",
       "last_seen": "2026-09-19T21:43:36Z"
+    },
+    {
+      "id": "L-048",
+      "key": "surviving_mutant::when an acceptance criterion gains a clause about rendered text or a visual token add its assertion in the same change a clause no check reads is where wrong output ships unnoticed",
+      "text": "When an acceptance criterion gains a clause about rendered text or a visual token, add its assertion in the same change; a clause no check reads is where wrong output ships unnoticed.",
+      "signal": "surviving_mutant",
+      "scope": "renderer",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "N1, N4, N5 - src/renderer/src/components/HoursView.tsx:306-327 (renderer)"
+      ],
+      "created": "2026-09-19T22:02:37Z",
+      "last_seen": "2026-09-19T22:02:37Z"
+    },
+    {
+      "id": "L-049",
+      "key": "spec_precision_gap::a count shown to the user must count what its label names do not label a group count as a task count when a group may carry no task",
+      "text": "A count shown to the user must count what its label names; do not label a group count as a task count when a group may carry no task.",
+      "signal": "spec_precision_gap",
+      "scope": "renderer",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "HCAL-15 - src/renderer/src/components/HoursView.tsx:309 (renderer)"
+      ],
+      "created": "2026-09-19T22:02:37Z",
+      "last_seen": "2026-09-19T22:02:37Z"
     }
   ]
 }
