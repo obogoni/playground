@@ -21,7 +21,9 @@
  *   8. ◀ closes the drawer; ▶ shows five dimmed, empty future columns that say
  *      there is no time; This week returns with nothing selected (HCAL-05, 06,
  *      07, 16)
- *   9. deleting the selected day's last period closes the drawer (edge case)
+ *   9. a day with no time opens a drawer that says so; time recorded on that
+ *      open day fills it, and deleting that time closes it (HCAL-17, HCAL-27,
+ *      edge case)
  *
  * NOT automatable here: colours of task slots (ad-hoc sessions in a non-git cwd
  * carry no task — HCAL-11 and the frozen ranking are unit-tested), keyboard
@@ -146,7 +148,7 @@ const clickHead = (header) =>
 /** Whether the Hours body fits the viewport: it does not scroll and the grid ends inside. */
 const fits = () =>
   evaluate(
-    `(() => { const b = document.querySelector('.hours-body'); const g = document.querySelector('.hcal').getBoundingClientRect(); return { scrolls: b.scrollHeight > b.clientHeight + 1, gridBottom: Math.round(g.bottom), height: innerHeight } })()`
+    `(() => { const b = document.querySelector('.hours-body'); const g = document.querySelector('.hcal').getBoundingClientRect(); return { scrolls: b.scrollHeight > b.clientHeight + 1, gridBottom: Math.round(g.bottom), gridWidth: Math.round(g.width), height: innerHeight } })()`
   )
 const barIn = (header, folder) =>
   `(() => { const i = ${HEADS}.findIndex(h => h.getAttribute('aria-label').startsWith(${JSON.stringify(header)})); const col = document.querySelectorAll('.hcal-col')[i]; return [...(col?.querySelectorAll('.hcal-bar') ?? [])].find(b => b.getAttribute('aria-label').startsWith(${JSON.stringify(`No task · ${folder}, `)})) ?? null })()`
@@ -291,6 +293,10 @@ try {
   const legend = await evaluate(
     `[...document.querySelectorAll('.hleg-chip')].map(r => ({ label: r.querySelector('.hleg-label')?.textContent, outlined: r.querySelector('.hleg-swatch')?.classList.contains('role-no-task') ?? false }))`
   )
+  const chipTitles = await evaluate(
+    `[...document.querySelectorAll('.hleg-chip')].every(c => c.getAttribute('title') === c.querySelector('.hleg-label').textContent)`
+  )
+  check('every legend chip carries its full label as its title', chipTitles)
   check(
     'the legend chips list both folders with outlined swatches',
     ['No task · Windows', 'No task · System32'].every((l) =>
@@ -371,6 +377,11 @@ try {
     `${JSON.stringify(fitOpen)} / ${JSON.stringify(fitClosed)}`
   )
   check('the X closes the drawer and clears the selection', closedByX)
+  check(
+    'the grid narrows for the drawer and takes the width back when it closes',
+    fitOpen.gridWidth < fitClosed.gridWidth - 100,
+    `${fitOpen.gridWidth} → ${fitClosed.gridWidth}`
+  )
   await clickHead(todayHeader)
   await sleep(200)
   const openedAgain = await drawerOpen()
@@ -444,10 +455,12 @@ try {
     )
   } else {
     const start = new Date(pastWed.getFullYear(), pastWed.getMonth(), pastWed.getDate(), 10)
+    // Park it outside that day first: the drawer must open on an EMPTY day.
+    const parked = new Date(start.getTime() - 24 * 3600_000)
     const moved = await invoke('time:adjust', {
       id: sysPeriod.id,
-      start: start.toISOString(),
-      end: new Date(start.getTime() + 30 * 60_000).toISOString()
+      start: parked.toISOString(),
+      end: new Date(parked.getTime() + 30 * 60_000).toISOString()
     })
     for (let i = 0; i < 4; i++) {
       await nav('Previous week')
@@ -456,17 +469,38 @@ try {
     await sleep(300)
     const wedHeader = dayHeader(pastWed)
     await clickHead(wedHeader)
-    await sleep(300)
-    const selectedBefore = (await drawerOpen()) ? await pressedLabel() : null
-    await invoke('time:delete', { id: sysPeriod.id })
-    await sleep(800)
+    await sleep(400)
+    const emptyDrawer = await evaluate(
+      `(() => { const d = document.querySelector('.hours-drawer'); return d ? { head: !!d.querySelector('.hours-day-head'), empty: d.querySelector('.hours-empty')?.textContent ?? null, groups: d.querySelectorAll('.hours-group').length } : null })()`
+    )
     check(
-      "deleting the open day's last period closes the drawer",
-      moved.ok === true &&
-        selectedBefore?.startsWith(wedHeader) &&
-        (await pressedLabel()) === null &&
-        !(await drawerOpen()),
-      `${selectedBefore} → ${await pressedLabel()}`
+      'a day with no time opens a drawer whose own text says so',
+      emptyDrawer !== null &&
+        emptyDrawer.head &&
+        emptyDrawer.empty === 'No time recorded on this day.' &&
+        emptyDrawer.groups === 0 &&
+        (await pressedLabel())?.startsWith(wedHeader),
+      JSON.stringify(emptyDrawer)
+    )
+    await invoke('time:adjust', {
+      id: sysPeriod.id,
+      start: start.toISOString(),
+      end: new Date(start.getTime() + 30 * 60_000).toISOString()
+    })
+    await sleep(1200)
+    const armed = await evaluate(
+      `(() => { const d = document.querySelector('.hours-drawer'); return d ? { title: d.querySelector('.hours-day-title')?.textContent ?? null, groups: d.querySelectorAll('.hours-group').length } : null })()`
+    )
+    check(
+      'time recorded on the open day fills its drawer',
+      moved.ok === true && armed?.title === wedHeader && armed.groups >= 1,
+      JSON.stringify(armed)
+    )
+    await invoke('time:delete', { id: sysPeriod.id })
+    await sleep(1200)
+    check(
+      'emptying the open day closes the drawer, even though it opened empty',
+      !(await drawerOpen()) && (await pressedLabel()) === null
     )
     await nav('This week')
   }

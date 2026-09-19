@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/hours-calendar/design.md`
-**Status**: Phase 5 in progress — the drawer's look (T17) and the round-3 verifier gaps (T18)
+**Status**: Phase 5 executed — T17, T18 done; Verifier re-run pending
 
 **Branch**: `feature/hours-calendar`, stacked on `feature/time-tracking` (PR #93). Its PR carries "depends on #93"; once #93 merges, `git rebase --onto origin/main feature/time-tracking feature/hours-calendar`.
 
@@ -510,13 +510,13 @@ T16 → T17 → T18
 
 **Done when**:
 
-- [ ] A day with no time opens a drawer whose own text says so (HCAL-17, 27)
-- [ ] A day selected while empty, given time and then emptied, closes the drawer (edge case, mutant MH)
-- [ ] The grid is narrower with the drawer open than closed (HCAL-15)
-- [ ] A legend chip's `title` carries its full label (HCAL-21)
-- [ ] The cross-check tables cover T12..T18
-- [ ] Both smokes pass against a live dev app, with the owner's go-ahead; cleanup verified
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] A day with no time opens a drawer whose own text says so (HCAL-17, 27)
+- [x] A day selected while empty, given time and then emptied, closes the drawer (edge case, mutant MH)
+- [x] The grid is narrower with the drawer open than closed (HCAL-15)
+- [x] A legend chip's `title` carries its full label (HCAL-21)
+- [x] The cross-check tables cover T12..T18
+- [x] Both smokes pass against a live dev app, with the owner's go-ahead; cleanup verified
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: manual
 **Gate**: manual
