@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/hours-calendar/design.md`
-**Status**: Done — T1..T11 executed; Verifier PASS round 2 (`validation.md`)
+**Status**: Phase 4 in progress — layout B revision (AD-031); T1..T11 done, Verifier PASS round 2 on them
 
 **Branch**: `feature/hours-calendar`, stacked on `feature/time-tracking` (PR #93). Its PR carries "depends on #93"; once #93 merges, `git rebase --onto origin/main feature/time-tracking feature/hours-calendar`.
 
@@ -62,6 +62,12 @@ T5 → T6 → T7 → T8 → T9
 
 ```
 T9 → T10 → T11
+```
+
+### Phase 4: Layout B — fit the window, detail in a drawer (AD-031, owner decision 2026-09-19)
+
+```
+T11 → T12 → T13 → T14 → T15 → T16
 ```
 
 ---
@@ -345,6 +351,122 @@ T9 → T10 → T11
 
 ---
 
+### T12: Revise the spec for layout B
+
+**What**: Rewrite HCAL-15..19 and 21, add HCAL-25 and 26, revise the edge cases, and record AD-031 in `.specs/STATE.md`.
+**Where**: `.specs/features/hours-calendar/spec.md`, `tasks.md`, `.specs/STATE.md`
+**Depends on**: T11
+**Reuses**: The AD-018 / AD-028 amendment pattern.
+**Requirement**: HCAL-15, 16, 17, 18, 19, 21, 25, 26
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+
+- [x] Every changed AC says it was revised or added by AD-031
+- [x] AD-031 records the owner's choice of layout B and its consequences for HCAL-16 and the tests
+- [x] Gate passes: `npm test`
+- [x] Test count: **896** (unchanged)
+
+**Tests**: none
+**Gate**: quick
+**Commit**: `docs(specs): revise the hours calendar for the drawer layout`
+
+---
+
+### T13: Put the legend in chips above the grid
+
+**What**: Rewrite `HoursLegend` as a wrapping row of chips — the three coloured tasks, each Other task with the neutral swatch, then folders outlined — each with its week total; long labels truncated with a `title`. Render it above the calendar.
+**Where**: `src/renderer/src/components/HoursLegend.tsx`, `.css`
+**Depends on**: T12
+**Reuses**: `legendEntries`, unchanged.
+**Requirement**: HCAL-21
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+
+- [ ] Every task and folder of the week has a chip with swatch, label and total
+- [ ] A long label is truncated and its full text is the chip's `title`
+- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [ ] Test count: **896** (unchanged)
+
+**Tests**: none
+**Gate**: full
+**Commit**: `feat(hours): show the week totals as chips above the calendar`
+
+---
+
+### T14: Let the calendar fill the height
+
+**What**: Make the Hours body a non-scrolling column whose calendar takes the remaining height; the hour rows divide it instead of a fixed 36 px.
+**Where**: `src/renderer/src/components/HoursCalendar.css`, `HoursView.css`
+**Depends on**: T13
+**Reuses**: The grid of T7.
+**Requirement**: HCAL-26
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+
+- [ ] At 1100 × 640 the Hours body does not scroll and the calendar ends inside the window
+- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [ ] Test count: **896** (unchanged)
+
+**Tests**: none
+**Gate**: full
+**Commit**: `feat(hours): fit the calendar to the window height`
+
+---
+
+### T15: Open the day in a drawer
+
+**What**: Replace the day card under the grid with a drawer beside it: closed on open and on week change; opened by a header or bar click; closed by its X, by Esc, and when its day loses its last period. Remove `defaultDay` and its three unit tests, whose requirement HCAL-16 no longer asks for a default day (owner decision 2026-09-19).
+**Where**: `src/renderer/src/components/HoursView.tsx`, `.css`, `src/renderer/src/lib/hours-calendar.ts`, `hours-calendar.test.ts`
+**Depends on**: T14
+**Reuses**: `DayCard` with its `focus` prop, unchanged.
+**Requirement**: HCAL-15, 16, 17, 18, 19, 25, 26
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+
+- [ ] No day is selected and no drawer shows when the view opens or the week changes
+- [ ] A header or bar click opens the drawer on that day; a bar click also focuses its block
+- [ ] X and Esc close it; deleting the day's last period closes it
+- [ ] Only the drawer's content scrolls
+- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [ ] Phase gate passes: `npx electron-vite build`
+- [ ] Test count: 896 − 3 = **893**
+
+**Tests**: none
+**Gate**: build
+**Commit**: `feat(hours): open the selected day in a drawer`
+
+---
+
+### T16: Drive the drawer layout end to end
+
+**What**: Update `smoke-hours-calendar.mjs` for the drawer (closed on open, opened by header and bar, closed by X, Esc, week change and delete, no page scroll at 1100 × 640) and `smoke-time.mjs` to open today's drawer before its Hours steps; run both against a live dev app with the owner's go-ahead; look at both themes.
+**Where**: `scripts/smoke-hours-calendar.mjs`, `scripts/smoke-time.mjs`
+**Depends on**: T15
+**Reuses**: The T11 harness and teardown.
+**Requirement**: HCAL-15..19, 21, 25, 26 end to end
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+
+- [ ] Both smokes pass against a live dev app; cleanup verified
+- [ ] Both themes looked at, at 1100 × 640 and wider
+- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
+
+**Tests**: manual
+**Gate**: manual
+**Commit**: `test(hours): drive the drawer layout end to end`
+
+---
+
 ## Phase Execution Map
 
 ```
@@ -420,15 +542,17 @@ Strictly sequential. 11 tasks > 8, so the sub-agent offer applies — offer-then
 | HCAL-12 | T7, T11 |
 | HCAL-13 | T5 |
 | HCAL-14 | T9, T10, T11 |
-| HCAL-15 | T6, T9, T11 |
-| HCAL-16 | T5, T9 |
-| HCAL-17 | T5, T9 |
-| HCAL-18 | T7, T9, T11 |
-| HCAL-19 | T6, T7, T9, T11 |
+| HCAL-15 | T6, T9, T11, T12, T15, T16 |
+| HCAL-16 | T5, T9, T12, T15, T16 |
+| HCAL-17 | T5, T9, T12, T15, T16 |
+| HCAL-18 | T7, T9, T11, T12, T15, T16 |
+| HCAL-19 | T6, T7, T9, T11, T12, T15, T16 |
 | HCAL-20 | T7, T11 |
-| HCAL-21 | T4, T8, T11 |
+| HCAL-21 | T4, T8, T11, T12, T13, T16 |
 | HCAL-22 | T7, T11 |
 | HCAL-23 | T5, T7, T11 |
 | HCAL-24 | T4, T9, T11 |
+| HCAL-25 | T12, T15, T16 |
+| HCAL-26 | T12, T14, T16 |
 
-All 24 mapped; none unmapped.
+All 26 mapped; none unmapped.

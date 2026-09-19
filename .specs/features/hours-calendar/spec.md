@@ -38,11 +38,12 @@ the week as columns, and the time drawn as bars.
 | Time axis | From the week's earliest block start to its latest block end, rounded out to whole hours, at least 8 hours; shared by every column; hour gridlines labelled | Owner decision (grill Q6) | y |
 | Colour | **[revised at Spec, grill Q9]** The three tasks with the most time in the shown week get the three colours; every other task shares a neutral **Other tasks** colour; task-less time has its own neutral treatment; the legend lists every task and folder with its week total | Grill Q7 asked for one colour per task. Running the dataviz validator on the app's own surfaces (`--panel` `#ffffff` light, `#221f1b` dark) with every pair in play — any bar can sit beside any other in a calendar — only three colours (blue, orange, aqua) pass in both themes; a fourth fails the normal-vision floor (violet vs blue ΔE 9.8 in dark), a pair that full-colour readers cannot tell apart and that labels do not excuse. Owner chose the top-three rule (Q9) | y |
 | Colour stability | Assigned when the week loads, never while it is shown | "Colour follows the entity": a bar must not repaint because an open period made another task overtake it | y |
-| Detail | A panel under the grid shows one selected day exactly as the list view showed a day: groups, blocks, raw periods, edit, delete, Copy | Owner decision (grill Q3); reuses TIME-35..41 and TIME-44..49 as they are | y |
-| Default selection | Today when the shown week contains it; otherwise the most recent day with time; nothing when the week is empty | Owner decision (grill Q8) | y |
+| Detail | **[revised 2026-09-19, AD-031]** A drawer to the right of the grid shows one selected day exactly as the list view showed a day: groups, blocks, raw periods, edit, delete, Copy. It is closed until a day or a bar is activated, and the grid narrows to make room | First shipped as a panel under the grid (grill Q3); the owner then chose layout B of three no-scroll mockups so the whole view fits the window | y |
+| Default selection | **[revised 2026-09-19, AD-031]** None: the view opens, and every week change lands, with no day selected and the drawer closed | Grill Q8 chose today / latest day; the owner reversed it with layout B ("hide the details until a day or task is selected") | y |
 | Clicking a bar | Selects its day, and highlights and expands that block in the detail | Owner decision (grill Q8) | y |
 | Future days | Shown as columns, dimmed, with no bars | A calendar shows the whole week; dimming says "not yet" rather than "nothing" | y |
 | Open periods | The bar of a block that is still open ends at "now", carries an ongoing marker, and grows at TIME-42's refresh | Consistent with the totals, which already count open time to now | y |
+| Fit | **[added 2026-09-19, AD-031]** The view fits the window with no page scroll down to the minimum window (1100 × 640): the hour height follows the available height and the legend is a row of chips above the grid; only the drawer's own content may scroll | Owner request after the first build: the grid, legend and detail stacked past the window | y |
 | Very short blocks | A bar keeps a minimum height so any block stays visible and clickable; its real duration is in the tooltip and the detail | A 2-minute block would otherwise be under one pixel | y |
 | Superseded requirement | TIME-34 ("list each day that has time, newest first") is superseded when this ships; recorded as **AD-029** in `.specs/STATE.md` on this feature's branch | The AD-018 / AD-028 pattern for shipped requirements that stop describing the app | y |
 | Branch base | `feature/hours-calendar` stacked on `feature/time-tracking` (PR #93) | The Hours view exists only there and on `develop`; the fork workflow stacks a dependent feature on its dependency | y |
@@ -91,14 +92,16 @@ reading raw periods, correcting them and copying the day for Clockify still work
 
 **Acceptance Criteria**:
 
-15. Under the grid the view SHALL show a detail panel for one selected day, presenting that day's groups, blocks, raw periods, edit, delete and Copy exactly as TIME-35..41 and TIME-44..49 specify <!-- ubiquitous -->
-16. WHEN the view opens or the shown week changes THEN the selected day SHALL be today if the week contains it, otherwise the most recent day with time <!-- event-driven -->
-17. IF the shown week holds no time THEN the detail panel SHALL say that there is no day to show <!-- unwanted-behavior -->
-18. WHEN the user activates a column header THEN that day SHALL become the selected day <!-- event-driven -->
-19. WHEN the user activates a bar THEN its day SHALL become the selected day and its block SHALL be highlighted and expanded in the detail panel <!-- event-driven -->
+15. WHILE a day is selected the view SHALL show a drawer to the right of the grid, the grid narrowing to make room, presenting that day's groups, blocks, raw periods, edit, delete and Copy exactly as TIME-35..41 and TIME-44..49 specify <!-- state-driven; revised by AD-031 -->
+16. WHEN the view opens or the shown week changes THEN no day SHALL be selected and the drawer SHALL be closed <!-- event-driven; revised by AD-031, was: today or the most recent day with time -->
+17. IF the selected day holds no time THEN the drawer SHALL say that no time is recorded on that day <!-- unwanted-behavior; revised by AD-031 -->
+18. WHEN the user activates a column header THEN that day SHALL become the selected day and the drawer SHALL open on it <!-- event-driven -->
+19. WHEN the user activates a bar THEN its day SHALL become the selected day, the drawer SHALL open on it, and its block SHALL be highlighted and expanded there <!-- event-driven -->
 20. Column headers and bars SHALL be keyboard-operable buttons with accessible names — the day and its total; the group label and the block's range and duration <!-- ubiquitous -->
 
-**Independent Test**: Open the view on a Thursday: Thursday's detail shows below. Click a Tuesday bar: Tuesday's detail replaces it with that block expanded; edit a raw period there and the bar moves.
+25. WHEN the user activates the drawer's close button or presses Esc THEN the drawer SHALL close, no day SHALL be selected, and the grid SHALL take the full width again <!-- event-driven; added by AD-031 -->
+
+**Independent Test**: Open the view: the week fills the width and no drawer shows. Click a Tuesday bar: the drawer opens on Tuesday with that block expanded; edit a raw period there and the bar moves. Press Esc: the drawer closes.
 
 ---
 
@@ -111,21 +114,23 @@ running block to grow, so that the calendar explains itself and stays current.
 
 **Acceptance Criteria**:
 
-21. The view SHALL show a legend listing every task and task-less folder of the shown week — including each task folded into Other tasks — with its colour and its week total <!-- ubiquitous -->
+21. The view SHALL show, above the grid, a legend of chips listing every task and task-less folder of the shown week — including each task folded into Other tasks — with its colour and its week total; a label too long for its chip SHALL be truncated with its full text available on hover <!-- ubiquitous; revised by AD-031 -->
 22. WHEN the user hovers or focuses a bar THEN the view SHALL show its group label, its `HH:MM–HH:MM` range and its duration <!-- event-driven -->
 23. WHILE a block is still open its bar SHALL end at the current time, carry an ongoing marker, and grow at the refresh TIME-42 defines <!-- state-driven -->
 
-**Independent Test**: With an agent running, its bar reaches the current time with the ongoing marker and is longer a minute later; the legend's total for its task grows with it.
+26. The Hours view SHALL fit the window without page scroll down to the minimum window size (1100 × 640): the grid's hour height SHALL follow the available height, and only the drawer's own content MAY scroll <!-- ubiquitous; added by AD-031 -->
+
+**Independent Test**: With an agent running, its bar reaches the current time with the ongoing marker and is longer a minute later; the legend's total for its task grows with it. At 1100 × 640 nothing but the drawer scrolls.
 
 ---
 
 ## Edge Cases
 
 - WHEN four or more blocks overlap in one day THEN the lanes SHALL narrow evenly and a bar narrower than 64 px or shorter than 36 px SHALL show no direct label, keeping its tooltip
-- WHEN switching to a week where the previously selected weekday holds no time THEN the default selection rule (HCAL-16) SHALL apply again
+- WHEN the shown week changes while the drawer is open THEN the drawer SHALL close (HCAL-16)
 - IF the only time of the week is one block under 1 minute THEN the axis SHALL still span 8 hours around it
 - WHEN a weekend column appears or disappears between weeks THEN the other columns SHALL resize without changing their order
-- WHEN the selected day's last period is deleted THEN the selection SHALL fall back by HCAL-16
+- WHEN the selected day's last period is deleted THEN the drawer SHALL close and no day SHALL be selected
 
 ---
 
@@ -147,18 +152,20 @@ running block to grow, so that the calendar explains itself and stays current.
 | HCAL-12 | P1: See the week as a calendar | Execute | Implemented (T7, T11) |
 | HCAL-13 | P1: See the week as a calendar | Execute | Implemented (T5) |
 | HCAL-14 | P1: See the week as a calendar | Execute | Implemented (T9, T10, T11) |
-| HCAL-15 | P1: Get to the detail and the actions | Execute | Implemented (T6, T9, T11) |
-| HCAL-16 | P1: Get to the detail and the actions | Execute | Implemented (T5, T9) |
-| HCAL-17 | P1: Get to the detail and the actions | Execute | Implemented (T5, T9) |
-| HCAL-18 | P1: Get to the detail and the actions | Execute | Implemented (T7, T9, T11) |
-| HCAL-19 | P1: Get to the detail and the actions | Execute | Implemented (T6, T7, T9, T11) |
+| HCAL-15 | P1: Get to the detail and the actions | Execute | In progress (T6, T9, T11, T12 of T6, T9, T11, T12, T15, T16) |
+| HCAL-16 | P1: Get to the detail and the actions | Execute | In progress (T5, T9, T12 of T5, T9, T12, T15, T16) |
+| HCAL-17 | P1: Get to the detail and the actions | Execute | In progress (T5, T9, T12 of T5, T9, T12, T15, T16) |
+| HCAL-18 | P1: Get to the detail and the actions | Execute | In progress (T7, T9, T11, T12 of T7, T9, T11, T12, T15, T16) |
+| HCAL-19 | P1: Get to the detail and the actions | Execute | In progress (T6, T7, T9, T11, T12 of T6, T7, T9, T11, T12, T15, T16) |
 | HCAL-20 | P1: Get to the detail and the actions | Execute | Implemented (T7, T11) |
-| HCAL-21 | P2: Read the colours and the live time | Execute | Implemented (T4, T8, T11) |
+| HCAL-21 | P2: Read the colours and the live time | Execute | In progress (T4, T8, T11, T12 of T4, T8, T11, T12, T13, T16) |
 | HCAL-22 | P2: Read the colours and the live time | Execute | Implemented (T7, T11) |
 | HCAL-23 | P2: Read the colours and the live time | Execute | Implemented (T5, T7, T11) |
 | HCAL-24 | P1: See the week as a calendar | Execute | Implemented (T4, T9, T11) |
+| HCAL-25 | P1: Get to the detail and the actions | Execute | In progress (T12 of T12, T15, T16) |
+| HCAL-26 | P2: Read the colours and the live time | Execute | In progress (T12 of T12, T14, T16) |
 
-**Coverage:** 24 total, 24 mapped to tasks, 0 unmapped
+**Coverage:** 26 total, 26 mapped to tasks, 0 unmapped
 
 ---
 
