@@ -1,0 +1,171 @@
+# Hours Calendar Specification
+
+## Problem Statement
+
+The Hours direction (`time-tracking`, PR #93) lists each day with recorded time as a stacked section,
+newest first (TIME-34), and inside it the task groups and their `HH:MM–HH:MM` lines. It answers "how
+long" but not "when": the shape of a week — which days were heavy, when the work happened, when two
+agents ran at once — has to be read out of text. The owner wants the view to read like a calendar:
+the week as columns, and the time drawn as bars.
+
+## Goals
+
+- [ ] The week reads at a glance as Monday-to-Friday columns, with the weekend shown only when it holds time
+- [ ] Each worked stretch is a bar at the hours it happened, coloured by the task it went to
+- [ ] Agents running in parallel are visible as such, never drawn over one another
+- [ ] Everything the list view let the owner do — read groups and raw periods, edit, delete, Copy for Clockify — is still one click away
+
+## Out of Scope
+
+| Feature | Reason |
+| ------- | ------- |
+| Keeping the list view, or a Calendar / List toggle | Owner decision (grill Q4): the calendar replaces it; the day detail covers what the list did |
+| Dragging bars to edit time | Editing stays in the raw-period detail (TIME-45..47), unchanged |
+| Month or multi-week views | Not requested; the week navigation (TIME-33) is unchanged |
+| Changing how time is recorded, merged or copied | `buildWeekReport`, block merging (TIME-36), the Copy format (TIME-39..41) and the log are reused untouched |
+| Per-agent colours | Owner decision (grill Q7): colour is by task |
+
+---
+
+## Assumptions & Open Questions
+
+| Assumption / decision | Chosen default | Rationale | Confirmed? |
+| --------------------- | -------------- | --------- | ---------- |
+| What a bar is | One bar per merged block (TIME-36), positioned from its start to its end on the day's time axis | Owner decision (grill Q1): a calendar's week view | y |
+| Columns | Monday to Friday always; Saturday and/or Sunday added as full columns only in a week where that day holds time | Owner decision (grill Q2) | y |
+| Week range | Still Monday 00:00 to next Monday 00:00 (TIME-32); only the presentation changes | The report, totals and navigation stay correct and tested | y |
+| Parallel sessions | Blocks that overlap in time within a day split the column width into side-by-side lanes | Owner decision (grill Q5); running agents in parallel is this app's normal case | y |
+| Time axis | From the week's earliest block start to its latest block end, rounded out to whole hours, at least 8 hours; shared by every column; hour gridlines labelled | Owner decision (grill Q6) | y |
+| Colour | **[revised at Spec, grill Q9]** The three tasks with the most time in the shown week get the three colours; every other task shares a neutral **Other tasks** colour; task-less time has its own neutral treatment; the legend lists every task and folder with its week total | Grill Q7 asked for one colour per task. Running the dataviz validator on the app's own surfaces (`--panel` `#ffffff` light, `#221f1b` dark) with every pair in play — any bar can sit beside any other in a calendar — only three colours (blue, orange, aqua) pass in both themes; a fourth fails the normal-vision floor (violet vs blue ΔE 9.8 in dark), a pair that full-colour readers cannot tell apart and that labels do not excuse. Owner chose the top-three rule (Q9) | y |
+| Colour stability | Assigned when the week loads, never while it is shown | "Colour follows the entity": a bar must not repaint because an open period made another task overtake it | y |
+| Detail | A panel under the grid shows one selected day exactly as the list view showed a day: groups, blocks, raw periods, edit, delete, Copy | Owner decision (grill Q3); reuses TIME-35..41 and TIME-44..49 as they are | y |
+| Default selection | Today when the shown week contains it; otherwise the most recent day with time; nothing when the week is empty | Owner decision (grill Q8) | y |
+| Clicking a bar | Selects its day, and highlights and expands that block in the detail | Owner decision (grill Q8) | y |
+| Future days | Shown as columns, dimmed, with no bars | A calendar shows the whole week; dimming says "not yet" rather than "nothing" | y |
+| Open periods | The bar of a block that is still open ends at "now", carries an ongoing marker, and grows at TIME-42's refresh | Consistent with the totals, which already count open time to now | y |
+| Very short blocks | A bar keeps a minimum height so any block stays visible and clickable; its real duration is in the tooltip and the detail | A 2-minute block would otherwise be under one pixel | y |
+| Superseded requirement | TIME-34 ("list each day that has time, newest first") is superseded when this ships; recorded as **AD-029** in `.specs/STATE.md` on this feature's branch | The AD-018 / AD-028 pattern for shipped requirements that stop describing the app | y |
+| Branch base | `feature/hours-calendar` stacked on `feature/time-tracking` (PR #93) | The Hours view exists only there and on `develop`; the fork workflow stacks a dependent feature on its dependency | y |
+
+**Open questions:** none — all resolved or logged above.
+
+---
+
+## User Stories
+
+### P1: See the week as a calendar ⭐ MVP
+
+**User Story**: As the developer, I want the week as day columns with my worked time drawn as bars at
+the hours it happened, so that I see the shape of my week at a glance.
+
+**Why P1**: It is the request.
+
+**Acceptance Criteria**:
+
+1. The Hours view SHALL show the shown week as side-by-side day columns, with Monday to Friday always present <!-- ubiquitous -->
+2. WHERE Saturday or Sunday of the shown week holds recorded time the view SHALL add a column for that day, and only for that day <!-- optional-feature -->
+3. Each column header SHALL show the weekday, the date and the day's total as the union of its periods <!-- ubiquitous -->
+4. WHILE the shown week contains today the view SHALL highlight today's column <!-- state-driven -->
+5. The view SHALL render days after today as dimmed columns with no bars <!-- ubiquitous -->
+6. The header's week range, week total, ◀, ▶ and **This week** SHALL keep behaving as TIME-32 and TIME-33 specify <!-- ubiquitous -->
+7. IF the shown week holds no time THEN the view SHALL show its columns empty together with `No time recorded this week.` <!-- unwanted-behavior -->
+8. The view SHALL draw each merged block (TIME-36) as a bar in its day's column, spanning its start to its end on the time axis <!-- ubiquitous -->
+9. The time axis SHALL run from the shown week's earliest block start to its latest block end, rounded out to whole hours and spanning at least 8 hours, shared by every column and marked with labelled hour lines <!-- ubiquitous -->
+10. WHILE blocks of one day overlap in time the view SHALL place them in side-by-side lanes that divide the column's width, none drawn over another <!-- state-driven -->
+11. The view SHALL colour the bars of the three tasks with the most time in the shown week with three distinct colours, the bars of every other task with one shared neutral **Other tasks** colour, and task-less time with a separate neutral treatment <!-- ubiquitous -->
+24. WHILE a week is shown the colour of every task SHALL stay the same, even when live time changes which tasks have the most; it is recomputed only when the shown week changes or the view reopens <!-- state-driven -->
+12. Every bar SHALL keep a minimum height so that a block of any duration is visible and can be activated <!-- ubiquitous -->
+13. WHEN a block crosses local midnight THEN each day's part SHALL be drawn in its own column, as TIME-37 splits it <!-- event-driven -->
+14. The view SHALL NOT list days as stacked sections, newest first; TIME-34 is superseded (AD-029) <!-- ubiquitous -->
+
+**Independent Test**: A week with work Monday 09:00–12:00 and Wednesday 14:00–18:00, two tasks overlapping on Wednesday, and one hour on Saturday shows six columns, an axis 09:00–18:00, two side-by-side bars on Wednesday, and no Sunday column.
+
+---
+
+### P1: Get to the detail and the actions ⭐ MVP
+
+**User Story**: As the developer, I want to open any day's details from the calendar, so that
+reading raw periods, correcting them and copying the day for Clockify still work.
+
+**Why P1**: Without it the calendar would remove shipped functionality.
+
+**Acceptance Criteria**:
+
+15. Under the grid the view SHALL show a detail panel for one selected day, presenting that day's groups, blocks, raw periods, edit, delete and Copy exactly as TIME-35..41 and TIME-44..49 specify <!-- ubiquitous -->
+16. WHEN the view opens or the shown week changes THEN the selected day SHALL be today if the week contains it, otherwise the most recent day with time <!-- event-driven -->
+17. IF the shown week holds no time THEN the detail panel SHALL say that there is no day to show <!-- unwanted-behavior -->
+18. WHEN the user activates a column header THEN that day SHALL become the selected day <!-- event-driven -->
+19. WHEN the user activates a bar THEN its day SHALL become the selected day and its block SHALL be highlighted and expanded in the detail panel <!-- event-driven -->
+20. Column headers and bars SHALL be keyboard-operable buttons with accessible names — the day and its total; the group label and the block's range and duration <!-- ubiquitous -->
+
+**Independent Test**: Open the view on a Thursday: Thursday's detail shows below. Click a Tuesday bar: Tuesday's detail replaces it with that block expanded; edit a raw period there and the bar moves.
+
+---
+
+### P2: Read the colours and the live time
+
+**User Story**: As the developer, I want a legend for the colours, a tooltip on each bar and the
+running block to grow, so that the calendar explains itself and stays current.
+
+**Why P2**: The calendar works without them; they make it legible and live.
+
+**Acceptance Criteria**:
+
+21. The view SHALL show a legend listing every task and task-less folder of the shown week — including each task folded into Other tasks — with its colour and its week total <!-- ubiquitous -->
+22. WHEN the user hovers or focuses a bar THEN the view SHALL show its group label, its `HH:MM–HH:MM` range and its duration <!-- event-driven -->
+23. WHILE a block is still open its bar SHALL end at the current time, carry an ongoing marker, and grow at the refresh TIME-42 defines <!-- state-driven -->
+
+**Independent Test**: With an agent running, its bar reaches the current time with the ongoing marker and is longer a minute later; the legend's total for its task grows with it.
+
+---
+
+## Edge Cases
+
+- WHEN four or more blocks overlap in one day THEN the lanes SHALL narrow evenly and a lane too narrow for text SHALL show no label, keeping its tooltip
+- WHEN switching to a week where the previously selected weekday holds no time THEN the default selection rule (HCAL-16) SHALL apply again
+- IF the only time of the week is one block under 1 minute THEN the axis SHALL still span 8 hours around it
+- WHEN a weekend column appears or disappears between weeks THEN the other columns SHALL resize without changing their order
+- WHEN the selected day's last period is deleted THEN the selection SHALL fall back by HCAL-16
+
+---
+
+## Requirement Traceability
+
+| Requirement ID | Story | Phase | Status |
+| -------------- | ----- | ----- | ------ |
+| HCAL-01 | P1: See the week as a calendar | Design | Pending |
+| HCAL-02 | P1: See the week as a calendar | Design | Pending |
+| HCAL-03 | P1: See the week as a calendar | Design | Pending |
+| HCAL-04 | P1: See the week as a calendar | Design | Pending |
+| HCAL-05 | P1: See the week as a calendar | Design | Pending |
+| HCAL-06 | P1: See the week as a calendar | Design | Pending |
+| HCAL-07 | P1: See the week as a calendar | Design | Pending |
+| HCAL-08 | P1: See the week as a calendar | Design | Pending |
+| HCAL-09 | P1: See the week as a calendar | Design | Pending |
+| HCAL-10 | P1: See the week as a calendar | Design | Pending |
+| HCAL-11 | P1: See the week as a calendar | Design | Pending |
+| HCAL-12 | P1: See the week as a calendar | Design | Pending |
+| HCAL-13 | P1: See the week as a calendar | Design | Pending |
+| HCAL-14 | P1: See the week as a calendar | Design | Pending |
+| HCAL-15 | P1: Get to the detail and the actions | Design | Pending |
+| HCAL-16 | P1: Get to the detail and the actions | Design | Pending |
+| HCAL-17 | P1: Get to the detail and the actions | Design | Pending |
+| HCAL-18 | P1: Get to the detail and the actions | Design | Pending |
+| HCAL-19 | P1: Get to the detail and the actions | Design | Pending |
+| HCAL-20 | P1: Get to the detail and the actions | Design | Pending |
+| HCAL-21 | P2: Read the colours and the live time | Design | Pending |
+| HCAL-22 | P2: Read the colours and the live time | Design | Pending |
+| HCAL-23 | P2: Read the colours and the live time | Design | Pending |
+| HCAL-24 | P1: See the week as a calendar | Design | Pending |
+
+**Coverage:** 24 total, 0 mapped to tasks yet (Design not run), 0 unmapped
+
+---
+
+## Success Criteria
+
+- [ ] The week reads as columns Monday to Friday, weekend columns appearing only with time
+- [ ] Parallel agents show as side-by-side bars, never overlapping
+- [ ] Every shipped Hours action — groups, raw periods, edit, delete, Copy — works from the day detail
+- [ ] The Copy output for a day is byte-identical to what the list view produced
+- [ ] The gate is green: `npm run typecheck && npm run lint && npm test`
