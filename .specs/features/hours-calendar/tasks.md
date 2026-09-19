@@ -80,14 +80,14 @@ T9 → T10 → T11
 
 **Done when**:
 
-- [ ] Monday to Friday are always present, in order, even with no time
-- [ ] Saturday is added only when it holds time; Sunday likewise; one without the other works
-- [ ] Each column's `totalMs` is its `DayReport.totalMs` (the union), 0 when empty
-- [ ] `isToday` only in the current week; `isFuture` for days after today
-- [ ] `hours-calendar.test.ts` created
-- [ ] Lint warning baseline recorded in the commit body
-- [ ] Gate passes: `npm test`
-- [ ] Test count: 865 + 5 = **870**
+- [x] Monday to Friday are always present, in order, even with no time
+- [x] Saturday is added only when it holds time; Sunday likewise; one without the other works
+- [x] Each column's `totalMs` is its `DayReport.totalMs` (the union), 0 when empty
+- [x] `isToday` only in the current week; `isFuture` for days after today
+- [x] `hours-calendar.test.ts` created
+- [x] Lint warning baseline recorded in the commit body
+- [x] Gate passes: `npm test`
+- [x] Test count: 865 + 5 = **870**
 
 **Tests**: unit
 **Gate**: quick
