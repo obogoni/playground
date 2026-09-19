@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Spec**: `.specs/features/session-strip-polish/spec.md` (Medium — no `design.md`; the design decisions live in the spec's Assumptions table)
-**Status**: Executed (T1-T6), awaiting Verifier
+**Status**: Done — T1-T6 executed, Verifier PASS (round 2 of 3)
 
 **Branch**: `feature/session-strip-polish`, already cut from `develop` at `9919139` with no commits. `develop` is the only ref holding both halves (the badge from #88/#94, the clock from #93). PR to upstream only after those merge: `git rebase --onto origin/main develop feature/session-strip-polish`.
 

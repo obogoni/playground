@@ -122,21 +122,21 @@ click works.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| STRP-01 | P1: MCP tool call reads at a glance | Execute | Implemented |
-| STRP-02 | P1: MCP tool call reads at a glance | Execute | Implemented |
-| STRP-03 | P1: MCP tool call reads at a glance | Execute | Implemented |
-| STRP-04 | P1: MCP tool call reads at a glance | Execute | Implemented |
-| STRP-05 | P1: MCP tool call reads at a glance | Execute | Implemented |
-| STRP-06 | P1: MCP tool call reads at a glance | Execute | Implemented |
-| STRP-07 | P1: Pause by clicking the clock | Execute | Implemented |
-| STRP-08 | P1: Pause by clicking the clock | Execute | Implemented |
-| STRP-09 | P1: Pause by clicking the clock | Execute | Implemented |
-| STRP-10 | P1: Pause by clicking the clock | Execute | Implemented |
-| STRP-11 | P1: Pause by clicking the clock | Execute | Implemented |
-| STRP-12 | P1: Pause by clicking the clock | Execute | Implemented |
-| STRP-13 | P1: Pause by clicking the clock | Execute | Implemented |
-| STRP-14 | P1: Pause by clicking the clock | Execute | Implemented |
-| STRP-15 | P1: Pause by clicking the clock | Execute | Implemented |
+| STRP-01 | P1: MCP tool call reads at a glance | Execute | Verified |
+| STRP-02 | P1: MCP tool call reads at a glance | Execute | Verified |
+| STRP-03 | P1: MCP tool call reads at a glance | Execute | Verified |
+| STRP-04 | P1: MCP tool call reads at a glance | Execute | Verified |
+| STRP-05 | P1: MCP tool call reads at a glance | Execute | Verified |
+| STRP-06 | P1: MCP tool call reads at a glance | Execute | Verified |
+| STRP-07 | P1: Pause by clicking the clock | Execute | Verified |
+| STRP-08 | P1: Pause by clicking the clock | Execute | Verified |
+| STRP-09 | P1: Pause by clicking the clock | Execute | Verified |
+| STRP-10 | P1: Pause by clicking the clock | Execute | Verified |
+| STRP-11 | P1: Pause by clicking the clock | Execute | Verified |
+| STRP-12 | P1: Pause by clicking the clock | Execute | Verified |
+| STRP-13 | P1: Pause by clicking the clock | Execute | Verified |
+| STRP-14 | P1: Pause by clicking the clock | Execute | Verified |
+| STRP-15 | P1: Pause by clicking the clock | Execute | Verified |
 
 **Coverage:** 15 total, 15 mapped to tasks, 0 unmapped
 
