@@ -386,10 +386,10 @@ T11 → T12 → T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] Every task and folder of the week has a chip with swatch, label and total
-- [ ] A long label is truncated and its full text is the chip's `title`
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **896** (unchanged)
+- [x] Every task and folder of the week has a chip with swatch, label and total
+- [x] A long label is truncated and its full text is the chip's `title`
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **896** (unchanged)
 
 **Tests**: none
 **Gate**: full

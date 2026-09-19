@@ -1,29 +1,33 @@
-/* Hours calendar legend (HCAL-21); swatches mirror the bars of HoursCalendar.css. */
+/* Hours calendar legend (HCAL-21): a row of chips; swatches mirror the bars of HoursCalendar.css. */
 
 .hleg {
-  width: 100%;
-  box-sizing: border-box;
+  flex: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 14px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  font-size: 12.5px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.hleg-row {
+.hleg-chip {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
+  max-width: 340px;
+  padding: 4px 10px;
+  box-sizing: border-box;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
 }
 
 .hleg-swatch {
   flex: none;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   box-sizing: border-box;
   border-radius: 3px;
 }
@@ -50,7 +54,6 @@
 }
 
 .hleg-label {
-  flex: 1;
   min-width: 0;
   color: var(--text);
   white-space: nowrap;
@@ -59,21 +62,8 @@
 }
 
 .hleg-total {
+  flex: none;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.hleg-members {
-  list-style: none;
-  margin: 2px 0 2px 20px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.hleg-members .hleg-label {
   color: var(--text-muted);
 }
