@@ -26,9 +26,11 @@
  *      open day fills it, and deleting that time closes it (HCAL-17, HCAL-27,
  *      edge case)
  *
- * NOT automatable here: colours of task slots (ad-hoc sessions in a non-git cwd
- * carry no task — HCAL-11 and the frozen ranking are unit-tested), keyboard
- * focus showing the tooltip, and the two-theme look.
+ * NOT automatable here, all from the same fact — ad-hoc sessions in a non-git
+ * cwd carry no task: the colours of the task slots (HCAL-11 and the frozen
+ * ranking are unit-tested) and the summary line's `N tasks` wording, since
+ * every fixture day counts zero tasks and that branch never renders. Nor is
+ * keyboard focus showing the tooltip, nor the two-theme look.
  *
  * The sessions are ad-hoc `pwsh` in C:/Windows and C:/Windows/System32 — never a
  * registry agent, which on a machine with the CLI installed starts a real agent.
