@@ -1,7 +1,6 @@
 /* Hours calendar legend (HCAL-21); swatches mirror the bars of HoursCalendar.css. */
 
 .hleg {
-  max-width: 880px;
   width: 100%;
   box-sizing: border-box;
   display: flex;

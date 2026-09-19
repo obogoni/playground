@@ -19,7 +19,6 @@
 
 .hcal {
   --hcal-hour-px: 36px;
-  max-width: 880px;
   width: 100%;
   box-sizing: border-box;
   display: grid;

@@ -101,7 +101,6 @@
 
 /* Day card */
 .hours-day {
-  max-width: 880px;
   width: 100%;
   box-sizing: border-box;
   background: var(--panel);

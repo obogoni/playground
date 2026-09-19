@@ -189,6 +189,7 @@ export function HoursView({
 
       <div className="hours-body">
         {report.days.length === 0 && <div className="hours-empty">No time recorded this week.</div>}
+        <HoursLegend entries={legendEntries(report, colours)} />
         <HoursCalendar
           columns={columns}
           axis={axis}
@@ -199,7 +200,6 @@ export function HoursView({
           onSelectDay={selectDay}
           onSelectBlock={selectBlock}
         />
-        <HoursLegend entries={legendEntries(report, colours)} />
         {shownDay ? (
           <DayCard
             key={shownDay.date.getTime()}
