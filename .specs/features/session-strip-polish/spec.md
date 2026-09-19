@@ -51,7 +51,7 @@ itself is inert text.
 | Counter tooltip | `current run <hh:mm:ss> · click to pause` / `· click to resume` | Preserves TIME-23's data and teaches the gesture in the same hover | y |
 | Counter element | `<button type="button">` with `aria-pressed` | Inherits the keyboard and screen-reader semantics the removed button had, instead of dropping them | y |
 | How the rail keeps its counter inert | The interactive behaviour is opt-in via prop; `SessionClock` is shared with the rail row (`SessionRail.tsx:338`) | Without a prop the rail row would inherit a click target inside a row whose click selects the session | y |
-| A session paused and then stopped | Keeps its paused flag; the counter goes inert until respawn | Exactly today's behaviour — the buttons already disappear when the session stops | y |
+| A session paused and then stopped | **[corrected at Execute]** Loses its paused flag with its run; the counter goes inert, and a respawn starts a fresh, counting run | Exactly today's behaviour, now read from the code: `TimeTracker.ended` deletes the run, paused mark included, and `started` opens a counting one (`time-tracker.ts:66-86`). The grilled default "keeps its paused flag" assumed otherwise; the smoke measured the real behaviour. Changing it would change what pausing does to the time log, which is out of scope | y |
 | Branch base | `feature/session-strip-polish` cut from `develop` | The badge half exists only on the `#88`/`#94` line and the timer half only on `#93`; `develop` is the one ref holding both. PR to upstream after `git rebase --onto origin/main develop` once those merge | y |
 | Verification split | Pure formatter unit-tested in `session-activity.test.ts`; both halves driven by a new CDP smoke | Matches the project convention (`TESTING.md`): pure seams tested, components hand-verified, CDP for the integration | y |
 | How the smoke reaches an MCP activity | **[corrected at Tasks]** A throwaway registry agent whose command is `claude --version`: it passes the hook rule (`session-manager.ts:320-325`), gets `--settings` injected, prints the version and exits spending no tokens, and leaves its host shell running with `PLAYGROUND_ACTIVITY_TOKEN` in its environment. The smoke types into that terminal an `Invoke-RestMethod` POST of a `PreToolUse` with an MCP `tool_name` to the hook URL read from the settings file, authorized with `$env:PLAYGROUND_ACTIVITY_TOKEN` | The grilled mechanism — an ad-hoc `pwsh` session plus a token read from the settings file — was built on two false premises, both verified at Tasks: ad-hoc sessions get no hooks, and the file carries only `Bearer $PLAYGROUND_ACTIVITY_TOKEN` (`claude-hook-settings.ts:64`), never the token. The owner's decision — a synthetic POST, zero tokens, deterministic — is kept; only the route to the token changes. Registering and removing a throwaway agent is `smoke-activity.mjs`'s own precedent | y |
@@ -113,8 +113,8 @@ click works.
 - IF the activity carries no tool name THEN the pill SHALL render the state (and subagent count or error) exactly as today
 - IF the tool name is `mcp__<server>__` or `mcp____<tool>` (an empty segment) THEN the pill SHALL render it raw, per STRP-03
 - IF the tool name contains more than two `__` separators (`mcp__srv__a__b`) THEN the pill SHALL render `MCP srv`, treating everything after the second separator as the tool
-- WHEN a session is paused and then stops THEN the counter SHALL go inert while the session keeps its paused flag
-- WHEN a session is respawned while paused THEN the counter SHALL become interactive again and report the paused state it kept
+- WHEN a session is paused and then stops THEN the counter SHALL go inert, and the session SHALL lose its paused flag with its run **[corrected at Execute]**
+- WHEN a session stopped while paused is respawned THEN the counter SHALL become interactive again and count, reporting not paused **[corrected at Execute]**
 
 ---
 
@@ -122,21 +122,21 @@ click works.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| STRP-01 | P1: MCP tool call reads at a glance | Tasks | Pending |
-| STRP-02 | P1: MCP tool call reads at a glance | Tasks | Pending |
-| STRP-03 | P1: MCP tool call reads at a glance | Tasks | Pending |
-| STRP-04 | P1: MCP tool call reads at a glance | Tasks | Pending |
-| STRP-05 | P1: MCP tool call reads at a glance | Tasks | Pending |
-| STRP-06 | P1: MCP tool call reads at a glance | Tasks | Pending |
-| STRP-07 | P1: Pause by clicking the clock | Tasks | Pending |
-| STRP-08 | P1: Pause by clicking the clock | Tasks | Pending |
-| STRP-09 | P1: Pause by clicking the clock | Tasks | Pending |
-| STRP-10 | P1: Pause by clicking the clock | Tasks | Pending |
-| STRP-11 | P1: Pause by clicking the clock | Tasks | Pending |
-| STRP-12 | P1: Pause by clicking the clock | Tasks | Pending |
-| STRP-13 | P1: Pause by clicking the clock | Tasks | Pending |
-| STRP-14 | P1: Pause by clicking the clock | Tasks | Pending |
-| STRP-15 | P1: Pause by clicking the clock | Tasks | Pending |
+| STRP-01 | P1: MCP tool call reads at a glance | Execute | Implemented |
+| STRP-02 | P1: MCP tool call reads at a glance | Execute | Implemented |
+| STRP-03 | P1: MCP tool call reads at a glance | Execute | Implemented |
+| STRP-04 | P1: MCP tool call reads at a glance | Execute | Implemented |
+| STRP-05 | P1: MCP tool call reads at a glance | Execute | Implemented |
+| STRP-06 | P1: MCP tool call reads at a glance | Execute | Implemented |
+| STRP-07 | P1: Pause by clicking the clock | Execute | Implemented |
+| STRP-08 | P1: Pause by clicking the clock | Execute | Implemented |
+| STRP-09 | P1: Pause by clicking the clock | Execute | Implemented |
+| STRP-10 | P1: Pause by clicking the clock | Execute | Implemented |
+| STRP-11 | P1: Pause by clicking the clock | Execute | Implemented |
+| STRP-12 | P1: Pause by clicking the clock | Execute | Implemented |
+| STRP-13 | P1: Pause by clicking the clock | Execute | Implemented |
+| STRP-14 | P1: Pause by clicking the clock | Execute | Implemented |
+| STRP-15 | P1: Pause by clicking the clock | Execute | Implemented |
 
 **Coverage:** 15 total, 15 mapped to tasks, 0 unmapped
 

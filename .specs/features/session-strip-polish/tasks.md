@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Spec**: `.specs/features/session-strip-polish/spec.md` (Medium — no `design.md`; the design decisions live in the spec's Assumptions table)
-**Status**: In progress
+**Status**: Executed (T1-T6), awaiting Verifier
 
 **Branch**: `feature/session-strip-polish`, already cut from `develop` at `9919139` with no commits. `develop` is the only ref holding both halves (the badge from #88/#94, the clock from #93). PR to upstream only after those merge: `git rebase --onto origin/main develop feature/session-strip-polish`.
 
@@ -211,12 +211,12 @@ T5 → T6
 
 **Done when**:
 
-- [ ] **Spends no tokens**: the only agent launched is `claude --version`, which prints and exits
-- [ ] Checks: the pill reads `working · MCP azure-devops`; its `title` is the raw name; the rail row's tooltip still carries the raw name; the strip holds no time button; clicking the clock freezes it, flips the icon to `play` and `aria-pressed` to `true`; clicking again resumes it; stopping the session leaves a plain, inert clock
-- [ ] Requires `claude` on `PATH`, like `smoke-activity.mjs`; says so and exits early when it is missing
-- [ ] Removes the throwaway agent and its session, **deletes every time period it created**, and restores the owner's direction and theme on the way out
-- [ ] Numbered pass/fail line per check; all pass against a live dev app
-- [ ] Recorded as hand checks, not scripted: the two-theme visual pass of the clock button, and a screen reader announcing pressed / not pressed
+- [x] **Spends no tokens**: the only agent launched is `claude --version`, which prints and exits
+- [x] Checks: the pill reads `working · MCP azure-devops`; its `title` is the raw name; the rail row's tooltip still carries the raw name; the strip holds no time button; clicking the clock freezes it, flips the icon to `play` and `aria-pressed` to `true`; clicking again resumes it; stopping the session leaves a plain, inert clock
+- [x] Requires `claude` on `PATH`, like `smoke-activity.mjs`; says so and exits early when it is missing
+- [x] Removes the throwaway agent and its session, **deletes every time period it created**, and restores the owner's direction and theme on the way out
+- [x] Numbered pass/fail line per check; all pass against a live dev app
+- [x] Recorded as hand checks, not scripted: the two-theme visual pass of the clock button, and a screen reader announcing pressed / not pressed
 
 **Tests**: manual
 **Gate**: manual
