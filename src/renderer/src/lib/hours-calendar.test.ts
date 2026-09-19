@@ -121,6 +121,11 @@ describe('timeAxis', () => {
     expect(timeAxis(r)).toEqual({ startHour: 9, endHour: 18 })
   })
 
+  it('rounds a start past the half hour down, never clipping the bar (HCAL-09)', () => {
+    const r = report({ periods: [closed({ start: at(14, 9, 40), end: at(14, 17, 40) })] })
+    expect(timeAxis(r)).toEqual({ startHour: 9, endHour: 18 })
+  })
+
   it('widens a short span symmetrically to 8 hours, kept within the day (HCAL-09)', () => {
     const mid = report({ periods: [closed({ start: at(15, 10), end: at(15, 11) })] })
     expect(timeAxis(mid)).toEqual({ startHour: 7, endHour: 15 })
@@ -217,6 +222,29 @@ describe('layoutLanes', () => {
       [1, 4],
       [2, 4],
       [3, 4]
+    ])
+  })
+
+  it('draws a lone block after a parallel pair at full width again (HCAL-10)', () => {
+    const [a, b] = [block(9, 11), block(10, 12)]
+    const touching = block(12, 13)
+    const later = block(15, 16)
+    const laid = lay(a, b, touching, later)
+    expect([a, b, touching, later].map((x) => placeOf(laid, x))).toEqual([
+      [0, 2],
+      [1, 2],
+      [0, 1],
+      [0, 1]
+    ])
+  })
+
+  it('reuses a lane whose block ends exactly when the next starts (HCAL-10)', () => {
+    const blocks = [block(9, 11), block(10, 12), block(11, 12)]
+    const laid = lay(...blocks)
+    expect(blocks.map((b) => placeOf(laid, b))).toEqual([
+      [0, 2],
+      [1, 2],
+      [0, 2]
     ])
   })
 

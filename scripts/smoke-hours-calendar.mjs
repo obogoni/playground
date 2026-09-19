@@ -273,8 +273,8 @@ try {
     `(() => { const t = ${winBar}.querySelector('.hcal-tip'); return { shown: getComputedStyle(t).display !== 'none', text: t.textContent } })()`
   )
   check(
-    'hovering a bar shows its duration and range',
-    tip.shown && /^\d+h\d{2}\d{2}:\d{2}–now/.test(tip.text),
+    'hovering a bar shows its duration, range and group label',
+    tip.shown && /^\d+h\d{2}\d{2}:\d{2}–nowNo task · Windows$/.test(tip.text),
     tip.text
   )
   await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 2, y: 2 })

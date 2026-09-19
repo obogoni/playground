@@ -74,7 +74,7 @@ the hours it happened, so that I see the shape of my week at a glance.
 10. WHILE blocks of one day overlap in time the view SHALL place them in side-by-side lanes that divide the column's width, none drawn over another <!-- state-driven -->
 11. The view SHALL colour the bars of the three tasks with the most time in the shown week with three distinct colours, the bars of every other task with one shared neutral **Other tasks** colour, and task-less time with a separate neutral treatment <!-- ubiquitous -->
 24. WHILE a week is shown the colour of every task SHALL stay the same, even when live time changes which tasks have the most; it is recomputed only when the shown week changes or the view reopens <!-- state-driven -->
-12. Every bar SHALL keep a minimum height so that a block of any duration is visible and can be activated <!-- ubiquitous -->
+12. Every bar SHALL keep a minimum height of 6 px so that a block of any duration is visible and can be activated <!-- ubiquitous -->
 13. WHEN a block crosses local midnight THEN each day's part SHALL be drawn in its own column, as TIME-37 splits it <!-- event-driven -->
 14. The view SHALL NOT list days as stacked sections, newest first; TIME-34 is superseded (AD-029) <!-- ubiquitous -->
 
@@ -121,7 +121,7 @@ running block to grow, so that the calendar explains itself and stays current.
 
 ## Edge Cases
 
-- WHEN four or more blocks overlap in one day THEN the lanes SHALL narrow evenly and a lane too narrow for text SHALL show no label, keeping its tooltip
+- WHEN four or more blocks overlap in one day THEN the lanes SHALL narrow evenly and a bar narrower than 64 px or shorter than 36 px SHALL show no direct label, keeping its tooltip
 - WHEN switching to a week where the previously selected weekday holds no time THEN the default selection rule (HCAL-16) SHALL apply again
 - IF the only time of the week is one block under 1 minute THEN the axis SHALL still span 8 hours around it
 - WHEN a weekend column appears or disappears between weeks THEN the other columns SHALL resize without changing their order
