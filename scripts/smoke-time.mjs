@@ -4,8 +4,9 @@
  *   1. spawning a session opens a period; its cwd is not a git worktree, so the
  *      snapshot fields are null (TIME-01, TIME-03, TIME-12)
  *   2. the rail row renders `hh:mm:ss` and advances while the period is open (TIME-22)
- *   3. Pause time closes the period, marks the session paused and freezes the
- *      detail-bar counter; Resume time opens a new period (TIME-16, TIME-17, TIME-18)
+ *   3. a click on the detail-bar clock closes the period, marks the session
+ *      paused and freezes the counter; a second click opens a new period
+ *      (TIME-16, TIME-17, TIME-18)
  *   4. stopping the session closes the open period (TIME-02)
  *   5. the Hours direction lists today with a `No task · Windows` group, and the
  *      direction survives a reload (TIME-31, TIME-34, TIME-35)
@@ -184,18 +185,12 @@ try {
   await evaluate(
     `[...document.querySelectorAll('.rail-group')].find(g => g.textContent.includes('Windows') && g.querySelector('.rail-row-status.running')).querySelector('.rail-row').click(), true`
   )
-  await waitFor(
-    `[...document.querySelectorAll('.agents-detail-btn')].some(b => b.textContent.includes('Pause time'))`,
-    'the Pause time control'
-  )
+  // The running session's clock is its own pause button (STRP-07, STRP-08).
+  const clock = `document.querySelector('.agents-detail button.agents-detail-time')`
+  await waitFor(`${clock}?.getAttribute('aria-pressed') === 'false'`, 'the counting clock')
   await shot('time-agents-dark.png')
-  await evaluate(
-    `[...document.querySelectorAll('.agents-detail-btn')].find(b => b.textContent.includes('Pause time')).click(), true`
-  )
-  await waitFor(
-    `[...document.querySelectorAll('.agents-detail-btn')].some(b => b.textContent.includes('Resume time'))`,
-    'the Resume time control'
-  )
+  await evaluate(`${clock}.click(), true`)
+  await waitFor(`${clock}?.getAttribute('aria-pressed') === 'true'`, 'the paused clock')
   const s2 = await invoke('time:snapshot')
   check('pause marks the session paused', s2.paused.includes(sessionId))
   check(
@@ -208,9 +203,7 @@ try {
   const frozen2 = await evaluate(`document.querySelector('.agents-detail-time')?.textContent`)
   check('paused counter does not advance', frozen1 === frozen2, `${frozen1} → ${frozen2}`)
 
-  await evaluate(
-    `[...document.querySelectorAll('.agents-detail-btn')].find(b => b.textContent.includes('Resume time')).click(), true`
-  )
+  await evaluate(`${clock}.click(), true`)
   await sleep(1500)
   const s3 = await invoke('time:snapshot')
   check(

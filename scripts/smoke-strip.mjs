@@ -10,8 +10,8 @@
  *      `· click to pause` tooltip, and it advances (STRP-09, STRP-10, STRP-12)
  *   4. a click pauses: the snapshot marks the session paused, the clock freezes,
  *      the icon turns to play, aria-pressed to true, the tooltip to `· click to
- *      resume`; Enter resumes and Space pauses again from the keyboard
- *      (STRP-07, STRP-08, STRP-11)
+ *      resume`; a second click resumes. From the keyboard, Enter pauses and
+ *      Space resumes, each from a confirmed state (STRP-07, STRP-08, STRP-11)
  *   5. the rail row counter and every total stay plain text (STRP-15)
  *   6. a session stopped while paused loses the mark with its run and its clock
  *      goes inert, a click on it doing nothing; respawned, the clock is a
@@ -174,14 +174,23 @@ async function pausedInSnapshot(id) {
 }
 
 /** Wait for the snapshot to report `paused` for this session and the strip's
- *  clock to render it: the snapshot push reaches the renderer a beat later. */
+ *  clock to render it: the snapshot push reaches the renderer a beat later.
+ *  On a timeout it prints what it last saw, so a failure names its cause. */
 async function waitPaused(id, paused) {
+  let s
+  let clock
   for (let i = 0; i < 20; i++) {
-    const s = await pausedInSnapshot(id)
-    const clock = await readClock()
+    s = await pausedInSnapshot(id)
+    clock = await readClock()
     if (s.paused === paused && s.open === !paused && clock.pressed === String(paused)) return true
     await sleep(150)
   }
+  const focused = await evaluate(
+    `document.hasFocus() + ' / ' + (document.activeElement?.className || document.activeElement?.tagName)`
+  )
+  console.log(
+    `      waited for paused=${paused}; snapshot ${JSON.stringify(s)}, clock ${JSON.stringify(clock)}, focus ${focused}`
+  )
   return false
 }
 
@@ -296,7 +305,7 @@ try {
   const advanced = (await readClock()).text
   check('a counting clock advances', advanced !== counting.text, `${counting.text} → ${advanced}`)
 
-  // 4. Click pauses, Enter resumes, Space pauses.
+  // 4. Click pauses and resumes; Enter pauses and Space resumes.
   await clickClock()
   check('a click pauses the session (STRP-07)', await waitPaused(sessionId, true))
   const paused = await readClock()
@@ -314,10 +323,17 @@ try {
   const still = (await readClock()).text
   check('a paused clock does not advance', still === paused.text, `${paused.text} → ${still}`)
 
+  await clickClock()
+  check('a second click resumes the session (STRP-08)', await waitPaused(sessionId, false))
+
+  // Each key starts from the state the previous check confirmed, so a key
+  // that does nothing fails its own check instead of passing the next one.
   await pressOnClock('Enter')
-  check('Enter on the focused clock resumes (STRP-08, STRP-11)', await waitPaused(sessionId, false))
+  check('Enter on the focused clock pauses (STRP-07, STRP-11)', await waitPaused(sessionId, true))
   await pressOnClock(' ')
-  check('Space on the focused clock pauses (STRP-11)', await waitPaused(sessionId, true))
+  check('Space on the focused clock resumes (STRP-08, STRP-11)', await waitPaused(sessionId, false))
+  await clickClock()
+  check('a click pauses it again before the stop', await waitPaused(sessionId, true))
 
   // 5. Every other counter is unchanged.
   const others = await evaluate(

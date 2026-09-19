@@ -202,7 +202,7 @@ const PATHS: Record<IconName, JSX.Element> = {
       <path d="M12 7v5l3 2" />
     </>
   ),
-  // Filled like `play`, so Pause time / Resume time swap glyphs of equal weight.
+  // Filled like `play`, so the session clock swaps glyphs of equal weight.
   pause: (
     <>
       <rect x="6.5" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none" />

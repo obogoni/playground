@@ -304,8 +304,12 @@ button.agents-detail-time {
 }
 
 button.agents-detail-time:hover {
-  color: var(--text);
   border-color: var(--border-strong);
+}
+
+/* Hover brightens a counting clock only; a paused one stays dim (TIME-17). */
+button.agents-detail-time:not(.paused):hover {
+  color: var(--text);
 }
 
 button.agents-detail-time:focus-visible {
