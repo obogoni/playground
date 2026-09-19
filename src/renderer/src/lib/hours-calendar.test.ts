@@ -4,7 +4,6 @@ import { buildWeekReport, weekRange, type Block, type WeekReport } from './hours
 import {
   assignColours,
   barBox,
-  defaultDay,
   layoutLanes,
   legendEntries,
   roleOf,
@@ -364,29 +363,6 @@ describe('assignColours and legendEntries', () => {
       ['task:6', 'other', 9 * HOUR],
       ['cwd:d:\\acme\\scratch', 'no-task', 1 * HOUR]
     ])
-  })
-})
-
-describe('defaultDay', () => {
-  it("selects today in the current week, even before today's first period (HCAL-16)", () => {
-    const now = at(16, 8)
-    const r = report({ periods: [closed({ start: at(14, 9), end: at(14, 10) })] }, now)
-    expect(defaultDay(weekColumns(r, WEEK.start, now))?.getTime()).toBe(at(16, 0))
-  })
-
-  it('selects the latest day with time in a past week (HCAL-16)', () => {
-    const r = report({
-      periods: [
-        closed({ id: 'a', start: at(14, 9), end: at(14, 10) }),
-        closed({ id: 'b', start: at(19, 9), end: at(19, 10) }),
-        closed({ id: 'c', start: at(16, 9), end: at(16, 10) })
-      ]
-    })
-    expect(defaultDay(weekColumns(r, WEEK.start, LATER))?.getTime()).toBe(at(19, 0))
-  })
-
-  it('selects nothing in a past week without time (HCAL-17)', () => {
-    expect(defaultDay(weekColumns(report({}), WEEK.start, LATER))).toBeNull()
   })
 })
 

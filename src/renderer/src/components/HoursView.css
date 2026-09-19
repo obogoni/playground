@@ -83,20 +83,79 @@
   cursor: default;
 }
 
+/* Fits the window: nothing here scrolls but the drawer (HCAL-26). */
 .hours-body {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  padding: 18px 22px 28px;
+  overflow: hidden;
+  padding: 14px 22px 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .hours-empty {
-  margin: 48px auto;
   font-size: 13px;
   color: var(--text-faint);
+}
+
+/* The calendar and, while a day is selected, its drawer (HCAL-15, HCAL-25). */
+.hours-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 12px;
+}
+
+.hours-main > .hcal {
+  min-width: 0;
+}
+
+.hours-drawer {
+  flex: none;
+  width: 380px;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hours-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.hours-drawer-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.hours-drawer-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--text-muted);
+}
+
+.hours-drawer-close:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+
+.hours-drawer .hours-empty {
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
 }
 
 /* Day card */

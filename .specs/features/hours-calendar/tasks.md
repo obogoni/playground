@@ -431,13 +431,13 @@ T11 → T12 → T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] No day is selected and no drawer shows when the view opens or the week changes
-- [ ] A header or bar click opens the drawer on that day; a bar click also focuses its block
-- [ ] X and Esc close it; deleting the day's last period closes it
-- [ ] Only the drawer's content scrolls
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Phase gate passes: `npx electron-vite build`
-- [ ] Test count: 896 − 3 = **893**
+- [ ] No day is selected and no drawer shows when the view opens or the week changes — **open: proven by the T16 smoke**
+- [ ] A header or bar click opens the drawer on that day; a bar click also focuses its block — **open: proven by the T16 smoke**
+- [ ] X and Esc close it; deleting the day's last period closes it — **open: proven by the T16 smoke**
+- [ ] Only the drawer's content scrolls — **open: checked in the T16 visual pass**
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Phase gate passes: `npx electron-vite build`
+- [x] Test count: 896 − 3 = **893**
 
 **Tests**: none
 **Gate**: build

@@ -213,17 +213,6 @@ export function legendEntries(report: WeekReport, colours: Map<string, ColourRol
     .sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role))
 }
 
-/**
- * The day selected when the view opens or the week changes: today when the week
- * shows it, otherwise the latest day with time, otherwise none (HCAL-16, HCAL-17).
- */
-export function defaultDay(columns: CalendarColumn[]): Date | null {
-  const today = columns.find((column) => column.isToday)
-  if (today) return today.date
-  const withTime = columns.filter((column) => column.day !== null)
-  return withTime.length > 0 ? withTime[withTime.length - 1].date : null
-}
-
 /** Where a bar sits in its column, as percentages of the axis height (HCAL-08, HCAL-23). */
 export interface BarBox {
   topPct: number

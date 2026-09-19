@@ -10,11 +10,9 @@ import {
 } from '../lib/hours-report'
 import {
   assignColours,
-  defaultDay,
   legendEntries,
   timeAxis,
   weekColumns,
-  type CalendarColumn,
   type ColourRole
 } from '../lib/hours-calendar'
 import { formatDayCopy } from '../lib/hours-copy'
@@ -54,28 +52,27 @@ interface FrozenColours {
   colours: Map<string, ColourRole>
 }
 
-/** The day whose detail is shown, and the block a bar asked to focus (HCAL-15..19). */
+/** The day open in the drawer, and the block a bar asked to focus (HCAL-15..19). */
 interface Selection {
   weekStart: number
-  /** Local midnight of the selected day; null when the week has no day to show. */
-  date: number | null
+  /** Local midnight of the selected day. */
+  date: number
   focus?: BlockFocus
-  /** The selected day held time when last seen, so emptying it falls back (edge case). */
+  /** The selected day held time when last seen, so emptying it closes the drawer (edge case). */
   hadTime: boolean
 }
 
-function defaultSelection(weekStart: number, columns: CalendarColumn[]): Selection {
-  const date = defaultDay(columns)?.getTime() ?? null
-  const column = columns.find((c) => c.date.getTime() === date)
-  return { weekStart, date, hadTime: Boolean(column?.day) }
-}
+/** Esc typed into a field belongs to the field, not to the drawer. */
+const isTextField = (target: EventTarget | null): boolean =>
+  target instanceof HTMLElement && target.closest('input, textarea, select') !== null
 
 /**
- * Hours direction (TIME-31..43, HCAL-01..24): one local week as a calendar of
- * day columns with the worked blocks drawn as bars, a colour legend, and the
- * selected day's detail — groups, raw periods, edit, delete and the Clockify
- * Copy. Every number comes from the pure `hours-report`, `hours-calendar` and
- * `hours-copy` models.
+ * Hours direction (TIME-31..43, HCAL-01..26): one local week as a calendar of
+ * day columns with the worked blocks drawn as bars, colour chips above it, and
+ * a drawer beside it with the selected day's detail — groups, raw periods,
+ * edit, delete and the Clockify Copy. The view fits the window; only the
+ * drawer scrolls. Every number comes from the pure `hours-report`,
+ * `hours-calendar` and `hours-copy` models.
  */
 export function HoursView({
   snapshot,
@@ -112,19 +109,21 @@ export function HoursView({
     setFrozen({ weekStart, colours })
   }
 
-  const [selection, setSelection] = useState<Selection>(() => defaultSelection(weekStart, columns))
+  // Nothing is selected when the view opens or the week changes; the drawer
+  // closes too when its day loses its last period (HCAL-16, edge case).
+  const [selection, setSelection] = useState<Selection | null>(null)
   let current = selection
-  const selectedDay =
-    columns.find((c) => c.date.getTime() === selection.date && selection.weekStart === weekStart)
-      ?.day ?? null
-  if (selection.weekStart !== weekStart || (selection.hadTime && !selectedDay)) {
-    current = defaultSelection(weekStart, columns)
-    setSelection(current)
-  } else if (!selection.hadTime && selectedDay) {
+  const shownDay =
+    selection && selection.weekStart === weekStart
+      ? (columns.find((c) => c.date.getTime() === selection.date)?.day ?? null)
+      : null
+  if (selection && (selection.weekStart !== weekStart || (selection.hadTime && !shownDay))) {
+    current = null
+    setSelection(null)
+  } else if (selection && !selection.hadTime && shownDay) {
     current = { ...selection, hadTime: true }
     setSelection(current)
   }
-  const shownDay = columns.find((c) => c.date.getTime() === current.date)?.day ?? null
 
   const selectDay = (date: number): void => {
     const column = columns.find((c) => c.date.getTime() === date)
@@ -132,6 +131,18 @@ export function HoursView({
   }
   const selectBlock = (date: number, focus: BlockFocus): void =>
     setSelection({ weekStart, date, focus, hadTime: true })
+  const closeDrawer = (): void => setSelection(null)
+
+  // Esc closes the drawer (HCAL-25).
+  const drawerOpen = current !== null
+  useEffect(() => {
+    if (!drawerOpen) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape' && !e.defaultPrevented && !isTextField(e.target)) setSelection(null)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [drawerOpen])
 
   // Shift by calendar days, not 7 × 24 h, so a DST change never skews Monday.
   const shiftWeek = (weeks: number): void => {
@@ -190,31 +201,50 @@ export function HoursView({
       <div className="hours-body">
         {report.days.length === 0 && <div className="hours-empty">No time recorded this week.</div>}
         <HoursLegend entries={legendEntries(report, colours)} />
-        <HoursCalendar
-          columns={columns}
-          axis={axis}
-          colours={colours}
-          now={now}
-          selected={current.date}
-          focus={current.focus}
-          onSelectDay={selectDay}
-          onSelectBlock={selectBlock}
-        />
-        {shownDay ? (
-          <DayCard
-            key={shownDay.date.getTime()}
-            day={shownDay}
-            onDelete={onDelete}
-            onAdjust={onAdjust}
-            focus={current.focus}
+        <div className="hours-main">
+          <HoursCalendar
+            columns={columns}
+            axis={axis}
+            colours={colours}
+            now={now}
+            selected={current?.date ?? null}
+            focus={current?.focus}
+            onSelectDay={selectDay}
+            onSelectBlock={selectBlock}
           />
-        ) : (
-          <div className="hours-empty">
-            {current.date === null || report.days.length === 0
-              ? 'No day to show.'
-              : `No time recorded on ${formatDayHeader(new Date(current.date))}.`}
-          </div>
-        )}
+          {current && (
+            <aside
+              className="hours-drawer"
+              aria-label={`Details of ${formatDayHeader(new Date(current.date))}`}
+            >
+              <div className="hours-drawer-head">
+                <span className="hours-drawer-hint">Esc closes</span>
+                <button
+                  type="button"
+                  className="hours-drawer-close"
+                  title="Close details"
+                  aria-label="Close details"
+                  onClick={closeDrawer}
+                >
+                  <Icon name="x" size={14} />
+                </button>
+              </div>
+              {shownDay ? (
+                <DayCard
+                  key={shownDay.date.getTime()}
+                  day={shownDay}
+                  onDelete={onDelete}
+                  onAdjust={onAdjust}
+                  focus={current.focus}
+                />
+              ) : (
+                <div className="hours-empty">
+                  No time recorded on {formatDayHeader(new Date(current.date))}.
+                </div>
+              )}
+            </aside>
+          )}
+        </div>
       </div>
     </div>
   )
