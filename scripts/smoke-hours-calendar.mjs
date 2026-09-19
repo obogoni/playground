@@ -1,0 +1,438 @@
+/* CDP smoke for the Hours week calendar (HCAL-01..24). Proves, against a running
+ * dev app, what the pure `hours-calendar` unit tests cannot reach — the rendered
+ * grid, its buttons and the selection wiring:
+ *   1. the current week shows Monday to Friday in order, and Saturday or Sunday
+ *      only when that day holds time (HCAL-01, HCAL-02)
+ *   2. column headers are buttons named `dd/MM/yyyy (ddd), XhMM`; exactly one is
+ *      today, selected by default, with its detail below (HCAL-03, 04, 16, 20)
+ *   3. two sessions in different folders running at once are two bars side by
+ *      side; a sub-minute bar keeps its minimum height; running bars are ongoing
+ *      and say `now` (HCAL-10, HCAL-12, HCAL-23)
+ *   4. hovering a bar shows its duration and range; the legend lists both
+ *      folders with outlined swatches (HCAL-21, HCAL-22)
+ *   5. a header click selects its day; a bar click selects its day and focuses
+ *      and expands its block in the detail (HCAL-18, HCAL-19)
+ *   6. a running bar grows at the one-minute refresh and keeps its colour
+ *      (HCAL-23, HCAL-24)
+ *   7. ◀ resets the selection; ▶ shows five dimmed, empty future columns that
+ *      say there is no time and no day; This week returns to today (HCAL-05,
+ *      06, 07, 16, 17)
+ *   8. deleting the selected day's last period falls back to the default day
+ *      (edge case)
+ *   9. one day card only, never the stacked list (HCAL-14, HCAL-15)
+ *
+ * NOT automatable here: colours of task slots (ad-hoc sessions in a non-git cwd
+ * carry no task — HCAL-11 and the frozen ranking are unit-tested), keyboard
+ * focus showing the tooltip, and the two-theme look.
+ *
+ * The sessions are ad-hoc `pwsh` in C:/Windows and C:/Windows/System32 — never a
+ * registry agent, which on a machine with the CLI installed starts a real agent.
+ * The script restores the owner's direction and theme and deletes every period
+ * it created.
+ *
+ * Run: npm run dev -- -- --remote-debugging-port=9222   (in one shell)
+ *      node scripts/smoke-hours-calendar.mjs             (in another)
+ */
+
+const PORT = Number(process.env.SMOKE_PORT) || 9222
+const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+const FOLDERS = ['C:\\Windows', 'C:\\Windows\\System32']
+
+async function pageTarget() {
+  for (let i = 0; i < 30; i++) {
+    try {
+      const targets = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json()
+      const page = targets.find((t) => t.type === 'page')
+      if (page) return page
+    } catch {
+      /* app not up yet */
+    }
+    await new Promise((r) => setTimeout(r, 1000))
+  }
+  throw new Error('No CDP page target after 30s')
+}
+
+let nextId = 1
+let ws
+function send(method, params = {}) {
+  return new Promise((resolve, reject) => {
+    const id = nextId++
+    const onMessage = (event) => {
+      const msg = JSON.parse(event.data)
+      if (msg.id !== id) return
+      ws.removeEventListener('message', onMessage)
+      if (msg.error) return reject(new Error(JSON.stringify(msg.error)))
+      resolve(msg.result)
+    }
+    ws.addEventListener('message', onMessage)
+    ws.send(JSON.stringify({ id, method, params }))
+  })
+}
+
+async function evaluate(expression) {
+  const result = await send('Runtime.evaluate', {
+    expression,
+    awaitPromise: true,
+    returnByValue: true,
+    userGesture: true
+  })
+  const r = result.result
+  if (r.subtype === 'error') throw new Error(r.description)
+  return r.value
+}
+
+const invoke = (channel, req) =>
+  evaluate(
+    `window.api.invoke(${JSON.stringify(channel)}${req === undefined ? '' : `, ${JSON.stringify(req)}`})`
+  )
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+async function waitFor(expression, what, tries = 40) {
+  for (let i = 0; i < tries; i++) {
+    if (await evaluate(expression)) return
+    await sleep(250)
+  }
+  throw new Error(`Timed out waiting for ${what}`)
+}
+
+async function reloadInto(direction) {
+  await invoke('config:patch', { ui: { direction } })
+  await send('Page.reload')
+  await sleep(1500)
+  await waitFor(`document.querySelector('.topbar') !== null`, 'the top bar')
+}
+
+const checks = []
+function check(name, ok, detail = '') {
+  checks.push({ name, ok })
+  console.log(
+    `${String(checks.length).padStart(2)}. ${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`
+  )
+}
+
+const pad = (n) => String(n).padStart(2, '0')
+const dayHeader = (d) =>
+  `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} (${WEEKDAYS[d.getDay()]})`
+const today = new Date()
+const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+const sinceMonday = (today.getDay() + 6) % 7
+/** Local midnight of day `offset` (0 = Monday) of the week `weeks` from this one. */
+const weekDay = (weeks, offset) =>
+  new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() - sinceMonday + 7 * weeks + offset
+  )
+
+// DOM probes, evaluated in the page.
+const HEADS = `[...document.querySelectorAll('.hcal-head')]`
+const headLabels = () => evaluate(`${HEADS}.map(h => h.getAttribute('aria-label'))`)
+const pressedLabel = () =>
+  evaluate(
+    `${HEADS}.find(h => h.getAttribute('aria-pressed') === 'true')?.getAttribute('aria-label') ?? null`
+  )
+const detailTitle = () =>
+  evaluate(`document.querySelector('.hours-day-title')?.textContent ?? null`)
+const emptyTexts = () =>
+  evaluate(`[...document.querySelectorAll('.hours-empty')].map(e => e.textContent)`)
+const barIn = (header, folder) =>
+  `(() => { const i = ${HEADS}.findIndex(h => h.getAttribute('aria-label').startsWith(${JSON.stringify(header)})); const col = document.querySelectorAll('.hcal-col')[i]; return [...(col?.querySelectorAll('.hcal-bar') ?? [])].find(b => b.getAttribute('aria-label').startsWith(${JSON.stringify(`No task · ${folder}, `)})) ?? null })()`
+const rectOf = (bar) =>
+  evaluate(
+    `(() => { const b = ${bar}; if (!b) return null; const r = b.getBoundingClientRect(); const c = b.parentElement.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, colW: c.width, cls: b.className, label: b.getAttribute('aria-label'), heightVar: b.style.getPropertyValue('--bar-height'), bg: getComputedStyle(b).borderColor + '|' + getComputedStyle(b).backgroundColor } })()`
+  )
+const nav = (label) =>
+  evaluate(
+    `[...document.querySelectorAll('.hours-nav-btn')].find(b => (b.getAttribute('aria-label') ?? b.textContent) === ${JSON.stringify(label)}).click(), true`
+  )
+
+const overlapsDay = (snapshot, day) => {
+  const start = day.getTime()
+  const end = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1).getTime()
+  const now = Date.now()
+  return [
+    ...snapshot.periods.map((p) => [Date.parse(p.start), Date.parse(p.end)]),
+    ...snapshot.open.map((p) => [Date.parse(p.start), now])
+  ].some(([s, e]) => s < end && e > start)
+}
+
+const target = await pageTarget()
+ws = new WebSocket(target.webSocketDebuggerUrl)
+await new Promise((resolve, reject) => {
+  ws.addEventListener('open', resolve)
+  ws.addEventListener('error', reject)
+})
+await send('Runtime.enable')
+await send('Page.enable')
+await waitFor(`typeof window.api !== 'undefined'`, 'the preload bridge')
+
+const original = (await invoke('config:get')).ui
+const before = await invoke('time:snapshot')
+const knownPeriods = new Set(before.periods.map((p) => p.id))
+const sessionIds = []
+const todayHeader = dayHeader(todayMidnight)
+
+try {
+  for (const cwd of FOLDERS) {
+    const view = await invoke('sessions:spawn', {
+      agentName: 'Ad-hoc',
+      cwd,
+      adhocCommand: 'pwsh -NoLogo -NoProfile'
+    })
+    sessionIds.push(view.id)
+  }
+  await sleep(1500)
+  await reloadInto('hours')
+  await waitFor(`document.querySelector('.hcal') !== null`, 'the calendar')
+  await sleep(500)
+
+  // 1. Columns.
+  const snap = await invoke('time:snapshot')
+  const labels = await headLabels()
+  const weekdays = [0, 1, 2, 3, 4].map((i) => dayHeader(weekDay(0, i)))
+  check(
+    'Monday to Friday head the current week, in order',
+    weekdays.every((h, i) => labels[i]?.startsWith(h)),
+    labels.map((l) => l.slice(0, 16)).join(' | ')
+  )
+  const weekendExpected = [5, 6].filter((i) => overlapsDay(snap, weekDay(0, i)))
+  const weekendShown = [5, 6].filter((i) =>
+    labels.some((l) => l.startsWith(dayHeader(weekDay(0, i))))
+  )
+  check(
+    'a weekend column appears only for a weekend day with time',
+    JSON.stringify(weekendExpected) === JSON.stringify(weekendShown) &&
+      labels.length === 5 + weekendExpected.length,
+    `expected ${weekendExpected}, shown ${weekendShown}`
+  )
+
+  // 2. Headers, today and the default selection.
+  check(
+    'headers are buttons named `dd/MM/yyyy (ddd), XhMM`',
+    (await evaluate(`${HEADS}.every(h => h.tagName === 'BUTTON')`)) &&
+      labels.every((l) => /^\d{2}\/\d{2}\/\d{4} \(\S+\), \d+h\d{2}$/.test(l))
+  )
+  const todays = await evaluate(
+    `${HEADS}.filter(h => h.classList.contains('today')).map(h => h.getAttribute('aria-label'))`
+  )
+  check(
+    "exactly one header is today's",
+    todays.length === 1 && todays[0].startsWith(todayHeader),
+    todays.join(' | ')
+  )
+  check(
+    'today is selected by default and its detail shows below',
+    (await pressedLabel())?.startsWith(todayHeader) && (await detailTitle()) === todayHeader,
+    `${await pressedLabel()} / ${await detailTitle()}`
+  )
+  check(
+    'one day card, never the stacked list',
+    (await evaluate(`document.querySelectorAll('.hours-day').length`)) === 1
+  )
+
+  // 3. Parallel bars, minimum height, ongoing.
+  const [winBar, sysBar] = FOLDERS.map((f) => barIn(todayHeader, f.split('\\').pop()))
+  const win = await rectOf(winBar)
+  const sys = await rectOf(sysBar)
+  check(
+    'two parallel sessions are two bars side by side',
+    Boolean(win && sys) &&
+      (win.x + win.w <= sys.x + 0.5 || sys.x + sys.w <= win.x + 0.5) &&
+      win.w < win.colW * 0.6 &&
+      sys.w < sys.colW * 0.6,
+    win && sys
+      ? `x ${win.x.toFixed(1)}+${win.w.toFixed(1)} / ${sys.x.toFixed(1)}+${sys.w.toFixed(1)}`
+      : 'missing'
+  )
+  check(
+    'a sub-minute bar keeps its minimum height',
+    Boolean(win) && win.h >= 5.5,
+    win ? `${win.h.toFixed(1)} px` : 'missing'
+  )
+  check(
+    'running bars are ongoing and end at now',
+    Boolean(win && sys) &&
+      [win, sys].every(
+        (b) => b.cls.includes('ongoing') && /, \d{2}:\d{2}–now, \d+h\d{2}$/.test(b.label)
+      ),
+    win?.label ?? ''
+  )
+
+  // 4. Tooltip and legend.
+  await evaluate(`${winBar}.scrollIntoView({ block: 'center' }), true`)
+  await sleep(200)
+  const hover = await rectOf(winBar)
+  await send('Input.dispatchMouseEvent', {
+    type: 'mouseMoved',
+    x: hover.x + hover.w / 2,
+    y: hover.y + hover.h / 2
+  })
+  await sleep(250)
+  const tip = await evaluate(
+    `(() => { const t = ${winBar}.querySelector('.hcal-tip'); return { shown: getComputedStyle(t).display !== 'none', text: t.textContent } })()`
+  )
+  check(
+    'hovering a bar shows its duration and range',
+    tip.shown && /^\d+h\d{2}\d{2}:\d{2}–now/.test(tip.text),
+    tip.text
+  )
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 2, y: 2 })
+  const legend = await evaluate(
+    `[...document.querySelectorAll('.hleg-row')].map(r => ({ label: r.querySelector('.hleg-label')?.textContent, outlined: r.querySelector('.hleg-swatch')?.classList.contains('role-no-task') ?? false }))`
+  )
+  check(
+    'the legend lists both folders with outlined swatches',
+    ['No task · Windows', 'No task · System32'].every((l) =>
+      legend.some((e) => e.label === l && e.outlined)
+    ),
+    legend.map((e) => e.label).join(' | ')
+  )
+
+  // 5. Header click and bar click.
+  const monday = dayHeader(weekDay(0, 0))
+  await evaluate(
+    `${HEADS}.find(h => h.getAttribute('aria-label').startsWith(${JSON.stringify(monday)})).click(), true`
+  )
+  await sleep(200)
+  const mondayDetail = (await detailTitle()) ?? (await emptyTexts()).join(' ')
+  check(
+    'a header click selects its day',
+    (await pressedLabel())?.startsWith(monday) && mondayDetail.includes(monday),
+    mondayDetail
+  )
+  await evaluate(`${winBar}.click(), true`)
+  await sleep(300)
+  const focused = await evaluate(
+    `(() => { const b = document.querySelector('.hours-block.focused'); return b ? { group: b.closest('.hours-group').querySelector('.hours-group-label').textContent, expanded: b.querySelector('.hours-block-line').getAttribute('aria-expanded'), periods: b.querySelectorAll('.period-row').length } : null })()`
+  )
+  check(
+    'a bar click selects its day and focuses and expands its block',
+    (await pressedLabel())?.startsWith(todayHeader) &&
+      (await detailTitle()) === todayHeader &&
+      focused?.group === 'No task · Windows' &&
+      focused.expanded === 'true' &&
+      focused.periods >= 1,
+    JSON.stringify(focused)
+  )
+
+  // 6. Live growth with a stable colour.
+  const grow0 = await rectOf(winBar)
+  console.log('    waiting 65 s for the live refresh…')
+  await sleep(65_000)
+  const grow1 = await rectOf(winBar)
+  check(
+    'a running bar grows at the refresh and keeps its colour',
+    Boolean(grow0 && grow1) &&
+      parseFloat(grow1.heightVar) > parseFloat(grow0.heightVar) &&
+      grow1.bg === grow0.bg &&
+      grow1.cls.replace(/ ?(focused|tip-left)/g, '') ===
+        grow0.cls.replace(/ ?(focused|tip-left)/g, ''),
+    `${grow0?.heightVar} → ${grow1?.heightVar}`
+  )
+
+  // 7. Navigation.
+  await nav('Previous week')
+  await sleep(300)
+  const prevBars = await evaluate(
+    `${HEADS}.map((h, i) => [h.getAttribute('aria-label'), document.querySelectorAll('.hcal-col')[i].querySelectorAll('.hcal-bar').length])`
+  )
+  const latestWithTime = [...prevBars].reverse().find(([, n]) => n > 0)?.[0] ?? null
+  const prevPressed = await pressedLabel()
+  check(
+    '◀ resets the selection to the default day of that week',
+    (await evaluate(`document.querySelector('.hours-block.focused') === null`)) &&
+      (latestWithTime === null
+        ? prevPressed === null && (await emptyTexts()).includes('No day to show.')
+        : prevPressed === latestWithTime),
+    `${prevPressed}`
+  )
+  await nav('This week')
+  await sleep(200)
+  await nav('Next week')
+  await sleep(300)
+  const next = await evaluate(
+    `({ heads: ${HEADS}.length, future: ${HEADS}.every(h => h.classList.contains('future')), dim: [...document.querySelectorAll('.hcal-col')].every(c => Number(getComputedStyle(c).opacity) < 1), bars: document.querySelectorAll('.hcal-bar').length })`
+  )
+  check(
+    '▶ shows five dimmed future columns without bars',
+    next.heads === 5 && next.future && next.dim && next.bars === 0,
+    JSON.stringify(next)
+  )
+  const nextEmpty = await emptyTexts()
+  check(
+    'an empty week says so and has no day to show',
+    nextEmpty.includes('No time recorded this week.') && nextEmpty.includes('No day to show.'),
+    nextEmpty.join(' | ')
+  )
+  await nav('This week')
+  await sleep(300)
+  check(
+    'This week returns with today selected',
+    (await pressedLabel())?.startsWith(todayHeader) && (await detailTitle()) === todayHeader
+  )
+
+  // 8. Delete fallback, in a past week this script empties itself.
+  await invoke('sessions:stop', { id: sessionIds[1] })
+  await sleep(800)
+  const s2 = await invoke('time:snapshot')
+  const sysPeriod = s2.periods.find((p) => p.sessionId === sessionIds[1] && !knownPeriods.has(p.id))
+  const pastWed = weekDay(-4, 2)
+  const pastWeek = [weekDay(-4, 0).getTime(), weekDay(-3, 0).getTime()]
+  const pastBusy = s2.periods.some(
+    (p) => Date.parse(p.start) < pastWeek[1] && Date.parse(p.end) > pastWeek[0]
+  )
+  if (!sysPeriod || pastBusy) {
+    check(
+      'delete fallback (setup)',
+      false,
+      !sysPeriod ? 'no closed period' : 'the past week holds time'
+    )
+  } else {
+    const start = new Date(pastWed.getFullYear(), pastWed.getMonth(), pastWed.getDate(), 10)
+    const moved = await invoke('time:adjust', {
+      id: sysPeriod.id,
+      start: start.toISOString(),
+      end: new Date(start.getTime() + 30 * 60_000).toISOString()
+    })
+    for (let i = 0; i < 4; i++) {
+      await nav('Previous week')
+      await sleep(200)
+    }
+    await sleep(300)
+    const wedHeader = dayHeader(pastWed)
+    const selectedBefore = await pressedLabel()
+    await invoke('time:delete', { id: sysPeriod.id })
+    await sleep(800)
+    const after = await emptyTexts()
+    check(
+      "deleting the selected day's last period falls back to the default day",
+      moved.ok === true &&
+        selectedBefore?.startsWith(wedHeader) &&
+        (await pressedLabel()) === null &&
+        after.includes('No day to show.'),
+      `${selectedBefore} → ${await pressedLabel()} / ${after.join(' | ')}`
+    )
+    await nav('This week')
+  }
+} finally {
+  for (const id of sessionIds) {
+    await invoke('sessions:stop', { id }).catch(() => {})
+    await invoke('sessions:remove', { id }).catch(() => {})
+  }
+  const after = await invoke('time:snapshot')
+  // Only these sessions' new periods: another live session may be recording too.
+  const created = after.periods.filter(
+    (p) => sessionIds.includes(p.sessionId) && !knownPeriods.has(p.id)
+  )
+  for (const p of created) {
+    await invoke('time:delete', { id: p.id })
+  }
+  await invoke('config:patch', { ui: { direction: original.direction, theme: original.theme } })
+  await send('Page.reload')
+  ws.close()
+}
+
+const failed = checks.filter((c) => !c.ok)
+console.log(`\n${checks.length - failed.length}/${checks.length} checks passed`)
+process.exit(failed.length === 0 ? 0 : 1)

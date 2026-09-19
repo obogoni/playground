@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/hours-calendar/design.md`
-**Status**: Draft
+**Status**: Executed — T1..T11 done; Verifier pending
 
 **Branch**: `feature/hours-calendar`, stacked on `feature/time-tracking` (PR #93). Its PR carries "depends on #93"; once #93 merges, `git rebase --onto origin/main feature/time-tracking feature/hours-calendar`.
 
@@ -287,9 +287,9 @@ T9 → T10 → T11
 **Done when**:
 
 - [x] No stacked list of days remains (HCAL-14)
-- [ ] A running agent's bar grows while its colour stays the same, even when its task overtakes another — **open: proven by the T11 smoke**
-- [ ] ◀, ▶ and This week reset the selection and recompute the colours — **open: proven by the T11 smoke**
-- [ ] Deleting the selected day's last period moves the selection to the fallback day — **open: proven by the T11 smoke**
+- [x] A running agent's bar grows while its colour stays the same, even when its task overtakes another — T11 smoke check 14 (growth, stable colour); the overtake case is the unit test `keeps frozen colours while live time reorders tasks`
+- [x] ◀, ▶ and This week reset the selection and recompute the colours — T11 smoke checks 15–18
+- [x] Deleting the selected day's last period moves the selection to the fallback day — T11 smoke check 19
 - [x] Gate passes: `npm run typecheck && npm run lint && npm test`
 - [x] Phase gate passes: `npx electron-vite build`
 - [x] Test count: **893** (unchanged)
@@ -334,10 +334,10 @@ T9 → T10 → T11
 
 **Done when**:
 
-- [ ] Checks: five columns; a weekend column appearing only with time; header totals; today highlighted; future dimmed; two parallel sessions drawn side by side; a sub-minute block visible; a bar click selecting its day and focusing its block; header click; legend entries; the running bar growing with a stable colour; ◀ ▶ This week
-- [ ] **`smoke-time.mjs` passes** through the detail panel — Copy text byte-identical, edit and delete working
-- [ ] Deletes every period it created and restores the owner's direction and theme
-- [ ] Numbered pass/fail line per check; all pass against a live dev app
+- [x] Checks: five columns; a weekend column appearing only with time; header totals; today highlighted; future dimmed; two parallel sessions drawn side by side; a sub-minute block visible; a bar click selecting its day and focusing its block; header click; legend entries; the running bar growing with a stable colour; ◀ ▶ This week
+- [x] **`smoke-time.mjs` passes** through the detail panel — Copy text byte-identical, edit and delete working
+- [x] Deletes every period it created and restores the owner's direction and theme
+- [x] Numbered pass/fail line per check; all pass against a live dev app
 
 **Tests**: manual
 **Gate**: manual
