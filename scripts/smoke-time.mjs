@@ -229,6 +229,13 @@ try {
   await reloadInto('hours')
   await waitFor(`document.querySelector('.hours-view') !== null`, 'the Hours view')
   check('Hours direction renders after a reload', true)
+  // The Hours detail lives in a drawer opened by a day's header (HCAL-18).
+  const openToday = () =>
+    evaluate(
+      `[...document.querySelectorAll('.hcal-head')].find(h => h.getAttribute('aria-label').startsWith(${JSON.stringify(todayHeader)}))?.click(), true`
+    )
+  await openToday()
+  await sleep(200)
   const todayCard = `[...document.querySelectorAll('.hours-day')].find(d => d.querySelector('.hours-day-title')?.textContent === ${JSON.stringify(todayHeader)})`
   check(
     'today is listed with its pt-BR header',
@@ -262,7 +269,9 @@ try {
   await nav('This week')
   await sleep(200)
 
-  // 6. Copy writes the exact header and confirms.
+  // 6. Copy writes the exact header and confirms; the week change closed the drawer.
+  await openToday()
+  await sleep(200)
   await evaluate(`window.focus(), true`)
   await evaluate(`(${todayCard}).querySelector('.hours-copy-btn').click(), true`)
   await sleep(400)

@@ -1,25 +1,27 @@
-/* CDP smoke for the Hours week calendar (HCAL-01..24). Proves, against a running
+/* CDP smoke for the Hours week calendar (HCAL-01..26). Proves, against a running
  * dev app, what the pure `hours-calendar` unit tests cannot reach — the rendered
- * grid, its buttons and the selection wiring:
+ * grid, its buttons, the drawer and the selection wiring:
  *   1. the current week shows Monday to Friday in order, and Saturday or Sunday
  *      only when that day holds time (HCAL-01, HCAL-02)
  *   2. column headers are buttons named `dd/MM/yyyy (ddd), XhMM`; exactly one is
- *      today, selected by default, with its detail below (HCAL-03, 04, 16, 20)
+ *      today; the view opens with nothing selected and no drawer (HCAL-03, 04,
+ *      16, 20)
  *   3. two sessions in different folders running at once are two bars side by
  *      side; a sub-minute bar keeps its minimum height; running bars are ongoing
  *      and say `now` (HCAL-10, HCAL-12, HCAL-23)
- *   4. hovering a bar shows its duration and range; the legend lists both
- *      folders with outlined swatches (HCAL-21, HCAL-22)
- *   5. a header click selects its day; a bar click selects its day and focuses
- *      and expands its block in the detail (HCAL-18, HCAL-19)
+ *   4. hovering a bar shows its duration, range and label; the legend chips
+ *      list both folders with outlined swatches (HCAL-21, HCAL-22)
+ *   5. a header click opens the drawer on its day; a bar click opens it on its
+ *      day and focuses and expands its block; one day card only (HCAL-14, 15,
+ *      18, 19)
  *   6. a running bar grows at the one-minute refresh and keeps its colour
  *      (HCAL-23, HCAL-24)
- *   7. ◀ resets the selection; ▶ shows five dimmed, empty future columns that
- *      say there is no time and no day; This week returns to today (HCAL-05,
- *      06, 07, 16, 17)
- *   8. deleting the selected day's last period falls back to the default day
- *      (edge case)
- *   9. one day card only, never the stacked list (HCAL-14, HCAL-15)
+ *   7. at 1100 × 640 the page does not scroll, with or without the drawer; the
+ *      X and Esc close the drawer (HCAL-25, HCAL-26)
+ *   8. ◀ closes the drawer; ▶ shows five dimmed, empty future columns that say
+ *      there is no time; This week returns with nothing selected (HCAL-05, 06,
+ *      07, 16)
+ *   9. deleting the selected day's last period closes the drawer (edge case)
  *
  * NOT automatable here: colours of task slots (ad-hoc sessions in a non-git cwd
  * carry no task — HCAL-11 and the frozen ranking are unit-tested), keyboard
@@ -136,6 +138,16 @@ const detailTitle = () =>
   evaluate(`document.querySelector('.hours-day-title')?.textContent ?? null`)
 const emptyTexts = () =>
   evaluate(`[...document.querySelectorAll('.hours-empty')].map(e => e.textContent)`)
+const drawerOpen = () => evaluate(`document.querySelector('.hours-drawer') !== null`)
+const clickHead = (header) =>
+  evaluate(
+    `${HEADS}.find(h => h.getAttribute('aria-label').startsWith(${JSON.stringify(header)})).click(), true`
+  )
+/** Whether the Hours body fits the viewport: it does not scroll and the grid ends inside. */
+const fits = () =>
+  evaluate(
+    `(() => { const b = document.querySelector('.hours-body'); const g = document.querySelector('.hcal').getBoundingClientRect(); return { scrolls: b.scrollHeight > b.clientHeight + 1, gridBottom: Math.round(g.bottom), height: innerHeight } })()`
+  )
 const barIn = (header, folder) =>
   `(() => { const i = ${HEADS}.findIndex(h => h.getAttribute('aria-label').startsWith(${JSON.stringify(header)})); const col = document.querySelectorAll('.hcal-col')[i]; return [...(col?.querySelectorAll('.hcal-bar') ?? [])].find(b => b.getAttribute('aria-label').startsWith(${JSON.stringify(`No task · ${folder}, `)})) ?? null })()`
 const rectOf = (bar) =>
@@ -222,13 +234,11 @@ try {
     todays.join(' | ')
   )
   check(
-    'today is selected by default and its detail shows below',
-    (await pressedLabel())?.startsWith(todayHeader) && (await detailTitle()) === todayHeader,
-    `${await pressedLabel()} / ${await detailTitle()}`
-  )
-  check(
-    'one day card, never the stacked list',
-    (await evaluate(`document.querySelectorAll('.hours-day').length`)) === 1
+    'the view opens with nothing selected and no drawer',
+    (await pressedLabel()) === null &&
+      !(await drawerOpen()) &&
+      (await evaluate(`document.querySelectorAll('.hours-day').length`)) === 0,
+    `${await pressedLabel()}`
   )
 
   // 3. Parallel bars, minimum height, ongoing.
@@ -279,10 +289,10 @@ try {
   )
   await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 2, y: 2 })
   const legend = await evaluate(
-    `[...document.querySelectorAll('.hleg-row')].map(r => ({ label: r.querySelector('.hleg-label')?.textContent, outlined: r.querySelector('.hleg-swatch')?.classList.contains('role-no-task') ?? false }))`
+    `[...document.querySelectorAll('.hleg-chip')].map(r => ({ label: r.querySelector('.hleg-label')?.textContent, outlined: r.querySelector('.hleg-swatch')?.classList.contains('role-no-task') ?? false }))`
   )
   check(
-    'the legend lists both folders with outlined swatches',
+    'the legend chips list both folders with outlined swatches',
     ['No task · Windows', 'No task · System32'].every((l) =>
       legend.some((e) => e.label === l && e.outlined)
     ),
@@ -291,14 +301,14 @@ try {
 
   // 5. Header click and bar click.
   const monday = dayHeader(weekDay(0, 0))
-  await evaluate(
-    `${HEADS}.find(h => h.getAttribute('aria-label').startsWith(${JSON.stringify(monday)})).click(), true`
-  )
+  await clickHead(monday)
   await sleep(200)
   const mondayDetail = (await detailTitle()) ?? (await emptyTexts()).join(' ')
   check(
-    'a header click selects its day',
-    (await pressedLabel())?.startsWith(monday) && mondayDetail.includes(monday),
+    'a header click opens the drawer on its day',
+    (await pressedLabel())?.startsWith(monday) &&
+      (await drawerOpen()) &&
+      mondayDetail.includes(monday),
     mondayDetail
   )
   await evaluate(`${winBar}.click(), true`)
@@ -307,13 +317,20 @@ try {
     `(() => { const b = document.querySelector('.hours-block.focused'); return b ? { group: b.closest('.hours-group').querySelector('.hours-group-label').textContent, expanded: b.querySelector('.hours-block-line').getAttribute('aria-expanded'), periods: b.querySelectorAll('.period-row').length } : null })()`
   )
   check(
-    'a bar click selects its day and focuses and expands its block',
+    'a bar click opens the drawer on its day and focuses and expands its block',
     (await pressedLabel())?.startsWith(todayHeader) &&
+      (await drawerOpen()) &&
       (await detailTitle()) === todayHeader &&
       focused?.group === 'No task · Windows' &&
       focused.expanded === 'true' &&
       focused.periods >= 1,
     JSON.stringify(focused)
+  )
+
+  check(
+    'one day card, in the drawer, never the stacked list',
+    (await evaluate(`document.querySelectorAll('.hours-day').length`)) === 1 &&
+      (await evaluate(`document.querySelectorAll('.hours-drawer .hours-day').length`)) === 1
   )
 
   // 6. Live growth with a stable colour.
@@ -331,21 +348,58 @@ try {
     `${grow0?.heightVar} → ${grow1?.heightVar}`
   )
 
-  // 7. Navigation.
+  // 7. Fitting the window, and closing the drawer.
+  await send('Emulation.setDeviceMetricsOverride', {
+    width: 1100,
+    height: 640,
+    deviceScaleFactor: 1,
+    mobile: false
+  })
+  await sleep(400)
+  const fitOpen = await fits()
+  await evaluate(`document.querySelector('.hours-drawer-close').click(), true`)
+  await sleep(300)
+  const closedByX = !(await drawerOpen()) && (await pressedLabel()) === null
+  const fitClosed = await fits()
+  await send('Emulation.clearDeviceMetricsOverride')
+  check(
+    'at 1100 × 640 the page does not scroll, with or without the drawer',
+    !fitOpen.scrolls &&
+      !fitClosed.scrolls &&
+      fitOpen.gridBottom <= fitOpen.height &&
+      fitClosed.gridBottom <= fitClosed.height,
+    `${JSON.stringify(fitOpen)} / ${JSON.stringify(fitClosed)}`
+  )
+  check('the X closes the drawer and clears the selection', closedByX)
+  await clickHead(todayHeader)
+  await sleep(200)
+  const openedAgain = await drawerOpen()
+  for (const type of ['keyDown', 'keyUp']) {
+    await send('Input.dispatchKeyEvent', {
+      type,
+      key: 'Escape',
+      code: 'Escape',
+      windowsVirtualKeyCode: 27
+    })
+  }
+  await sleep(200)
+  check(
+    'Esc closes the drawer',
+    openedAgain && !(await drawerOpen()) && (await pressedLabel()) === null
+  )
+
+  // 8. Navigation.
+  await clickHead(todayHeader)
+  await sleep(200)
+  const openBeforeNav = await drawerOpen()
   await nav('Previous week')
   await sleep(300)
-  const prevBars = await evaluate(
-    `${HEADS}.map((h, i) => [h.getAttribute('aria-label'), document.querySelectorAll('.hcal-col')[i].querySelectorAll('.hcal-bar').length])`
-  )
-  const latestWithTime = [...prevBars].reverse().find(([, n]) => n > 0)?.[0] ?? null
-  const prevPressed = await pressedLabel()
   check(
-    '◀ resets the selection to the default day of that week',
-    (await evaluate(`document.querySelector('.hours-block.focused') === null`)) &&
-      (latestWithTime === null
-        ? prevPressed === null && (await emptyTexts()).includes('No day to show.')
-        : prevPressed === latestWithTime),
-    `${prevPressed}`
+    '◀ closes the drawer and clears the selection',
+    openBeforeNav &&
+      !(await drawerOpen()) &&
+      (await pressedLabel()) === null &&
+      (await evaluate(`document.querySelector('.hours-block.focused') === null`))
   )
   await nav('This week')
   await sleep(200)
@@ -361,18 +415,18 @@ try {
   )
   const nextEmpty = await emptyTexts()
   check(
-    'an empty week says so and has no day to show',
-    nextEmpty.includes('No time recorded this week.') && nextEmpty.includes('No day to show.'),
+    'an empty week says so, with no drawer',
+    nextEmpty.includes('No time recorded this week.') && !(await drawerOpen()),
     nextEmpty.join(' | ')
   )
   await nav('This week')
   await sleep(300)
   check(
-    'This week returns with today selected',
-    (await pressedLabel())?.startsWith(todayHeader) && (await detailTitle()) === todayHeader
+    'This week returns with nothing selected',
+    (await pressedLabel()) === null && !(await drawerOpen())
   )
 
-  // 8. Delete fallback, in a past week this script empties itself.
+  // 9. Deleting the open day's last period, in a past week this script empties itself.
   await invoke('sessions:stop', { id: sessionIds[1] })
   await sleep(800)
   const s2 = await invoke('time:snapshot')
@@ -401,17 +455,18 @@ try {
     }
     await sleep(300)
     const wedHeader = dayHeader(pastWed)
-    const selectedBefore = await pressedLabel()
+    await clickHead(wedHeader)
+    await sleep(300)
+    const selectedBefore = (await drawerOpen()) ? await pressedLabel() : null
     await invoke('time:delete', { id: sysPeriod.id })
     await sleep(800)
-    const after = await emptyTexts()
     check(
-      "deleting the selected day's last period falls back to the default day",
+      "deleting the open day's last period closes the drawer",
       moved.ok === true &&
         selectedBefore?.startsWith(wedHeader) &&
         (await pressedLabel()) === null &&
-        after.includes('No day to show.'),
-      `${selectedBefore} → ${await pressedLabel()} / ${after.join(' | ')}`
+        !(await drawerOpen()),
+      `${selectedBefore} → ${await pressedLabel()}`
     )
     await nav('This week')
   }

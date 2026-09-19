@@ -152,18 +152,18 @@ running block to grow, so that the calendar explains itself and stays current.
 | HCAL-12 | P1: See the week as a calendar | Execute | Implemented (T7, T11) |
 | HCAL-13 | P1: See the week as a calendar | Execute | Implemented (T5) |
 | HCAL-14 | P1: See the week as a calendar | Execute | Implemented (T9, T10, T11) |
-| HCAL-15 | P1: Get to the detail and the actions | Execute | In progress (T6, T9, T11, T12 of T6, T9, T11, T12, T15, T16) |
-| HCAL-16 | P1: Get to the detail and the actions | Execute | In progress (T5, T9, T12 of T5, T9, T12, T15, T16) |
-| HCAL-17 | P1: Get to the detail and the actions | Execute | In progress (T5, T9, T12 of T5, T9, T12, T15, T16) |
-| HCAL-18 | P1: Get to the detail and the actions | Execute | In progress (T7, T9, T11, T12 of T7, T9, T11, T12, T15, T16) |
-| HCAL-19 | P1: Get to the detail and the actions | Execute | In progress (T6, T7, T9, T11, T12 of T6, T7, T9, T11, T12, T15, T16) |
+| HCAL-15 | P1: Get to the detail and the actions | Execute | Implemented (T6, T9, T11, T12, T15, T16) |
+| HCAL-16 | P1: Get to the detail and the actions | Execute | Implemented (T5, T9, T12, T15, T16) |
+| HCAL-17 | P1: Get to the detail and the actions | Execute | Implemented (T5, T9, T12, T15, T16) |
+| HCAL-18 | P1: Get to the detail and the actions | Execute | Implemented (T7, T9, T11, T12, T15, T16) |
+| HCAL-19 | P1: Get to the detail and the actions | Execute | Implemented (T6, T7, T9, T11, T12, T15, T16) |
 | HCAL-20 | P1: Get to the detail and the actions | Execute | Implemented (T7, T11) |
-| HCAL-21 | P2: Read the colours and the live time | Execute | In progress (T4, T8, T11, T12, T13 of T4, T8, T11, T12, T13, T16) |
+| HCAL-21 | P2: Read the colours and the live time | Execute | Implemented (T4, T8, T11, T12, T13, T16) |
 | HCAL-22 | P2: Read the colours and the live time | Execute | Implemented (T7, T11) |
 | HCAL-23 | P2: Read the colours and the live time | Execute | Implemented (T5, T7, T11) |
 | HCAL-24 | P1: See the week as a calendar | Execute | Implemented (T4, T9, T11) |
-| HCAL-25 | P1: Get to the detail and the actions | Execute | In progress (T12 of T12, T15, T16) |
-| HCAL-26 | P2: Read the colours and the live time | Execute | In progress (T12 of T12, T14, T16) |
+| HCAL-25 | P1: Get to the detail and the actions | Execute | Implemented (T12, T15, T16) |
+| HCAL-26 | P2: Read the colours and the live time | Execute | Implemented (T12, T14, T16) |
 
 **Coverage:** 26 total, 26 mapped to tasks, 0 unmapped
 

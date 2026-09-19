@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/hours-calendar/design.md`
-**Status**: Phase 4 in progress — layout B revision (AD-031); T1..T11 done, Verifier PASS round 2 on them
+**Status**: Phase 4 executed — T12..T16 done; Verifier pending for the layout B revision
 
 **Branch**: `feature/hours-calendar`, stacked on `feature/time-tracking` (PR #93). Its PR carries "depends on #93"; once #93 merges, `git rebase --onto origin/main feature/time-tracking feature/hours-calendar`.
 
@@ -409,7 +409,7 @@ T11 → T12 → T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] At 1100 × 640 the Hours body does not scroll and the calendar ends inside the window — **open: the day card still sits under the grid until T15 moves it into the drawer; checked in the T16 visual pass**
+- [x] At 1100 × 640 the Hours body does not scroll and the calendar ends inside the window — T16 smoke check 15 and visual pass
 - [x] Gate passes: `npm run typecheck && npm run lint && npm test`
 - [x] Test count: **896** (unchanged)
 
@@ -431,10 +431,10 @@ T11 → T12 → T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] No day is selected and no drawer shows when the view opens or the week changes — **open: proven by the T16 smoke**
-- [ ] A header or bar click opens the drawer on that day; a bar click also focuses its block — **open: proven by the T16 smoke**
-- [ ] X and Esc close it; deleting the day's last period closes it — **open: proven by the T16 smoke**
-- [ ] Only the drawer's content scrolls — **open: checked in the T16 visual pass**
+- [x] No day is selected and no drawer shows when the view opens or the week changes — T16 smoke checks 5, 18, 21
+- [x] A header or bar click opens the drawer on that day; a bar click also focuses its block — T16 smoke checks 11, 12
+- [x] X and Esc close it; deleting the day's last period closes it — T16 smoke checks 16, 17, 22
+- [x] Only the drawer's content scrolls — T16 smoke check 15 and visual pass
 - [x] Gate passes: `npm run typecheck && npm run lint && npm test`
 - [x] Phase gate passes: `npx electron-vite build`
 - [x] Test count: 896 − 3 = **893**
@@ -457,9 +457,9 @@ T11 → T12 → T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] Both smokes pass against a live dev app; cleanup verified
-- [ ] Both themes looked at, at 1100 × 640 and wider
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Both smokes pass against a live dev app; cleanup verified
+- [x] Both themes looked at, at 1100 × 640 and wider
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: manual
 **Gate**: manual
