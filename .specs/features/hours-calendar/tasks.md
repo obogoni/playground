@@ -241,7 +241,7 @@ T9 → T10 → T11
 - [x] Bars keep a 6 px minimum height and a 4 px hit halo; a 2 px surface gap separates lanes
 - [x] The pulse on an ongoing bar stops under `prefers-reduced-motion`
 - [x] Label text uses text tokens, never a series colour
-- [ ] Rendered and looked at in both themes, at the app's minimum window width, before commit (dataviz step 7) — **open: the component first mounts at T9, so this pass runs after T9 and is ticked then**
+- [x] Rendered and looked at in both themes, at the app's minimum window width, before commit (dataviz step 7) — done after T9 mounted it: dark and light at 1100 px, a hovered bar, the detail panel; no horizontal overflow
 - [x] Gate passes: `npm run typecheck && npm run lint && npm test`
 - [x] Test count: **893** (unchanged)
 
@@ -286,13 +286,13 @@ T9 → T10 → T11
 
 **Done when**:
 
-- [ ] No stacked list of days remains (HCAL-14)
-- [ ] A running agent's bar grows while its colour stays the same, even when its task overtakes another
-- [ ] ◀, ▶ and This week reset the selection and recompute the colours
-- [ ] Deleting the selected day's last period moves the selection to the fallback day
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Phase gate passes: `npx electron-vite build`
-- [ ] Test count: **893** (unchanged)
+- [x] No stacked list of days remains (HCAL-14)
+- [ ] A running agent's bar grows while its colour stays the same, even when its task overtakes another — **open: proven by the T11 smoke**
+- [ ] ◀, ▶ and This week reset the selection and recompute the colours — **open: proven by the T11 smoke**
+- [ ] Deleting the selected day's last period moves the selection to the fallback day — **open: proven by the T11 smoke**
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Phase gate passes: `npx electron-vite build`
+- [x] Test count: **893** (unchanged)
 
 **Tests**: none
 **Gate**: build

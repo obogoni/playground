@@ -8,10 +8,21 @@ import {
   type DayReport,
   type GroupReport
 } from '../lib/hours-report'
+import {
+  assignColours,
+  defaultDay,
+  legendEntries,
+  timeAxis,
+  weekColumns,
+  type CalendarColumn,
+  type ColourRole
+} from '../lib/hours-calendar'
 import { formatDayCopy } from '../lib/hours-copy'
 import { COPIED_FEEDBACK_MS } from '../lib/terminal-keys'
 import { formatDayHeader, formatHmCompact } from '../lib/time-format'
 import { useNow } from '../lib/use-time'
+import { HoursCalendar } from './HoursCalendar'
+import { HoursLegend } from './HoursLegend'
 import { Icon } from './Icon'
 import { PeriodRow } from './PeriodRow'
 import './HoursView.css'
@@ -37,10 +48,34 @@ const shortDate = (ms: number): string => {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`
 }
 
+/** Colour roles frozen for one shown week (HCAL-24). */
+interface FrozenColours {
+  weekStart: number
+  colours: Map<string, ColourRole>
+}
+
+/** The day whose detail is shown, and the block a bar asked to focus (HCAL-15..19). */
+interface Selection {
+  weekStart: number
+  /** Local midnight of the selected day; null when the week has no day to show. */
+  date: number | null
+  focus?: BlockFocus
+  /** The selected day held time when last seen, so emptying it falls back (edge case). */
+  hadTime: boolean
+}
+
+function defaultSelection(weekStart: number, columns: CalendarColumn[]): Selection {
+  const date = defaultDay(columns)?.getTime() ?? null
+  const column = columns.find((c) => c.date.getTime() === date)
+  return { weekStart, date, hadTime: Boolean(column?.day) }
+}
+
 /**
- * Hours direction (TIME-31..43): one local week, Monday to Sunday, grouped by
- * day → task → merged block, with a per-day Copy in the Clockify text format.
- * Every number comes from the pure `hours-report` / `hours-copy` models.
+ * Hours direction (TIME-31..43, HCAL-01..24): one local week as a calendar of
+ * day columns with the worked blocks drawn as bars, a colour legend, and the
+ * selected day's detail — groups, raw periods, edit, delete and the Clockify
+ * Copy. Every number comes from the pure `hours-report`, `hours-calendar` and
+ * `hours-copy` models.
  */
 export function HoursView({
   snapshot,
@@ -59,7 +94,44 @@ export function HoursView({
     [snapshot, now, weekStart, liveTitles]
   )
   // Read the wall clock, not `now`: `now` stands still while nothing in the week is open.
-  const currentWeekStart = weekRange(new Date()).start
+  const wallClock = new Date()
+  const currentWeekStart = weekRange(wallClock).start
+  const columns = weekColumns(report, weekStart, wallClock.getTime())
+  const axis = useMemo(() => timeAxis(report), [report])
+
+  // Colours are assigned when a week loads and kept while it is shown, so live
+  // time never repaints a bar (HCAL-24). A week first seen before the snapshot
+  // arrived is assigned once its time does.
+  const [frozen, setFrozen] = useState<FrozenColours>(() => ({
+    weekStart,
+    colours: assignColours(report)
+  }))
+  let colours = frozen.colours
+  if (frozen.weekStart !== weekStart || (colours.size === 0 && report.days.length > 0)) {
+    colours = assignColours(report)
+    setFrozen({ weekStart, colours })
+  }
+
+  const [selection, setSelection] = useState<Selection>(() => defaultSelection(weekStart, columns))
+  let current = selection
+  const selectedDay =
+    columns.find((c) => c.date.getTime() === selection.date && selection.weekStart === weekStart)
+      ?.day ?? null
+  if (selection.weekStart !== weekStart || (selection.hadTime && !selectedDay)) {
+    current = defaultSelection(weekStart, columns)
+    setSelection(current)
+  } else if (!selection.hadTime && selectedDay) {
+    current = { ...selection, hadTime: true }
+    setSelection(current)
+  }
+  const shownDay = columns.find((c) => c.date.getTime() === current.date)?.day ?? null
+
+  const selectDay = (date: number): void => {
+    const column = columns.find((c) => c.date.getTime() === date)
+    setSelection({ weekStart, date, hadTime: Boolean(column?.day) })
+  }
+  const selectBlock = (date: number, focus: BlockFocus): void =>
+    setSelection({ weekStart, date, focus, hadTime: true })
 
   // Shift by calendar days, not 7 × 24 h, so a DST change never skews Monday.
   const shiftWeek = (weeks: number): void => {
@@ -116,12 +188,32 @@ export function HoursView({
       </header>
 
       <div className="hours-body">
-        {report.days.length === 0 ? (
-          <div className="hours-empty">No time recorded this week.</div>
+        {report.days.length === 0 && <div className="hours-empty">No time recorded this week.</div>}
+        <HoursCalendar
+          columns={columns}
+          axis={axis}
+          colours={colours}
+          now={now}
+          selected={current.date}
+          focus={current.focus}
+          onSelectDay={selectDay}
+          onSelectBlock={selectBlock}
+        />
+        <HoursLegend entries={legendEntries(report, colours)} />
+        {shownDay ? (
+          <DayCard
+            key={shownDay.date.getTime()}
+            day={shownDay}
+            onDelete={onDelete}
+            onAdjust={onAdjust}
+            focus={current.focus}
+          />
         ) : (
-          report.days.map((day) => (
-            <DayCard key={day.date.getTime()} day={day} onDelete={onDelete} onAdjust={onAdjust} />
-          ))
+          <div className="hours-empty">
+            {current.date === null || report.days.length === 0
+              ? 'No day to show.'
+              : `No time recorded on ${formatDayHeader(new Date(current.date))}.`}
+          </div>
         )}
       </div>
     </div>
