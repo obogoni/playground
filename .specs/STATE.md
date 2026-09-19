@@ -426,3 +426,35 @@ branch ships without it).
 ### `time-tracking` (PR #93, merged on 2026-09-25)
 
 Lesson candidates L-017..L-022 of this branch were renumbered **L-035..L-040** at merge time (`origin/main` already held L-017..L-034). AD-021 keeps its number.
+
+### `session-strip-polish` (PR #98)
+
+**Status (current, 2026-09-19): `session-strip-polish` COMPLETE. T1-T6 are executed, and the
+independent Verifier returned **PASS** in round 2 of 3, on branch `feature/session-strip-polish`
+(cut from `develop` at `9919139`). Nothing is uncommitted and nothing is pushed: the local
+branch is ahead of `fork`. Report: `.specs/features/session-strip-polish/validation.md`;
+`validate_state.py` exits 0.**
+
+- **Commits:** T1-T6 are `5522aa8`..`adcaaa4`. Then `19ef7bc` closed the Verifier's round-1
+  gaps, `80dbb7f` records the report and `423d055` adds lessons L-030..L-032.
+- **Verification:** the suite went from 1200 to **1216** tests (69 files). Typecheck, lint
+  (17 warnings, the baseline) and `npx electron-vite build` all exit 0. The discrimination
+  sensor killed 11 of 11 mutants. `scripts/smoke-strip.mjs` ran **24/24** against the dev
+  app, and the repaired `scripts/smoke-time.mjs` ran **26/26**.
+- **Spec correction:** the spec assumed that a session stopped while paused keeps its paused
+  flag. It does not: `TimeTracker.ended` drops the run with its mark, and a respawn starts
+  counting again. The edge cases and the assumption row are marked `[corrected at Execute]`.
+  The tracker is unchanged, because it is out of scope.
+- **Owner-pending hand checks:**
+  - the clock button in light and dark: hover border, focus ring, and a paused clock staying
+    dim on hover;
+  - a screen reader announcing the clock as a pressed / not-pressed toggle.
+- **Next:**
+  - owner hand checks;
+  - `git push fork feature/session-strip-polish`;
+  - merge into `develop`: renumber L-030..L-032, which collide with the status-bar lessons
+    already on `develop`;
+  - the upstream PR waits for #93 and #94, then
+    `git rebase --onto origin/main develop feature/session-strip-polish`.
+- **Follow-up, not in scope:** `smoke-time.mjs:186` selects the first running row under
+  `C:\Windows`, not the session it spawned. It could pause an owner's session in that folder.
