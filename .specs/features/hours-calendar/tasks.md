@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/hours-calendar/design.md`
-**Status**: Phase 4 executed — T12..T16 done; Verifier pending for the layout B revision
+**Status**: Phase 5 in progress — the drawer's look (T17) and the round-3 verifier gaps (T18)
 
 **Branch**: `feature/hours-calendar`, stacked on `feature/time-tracking` (PR #93). Its PR carries "depends on #93"; once #93 merges, `git rebase --onto origin/main feature/time-tracking feature/hours-calendar`.
 
@@ -68,6 +68,12 @@ T9 → T10 → T11
 
 ```
 T11 → T12 → T13 → T14 → T15 → T16
+```
+
+### Phase 5: The drawer's look, and the round-3 verifier gaps
+
+```
+T16 → T17 → T18
 ```
 
 ---
@@ -467,14 +473,67 @@ T11 → T12 → T13 → T14 → T15 → T16
 
 ---
 
+### T17: Match the drawer to the approved mockup
+
+**What**: Move the close control and the hint into the day card's head, add the summary line (day total, task and block counts, Copy), give each group its calendar swatch, drop the rules between groups, and let the card fill the drawer.
+**Where**: `src/renderer/src/components/HoursView.tsx`, `.css`
+**Depends on**: T16
+**Reuses**: `roleOf` and the frozen colour map; the swatch styling of `HoursLegend.css`.
+**Requirement**: HCAL-15, 27
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+
+- [x] The head holds the day, the hint and the close button; no row sits above the card
+- [x] The summary line shows the day total, `N tasks · N blocks` and Copy
+- [x] Every group row carries the swatch of its bar's colour, the task-less one outlined
+- [x] The card fills the drawer's height, with no rule between groups
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **893** (unchanged)
+
+**Tests**: none
+**Gate**: full
+**Commit**: `feat(hours): match the day drawer to the approved design`
+
+---
+
+### T18: Close the round-3 verifier gaps
+
+**What**: Give HCAL-17, HCAL-27 and the re-arm edge case deterministic smoke evidence — open the drawer on a day with no time in an empty past week, assert the drawer's own empty text, move a period onto that day, then delete it and assert the drawer closes — and add the grid-narrowing and legend-truncation assertions. The spec's HCAL-25 now states the text-field exception and HCAL-27 the empty drawer (T17's commit carries those edits); extend the `tasks.md` cross-check tables to T18.
+**Where**: `scripts/smoke-hours-calendar.mjs`, `.specs/features/hours-calendar/tasks.md`
+**Depends on**: T17
+**Reuses**: The past-week scenario of the T11 delete check.
+**Requirement**: HCAL-15, 17, 21, 25, 27; the emptied-day edge case
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+
+- [ ] A day with no time opens a drawer whose own text says so (HCAL-17, 27)
+- [ ] A day selected while empty, given time and then emptied, closes the drawer (edge case, mutant MH)
+- [ ] The grid is narrower with the drawer open than closed (HCAL-15)
+- [ ] A legend chip's `title` carries its full label (HCAL-21)
+- [ ] The cross-check tables cover T12..T18
+- [ ] Both smokes pass against a live dev app, with the owner's go-ahead; cleanup verified
+- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
+
+**Tests**: manual
+**Gate**: manual
+**Commit**: `test(hours): pin the empty drawer and its re-arm`
+
+---
+
 ## Phase Execution Map
 
 ```
-Phase 1 → Phase 2 → Phase 3
+Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5
 
 Phase 1:  T1 → T2 → T3 → T4 → T5
 Phase 2:  T6 → T7 → T8 → T9
 Phase 3:  T10 → T11
+Phase 4:  T12 → T13 → T14 → T15 → T16
+Phase 5:  T17 → T18
 ```
 
 Strictly sequential. 11 tasks > 8, so the sub-agent offer applies — offer-then-confirm. **Packing**: Phase 1 (5) = batch 1; Phases 2 + 3 (4 + 2) = batch 2.
@@ -492,6 +551,11 @@ Strictly sequential. 11 tasks > 8, so the sub-agent offer applies — offer-then
 | T9 | 1 view composition | ✅ |
 | T10 | 1 spec annotation | ✅ |
 | T11 | 1 script (+ a re-run) | ✅ |
+| T12 | 1 spec revision | ✅ |
+| T13, T14 | 1 component / 1 stylesheet pass each | ✅ |
+| T15 | 1 view change (drawer) | ✅ |
+| T16, T18 | 1 smoke pass each | ✅ |
+| T17 | 1 card layout | ✅ |
 
 ---
 
@@ -510,6 +574,13 @@ Strictly sequential. 11 tasks > 8, so the sub-agent offer applies — offer-then
 | T9 | T8 | T8 → T9 | ✅ |
 | T10 | T9 | T9 → T10 (boundary) | ✅ |
 | T11 | T10 | T10 → T11 | ✅ |
+| T12 | T11 | T11 → T12 (boundary) | ✅ |
+| T13 | T12 | T12 → T13 | ✅ |
+| T14 | T13 | T13 → T14 | ✅ |
+| T15 | T14 | T14 → T15 | ✅ |
+| T16 | T15 | T15 → T16 | ✅ |
+| T17 | T16 | T16 → T17 (boundary) | ✅ |
+| T18 | T17 | T17 → T18 | ✅ |
 
 ---
 
@@ -520,7 +591,9 @@ Strictly sequential. 11 tasks > 8, so the sub-agent offer applies — offer-then
 | T1–T5 | Pure calendar logic | unit | unit | ✅ |
 | T6–T9 | Renderer components | none | none | ✅ |
 | T10 | Docs | none | none | ✅ |
-| T11 | Smoke | manual only | manual | ✅ |
+| T11, T16, T18 | Smoke | manual only | manual | ✅ |
+| T12 | Docs | none | none | ✅ |
+| T13, T14, T15, T17 | Renderer components | none | none | ✅ |
 
 ---
 
@@ -542,17 +615,18 @@ Strictly sequential. 11 tasks > 8, so the sub-agent offer applies — offer-then
 | HCAL-12 | T7, T11 |
 | HCAL-13 | T5 |
 | HCAL-14 | T9, T10, T11 |
-| HCAL-15 | T6, T9, T11, T12, T15, T16 |
+| HCAL-15 | T6, T9, T11, T12, T15, T16, T17, T18 |
 | HCAL-16 | T5, T9, T12, T15, T16 |
-| HCAL-17 | T5, T9, T12, T15, T16 |
+| HCAL-17 | T5, T9, T12, T15, T16, T18 |
 | HCAL-18 | T7, T9, T11, T12, T15, T16 |
 | HCAL-19 | T6, T7, T9, T11, T12, T15, T16 |
 | HCAL-20 | T7, T11 |
-| HCAL-21 | T4, T8, T11, T12, T13, T16 |
+| HCAL-21 | T4, T8, T11, T12, T13, T16, T18 |
 | HCAL-22 | T7, T11 |
 | HCAL-23 | T5, T7, T11 |
 | HCAL-24 | T4, T9, T11 |
-| HCAL-25 | T12, T15, T16 |
+| HCAL-25 | T12, T15, T16, T18 |
 | HCAL-26 | T12, T14, T16 |
+| HCAL-27 | T17, T18 |
 
-All 26 mapped; none unmapped.
+All 27 mapped; none unmapped.

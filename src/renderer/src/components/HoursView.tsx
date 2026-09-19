@@ -11,6 +11,7 @@ import {
 import {
   assignColours,
   legendEntries,
+  roleOf,
   timeAxis,
   weekColumns,
   type ColourRole
@@ -217,18 +218,6 @@ export function HoursView({
               className="hours-drawer"
               aria-label={`Details of ${formatDayHeader(new Date(current.date))}`}
             >
-              <div className="hours-drawer-head">
-                <span className="hours-drawer-hint">Esc closes</span>
-                <button
-                  type="button"
-                  className="hours-drawer-close"
-                  title="Close details"
-                  aria-label="Close details"
-                  onClick={closeDrawer}
-                >
-                  <Icon name="x" size={14} />
-                </button>
-              </div>
               {shownDay ? (
                 <DayCard
                   key={shownDay.date.getTime()}
@@ -236,11 +225,14 @@ export function HoursView({
                   onDelete={onDelete}
                   onAdjust={onAdjust}
                   focus={current.focus}
+                  colours={colours}
+                  onClose={closeDrawer}
                 />
               ) : (
-                <div className="hours-empty">
-                  No time recorded on {formatDayHeader(new Date(current.date))}.
-                </div>
+                <section className="hours-day">
+                  <DayHead date={new Date(current.date)} onClose={closeDrawer} />
+                  <p className="hours-empty">No time recorded on this day.</p>
+                </section>
               )}
             </aside>
           )}
@@ -259,15 +251,39 @@ export interface BlockFocus {
   start: number
 }
 
+/** The drawer card's top line: the day, how to close it, and the close button. */
+function DayHead({ date, onClose }: { date: Date; onClose: () => void }): JSX.Element {
+  return (
+    <header className="hours-day-head">
+      <div className="hours-day-titles">
+        <span className="hours-day-title">{formatDayHeader(date)}</span>
+        <span className="hours-day-hint">Click a bar or a day to open · Esc closes</span>
+      </div>
+      <button
+        type="button"
+        className="hours-drawer-close"
+        title="Close details"
+        aria-label="Close details"
+        onClick={onClose}
+      >
+        <Icon name="x" size={14} />
+      </button>
+    </header>
+  )
+}
+
 interface DayCardProps {
   day: DayReport
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
   /** The block to focus; absent, the card renders as the list view did. */
   focus?: BlockFocus
+  /** Colour roles of the shown week, for the swatch beside each group (HCAL-11). */
+  colours: Map<string, ColourRole>
+  onClose: () => void
 }
 
-function DayCard({ day, onDelete, onAdjust, focus }: DayCardProps): JSX.Element {
+function DayCard({ day, onDelete, onAdjust, focus, colours, onClose }: DayCardProps): JSX.Element {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -286,9 +302,13 @@ function DayCard({ day, onDelete, onAdjust, focus }: DayCardProps): JSX.Element 
 
   return (
     <section className="hours-day">
-      <header className="hours-day-head">
-        <span className="hours-day-title">{formatDayHeader(day.date)}</span>
+      <DayHead date={day.date} onClose={onClose} />
+      <div className="hours-day-stats">
         <span className="hours-day-total">{formatHmCompact(day.totalMs)}</span>
+        <span className="hours-day-count">
+          {day.groups.length} task{day.groups.length === 1 ? '' : 's'} ·{' '}
+          {day.groups.reduce((n, g) => n + g.blocks.length, 0)} blocks
+        </span>
         <span className="hours-head-spacer" />
         <button
           type="button"
@@ -299,11 +319,12 @@ function DayCard({ day, onDelete, onAdjust, focus }: DayCardProps): JSX.Element 
           <Icon name={copied ? 'check' : 'copy'} size={13} />
           {copied ? 'Copied' : 'Copy'}
         </button>
-      </header>
+      </div>
       {day.groups.map((group) => (
         <GroupSection
           key={group.key}
           group={group}
+          role={roleOf(colours, group.key)}
           onDelete={onDelete}
           onAdjust={onAdjust}
           focus={focus?.groupKey === group.key ? focus : undefined}
@@ -315,16 +336,21 @@ function DayCard({ day, onDelete, onAdjust, focus }: DayCardProps): JSX.Element 
 
 interface GroupSectionProps {
   group: GroupReport
+  role: ColourRole
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
   focus?: BlockFocus
 }
 
-function GroupSection({ group, onDelete, onAdjust, focus }: GroupSectionProps): JSX.Element {
+function GroupSection({ group, role, onDelete, onAdjust, focus }: GroupSectionProps): JSX.Element {
   return (
     <div className="hours-group">
       <div className="hours-group-head">
-        <span className={`hours-group-label${group.taskId === null ? ' no-task' : ''}`}>
+        <span className={`hours-group-swatch role-${role}`} />
+        <span
+          className={`hours-group-label${group.taskId === null ? ' no-task' : ''}`}
+          title={group.label}
+        >
           {group.label}
         </span>
         <span className="hours-group-total">{formatHmCompact(group.totalMs)}</span>

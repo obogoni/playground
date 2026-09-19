@@ -138,7 +138,10 @@ Midnight splitting (HCAL-13) needs nothing new: `buildWeekReport` already splits
 - Replaces the day list with `HoursCalendar`, `HoursLegend` and **one** `DayCard` for the selected day (HCAL-14, 15)
 - Selection state: `defaultDay` when the week changes, a header or bar click otherwise (HCAL-16..19); falls back when the selected day empties (edge case)
 - **Colour freeze** (HCAL-24): `assignColours` runs when `weekStart` changes and is kept in a ref while the week is shown; a task that first appears mid-view is `other` until the week is reopened
-- `DayCard` gains an optional `focusBlockStart` prop: that block is expanded and scrolled into view (HCAL-19)
+- `DayCard` gains an optional focus prop: that block is expanded and scrolled into view (HCAL-19)
+- **[2026-09-19, AD-031]** `DayCard` is the drawer's whole surface: its head carries the day and the close
+  button, a summary line carries the total, the task and block counts and Copy, and each group wears its
+  calendar swatch (HCAL-15). It takes the frozen colour map and an `onClose` for that
 
 ---
 

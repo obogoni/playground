@@ -92,14 +92,14 @@ reading raw periods, correcting them and copying the day for Clockify still work
 
 **Acceptance Criteria**:
 
-15. WHILE a day is selected the view SHALL show a drawer to the right of the grid, the grid narrowing to make room, presenting that day's groups, blocks, raw periods, edit, delete and Copy exactly as TIME-35..41 and TIME-44..49 specify <!-- state-driven; revised by AD-031 -->
+15. WHILE a day is selected the view SHALL show a drawer to the right of the grid, the grid narrowing to make room, presenting that day's groups, blocks, raw periods, edit, delete and Copy exactly as TIME-35..41 and TIME-44..49 specify. The drawer SHALL carry the day and its close control in one head, a summary line with the day total, its task and block counts and Copy, and each group SHALL wear the swatch of its calendar colour <!-- state-driven; revised by AD-031, summary and swatches added 2026-09-19 from the approved mockup -->
 16. WHEN the view opens or the shown week changes THEN no day SHALL be selected and the drawer SHALL be closed <!-- event-driven; revised by AD-031, was: today or the most recent day with time -->
 17. IF the selected day holds no time THEN the drawer SHALL say that no time is recorded on that day <!-- unwanted-behavior; revised by AD-031 -->
 18. WHEN the user activates a column header THEN that day SHALL become the selected day and the drawer SHALL open on it <!-- event-driven -->
 19. WHEN the user activates a bar THEN its day SHALL become the selected day, the drawer SHALL open on it, and its block SHALL be highlighted and expanded there <!-- event-driven -->
 20. Column headers and bars SHALL be keyboard-operable buttons with accessible names — the day and its total; the group label and the block's range and duration <!-- ubiquitous -->
 
-25. WHEN the user activates the drawer's close button or presses Esc THEN the drawer SHALL close, no day SHALL be selected, and the grid SHALL take the full width again <!-- event-driven; added by AD-031 -->
+25. WHEN the user activates the drawer's close button, or presses Esc outside a text field, THEN the drawer SHALL close, no day SHALL be selected, and the grid SHALL take the full width again; Esc inside a text field SHALL belong to that field <!-- event-driven; added by AD-031, the text-field exception stated 2026-09-19 -->
 
 **Independent Test**: Open the view: the week fills the width and no drawer shows. Click a Tuesday bar: the drawer opens on Tuesday with that block expanded; edit a raw period there and the bar moves. Press Esc: the drawer closes.
 
@@ -118,6 +118,7 @@ running block to grow, so that the calendar explains itself and stays current.
 22. WHEN the user hovers or focuses a bar THEN the view SHALL show its group label, its `HH:MM–HH:MM` range and its duration <!-- event-driven -->
 23. WHILE a block is still open its bar SHALL end at the current time, carry an ongoing marker, and grow at the refresh TIME-42 defines <!-- state-driven -->
 
+27. WHILE the selected day holds no time the drawer SHALL keep its head and say that no time is recorded on that day <!-- state-driven; added 2026-09-19 with HCAL-17's evidence -->
 26. The Hours view SHALL fit the window without page scroll down to the minimum window size (1100 × 640): the grid's hour height SHALL follow the available height, and only the drawer's own content MAY scroll <!-- ubiquitous; added by AD-031 -->
 
 **Independent Test**: With an agent running, its bar reaches the current time with the ongoing marker and is longer a minute later; the legend's total for its task grows with it. At 1100 × 640 nothing but the drawer scrolls.
@@ -130,7 +131,7 @@ running block to grow, so that the calendar explains itself and stays current.
 - WHEN the shown week changes while the drawer is open THEN the drawer SHALL close (HCAL-16)
 - IF the only time of the week is one block under 1 minute THEN the axis SHALL still span 8 hours around it
 - WHEN a weekend column appears or disappears between weeks THEN the other columns SHALL resize without changing their order
-- WHEN the selected day's last period is deleted THEN the drawer SHALL close and no day SHALL be selected
+- WHEN the selected day's last period is deleted THEN the drawer SHALL close and no day SHALL be selected, including when that day held no time when it was selected
 
 ---
 
@@ -152,18 +153,19 @@ running block to grow, so that the calendar explains itself and stays current.
 | HCAL-12 | P1: See the week as a calendar | Execute | Implemented (T7, T11) |
 | HCAL-13 | P1: See the week as a calendar | Execute | Implemented (T5) |
 | HCAL-14 | P1: See the week as a calendar | Execute | Implemented (T9, T10, T11) |
-| HCAL-15 | P1: Get to the detail and the actions | Execute | Implemented (T6, T9, T11, T12, T15, T16) |
+| HCAL-15 | P1: Get to the detail and the actions | Execute | In progress (T6, T9, T11, T12, T15, T16, T17 of T6, T9, T11, T12, T15, T16, T17, T18) |
 | HCAL-16 | P1: Get to the detail and the actions | Execute | Implemented (T5, T9, T12, T15, T16) |
-| HCAL-17 | P1: Get to the detail and the actions | Execute | Implemented (T5, T9, T12, T15, T16) |
+| HCAL-17 | P1: Get to the detail and the actions | Execute | In progress (T5, T9, T12, T15, T16 of T5, T9, T12, T15, T16, T18) |
 | HCAL-18 | P1: Get to the detail and the actions | Execute | Implemented (T7, T9, T11, T12, T15, T16) |
 | HCAL-19 | P1: Get to the detail and the actions | Execute | Implemented (T6, T7, T9, T11, T12, T15, T16) |
 | HCAL-20 | P1: Get to the detail and the actions | Execute | Implemented (T7, T11) |
-| HCAL-21 | P2: Read the colours and the live time | Execute | Implemented (T4, T8, T11, T12, T13, T16) |
+| HCAL-21 | P2: Read the colours and the live time | Execute | In progress (T4, T8, T11, T12, T13, T16 of T4, T8, T11, T12, T13, T16, T18) |
 | HCAL-22 | P2: Read the colours and the live time | Execute | Implemented (T7, T11) |
 | HCAL-23 | P2: Read the colours and the live time | Execute | Implemented (T5, T7, T11) |
 | HCAL-24 | P1: See the week as a calendar | Execute | Implemented (T4, T9, T11) |
-| HCAL-25 | P1: Get to the detail and the actions | Execute | Implemented (T12, T15, T16) |
+| HCAL-25 | P1: Get to the detail and the actions | Execute | In progress (T12, T15, T16 of T12, T15, T16, T18) |
 | HCAL-26 | P2: Read the colours and the live time | Execute | Implemented (T12, T14, T16) |
+| HCAL-27 | P1: Get to the detail and the actions | Execute | In progress (T17 of T17, T18) |
 
 **Coverage:** 26 total, 26 mapped to tasks, 0 unmapped
 

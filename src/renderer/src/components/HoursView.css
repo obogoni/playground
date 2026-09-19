@@ -121,19 +121,8 @@
   gap: 8px;
 }
 
-.hours-drawer-head {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.hours-drawer-hint {
-  font-size: 11.5px;
-  color: var(--text-faint);
-}
-
 .hours-drawer-close {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -152,15 +141,14 @@
 }
 
 .hours-drawer .hours-empty {
-  padding: 12px 14px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  margin: 0;
+  padding: 4px;
 }
 
-/* Day card */
+/* Day card: the drawer's whole surface (HCAL-15). */
 .hours-day {
   width: 100%;
+  min-height: 100%;
   box-sizing: border-box;
   background: var(--panel);
   border: 1px solid var(--border);
@@ -173,8 +161,36 @@
 
 .hours-day-head {
   display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.hours-day-titles {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hours-day-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+/* Total, counts and Copy, the day at a glance. */
+.hours-day-stats {
+  display: flex;
   align-items: center;
   gap: 10px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border-radius: 9px;
+}
+
+.hours-day-count {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .hours-day-title {
@@ -186,7 +202,7 @@
 
 .hours-day-total {
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: 17px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--accent-text);
@@ -220,16 +236,44 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
 }
 
 .hours-group-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
   padding: 0 4px 4px;
+}
+
+/* The task's colour in the calendar (HCAL-11), so a row and its bar match. */
+.hours-group-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  border-radius: 3px;
+}
+
+.hours-group-swatch.role-slot1 {
+  background: var(--hcal-slot1);
+}
+
+.hours-group-swatch.role-slot2 {
+  background: var(--hcal-slot2);
+}
+
+.hours-group-swatch.role-slot3 {
+  background: var(--hcal-slot3);
+}
+
+.hours-group-swatch.role-other {
+  background: var(--text-faint);
+}
+
+.hours-group-swatch.role-no-task {
+  background: transparent;
+  border: 1.5px solid var(--text-muted);
 }
 
 .hours-group-label {
