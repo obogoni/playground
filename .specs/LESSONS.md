@@ -276,6 +276,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: HCAL-15 - src/renderer/src/components/HoursView.tsx:309 (renderer)
 - last seen: 2026-09-19T22:02:37Z
 
+### L-050 - Exercise a fix at the boundary value it was made for; an end-to-end check whose fixture never reaches that value cannot fail when the fix is undone.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-calendar
+- evidence: P1 - src/renderer/src/components/HoursView.tsx:286 vs scripts/smoke-hours-calendar.mjs:342-356 (smoke)
+- last seen: 2026-09-19T22:19:57Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

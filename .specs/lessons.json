@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 50,
+  "next_id": 51,
   "lessons": [
     {
       "id": "L-001",
@@ -803,6 +803,24 @@
       ],
       "created": "2026-09-19T22:02:37Z",
       "last_seen": "2026-09-19T22:02:37Z"
+    },
+    {
+      "id": "L-050",
+      "key": "surviving_mutant::exercise a fix at the boundary value it was made for an end to end check whose fixture never reaches that value cannot fail when the fix is undone",
+      "text": "Exercise a fix at the boundary value it was made for; an end-to-end check whose fixture never reaches that value cannot fail when the fix is undone.",
+      "signal": "surviving_mutant",
+      "scope": "smoke",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "P1 - src/renderer/src/components/HoursView.tsx:286 vs scripts/smoke-hours-calendar.mjs:342-356 (smoke)"
+      ],
+      "created": "2026-09-19T22:19:57Z",
+      "last_seen": "2026-09-19T22:19:57Z"
     }
   ]
 }
