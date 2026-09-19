@@ -146,7 +146,7 @@ running block to grow, so that the calendar explains itself and stays current.
 | HCAL-11 | P1: See the week as a calendar | Execute | Implemented (T4, T7) |
 | HCAL-12 | P1: See the week as a calendar | Execute | In progress (T7 of T7, T11) |
 | HCAL-13 | P1: See the week as a calendar | Execute | Implemented (T5) |
-| HCAL-14 | P1: See the week as a calendar | Tasks | Pending (T9, T10, T11) |
+| HCAL-14 | P1: See the week as a calendar | Execute | In progress (T10 of T9, T10, T11) |
 | HCAL-15 | P1: Get to the detail and the actions | Execute | In progress (T6 of T6, T9, T11) |
 | HCAL-16 | P1: Get to the detail and the actions | Execute | In progress (T5 of T5, T9) |
 | HCAL-17 | P1: Get to the detail and the actions | Execute | In progress (T5 of T5, T9) |

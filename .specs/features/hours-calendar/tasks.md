@@ -312,9 +312,9 @@ T9 → T10 → T11
 
 **Done when**:
 
-- [ ] TIME-34 reads as superseded, citing HCAL-14 and AD-029; no other time-tracking requirement changes
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **893** (unchanged)
+- [x] TIME-34 reads as superseded, citing HCAL-14 and AD-029; no other time-tracking requirement changes
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **893** (unchanged)
 
 **Tests**: none
 **Gate**: full

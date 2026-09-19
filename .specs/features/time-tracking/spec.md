@@ -163,6 +163,10 @@ for details the grilling did not reach; the owner confirmed all of them at spec 
 2. WHEN the Hours direction opens THEN it SHALL show the current local week, Monday to Sunday, with the week range and week total in its header.  <!-- TIME-32, event-driven -->
 3. WHEN the owner activates ◀ or ▶ THEN the view SHALL show the previous or next week, and **This week** SHALL return to the current one.  <!-- TIME-33, event-driven -->
 4. The view SHALL list each day that has time, newest first, with the day total computed as the union of all that day's periods.  <!-- TIME-34, ubiquitous -->
+   > **Superseded by HCAL-14 — see AD-029 (2026-09-19).** `hours-calendar` shows the week as day
+   > columns, Monday to Friday always and the weekend only with time, instead of stacked days newest
+   > first. The day total as the union of that day's periods still holds, now in each column header
+   > (HCAL-03).
 5. Within a day the view SHALL group periods by task id, with task-less periods grouped as **No task · <folder leaf>** per cwd, each group showing its union total.  <!-- TIME-35, ubiquitous -->
 6. Within a group the view SHALL render one line per merged block, merging periods whose intervals overlap or are separated by 60 s or less, formatted `HH:MM–HH:MM` with the block's duration.  <!-- TIME-36, ubiquitous -->
 7. WHEN a period crosses local midnight THEN the view SHALL count the part before midnight on the first day and the rest on the next day.  <!-- TIME-37, event-driven -->
@@ -260,7 +264,7 @@ for details the grilling did not reach; the owner confirmed all of them at spec 
 | TIME-31 | P2: Hours view for booking | Tasks | In Tasks |
 | TIME-32 | P2: Hours view for booking | Tasks | In Tasks |
 | TIME-33 | P2: Hours view for booking | Tasks | In Tasks |
-| TIME-34 | P2: Hours view for booking | Tasks | In Tasks |
+| TIME-34 | P2: Hours view for booking | Tasks | In Tasks — **superseded by HCAL-14 (AD-029)** |
 | TIME-35 | P2: Hours view for booking | Tasks | In Tasks |
 | TIME-36 | P2: Hours view for booking | Tasks | In Tasks |
 | TIME-37 | P2: Hours view for booking | Tasks | In Tasks |
