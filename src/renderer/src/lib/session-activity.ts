@@ -78,11 +78,17 @@ export function detailPillText(session: SessionView): string {
   const activity = session.activity
   if (!activity) return 'running'
   const detail = [
-    activity.tool,
+    activity.tool && mcpToolLabel(activity.tool),
     activity.subagents > 0
       ? `${activity.subagents} subagent${activity.subagents === 1 ? '' : 's'}`
       : undefined,
     activity.error
   ].filter(Boolean)
   return [ACTIVITY_LABEL[activity.state], ...detail].join(' · ')
+}
+
+/** The pill's tooltip: the tool name exactly as the agent reported it, so the
+ *  shortened `MCP <server>` never costs the technical name (STRP-05). */
+export function detailPillTitle(session: SessionView): string | undefined {
+  return session.activity?.tool
 }

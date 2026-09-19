@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { SessionView } from '../../../shared/config'
-import { applyActivity, detailPillClass, detailPillText, mcpToolLabel } from './session-activity'
+import {
+  applyActivity,
+  detailPillClass,
+  detailPillText,
+  detailPillTitle,
+  mcpToolLabel
+} from './session-activity'
 
 function session(overrides: Partial<SessionView> & { id: string }): SessionView {
   return {
@@ -119,6 +125,45 @@ describe('detailPillText', () => {
         })
       )
     ).toBe('working · Bash · 2 subagents · overloaded')
+  })
+
+  it('names an MCP tool by its server (STRP-01)', () => {
+    expect(
+      detailPillText(
+        session({
+          id: 'a',
+          activity: { state: 'working', tool: 'mcp__azure-devops__wit_work_item', subagents: 0 }
+        })
+      )
+    ).toBe('working · MCP azure-devops')
+  })
+})
+
+describe('detailPillTitle', () => {
+  it('carries the raw MCP tool name (STRP-05)', () => {
+    expect(
+      detailPillTitle(
+        session({
+          id: 'a',
+          activity: { state: 'working', tool: 'mcp__azure-devops__wit_work_item', subagents: 0 }
+        })
+      )
+    ).toBe('mcp__azure-devops__wit_work_item')
+  })
+
+  it('carries a native tool name as received', () => {
+    expect(
+      detailPillTitle(
+        session({ id: 'a', activity: { state: 'working', tool: 'Bash', subagents: 0 } })
+      )
+    ).toBe('Bash')
+  })
+
+  it('is absent when the activity names no tool', () => {
+    expect(
+      detailPillTitle(session({ id: 'a', activity: { state: 'waiting', subagents: 0 } }))
+    ).toBeUndefined()
+    expect(detailPillTitle(session({ id: 'a' }))).toBeUndefined()
   })
 })
 

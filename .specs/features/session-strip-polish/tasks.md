@@ -108,14 +108,14 @@ T5 → T6
 
 **Done when**:
 
-- [ ] A `working` activity with `mcp__azure-devops__wit_work_item` reads `working · MCP azure-devops`
-- [ ] A native tool's pill text is byte-identical to today's; every pre-existing `session-activity.test.ts` case passes unedited
-- [ ] `detailPillTitle` returns the raw name when the activity has a tool and `undefined` when it has none
-- [ ] **Guard** in `rail-groups.test.ts`: the rail tooltip for an MCP tool contains `mcp__azure-devops__wit_work_item`, not `MCP azure-devops`
-- [ ] **Guard** in `activity-notification.test.ts`: the needs-approval body reads `Needs approval to run mcp__azure-devops__wit_work_item`
-- [ ] `rail-groups.ts` and `activity-notification.ts` are not modified
-- [ ] Gate passes: `npm test`
-- [ ] Test count: 1207 + 6 = **1213**
+- [x] A `working` activity with `mcp__azure-devops__wit_work_item` reads `working · MCP azure-devops`
+- [x] A native tool's pill text is byte-identical to today's; every pre-existing `session-activity.test.ts` case passes unedited
+- [x] `detailPillTitle` returns the raw name when the activity has a tool and `undefined` when it has none
+- [x] **Guard** in `rail-groups.test.ts`: the rail tooltip for an MCP tool contains `mcp__azure-devops__wit_work_item`, not `MCP azure-devops`
+- [x] **Guard** in `activity-notification.test.ts`: the needs-approval body reads `Needs approval to run mcp__azure-devops__wit_work_item`
+- [x] `rail-groups.ts` and `activity-notification.ts` are not modified
+- [x] Gate passes: `npm test`
+- [x] Test count: 1207 + 6 = **1213**
 
 **Tests**: unit
 **Gate**: quick
