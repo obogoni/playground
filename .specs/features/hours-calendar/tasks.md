@@ -107,13 +107,13 @@ T9 → T10 → T11
 
 **Done when**:
 
-- [ ] 09:10–17:40 → 09–18
-- [ ] 10:00–11:00 → widened to 8 h, symmetrically, clamped to 0–24
-- [ ] A 03:00 block and an 18:00 block → 03–18 (nothing clipped)
-- [ ] An empty week → 09–17
-- [ ] A single sub-minute block → an 8 h axis around it
-- [ ] Gate passes: `npm test`
-- [ ] Test count: 870 + 5 = **875**
+- [x] 09:10–17:40 → 09–18
+- [x] 10:00–11:00 → widened to 8 h, symmetrically, clamped to 0–24
+- [x] A 03:00 block and an 18:00 block → 03–18 (nothing clipped)
+- [x] An empty week → 09–17
+- [x] A single sub-minute block → an 8 h axis around it
+- [x] Gate passes: `npm test`
+- [x] Test count: 870 + 5 = **875**
 
 **Tests**: unit
 **Gate**: quick

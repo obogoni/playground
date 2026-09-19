@@ -12,9 +12,25 @@ export interface CalendarColumn {
   day: DayReport | null
 }
 
+/** The hour span every column shares, in whole local hours (HCAL-09). */
+export interface TimeAxis {
+  startHour: number
+  endHour: number
+}
+
+const MIN_AXIS_HOURS = 8
+const EMPTY_AXIS: TimeAxis = { startHour: 9, endHour: 17 }
+
 const localMidnight = (ms: number): number => {
   const d = new Date(ms)
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+}
+
+/** Local hour of `ms` within the day starting at `dayMidnight`; the next midnight is 24. */
+function hourOfDay(ms: number, dayMidnight: number): number {
+  if (localMidnight(ms) > dayMidnight) return 24
+  const d = new Date(ms)
+  return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600 + d.getMilliseconds() / 3_600_000
 }
 
 /**
@@ -40,4 +56,37 @@ export function weekColumns(report: WeekReport, weekStart: number, now: number):
     })
   }
   return columns
+}
+
+/**
+ * From the week's earliest block start to its latest block end, rounded out to
+ * whole hours, widened symmetrically to at least 8 hours and kept within the
+ * day; an empty week shows 09–17 (HCAL-09).
+ */
+export function timeAxis(report: WeekReport): TimeAxis {
+  const blocks = report.days.flatMap((day) =>
+    day.groups.flatMap((group) => group.blocks.map((block) => ({ block, day })))
+  )
+  if (blocks.length === 0) return EMPTY_AXIS
+
+  let startHour = Math.min(
+    ...blocks.map(({ block, day }) => Math.floor(hourOfDay(block.start, day.date.getTime())))
+  )
+  let endHour = Math.max(
+    ...blocks.map(({ block, day }) => Math.ceil(hourOfDay(block.end, day.date.getTime())))
+  )
+  const missing = MIN_AXIS_HOURS - (endHour - startHour)
+  if (missing > 0) {
+    startHour -= Math.floor(missing / 2)
+    endHour += Math.ceil(missing / 2)
+  }
+  if (startHour < 0) {
+    endHour -= startHour
+    startHour = 0
+  }
+  if (endHour > 24) {
+    startHour -= endHour - 24
+    endHour = 24
+  }
+  return { startHour, endHour }
 }

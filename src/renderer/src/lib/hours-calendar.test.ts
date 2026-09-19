@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { TimePeriod, TimeSnapshot } from '../../../shared/time'
 import { buildWeekReport, weekRange, type WeekReport } from './hours-report'
-import { weekColumns } from './hours-calendar'
+import { timeAxis, weekColumns } from './hours-calendar'
 
 const MIN = 60_000
 const HOUR = 60 * MIN
@@ -96,5 +96,49 @@ describe('weekColumns', () => {
 
     const past = weekColumns(report({}), WEEK.start, LATER)
     expect(past.some((c) => c.isToday || c.isFuture)).toBe(false)
+  })
+})
+
+describe('timeAxis', () => {
+  it('rounds the earliest start down and the latest end up to whole hours (HCAL-09)', () => {
+    const r = report({
+      periods: [
+        closed({ id: 'a', start: at(14, 9, 10), end: at(14, 12) }),
+        closed({ id: 'b', start: at(17, 14), end: at(17, 17, 40) })
+      ]
+    })
+    expect(timeAxis(r)).toEqual({ startHour: 9, endHour: 18 })
+  })
+
+  it('widens a short span symmetrically to 8 hours, kept within the day (HCAL-09)', () => {
+    const mid = report({ periods: [closed({ start: at(15, 10), end: at(15, 11) })] })
+    expect(timeAxis(mid)).toEqual({ startHour: 7, endHour: 15 })
+
+    const early = report({ periods: [closed({ start: at(15, 1), end: at(15, 2) })] })
+    expect(timeAxis(early)).toEqual({ startHour: 0, endHour: 8 })
+
+    const late = report({ periods: [closed({ start: at(15, 23), end: at(15, 23, 30) })] })
+    expect(timeAxis(late)).toEqual({ startHour: 16, endHour: 24 })
+  })
+
+  it('spans blocks on different days without clipping either (HCAL-09)', () => {
+    const r = report({
+      periods: [
+        closed({ id: 'a', start: at(14, 3), end: at(14, 4) }),
+        closed({ id: 'b', start: at(15, 17), end: at(15, 18) })
+      ]
+    })
+    expect(timeAxis(r)).toEqual({ startHour: 3, endHour: 18 })
+  })
+
+  it('shows 09–17 for an empty week (HCAL-09)', () => {
+    expect(timeAxis(report({}))).toEqual({ startHour: 9, endHour: 17 })
+  })
+
+  it('keeps an 8-hour axis around a single sub-minute block (edge case)', () => {
+    const r = report({ periods: [closed({ start: at(16, 12), end: at(16, 12, 0, 30) })] })
+    const axis = timeAxis(r)
+    expect(axis).toEqual({ startHour: 9, endHour: 17 })
+    expect(axis.endHour - axis.startHour).toBe(8)
   })
 })
