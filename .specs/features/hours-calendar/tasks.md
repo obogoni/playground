@@ -263,10 +263,10 @@ T9 → T10 → T11
 
 **Done when**:
 
-- [ ] Each entry shows swatch, label and week total; Other lists its tasks
-- [ ] The no-task swatch is outlined like its bars
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **893** (unchanged)
+- [x] Each entry shows swatch, label and week total; Other lists its tasks
+- [x] The no-task swatch is outlined like its bars
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **893** (unchanged)
 
 **Tests**: none
 **Gate**: full

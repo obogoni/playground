@@ -153,7 +153,7 @@ running block to grow, so that the calendar explains itself and stays current.
 | HCAL-18 | P1: Get to the detail and the actions | Tasks | Pending (T7, T9, T11) |
 | HCAL-19 | P1: Get to the detail and the actions | Execute | In progress (T6 of T6, T7, T9, T11) |
 | HCAL-20 | P1: Get to the detail and the actions | Tasks | Pending (T7, T11) |
-| HCAL-21 | P2: Read the colours and the live time | Execute | In progress (T4 of T4, T8, T11) |
+| HCAL-21 | P2: Read the colours and the live time | Execute | In progress (T4, T8 of T4, T8, T11) |
 | HCAL-22 | P2: Read the colours and the live time | Tasks | Pending (T7, T11) |
 | HCAL-23 | P2: Read the colours and the live time | Execute | In progress (T5 of T5, T7, T11) |
 | HCAL-24 | P1: See the week as a calendar | Execute | In progress (T4 of T4, T9, T11) |
