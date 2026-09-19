@@ -133,14 +133,14 @@ T9 → T10 → T11
 
 **Done when**:
 
-- [ ] Disjoint blocks → each `lane 0 / lanes 1`
-- [ ] Two overlapping → lanes 0 and 1, both `lanes 2`
-- [ ] A chain A∩B, B∩C, A∌C → one cluster; C reuses A's lane; all `lanes 2`
-- [ ] One block containing two others → three lanes where they meet
-- [ ] Four simultaneous → four lanes
-- [ ] No two blocks sharing a lane ever overlap in time (asserted over every case)
-- [ ] Gate passes: `npm test`
-- [ ] Test count: 875 + 6 = **881**
+- [x] Disjoint blocks → each `lane 0 / lanes 1`
+- [x] Two overlapping → lanes 0 and 1, both `lanes 2`
+- [x] A chain A∩B, B∩C, A∌C → one cluster; C reuses A's lane; all `lanes 2`
+- [x] One block containing two others → three lanes where they meet
+- [x] Four simultaneous → four lanes
+- [x] No two blocks sharing a lane ever overlap in time (asserted over every case)
+- [x] Gate passes: `npm test`
+- [x] Test count: 875 + 6 = **881**
 
 **Tests**: unit
 **Gate**: quick

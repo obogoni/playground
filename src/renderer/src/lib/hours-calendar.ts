@@ -1,4 +1,4 @@
-import { weekRange, type DayReport, type WeekReport } from './hours-report'
+import { weekRange, type Block, type DayReport, type WeekReport } from './hours-report'
 
 /** One day column of the week calendar (HCAL-01..05). */
 export interface CalendarColumn {
@@ -30,7 +30,9 @@ const localMidnight = (ms: number): number => {
 function hourOfDay(ms: number, dayMidnight: number): number {
   if (localMidnight(ms) > dayMidnight) return 24
   const d = new Date(ms)
-  return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600 + d.getMilliseconds() / 3_600_000
+  return (
+    d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600 + d.getMilliseconds() / 3_600_000
+  )
 }
 
 /**
@@ -89,4 +91,48 @@ export function timeAxis(report: WeekReport): TimeAxis {
     endHour = 24
   }
   return { startHour, endHour }
+}
+
+/** A block placed in one of the side-by-side lanes of its overlap cluster (HCAL-10). */
+export interface LaidOutBlock {
+  block: Block
+  groupKey: string
+  /** 0-based lane, left to right. */
+  lane: number
+  /** Lanes of the block's overlap cluster; the column width is divided by it. */
+  lanes: number
+}
+
+/**
+ * One day's blocks in lanes: blocks overlapping in time form a cluster, each
+ * takes the first lane free at its start, and the whole cluster shares its
+ * lane count, so no bar is drawn over another (HCAL-10).
+ */
+export function layoutLanes(entries: { block: Block; groupKey: string }[]): LaidOutBlock[] {
+  const sorted = [...entries].sort(
+    (a, b) => a.block.start - b.block.start || b.block.end - a.block.end
+  )
+  const laidOut: LaidOutBlock[] = []
+  let cluster: LaidOutBlock[] = []
+  let laneEnds: number[] = []
+  let clusterEnd = -Infinity
+
+  const closeCluster = (): void => {
+    for (const item of cluster) item.lanes = laneEnds.length
+    cluster = []
+    laneEnds = []
+  }
+
+  for (const { block, groupKey } of sorted) {
+    if (block.start >= clusterEnd) closeCluster()
+    let lane = laneEnds.findIndex((end) => end <= block.start)
+    if (lane === -1) lane = laneEnds.length
+    laneEnds[lane] = block.end
+    clusterEnd = cluster.length === 0 ? block.end : Math.max(clusterEnd, block.end)
+    const item = { block, groupKey, lane, lanes: 0 }
+    cluster.push(item)
+    laidOut.push(item)
+  }
+  closeCluster()
+  return laidOut
 }

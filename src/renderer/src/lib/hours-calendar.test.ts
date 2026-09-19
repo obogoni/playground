@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { TimePeriod, TimeSnapshot } from '../../../shared/time'
-import { buildWeekReport, weekRange, type WeekReport } from './hours-report'
-import { timeAxis, weekColumns } from './hours-calendar'
+import { buildWeekReport, weekRange, type Block, type WeekReport } from './hours-report'
+import { layoutLanes, timeAxis, weekColumns, type LaidOutBlock } from './hours-calendar'
 
 const MIN = 60_000
 const HOUR = 60 * MIN
@@ -140,5 +140,87 @@ describe('timeAxis', () => {
     const axis = timeAxis(r)
     expect(axis).toEqual({ startHour: 9, endHour: 17 })
     expect(axis.endHour - axis.startHour).toBe(8)
+  })
+})
+
+describe('layoutLanes', () => {
+  /** A block on Wednesday from `from` to `to`, in fractional hours. */
+  const block = (from: number, to: number): Block => ({
+    start: at(16, 0) + from * HOUR,
+    end: at(16, 0) + to * HOUR,
+    durationMs: (to - from) * HOUR,
+    periods: []
+  })
+  const lay = (...blocks: Block[]): LaidOutBlock[] =>
+    layoutLanes(blocks.map((b, i) => ({ block: b, groupKey: `task:${i}` })))
+  const placeOf = (laid: LaidOutBlock[], b: Block): [number, number] => {
+    const item = laid.find((l) => l.block === b)
+    return [item?.lane ?? -1, item?.lanes ?? -1]
+  }
+
+  const disjoint = [block(9, 10), block(11, 12), block(12, 13)]
+  const pair = [block(9, 11), block(10, 12)]
+  const chain = [block(9, 11), block(10, 13), block(12, 14)]
+  const nested = [block(9, 17), block(10, 12), block(11, 13)]
+  const four = [block(9, 12), block(9.5, 12), block(10, 12), block(10.5, 12)]
+
+  it('keeps disjoint and touching blocks each in a single full-width lane (HCAL-10)', () => {
+    const laid = lay(...disjoint)
+    expect(disjoint.map((b) => placeOf(laid, b))).toEqual([
+      [0, 1],
+      [0, 1],
+      [0, 1]
+    ])
+  })
+
+  it('puts two overlapping blocks side by side (HCAL-10)', () => {
+    const laid = lay(...pair)
+    expect(pair.map((b) => placeOf(laid, b))).toEqual([
+      [0, 2],
+      [1, 2]
+    ])
+  })
+
+  it('clusters a chain and lets the last block reuse the first lane (HCAL-10)', () => {
+    const laid = lay(...chain)
+    expect(chain.map((b) => placeOf(laid, b))).toEqual([
+      [0, 2],
+      [1, 2],
+      [0, 2]
+    ])
+  })
+
+  it('gives a block containing two overlapping others three lanes (HCAL-10)', () => {
+    const laid = lay(...nested)
+    expect(nested.map((b) => placeOf(laid, b))).toEqual([
+      [0, 3],
+      [1, 3],
+      [2, 3]
+    ])
+  })
+
+  it('narrows four simultaneous blocks into four lanes (edge case)', () => {
+    const laid = lay(...four)
+    expect(four.map((b) => placeOf(laid, b))).toEqual([
+      [0, 4],
+      [1, 4],
+      [2, 4],
+      [3, 4]
+    ])
+  })
+
+  it('never lets two blocks in one lane overlap in time (HCAL-10)', () => {
+    for (const blocks of [disjoint, pair, chain, nested, four]) {
+      const laid = lay(...blocks)
+      expect(laid).toHaveLength(blocks.length)
+      for (const a of laid) {
+        for (const b of laid) {
+          if (a === b || a.lane !== b.lane) continue
+          const overlaps = a.block.start < b.block.end && b.block.start < a.block.end
+          expect(overlaps).toBe(false)
+        }
+        expect(a.lane).toBeLessThan(a.lanes)
+      }
+    }
   })
 })
