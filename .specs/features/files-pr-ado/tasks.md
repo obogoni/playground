@@ -716,10 +716,10 @@ T24 → T25 → T26 → T27
 
 ### T26: Record the new write posture
 
-**What**: Amend the README's "ADO integration is view-only" to state that the app writes PR comments on explicit user action only, and append the proposed AD to `.specs/STATE.md`.
+**What**: Amend the README's "ADO integration is view-only" to state that the app writes PR comments on explicit user action only. **The decision itself is already recorded as AD-027** (2026-09-19, at planning) — this task does not add an AD.
 **Where**: `README.md`
 **Depends on**: T25
-**Reuses**: The AD wording in `spec.md`.
+**Reuses**: AD-027's wording in `.specs/STATE.md`.
 **Requirement**: FPRA-32
 
 **Tools**: MCP: NONE · Skill: NONE
@@ -727,7 +727,7 @@ T24 → T25 → T26 → T27
 **Done when**:
 
 - [ ] README no longer claims view-only, and names exactly the four writes
-- [ ] `.specs/STATE.md` gains the AD with the next free number, checked against `develop` and `origin/main` for collisions (the AD-018 / AD-021 renumbering precedent)
+- [ ] `.specs/STATE.md` gains **no new AD**; AD-027 is left as recorded, and still matches what shipped — if it does not, AD-027 is amended in place, never duplicated
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
 - [ ] Test count: unchanged from T25
 

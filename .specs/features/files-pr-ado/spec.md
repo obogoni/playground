@@ -68,10 +68,10 @@ ability to reply, resolve, and start threads from a selection.
 | Gateway housekeeping | The raw NUL byte at `ado-gateway.ts:280` (a composite-key separator inside a template string) is replaced by the `\u0000` escape — same runtime value — in the task that extends the gateway | Owner decision (F4-Q8). The byte makes grep and ripgrep treat the file as binary, so code searches silently skip the ADO gateway. Git is unaffected: the byte sits past the 8000 bytes git inspects | y |
 | Branch base | `feature/files-pr-ado` stacked on `feature/files-commits` | Reuses F3's `parseRemote` and safe opener, and F2's viewer | y |
 
-**Proposed project decision (to append to `.specs/STATE.md` on approval):**
-> *AD — The app writes to Azure DevOps, for pull-request comments only: reply, thread status, a new
-> thread, a general comment. Every write is the direct result of a user action; there are no background
-> or automatic writes. The README's "ADO integration is view-only" is amended to say so.*
+**Project decision — recorded as AD-027 in `.specs/STATE.md` (2026-09-19), covering GitHub as well (F5):**
+> *The app writes to Azure DevOps and GitHub for pull-request comments only — reply, thread state, a new
+> thread from a selection, a general comment — each the direct result of a user action; no background
+> or automatic writes. The README's "ADO integration is view-only" is amended when this feature ships (T26).*
 
 **Open questions:** one, logged above and owned by Design — whether Azure DevOps alters `<…>` in PR comment content.
 
