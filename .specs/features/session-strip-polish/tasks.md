@@ -184,14 +184,14 @@ T5 → T6
 
 **Done when**:
 
-- [ ] No `Pause time` or `Resume time` text remains in the strip (STRP-14)
-- [ ] A stopped session's clock gets no `toggle`: plain text, no icon, no handler (STRP-13)
-- [ ] Clicking the clock pauses a counting session and resumes a paused one, through the same `time:pause` / `time:resume` IPC as before (STRP-07, 08)
-- [ ] The pill carries the raw tool name as its `title` when there is one (STRP-05)
-- [ ] `AgentsView.css` gives the clock button a hover and a focus ring in both themes, and does not change the rail
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Phase gate passes: `npx electron-vite build`
-- [ ] Test count: **1216** (unchanged — renderer component)
+- [x] No `Pause time` or `Resume time` text remains in the strip (STRP-14)
+- [x] A stopped session's clock gets no `toggle`: plain text, no icon, no handler (STRP-13)
+- [x] Clicking the clock pauses a counting session and resumes a paused one, through the same `time:pause` / `time:resume` IPC as before (STRP-07, 08)
+- [x] The pill carries the raw tool name as its `title` when there is one (STRP-05)
+- [x] `AgentsView.css` gives the clock button a hover and a focus ring in both themes, and does not change the rail
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Phase gate passes: `npx electron-vite build`
+- [x] Test count: **1216** (unchanged — renderer component)
 
 **Tests**: none
 **Gate**: build
