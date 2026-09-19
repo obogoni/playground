@@ -236,14 +236,14 @@ T9 → T10 → T11
 
 **Done when**:
 
-- [ ] `HoursCalendar.css` declares `--hcal-slot1..3` for both themes under the selectors `tokens.css` uses, with exactly the design's hex values
-- [ ] Other tasks are filled neutral; no-task bars are outlined, never filled
-- [ ] Bars keep a 6 px minimum height and a 4 px hit halo; a 2 px surface gap separates lanes
-- [ ] The pulse on an ongoing bar stops under `prefers-reduced-motion`
-- [ ] Label text uses text tokens, never a series colour
-- [ ] Rendered and looked at in both themes, at the app's minimum window width, before commit (dataviz step 7)
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **893** (unchanged)
+- [x] `HoursCalendar.css` declares `--hcal-slot1..3` for both themes under the selectors `tokens.css` uses, with exactly the design's hex values
+- [x] Other tasks are filled neutral; no-task bars are outlined, never filled
+- [x] Bars keep a 6 px minimum height and a 4 px hit halo; a 2 px surface gap separates lanes
+- [x] The pulse on an ongoing bar stops under `prefers-reduced-motion`
+- [x] Label text uses text tokens, never a series colour
+- [ ] Rendered and looked at in both themes, at the app's minimum window width, before commit (dataviz step 7) — **open: the component first mounts at T9, so this pass runs after T9 and is ticked then**
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **893** (unchanged)
 
 **Tests**: none
 **Gate**: full
