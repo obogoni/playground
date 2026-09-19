@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { TimeEditResult, TimeSnapshot } from '../../../shared/time'
 import {
@@ -128,13 +128,24 @@ export function HoursView({
   )
 }
 
+/**
+ * A request to highlight, expand and scroll to one block (HCAL-19). A fresh
+ * object per request, so activating the same bar again re-expands its block.
+ */
+export interface BlockFocus {
+  groupKey: string
+  start: number
+}
+
 interface DayCardProps {
   day: DayReport
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
+  /** The block to focus; absent, the card renders as the list view did. */
+  focus?: BlockFocus
 }
 
-function DayCard({ day, onDelete, onAdjust }: DayCardProps): JSX.Element {
+function DayCard({ day, onDelete, onAdjust, focus }: DayCardProps): JSX.Element {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -168,7 +179,13 @@ function DayCard({ day, onDelete, onAdjust }: DayCardProps): JSX.Element {
         </button>
       </header>
       {day.groups.map((group) => (
-        <GroupSection key={group.key} group={group} onDelete={onDelete} onAdjust={onAdjust} />
+        <GroupSection
+          key={group.key}
+          group={group}
+          onDelete={onDelete}
+          onAdjust={onAdjust}
+          focus={focus?.groupKey === group.key ? focus : undefined}
+        />
       ))}
     </section>
   )
@@ -178,9 +195,10 @@ interface GroupSectionProps {
   group: GroupReport
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
+  focus?: BlockFocus
 }
 
-function GroupSection({ group, onDelete, onAdjust }: GroupSectionProps): JSX.Element {
+function GroupSection({ group, onDelete, onAdjust, focus }: GroupSectionProps): JSX.Element {
   return (
     <div className="hours-group">
       <div className="hours-group-head">
@@ -190,7 +208,13 @@ function GroupSection({ group, onDelete, onAdjust }: GroupSectionProps): JSX.Ele
         <span className="hours-group-total">{formatHmCompact(group.totalMs)}</span>
       </div>
       {group.blocks.map((block) => (
-        <BlockLine key={block.start} block={block} onDelete={onDelete} onAdjust={onAdjust} />
+        <BlockLine
+          key={block.start}
+          block={block}
+          onDelete={onDelete}
+          onAdjust={onAdjust}
+          focus={focus?.start === block.start ? focus : undefined}
+        />
       ))}
     </div>
   )
@@ -200,14 +224,28 @@ interface BlockLineProps {
   block: Block
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
+  focus?: BlockFocus
 }
 
-function BlockLine({ block, onDelete, onAdjust }: BlockLineProps): JSX.Element {
+function BlockLine({ block, onDelete, onAdjust, focus }: BlockLineProps): JSX.Element {
   const [expanded, setExpanded] = useState(false)
+  const [seenFocus, setSeenFocus] = useState<BlockFocus | undefined>(undefined)
+  const ref = useRef<HTMLDivElement>(null)
   const open = block.periods.some((p) => p.open)
 
+  // Expand on each new focus request, adjusting state while rendering rather
+  // than in an effect; the user may still collapse it afterwards.
+  if (focus !== seenFocus) {
+    setSeenFocus(focus)
+    if (focus) setExpanded(true)
+  }
+
+  useEffect(() => {
+    if (focus) ref.current?.scrollIntoView({ block: 'nearest' })
+  }, [focus])
+
   return (
-    <div className="hours-block">
+    <div ref={ref} className={`hours-block${focus ? ' focused' : ''}`}>
       <button
         type="button"
         className="hours-block-line"

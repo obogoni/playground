@@ -217,6 +217,11 @@
   background: var(--panel-2);
 }
 
+/* The block a calendar bar was activated for (HCAL-19). */
+.hours-block.focused .hours-block-line {
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+}
+
 .hours-block-chevron {
   display: flex;
   color: var(--text-faint);

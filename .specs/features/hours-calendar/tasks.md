@@ -213,10 +213,10 @@ T9 → T10 → T11
 
 **Done when**:
 
-- [ ] Without the prop, the card renders exactly as today
-- [ ] Every time-tracking unit test passes unedited
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **893** (unchanged)
+- [x] Without the prop, the card renders exactly as today
+- [x] Every time-tracking unit test passes unedited
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **893** (unchanged)
 
 **Tests**: none
 **Gate**: full
