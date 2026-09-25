@@ -21,6 +21,7 @@ import type {
 } from './files'
 import type { CommitLists, GitOp, GitOpResult, SyncState } from './git'
 import type { ProbeResult } from './links'
+import type { ClipboardPaste } from './paste'
 import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type { ParentOfResult, PinTaskResult, TasksSnapshot } from './tasks'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'
@@ -133,6 +134,14 @@ export interface IpcContract {
   'sessions:detach': { req: { id: string }; res: void }
   /** Native folder picker for a detached (ad-hoc) cwd; null when cancelled. */
   'dialog:pickFolder': { req: void; res: { path: string | null } }
+  /**
+   * What the OS clipboard holds, read in main because the renderer `clipboard`
+   * is deprecated from Electron 40 and the Explorer file list needs a child
+   * process. Text wins over files, files over an image; an image is written to
+   * a temp PNG first and comes back as its path (TSP-12/13/14/15). A failed
+   * read answers `{ kind: 'error' }` and never throws (TSP-16).
+   */
+  'clipboard:read-paste': { req: void; res: ClipboardPaste }
   /** Every discovered workflow, valid (`{id,meta}`) or broken (`{id,error}`) (WF2-01). */
   'workflows:list': { req: void; res: WorkflowDef[] }
   /** Start a serial run of workflow `id` in the main process; returns its runId (WF2-13/17). */
@@ -240,4 +249,9 @@ export interface RendererApi {
   on<E extends IpcEvent>(channel: E, listener: (payload: IpcEvents[E]) => void): () => void
   /** Fire-and-forget a renderer→main message (no reply). */
   send<S extends IpcSend>(channel: S, payload: IpcSends[S]): void
+  /**
+   * Absolute path of a dropped `File`, via `webUtils.getPathForFile`; `''` when
+   * the item carries no filesystem path, e.g. a dragged link (TSP-25, TSP-27).
+   */
+  pathForFile(file: File): string
 }

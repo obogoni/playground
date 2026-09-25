@@ -8,8 +8,15 @@
  * The buffer is capped on two axes (bytes and lines); whichever cap is hit
  * first, the *oldest* content is dropped and the recent tail is preserved.
  *
+ * Everything trimmed off the head is folded into a `TerminalModeTracker`, and
+ * `snapshot()` prepends the mode prefix it yields: a TUI sets the alternate
+ * screen, mouse tracking and bracketed paste once at startup, so those
+ * sequences are long gone by the time a session switch replays the buffer.
+ *
  * Pure (string ops only) and therefore fully unit-tested.
  */
+
+import { TerminalModeTracker } from './terminal-mode-tracker'
 
 export interface SessionRingBufferOptions {
   /** Hard cap on retained bytes (UTF-8); defaults to ~1 MB. */
@@ -25,6 +32,7 @@ export class SessionRingBuffer {
   readonly maxBytes: number
   readonly maxLines: number
   #buf = ''
+  readonly #modes = new TerminalModeTracker()
 
   constructor(opts: SessionRingBufferOptions = {}) {
     this.maxBytes = opts.maxBytes ?? DEFAULT_MAX_BYTES
@@ -39,9 +47,12 @@ export class SessionRingBuffer {
     this.#trimToBytes()
   }
 
-  /** Full retained scrollback, ready to write straight back to a terminal. */
+  /**
+   * Full retained scrollback, ready to write straight back to a terminal: the
+   * modes trimmed off the head first, then the content that survived.
+   */
   snapshot(): string {
-    return this.#buf
+    return this.#modes.prefix() + this.#buf
   }
 
   /** The last `lines` lines, for a card's last-output preview. */
@@ -55,6 +66,8 @@ export class SessionRingBuffer {
   #trimToLines(): void {
     const parts = this.#buf.split('\n')
     if (parts.length > this.maxLines) {
+      const dropped = parts.slice(0, parts.length - this.maxLines)
+      this.#modes.feed(`${dropped.join('\n')}\n`)
       this.#buf = parts.slice(-this.maxLines).join('\n')
     }
   }
@@ -73,6 +86,8 @@ export class SessionRingBuffer {
       i++
     }
     const nl = this.#buf.indexOf('\n', i)
-    this.#buf = nl >= 0 ? this.#buf.slice(nl + 1) : this.#buf.slice(i)
+    const cut = nl >= 0 ? nl + 1 : i
+    this.#modes.feed(this.#buf.slice(0, cut))
+    this.#buf = this.#buf.slice(cut)
   }
 }
