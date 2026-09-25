@@ -27,11 +27,11 @@ the bug it would catch. It is recorded below and excluded from the tally, the wa
 
 | Round | Range | Verdict | Why |
 | ----- | ----- | ------- | --- |
-| 1 | `c27b412..94f107d` | not done | 4 surviving mutants in `hours-calendar.ts`: M8 (axis start `floor`→`round`), M10 (lane reuse at a touching boundary), M12 / M13 (cluster closing); spec-precision gaps on HCAL-12 and the narrow-lane edge case. Lessons L-023..L-026 (`82862a0`) |
+| 1 | `c27b412..94f107d` | not done | 4 surviving mutants in `hours-calendar.ts`: M8 (axis start `floor`→`round`), M10 (lane reuse at a touching boundary), M12 / M13 (cluster closing); spec-precision gaps on HCAL-12 and the narrow-lane edge case. Lessons L-041..L-044 (`82862a0`) |
 | 2 | `c27b412..be5d8ab` | done | Three unit tests added, 6 px into HCAL-12 and 64 × 36 px into the edge case. All round-1 gaps closed |
-| 3 | `8b9d191..a9c98f8` | not done | Layout B (AD-031). 6 gaps: HCAL-17 evidence data-conditional (MA survived), the `hadTime` re-arm branch unevidenced (MH survived), HCAL-25 spec-precision (MB survived), drawer geometry and legend truncation code-only, `tasks.md` tables stopped at T11. Lessons L-027..L-029 (`2aff55e`) |
-| 4 | `a9c98f8..a81df5b` | not done | T17 mockup pass + T18 smoke. All 6 round-3 gaps closed; MA and MH killed. New: HCAL-15's summary and swatch clauses unasserted (N1, N4, N5 survived) and the summary shipped `1 blocks`; HCAL-25's exception untested (MB survived). Lessons L-030, L-031 (`29d1ff6`) |
-| 5 | `a81df5b..4e2ce9f` | not done | T19 fixes the defect and adds checks 15, 16, 28. N1, N4, N5 and MB all killed. One blocker: the fixture's counts were always 2, so restoring the defect (P1) survived all 29 checks; plus two spec items reported fixed that were not. Lesson L-032 (`999d98b`) |
+| 3 | `8b9d191..a9c98f8` | not done | Layout B (AD-031). 6 gaps: HCAL-17 evidence data-conditional (MA survived), the `hadTime` re-arm branch unevidenced (MH survived), HCAL-25 spec-precision (MB survived), drawer geometry and legend truncation code-only, `tasks.md` tables stopped at T11. Lessons L-045..L-047 (`2aff55e`) |
+| 4 | `a9c98f8..a81df5b` | not done | T17 mockup pass + T18 smoke. All 6 round-3 gaps closed; MA and MH killed. New: HCAL-15's summary and swatch clauses unasserted (N1, N4, N5 survived) and the summary shipped `1 blocks`; HCAL-25's exception untested (MB survived). Lessons L-048, L-049 (`29d1ff6`) |
+| 5 | `a81df5b..4e2ce9f` | not done | T19 fixes the defect and adds checks 15, 16, 28. N1, N4, N5 and MB all killed. One blocker: the fixture's counts were always 2, so restoring the defect (P1) survived all 29 checks; plus two spec items reported fixed that were not. Lesson L-050 (`999d98b`) |
 | 6 | `4e2ce9f..200147c` | **done** | Check 27 pins the literal `1 folder · 1 block` on the one-period day. **Q0 (the round-4 defect verbatim), Q1 (round-5's P1) and six variants all die**; 8 of 9 killed, the ninth unreachable in the fixture. Coverage line reads 27, HCAL-27 sits after HCAL-25. Gate green at 893 |
 
 ---

@@ -432,9 +432,11 @@ Lesson candidates L-017..L-022 of this branch were renumbered **L-035..L-040** a
 
 ### `hours-calendar` (PR #99)
 
+Lesson candidates L-023..L-032 of this branch were renumbered **L-041..L-050** at rebase time (`origin/main` already held L-023..L-040).
+
 **Status (current, 2026-09-19): `hours-calendar` DONE — layout B + the drawer polish, independent
-Verifier PASS round 6 on branch `feature/hours-calendar`, stacked on `feature/time-tracking`
-(PR #93, still open). Nothing uncommitted. Not pushed, no PR — push needs an explicit go-ahead.**
+Verifier PASS round 6 on branch `feature/hours-calendar`, rebased onto `origin/main` on
+2026-09-25 after #93 merged. Open upstream as PR #99.**
 
 - 19 tasks in 5 phases (`19a2504`..`200147c`). Phases 1–3 built the week calendar; Phase 4 (AD-031)
   turned it into layout B — legend chips, a grid that fills the height, the day's detail in a drawer
@@ -442,7 +444,7 @@ Verifier PASS round 6 on branch `feature/hours-calendar`, stacked on `feature/ti
 - Verifier ran **six rounds** (the owner approved rounds beyond the 3-iteration bound): PASS at
   rounds 2 and 6, FAIL at 1, 3, 4 and 5. Every gap was evidence, except one real defect caught before
   release — the drawer's summary line rendered `1 blocks` (fixed in `4e2ce9f`, pinned in `200147c`).
-  Lessons L-023..L-032. Final: 27/27 ACs evidenced, 8/8 reachable mutants killed, `validate_state.py`
+  Lessons L-041..L-050. Final: 27/27 ACs evidenced, 8/8 reachable mutants killed, `validate_state.py`
   exit 0.
 - Gate: typecheck 0, lint 0 errors / **18 warnings** (the baseline), **893 tests**.
 - Live smokes on the dev app, owner-approved, last run 2026-09-19: `smoke-hours-calendar.mjs`
@@ -451,6 +453,7 @@ Verifier PASS round 6 on branch `feature/hours-calendar`, stacked on `feature/ti
   (its ad-hoc sessions carry no task — same cause as HCAL-11's note, now in the script header); the
   spec's Coverage line is derived but nothing checks it, and it silently reverted once when the
   task-closing helper rewrote it; chip truncation and the drawer's side stay CSS-only.
-- **Next:** push `feature/hours-calendar` to `fork` and open the upstream PR with "depends on #93"
-  (owner go-ahead). Once #93 merges: `git rebase --onto origin/main feature/time-tracking
-  feature/hours-calendar`, then force-with-lease to `fork`.
+- **Rebase onto `origin/main` (2026-09-25):** code diff unchanged; the conflicts were all in
+  `.specs/` — decision rows and roadmap entries kept on both sides, lessons renumbered as above.
+  Gate on the rebased tip: typecheck 0, lint 0 errors / 18 warnings, **1691 tests**.
+- **Next:** review of PR #99.
