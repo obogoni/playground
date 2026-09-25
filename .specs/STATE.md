@@ -462,6 +462,6 @@ Verifier PASS round 6 on branch `feature/hours-calendar`, rebased onto `origin/m
   refuses anything else (`not running on the seeded data`), and step 10 checks the card geometry. Red 32/34 before
   the fix, 34/34 after; independent Verifier PASS, 4/4 mutants killed (`hours-drawer-growth/validation.md`). The
   refusal against the owner's real data was not run (launching the dev app on it is not permitted to the agent); an
-  empty directory took the same branch. Local commits `6a2211e..bcc8e3f`, not pushed.
-- **Next:** push to `fork` (updates PR #99), add `Closes #105` to the PR body, merge into `develop` — each on the
-  owner's go-ahead; then review of PR #99.
+  empty directory took the same branch. Commits `6a2211e..6fa96d4` pushed to `fork`; PR #99 closes #105. A
+  follow-up makes a pass fail when the clean-up leaves the seed behind (the Verifier's one minor gap).
+- **Next:** review of PR #99.
