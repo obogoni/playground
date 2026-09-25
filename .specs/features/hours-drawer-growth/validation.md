@@ -188,3 +188,12 @@ No grounded failure: no surviving mutant, no open spec-precision gap, no failed 
 **Issues found**: none blocking. O1 to O3 are optional hardening.
 
 **Next steps**: the orchestrator marks HDRW-01..11 Verified. The owner decides on O1 to O3, and separately on push and merge (gated by the spec).
+
+## After verification: O1 closed (author, not a Verifier round)
+
+On the owner's go-ahead, a pass now checks that the seeded directory and the pointer are really gone after
+`rmSync`, and exits 1 with `Checks passed, but clean-up left: <path>` when either remains. Re-checked the same
+day against the Verifier's M4 (the directory's `rmSync` removed, in a scratch copy): 34/34 checks, then exit 1 with
+`clean-up left: ...playground-smoke-hours-<n>`, so M4 is now caught by the smoke itself. The unmutated smoke on a
+fresh seed: 34/34, exit 0, directory and pointer gone, the owner's three data files unchanged (SHA-256). O2 and O3
+stay open as cosmetic.

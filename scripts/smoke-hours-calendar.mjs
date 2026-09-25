@@ -762,5 +762,10 @@ for (let i = 0; i < 40; i++) {
 }
 rmSync(seededDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 500 })
 rmSync(POINTER, { force: true })
+const leftBehind = [seededDir, POINTER].filter((p) => existsSync(p))
+if (leftBehind.length > 0) {
+  console.error(`Checks passed, but clean-up left: ${leftBehind.join(', ')}`)
+  process.exit(1)
+}
 console.log(`App closed; deleted ${seededDir} and ${POINTER}`)
 process.exit(0)
