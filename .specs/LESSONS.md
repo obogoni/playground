@@ -222,6 +222,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: M21 src/main/time-log-store.ts:107 (file-stores)
 - last seen: 2026-09-16T22:42:48Z
 
+### L-051 - Before writing an edge case as 'exactly today's behaviour', read the state owner's lifecycle code (e.g. TimeTracker.ended drops the run and its paused flag); a grilled default about existing behaviour is a premise to verify, not a fact.
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `spec/edge-cases` · harmful: 0
+- features: session-strip-polish
+- evidence: spec.md Edge Cases; src/main/time-tracker.ts:80-86 (spec/edge-cases)
+- last seen: 2026-09-19T19:49:53Z
+
+### L-052 - In a smoke that toggles state, start each check from a state the previous check confirmed and flip it, so a dead input fails its own check instead of a later one passing because nothing changed.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke-*.mjs` · harmful: 0
+- features: session-strip-polish
+- evidence: scripts/smoke-strip.mjs:317-320 (round 1) (scripts/smoke-*.mjs)
+- last seen: 2026-09-19T19:49:54Z
+
+### L-053 - When a task removes or renames a UI control, grep scripts/ for its label and selectors; smoke scripts are outside the unit gate and break silently.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke-*.mjs` · harmful: 0
+- features: session-strip-polish
+- evidence: scripts/smoke-time.mjs:188-212 (round 1) (scripts/smoke-*.mjs)
+- last seen: 2026-09-19T19:49:54Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

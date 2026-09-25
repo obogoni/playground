@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 import type { TimeSnapshot } from '../../../shared/time'
-import { formatHm, formatHms } from '../lib/time-format'
+import { clockToggleTitle, formatHm, formatHms } from '../lib/time-format'
 import { currentRunMs, sessionTotalMs } from '../lib/time-totals'
 import { useNow } from '../lib/use-time'
 import { Icon } from './Icon'
@@ -14,6 +14,9 @@ interface SessionClockProps {
   className?: string
   /** Adds `current run hh:mm:ss` as the tooltip (TIME-23). */
   withRunTooltip?: boolean
+  /** Makes the clock a pause/resume button (STRP-07..12). Opt-in: the rail row
+   *  shares this component, and a click there selects the session. */
+  toggle?: { paused: boolean; onToggle: () => void }
 }
 
 /** A session's total as `hh:mm:ss`, ticking every second only while it has an
@@ -23,10 +26,25 @@ export function SessionClock({
   snapshot,
   sessionId,
   className,
-  withRunTooltip = false
+  withRunTooltip = false,
+  toggle
 }: SessionClockProps): JSX.Element {
   const live = snapshot.open.some((p) => p.sessionId === sessionId)
   const now = useNow(live ? 1000 : null)
+  if (toggle) {
+    return (
+      <button
+        type="button"
+        className={className}
+        aria-pressed={toggle.paused}
+        title={clockToggleTitle(currentRunMs(snapshot, sessionId, now), toggle.paused)}
+        onClick={toggle.onToggle}
+      >
+        <Icon name={toggle.paused ? 'play' : 'pause'} size={11} />
+        {formatHms(sessionTotalMs(snapshot, sessionId, now))}
+      </button>
+    )
+  }
   return (
     <span
       className={className}

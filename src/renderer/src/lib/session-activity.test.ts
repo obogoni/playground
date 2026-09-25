@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { SessionView } from '../../../shared/config'
-import { applyActivity, detailPillClass, detailPillText } from './session-activity'
+import {
+  applyActivity,
+  detailPillClass,
+  detailPillText,
+  detailPillTitle,
+  mcpToolLabel
+} from './session-activity'
 
 function session(overrides: Partial<SessionView> & { id: string }): SessionView {
   return {
@@ -120,6 +126,45 @@ describe('detailPillText', () => {
       )
     ).toBe('working · Bash · 2 subagents · overloaded')
   })
+
+  it('names an MCP tool by its server (STRP-01)', () => {
+    expect(
+      detailPillText(
+        session({
+          id: 'a',
+          activity: { state: 'working', tool: 'mcp__azure-devops__wit_work_item', subagents: 0 }
+        })
+      )
+    ).toBe('working · MCP azure-devops')
+  })
+})
+
+describe('detailPillTitle', () => {
+  it('carries the raw MCP tool name (STRP-05)', () => {
+    expect(
+      detailPillTitle(
+        session({
+          id: 'a',
+          activity: { state: 'working', tool: 'mcp__azure-devops__wit_work_item', subagents: 0 }
+        })
+      )
+    ).toBe('mcp__azure-devops__wit_work_item')
+  })
+
+  it('carries a native tool name as received', () => {
+    expect(
+      detailPillTitle(
+        session({ id: 'a', activity: { state: 'working', tool: 'Bash', subagents: 0 } })
+      )
+    ).toBe('Bash')
+  })
+
+  it('is absent when the activity names no tool', () => {
+    expect(
+      detailPillTitle(session({ id: 'a', activity: { state: 'waiting', subagents: 0 } }))
+    ).toBeUndefined()
+    expect(detailPillTitle(session({ id: 'a' }))).toBeUndefined()
+  })
 })
 
 describe('detailPillClass', () => {
@@ -140,5 +185,30 @@ describe('detailPillClass', () => {
   it('keeps today’s tints for a session with no activity', () => {
     expect(detailPillClass(session({ id: 'a' }))).toBe('green')
     expect(detailPillClass(session({ id: 'a', status: 'stopped' }))).toBe('faint')
+  })
+})
+
+describe('mcpToolLabel', () => {
+  it('names an MCP tool by its server (STRP-01)', () => {
+    expect(mcpToolLabel('mcp__azure-devops__wit_work_item')).toBe('MCP azure-devops')
+  })
+
+  it('keeps the server’s case and underscores as received (STRP-02)', () => {
+    expect(mcpToolLabel('mcp__claude_ai_Claude_Docs__batch')).toBe('MCP claude_ai_Claude_Docs')
+  })
+
+  it('reads everything after the second separator as the tool', () => {
+    expect(mcpToolLabel('mcp__srv__a__b')).toBe('MCP srv')
+  })
+
+  it.each(['mcp____tool', 'mcp__srv__', 'mcp__'])(
+    'leaves %s unchanged: an empty segment does not match (STRP-03)',
+    (tool) => {
+      expect(mcpToolLabel(tool)).toBe(tool)
+    }
+  )
+
+  it('leaves a native tool unchanged (STRP-04)', () => {
+    expect(mcpToolLabel('Bash')).toBe('Bash')
   })
 })

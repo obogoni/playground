@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 41,
+  "next_id": 54,
   "lessons": [
     {
       "id": "L-001",
@@ -640,6 +640,60 @@
       ],
       "created": "2026-09-16T22:42:48Z",
       "last_seen": "2026-09-16T22:42:48Z"
+    },
+    {
+      "id": "L-051",
+      "key": "spec_deviation::before writing an edge case as exactly today s behaviour read the state owner s lifecycle code e g timetracker ended drops the run and its paused flag a grilled default about existing behaviour is a premise to verify not a fact",
+      "text": "Before writing an edge case as 'exactly today's behaviour', read the state owner's lifecycle code (e.g. TimeTracker.ended drops the run and its paused flag); a grilled default about existing behaviour is a premise to verify, not a fact.",
+      "signal": "spec_deviation",
+      "scope": "spec/edge-cases",
+      "status": "candidate",
+      "features": [
+        "session-strip-polish"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "spec.md Edge Cases; src/main/time-tracker.ts:80-86 (spec/edge-cases)"
+      ],
+      "created": "2026-09-19T19:49:53Z",
+      "last_seen": "2026-09-19T19:49:53Z"
+    },
+    {
+      "id": "L-052",
+      "key": "ac_gap::in a smoke that toggles state start each check from a state the previous check confirmed and flip it so a dead input fails its own check instead of a later one passing because nothing changed",
+      "text": "In a smoke that toggles state, start each check from a state the previous check confirmed and flip it, so a dead input fails its own check instead of a later one passing because nothing changed.",
+      "signal": "ac_gap",
+      "scope": "scripts/smoke-*.mjs",
+      "status": "candidate",
+      "features": [
+        "session-strip-polish"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "scripts/smoke-strip.mjs:317-320 (round 1) (scripts/smoke-*.mjs)"
+      ],
+      "created": "2026-09-19T19:49:54Z",
+      "last_seen": "2026-09-19T19:49:54Z"
+    },
+    {
+      "id": "L-053",
+      "key": "ac_gap::when a task removes or renames a ui control grep scripts for its label and selectors smoke scripts are outside the unit gate and break silently",
+      "text": "When a task removes or renames a UI control, grep scripts/ for its label and selectors; smoke scripts are outside the unit gate and break silently.",
+      "signal": "ac_gap",
+      "scope": "scripts/smoke-*.mjs",
+      "status": "candidate",
+      "features": [
+        "session-strip-polish"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "scripts/smoke-time.mjs:188-212 (round 1) (scripts/smoke-*.mjs)"
+      ],
+      "created": "2026-09-19T19:49:54Z",
+      "last_seen": "2026-09-19T19:49:54Z"
     }
   ]
 }
