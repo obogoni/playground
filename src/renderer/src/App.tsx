@@ -12,6 +12,7 @@ import { FilesView } from './components/FilesView'
 import { HoursView } from './components/HoursView'
 import { NewSessionDialog, type NewSessionSource } from './components/NewSessionDialog'
 import { NewWorktreeDialog } from './components/NewWorktreeDialog'
+import { SessionNotices } from './components/SessionNotices'
 import { SettingsDialog } from './components/SettingsDialog'
 import { Sidebar } from './components/Sidebar'
 import { StartWorkDialog } from './components/StartWorkDialog'
@@ -29,6 +30,7 @@ import {
   TASKS_DEFAULT_WIDTH,
   resolvePaneWidth
 } from './lib/pane-layout'
+import { dropNotice, upsertNotice, type Notice } from './lib/session-notices'
 import { findWorktree, worktreeIdForPath } from './lib/tree-selection'
 import { dropCollapsedId, isCollapsed, toggleCollapsedId } from './lib/workspace-collapse'
 import { filesStateFor } from './lib/files-view'
@@ -72,6 +74,11 @@ function App(): JSX.Element {
   const [ui, setUi] = useState<UiState | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const dismissToast = useCallback(() => setToast(null), [])
+  /** In-app session notices, one per session (NOTF-02, NOTF-22). */
+  const [notices, setNotices] = useState<Notice[]>([])
+  const dismissNotice = useCallback((id: string) => {
+    setNotices((prev) => dropNotice(prev, id))
+  }, [])
   /** Repo path the new-worktree dialog was opened for; null = closed. */
   const [dialogRepoPath, setDialogRepoPath] = useState<string | null>(null)
   /** Task the start-work dialog was opened for; null = closed. */
@@ -239,6 +246,32 @@ function App(): JSX.Element {
   useEffect(() => {
     if (ui) document.documentElement.dataset.theme = ui.theme
   }, [ui])
+
+  // A session notification, OS or in-app, opens its session in the agents
+  // direction, like `openSession` below but stable for the subscription. A stopped
+  // session is still in the list and gets selected (NOTF-05, NOTF-23).
+  const openNotifiedSession = useCallback(
+    (id: string): void => {
+      setUi((prev) => (prev ? { ...prev, direction: 'agents' } : prev))
+      api.invoke('config:patch', { ui: { direction: 'agents' } }).catch(console.error)
+      setSelectedSessionId(id)
+      setNotices((prev) => dropNotice(prev, id))
+    },
+    [setSelectedSessionId]
+  )
+  const noticeKey = useRef(0)
+  useEffect(() => {
+    const offNotice = api.on('session:notice', ({ id, title, body }) => {
+      noticeKey.current += 1
+      const key = noticeKey.current
+      setNotices((prev) => upsertNotice(prev, { id, title, body, key }))
+    })
+    const offFocus = api.on('session:focus', ({ id }) => openNotifiedSession(id))
+    return () => {
+      offNotice()
+      offFocus()
+    }
+  }, [openNotifiedSession])
 
   // A WF4 lifecycle-toast click asks the renderer to surface a run: switch to the
   // Workflows direction and open that run (WF5-17).
@@ -536,6 +569,7 @@ function App(): JSX.Element {
         />
       )}
       {toast && <Toast message={toast} onDismiss={dismissToast} />}
+      <SessionNotices notices={notices} onOpen={openNotifiedSession} onDismiss={dismissNotice} />
     </>
   )
 }

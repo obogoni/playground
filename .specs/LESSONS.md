@@ -156,6 +156,36 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: src/main/commit-log.ts commitFiles; intermittent EPERM in commit-log.test.ts teardown (src/main/**, windows)
 - last seen: 2026-09-20T22:58:11Z
 
+### L-030 - Every acceptance criterion left to hand-verification must appear as a named line in the owner smoke script's hand-verify header or as a smoke check
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-scripts` · harmful: 0
+- features: session-idle-notifications
+- evidence: NOTF-23, NOTF-06, NOTF-21 (validation.md AC table; src/main/index.ts:237,256; src/renderer/src/App.tsx:174) (smoke-scripts) (+1 more)
+- last seen: 2026-09-17T01:30:15Z
+
+### L-031 - A smoke check for a state change must start from a different state, or it cannot fail
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-scripts` · harmful: 0
+- features: session-idle-notifications
+- evidence: NOTF-05 direction half (scripts/smoke-notifications.mjs:492; src/renderer/src/App.tsx:172) (smoke-scripts)
+- last seen: 2026-09-17T00:29:17Z
+
+### L-032 - When the spec leaves user-facing wording open, fix the exact wording in the spec before tests pin it
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `notifications` · harmful: 0
+- features: session-idle-notifications
+- evidence: validation.md spec-precision gaps (src/main/activity-notification.test.ts:116,122,126,136) (notifications)
+- last seen: 2026-09-17T00:29:17Z
+
+### L-033 - When the design replaces a mechanism a confirmed spec row names, update that spec row in the same change or mark a SPEC_DEVIATION at the code
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: session-idle-notifications
+- evidence: spec.md:75 vs src/main/index.ts:81 (rev-parse --abbrev-ref vs symbolic-ref --short) — validation.md round 3 gap 2 (spec) (+1 more)
+- last seen: 2026-09-17T01:50:57Z
+
+### L-034 - When a rule says a value is never cut, test it with a long value at every place the value is rendered, not only the first
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `notifications` · harmful: 0
+- features: session-idle-notifications
+- evidence: V7 src/main/activity-notification.ts:86 (validation.md round 5) (notifications)
+- last seen: 2026-09-17T01:50:57Z
+
 ### L-035 - In renderer components and hooks keep Date.now() out of render and setState out of synchronous effect bodies, because eslint-plugin-react-hooks v7 purity and set-state-in-effect rules fail the lint gate
 - signal: `gate_fail` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
 - features: time-tracking

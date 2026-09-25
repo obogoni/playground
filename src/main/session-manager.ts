@@ -4,6 +4,7 @@ import { commandKey } from '../shared/command-key'
 import type { PersistedSession, SessionStatus, SessionView } from '../shared/config'
 import type { IpcEvent, IpcEvents } from '../shared/ipc-contract'
 import { applyHookEvent, applyKeystroke, sameView, type MachineState } from './activity-machine'
+import type { ActivityChange } from './activity-notification'
 import { ACTIVITY_TOKEN_ENV } from './claude-hook-settings'
 import type { ConfigStore } from './config-store'
 import { isKeystroke } from './keystroke'
@@ -46,6 +47,8 @@ export interface SessionManagerDeps {
   fsExists: (path: string) => boolean
   /** Absent means no session reports activity — the pre-feature behaviour. */
   hooks?: ActivityHooks
+  /** Told about every activity transition that changed the view; the notifier (NOTF). */
+  onActivityChange?: (change: ActivityChange) => void
   /** Absent means no session is named — the pre-feature rendering. */
   names?: SessionNames
   /** Told when a session's PTY starts and ends (the time tracker, AD-021); absent = no observer. */
@@ -408,7 +411,23 @@ export class SessionManager {
     const after = next?.view ?? null
     session.activity = next
     if (sameView(before, after)) return
-    this.deps.emit('session:activity', { id: session.meta.id, activity: after })
+    const { id, agent, title, cwd } = session.meta
+    this.deps.emit('session:activity', { id, activity: after })
+    // Only transitions reach the listener: #finalize drops the activity without
+    // coming through here, so a stopping PTY never notifies (NOTF-26).
+    try {
+      this.deps.onActivityChange?.({
+        id,
+        agent,
+        title,
+        cwd,
+        before,
+        after,
+        attached: this.#activeId === id
+      })
+    } catch (err) {
+      console.error('[notifications] activity listener failed', err)
+    }
   }
 
   #setStatus(id: string, status: SessionStatus): void {

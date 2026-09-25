@@ -9,9 +9,11 @@ import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
+import { readNotificationPrefs } from '../shared/notifications'
 import { AdoGateway } from './ado-gateway'
 import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-runner'
 import { createActivityHookServer } from './activity-hook-server'
+import { linkTask } from './activity-notification'
 import { buildClaudeHookSettings } from './claude-hook-settings'
 import { readClipboardPaste } from './clipboard-reader'
 import { ConfigStore } from './config-store'
@@ -33,6 +35,7 @@ import { scrubAuthEnv } from './scrub-auth-env'
 import { SessionManager, type ActivityHooks, type EmitFn } from './session-manager'
 import { LinkOpener } from './link-opener'
 import { SessionNamePoller } from './session-name-poller'
+import { SessionNotifier } from './session-notifier'
 import { ShortcutLauncher, spawnDetached } from './shortcut-launcher'
 import { TaskBoard } from './task-board'
 import { TimeLogStore } from './time-log-store'
@@ -81,6 +84,26 @@ async function gitFetch({ cwd, remote, branch }: GitFetchOptions): Promise<void>
     windowsHide: true,
     env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
   })
+}
+
+/**
+ * The branch a session's cwd has checked out, which names its task in a
+ * notification (NOTF-30). `symbolic-ref` answers on an unborn branch and fails
+ * on a detached HEAD; that, a folder outside git, or git taking over 2 s all
+ * mean no branch (NOTF-34).
+ */
+async function readBranch(cwd: string): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync('git', ['symbolic-ref', '--short', 'HEAD'], {
+      cwd,
+      timeout: 2000,
+      windowsHide: true,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
+    })
+    return stdout.trim() || null
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -359,6 +382,43 @@ app.whenReady().then(() => {
     if (mainWindow) emit(mainWindow.webContents, channel, payload)
   }
 
+  /** Bring the window forward; a click on a stale notification after the window
+   *  is gone does nothing (NOTF-21). */
+  const revealWindow = (): void => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  }
+
+  /** A minimized window counts as not focused: its rail cannot be seen (NOTF-24). */
+  const windowFocused = (): boolean =>
+    !!mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused() && !mainWindow.isMinimized()
+
+  /**
+   * Notifications still on screen. An unreferenced `Notification` can be
+   * garbage-collected before the user clicks it, silently dropping the click
+   * handler, so each one is held until it is clicked, closed or fails.
+   */
+  const liveNotifications = new Set<Notification>()
+
+  /** Show a native notification; skipped silently where the OS has none (NOTF-06). */
+  const showOs = (title: string, body: string, onClick?: () => void): void => {
+    if (!Notification.isSupported()) return
+    const notification = new Notification({ title, body })
+    liveNotifications.add(notification)
+    const release = (): void => {
+      liveNotifications.delete(notification)
+    }
+    notification.on('click', () => {
+      release()
+      onClick?.()
+    })
+    notification.on('close', release)
+    notification.on('failed', release)
+    notification.show()
+  }
+
   /**
    * WF2 author `ctx.notify({ toast })` sink (WF2-09) AND WF4 manager lifecycle toast
    * (WF4-13): a native OS toast. A lifecycle toast (`opts.runId`) attaches a `click`
@@ -367,17 +427,17 @@ app.whenReady().then(() => {
    * notification, behaviour unchanged.
    */
   const notifier = (title: string, body: string, opts?: { runId?: string }): void => {
-    if (!Notification.isSupported()) return
-    const notification = new Notification({ title, body })
-    if (opts?.runId) {
-      const runId = opts.runId
-      notification.on('click', () => {
-        mainWindow?.show()
-        mainWindow?.focus()
-        emitToWindow('workflow:focus-run', { runId })
-      })
-    }
-    notification.show()
+    const runId = opts?.runId
+    showOs(
+      title,
+      body,
+      runId
+        ? () => {
+            revealWindow()
+            emitToWindow('workflow:focus-run', { runId })
+          }
+        : undefined
+    )
   }
 
   // Time tracking (AD-021). The tracker must recover the periods a crash left
@@ -414,6 +474,16 @@ app.whenReady().then(() => {
   powerMonitor.on('suspend', () => tracker.suspend())
   powerMonitor.on('resume', () => tracker.resumeFromSuspend())
   // lock-screen / unlock-screen are deliberately not subscribed (TIME-08).
+
+  const sessionNotifier = new SessionNotifier({
+    prefs: () => readNotificationPrefs(configStore.get().ui),
+    windowFocused,
+    // Cached pins only: a notification never waits on Azure DevOps (NOTF-35).
+    linkedTask: async (cwd) => linkTask(await readBranch(cwd), taskBoard.list().tasks),
+    showOs,
+    reveal: revealWindow,
+    emit: emitToWindow
+  })
 
   // Claude Code activity hooks (AD-019). The loopback server takes a moment to
   // bind, so `settingsPath` starts null and is filled once it is listening;
@@ -481,6 +551,13 @@ app.whenReady().then(() => {
     fsExists: existsSync,
     lifecycle: tracker,
     hooks: activityHooks,
+    // handle() is async since it looks the task up; a failure after the lookup
+    // (in showOs, say) must be logged, not left as an unhandled rejection.
+    onActivityChange: (change) => {
+      sessionNotifier
+        .handle(change)
+        .catch((err) => console.error('[notifications] session notification failed', err))
+    },
     names: namePoller
   })
   const sessions = sessionManager

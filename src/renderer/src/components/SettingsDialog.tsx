@@ -2,6 +2,13 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties, JSX } from 'react'
 import type { AgentDef, Shell } from '../../../shared/agents'
 import type { AppConfig } from '../../../shared/config'
+import {
+  NOTIFIABLE_STATES,
+  NOTIFY_STATE_KEYS,
+  readNotificationPrefs,
+  type NotifiableState,
+  type NotificationPrefs
+} from '../../../shared/notifications'
 import { DEFAULT_BRANCH_TEMPLATE } from '../../../shared/tasks'
 import { DEFAULT_WORKTREE_TEMPLATE } from '../../../shared/worktrees'
 import { api } from '../lib/api'
@@ -33,6 +40,24 @@ interface AgentForm {
   color: string
 }
 
+type SettingsTab = 'general' | 'notifications'
+
+/** One switch per notifiable state, worded like the notifications they gate (NOTF-18). */
+const STATE_SWITCHES: Record<NotifiableState, { label: string; note: string }> = {
+  'needs-approval': {
+    label: 'Needs approval',
+    note: 'the agent is waiting on a permission prompt'
+  },
+  'needs-input': { label: 'Needs input', note: 'the agent asked you a question' },
+  waiting: { label: 'Finished its turn', note: 'the agent is done and waiting for you' },
+  error: { label: 'Turn failed', note: 'the turn ended on an API error' }
+}
+
+const TABS: { id: SettingsTab; label: string; title: string }[] = [
+  { id: 'general', label: 'General', title: 'Azure DevOps, agents & shell' },
+  { id: 'notifications', label: 'Notifications', title: 'Agent notifications' }
+]
+
 const EMPTY_FORM: Omit<AgentForm, 'editKey'> = {
   name: '',
   command: '',
@@ -61,6 +86,10 @@ export function SettingsDialog({
   const [defaultShell, setDefaultShell] = useState<Shell>('pwsh')
   const [form, setForm] = useState<AgentForm | null>(null)
   const [busy, setBusy] = useState(false)
+  // Not persisted: the dialog always opens on General (NOTF-28). Every field's
+  // state lives here, above the tabs, so switching tabs loses no edit (NOTF-29).
+  const [tab, setTab] = useState<SettingsTab>('general')
+  const [notify, setNotify] = useState<NotificationPrefs | null>(null)
 
   useEffect(() => {
     api
@@ -73,6 +102,7 @@ export function SettingsDialog({
         setDevAlias(config.ado.devAlias ?? '')
         setAgents(config.agents)
         setDefaultShell(config.ui.defaultShell)
+        setNotify(readNotificationPrefs(config.ui))
       })
       .catch(console.error)
   }, [])
@@ -87,6 +117,18 @@ export function SettingsDialog({
   const persistShell = (shell: Shell): void => {
     setDefaultShell(shell)
     api.invoke('config:patch', { ui: { defaultShell: shell } }).catch(console.error)
+  }
+
+  // Each switch persists on its own key, so the master never rewrites a state
+  // choice (NOTF-16, NOTF-19).
+  const persistNotify = (enabled: boolean): void => {
+    setNotify((prev) => (prev ? { ...prev, enabled } : prev))
+    api.invoke('config:patch', { ui: { notify: enabled } }).catch(console.error)
+  }
+
+  const persistNotifyState = (state: NotifiableState, on: boolean): void => {
+    setNotify((prev) => (prev ? { ...prev, states: { ...prev.states, [state]: on } } : prev))
+    api.invoke('config:patch', { ui: { [NOTIFY_STATE_KEYS[state]]: on } }).catch(console.error)
   }
 
   const commitForm = (): void => {
@@ -149,11 +191,60 @@ export function SettingsDialog({
         <header className="dialog-header">
           <div className="dialog-kicker">Settings</div>
           <div className="dialog-title-row">
-            <span className="dialog-task-title">Azure DevOps, agents &amp; shell</span>
+            <span className="dialog-task-title">{TABS.find((t) => t.id === tab)?.title}</span>
+          </div>
+          <div className="set-tabs" role="tablist" aria-label="Settings sections">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                className={`set-tab${tab === t.id ? ' active' : ''}`}
+                onClick={() => setTab(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
         </header>
-        {loaded && (
-          <div className="dialog-body">
+        {loaded && tab === 'notifications' && notify && (
+          <div className="dialog-body" role="tabpanel" aria-label="Notifications">
+            <label className="dialog-check">
+              <input
+                type="checkbox"
+                checked={notify.enabled}
+                onChange={(event) => persistNotify(event.target.checked)}
+              />
+              <span className="dialog-check-text">
+                Notify me about agent sessions
+                <span className="dialog-check-note">
+                  an OS notification when the app is in the background, an in-app notice when
+                  another session is on screen
+                </span>
+              </span>
+            </label>
+            <div className="set-notify-states">
+              <div className="dialog-field-label">Notify when an agent…</div>
+              {NOTIFIABLE_STATES.map((state) => (
+                <label key={state} className={`dialog-check${notify.enabled ? '' : ' disabled'}`}>
+                  <input
+                    type="checkbox"
+                    checked={notify.states[state]}
+                    disabled={!notify.enabled}
+                    onChange={(event) => persistNotifyState(state, event.target.checked)}
+                  />
+                  <span className="dialog-check-text">
+                    {STATE_SWITCHES[state].label}
+                    <span className="dialog-check-note">{STATE_SWITCHES[state].note}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+        {loaded && tab === 'general' && (
+          <div className="dialog-body" role="tabpanel" aria-label="General">
             <div className="dialog-branch-row">
               <div>
                 <div className="dialog-field-label">

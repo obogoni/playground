@@ -1,0 +1,957 @@
+# Session Activity Notifications Tasks
+
+## Execution Protocol (MANDATORY -- do not skip)
+
+Implement these tasks with the `tlc-spec-driven` skill: **activate it by name and follow its Execute flow and Critical Rules.** Do not search for skill files by filesystem path. The skill is the source of truth for the full flow (per-task cycle, sub-agent delegation, adequacy review, Verifier, discrimination sensor).
+
+**If the skill cannot be activated, STOP and tell the user - do not proceed without it.**
+
+---
+
+**Design**: `.specs/features/session-idle-notifications/design.md`
+**Status**: T1–T13 Done (Verifier PASS, owner smoke 34/34); rev4 T14–T20 Done (Verifier round 4 PASS, 18/18 mutants); rev5 T21–T23 Done (Verifier round 6 PASS, 8/8 mutants); owner smoke 36/36; long-title hand check pending
+**Branch**: `feature/session-idle-notifications` (stacked on `feature/session-activity-status` `65de9fd`, PR #88)
+**Test baseline**: **917 tests / 52 files**, measured green on this branch before any task.
+
+---
+
+## Test Coverage Matrix
+
+> Generated from codebase, project guidelines, and spec - confirm before Execute. Guidelines found: `.specs/codebase/TESTING.md`, `.specs/codebase/CONVENTIONS.md`, `vitest.config.ts` (AD-003: coverage is report-only, no threshold gate).
+
+| Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
+| ---------- | ------------------ | -------------------- | ---------------- | ----------- |
+| Pure logic (`src/shared/**`, pure modules in `src/main/**`, `src/renderer/src/lib/**`) | unit | All branches; 1:1 to spec ACs; every listed edge case has a test | `<module>.test.ts` co-located | `npx vitest run <file>` |
+| Main-process orchestrators with DI (`SessionNotifier`, `SessionManager`) | unit | Every behaviour the ACs name, driven through hand-rolled fakes (no mocking library — TESTING.md pattern 3) | `src/main/<module>.test.ts` | `npx vitest run <file>` |
+| Type-only contracts (`src/shared/config.ts`, `ipc-contract.ts`) | none | Build gate only (TESTING.md: "shared types via typecheck") | - | build gate only |
+| Electron/main wiring (`src/main/index.ts`) | none | Hand-verified (TESTING.md: "thin OS/Electron shells") | - | build gate only |
+| Renderer React components (`src/renderer/src/components/**`, `App.tsx`) | none | Hand-verified via CDP smoke + a two-theme visual pass (TESTING.md) | - | build gate only |
+| Smoke scripts (`scripts/smoke-*.mjs`) | none | Owner-run against a live app; never in CI (TESTING.md) | - | build gate only |
+
+## Gate Check Commands
+
+> Generated from codebase - confirm before Execute. Judge every gate by **exit code**, never by reading the summary line (process lesson from `time-tracking`).
+
+| Gate Level | When to Use | Command |
+| ---------- | ----------- | ------- |
+| Quick | After tasks with unit tests only | `npx vitest run <the task's test file>` |
+| Full | After tasks that touch `SessionManager` | `npm test` |
+| Build | After phase completion or for type/wiring/renderer-only tasks | `npm run typecheck && npm run lint && npm test` (+ `npx electron-vite build` at the end of Phase 3 and Phase 4) |
+
+---
+
+## Execution Plan
+
+Phases are ordered and run sequentially - each phase completes before the next begins, and tasks within a phase execute in order.
+
+Each block below shows the real dependency edges, including the ones that cross a phase
+boundary. Tasks with no incoming edge still run in the listed order inside their phase.
+
+### Phase 1: Shared contracts
+
+```
+T1 → T2
+T3
+```
+
+### Phase 2: Main-process decision
+
+```
+T2 → T4
+T3 → T5
+T4 → T5
+```
+
+### Phase 3: Main-process integration
+
+```
+T4 → T6
+T2 → T7
+T5 → T7
+T6 → T7
+```
+
+### Phase 4: Renderer and smoke
+
+```
+T8 → T9
+T3 → T10
+T8 → T10
+T9 → T10
+T11
+T2 → T12
+T11 → T12
+T7 → T13
+T10 → T13
+T12 → T13
+```
+
+### Phase 5: Task in the notification — main (rev4)
+
+```
+T14 → T15
+T4 → T14
+T6 → T16
+T15 → T17
+T16 → T17
+T17 → T18
+```
+
+### Phase 6: Task in the notification — renderer and smoke (rev4)
+
+```
+T9 → T19
+T18 → T20
+T19 → T20
+```
+
+### Phase 7: Whole titles (rev5)
+
+```
+T15 → T21
+T19 → T22
+T20 → T23
+T21 → T23
+T22 → T23
+```
+
+---
+
+## Task Breakdown
+
+### T1: Notification switches in the config type ✅ COMPLETE
+
+**Status**: Done — five flat optional `ui` booleans on `AppConfig`, `DEFAULT_CONFIG` untouched. Build gate green: typecheck 0, lint 0 errors (18 pre-existing warnings), 917 tests.
+
+**What**: Add the five optional `ui` booleans (`notify`, `notifyNeedsApproval`, `notifyNeedsInput`, `notifyWaiting`, `notifyError`) to `AppConfig`, each documented as "absent = on"; `DEFAULT_CONFIG` stays without them.
+**Where**: `src/shared/config.ts`
+**Depends on**: None
+**Reuses**: the existing optional `ui` keys (`sidebarWidth?`, `collapsedWorkspaces?`) and their comment style
+**Requirement**: NOTF-15, NOTF-17
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Five optional booleans on `AppConfig['ui']`, flat (no nested object — design Risks: one-level-deep merge)
+- [x] `DEFAULT_CONFIG.ui` unchanged, so no migration and `config-store.test.ts:79` still passes unmodified
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged at 917 (no silent deletions)
+
+**Tests**: none (type-only contract layer — matrix says build gate only)
+**Gate**: build
+
+**Commit**: `feat(shared): declare the session notification switches`
+
+---
+
+### T2: Reading the notification preferences ✅ COMPLETE
+
+**Status**: Done — `src/shared/notifications.ts` + 10 tests (four states, key map, absent = on, explicit true = absent, master off keeps states, each state off alone). Quick gate green; lint clean. Suite 917 → 927.
+
+**What**: Implement `src/shared/notifications.ts` — `NotifiableState`, `NOTIFIABLE_STATES`, `NOTIFY_STATE_KEYS` and `readNotificationPrefs(ui)` applying "absent = on" to the master and each state.
+**Where**: `src/shared/notifications.ts`
+**Depends on**: T1
+**Reuses**: `src/shared/command-key.ts` as the precedent for a small pure shared module with a co-located test
+**Requirement**: NOTF-13, NOTF-14, NOTF-17, NOTF-19
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] `NOTIFIABLE_STATES` is exactly `needs-approval`, `needs-input`, `waiting`, `error`
+- [x] `NOTIFY_STATE_KEYS` maps each state to its `ui` key, typed so a missing state fails typecheck
+- [x] Tests cover: empty `ui` → master and all four on; each key `false` alone turns off only its own entry; master `false` leaves every state value as configured (NOTF-19 — master never rewrites states); explicit `true` equals absent
+- [x] Gate check passes: `npx vitest run src/shared/notifications.test.ts`
+- [x] Test count: 917 → ~925 (+~8; no silent deletions)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(shared): read notification switches with absent meaning on`
+
+---
+
+### T3: `session:notice` and `session:focus` channels ✅ COMPLETE
+
+**Status**: Done — `session:notice` and `session:focus` declared next to `session:activity`; `workflow:focus-run` untouched. Build gate green (phase 1 close): typecheck 0, lint 0 errors, 927 tests.
+
+**What**: Declare the two main→renderer events in `IpcEvents`: `'session:notice': { id: string; title: string; body: string }` and `'session:focus': { id: string }`.
+**Where**: `src/shared/ipc-contract.ts`
+**Depends on**: None
+**Reuses**: `'session:activity'` and `'workflow:focus-run'` entries (`ipc-contract.ts:138`, `:155`)
+**Requirement**: NOTF-02, NOTF-05
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Both events declared with a one-line comment each, next to the other `session:*` events
+- [x] `workflow:focus-run` untouched
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
+
+**Tests**: none (type-only contract layer)
+**Gate**: build
+
+**Commit**: `feat(shared): declare the session notice and focus pushes`
+
+---
+
+### T4: Deciding and describing a notification ✅ COMPLETE
+
+**Status**: Done — `activity-notification.ts` (`ActivityChange`, `decideNotification`, `describeNotification`) + 43 tests: each of the four states × surface, attached, master, own switch, first event; the three silent states; no activity; answered approval; detail-only change; wording and title prefix. Quick gate green; lint clean. Suite 927 → 970.
+
+**What**: Implement `src/main/activity-notification.ts` with `ActivityChange` (the type `SessionManager` will report), `decideNotification` (the seven ordered rules of the design) and `describeNotification` (title and body wording).
+**Where**: `src/main/activity-notification.ts`
+**Depends on**: T2
+**Reuses**: `SessionActivity` (`src/shared/config.ts`); `activity-machine.ts` as the precedent for a pure, table-tested main module
+**Requirement**: NOTF-01, NOTF-02, NOTF-03, NOTF-04, NOTF-07, NOTF-08, NOTF-09, NOTF-10, NOTF-11, NOTF-12, NOTF-13, NOTF-14, NOTF-24, NOTF-25, NOTF-27
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] No I/O, no Electron import; imports only from `src/shared`
+- [x] `decideNotification` tests, one per rule and per state: each of the four notifiable states entered from `working` → `'os'` when unfocused, `'in-app'` when focused and not attached, `null` when focused and attached (NOTF-01/02/03, 07/08/09); entering `working`, `compacting`, `exited` → `null` (NOTF-10); `after` null → `null` (NOTF-11); `before` null → `null` even for `waiting` (NOTF-27); `needs-approval` → `working` → `null` (NOTF-25); same state with a different tool or subagent count → `null`; master off → `null` on both surfaces (NOTF-13); one state off → `null` for it and still notifies the other three (NOTF-14); unfocused + attached → `'os'` (minimized is unfocused, NOTF-24)
+- [x] `describeNotification` tests: approval with and without a tool (NOTF-04); input; waiting; error with and without an error type (NOTF-08); title carries the agent and title, with no doubled `"<agent> · "` prefix when the title already starts with it, and a renamed title gets the prefix (NOTF-12)
+- [x] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
+- [x] Test count: ~925 → ~955 (+~30; no silent deletions)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(main): decide whether and where an activity change notifies`
+
+---
+
+### T5: SessionNotifier ✅ COMPLETE
+
+**Status**: Done — `SessionNotifier` + 7 fake-driven tests: OS path with title/body, click reveals then emits `session:focus`, in-app notice payload, silent transitions, prefs/focus read per change, one notification per session and each click opens its own. Build gate green (phase 2 close): typecheck 0, lint 0 errors, 977 tests.
+
+**What**: Implement the DI'd `SessionNotifier` that turns one `ActivityChange` into `showOs(...)` with a click that reveals the window and emits `session:focus`, or into an `emit('session:notice', ...)`, or into nothing.
+**Where**: `src/main/session-notifier.ts`
+**Depends on**: T3, T4
+**Reuses**: `SessionManagerDeps` / `EmitFn` DI shape; hand-rolled fakes as in `session-manager.test.ts`
+**Requirement**: NOTF-01, NOTF-02, NOTF-05, NOTF-22
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Reads `prefs()` and `windowFocused()` on every `handle` call, so a toggle applies to the next transition without a restart
+- [x] Tests with fakes: unfocused → one `showOs` call with the described title/body and no emit; invoking the captured click calls `reveal` then emits `session:focus` with the session id (NOTF-05); focused + not attached → one `session:notice` emit and no `showOs` (NOTF-02); decision `null` → neither; two changes for two sessions → two notifications, one per session id (NOTF-22)
+- [x] Gate check passes: `npx vitest run src/main/session-notifier.test.ts`
+- [x] Test count: ~955 → ~961 (+~6; no silent deletions)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(main): route activity notifications to the OS or the app`
+
+---
+
+### T6: SessionManager reports activity transitions ✅ COMPLETE
+
+**Status**: Done — `onActivityChange` dep called from `#setActivity` after the push, guarded by try/catch; +7 tests (first state, before/after, attached, renamed title, unchanged view, PTY exit while blocked, throwing listener). Existing 43 SessionManager tests unmodified. Full gate green: typecheck 0, 984 tests.
+
+**What**: Add the optional `onActivityChange` dep and call it from `#setActivity` after the `session:activity` emit, with `id`, `agent`, `title`, `before`, `after` and `attached`, guarded by `try/catch`.
+**Where**: `src/main/session-manager.ts`
+**Depends on**: T4
+**Reuses**: `#setActivity` (`session-manager.ts:340`) and its `sameView` gate; `#activeId`
+**Requirement**: NOTF-22, NOTF-26
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Called only when the view changed; never from `#finalize`
+- [x] Tests in `session-manager.test.ts` with the existing fakes: a hook event reports `before` null and `after` set; a second event reports the previous view as `before`; `attached` is true after `attach(id)` and false after `detach(id)`; a renamed session reports the new title; an unchanged view reports nothing; stopping a PTY that holds `needs-approval` reports nothing (NOTF-26); a throwing callback does not stop the `session:activity` emit
+- [x] Existing `session-manager.test.ts` cases pass unmodified
+- [x] Gate check passes: `npm test`
+- [x] Test count: ~961 → ~968 (+~7; no silent deletions)
+
+**Tests**: unit
+**Gate**: full
+
+**Commit**: `feat(main): report session activity transitions to a listener`
+
+---
+
+### T7: Electron wiring for session notifications ✅ COMPLETE
+
+**Status**: Done — `revealWindow` (destroyed-safe, restores minimized), `windowFocused` (minimized = unfocused), shared `showOs` holding each `Notification` until click/close/failed; the workflow toast now rides both; `SessionNotifier` wired as `onActivityChange`. Build gate green (phase 3 close): typecheck 0, lint 0 errors, electron-vite build ok, 984 tests. OS path hand-verified in T13.
+
+**What**: In `index.ts`, extract `revealWindow()` (destroyed-safe, restores a minimized window), add `windowFocused()`, make `showOs` hold each `Notification` until `click`/`close`/`failed`, reuse both for the workflow toast, construct `SessionNotifier`, and pass `onActivityChange` to `SessionManager`.
+**Where**: `src/main/index.ts`
+**Depends on**: T2, T5, T6
+**Reuses**: `notifier` (`index.ts:238`), `emitToWindow`, `configStore`
+**Requirement**: NOTF-05, NOTF-06, NOTF-21, NOTF-24
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] `Notification.isSupported()` false → nothing shown, no throw (NOTF-06)
+- [x] `revealWindow` and `windowFocused` no-op / false on a missing or destroyed window (NOTF-21); a minimized window counts as unfocused (NOTF-24)
+- [x] Workflow lifecycle toasts still click through to `workflow:focus-run` (unchanged behaviour, now via the shared helpers)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
+- [x] Test count: unchanged (no silent deletions)
+
+**Tests**: none (Electron/main wiring — hand-verified; the OS notification and its click ride T13's hand checks)
+**Gate**: build
+
+**Commit**: `feat(main): notify on session activity through Electron`
+
+---
+
+### T8: Session notice list logic ✅ COMPLETE
+
+**Status**: Done — `session-notices.ts` (`upsertNotice`, `dropNotice`) + 6 tests: first add, stacking order, in-place replace with the new key, no mutation, drop one, drop unknown. Quick gate green; lint clean. Suite 984 → 990.
+
+**What**: Implement `upsertNotice` and `dropNotice` over `Notice { id, title, body, key }`: a newer notice for a session replaces its old one in place, different sessions stack in arrival order.
+**Where**: `src/renderer/src/lib/session-notices.ts`
+**Depends on**: None
+**Reuses**: `src/renderer/src/lib/session-activity.ts` (`applyActivity`) as the precedent for an in-place list update with a unit test
+**Requirement**: NOTF-05, NOTF-22
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Pure; returns new arrays, never mutates the input
+- [x] Tests: upsert into empty; two sessions stack in order; a second notice for the same session replaces the first in place and changes `key` (so its timer restarts); drop removes only that session; drop of an unknown id returns an equal list
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/session-notices.test.ts`
+- [x] Test count: ~968 → ~974 (+~6; no silent deletions)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(renderer): keep one in-app notice per session`
+
+---
+
+### T9: SessionNotices component ✅ COMPLETE
+
+**Status**: Done — `SessionNotices` + CSS: stack bottom-right, open button carrying title and body, separate × with `aria-label=\"Dismiss\"`, 8 s timer restarted by `key`, theme tokens only. Build gate green: typecheck 0, lint 0 errors, 990 tests. Visual pass rides T13.
+
+**What**: Render the notice stack bottom-right: title, body, click opens, × dismisses, each auto-dismisses after 8 s keyed on `key`.
+**Where**: `src/renderer/src/components/SessionNotices.tsx` (+ `SessionNotices.css`)
+**Depends on**: T8
+**Reuses**: `Toast.tsx` timer pattern and `Toast.css` `toastIn` motion and tokens
+**Requirement**: NOTF-02, NOTF-05
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Each notice is a `button` with an accessible name carrying title and body; × has `aria-label="Dismiss"` and does not trigger open
+- [x] Uses theme tokens only, readable in light and dark
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
+
+**Tests**: none (renderer component — hand-verified in T13)
+**Gate**: build
+
+**Commit**: `feat(renderer): show clickable session notices`
+
+---
+
+### T10: App subscribes to session notices and focus ✅ COMPLETE
+
+**Status**: Done — notice list state, `session:notice` (upsert with a ref-counted key) and `session:focus` subscriptions, `openNotifiedSession` shared by both surfaces. Named apart from the existing chip `openSession` because the subscription needs a stable callback. Build gate green: typecheck 0, lint 0 errors, electron-vite build ok, 990 tests.
+
+**What**: In `App.tsx`, hold the notice list, subscribe `session:notice` (upsert) and `session:focus` (open), and add `openSession(id)`: direction `agents` with `config:patch`, `setSelectedSessionId(id)`, drop that session's notice.
+**Where**: `src/renderer/src/App.tsx`
+**Depends on**: T3, T8, T9
+**Reuses**: the `workflow:focus-run` effect (`App.tsx:164`); `setSelectedSessionId` from `useSessions`
+**Requirement**: NOTF-02, NOTF-05, NOTF-23
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Clicking an in-app notice and clicking an OS notification run the same `openSession`
+- [x] A stopped session is selected as-is (NOTF-23)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
+- [x] Test count: unchanged (no silent deletions)
+
+**Tests**: none (renderer component — hand-verified in T13)
+**Gate**: build
+
+**Commit**: `feat(renderer): open a session from its notification`
+
+---
+
+### T11: Settings dialog tabs ✅ COMPLETE
+
+**Status**: Done — `set-tabs` tablist under the header (General / Notifications, `role=tab` + `aria-selected`), header title follows the tab, unpersisted `tab` state opening on General, General body untouched, Notifications panel empty until T12. Build gate green: typecheck 0, lint 0 errors, 990 tests.
+
+**What**: Add a `role="tablist"` with **General** and **Notifications** under the dialog header; General holds today's body unchanged, the header title follows the tab, and the dialog opens on General.
+**Where**: `src/renderer/src/components/SettingsDialog.tsx` (+ `SettingsDialog.css`)
+**Depends on**: None
+**Reuses**: `TopBar` segmented tabs (`TopBar.tsx:94`, `topbar-segmented` / `topbar-segment` styles, copied as `set-tabs` / `set-tab`)
+**Requirement**: NOTF-28, NOTF-29
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Tabs carry `role="tab"` + `aria-selected`; the Notifications panel is an empty placeholder until T12
+- [x] Field state stays at dialog level, so an unsaved template edit and an open agent form survive General → Notifications → General (NOTF-29)
+- [x] Footer unchanged on both tabs
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
+
+**Tests**: none (renderer component — hand-verified in T13)
+**Gate**: build
+
+**Commit**: `feat(settings): split the dialog into General and Notifications tabs`
+
+---
+
+### T12: Notifications tab switches ✅ COMPLETE
+
+**Status**: Done — Notifications tab: master checkbox and the four state checkboxes (`dialog-check` pattern), read via `readNotificationPrefs`, each toggle patching only its own `ui` key; state checkboxes disabled and dimmed while the master is off, keeping their values. Build gate green: typecheck 0, lint 0 errors, electron-vite build ok, 990 tests.
+
+**What**: Fill the Notifications tab: master checkbox and four state checkboxes (*Needs approval*, *Needs input*, *Finished its turn*, *Turn failed*), read through `readNotificationPrefs`, each persisted immediately with a one-key `config:patch`, state checkboxes disabled while the master is off.
+**Where**: `src/renderer/src/components/SettingsDialog.tsx`
+**Depends on**: T2, T11
+**Reuses**: `persistShell` (`SettingsDialog.tsx:87`) persist-on-change pattern; `NOTIFY_STATE_KEYS` from T2
+**Requirement**: NOTF-16, NOTF-18, NOTF-19, NOTF-20
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Toggling the master writes only `notify`; toggling a state writes only its key (NOTF-16, NOTF-19)
+- [x] State checkboxes `disabled` while the master is off and keep their checked value (NOTF-20)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
+- [x] Test count: unchanged (no silent deletions)
+
+**Tests**: none (renderer component — hand-verified in T13)
+**Gate**: build
+
+**Commit**: `feat(settings): choose which session states notify`
+
+---
+
+### T13: Owner smoke script ✅ COMPLETE
+
+**Status**: Done — `scripts/smoke-notifications.mjs` written and linted — **NOT YET RUN; owner-run pending**. Zero tokens: the `claude --version` agent runs in `C:/Windows` and no input is typed until the version line shows (the dev app's registry agent is the real CLI). Unlike `smoke-activity.mjs` it removes only the sessions it created and restores the five switches and `ui.direction`. Build gate green: typecheck 0, lint 0 errors, electron-vite build ok, 990 tests.
+
+**What**: Write `scripts/smoke-notifications.mjs`, a zero-token CDP smoke: settings tabs and switches round-tripped through `config:get`, and the in-app notice path driven by POSTing documentation-shaped hook payloads to the loopback hook server for a session whose token it reads from the session's own shell.
+**Where**: `scripts/smoke-notifications.mjs`
+**Depends on**: T7, T10, T12
+**Reuses**: `scripts/smoke-activity.mjs` (CDP connection, settings file path, throwaway agent cleanup)
+**Requirement**: NOTF-02, NOTF-05, NOTF-14, NOTF-16, NOTF-18, NOTF-19, NOTF-20, NOTF-28, NOTF-29
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Spends no tokens: the throwaway agent runs `claude --version` so the hooked launch exits and leaves the shell holding `PLAYGROUND_ACTIVITY_TOKEN`; the hook URL comes from the generated settings file
+- [x] Checks: dialog opens on General; an unsaved template edit survives a tab round trip; each switch persists; master off disables the state switches and keeps their values; with session B attached, `working` → `needs-approval` on session A shows one in-app notice naming the tool; with `waiting` switched off, `working` → `waiting` shows nothing; clicking the notice selects A in the agents direction
+- [x] Header lists what is hand-verified: the OS notification while the app is in the background, its click after a minute (the GC risk), minimized window, two-theme visual pass of the tabs and notices
+- [x] Restores every switch it changed and removes the agent and sessions it created
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
+
+**Tests**: none (smoke script — owner-run, never in CI)
+**Gate**: build
+
+**Commit**: `test(notifications): add the owner smoke for session notifications`
+
+---
+
+### T14: Link a branch to a task ✅ COMPLETE
+
+**Status**: Done — `LinkedTask` + `linkTask` in `activity-notification.ts` + 6 tests (titled pin, uncached pin, unpinned number, no number, no branch, first of two same-id pins). Quick gate green; lint clean. Suite 990 → 996.
+
+**What**: Add `LinkedTask` and `linkTask(branch, tasks)` to `activity-notification.ts`: the number from `taskIdFromBranch`, the first pin with that id, its cached title or `null`.
+**Where**: `src/main/activity-notification.ts`
+**Depends on**: T4
+**Reuses**: `taskIdFromBranch` (`src/shared/tasks.ts:53`); the first-match rule of `linkedPinFor` (`src/renderer/src/lib/session-attribution.ts`)
+**Requirement**: NOTF-30, NOTF-31
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Tests: pinned with details → `{ id, title }`; pinned without details → `{ id, title: null }`; number not pinned → `{ id, title: null }`; branch without a number → `null`; `null` branch → `null`; two pins with the same id → the first
+- [x] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
+- [x] Test count: 990 → ~996 (no silent deletions)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(main): link a session branch to its pinned task`
+
+---
+
+### T15: Describe a notification with its task ✅ COMPLETE
+
+**Status**: Done — `describeNotification(session, activity, task?)` + `clip` at `MAX_TITLE_LENGTH` 60; +6 tests (titled task layout, number-only title, long title cut to 60 with …, exactly 60 kept, long session title cut without a task, renamed session on the second line). Existing describe tests unmodified. Quick gate green; lint clean. Suite 996 → 1002.
+
+**What**: Give `describeNotification` an optional `task`: title `#<id> · <title>` or `#<id>`, body `<state>\n<agent> · <session title>`; clip every title to 60 characters with `…`.
+**Where**: `src/main/activity-notification.ts`
+**Depends on**: T14
+**Reuses**: the rev3 agent-prefix rule, now applied to the body's second line
+**Requirement**: NOTF-30, NOTF-31, NOTF-32, NOTF-33
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Existing `describeNotification` tests pass unmodified (the no-task layout is unchanged)
+- [x] Tests: title and two-line body with a titled task; `#<id>` title with an untitled task; a 100-character task title gives a 60-character title ending in `…`; a title of exactly 60 characters is not cut; the second body line applies the agent prefix to a renamed session
+- [x] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
+- [x] Test count: ~996 → ~1001 (no silent deletions)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(main): name the task in session notifications`
+
+---
+
+### T16: Report the session cwd with each transition ✅ COMPLETE
+
+**Status**: Done — `ActivityChange.cwd` filled from `session.meta.cwd` in `#setActivity`; the first-state test now asserts `cwd`; the notifier test fixture gained the field. Full gate green: typecheck 0, lint clean, 1002 tests.
+
+**What**: Add `cwd` to `ActivityChange` and fill it in `SessionManager.#setActivity`.
+**Where**: `src/main/session-manager.ts`
+**Depends on**: T6
+**Reuses**: `session.meta.cwd`
+**Requirement**: NOTF-30
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] The first-state test in `session-manager.test.ts` asserts `cwd` in the reported change (the `ActivityChange` type gains the field in `activity-notification.ts` in this same task)
+- [x] Gate check passes: `npm test`
+- [x] Test count: unchanged or +1 (no silent deletions)
+
+**Tests**: unit
+**Gate**: full
+
+**Commit**: `feat(main): report the session cwd with activity transitions`
+
+---
+
+### T17: SessionNotifier looks the task up after deciding ✅ COMPLETE
+
+**Status**: Done — `linkedTask(cwd)` dep; `handle` is async, looks the task up only after a notifying decision and treats a rejection as no task. Existing 7 tests now await `handle` with unchanged assertions; +4 tests (task on the OS surface, task on the in-app notice, no lookup for silent transitions, failed lookup keeps the no-task layout). SPEC_DEVIATION: `index.ts` gets a placeholder `linkedTask: async () => null` (and `void` on the fire-and-forget call) in this commit so the tree keeps compiling; T18 replaces it. Gates: typecheck 0, lint 0 errors, 1006 tests.
+
+**What**: Add `linkedTask(cwd)` to `SessionNotifierDeps`; make `handle` async, call the dep only when the decision is not `null`, treat a rejection as no task, and pass the task to `describeNotification`.
+**Where**: `src/main/session-notifier.ts`
+**Depends on**: T15, T16
+**Reuses**: the existing fake harness in `session-notifier.test.ts`
+**Requirement**: NOTF-30, NOTF-34, NOTF-35
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Existing tests await `handle` and keep their assertions
+- [x] Tests: a linked task reaches both surfaces' title and body; a silent transition never calls `linkedTask`; a rejecting `linkedTask` still notifies with the no-task layout
+- [x] Gate check passes: `npx vitest run src/main/session-notifier.test.ts`
+- [x] Test count: ~1001 → ~1004 (no silent deletions)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(main): look up the linked task only for notifying transitions`
+
+---
+
+### T18: Read the session branch in main ✅ COMPLETE
+
+**Status**: Done — `readBranch(cwd)` (`git symbolic-ref --short HEAD`, 2 s timeout, `windowsHide`, any error → null) and `linkedTask` wired to `linkTask(branch, taskBoard.list().tasks)`, replacing T17's placeholder. Checked by hand: a branch answers, `C:/Windows` exits 128 (→ null), an unborn `feature/12345-notify-smoke` answers. Build gate green (phase 5 close): typecheck 0, lint 0 errors, electron-vite build ok, 1006 tests.
+
+**What**: In `index.ts`, add `readBranch(cwd)` (`git symbolic-ref --short HEAD`, 2 s timeout, `windowsHide`, any error → `null`) and wire `linkedTask: async (cwd) => linkTask(await readBranch(cwd), taskBoard.list().tasks)`.
+**Where**: `src/main/index.ts`
+**Depends on**: T17
+**Reuses**: `execFile`/`promisify` already imported in `index.ts`; `taskBoard`
+**Requirement**: NOTF-30, NOTF-34, NOTF-35
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] No Azure DevOps call on the notification path (`taskBoard.list()` only)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test && npx electron-vite build`
+- [x] Test count: unchanged (no silent deletions)
+
+**Tests**: none (Electron/main wiring — covered by T20's smoke)
+**Gate**: build
+
+**Commit**: `feat(main): read the session branch to name its task`
+
+---
+
+### T19: Notice layout for longer titles ✅ COMPLETE
+
+**Status**: Done — notice title clamped to two lines (`-webkit-line-clamp: 2`, `overflow-wrap: anywhere`), body `white-space: pre-line`. Build gate green: typecheck 0, lint 0 errors, 1006 tests. Visual pass rides T20.
+
+**What**: In `SessionNotices.css`, clamp the title to two lines and render body line breaks.
+**Where**: `src/renderer/src/components/SessionNotices.css`
+**Depends on**: T9
+**Reuses**: existing notice tokens
+**Requirement**: NOTF-36
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Title uses a two-line clamp instead of `white-space: nowrap`; body uses `white-space: pre-line`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
+
+**Tests**: none (renderer component — hand-verified in T20)
+**Gate**: build
+
+**Commit**: `style(renderer): let session notices show a task title and two body lines`
+
+---
+
+### T20: Smoke the task in the notification ✅ COMPLETE
+
+**Status**: Done — smoke: session A runs in a throwaway `%TEMP%` git repo on `feature/<id>-notify-smoke` with an unpinned id; in-app notices expect `#<id>` + two body lines and the rendered body is checked for two lines; the guided OS step lists the three lines and asks the owner y/n whether the toast shows them separately; the repo is deleted in cleanup. **Not yet run — owner-run pending.** Build gate green: typecheck 0, lint 0 errors, electron-vite build ok, 1006 tests.
+
+**What**: Run session A in a throwaway git repo under the scratch temp folder on branch `feature/12345-notify-smoke`, and update the notice checks to expect title `#12345` and the `<agent> · <session>` body line; remove the repo afterwards.
+**Where**: `scripts/smoke-notifications.mjs`
+**Depends on**: T18, T19
+**Reuses**: the smoke's cleanup and notice helpers
+**Requirement**: NOTF-31, NOTF-32, NOTF-36
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] The in-app approval notice check expects title `#12345` and a body with both lines; session B stays in `C:/Windows` and its notices (if any) keep the no-task layout
+- [x] The guided OS step asks the owner to confirm the task title and the second body line in the Windows toast (the newline risk)
+- [x] The temp repo is removed in cleanup; still zero tokens
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
+
+**Tests**: none (smoke script — owner-run)
+**Gate**: build
+
+**Commit**: `test(notifications): smoke the task named in notifications`
+
+---
+
+### T21: Send the title whole ✅ COMPLETE
+
+**Status**: Done — `clip` and `MAX_TITLE_LENGTH` removed; both titles sent as they are. The three rev4 cut tests were replaced (owner-approved spec change) by two: a long task title and a long session title arrive whole. Other tests unmodified. Quick gate green; node typecheck clean; lint clean. Suite 1006 → 1005.
+
+**What**: Remove `clip` and `MAX_TITLE_LENGTH` from `describeNotification`, so the task line and the session line are titles as they are.
+**Where**: `src/main/activity-notification.ts`
+**Depends on**: T15
+**Reuses**: nothing new
+**Requirement**: NOTF-33
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] The three rev4 tests that pinned the 60-character cut (long task title cut, exactly 60 kept, long session title cut) are replaced — owner-approved spec change — by tests that a long task title and a long session title arrive whole with no `…`
+- [x] Every other `activity-notification.test.ts` test passes unmodified
+- [x] Gate check passes: `npx vitest run src/main/activity-notification.test.ts`
+- [x] Test count: 1006 → ~1005 (3 replaced by 2; no silent deletions)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(main): send session notification titles whole`
+
+---
+
+### T22: Let the notice title wrap freely ✅ COMPLETE
+
+**Status**: Done — title clamp removed (`-webkit-box`, `-webkit-line-clamp`, `overflow: hidden`); `overflow-wrap: anywhere` kept. Build gate green: typecheck 0, lint 0 errors, 1005 tests.
+
+**What**: In `SessionNotices.css`, drop the two-line clamp from the title and keep `overflow-wrap: anywhere`.
+**Where**: `src/renderer/src/components/SessionNotices.css`
+**Depends on**: T19
+**Reuses**: existing notice styles
+**Requirement**: NOTF-36
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] No `-webkit-line-clamp`, `-webkit-box` or `overflow: hidden` on `.session-notice-title`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
+
+**Tests**: none (renderer component — hand-verified per T23)
+**Gate**: build
+
+**Commit**: `style(renderer): wrap the whole session notice title`
+
+---
+
+### T23: Smoke header expects the whole title ✅ COMPLETE
+
+**Status**: Done — smoke header's hand check now expects the whole title wrapping in the in-app notice with no `…`, and notes Windows may shorten its own toast title. Build gate green (phase 7 close): typecheck 0, lint 0 errors, electron-vite build ok, 1005 tests.
+
+**What**: Update the NOTF-36 hand-verify line in the smoke header: a long pinned task title must wrap in full, with no `…`, in the in-app notice.
+**Where**: `scripts/smoke-notifications.mjs`
+**Depends on**: T20, T21, T22
+**Reuses**: the existing header list
+**Requirement**: NOTF-33, NOTF-36
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Header names the whole-title check for the in-app notice and notes Windows may shorten its own toast title
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged (no silent deletions)
+
+**Tests**: none (smoke script — owner-run)
+**Gate**: build
+
+**Commit**: `test(notifications): expect whole titles in the smoke hand checks`
+
+---
+
+## Phase Execution Map
+
+Phases run in sequence; within a phase the tasks run in the order listed.
+
+| Order | Phase | Tasks |
+| ----- | ----- | ----- |
+| 1 | Shared contracts | T1, T2, T3 |
+| 2 | Main-process decision | T4, T5 |
+| 3 | Main-process integration | T6, T7 |
+| 4 | Renderer and smoke | T8, T9, T10, T11, T12, T13 |
+| 5 | Task in the notification — main (rev4) | T14, T15, T16, T17, T18 |
+| 6 | Task in the notification — renderer and smoke (rev4) | T19, T20 |
+| 7 | Whole titles (rev5) | T21, T22, T23 |
+
+Execution is strictly sequential - there is no intra-phase parallelism. A single agent (or batch worker) works one task at a time, in order.
+
+Packing for Execute: 13 tasks at ~7 per batch → **2 batches** (Phases 1–3 = 7 tasks, main process; Phase 4 = 6 tasks, renderer + smoke), so the sub-agent offer applies.
+
+---
+
+## Task Granularity Check
+
+| Task | Scope | Status |
+| ---- | ----- | ------ |
+| T1: config switches | 1 type, 5 keys | ✅ Granular |
+| T2: `readNotificationPrefs` | 1 module | ✅ Granular |
+| T3: two IPC events | 1 contract file | ✅ Granular |
+| T4: decide + describe | 2 cohesive pure functions, 1 file | ⚠️ OK — cohesive |
+| T5: `SessionNotifier` | 1 class | ✅ Granular |
+| T6: `onActivityChange` | 1 dep, 1 call site | ✅ Granular |
+| T7: Electron wiring | 1 file | ✅ Granular |
+| T8: notice list logic | 2 functions, 1 file | ✅ Granular |
+| T9: `SessionNotices` | 1 component (+ its CSS) | ✅ Granular |
+| T10: App subscriptions | 1 file | ✅ Granular |
+| T11: settings tabs | 1 component change (+ its CSS) | ✅ Granular |
+| T12: notification switches | 1 tab body | ✅ Granular |
+| T13: smoke | 1 script | ✅ Granular |
+| T14: `linkTask` | 1 function | ✅ Granular |
+| T15: describe with task | 1 function change + `clip` | ✅ Granular |
+| T16: `cwd` on the change | 1 field, 1 call site | ✅ Granular |
+| T17: async lookup in notifier | 1 method | ✅ Granular |
+| T18: `readBranch` wiring | 1 file | ✅ Granular |
+| T19: notice CSS | 1 stylesheet | ✅ Granular |
+| T20: smoke update | 1 script | ✅ Granular |
+| T21: whole title | 1 function change | ✅ Granular |
+| T22: notice CSS | 1 rule | ✅ Granular |
+| T23: smoke header | 1 comment block | ✅ Granular |
+
+---
+
+## Diagram-Definition Cross-Check
+
+| Task | Depends On (task body) | Diagram Shows | Status |
+| ---- | ---------------------- | ------------- | ------ |
+| T1 | None | none | ✅ Match |
+| T2 | T1 | T1 → T2 | ✅ Match |
+| T3 | None | none | ✅ Match |
+| T4 | T2 | T2 → T4 | ✅ Match |
+| T5 | T3, T4 | T3 → T5, T4 → T5 | ✅ Match |
+| T6 | T4 | T4 → T6 | ✅ Match |
+| T7 | T2, T5, T6 | T2 → T7, T5 → T7, T6 → T7 | ✅ Match |
+| T8 | None | none | ✅ Match |
+| T9 | T8 | T8 → T9 | ✅ Match |
+| T10 | T3, T8, T9 | T3 → T10, T8 → T10, T9 → T10 | ✅ Match |
+| T11 | None | none | ✅ Match |
+| T12 | T2, T11 | T2 → T12, T11 → T12 | ✅ Match |
+| T13 | T7, T10, T12 | T7 → T13, T10 → T13, T12 → T13 | ✅ Match |
+| T14 | T4 | T4 → T14 | ✅ Match |
+| T15 | T14 | T14 → T15 | ✅ Match |
+| T16 | T6 | T6 → T16 | ✅ Match |
+| T17 | T15, T16 | T15 → T17, T16 → T17 | ✅ Match |
+| T18 | T17 | T17 → T18 | ✅ Match |
+| T19 | T9 | T9 → T19 | ✅ Match |
+| T20 | T18, T19 | T18 → T20, T19 → T20 | ✅ Match |
+| T21 | T15 | T15 → T21 | ✅ Match |
+| T22 | T19 | T19 → T22 | ✅ Match |
+| T23 | T20, T21, T22 | T20 → T23, T21 → T23, T22 → T23 | ✅ Match |
+
+No dependency points to a later phase.
+
+---
+
+## Test Co-location Validation
+
+| Task | Code Layer Created/Modified | Matrix Requires | Task Says | Status |
+| ---- | --------------------------- | --------------- | --------- | ------ |
+| T1 | Type-only contract | none | none | ✅ OK |
+| T2 | Pure shared logic | unit | unit | ✅ OK |
+| T3 | Type-only contract | none | none | ✅ OK |
+| T4 | Pure main logic | unit | unit | ✅ OK |
+| T5 | DI orchestrator | unit | unit | ✅ OK |
+| T6 | DI orchestrator (`SessionManager`) | unit | unit | ✅ OK |
+| T7 | Electron/main wiring | none | none | ✅ OK |
+| T8 | Pure renderer lib | unit | unit | ✅ OK |
+| T9 | Renderer component | none | none | ✅ OK |
+| T10 | Renderer component | none | none | ✅ OK |
+| T11 | Renderer component | none | none | ✅ OK |
+| T12 | Renderer component | none | none | ✅ OK |
+| T13 | Smoke script | none | none | ✅ OK |
+| T14 | Pure main logic | unit | unit | ✅ OK |
+| T15 | Pure main logic | unit | unit | ✅ OK |
+| T16 | DI orchestrator (`SessionManager`) | unit | unit | ✅ OK |
+| T17 | DI orchestrator (`SessionNotifier`) | unit | unit | ✅ OK |
+| T18 | Electron/main wiring | none | none | ✅ OK |
+| T19 | Renderer component (CSS) | none | none | ✅ OK |
+| T20 | Smoke script | none | none | ✅ OK |
+| T21 | Pure main logic | unit | unit | ✅ OK |
+| T22 | Renderer component (CSS) | none | none | ✅ OK |
+| T23 | Smoke script | none | none | ✅ OK |
+
+---
+
+## Fix round 1 (Verifier FAIL, 2026-09-16)
+
+Round 1: gates green (990 tests), 20/21 mutants killed (the survivor is equivalent). FAIL on evidence only; no production code changed.
+
+### F1: NOTF-23 and the direction half of NOTF-05 ✅ COMPLETE
+
+Smoke step 8: raise a notice for A, switch to Tree, stop A, click the notice; assert the direction is Agents and A is selected. The old NOTF-05 check started in Agents and could not fail.
+
+### F2: NOTF-29 agent form ✅ COMPLETE
+
+Smoke opens the agent form, types a name, round-trips the tabs and asserts the form and its value are still there.
+
+### F3: NOTF-06 and NOTF-21 named as code reading ✅ COMPLETE
+
+Both are unreachable on a Windows desktop (notifications are supported; closing the last window quits). The smoke header now lists them with the guard each relies on.
+
+### F4: Spec precision ✅ COMPLETE
+
+Notification wording pinned in the spec's content row; NOTF-19's assumption row marked accepted; "attached" defined for directions other than agents.
+
+---
+
+## Fix round 2 (Verifier round 3 FAIL on the rev4 increment, 2026-09-16)
+
+Round 3: gates green (1006 tests), 17/17 mutants killed. FAIL on evidence and documentation only.
+
+### F5: NOTF-36 title half named for hand-verification ✅ COMPLETE
+
+The smoke's task is unpinned, so its `#<id>` title never wraps. The smoke header now names a long pinned task title as a hand check.
+
+### F6: Spec row names the shipped git command ✅ COMPLETE
+
+The rev4 source row said `git rev-parse --abbrev-ref HEAD`; the code uses `git symbolic-ref --short HEAD`, which answers on an unborn branch (the smoke's temp repo) and fails on a detached HEAD. Row corrected; stale coverage line updated.
+
+### F7: NOTF-34 git half named as code reading ✅ COMPLETE
+
+Added to the smoke header's CODE READING ONLY list, next to NOTF-06 and NOTF-21.
+
+### F8: No unhandled rejection from the async notifier ✅ COMPLETE
+
+`index.ts` catches and logs a failure of `sessionNotifier.handle` instead of `void`-ing the promise (Verifier observation: a throw in `showOs` after the lookup no longer reached `#setActivity`'s try/catch).
+
+---
+
+## Fix round 3 (Verifier round 5 FAIL on rev5, 2026-09-16)
+
+Round 5: gates green (1005 tests), 6/7 mutants killed. V7 (cutting the session title on the task layout's second body line) survived.
+
+### F9: Kill V7 ✅ COMPLETE
+
+New test: with a task, a 120-character session title arrives whole on the body's second line. NOTF-33 reworded to name both places the session title appears.
+
+### F10: design.md drift ✅ COMPLETE
+
+The rev4 `clip` and line-clamp bullets are marked superseded, and a short rev5 section records the change.
