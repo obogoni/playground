@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 41,
+  "next_id": 51,
   "lessons": [
     {
       "id": "L-001",
@@ -640,6 +640,187 @@
       ],
       "created": "2026-09-16T22:42:48Z",
       "last_seen": "2026-09-16T22:42:48Z"
+    },
+    {
+      "id": "L-041",
+      "key": "surviving_mutant::test interval layout logic with several clusters in one input not one cluster per case",
+      "text": "Test interval-layout logic with several clusters in one input, not one cluster per case",
+      "signal": "surviving_mutant",
+      "scope": "renderer/lib",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M12,M13 hours-calendar.ts:127 (renderer/lib)"
+      ],
+      "created": "2026-09-19T20:43:35Z",
+      "last_seen": "2026-09-19T20:43:35Z"
+    },
+    {
+      "id": "L-042",
+      "key": "surviving_mutant::cover the exact boundary case where one interval ends as the next starts for every interval comparison",
+      "text": "Cover the exact-boundary case where one interval ends as the next starts for every interval comparison",
+      "signal": "surviving_mutant",
+      "scope": "renderer/lib",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M10 hours-calendar.ts:128 (renderer/lib)"
+      ],
+      "created": "2026-09-19T20:43:36Z",
+      "last_seen": "2026-09-19T20:43:36Z"
+    },
+    {
+      "id": "L-043",
+      "key": "surviving_mutant::test rounding with inputs on both sides of the half so floor ceil and round are distinguishable",
+      "text": "Test rounding with inputs on both sides of the half so floor, ceil and round are distinguishable",
+      "signal": "surviving_mutant",
+      "scope": "renderer/lib",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M8 hours-calendar.ts:75 (renderer/lib)"
+      ],
+      "created": "2026-09-19T20:43:36Z",
+      "last_seen": "2026-09-19T20:43:36Z"
+    },
+    {
+      "id": "L-044",
+      "key": "spec_precision_gap::state numeric ui thresholds in the spec acceptance criterion not only in the design",
+      "text": "State numeric UI thresholds in the spec acceptance criterion, not only in the design",
+      "signal": "spec_precision_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "HCAL-12",
+        "hours-calendar edge case: narrow lane label"
+      ],
+      "created": "2026-09-19T20:43:36Z",
+      "last_seen": "2026-09-19T20:43:36Z"
+    },
+    {
+      "id": "L-045",
+      "key": "ac_gap::a check whose assertion is satisfied by either branch of a conditional render is not evidence for either drive the branch the criterion names from data the check itself creates",
+      "text": "A check whose assertion is satisfied by either branch of a conditional render is not evidence for either; drive the branch the criterion names from data the check itself creates.",
+      "signal": "ac_gap",
+      "scope": "smoke",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "HCAL-17 - scripts/smoke-hours-calendar.mjs:303-313 (smoke)"
+      ],
+      "created": "2026-09-19T21:43:36Z",
+      "last_seen": "2026-09-19T21:43:36Z"
+    },
+    {
+      "id": "L-046",
+      "key": "surviving_mutant::a state flag that re arms a close or cleanup rule needs a check that starts from the state where the flag is still false not only from the common state where it is already true",
+      "text": "A state flag that re-arms a close or cleanup rule needs a check that starts from the state where the flag is still false, not only from the common state where it is already true.",
+      "signal": "surviving_mutant",
+      "scope": "renderer",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "MH - src/renderer/src/components/HoursView.tsx:123-126 (renderer)"
+      ],
+      "created": "2026-09-19T21:43:36Z",
+      "last_seen": "2026-09-19T21:43:36Z"
+    },
+    {
+      "id": "L-047",
+      "key": "spec_precision_gap::a global key handler that exempts text fields is behaviour the acceptance criterion must state or the exemption is untestable and a mutant removing it survives",
+      "text": "A global key handler that exempts text fields is behaviour the acceptance criterion must state, or the exemption is untestable and a mutant removing it survives.",
+      "signal": "spec_precision_gap",
+      "scope": "renderer",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "HCAL-25 - src/renderer/src/components/HoursView.tsx:66-67 (renderer)"
+      ],
+      "created": "2026-09-19T21:43:36Z",
+      "last_seen": "2026-09-19T21:43:36Z"
+    },
+    {
+      "id": "L-048",
+      "key": "surviving_mutant::when an acceptance criterion gains a clause about rendered text or a visual token add its assertion in the same change a clause no check reads is where wrong output ships unnoticed",
+      "text": "When an acceptance criterion gains a clause about rendered text or a visual token, add its assertion in the same change; a clause no check reads is where wrong output ships unnoticed.",
+      "signal": "surviving_mutant",
+      "scope": "renderer",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "N1, N4, N5 - src/renderer/src/components/HoursView.tsx:306-327 (renderer)"
+      ],
+      "created": "2026-09-19T22:02:37Z",
+      "last_seen": "2026-09-19T22:02:37Z"
+    },
+    {
+      "id": "L-049",
+      "key": "spec_precision_gap::a count shown to the user must count what its label names do not label a group count as a task count when a group may carry no task",
+      "text": "A count shown to the user must count what its label names; do not label a group count as a task count when a group may carry no task.",
+      "signal": "spec_precision_gap",
+      "scope": "renderer",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "HCAL-15 - src/renderer/src/components/HoursView.tsx:309 (renderer)"
+      ],
+      "created": "2026-09-19T22:02:37Z",
+      "last_seen": "2026-09-19T22:02:37Z"
+    },
+    {
+      "id": "L-050",
+      "key": "surviving_mutant::exercise a fix at the boundary value it was made for an end to end check whose fixture never reaches that value cannot fail when the fix is undone",
+      "text": "Exercise a fix at the boundary value it was made for; an end-to-end check whose fixture never reaches that value cannot fail when the fix is undone.",
+      "signal": "surviving_mutant",
+      "scope": "smoke",
+      "status": "candidate",
+      "features": [
+        "hours-calendar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "P1 - src/renderer/src/components/HoursView.tsx:286 vs scripts/smoke-hours-calendar.mjs:342-356 (smoke)"
+      ],
+      "created": "2026-09-19T22:19:57Z",
+      "last_seen": "2026-09-19T22:19:57Z"
     }
   ]
 }

@@ -1,0 +1,69 @@
+/* Hours calendar legend (HCAL-21): a row of chips; swatches mirror the bars of HoursCalendar.css. */
+
+.hleg {
+  flex: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hleg-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 340px;
+  padding: 4px 10px;
+  box-sizing: border-box;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.hleg-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  border-radius: 3px;
+}
+
+.hleg-swatch.role-slot1 {
+  background: var(--hcal-slot1);
+}
+
+.hleg-swatch.role-slot2 {
+  background: var(--hcal-slot2);
+}
+
+.hleg-swatch.role-slot3 {
+  background: var(--hcal-slot3);
+}
+
+.hleg-swatch.role-other {
+  background: var(--text-faint);
+}
+
+.hleg-swatch.role-no-task {
+  background: transparent;
+  border: 1.5px solid var(--text-muted);
+}
+
+.hleg-label {
+  min-width: 0;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hleg-total {
+  flex: none;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}

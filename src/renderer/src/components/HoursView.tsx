@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { TimeEditResult, TimeSnapshot } from '../../../shared/time'
 import {
@@ -8,10 +8,20 @@ import {
   type DayReport,
   type GroupReport
 } from '../lib/hours-report'
+import {
+  assignColours,
+  legendEntries,
+  roleOf,
+  timeAxis,
+  weekColumns,
+  type ColourRole
+} from '../lib/hours-calendar'
 import { formatDayCopy } from '../lib/hours-copy'
 import { COPIED_FEEDBACK_MS } from '../lib/terminal-keys'
 import { formatDayHeader, formatHmCompact } from '../lib/time-format'
 import { useNow } from '../lib/use-time'
+import { HoursCalendar } from './HoursCalendar'
+import { HoursLegend } from './HoursLegend'
 import { Icon } from './Icon'
 import { PeriodRow } from './PeriodRow'
 import './HoursView.css'
@@ -37,10 +47,33 @@ const shortDate = (ms: number): string => {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`
 }
 
+/** Colour roles frozen for one shown week (HCAL-24). */
+interface FrozenColours {
+  weekStart: number
+  colours: Map<string, ColourRole>
+}
+
+/** The day open in the drawer, and the block a bar asked to focus (HCAL-15..19). */
+interface Selection {
+  weekStart: number
+  /** Local midnight of the selected day. */
+  date: number
+  focus?: BlockFocus
+  /** The selected day held time when last seen, so emptying it closes the drawer (edge case). */
+  hadTime: boolean
+}
+
+/** Esc typed into a field belongs to the field, not to the drawer. */
+const isTextField = (target: EventTarget | null): boolean =>
+  target instanceof HTMLElement && target.closest('input, textarea, select') !== null
+
 /**
- * Hours direction (TIME-31..43): one local week, Monday to Sunday, grouped by
- * day → task → merged block, with a per-day Copy in the Clockify text format.
- * Every number comes from the pure `hours-report` / `hours-copy` models.
+ * Hours direction (TIME-31..43, HCAL-01..26): one local week as a calendar of
+ * day columns with the worked blocks drawn as bars, colour chips above it, and
+ * a drawer beside it with the selected day's detail — groups, raw periods,
+ * edit, delete and the Clockify Copy. The view fits the window; only the
+ * drawer scrolls. Every number comes from the pure `hours-report`,
+ * `hours-calendar` and `hours-copy` models.
  */
 export function HoursView({
   snapshot,
@@ -59,7 +92,58 @@ export function HoursView({
     [snapshot, now, weekStart, liveTitles]
   )
   // Read the wall clock, not `now`: `now` stands still while nothing in the week is open.
-  const currentWeekStart = weekRange(new Date()).start
+  const wallClock = new Date()
+  const currentWeekStart = weekRange(wallClock).start
+  const columns = weekColumns(report, weekStart, wallClock.getTime())
+  const axis = useMemo(() => timeAxis(report), [report])
+
+  // Colours are assigned when a week loads and kept while it is shown, so live
+  // time never repaints a bar (HCAL-24). A week first seen before the snapshot
+  // arrived is assigned once its time does.
+  const [frozen, setFrozen] = useState<FrozenColours>(() => ({
+    weekStart,
+    colours: assignColours(report)
+  }))
+  let colours = frozen.colours
+  if (frozen.weekStart !== weekStart || (colours.size === 0 && report.days.length > 0)) {
+    colours = assignColours(report)
+    setFrozen({ weekStart, colours })
+  }
+
+  // Nothing is selected when the view opens or the week changes; the drawer
+  // closes too when its day loses its last period (HCAL-16, edge case).
+  const [selection, setSelection] = useState<Selection | null>(null)
+  let current = selection
+  const shownDay =
+    selection && selection.weekStart === weekStart
+      ? (columns.find((c) => c.date.getTime() === selection.date)?.day ?? null)
+      : null
+  if (selection && (selection.weekStart !== weekStart || (selection.hadTime && !shownDay))) {
+    current = null
+    setSelection(null)
+  } else if (selection && !selection.hadTime && shownDay) {
+    current = { ...selection, hadTime: true }
+    setSelection(current)
+  }
+
+  const selectDay = (date: number): void => {
+    const column = columns.find((c) => c.date.getTime() === date)
+    setSelection({ weekStart, date, hadTime: Boolean(column?.day) })
+  }
+  const selectBlock = (date: number, focus: BlockFocus): void =>
+    setSelection({ weekStart, date, focus, hadTime: true })
+  const closeDrawer = (): void => setSelection(null)
+
+  // Esc closes the drawer (HCAL-25).
+  const drawerOpen = current !== null
+  useEffect(() => {
+    if (!drawerOpen) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape' && !e.defaultPrevented && !isTextField(e.target)) setSelection(null)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [drawerOpen])
 
   // Shift by calendar days, not 7 × 24 h, so a DST change never skews Monday.
   const shiftWeek = (weeks: number): void => {
@@ -116,15 +200,75 @@ export function HoursView({
       </header>
 
       <div className="hours-body">
-        {report.days.length === 0 ? (
-          <div className="hours-empty">No time recorded this week.</div>
-        ) : (
-          report.days.map((day) => (
-            <DayCard key={day.date.getTime()} day={day} onDelete={onDelete} onAdjust={onAdjust} />
-          ))
-        )}
+        {report.days.length === 0 && <div className="hours-empty">No time recorded this week.</div>}
+        <HoursLegend entries={legendEntries(report, colours)} />
+        <div className="hours-main">
+          <HoursCalendar
+            columns={columns}
+            axis={axis}
+            colours={colours}
+            now={now}
+            selected={current?.date ?? null}
+            focus={current?.focus}
+            onSelectDay={selectDay}
+            onSelectBlock={selectBlock}
+          />
+          {current && (
+            <aside
+              className="hours-drawer"
+              aria-label={`Details of ${formatDayHeader(new Date(current.date))}`}
+            >
+              {shownDay ? (
+                <DayCard
+                  key={shownDay.date.getTime()}
+                  day={shownDay}
+                  onDelete={onDelete}
+                  onAdjust={onAdjust}
+                  focus={current.focus}
+                  colours={colours}
+                  onClose={closeDrawer}
+                />
+              ) : (
+                <section className="hours-day">
+                  <DayHead date={new Date(current.date)} onClose={closeDrawer} />
+                  <p className="hours-empty">No time recorded on this day.</p>
+                </section>
+              )}
+            </aside>
+          )}
+        </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * A request to highlight, expand and scroll to one block (HCAL-19). A fresh
+ * object per request, so activating the same bar again re-expands its block.
+ */
+export interface BlockFocus {
+  groupKey: string
+  start: number
+}
+
+/** The drawer card's top line: the day, how to close it, and the close button. */
+function DayHead({ date, onClose }: { date: Date; onClose: () => void }): JSX.Element {
+  return (
+    <header className="hours-day-head">
+      <div className="hours-day-titles">
+        <span className="hours-day-title">{formatDayHeader(date)}</span>
+        <span className="hours-day-hint">Click a bar or a day to open · Esc closes</span>
+      </div>
+      <button
+        type="button"
+        className="hours-drawer-close"
+        title="Close details"
+        aria-label="Close details"
+        onClick={onClose}
+      >
+        <Icon name="x" size={14} />
+      </button>
+    </header>
   )
 }
 
@@ -132,9 +276,32 @@ interface DayCardProps {
   day: DayReport
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
+  /** The block to focus; absent, the card renders as the list view did. */
+  focus?: BlockFocus
+  /** Colour roles of the shown week, for the swatch beside each group (HCAL-11). */
+  colours: Map<string, ColourRole>
+  onClose: () => void
 }
 
-function DayCard({ day, onDelete, onAdjust }: DayCardProps): JSX.Element {
+const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
+
+/** `2 tasks · 1 folder · 5 blocks`, leaving out what the day does not hold (HCAL-15). */
+function daySummary(day: DayReport): string {
+  const tasks = day.groups.filter((g) => g.taskId !== null).length
+  const folders = day.groups.length - tasks
+  return [
+    tasks > 0 ? plural(tasks, 'task') : null,
+    folders > 0 ? plural(folders, 'folder') : null,
+    plural(
+      day.groups.reduce((n, g) => n + g.blocks.length, 0),
+      'block'
+    )
+  ]
+    .filter((part) => part !== null)
+    .join(' · ')
+}
+
+function DayCard({ day, onDelete, onAdjust, focus, colours, onClose }: DayCardProps): JSX.Element {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -153,9 +320,10 @@ function DayCard({ day, onDelete, onAdjust }: DayCardProps): JSX.Element {
 
   return (
     <section className="hours-day">
-      <header className="hours-day-head">
-        <span className="hours-day-title">{formatDayHeader(day.date)}</span>
+      <DayHead date={day.date} onClose={onClose} />
+      <div className="hours-day-stats">
         <span className="hours-day-total">{formatHmCompact(day.totalMs)}</span>
+        <span className="hours-day-count">{daySummary(day)}</span>
         <span className="hours-head-spacer" />
         <button
           type="button"
@@ -166,9 +334,16 @@ function DayCard({ day, onDelete, onAdjust }: DayCardProps): JSX.Element {
           <Icon name={copied ? 'check' : 'copy'} size={13} />
           {copied ? 'Copied' : 'Copy'}
         </button>
-      </header>
+      </div>
       {day.groups.map((group) => (
-        <GroupSection key={group.key} group={group} onDelete={onDelete} onAdjust={onAdjust} />
+        <GroupSection
+          key={group.key}
+          group={group}
+          role={roleOf(colours, group.key)}
+          onDelete={onDelete}
+          onAdjust={onAdjust}
+          focus={focus?.groupKey === group.key ? focus : undefined}
+        />
       ))}
     </section>
   )
@@ -176,21 +351,33 @@ function DayCard({ day, onDelete, onAdjust }: DayCardProps): JSX.Element {
 
 interface GroupSectionProps {
   group: GroupReport
+  role: ColourRole
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
+  focus?: BlockFocus
 }
 
-function GroupSection({ group, onDelete, onAdjust }: GroupSectionProps): JSX.Element {
+function GroupSection({ group, role, onDelete, onAdjust, focus }: GroupSectionProps): JSX.Element {
   return (
     <div className="hours-group">
       <div className="hours-group-head">
-        <span className={`hours-group-label${group.taskId === null ? ' no-task' : ''}`}>
+        <span className={`hours-group-swatch role-${role}`} />
+        <span
+          className={`hours-group-label${group.taskId === null ? ' no-task' : ''}`}
+          title={group.label}
+        >
           {group.label}
         </span>
         <span className="hours-group-total">{formatHmCompact(group.totalMs)}</span>
       </div>
       {group.blocks.map((block) => (
-        <BlockLine key={block.start} block={block} onDelete={onDelete} onAdjust={onAdjust} />
+        <BlockLine
+          key={block.start}
+          block={block}
+          onDelete={onDelete}
+          onAdjust={onAdjust}
+          focus={focus?.start === block.start ? focus : undefined}
+        />
       ))}
     </div>
   )
@@ -200,14 +387,28 @@ interface BlockLineProps {
   block: Block
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
+  focus?: BlockFocus
 }
 
-function BlockLine({ block, onDelete, onAdjust }: BlockLineProps): JSX.Element {
+function BlockLine({ block, onDelete, onAdjust, focus }: BlockLineProps): JSX.Element {
   const [expanded, setExpanded] = useState(false)
+  const [seenFocus, setSeenFocus] = useState<BlockFocus | undefined>(undefined)
+  const ref = useRef<HTMLDivElement>(null)
   const open = block.periods.some((p) => p.open)
 
+  // Expand on each new focus request, adjusting state while rendering rather
+  // than in an effect; the user may still collapse it afterwards.
+  if (focus !== seenFocus) {
+    setSeenFocus(focus)
+    if (focus) setExpanded(true)
+  }
+
+  useEffect(() => {
+    if (focus) ref.current?.scrollIntoView({ block: 'nearest' })
+  }, [focus])
+
   return (
-    <div className="hours-block">
+    <div ref={ref} className={`hours-block${focus ? ' focused' : ''}`}>
       <button
         type="button"
         className="hours-block-line"
