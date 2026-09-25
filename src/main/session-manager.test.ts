@@ -13,7 +13,8 @@ import {
   SessionManager,
   SESSION_EXIT_WAIT_MS,
   type ActivityHooks,
-  type EmitFn
+  type EmitFn,
+  type SessionNames
 } from './session-manager'
 
 interface FakeHandle extends PtyHandle {
@@ -89,6 +90,30 @@ function fakeHooks(settingsPath: string | null = 'C:\\app\\hooks.json'): FakeHoo
   return hooks
 }
 
+interface FakeNames extends SessionNames {
+  watched: { id: string; claudeSessionId: string }[]
+  nudged: string[]
+  unwatched: string[]
+}
+
+function fakeNames(): FakeNames {
+  const names: FakeNames = {
+    watched: [],
+    nudged: [],
+    unwatched: [],
+    watch: (id, claudeSessionId) => {
+      names.watched.push({ id, claudeSessionId })
+    },
+    nudge: (id) => {
+      names.nudged.push(id)
+    },
+    unwatch: (id) => {
+      names.unwatched.push(id)
+    }
+  }
+  return names
+}
+
 interface EmittedEvent {
   channel: string
   payload: unknown
@@ -122,6 +147,8 @@ function makeManager(
     seed?: PersistedSession[]
     hooks?: FakeHooks
     onActivityChange?: (change: ActivityChange) => void
+    /** `null` builds a manager without the names dep (pre-feature wiring). */
+    names?: FakeNames | null
   } = {}
 ): {
   manager: SessionManager
@@ -129,6 +156,7 @@ function makeManager(
   port: PtyPort & { handles: FakeHandle[]; envs: (NodeJS.ProcessEnv | undefined)[] }
   emit: EmitFnRecorder
   hooks: FakeHooks
+  names: FakeNames
 } {
   const dir = mkdtempSync(join(tmpdir(), 'sm-'))
   dirs.push(dir)
@@ -137,6 +165,7 @@ function makeManager(
   const port = fakePort()
   const emit = recordingEmit()
   const hooks = opts.hooks ?? fakeHooks()
+  const names = opts.names ?? fakeNames()
   const manager = new SessionManager({
     port,
     config,
@@ -144,9 +173,10 @@ function makeManager(
     emit: emit as unknown as EmitFn,
     fsExists: opts.fsExists ?? (() => true),
     hooks,
-    onActivityChange: opts.onActivityChange
+    onActivityChange: opts.onActivityChange,
+    ...(opts.names === null ? {} : { names })
   })
-  return { manager, config, port, emit, hooks }
+  return { manager, config, port, emit, hooks, names }
 }
 
 const CWD = 'C:\\work\\repo-feature'
@@ -465,6 +495,9 @@ function hookEvent(name: string, extra: Record<string, unknown> = {}): Record<st
 const activityEvents = (emit: EmitFnRecorder): unknown[] =>
   emit.events.filter((e) => e.channel === 'session:activity').map((e) => e.payload)
 
+const nameEvents = (emit: EmitFnRecorder): unknown[] =>
+  emit.events.filter((e) => e.channel === 'session:name').map((e) => e.payload)
+
 describe('SessionManager activity hooks', () => {
   it('launches Claude with the hook settings and the session token (ACTV-01)', () => {
     const { manager, port, hooks } = makeManager()
@@ -752,5 +785,212 @@ describe('SessionManager activity transitions', () => {
     ])
     expect(manager.list()[0].activity).toEqual({ state: 'waiting', subagents: 0 })
     error.mockRestore()
+  })
+})
+
+describe('SessionManager — session names (AD-040)', () => {
+  const CLAUDE_ID = 'claude-side-id'
+
+  it('records the session_id of the first hook event and watches it (SNAME-08, SNAME-09)', () => {
+    const { manager, names } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+
+    expect(names.watched).toEqual([{ id: view.id, claudeSessionId: CLAUDE_ID }])
+    expect(names.nudged).toEqual([])
+  })
+
+  it('nudges, without re-watching, while a known session is still unnamed (SNAME-09)', () => {
+    const { manager, names } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+
+    manager.handleHookEvent(view.id, hookEvent('PreToolUse', { tool_name: 'Bash' }))
+
+    expect(names.watched).toHaveLength(1)
+    expect(names.nudged).toEqual([view.id])
+  })
+
+  it('re-watches with the new session_id after /clear or /resume (edge case)', () => {
+    const { manager, names } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit', { session_id: 'claude-new' }))
+
+    expect(names.watched).toEqual([
+      { id: view.id, claudeSessionId: CLAUDE_ID },
+      { id: view.id, claudeSessionId: 'claude-new' }
+    ])
+    expect(names.nudged).toEqual([])
+  })
+
+  it('neither watches nor nudges once the session has its name', () => {
+    const { manager, names } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+
+    manager.handleHookEvent(view.id, hookEvent('Stop'))
+
+    expect(names.watched).toHaveLength(1)
+    expect(names.nudged).toEqual([])
+  })
+
+  it.each([
+    ['missing', { session_id: undefined }],
+    ['not a string', { session_id: 42 }],
+    ['empty', { session_id: '' }]
+  ])('ignores a payload whose session_id is %s (SNAME-08)', (_, extra) => {
+    const { manager, names } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit', extra))
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+
+    expect(names.watched).toEqual([])
+    expect(names.nudged).toEqual([])
+    expect(manager.list()[0].name).toBeUndefined()
+  })
+
+  it('sets the name from the listing, pushes it once, and lists it (SNAME-01, SNAME-11)', () => {
+    const { manager, emit } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+
+    expect(manager.list()[0].name).toBe('alpha')
+    expect(nameEvents(emit)).toEqual([{ id: view.id, name: 'alpha' }])
+  })
+
+  it('pushes nothing when a listing repeats the name the session holds (SNAME-11)', () => {
+    const { manager, emit } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+
+    expect(nameEvents(emit)).toHaveLength(1)
+  })
+
+  it('updates the name in place when a later listing renames the session (SNAME-02)', () => {
+    const { manager, emit } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    manager.applyNames(new Map([[CLAUDE_ID, 'repos-a2']]))
+
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+
+    expect(manager.list()[0].name).toBe('alpha')
+    expect(nameEvents(emit)).toEqual([
+      { id: view.id, name: 'repos-a2' },
+      { id: view.id, name: 'alpha' }
+    ])
+  })
+
+  it('clears the name when a successful listing no longer carries the id (SNAME-11)', () => {
+    const { manager, emit } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+
+    manager.applyNames(new Map([['someone-else', 'beta']]))
+
+    expect(manager.list()[0].name).toBeUndefined()
+    expect(nameEvents(emit)).toEqual([
+      { id: view.id, name: 'alpha' },
+      { id: view.id, name: null }
+    ])
+  })
+
+  it('names both app sessions that share one session_id (edge case)', () => {
+    const { manager } = makeManager()
+    const first = manager.spawn('Claude', CWD)
+    const second = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(first.id, hookEvent('UserPromptSubmit'))
+    manager.handleHookEvent(second.id, hookEvent('UserPromptSubmit'))
+
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+
+    expect(manager.list().map((s) => s.name)).toEqual(['alpha', 'alpha'])
+  })
+
+  it('skips a running session that has reported no session_id yet (SNAME-03, SNAME-11)', () => {
+    const { manager, emit } = makeManager()
+    manager.spawn('Claude', CWD)
+
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+
+    expect(manager.list()[0].name).toBeUndefined()
+    expect(nameEvents(emit)).toEqual([])
+  })
+
+  it('drops the name and unwatches when the session stops (SNAME-04)', async () => {
+    const { manager, emit, names } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+    emit.events.length = 0
+
+    await manager.stop(view.id)
+
+    expect(names.unwatched).toEqual([view.id])
+    expect(manager.list()[0]).toMatchObject({ status: 'stopped' })
+    expect(manager.list()[0].name).toBeUndefined()
+    expect(nameEvents(emit)).toEqual([])
+  })
+
+  it('drops the name and unwatches when the PTY exits on its own (SNAME-04)', () => {
+    const { manager, port, names } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+
+    port.handles[0].emitExit(0)
+
+    expect(names.unwatched).toEqual([view.id])
+    expect(manager.list()[0].name).toBeUndefined()
+  })
+
+  it('starts a respawned session unnamed until its own hooks report an id (SNAME-03)', async () => {
+    const { manager, names } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+    await manager.stop(view.id)
+
+    manager.respawn(view.id)
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+
+    expect(manager.list()[0].name).toBeUndefined()
+    expect(names.watched).toHaveLength(1)
+  })
+
+  it('never writes the name to the config, and a restored session has none (SNAME-15)', () => {
+    const { manager, config } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+
+    for (const session of config.get().sessions) {
+      expect(session).not.toHaveProperty('name')
+    }
+    const restored = makeManager({ seed: config.get().sessions })
+    expect(restored.manager.list()[0].name).toBeUndefined()
+  })
+
+  it('works without a names collaborator, as before the feature', () => {
+    const { manager, emit } = makeManager({ names: null })
+    const view = manager.spawn('Claude', CWD)
+
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    manager.handleHookEvent(view.id, hookEvent('Stop'))
+    manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
+
+    expect(manager.list()[0].name).toBe('alpha')
+    expect(nameEvents(emit)).toEqual([{ id: view.id, name: 'alpha' }])
   })
 })

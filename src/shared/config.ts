@@ -59,6 +59,11 @@ export interface SessionView extends PersistedSession {
    *  for ad-hoc and non-Claude sessions, for stopped sessions, and until the
    *  first hook event arrives. Never persisted (ACTV-09). */
   activity?: SessionActivity
+  /** The name Claude Code gives this session, read from `claude agents --json`
+   *  and matched by the `session_id` its hooks report (AD-040). Absent until the
+   *  first successful listing after the first hook event, for ad-hoc and
+   *  non-Claude sessions, and for stopped sessions. Never persisted (SNAME-15). */
+  name?: string
 }
 
 /** One worktree's remembered Files lens (FXPL-13). `base` is absent until the

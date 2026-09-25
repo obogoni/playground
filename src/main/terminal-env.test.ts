@@ -13,6 +13,16 @@ describe('buildPtyEnv', () => {
     expect(env.TERM_PROGRAM).toBeUndefined()
   })
 
+  it('claims hyperlink support so agents emit OSC 8 for paths and urls (LINK-33)', () => {
+    const env = buildPtyEnv({})
+    expect(env.FORCE_HYPERLINK).toBe('1')
+    expect(env.TERM_PROGRAM).toBeUndefined()
+  })
+
+  it('overrides a parent FORCE_HYPERLINK=0 (LINK-33)', () => {
+    expect(buildPtyEnv({ FORCE_HYPERLINK: '0' }).FORCE_HYPERLINK).toBe('1')
+  })
+
   it('preserves the rest of the parent environment', () => {
     const env = buildPtyEnv({ PATH: 'C:\\bin', HOME: 'C:\\Users\\dev' })
     expect(env.PATH).toBe('C:\\bin')

@@ -68,6 +68,7 @@ A hand-written stub implementing the collaborator's interface is passed into the
 | Renderer React components (`src/renderer/**`) | none (CDP smoke + visual) | — | `node scripts/smoke-*.mjs` |
 | Build config & CI workflows (`electron-builder.yml`, `.github/workflows/*`, `dev-app-update.yml`) | none (real build / real test release) | — | `npm run build:win` + cut a throwaway release |
 | Out-of-CI smoke scripts (`scripts/smoke-*.mjs`) | manual only | `scripts/smoke-*.mjs` | `node scripts/smoke-*.mjs` (live session) |
+| Session names end to end (`scripts/smoke-session-name.mjs`: two real Claude sessions, first prompt, `/rename`, stop — spends two short prompts; needs the app alone on its `userData`) | manual only | `scripts/smoke-session-name.mjs` | `node scripts/smoke-session-name.mjs` (live session) |
 
 ## Parallelism Assessment
 
