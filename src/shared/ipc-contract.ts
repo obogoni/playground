@@ -20,6 +20,7 @@ import type {
   FilesMode
 } from './files'
 import type { CommitLists, GitOp, GitOpResult, SyncState } from './git'
+import type { ProbeResult } from './links'
 import type { ClipboardPaste } from './paste'
 import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type { ParentOfResult, PinTaskResult, TasksSnapshot } from './tasks'
@@ -53,6 +54,14 @@ export interface IpcContract {
   'tree:get': { req: void; res: WorkspaceNode[] }
   /** Opens the external tool rooted at the path; failures are returned, never thrown. */
   'shortcuts:launch': { req: { tool: ShortcutTool; path: string }; res: LaunchResult }
+  /** Resolves each candidate against cwd and stats it; never throws, unresolvable → 'missing' (LINK-29). */
+  'links:probe': { req: { cwd: string; paths: string[] }; res: ProbeResult[] }
+  /** Opens an http/https URL in the default browser; any other scheme is refused (LINK-04). */
+  'links:openUrl': { req: { url: string }; res: LaunchResult }
+  /** Opens a file with its Windows default app (or the "Open with" chooser) and a directory in Explorer. */
+  'links:openPath': { req: { cwd: string; pathText: string }; res: LaunchResult }
+  /** Opens an OSC 8 `file://` target through the same rules as `links:openPath`; any other URL is refused (LINK-21). */
+  'links:openFileUrl': { req: { url: string }; res: LaunchResult }
   /** git worktree add at the flat-sibling path; failures are returned, never thrown. */
   'worktrees:create': {
     req: {
@@ -198,6 +207,9 @@ export interface IpcEvents {
   /** What the session's agent is doing, folded from its lifecycle hooks; `null`
    *  clears it back to the plain `running` rendering (ACTV-05). */
   'session:activity': { id: string; activity: SessionActivity | null }
+  /** The agent's own session name changed; `null` clears it back to the agent
+   *  display name (SNAME-02, SNAME-04). */
+  'session:name': { id: string; name: string | null }
   /** A run's folded lifecycle status changed (WF2-12). */
   'workflow:status': { runId: string; status: RunStatus }
   /** A `step-started` event — an executed `ctx.*` primitive / `ctx.step` group (WF2-10). */

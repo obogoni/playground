@@ -121,12 +121,19 @@ are one visual change — half of it is not demo-able.
     `worktree path missing` in `var(--red)`, taking precedence over the
     `detached` and `untagged worktree` notes. <!-- RAIL-11, unwanted-behaviour -->
 12. The system SHALL render each session row as a 22×22 agent tile tinted by
-    `agentColor`, the agent's display name, a short status label, a status dot,
-    and the action buttons for its state — and SHALL NOT render the worktree
-    name, the branch line, or the last-output preview anywhere in a row. <!-- RAIL-12, ubiquitous -->
-13. WHEN two or more sessions in one group share an agent name THEN the system
-    SHALL label each of them `<agentName> <n>` with `n` 1-based in group order,
-    and SHALL leave an agent name that is unique within its group unsuffixed. <!-- RAIL-13, event-driven -->
+    `agentColor`, the row label — the agent's own session name when it reports
+    one (SNAME-01), else the agent's display name — a short status label, a
+    status dot, and the action buttons for its state — and SHALL NOT render the
+    worktree name, the branch line, or the last-output preview anywhere in a
+    row. <!-- RAIL-12, ubiquitous -->
+13. WHEN two or more sessions in one group share a row label THEN the system
+    SHALL label each of them `<label> <n>` with `n` 1-based in group order,
+    and SHALL leave a label that is unique within its group unsuffixed. <!-- RAIL-13, event-driven -->
+
+    > Amended 2026-09-19 for `session-name` (AD-040, the AD-018 precedent):
+    > RAIL-12 and RAIL-13 said "the agent's display name" / "an agent name";
+    > the label may now be the session's own name. Everything else in the row
+    > is unchanged.
 14. The system SHALL resolve a row's short status by the precedence
     `running` → `running`/`--green`, else `pathMissing` → `path missing`/`--red`,
     else `stopped`/`--text-faint`. <!-- RAIL-14, ubiquitous -->
