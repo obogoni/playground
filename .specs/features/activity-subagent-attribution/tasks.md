@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: none as a separate file — one module changes (`activity-machine.ts`) and its shape is fixed below. `MachineState` grows four private fields: whether the main agent's turn has ended (`mainStopped`), the ids in the last main-agent `Stop`'s `background_tasks` (`background`, absent until a `Stop` carries the field), the subagents that stopped and still owe their result (`owed`), and who asked the pending question (`askedBy`: an `agent_id`, or `main`). The view (`SessionActivity`) does not change, so IPC, renderer and notifications are untouched.
-**Status**: Re-planned 2026-09-25 after T1's findings — awaiting owner approval of T2..T7 (first plan approved 2026-09-25, planned 2026-09-22)
+**Status**: Re-planned 2026-09-25 after T1's findings and approved by the owner the same day — in Execute (planned 2026-09-22)
 
 **Branch**: `feature/activity-subagent-attribution`, rebased onto `origin/main` `c31bb9a` on 2026-09-25 after #94 merged. The PR goes to `obogoni:main` with `Closes #106`, and no longer depends on #94.
 
@@ -127,7 +127,7 @@ Probe: the app's 16 hooks as http hooks, same shape as `buildClaudeHookSettings`
 
 ---
 
-### T2: Sanitised fixtures of the captured sequences
+### T2: Sanitised fixtures of the captured sequences ✅
 
 **What**: S1, S2, S3a and S4 as typed arrays of hook payloads, keeping the captured event order and reduced to the fields the machine reads: `hook_event_name`, `agent_id`, `agent_type`, `tool_name`, `notification_type`, `reason`, `background_tasks` as `{ id, type }`, and a `UserPromptSubmit` prompt kept only as its `<task-notification>` / `<task-id>` marker or a fixed fictitious sentence. Every id is fictitious and readable (`sub-1`, `side-1`, `shell-1`). A test rejects anything that looks real.
 **Where**: `src/main/activity-sequences.fixture.ts` (new) and `src/main/activity-sequences.fixture.test.ts` (new)
@@ -142,10 +142,10 @@ Probe: the app's 16 hooks as http hooks, same shape as `buildClaudeHookSettings`
 
 **Done when**:
 
-- [ ] Each fixture keeps the captured event order exactly, side agents included
-- [ ] The sanitisation test fails on a planted `C:\Users\…` string, a drive-letter path, a UUID-shaped id and a 17-hex agent id (seen failing, then the plant removed)
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: baseline + the sanitisation tests (no silent deletions)
+- [x] Each fixture keeps the captured event order exactly, side agents included — generated from the raw log in arrival order, not written by hand
+- [x] The sanitisation test fails on a planted `C:\Users\…` string, a drive-letter path, a UUID-shaped id and a 17-hex agent id (seen failing: each plant in the real fixture gave 1 failed of 17, then the file was restored byte for byte; `findLeaks` keeps one test per shape)
+- [x] Gate check passes: `npm test` (typecheck and lint too; lint still 18 warnings)
+- [x] Test count: baseline + the sanitisation tests (no silent deletions) — 1663 + 17 = 1680
 
 **Tests**: unit
 **Gate**: quick

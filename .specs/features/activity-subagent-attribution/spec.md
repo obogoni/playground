@@ -148,7 +148,7 @@ The Claude Code docs were silent on the facts a fix depends on. T1 measured them
 | ASUB-10 | P1: question stays — AC 10 | — | N/A — T1: tool hooks carry `agent_id` |
 | ASUB-11 | P1: question stays — AC 11 | Tasks | In Tasks |
 | ASUB-12 | P1: real sequences — AC 12 | Tasks | In Tasks |
-| ASUB-13 | P1: real sequences — AC 13 | Tasks | In Tasks |
+| ASUB-13 | P1: real sequences — AC 13 | Execute | Done (T2) |
 | ASUB-14 | P1: no "your turn" — AC 14 | Tasks | In Tasks |
 | ASUB-15 | P1: no "your turn" — AC 15 | Tasks | In Tasks |
 | ASUB-16 | P1: no "your turn" — AC 16 | Tasks | In Tasks |
