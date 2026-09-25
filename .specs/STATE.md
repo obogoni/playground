@@ -429,14 +429,16 @@ Lesson candidates L-017..L-022 of this branch were renumbered **L-035..L-040** a
 
 ### `session-strip-polish` (PR #98)
 
+Lesson candidates L-030..L-032 of this branch were renumbered **L-051..L-053** at rebase time (`origin/main` already held L-030..L-040, and #99 claims L-041..L-050).
+
 **Status (current, 2026-09-19): `session-strip-polish` COMPLETE. T1-T6 are executed, and the
 independent Verifier returned **PASS** in round 2 of 3, on branch `feature/session-strip-polish`
-(cut from `develop` at `9919139`). Nothing is uncommitted and nothing is pushed: the local
-branch is ahead of `fork`. Report: `.specs/features/session-strip-polish/validation.md`;
+(cut from `develop` at `9919139`, rebased onto `origin/main` on 2026-09-25 after #93 and #94
+merged). Open upstream as PR #98. Report: `.specs/features/session-strip-polish/validation.md`;
 `validate_state.py` exits 0.**
 
 - **Commits:** T1-T6 are `5522aa8`..`adcaaa4`. Then `19ef7bc` closed the Verifier's round-1
-  gaps, `80dbb7f` records the report and `423d055` adds lessons L-030..L-032.
+  gaps, `80dbb7f` records the report and `423d055` adds lessons L-051..L-053.
 - **Verification:** the suite went from 1200 to **1216** tests (69 files). Typecheck, lint
   (17 warnings, the baseline) and `npx electron-vite build` all exit 0. The discrimination
   sensor killed 11 of 11 mutants. `scripts/smoke-strip.mjs` ran **24/24** against the dev
@@ -451,10 +453,8 @@ branch is ahead of `fork`. Report: `.specs/features/session-strip-polish/validat
   - a screen reader announcing the clock as a pressed / not-pressed toggle.
 - **Next:**
   - owner hand checks;
-  - `git push fork feature/session-strip-polish`;
-  - merge into `develop`: renumber L-030..L-032, which collide with the status-bar lessons
-    already on `develop`;
-  - the upstream PR waits for #93 and #94, then
-    `git rebase --onto origin/main develop feature/session-strip-polish`.
+  - review of PR #98. The branch was rebased with `--onto origin/main 9919139`, so it now
+    carries only its own 11 commits; the code diff is unchanged and the conflicts were all in
+    `.specs/`. Gate on the rebased tip: typecheck 0, lint 0 errors / 18 warnings, **1679 tests**.
 - **Follow-up, not in scope:** `smoke-time.mjs:186` selects the first running row under
   `C:\Windows`, not the session it spawned. It could pause an owner's session in that folder.
