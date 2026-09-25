@@ -45,7 +45,7 @@ on whether `idle_prompt` fires while subagents run. A spike with a real session 
 | A subagent count stuck above zero (a lost `SubagentStop`) | `idle_prompt` moves the session to `waiting` and empties the active set | Owner decision (grill Q8) — **only if** T1 finds that `idle_prompt` does not fire while subagents run; if it does, execution stops and the question returns to the owner | n — T1 measures |
 | How facts are measured | An owner-driven interactive Claude Code session in a scratch folder, its hooks posted to a throwaway listener that logs each payload in order | Owner decision (grill Q2). Approvals need a human, and `--settings` keeps the owner's real hook configuration untouched | y |
 | Test fixtures | The captured sequences, reduced to the fields the machine reads, with ids, paths, prompts and messages replaced by fictitious values | Public repository (privacy guardrail) | y |
-| Base branch | `feature/activity-subagent-attribution` off `feature/session-idle-notifications` (PR #94, tip `9e81522`); its PR says "depends on #94" | Owner decision (grill Q7) | y |
+| Base branch | `feature/activity-subagent-attribution` off `feature/session-idle-notifications` (PR #94, tip `9e81522`); #94 merged, so on 2026-09-25 the branch was rebased onto `origin/main` and its PR closes #106 | Owner decision (grill Q7) | y |
 
 **Open questions:** none — all resolved or logged above. The two `n` rows are settled by T1, each with its outcome already decided.
 

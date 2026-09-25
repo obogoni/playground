@@ -9,9 +9,9 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: none as a separate file — one module changes (`activity-machine.ts`) and its shape is fixed below. The machine grows two private fields on `MachineState`: whether the main agent's turn has ended (`mainStopped`), and who asked the pending question (`askedBy`: an `agent_id`, or `main`). The view (`SessionActivity`) does not change, so IPC, renderer and notifications are untouched.
-**Status**: Draft — awaiting owner approval (planned 2026-09-22)
+**Status**: Approved by the owner 2026-09-25 (planned 2026-09-22) — in Execute
 
-**Branch**: `feature/activity-subagent-attribution` off `feature/session-idle-notifications` `9e81522` (PR #94). PR carries "depends on #94"; once #94 merges, `git rebase --onto origin/main feature/session-idle-notifications feature/activity-subagent-attribution`.
+**Branch**: `feature/activity-subagent-attribution`, rebased onto `origin/main` `c31bb9a` on 2026-09-25 after #94 merged. The PR goes to `obogoni:main` with `Closes #106`, and no longer depends on #94.
 
 **Test baseline**: **re-measure** with `npx vitest run` as the first act of Execute; record the lint warning count at the same time.
 
