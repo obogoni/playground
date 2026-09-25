@@ -1,5 +1,6 @@
 import type { AgentDef, Shell } from '../main/spawn-plan'
 import { SEEDED_AGENTS } from './agents'
+import type { FilesMode } from './files'
 import type { PinnedTask } from './tasks'
 import { DEFAULT_BRANCH_TEMPLATE } from './tasks'
 import type { WorkspaceEntry } from './tree'
@@ -60,10 +61,17 @@ export interface SessionView extends PersistedSession {
   activity?: SessionActivity
 }
 
+/** One worktree's remembered Files lens (FXPL-13). `base` is absent until the
+ *  user picks one; the diff mode then falls back to `origin/HEAD` (FXPL-10). */
+export interface FilesState {
+  mode: FilesMode
+  base?: string
+}
+
 export interface AppConfig {
   ui: {
     theme: 'dark' | 'light'
-    direction: 'tree' | 'board' | 'agents' | 'workflows'
+    direction: 'tree' | 'board' | 'agents' | 'workflows' | 'files'
     /** Hosting shell for new agent PTYs; running sessions keep their own (AGCF-02). */
     defaultShell: Shell
     /** Persisted sidebar width; absent = 230px default (PANE-01). */
@@ -76,6 +84,17 @@ export interface AppConfig {
     tasksCollapsed?: boolean
     /** Workspace ids folded in the sidebar tree; absent = every workspace expanded (WSCL-06). */
     collapsedWorkspaces?: string[]
+    /** What the Files direction last showed per worktree; absent = full folder
+     *  and the `origin/HEAD` default (FXPL-13, design D4). */
+    files?: Record<string, FilesState>
+    /** The worktree selected when the app last closed, restored on launch
+     *  (FXPL-33); absent, or naming a worktree that is gone, selects nothing. */
+    selectedWorktree?: string
+    /** How every open diff is laid out; absent = side by side (FDIF-11/12). */
+    diffLayout?: 'side-by-side' | 'inline'
+    /** Hide leading and trailing whitespace changes, and the line-ending strip
+     *  and markers with them; absent = whitespace shown (FDIF-15/16). */
+    diffIgnoreWhitespace?: boolean
     /** Master switch for session activity notifications; absent = on (NOTF-13, NOTF-17).
      *  Never clears the per-state switches below (NOTF-19). */
     notify?: boolean

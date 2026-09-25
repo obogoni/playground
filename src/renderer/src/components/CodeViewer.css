@@ -1,0 +1,17 @@
+/*
+ * The read-only file viewer (FXPL-17). The editor fills whatever the tab gives
+ * it; Monaco's `automaticLayout` needs a sized box, so the column is a flex
+ * parent and the editor takes the remaining height.
+ */
+
+.code-viewer {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.code-viewer-editor {
+  flex: 1;
+  min-height: 0;
+}

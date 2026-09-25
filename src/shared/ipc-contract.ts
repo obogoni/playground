@@ -6,6 +6,20 @@ import type {
   SessionView,
   WorkspaceTemplates
 } from './config'
+import type {
+  BaseOptions,
+  ChangedListing,
+  CommitDetail,
+  CommitPage,
+  DiffRequest,
+  DiffSides,
+  DirListing,
+  FileContent,
+  FileStat,
+  FilesChanged,
+  FilesMode
+} from './files'
+import type { CommitLists, GitOp, GitOpResult, SyncState } from './git'
 import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type { ParentOfResult, PinTaskResult, TasksSnapshot } from './tasks'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'
@@ -72,6 +86,12 @@ export interface IpcContract {
   }
   /** Live `git status --porcelain` of a worktree, parsed for the remove confirm (FRWT-01); [] when clean/unreadable. */
   'worktrees:changes': { req: { worktreePath: string }; res: ChangedFile[] }
+  /** Branch, upstream, ahead/behind, remotes and fetch age from local refs — never the network; failures land in `error` (STBR-09/12/13/14/22). */
+  'git:sync-state': { req: { worktreePath: string }; res: SyncState }
+  /** Incoming and outgoing commits against the upstream, 20 each plus the "+N more" counts (STBR-15/16). */
+  'git:commits': { req: { worktreePath: string }; res: CommitLists }
+  /** Run one sync/pull/push/fetch/publish, 120 s ceiling, one per worktree; failures are returned, never thrown (STBR-17–21/24/28). */
+  'git:run': { req: { worktreePath: string; op: GitOp; remote?: string }; res: GitOpResult }
   /** Pinned tasks merged with this session's cached details; no network. */
   'tasks:list': { req: void; res: TasksSnapshot }
   /** Parses ID/URL, validates against ADO, persists; failures are returned, never thrown. */
@@ -116,6 +136,39 @@ export interface IpcContract {
   'workflows:reload': { req: void; res: void }
   /** Scaffold a new workflow folder from a template + reveal it; an existing id is rejected, never overwritten (WF5-22/24/25). */
   'workflows:scaffold': { req: { name: string }; res: ScaffoldResult }
+  /** One folder's direct children, tracked plus untracked-not-ignored; a git failure lands in `error` (FXPL-02/04/05). */
+  'files:list-dir': { req: { worktreePath: string; dir: string }; res: DirListing }
+  /** The files the branch committed since `merge-base(HEAD, base)` (FXPL-08). */
+  'files:changed-since': { req: { worktreePath: string; base: string }; res: ChangedListing }
+  /** The base the diff mode defaults to plus every branch the picker can offer (FXPL-09/10/11). */
+  'files:bases': { req: { worktreePath: string }; res: BaseOptions }
+  /** One file read for the viewer, capped and sniffed in main (FXPL-16/17/20/24). */
+  'files:read': { req: { worktreePath: string; relPath: string }; res: FileContent }
+  /** Watch this worktree for disk changes, or `null` to stop watching (FXPL-21/22/23). */
+  'files:watch': { req: { worktreePath: string | null }; res: void }
+  /** Both sides of one diff, plus the lines whose terminator changed (FDIF-01..06, 15). */
+  'files:diff-sides': {
+    req: { worktreePath: string; request: DiffRequest }
+    res: DiffSides
+  }
+  /** Added and removed line counts per file of the mode's list (FDIF-19/20/24). */
+  'files:diff-stats': {
+    req: { worktreePath: string; mode: FilesMode; base?: string }
+    res: FileStat[]
+  }
+  /** One page of the branch's own commits since its base (FCMT-02/08/09/12/23). */
+  'commits:list': {
+    req: { worktreePath: string; base: string; cursor?: string }
+    res: CommitPage
+  }
+  /** What one commit changed against its first parent (FCMT-16/17/18). */
+  'commits:files': { req: { worktreePath: string; sha: string }; res: CommitDetail }
+  /**
+   * Open a pushed commit's page on its provider (FCMT-24/25). The request
+   * carries a sha and nothing else: main resolves the remote and builds the
+   * URL, so no URL the renderer holds can ever reach the OS shell (FCMT-28).
+   */
+  'commits:open': { req: { worktreePath: string; sha: string }; res: LaunchResult }
 }
 
 export type IpcChannel = keyof IpcContract
@@ -158,6 +211,8 @@ export interface IpcEvents {
   'workflow:blocked': { runId: string; question: BlockerQuestion; sessionId?: string }
   /** A lifecycle-toast click asked the renderer to surface this run (WF4-15). */
   'workflow:focus-run': { runId: string }
+  /** One batch of disk changes in the watched worktree (FXPL-21/22). */
+  'files:changed': FilesChanged
 }
 
 export interface IpcSends {

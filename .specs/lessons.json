@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 24,
+  "next_id": 35,
   "lessons": [
     {
       "id": "L-001",
@@ -245,6 +245,204 @@
     },
     {
       "id": "L-019",
+      "key": "surviving_mutant::pin a spec mandated numeric limit with a literal assertion on the default production uses a test that overrides the value to run fast leaves the default free to drift",
+      "text": "Pin a spec-mandated numeric limit with a literal assertion on the default production uses; a test that overrides the value to run fast leaves the default free to drift.",
+      "signal": "surviving_mutant",
+      "scope": "src/main/**",
+      "status": "candidate",
+      "features": [
+        "status-bar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M17 src/main/git-sync.ts:7 OP_TIMEOUT_MS (STBR-24) (src/main/**)"
+      ],
+      "created": "2026-09-19T16:44:45Z",
+      "last_seen": "2026-09-19T16:44:45Z"
+    },
+    {
+      "id": "L-020",
+      "key": "surviving_mutant::when an ac mandates an environment variable or spawn option for a child process assert it from inside the spawned process or on the spawn call testing the wrapper s outcomes never observes it",
+      "text": "When an AC mandates an environment variable or spawn option for a child process, assert it from inside the spawned process or on the spawn call; testing the wrapper's outcomes never observes it.",
+      "signal": "surviving_mutant",
+      "scope": "src/main/**",
+      "status": "candidate",
+      "features": [
+        "status-bar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M18 src/main/git.ts:22 GIT_TERMINAL_PROMPT (STBR-27) (src/main/**)"
+      ],
+      "created": "2026-09-19T16:44:45Z",
+      "last_seen": "2026-09-19T16:44:45Z"
+    },
+    {
+      "id": "L-021",
+      "key": "ac_gap::when a task names a smoke script as the sole evidence for an ac confirm the script has a numbered check asserting that ac before marking it done listing the requirement id is not a check",
+      "text": "When a task names a smoke script as the sole evidence for an AC, confirm the script has a numbered check asserting that AC before marking it done; listing the requirement ID is not a check.",
+      "signal": "ac_gap",
+      "scope": "scripts/smoke",
+      "status": "candidate",
+      "features": [
+        "status-bar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "STBR-23 / M19 src/renderer/src/components/SyncPopover.tsx:94; tasks.md T18 claims sole evidence (scripts/smoke)"
+      ],
+      "created": "2026-09-19T16:44:45Z",
+      "last_seen": "2026-09-19T16:44:45Z"
+    },
+    {
+      "id": "L-022",
+      "key": "spec_precision_gap::before an edge case cites a state the app already derives confirm the model carries it at that level otherwise name the state the feature must add",
+      "text": "Before an edge case cites a state the app already derives, confirm the model carries it at that level; otherwise name the state the feature must add.",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "status-bar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "spec.md Edge Cases: path-missing state the tree already derives (only WorkspaceNode.missing exists) (spec)"
+      ],
+      "created": "2026-09-19T16:44:45Z",
+      "last_seen": "2026-09-19T16:44:45Z"
+    },
+    {
+      "id": "L-023",
+      "key": "spec_deviation::git pull and push write progress and hint lines to stderr before the error so report the first fatal or error line rather than the first stderr line",
+      "text": "Git pull and push write progress and hint lines to stderr before the error, so report the first fatal or error line rather than the first stderr line.",
+      "signal": "spec_deviation",
+      "scope": "src/main/**",
+      "status": "candidate",
+      "features": [
+        "status-bar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/main/git-sync.ts:69-80 errorLine vs gitFailureLine (src/main/**)"
+      ],
+      "created": "2026-09-19T16:44:46Z",
+      "last_seen": "2026-09-19T16:44:46Z"
+    },
+    {
+      "id": "L-024",
+      "key": "surviving_mutant::when an error extractor accepts several prefixes drive a real failure for each prefix testing only one leaves the others and flags that turn the refusal into success free to change unseen",
+      "text": "When an error extractor accepts several prefixes, drive a real failure for each prefix; testing only one leaves the others, and flags that turn the refusal into success, free to change unseen.",
+      "signal": "surviving_mutant",
+      "scope": "main/git",
+      "status": "candidate",
+      "features": [
+        "status-bar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M29, M30 (src/main/git-sync.ts:81, :35) (main/git)"
+      ],
+      "created": "2026-09-19T17:53:18Z",
+      "last_seen": "2026-09-19T17:53:18Z"
+    },
+    {
+      "id": "L-025",
+      "key": "ac_gap::map every spec edge case to its own test or numbered smoke check in tasks md as acs are edge cases left to structure or to the tool s own behaviour reach validation with no evidence",
+      "text": "Map every spec edge case to its own test or numbered smoke check in tasks.md, as ACs are; edge cases left to structure or to the tool's own behaviour reach validation with no evidence.",
+      "signal": "ac_gap",
+      "scope": "specs/edge-cases",
+      "status": "candidate",
+      "features": [
+        "status-bar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md edge cases: dirty pull, Escape, one popover at a time, no toast; STBR-25 refresh (specs/edge-cases)"
+      ],
+      "created": "2026-09-19T17:53:18Z",
+      "last_seen": "2026-09-19T17:53:18Z"
+    },
+    {
+      "id": "L-026",
+      "key": "spec_precision_gap::when a spec names a git command name the flags that keep its behaviour independent of user and system git config such as pull rebase and pin that config in the real git tests",
+      "text": "When a spec names a git command, name the flags that keep its behaviour independent of user and system git config such as pull.rebase, and pin that config in the real-git tests.",
+      "signal": "spec_precision_gap",
+      "scope": "git, main-process",
+      "status": "candidate",
+      "features": [
+        "status-bar"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md spec-precision note 3; src/main/git-sync.ts:35; src/main/git-sync.test.ts:337 (git, main-process)"
+      ],
+      "created": "2026-09-19T18:18:03Z",
+      "last_seen": "2026-09-19T18:18:03Z"
+    },
+    {
+      "id": "L-027",
+      "key": "surviving_mutant::a rejection fixture must reach the guard it claims to test a wrong shape input that is also the wrong length dies on the length check leaving the real guard unproven",
+      "text": "A rejection fixture must reach the guard it claims to test: a wrong-shape input that is also the wrong length dies on the length check, leaving the real guard unproven.",
+      "signal": "surviving_mutant",
+      "scope": "tests/fixtures",
+      "status": "candidate",
+      "features": [
+        "files-commits"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M1 (src/main/remote-url.ts:29; src/main/remote-url.test.ts:59) (tests/fixtures)"
+      ],
+      "created": "2026-09-20T22:58:11Z",
+      "last_seen": "2026-09-20T22:58:11Z"
+    },
+    {
+      "id": "L-028",
+      "key": "surviving_mutant::when an ac says more than n seed a fixture at exactly n counts above and below it cannot tell from",
+      "text": "When an AC says 'more than N', seed a fixture at exactly N: counts above and below it cannot tell > from >=.",
+      "signal": "surviving_mutant",
+      "scope": "tests/boundaries",
+      "status": "candidate",
+      "features": [
+        "files-commits"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md M5 (src/main/commit-log.ts:82) (tests/boundaries)"
+      ],
+      "created": "2026-09-20T22:58:11Z",
+      "last_seen": "2026-09-20T22:58:11Z"
+    },
+    {
+      "id": "L-029",
+      "key": "gate_fail::promise all returns on the first rejection and abandons its siblings still running on windows a child holding a temp directory as its cwd then blocks its removal so use allsettled when every branch spawns a process",
+      "text": "Promise.all returns on the first rejection and abandons its siblings still running; on Windows a child holding a temp directory as its cwd then blocks its removal, so use allSettled when every branch spawns a process.",
+      "signal": "gate_fail",
+      "scope": "src/main/**, windows",
+      "status": "candidate",
+      "features": [
+        "files-commits"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/main/commit-log.ts commitFiles; intermittent EPERM in commit-log.test.ts teardown (src/main/**, windows)"
+      ],
+      "created": "2026-09-20T22:58:11Z",
+      "last_seen": "2026-09-20T22:58:11Z"
+    },
+    {
+      "id": "L-030",
       "key": "ac_gap::every acceptance criterion left to hand verification must appear as a named line in the owner smoke script s hand verify header or as a smoke check",
       "text": "Every acceptance criterion left to hand-verification must appear as a named line in the owner smoke script's hand-verify header or as a smoke check",
       "signal": "ac_gap",
@@ -263,7 +461,7 @@
       "last_seen": "2026-09-17T01:30:15Z"
     },
     {
-      "id": "L-020",
+      "id": "L-031",
       "key": "ac_gap::a smoke check for a state change must start from a different state or it cannot fail",
       "text": "A smoke check for a state change must start from a different state, or it cannot fail",
       "signal": "ac_gap",
@@ -281,7 +479,7 @@
       "last_seen": "2026-09-17T00:29:17Z"
     },
     {
-      "id": "L-021",
+      "id": "L-032",
       "key": "spec_precision_gap::when the spec leaves user facing wording open fix the exact wording in the spec before tests pin it",
       "text": "When the spec leaves user-facing wording open, fix the exact wording in the spec before tests pin it",
       "signal": "spec_precision_gap",
@@ -299,7 +497,7 @@
       "last_seen": "2026-09-17T00:29:17Z"
     },
     {
-      "id": "L-022",
+      "id": "L-033",
       "key": "spec_deviation::when the design replaces a mechanism a confirmed spec row names update that spec row in the same change or mark a spec deviation at the code",
       "text": "When the design replaces a mechanism a confirmed spec row names, update that spec row in the same change or mark a SPEC_DEVIATION at the code",
       "signal": "spec_deviation",
@@ -318,7 +516,7 @@
       "last_seen": "2026-09-17T01:50:57Z"
     },
     {
-      "id": "L-023",
+      "id": "L-034",
       "key": "surviving_mutant::when a rule says a value is never cut test it with a long value at every place the value is rendered not only the first",
       "text": "When a rule says a value is never cut, test it with a long value at every place the value is rendered, not only the first",
       "signal": "surviving_mutant",

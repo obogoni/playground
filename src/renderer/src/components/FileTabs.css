@@ -1,0 +1,213 @@
+/*
+ * The Files direction's right column (FXPL-16/18/19/25): tab strip, launcher
+ * row, then the viewer. Three stacked bands in one flex column, so Monaco's
+ * `automaticLayout` gets a sized box for the remaining height.
+ */
+
+.file-tabs {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.file-tabs-strip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  min-height: 34px;
+  padding: 4px 6px 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+}
+
+.file-tab {
+  display: flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  color: var(--text-muted);
+}
+
+.file-tab:hover {
+  background: var(--panel);
+}
+
+.file-tab.active {
+  background: var(--panel);
+  border-color: var(--border);
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.file-tab-label {
+  max-width: 200px;
+  padding: 5px 4px 5px 10px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-tab.active .file-tab-label {
+  color: var(--text);
+}
+
+/* FDIF-17: the fixed tab is not one of the reader's, so it does not look like one. */
+.file-tab.fixed .file-tab-label {
+  padding-right: 10px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+/* FDIF-08: a diff tab and a file tab of the same path read apart at a glance. */
+.file-tab-glyph {
+  margin-right: 5px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.file-tab-close {
+  display: flex;
+  align-items: center;
+  padding: 5px 8px 5px 4px;
+  color: var(--text-faint);
+}
+
+.file-tab-close:hover {
+  color: var(--text);
+}
+
+/*
+ * The diff controls (FDIF-12/16/25/27), shown only while a diff surface is in
+ * front of the reader. Above the launcher row, so the row stays where FXPL-25
+ * put it whatever the tab is.
+ */
+.file-tabs-controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.file-tabs-controls-gap {
+  flex: 1;
+}
+
+.file-tabs-toggle {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  transition: border-color 0.12s;
+}
+
+.file-tabs-toggle:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.file-tabs-toggle[aria-pressed='true'] {
+  border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.file-tabs-nav {
+  display: flex;
+  align-items: center;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text-muted);
+}
+
+.file-tabs-nav:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.file-tabs-nav:disabled {
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+/* Previous points up, next points down: one glyph, turned. */
+.file-tabs-nav svg {
+  transform: rotate(180deg);
+}
+
+.file-tabs-nav.next svg {
+  transform: none;
+}
+
+/* FXPL-25: under the tabs, above whatever the tab shows. */
+.file-tabs-launchers {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.file-tabs-launcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 11.5px;
+  transition: border-color 0.12s;
+}
+
+.file-tabs-launcher:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.file-tabs-launcher:disabled {
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+.file-tabs-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.file-tabs-empty {
+  margin: auto;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.file-tabs-note {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.file-tabs-error {
+  padding: 12px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--red);
+  word-break: break-word;
+}

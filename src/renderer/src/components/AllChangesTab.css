@@ -1,0 +1,57 @@
+/*
+ * Every change of the current mode, stacked (FDIF-19/20/22). One scroll for the
+ * whole page: each section's editor is sized to its content, so a wheel never
+ * lands inside an inner scrollbar.
+ */
+
+.all-changes {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* FDIF-20: how many files, and how many lines the whole set moved. */
+.all-changes-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.all-changes-files {
+  color: var(--text);
+}
+
+.all-changes-added {
+  font-family: var(--font-mono);
+  color: var(--green);
+}
+
+.all-changes-removed {
+  font-family: var(--font-mono);
+  color: var(--red);
+}
+
+.all-changes-stack {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  /* The observer measures against this box, so it has to be the scroller. */
+  position: relative;
+}
+
+.all-changes-empty {
+  margin: auto;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-faint);
+}

@@ -1,10 +1,10 @@
 import { app, shell, dialog, BrowserWindow, Notification } from 'electron'
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, watch, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { promisify } from 'node:util'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
@@ -15,6 +15,13 @@ import { createActivityHookServer } from './activity-hook-server'
 import { linkTask } from './activity-notification'
 import { buildClaudeHookSettings } from './claude-hook-settings'
 import { ConfigStore } from './config-store'
+import { commitFiles, listCommits, openCommit } from './commit-log'
+import { diffStats, readDiffSides } from './file-diff'
+import { readForView } from './file-reader'
+import { changedSince, listBases, listDir } from './file-tree'
+import { FileWatcher, type WatchPort } from './file-watcher'
+import { git } from './git'
+import { readCommits, readSyncState, runGitOp } from './git-sync'
 import { runHookShell } from './hook-shell'
 import { emit, handle, onSend } from './ipc'
 import { createMcpResultServer } from './mcp-result-server'
@@ -87,6 +94,24 @@ async function readBranch(cwd: string): Promise<string | null> {
     return stdout.trim() || null
   } catch {
     return null
+  }
+}
+
+/**
+ * The real `fs.watch` behind `FileWatcher`'s port. A path that vanishes between
+ * the selection and the watch throws synchronously, and an unwatchable path
+ * errors asynchronously; neither may take the main process down, so both come
+ * back as a handle that watches nothing.
+ */
+const watchPort: WatchPort = (path, opts, listener) => {
+  try {
+    const watcher = watch(path, { recursive: opts.recursive }, (_event, filename) =>
+      listener(typeof filename === 'string' ? filename : '')
+    )
+    watcher.on('error', () => watcher.close())
+    return { close: () => watcher.close() }
+  } catch {
+    return { close: () => {} }
   }
 }
 
@@ -234,6 +259,51 @@ app.whenReady().then(() => {
     removeWorktree(repoPath, worktreePath, { force })
   )
   handle('worktrees:changes', ({ worktreePath }) => changedFilesOf(worktreePath))
+  handle('git:sync-state', ({ worktreePath }) => readSyncState(worktreePath))
+  handle('git:commits', ({ worktreePath }) => readCommits(worktreePath))
+  handle('git:run', ({ worktreePath, op, remote }) => runGitOp(worktreePath, op, remote))
+
+  // The Files direction (FXPL-02/08/09/16/21). Every handler delegates; the
+  // modules behind them are unit-tested, this is only the wiring.
+  const fileWatcher = new FileWatcher({
+    watch: watchPort,
+    // `--git-dir` answers relatively for a primary checkout and absolutely for
+    // a linked worktree, whose git dir lives outside its own root.
+    resolveGitDir: async (worktreePath) => {
+      const { stdout } = await git(worktreePath, ['rev-parse', '--git-dir'])
+      return resolve(worktreePath, stdout.trim())
+    },
+    schedule: {
+      after: (ms, fn) => {
+        const timer = setTimeout(fn, ms)
+        return () => clearTimeout(timer)
+      }
+    },
+    emit: (event) => {
+      if (mainWindow) emit(mainWindow.webContents, 'files:changed', event)
+    }
+  })
+  handle('files:list-dir', ({ worktreePath, dir }) => listDir(worktreePath, dir))
+  handle('files:changed-since', ({ worktreePath, base }) => changedSince(worktreePath, base))
+  handle('files:bases', ({ worktreePath }) => listBases(worktreePath))
+  handle('files:read', ({ worktreePath, relPath }) => readForView(worktreePath, relPath))
+  handle('files:watch', ({ worktreePath }) => fileWatcher.select(worktreePath))
+  handle('files:diff-sides', ({ worktreePath, request }) => readDiffSides(worktreePath, request))
+  handle('files:diff-stats', ({ worktreePath, mode, base }) => diffStats(worktreePath, mode, base))
+  handle('commits:list', ({ worktreePath, base, cursor }) =>
+    listCommits(worktreePath, base, cursor)
+  )
+  handle('commits:files', ({ worktreePath, sha }) => commitFiles(worktreePath, sha))
+  // The renderer sends a sha, never an address: `shell.openExternal` is only
+  // ever reached through `openCommit`, which builds the URL itself and refuses
+  // anything that is not https (FCMT-28).
+  handle('commits:open', ({ worktreePath, sha }) =>
+    openCommit(worktreePath, sha, (url) => shell.openExternal(url))
+  )
+  // Close every watch handle before the process goes away (FXPL-23).
+  app.on('will-quit', () => {
+    void fileWatcher.select(null)
+  })
 
   const launcher = new ShortcutLauncher()
   handle('shortcuts:launch', ({ tool, path }) => launcher.launch(tool, path))

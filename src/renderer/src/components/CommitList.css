@@ -1,0 +1,158 @@
+.commit-list {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+/* The row that heads the list while the worktree is dirty (FCMT-14). */
+.commit-uncommitted {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklab, var(--amber) 12%, transparent);
+  color: var(--amber);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.commit-uncommitted:hover {
+  background: color-mix(in oklab, var(--amber) 22%, transparent);
+}
+
+.commit-row {
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+}
+
+.commit-row:hover {
+  background: var(--panel-2);
+}
+
+/* The whole row is the button. The two actions moved to the right-click menu:
+   as buttons beside this they reserved their width even while hidden, and the
+   author's name was squeezed down to one letter. */
+.commit-open {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 10px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* What the reader is scanning for, so it leads. */
+.commit-subject {
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commit-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* Shrinks last and keeps a readable floor: a name cut to its first letter
+   names nobody. */
+.commit-author {
+  flex: 0 1 auto;
+  min-width: 5.5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commit-date,
+.commit-badge {
+  flex: none;
+}
+
+.commit-badge {
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 15px;
+}
+
+.commit-merge {
+  background: color-mix(in oklab, var(--blue) 18%, transparent);
+  color: var(--blue);
+}
+
+/* FCMT-12: what has not reached the upstream yet. */
+.commit-unpushed {
+  background: color-mix(in oklab, var(--amber) 18%, transparent);
+  color: var(--amber);
+}
+
+.commit-more {
+  margin: 6px 10px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.commit-more:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+/* Same geometry as the sidebar's row menu, so the two read as one control. */
+.commit-ctx-menu {
+  position: fixed;
+  z-index: 70;
+  min-width: 168px;
+  padding: 5px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 12px 36px var(--shadow);
+}
+
+.commit-ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.commit-ctx-item:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+
+/* FCMT-25: still offered, so it can say why it does nothing. */
+.commit-ctx-item:disabled {
+  color: var(--text-faint);
+  cursor: default;
+}

@@ -1,0 +1,84 @@
+/*
+ * One diff (FDIF-07/11-16). Two bands in a flex column: the line-ending strip,
+ * then the editor. Monaco's `automaticLayout` needs a sized box, so the editor
+ * takes the remaining height — unless the diff sits in a stack section, where
+ * it is sized to its content instead and the page scrolls once (D1).
+ */
+
+.diff-viewer {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.diff-viewer.fit {
+  height: auto;
+}
+
+.diff-viewer-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+.diff-viewer.fit .diff-viewer-editor {
+  flex: none;
+}
+
+/*
+ * Both sides read the same, so there is no diff to show (spec §Edge Cases).
+ * The editor stays mounted — it is what reports the next change once content
+ * arrives — but it is taken out of the layout rather than folded to a strip of
+ * nothing.
+ */
+.diff-viewer.identical .diff-viewer-editor {
+  display: none;
+}
+
+/*
+ * The line-ending strip (FDIF-15). Advisory, like the F1 file-view caption: it
+ * names a change the diff itself cannot render, not a failure.
+ */
+.diff-viewer-eol {
+  flex: none;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.diff-viewer-note {
+  flex: none;
+  padding: 12px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.diff-viewer-error {
+  padding: 12px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--red);
+  word-break: break-word;
+}
+
+/*
+ * The per-line marker of FDIF-15, in the glyph margin beside the line number.
+ *
+ * Drawn, not lettered. It used to be a pilcrow, which renders as a missing-glyph
+ * box wherever the editor's font lacks one — and the glyph margin inherits
+ * Monaco's font stack, not the app's, so which font answers is out of our hands.
+ * A shape made of borders looks the same everywhere and cannot go missing: a
+ * short stem with a foot, the way an editor draws a line terminator.
+ */
+.diff-viewer-eol-marker::after {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  margin: 4px auto 0;
+  border-left: 2px solid var(--amber);
+  border-bottom: 2px solid var(--amber);
+}

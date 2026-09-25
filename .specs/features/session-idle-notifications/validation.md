@@ -88,7 +88,7 @@ Test count unchanged from round 1 (the smoke is not in the suite); baseline 917 
 
 ## Lessons
 
-The three candidates recorded in round 1 (L-019, L-020, L-021) stay: they were distilled from real
+The three candidates recorded in round 1 (L-030, L-031, L-032) stay: they were distilled from real
 round-1 failures and remain correct general rules. The fix round applied exactly those rules (named
 code-reading lines, a start state that differs, wording pinned in the spec), which corroborates
 rather than invalidates them. Round 2 has no new signal, so nothing new is recorded.
@@ -640,7 +640,7 @@ Source and unit tests of the decision layer are byte-identical to round 3 (only 
 
 ### R4 · Lessons
 
-No new grounded failure this round, so nothing new was recorded. L-019 and L-022 (round 3) stay as candidates; this fix
+No new grounded failure this round, so nothing new was recorded. L-030 and L-033 (round 3) stay as candidates; this fix
 applied them rather than contradicting them.
 
 ### R4 · Summary
@@ -825,7 +825,7 @@ Delta: 1005 → 1006 (+1, the new body-line test). No test removed or weakened.
 
 ### R6 · Lessons
 
-No new grounded failure. L-023 (round 5, surviving mutant) and L-022 stay as candidates; this fix applied them.
+No new grounded failure. L-034 (round 5, surviving mutant) and L-033 stay as candidates; this fix applied them.
 
 ### R6 · Summary
 

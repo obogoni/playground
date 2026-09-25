@@ -2,6 +2,7 @@
 
 **Current Milestone:** **M6 — Workflows (epic #56)** — NEARLY COMPLETE: WF1 + WF2 + WF3 + WF4 merged to `main`; **WF5 (Workflows UI) executed + independently verified (PASS)** on `feature/workflows-ui` — owner-run two-example UI smoke + PR/merge are all that remain (merging WF5 closes the epic).
 **Status:** v1 (M1–M4) + worktree-name-template (post-v1) + M5 (v2) complete and on `main`. M5 AM1 (Agent Spike) merged PR #39, AM2 (Agent Sessions) merged PR #41 (`Closes #40`), AM3 (Agent Config) merged PR #44 (`Closes #43`). AGCF-05 remove-worktree confirm + visual theme toggle = hand-verify only (code merged). **M6 (Workflows) now active — see below.**
+**Next (planned 2026-09-19):** **M7 — Files Direction** — a status bar plus five stacked slices, each with spec, design and tasks on its own branch; nothing executed yet. See M7 below and AD-022..AD-028.
 
 Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes"). The app is intended to be daily-usable at the end of M1.
 
@@ -112,6 +113,12 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - Fast-forward only, in-place `merge --ff-only` inside the worktree holding the checked-out base (else a direct ref fetch); any refresh failure (no upstream / fetch fail / diverged / dirty base) **blocks** the create with a readable inline error — never a silent stale base (WBR-02)
 - Per-dialog default, **not persisted** (no `AppConfig` field); inert when no base branch is given; new optional `worktrees:create` `updateBase` field; `GIT_TERMINAL_PROMPT=0` so a credential-less fetch fails fast (WBR-03/05)
 
+**Session Strip Polish** - PLANNED (spec + tasks on `feature/session-strip-polish`)
+
+- An MCP tool reads `MCP <server>` in the session detail's activity pill, the raw tool name kept in its tooltip; the rail tooltip and the OS notification keep the raw name (STRP-01..06)
+- The session clock pauses and resumes on click — a `<button aria-pressed>` with a pause / play icon — replacing the Pause time / Resume time buttons (STRP-07..15)
+- 6 tasks, inline. Cut from `develop`, the only ref holding both halves (the pill arrived with #88, the clock with #93); its PR follows #93 and #94
+
 ---
 
 ## M5 — Embedded Agent Sessions (v2)
@@ -171,6 +178,44 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - Workflows view (fourth direction), live step timeline, blocked-respond panel, run-trigger dialog from `meta.inputs`, New workflow (scaffold + reveal) / Reload, `workflow:focus-run` handling (US 6/7/8/9/22/23/24/28/30/31). Scope + architecture = **AD-011**.
 - 10 tasks / 3 phases (inline), 25 ACs (WF5-01..25), 11 commits `5f0ad4d..1c5b84c` on `feature/workflows-ui`. Two unit-tested pure seams (`workflow-run-view` fold, `workflow-scaffold`); the rest hand-verified per the project's UI convention. Verifier **PASS** (25/25 ACs, discrimination sensor 5/5 killed, gate 440/440 tests, prod build OK). Report: `.specs/features/workflows-ui/validation.md`.
 - **Remaining:** owner-run two-example UI smoke ("review PR" + "implement ticket" driven through the GUI with a live agent) → PR (`Closes #56`) → `gh pr merge --admin`.
+
+---
+
+## M7 — Files Direction (epic)
+
+**Goal:** Browse, read, diff and review any worktree without leaving the app — its files, what its branch changed, its commits, and its pull request on Azure DevOps or GitHub — preceded by a Visual Studio-style status bar.
+**Source:** owner request, and one grill over the whole epic (2026-09-17..19). Structure and cross-cutting decisions: **AD-022..AD-028**.
+**Status:** **PLANNED** — every feature has spec, design and tasks, committed on its own branch; nothing executed. The branches stack in merge order below, each PR "depends on" the previous one.
+
+### Features
+
+**Status Bar** (prerequisite; `feature/status-bar`, from `main`) - PLANNED
+
+- Always-mounted bottom bar: repo name and a middle-truncated branch, `↓n ↑n` from local refs only, a sync / pull / push / fetch / publish popover with incoming and outgoing commits, a changed-file counter (STBR-01..32; 18 tasks)
+- Introduces `src/main/git.ts`, the single git invoker every later slice uses (AD-023)
+
+**F1 — Explore** (`feature/files-explore`) - PLANNED
+
+- Sixth direction, `Files`: full-folder (`.gitignore`-aware, lazy), diff-to-origin and uncommitted modes; read-only Monaco tabs that follow an agent's writes; Explorer / VS Code / VS 2022 / VS 2026 launchers, `.sln` → VS 2026 (FXPL-01..32; 23 tasks)
+- T13, a packaged-build Monaco spike, is a stop point (AD-025); the counter of the status bar lands here (AD-028)
+
+**F2 — Diffs** (`feature/files-diff`) - PLANNED
+
+- Per-file diffs and a lazily mounted All changes stack; side by side or inline; unchanged regions folded; line-ending changes made visible (FDIF-01..32; 21 tasks; T1 diff-editor spike)
+
+**F3 — Commits** (`feature/files-commits`) - PLANNED
+
+- The branch's first-parent commits since its base, not-pushed markers, a commit opened as a stack of diffs, copy sha and open on the provider (FCMT-01..32; 16 tasks)
+
+**F4 — Azure DevOps Pull Requests** (`feature/files-pr-ado`) - PLANNED
+
+- The branch's PR, fork included: Overview, threads beside their lines, and — P2 — reply, thread status, a thread from a selection, a general comment (FPRA-01..36, FPRA-37 conditional; 27 tasks)
+- First write to Azure DevOps (AD-027); first third-party content rendered (AD-026); T1 is an owner-gated sandbox spike
+
+**F5 — GitHub Pull Requests** (`feature/files-pr-github`) - PLANNED
+
+- The same surfaces over GitHub: a `gh` chip beside `az`, reviews, resolve / reopen, out-of-diff selections posted as cited general comments (FPRG-01..26; 22 tasks)
+- Its `GitHubGateway` is what issue #50 (GitHub issues as work items) extends; T1 is an owner-gated scratch-repository spike, never on this repository's upstream
 
 ---
 

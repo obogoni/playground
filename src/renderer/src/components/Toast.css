@@ -2,7 +2,8 @@
 
 .toast {
   position: fixed;
-  bottom: 26px;
+  /* Clears the status bar (StatusBar.css defines its height). */
+  bottom: calc(var(--status-bar-height, 0px) + 26px);
   left: 0;
   right: 0;
   margin-inline: auto;

@@ -26,12 +26,25 @@ export class PtyPort {
    * developer's environment (PATH etc., PRD story 40) plus any overrides.
    */
   spawn(plan: SpawnPlan, env?: NodeJS.ProcessEnv): PtyHandle {
-    const proc = pty.spawn(plan.file, plan.args, {
-      name: 'xterm-256color',
-      cwd: plan.cwd,
-      env: buildPtyEnv({ ...process.env, ...env }),
-      useConpty: true
-    })
+    let proc: pty.IPty
+    try {
+      proc = pty.spawn(plan.file, plan.args, {
+        name: 'xterm-256color',
+        cwd: plan.cwd,
+        env: buildPtyEnv({ ...process.env, ...env }),
+        useConpty: true
+      })
+    } catch (err) {
+      // The renderer surfaces the reason in a toast, which is gone the moment it
+      // fades; a packaged build has no DevTools to fall back on (#89). Logging the
+      // plan here is what lets an intermittent failure be attributed after the
+      // fact — which of file/args/cwd the OS actually rejected.
+      console.error(
+        `Failed to spawn PTY: file=${plan.file} args=${JSON.stringify(plan.args)} cwd=${plan.cwd}`,
+        err
+      )
+      throw err
+    }
 
     return {
       onData: (cb) => proc.onData(cb),
