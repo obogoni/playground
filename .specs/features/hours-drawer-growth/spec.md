@@ -113,17 +113,17 @@ Proving the fix needs a day that overflows, and producing one must not touch the
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| HDRW-01 | P1: tall day stays inside its card — AC 1 | Tasks | Implemented |
-| HDRW-02 | P1: tall day — AC 2 | Tasks | Implemented |
-| HDRW-03 | P1: tall day — AC 3 | Tasks | Implemented |
-| HDRW-04 | P1: tall day — AC 4 | Tasks | Implemented |
-| HDRW-05 | P1: seeded smoke — AC 5 | Tasks | Implemented |
-| HDRW-06 | P1: seeded smoke — AC 6 | Tasks | Implemented |
-| HDRW-07 | P1: seeded smoke — AC 7 | Tasks | Implemented |
-| HDRW-08 | P1: seeded smoke — AC 8 | Tasks | Implemented |
-| HDRW-09 | P1: seeded smoke — AC 9 | Tasks | Implemented |
-| HDRW-10 | P1: seeded smoke — AC 10 | Tasks | Implemented |
-| HDRW-11 | P1: seeded smoke — AC 11 | Tasks | Implemented |
+| HDRW-01 | P1: tall day stays inside its card — AC 1 | Execute | Verified |
+| HDRW-02 | P1: tall day — AC 2 | Execute | Verified |
+| HDRW-03 | P1: tall day — AC 3 | Execute | Verified |
+| HDRW-04 | P1: tall day — AC 4 | Execute | Verified |
+| HDRW-05 | P1: seeded smoke — AC 5 | Execute | Verified |
+| HDRW-06 | P1: seeded smoke — AC 6 | Execute | Verified |
+| HDRW-07 | P1: seeded smoke — AC 7 | Execute | Verified |
+| HDRW-08 | P1: seeded smoke — AC 8 | Execute | Verified |
+| HDRW-09 | P1: seeded smoke — AC 9 | Execute | Verified |
+| HDRW-10 | P1: seeded smoke — AC 10 | Execute | Verified |
+| HDRW-11 | P1: seeded smoke — AC 11 | Execute | Verified |
 | HDRW-12 | P2: dev-only override — AC 12 | Tasks | N/A — T1: switch honoured |
 | HDRW-13 | P2: dev-only override — AC 13 | Tasks | N/A — T1: switch honoured |
 | HDRW-14 | P2: dev-only override — AC 14 | Tasks | N/A — T1: switch honoured |
