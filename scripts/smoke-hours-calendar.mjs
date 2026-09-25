@@ -41,6 +41,10 @@
  *      node scripts/smoke-hours-calendar.mjs             (in another)
  */
 
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
 const PORT = Number(process.env.SMOKE_PORT) || 9222
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 const FOLDERS = ['C:\\Windows', 'C:\\Windows\\System32']
@@ -172,6 +176,62 @@ const overlapsDay = (snapshot, day) => {
     ...snapshot.periods.map((p) => [Date.parse(p.start), Date.parse(p.end)]),
     ...snapshot.open.map((p) => [Date.parse(p.start), now])
   ].some(([s, e]) => s < end && e > start)
+}
+
+// --seed: a throwaway userData directory holding one tall day, the previous
+// week's Sunday (always past and complete, and outside every other step's
+// weeks). Fictitious tasks only: the repository is public.
+const TEMP = realpathSync.native(tmpdir())
+const POINTER = join(TEMP, 'playground-smoke-hours.last')
+const SEED_TITLES = [
+  'Fix login redirect',
+  'Add CSV export',
+  'Cache the price list',
+  'Retry failed webhooks',
+  'Paginate the audit log',
+  'Validate invoice dates',
+  'Trim the search index',
+  'Rename the billing flag',
+  'Upgrade the chart library',
+  'Localise the error pages',
+  'Speed up the report query',
+  'Guard the upload size',
+  'Archive stale drafts',
+  'Fix the timezone offset'
+]
+const seedId = (i) => `hours-smoke-seed-${String(i + 1).padStart(2, '0')}`
+
+if (process.argv.includes('--seed')) {
+  const dir = join(TEMP, `playground-smoke-hours-${Date.now()}`)
+  if (existsSync(dir)) {
+    console.error(`Seed directory already exists, nothing written: ${dir}`)
+    process.exit(1)
+  }
+  const sunday = weekDay(-1, 6)
+  const lines = SEED_TITLES.map((title, i) => {
+    const start = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate(), 8, 20 * i)
+    const taskId = 9101 + i
+    return JSON.stringify({
+      v: 1,
+      id: seedId(i),
+      sessionId: 'hours-smoke-seed',
+      agent: 'Ad-hoc',
+      cwd: 'C:\\Windows',
+      start: start.toISOString(),
+      end: new Date(start.getTime() + 20 * 60_000).toISOString(),
+      workspacePath: null,
+      repoName: 'acme-widgets',
+      branch: `feature/${taskId}-seed`,
+      taskId,
+      taskTitle: title
+    })
+  })
+  mkdirSync(dir)
+  writeFileSync(join(dir, 'time-log.jsonl'), lines.join('\n') + '\n')
+  writeFileSync(POINTER, dir)
+  console.log(`Seeded ${lines.length} periods on ${dayHeader(sunday)} in ${dir}`)
+  console.log(`Launch: npm run dev -- -- "--user-data-dir=${dir}" --remote-debugging-port=${PORT}`)
+  process.exit(0)
 }
 
 const target = await pageTarget()

@@ -178,10 +178,16 @@ are N/A.
 
 **Done when**:
 
-- [ ] `--seed` output: a new directory with exactly 14 lines that the app accepts (checked in T5 by `time:snapshot`, not by reading the file back with the script's own writer)
-- [ ] A second `--seed` aimed at an existing directory exits non-zero and writes nothing (HDRW-06) — exercised by temporarily pinning the timestamp, then reverted
-- [ ] No real work item, client or company name in the seed (public repository)
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] `--seed` output: a new directory with exactly 14 lines that the app accepts (checked in T5 by `time:snapshot`, not by reading the file back with the script's own writer)
+- [x] A second `--seed` aimed at an existing directory exits non-zero and writes nothing (HDRW-06) — exercised by temporarily pinning the timestamp, then reverted
+- [x] No real work item, client or company name in the seed (public repository)
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Result (2026-09-25):** `--seed` exited 0 with no app running (CDP port 9222 closed), creating
+`%TEMP%\playground-smoke-hours-<ms>` with 14 lines on `20/09/2026 (dom)`, 08:00–12:40 local, ids
+`hours-smoke-seed-01..14`, `taskId` 9101..9114, and the directory in the pointer file. With the directory name pinned
+in a scratch copy of the script, the second run exited 1 with `Seed directory already exists, nothing written`, and
+left the log (hash and mtime) and the pointer file untouched. Lint 0 errors / 18 warnings.
 
 **Tests**: manual
 **Gate**: manual
