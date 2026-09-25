@@ -9,11 +9,11 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: none — no architectural decision; the fix is one CSS declaration and the rest is smoke tooling. The one open fact (`--user-data-dir`) is measured by T1, with its fallback decided in the spec.
-**Status**: Draft — awaiting owner approval (planned 2026-09-22)
+**Status**: Approved by the owner 2026-09-25 — executing
 
-**Branch**: `feature/hours-calendar` (draft PR #99), tip `5cda0b1` at planning. The fix is part of that PR, not a new branch (grill Q3). Pushing to `fork` and merging into `develop` wait for the owner's go-ahead at that moment.
+**Branch**: `feature/hours-calendar` (PR #99, issue #105), tip `5cda0b1` at planning and `1a89301` at Execute, after the 2026-09-25 rebase onto `origin/main`. The fix is part of that PR, not a new branch (grill Q3). Pushing to `fork` and merging into `develop` wait for the owner's go-ahead at that moment.
 
-**Test baseline**: 893 tests on `5cda0b1` per the hours-calendar hand-off — **re-measure** with `npx vitest run` as the first act of Execute. Record the lint warning count at the same time.
+**Test baseline**: measured at T1 on `1a89301`: **1691 tests** (91 files), lint 0 errors / **18 warnings**.
 
 **Seed day**: Sunday of the previous week (owner, 2026-09-22). Steps 1–8 use the current week and step 9 uses week −4; neither touches it.
 
@@ -87,9 +87,16 @@ T6 → T7
 
 **Done when**:
 
-- [ ] The probe period is found (switch honoured) or not found (switch ignored) — the id itself is the evidence, not the presence of Chromium files in the directory, which Chromium writes either way
-- [ ] `%APPDATA%\playground\time-log.jsonl` has the same size and hash before and after the probe
-- [ ] Baselines recorded: test count, lint warning count
+- [x] The probe period is found (switch honoured) or not found (switch ignored) — the id itself is the evidence, not the presence of Chromium files in the directory, which Chromium writes either way
+- [x] `%APPDATA%\playground\time-log.jsonl` has the same size and hash before and after the probe
+- [x] Baselines recorded: test count, lint warning count
+
+**Result (2026-09-25): switch honoured.** `npm run dev -- -- --user-data-dir=<fresh temp dir> --remote-debugging-port=9222`
+on `1a89301`, with a one-line `time-log.jsonl` holding a fictitious period: `time:snapshot` returned exactly
+one period, the probe's id (`{"found":true,"periods":1}`), so `app.getPath('userData')` follows the switch in
+Electron 39 and the app read nothing else. The real `time-log.jsonl` kept its size (19054 bytes) and SHA-256
+(`7eb50822…`). Baselines: **1691 tests**, lint 0 errors / **18 warnings**. T2 and T3 are skipped and HDRW-12..14
+are N/A.
 
 **Tests**: none
 **Gate**: manual
@@ -99,6 +106,8 @@ T6 → T7
 ---
 
 ### T2: Pure `userDataOverride` helper (only if T1 finds the switch ignored)
+
+**Status**: Skipped — T1: switch honoured
 
 **What**: A pure function `userDataOverride(env, isPackaged)` returning the path to use, or `null` to keep Electron's default.
 **Where**: `src/main/user-data-override.ts` (new) and its co-located test
@@ -127,6 +136,8 @@ T6 → T7
 ---
 
 ### T3: Apply the override before any store reads `userData` (only if T2 ran)
+
+**Status**: Skipped — T1: switch honoured
 
 **What**: Call `app.setPath('userData', …)` with `userDataOverride(process.env, app.isPackaged)` at the top of the main entry, before `app` is ready and before any `app.getPath('userData')`.
 **Where**: `src/main/index.ts`

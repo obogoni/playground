@@ -6,8 +6,8 @@ In the Hours direction, a day with many tasks does not fit the drawer, and the d
 the drawer ends: the groups below spill out of the card's background and border while the drawer
 scrolls them. The card is a flex item of the drawer's column (`.hours-drawer`, `flex-direction:
 column`, `overflow-y: auto`) with `min-height: 100%` and no `flex: none`, so flex shrinks it to the
-drawer's height and its content overflows it. It is a defect of `hours-calendar` (draft PR #99),
-fixed inside that branch before the PR leaves draft.
+drawer's height and its content overflows it. It is a defect of `hours-calendar` (PR #99),
+fixed inside that branch before the PR merges. Tracked upstream as issue #105.
 
 The smoke that should have caught it cannot: `scripts/smoke-hours-calendar.mjs` attaches to a dev
 app running on the owner's real `%APPDATA%\playground`, whose days are never guaranteed to be tall.
@@ -40,7 +40,7 @@ Proving the fix needs a day that overflows, and producing one must not touch the
 | Where the tall day comes from | Fictitious closed periods written by the smoke's `--seed` mode into a new temporary userData directory, before the app starts | Owner decisions (grill Q5, Q6). The time log is read once at start-up and the in-memory list is authoritative (`TimeLogStore`, TIME-14), so seeding a running app is invisible and is overwritten by its next rewrite | y |
 | Which day holds the seed | **Sunday of the previous week** | Owner asked for a Saturday or Sunday, easy to spot and clean by hand. The current week's weekend is in the future on any weekday; last week's Sunday is always past, and the existing checks use the current week (steps 1–8) and week −4 (step 9), neither of which it touches | y |
 | How the smoke reaches the seeded directory | `--seed` prints the directory and the dev command, and records the directory in `%TEMP%\playground-smoke-hours.last`; the normal run reads that file | The run is a separate process started after the owner launches the app; a pointer file avoids retyping a path | y |
-| How the dev app is pointed at the directory | `npm run dev -- -- --user-data-dir=<dir> --remote-debugging-port=9222`, verified first (T1) | Chromium's switch; whether Electron derives `app.getPath('userData')` from it is not documented for Electron 39 and is measured rather than assumed | n — T1 measures |
+| How the dev app is pointed at the directory | `npm run dev -- -- --user-data-dir=<dir> --remote-debugging-port=9222`, verified first (T1) | Chromium's switch; whether Electron derives `app.getPath('userData')` from it is not documented for Electron 39 and is measured rather than assumed | y — T1 measured 2026-09-25: honoured |
 | If Electron ignores `--user-data-dir` | The main process reads `PLAYGROUND_USER_DATA` and calls `app.setPath('userData', …)` only when `!app.isPackaged` | Owner decision (grill Q9) | y |
 | Whole smoke isolated | Every step (1–10) runs on the seeded directory; the smoke fails before any other check when the seed is not in `time:snapshot` | Owner decision (grill Q8): a step that skips when its data is missing can pass without proving anything | y |
 | Clean-up | On all checks passing, the smoke closes the app (`Browser.close`) and deletes the directory; on any failure it leaves both and prints the directory | Owner decision (grill Q11). The directory cannot be deleted while Electron holds its profile files open, so the app has to go first | y |
@@ -124,9 +124,9 @@ Proving the fix needs a day that overflows, and producing one must not touch the
 | HDRW-09 | P1: seeded smoke — AC 9 | Tasks | In Tasks |
 | HDRW-10 | P1: seeded smoke — AC 10 | Tasks | In Tasks |
 | HDRW-11 | P1: seeded smoke — AC 11 | Tasks | In Tasks |
-| HDRW-12 | P2: dev-only override — AC 12 | Tasks | In Tasks (conditional on T1) |
-| HDRW-13 | P2: dev-only override — AC 13 | Tasks | In Tasks (conditional on T1) |
-| HDRW-14 | P2: dev-only override — AC 14 | Tasks | In Tasks (conditional on T1) |
+| HDRW-12 | P2: dev-only override — AC 12 | Tasks | N/A — T1: switch honoured |
+| HDRW-13 | P2: dev-only override — AC 13 | Tasks | N/A — T1: switch honoured |
+| HDRW-14 | P2: dev-only override — AC 14 | Tasks | N/A — T1: switch honoured |
 
 **Coverage:** 14 total, 14 mapped to tasks, 0 unmapped.
 
@@ -134,5 +134,5 @@ Proving the fix needs a day that overflows, and producing one must not touch the
 
 ## Success Criteria
 
-- [ ] The smoke's drawer check FAILS on the CSS of `5cda0b1` and PASSES after the fix
+- [ ] The smoke's drawer check FAILS on the CSS before the fix and PASSES after it
 - [ ] A full smoke run leaves `%APPDATA%\playground\time-log.jsonl` byte-identical to before it
