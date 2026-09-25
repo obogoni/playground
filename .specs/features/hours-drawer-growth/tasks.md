@@ -211,11 +211,28 @@ left the log (hash and mtime) and the pointer file untouched. Lint 0 errors / 18
 
 **Done when**:
 
-- [ ] Run against the owner's normal dev app (real data): exits non-zero with `not running on the seeded data`, spawns no session, and the real `time-log.jsonl` is unchanged (HDRW-08)
-- [ ] Run with the pointer file removed: same refusal (HDRW-08)
-- [ ] Run on the seeded directory: steps 1–9 pass as before (HDRW-11), then the app closes and the directory and pointer are gone (HDRW-09)
-- [ ] A forced failure (one check temporarily inverted, then reverted): the app stays open, the directory stays, its path is printed (HDRW-10)
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [ ] Run against the owner's normal dev app (real data): exits non-zero with `not running on the seeded data`, spawns no session, and the real `time-log.jsonl` is unchanged (HDRW-08) — **pending the owner**, see the result below
+- [x] Run with the pointer file removed: same refusal (HDRW-08)
+- [x] Run on the seeded directory: steps 1–9 pass as before (HDRW-11), then the app closes and the directory and pointer are gone (HDRW-09)
+- [x] A forced failure (one check temporarily inverted, then reverted): the app stays open, the directory stays, its path is printed (HDRW-10)
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Result (2026-09-25):**
+
+- The app on the seeded directory reported `{"sessions":0,"periods":14,"open":0,"seed":14}`: it accepts every
+  seeded line (T4's first criterion).
+- Pointer file moved aside: exit 1, `not running on the seeded data — no …playground-smoke-hours.last; run with --seed
+  first`; sessions 0 and periods 14 before and after, so nothing was spawned or written.
+- App on an empty `--user-data-dir`, pointer present: exit 1, `not running on the seeded data — 14 seeded periods
+  missing`; sessions 0 and periods 0 before and after. This is the branch a real-data run takes.
+- Forced failure, from a scratch copy with the "exactly one header is today's" check inverted: 28/29, exit 1,
+  `Seeded data left in place for inspection: <dir>`; the app, the directory and the pointer stayed.
+- Seeded run: **29/29** (steps 1–9 unchanged), then `App closed; deleted <dir> and <pointer>`, the dev process exited
+  0 and nothing named `playground-smoke-hours*` was left in `%TEMP%`.
+- Lint 0 errors / 18 warnings, after `prettier --write` on the script.
+- **Not run: the refusal against the owner's real data.** Launching the dev app on `%APPDATA%\playground` was
+  denied by the session's permission check, so the empty-directory run above stands in for it. `time-log.jsonl`,
+  `config.json` and `time-open.json` in `%APPDATA%\playground` kept their SHA-256 through the whole task.
 
 **Tests**: manual
 **Gate**: manual

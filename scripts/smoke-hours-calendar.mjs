@@ -37,11 +37,18 @@
  * The script restores the owner's direction and theme and deletes every period
  * it created.
  *
- * Run: npm run dev -- -- --remote-debugging-port=9222   (in one shell)
- *      node scripts/smoke-hours-calendar.mjs             (in another)
+ * It runs only on its own throwaway data, never on the owner's hours:
+ *   1. node scripts/smoke-hours-calendar.mjs --seed
+ *        writes a tall past Sunday into a new directory under %TEMP% and
+ *        prints the next command
+ *   2. npm run dev -- -- "--user-data-dir=<that directory>" --remote-debugging-port=9222
+ *   3. node scripts/smoke-hours-calendar.mjs
+ *        refuses with `not running on the seeded data` unless every seeded
+ *        period is in the app; on a pass it closes the app and deletes the
+ *        directory, on a failure it leaves both and prints the directory
  */
 
-import { existsSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -243,6 +250,18 @@ await new Promise((resolve, reject) => {
 await send('Runtime.enable')
 await send('Page.enable')
 await waitFor(`typeof window.api !== 'undefined'`, 'the preload bridge')
+
+// Refuse anything but the seeded directory, before a session or a write.
+const seededDir = existsSync(POINTER) ? readFileSync(POINTER, 'utf8').trim() : null
+const snapshotIds = new Set((await invoke('time:snapshot')).periods.map((p) => p.id))
+const missingSeed = SEED_TITLES.map((_, i) => seedId(i)).filter((id) => !snapshotIds.has(id))
+if (!seededDir || missingSeed.length > 0) {
+  console.error(
+    `not running on the seeded data — ${!seededDir ? `no ${POINTER}` : `${missingSeed.length} seeded periods missing`}; run with --seed first`
+  )
+  ws.close()
+  process.exit(1)
+}
 
 const original = (await invoke('config:get')).ui
 const before = await invoke('time:snapshot')
@@ -640,4 +659,33 @@ try {
 
 const failed = checks.filter((c) => !c.ok)
 console.log(`\n${checks.length - failed.length}/${checks.length} checks passed`)
-process.exit(failed.length === 0 ? 0 : 1)
+if (failed.length > 0) {
+  console.log(`Seeded data left in place for inspection: ${seededDir}`)
+  process.exit(1)
+}
+
+// A pass: close the app, which holds the profile open, then delete its data.
+if (
+  !/^playground-smoke-hours-\d+$/.test(seededDir.split('\\').pop()) ||
+  !seededDir.startsWith(TEMP)
+) {
+  console.error(`Not deleting ${seededDir}: not a seeded directory under ${TEMP}`)
+  process.exit(1)
+}
+const browser = new WebSocket(
+  (await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json()).webSocketDebuggerUrl
+)
+await new Promise((resolve) => browser.addEventListener('open', resolve))
+browser.send(JSON.stringify({ id: 1, method: 'Browser.close' }))
+for (let i = 0; i < 40; i++) {
+  try {
+    await fetch(`http://127.0.0.1:${PORT}/json/version`)
+    await sleep(250)
+  } catch {
+    break
+  }
+}
+rmSync(seededDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 500 })
+rmSync(POINTER, { force: true })
+console.log(`App closed; deleted ${seededDir} and ${POINTER}`)
+process.exit(0)
