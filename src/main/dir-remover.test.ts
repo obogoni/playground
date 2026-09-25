@@ -1,9 +1,11 @@
 import { type ChildProcess, execFileSync, spawn } from 'node:child_process'
 import {
   chmodSync,
+  closeSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readFileSync,
   realpathSync,
   type RmOptions,
@@ -240,8 +242,25 @@ describe('removeDirTree against the real filesystem', () => {
       { stdio: 'ignore' }
     )
     holders.push(holder)
-    await delay(2500) // measured: pwsh startup plus acquiring the handle
+    // Wait for the lock itself, not for a measured pwsh startup: under a full
+    // parallel run pwsh can take longer than any fixed delay, and a removal
+    // that races ahead of the handle succeeds and fails the assertion.
+    await waitUntilLocked(file)
     return holder
+  }
+
+  /** Resolves once opening the file for writing fails — the holder's FileShare.None is in place. */
+  async function waitUntilLocked(file: string): Promise<void> {
+    const deadline = Date.now() + 25_000
+    for (;;) {
+      try {
+        closeSync(openSync(file, 'r+'))
+      } catch {
+        return
+      }
+      if (Date.now() > deadline) throw new Error(`holder never locked ${file}`)
+      await delay(100)
+    }
   }
 
   function stopHolder(holder: ChildProcess): Promise<void> {

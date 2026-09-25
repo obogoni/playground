@@ -28,6 +28,7 @@ interface AgentsViewProps {
   onDuplicate: (id: string) => void
   onOpenWorktree: (cwd: string) => void
   onNew: () => void
+  onToast: (message: string) => void
 }
 
 /**
@@ -49,7 +50,8 @@ export function AgentsView({
   onRename,
   onDuplicate,
   onOpenWorktree,
-  onNew
+  onNew,
+  onToast
 }: AgentsViewProps): JSX.Element {
   const active = sessions.find((s) => s.id === selectedId) ?? sessions[0] ?? null
 
@@ -79,6 +81,7 @@ export function AgentsView({
           onRename={onRename}
           onDuplicate={onDuplicate}
           onOpenWorktree={onOpenWorktree}
+          onToast={onToast}
         />
       ) : (
         <div className="agents-detail-empty">
@@ -104,6 +107,7 @@ interface SessionDetailProps {
   onRename: (id: string, title: string) => void
   onDuplicate: (id: string) => void
   onOpenWorktree: (cwd: string) => void
+  onToast: (message: string) => void
 }
 
 function SessionDetail({
@@ -116,7 +120,8 @@ function SessionDetail({
   onRemove,
   onRename,
   onDuplicate,
-  onOpenWorktree
+  onOpenWorktree,
+  onToast
 }: SessionDetailProps): JSX.Element {
   const { branch, taskId, detached } = deriveAttribution(tree, session.cwd)
   const pin = linkedPinFor(tasks, taskId)
@@ -249,6 +254,8 @@ function SessionDetail({
           key={session.id}
           sessionId={session.id}
           undoByte={undoByteFor(agents, session.agent)}
+          cwd={session.cwd}
+          onToast={onToast}
         />
       ) : (
         <div className="agents-detail-stopped">

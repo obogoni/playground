@@ -2,8 +2,19 @@ import { useEffect, useRef } from 'react'
 import type { JSX } from 'react'
 import { UnicodeGraphemesAddon } from '@xterm/addon-unicode-graphemes'
 import { FitAddon } from '@xterm/addon-fit'
-import { Terminal, type ITheme } from '@xterm/xterm'
+import { Terminal, type IBufferRange, type ITheme } from '@xterm/xterm'
 import { api } from '../lib/api'
+import {
+  activeBufferOf,
+  bufferPositionForMouseEvent,
+  rangeContains
+} from '../lib/terminal-buffer-lines'
+import { linkGestureOnMouseDown, linkGestureOnMouseUp } from '../lib/terminal-link-gesture'
+import {
+  createTerminalLinkProvider,
+  hitForOscTarget,
+  type LinkHit
+} from '../lib/terminal-link-provider'
 import {
   classifyTerminalKey,
   classifyTerminalMouse,
@@ -18,6 +29,10 @@ interface TerminalPaneProps {
   /** Byte Ctrl+Z sends on this session's PTY, resolved from the agent registry
    * by `undoByteFor` — TUIs disagree on it (TCU-01). */
   undoByte: string
+  /** The session's initial cwd; relative file links resolve against it (LINK-12). */
+  cwd: string
+  /** Surfaces a failed link open (LINK-05, LINK-13). */
+  onToast: (message: string) => void
 }
 
 /** Reads a CSS custom property off <html>, falling back when unset. */
@@ -73,8 +88,19 @@ function readTheme(): ITheme {
  * readTheme() — the full token→ANSI palette map, re-emitted on theme toggle
  * via a MutationObserver below (handoff §Terminal theming, AGCF-07).
  */
-export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.Element {
+export function TerminalPane({
+  sessionId,
+  undoByte,
+  cwd,
+  onToast
+}: TerminalPaneProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
+  // Read through a ref so a new callback identity never remounts the terminal
+  // (the effect below re-attaches the session when its deps change).
+  const onToastRef = useRef(onToast)
+  useEffect(() => {
+    onToastRef.current = onToast
+  }, [onToast])
 
   useEffect(() => {
     const container = containerRef.current
@@ -132,6 +158,82 @@ export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.El
     term.loadAddon(new UnicodeGraphemesAddon())
     term.open(container)
     fit.fit()
+
+    // Links (LINK-01..33): xterm only underlines what the provider returns;
+    // opening is decided here, at the capture-phase mousedown/mouseup on the
+    // container, so a Ctrl+click over a link never reaches xterm and, through
+    // it, a mouse-tracking agent (LINK-14). `linkHandler.activate` is a no-op
+    // because xterm's default opens an OSC 8 link on a plain click (LINK-16).
+    // `allowNonHttpProtocols` is on so a `file://` OSC 8 target — every path
+    // Claude Code prints under FORCE_HYPERLINK — reaches `hoveredOsc`; the
+    // scheme filter is `hitForOscTarget` (LINK-21, LINK-22).
+    const links = createTerminalLinkProvider({
+      buffer: activeBufferOf(term),
+      getCols: () => term.cols,
+      probe: (paths) => api.invoke('links:probe', { cwd, paths })
+    })
+    const linkProvider = term.registerLinkProvider(links)
+    let hoveredOsc: { text: string; range: IBufferRange } | null = null
+    term.options.linkHandler = {
+      allowNonHttpProtocols: true,
+      activate: () => {},
+      hover: (_event, text, range) => {
+        hoveredOsc = { text, range }
+      },
+      leave: () => {
+        hoveredOsc = null
+      }
+    }
+    // The press being tracked between mousedown and mouseup; dies with the pane.
+    let pendingLink: { clientX: number; clientY: number; hit: LinkHit } | null = null
+    const activateLink = async (hit: LinkHit): Promise<void> => {
+      const known = hit.kind === 'path' && hit.state === 'unprobed' ? await hit.settled : hit
+      if (!known) return
+      const result =
+        known.kind === 'url'
+          ? await api.invoke('links:openUrl', { url: known.url })
+          : known.kind === 'fileUrl'
+            ? await api.invoke('links:openFileUrl', { url: known.url })
+            : await api.invoke('links:openPath', { cwd, pathText: known.pathText })
+      if (!result.ok) onToastRef.current(result.error ?? 'Couldn’t open the link')
+    }
+    const onLinkMouseDown = (event: MouseEvent): void => {
+      // A press released outside the pane never saw its mouseup here; any new
+      // press retires it, or the next plain click's release would be swallowed.
+      pendingLink = null
+      // The chord first, so a plain click never hit-tests (and never probes).
+      if (linkGestureOnMouseDown(event, true) !== 'intercept') return
+      const cell = bufferPositionForMouseEvent(term, event)
+      const hit = !cell
+        ? null
+        : hoveredOsc && rangeContains(hoveredOsc.range, cell.x, cell.y, term.cols)
+          ? hitForOscTarget(hoveredOsc.text)
+          : links.hitTest(cell.x, cell.y)
+      // Over nothing, the press stays the agent's (LINK-15).
+      if (linkGestureOnMouseDown(event, hit) !== 'intercept' || !hit) return
+      event.preventDefault()
+      event.stopPropagation()
+      pendingLink = { clientX: event.clientX, clientY: event.clientY, hit }
+    }
+    const onLinkMouseUp = (event: MouseEvent): void => {
+      if (!pendingLink) return
+      event.preventDefault()
+      event.stopPropagation()
+      const { hit } = pendingLink
+      const action = linkGestureOnMouseUp(pendingLink, event)
+      pendingLink = null
+      if (action === 'open') {
+        activateLink(hit).catch((err) =>
+          onToastRef.current(err instanceof Error ? err.message : String(err))
+        )
+      }
+    }
+    const forgetPendingLink = (): void => {
+      pendingLink = null
+    }
+    container.addEventListener('mousedown', onLinkMouseDown, true)
+    container.addEventListener('mouseup', onLinkMouseUp, true)
+    window.addEventListener('blur', forgetPendingLink)
 
     // Key chords (INPUT-04..08): xterm renders selection on its own layer,
     // not as a native DOM selection, so the browser's Ctrl+C copies nothing —
@@ -310,6 +412,11 @@ export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.El
       api.invoke('sessions:detach', { id: sessionId }).catch(console.error)
       container.removeEventListener('mousedown', onRightMouseDown, true)
       container.removeEventListener('contextmenu', onContextMenu, true)
+      container.removeEventListener('mousedown', onLinkMouseDown, true)
+      container.removeEventListener('mouseup', onLinkMouseUp, true)
+      window.removeEventListener('blur', forgetPendingLink)
+      linkProvider.dispose()
+      links.dispose()
       clearTimeout(copiedTimer)
       copied.remove()
       selectionSub.dispose()
@@ -320,7 +427,7 @@ export function TerminalPane({ sessionId, undoByte }: TerminalPaneProps): JSX.El
       inputSub.dispose()
       term.dispose()
     }
-  }, [sessionId, undoByte])
+  }, [sessionId, undoByte, cwd])
 
   return <div ref={containerRef} className="terminal-pane" />
 }

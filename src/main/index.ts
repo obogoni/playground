@@ -2,6 +2,7 @@ import { app, shell, dialog, BrowserWindow, Notification } from 'electron'
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, watch, writeFileSync } from 'node:fs'
+import { stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { promisify } from 'node:util'
 import { join, resolve } from 'path'
@@ -28,8 +29,9 @@ import { PtyPort } from './pty-port'
 import { resolvePostCreateCommand } from './repo-config'
 import { scrubAuthEnv } from './scrub-auth-env'
 import { SessionManager, type ActivityHooks, type EmitFn } from './session-manager'
+import { LinkOpener } from './link-opener'
 import { SessionNamePoller } from './session-name-poller'
-import { ShortcutLauncher } from './shortcut-launcher'
+import { ShortcutLauncher, spawnDetached } from './shortcut-launcher'
 import { TaskBoard } from './task-board'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
@@ -289,6 +291,25 @@ app.whenReady().then(() => {
 
   const launcher = new ShortcutLauncher()
   handle('shortcuts:launch', ({ tool, path }) => launcher.launch(tool, path))
+
+  const linkOpener = new LinkOpener({
+    homedir,
+    stat,
+    openPath: (path) => shell.openPath(path),
+    openExternal: (url) => shell.openExternal(url),
+    spawnDetached,
+    // `assoc` exits 0 only when the extension has a ProgId; a plain `exec`
+    // would resolve either way, so the exit code is what answers the question.
+    hasAssociation: (ext) =>
+      execFileAsync('cmd.exe', ['/c', 'assoc', ext], { windowsHide: true }).then(
+        () => true,
+        () => false
+      )
+  })
+  handle('links:probe', ({ cwd, paths }) => linkOpener.probe(cwd, paths))
+  handle('links:openUrl', ({ url }) => linkOpener.openUrl(url))
+  handle('links:openPath', ({ cwd, pathText }) => linkOpener.openPath(cwd, pathText))
+  handle('links:openFileUrl', ({ url }) => linkOpener.openFileUrl(url))
 
   const adoGateway = new AdoGateway()
   const taskBoard = new TaskBoard(configStore, adoGateway)
