@@ -62,4 +62,45 @@ describe('SessionRingBuffer', () => {
     expect(buf.snapshot()).toBe('line-97\nline-98\nline-99\nline-100\n')
     expect(buf.snapshot()).not.toContain('line-1\n')
   })
+  it('replays the modes that were trimmed off the head (TSP-06, TSP-07)', () => {
+    const buf = new SessionRingBuffer({ maxBytes: 100_000, maxLines: 3 })
+    buf.append('\x1b[?1049h\x1b[?1003h\x1b[?1006h\x1b[?2004h\n')
+    for (let i = 1; i <= 5; i++) buf.append(`l${i}\n`)
+
+    expect(buf.snapshot()).toBe('\x1b[?1049h\x1b[?1003h\x1b[?1006h\x1b[?2004h' + 'l4\nl5\n')
+  })
+
+  it('replays trimmed modes when the byte cap does the cutting (TSP-06)', () => {
+    const buf = new SessionRingBuffer({ maxBytes: 20, maxLines: 100_000 })
+    buf.append('\x1b[?1049h\x1b[?1003h\x1b[?2004h old and long line\n')
+    buf.append('keep\n')
+
+    expect(buf.snapshot()).toBe('\x1b[?1049h\x1b[?1003h\x1b[?2004h' + 'keep\n')
+  })
+
+  it('emits no prefix for modes set and reset inside the dropped head (TSP-07)', () => {
+    const buf = new SessionRingBuffer({ maxBytes: 100_000, maxLines: 2 })
+    buf.append('\x1b[?1049h\x1b[?1003h\n')
+    buf.append('\x1b[?1003l\x1b[?1049l\n')
+    buf.append('l1\nl2\n')
+
+    expect(buf.snapshot()).toBe('l2\n')
+  })
+
+  it('leaves snapshot byte-equal to the appended content while nothing is dropped (TSP-10)', () => {
+    const buf = new SessionRingBuffer({ maxBytes: 100_000, maxLines: 100_000 })
+    const content = '\x1b[?1049h\x1b[?1003h\x1b[?2004hprompt> \n'
+    buf.append(content)
+
+    expect(buf.snapshot()).toBe(content)
+  })
+
+  it('never puts the mode prefix in the tail preview (TSP-11)', () => {
+    const buf = new SessionRingBuffer({ maxBytes: 100_000, maxLines: 3 })
+    buf.append('\x1b[?1049h\x1b[?1003h\n')
+    for (let i = 1; i <= 5; i++) buf.append(`l${i}\n`)
+
+    expect(buf.tail(2)).toBe('l5\n')
+    expect(buf.snapshot()).toContain('\x1b[?1049h')
+  })
 })

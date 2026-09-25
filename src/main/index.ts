@@ -1,9 +1,9 @@
-import { app, shell, dialog, BrowserWindow, Notification } from 'electron'
+import { app, shell, clipboard, dialog, BrowserWindow, Notification } from 'electron'
 import { execFile, execFileSync, spawn } from 'node:child_process'
-import { randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, watch, writeFileSync } from 'node:fs'
-import { stat } from 'node:fs/promises'
-import { homedir } from 'node:os'
+import { mkdir, stat, writeFile } from 'node:fs/promises'
+import { homedir, tmpdir } from 'node:os'
 import { promisify } from 'node:util'
 import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -15,6 +15,7 @@ import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-
 import { createActivityHookServer } from './activity-hook-server'
 import { linkTask } from './activity-notification'
 import { buildClaudeHookSettings } from './claude-hook-settings'
+import { readClipboardPaste } from './clipboard-reader'
 import { ConfigStore } from './config-store'
 import { commitFiles, listCommits, openCommit } from './commit-log'
 import { diffStats, readDiffSides } from './file-diff'
@@ -26,6 +27,7 @@ import { readCommits, readSyncState, runGitOp } from './git-sync'
 import { runHookShell } from './hook-shell'
 import { emit, handle, onSend } from './ipc'
 import { createMcpResultServer } from './mcp-result-server'
+import { purgePasteDir } from './paste-temp'
 import { withPostCreateHook } from './post-create-hook'
 import { PtyPort } from './pty-port'
 import { resolvePostCreateCommand } from './repo-config'
@@ -99,6 +101,34 @@ async function readBranch(cwd: string): Promise<string | null> {
   } catch {
     return null
   }
+}
+
+/**
+ * The Explorer file list, read through Windows PowerShell 5.1. On Electron
+ * 39.8.10 `clipboard.readBuffer('FileNameW')` returns only the first copied file
+ * and `CF_HDROP` comes back empty, so `GetFileDropList()` on an STA thread is the
+ * only reader that sees every path — it is what opencode and Claude Code use.
+ * `-NoProfile` keeps a user's profile out of the paste path, and UTF-8 output
+ * keeps a `relatório.png` intact (TSP-37).
+ */
+const FILE_DROP_LIST_COMMAND = [
+  '[Console]::OutputEncoding=[Text.Encoding]::UTF8;',
+  'Add-Type -AssemblyName System.Windows.Forms;',
+  '[System.Windows.Forms.Clipboard]::GetFileDropList()'
+].join(' ')
+
+/**
+ * One line per copied path. The 5 s timeout is the contract's failure bound
+ * (TSP-16): a wedged shell turns into a failed paste the pane reports, never
+ * into a paste that hangs forever.
+ */
+async function readFileDropList(): Promise<string> {
+  const { stdout } = await execFileAsync(
+    'powershell.exe',
+    ['-NoProfile', '-STA', '-Command', FILE_DROP_LIST_COMMAND],
+    { timeout: 5_000, windowsHide: true, encoding: 'utf8' }
+  )
+  return stdout
 }
 
 /**
@@ -517,6 +547,38 @@ app.whenReady().then(() => {
   })
   onSend('session:input', ({ id, data }) => sessions.input(id, data))
   onSend('session:resize', ({ id, cols, rows }) => sessions.resize(id, cols, rows))
+
+  // Rich terminal paste (TSP-14, TSP-16). The clipboard is read here because the
+  // renderer `clipboard` is deprecated from Electron 40 and the file list needs a
+  // child process. An image is written to a temp PNG before the invoke resolves,
+  // so the path the renderer pastes always points at a file that already exists —
+  // the agents read it the instant it lands.
+  const pasteDir = join(tmpdir(), 'playground-paste')
+  handle('clipboard:read-paste', () =>
+    readClipboardPaste({
+      readText: () => clipboard.readText(),
+      formats: () => clipboard.availableFormats(),
+      readImagePng: () => {
+        const image = clipboard.readImage()
+        return image.isEmpty() ? null : image.toPNG()
+      },
+      readFileDropList,
+      writeFile: async (path, data) => {
+        await mkdir(pasteDir, { recursive: true })
+        await writeFile(path, data)
+      },
+      pasteDir,
+      now: () => new Date(),
+      rand: () => randomBytes(3).toString('hex')
+    })
+  )
+  // Pasted images live a week (TSP-18). The purge never blocks or fails startup
+  // (TSP-19): a missing directory is normal and the next start tries again.
+  try {
+    purgePasteDir(pasteDir, Date.now())
+  } catch (err) {
+    console.error('[paste] purging old pasted images failed', err)
+  }
 
   // WF3 agent step: one shared MCP result server (started lazily by the runner on the
   // first agent step, reused across steps/runs — WF3-10) forces structured output; the

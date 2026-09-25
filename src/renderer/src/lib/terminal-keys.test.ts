@@ -112,6 +112,22 @@ describe('classifyTerminalKey', () => {
     })
   })
 
+  describe('Alt+V pass-through (TSP-17)', () => {
+    it('passes Alt+V through so xterm sends ESC v to the agent untouched', () => {
+      // Claude Code on Windows reads the clipboard itself on Alt+V. The app's own
+      // Ctrl+V paste never takes that chord away from anyone who wants it.
+      expect(classifyTerminalKey(key({ altKey: true, code: 'KeyV', key: 'v' }), false, cold)).toBe(
+        'pass'
+      )
+    })
+
+    it('passes Ctrl+Alt+V through — AltGr on ABNT2 reports both modifiers', () => {
+      expect(
+        classifyTerminalKey(key({ ctrlKey: true, altKey: true, code: 'KeyV' }), false, cold)
+      ).toBe('pass')
+    })
+  })
+
   describe('Ctrl+C grace window (TCU-04..08)', () => {
     it('discards a selection-less Ctrl+C inside the window instead of sending SIGINT', () => {
       expect(classifyTerminalKey(key({ ctrlKey: true, code: 'KeyC' }), false, grace(0))).toBe(
