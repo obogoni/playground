@@ -109,7 +109,11 @@ export function classifyTerminalKey(
   // (see undoByteFor) — Claude Code wants US, opencode wants the plain SUB
   // (TCU-01). Alt is excluded so AltGr chords on ABNT2 keep passing through.
   if (ctrl && !shift && !event.altKey && event.code === 'KeyZ') return 'undo'
-  if (ctrl && !shift && event.code === 'KeyV') return 'paste'
+  // Alt is excluded for the same reason as Ctrl+Z: AltGr on an ABNT2 keyboard
+  // reports ctrl+alt, and Alt+V is how Claude Code on Windows asks to read the
+  // clipboard itself, so neither chord may be swallowed by the app's paste
+  // (TSP-17).
+  if (ctrl && !shift && !event.altKey && event.code === 'KeyV') return 'paste'
   if (event.key === 'Enter' && (shift || ctrl)) return 'newline'
   return 'pass'
 }
