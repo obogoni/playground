@@ -8,6 +8,7 @@ import type { TimeSnapshot } from '../../../shared/time'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { agentTileStyle } from '../lib/agent-color'
 import { deriveAttribution, linkedPinFor } from '../lib/session-attribution'
+import { detailPillClass, detailPillText } from '../lib/session-activity'
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import { SessionRail } from './SessionRail'
@@ -191,8 +192,8 @@ function SessionDetail({
           )}
           <span className="agents-detail-cwd">{session.cwd}</span>
         </div>
-        <span className={`agents-detail-pill ${running ? 'green' : 'faint'}`}>
-          {running ? 'running' : 'stopped'}
+        <span className={`agents-detail-pill ${detailPillClass(session)}`}>
+          {detailPillText(session)}
         </span>
         <SessionClock
           className={`agents-detail-time${timePaused ? ' paused' : ''}`}

@@ -15,7 +15,14 @@ export default defineConfig({
   renderer: {
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer/src')
+        '@renderer': resolve('src/renderer/src'),
+        // Monaco's icon font, reached by file path because its package exports
+        // map appends `.js` to every subpath and so cannot serve a stylesheet.
+        // Without it every codicon renders as a missing-glyph box — the +/- in
+        // a diff's gutter among them (F2 T21).
+        'monaco-codicon.css': resolve(
+          'node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.css'
+        )
       }
     },
     plugins: [react()]

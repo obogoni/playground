@@ -10,10 +10,12 @@ import {
   adjacentRowId,
   buildRailGroups,
   flatRows,
+  headerCounts,
   statusClass,
   type RailGroup,
   type RailRow,
-  type RowAction
+  type RowAction,
+  type RowStatus
 } from '../lib/rail-groups'
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { taskTotalMs, worktreeTotalMs } from '../lib/time-totals'
@@ -55,7 +57,7 @@ export function SessionRail({
   onRemove,
   onNew
 }: SessionRailProps): JSX.Element {
-  const runningCount = sessions.filter((s) => s.status === 'running').length
+  const { running: runningCount, working, needYou } = headerCounts(sessions)
   const groups = buildRailGroups(sessions, tree, tasks)
   const rows = flatRows(groups)
   const [focusedId, setFocusedId] = useState<string | null>(null)
@@ -97,7 +99,11 @@ export function SessionRail({
       <header className="session-rail-header">
         <div className="session-rail-title-row">
           <span className="session-rail-title">AGENTS</span>
-          <span className="session-rail-count">{runningCount} running</span>
+          <span className="session-rail-count">
+            {runningCount} running
+            {working > 0 && <span className="working"> · {working} working</span>}
+            {needYou > 0 && <span className="need-you"> · {needYou} need you</span>}
+          </span>
         </div>
         <button type="button" className="session-rail-new" onClick={onNew}>
           <Icon name="plus" size={14} strokeWidth={2.2} /> New session
@@ -255,6 +261,23 @@ interface SessionRowProps {
   onRemove: (id: string) => void
 }
 
+/** Statuses that mean the agent is mid-work, and so spin (ACTV-14). */
+const SPINNING: RowStatus[] = ['working', 'compacting']
+
+/** The 8px dot, or a spinning loader while the agent is working. The label
+ *  beside it carries the accessible name, so this is decorative (ACTV-14..18). */
+function StatusIndicator({ status }: { status: RowStatus }): JSX.Element {
+  const className = statusClass(status)
+  if (SPINNING.includes(status)) {
+    return (
+      <span className={`rail-row-loader ${className}`} aria-hidden="true">
+        <Icon name="loader" size={11} strokeWidth={2.4} />
+      </span>
+    )
+  }
+  return <span className={`rail-row-dot ${className}`} aria-hidden="true" />
+}
+
 /** Icon, glyph size and tooltip verb for each action the model can list. */
 const ACTION_ICON = {
   stop: { name: 'stop-square', size: 10, verb: 'Stop' },
@@ -308,10 +331,12 @@ function SessionRow({
         {row.session.agent.charAt(0)}
       </span>
       <span className="rail-row-label">{row.label}</span>
-      <span className={`rail-row-status ${statusClass(row.status)}`}>{row.status}</span>
+      <span className={`rail-row-status ${statusClass(row.status)}`} aria-label={row.status}>
+        {row.status}
+      </span>
       {/* The one addition AD-021 allows on a row beyond RAIL-12's list. */}
       <SessionClock className="rail-row-time" snapshot={time} sessionId={row.id} />
-      <span className={`rail-row-dot ${statusClass(row.status)}`} />
+      <StatusIndicator status={row.status} />
       <span className="rail-row-actions">
         {row.actions.map((action) => (
           <button

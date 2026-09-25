@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { SessionView } from '../../../shared/config'
 import { api } from './api'
+import { failureToast } from './failure-toast'
+import { applyActivity } from './session-activity'
 
 export interface UseSessionsOptions {
   /** Show a transient error toast (spawn / duplicate failures). */
@@ -39,12 +41,21 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
 
   // Keep the session list live: main pushes status on PTY exit / respawn, which
   // the rail + detail panel reflect without an explicit refresh.
+  //
+  // Activity is the exception: it changes on every tool call, so it is applied
+  // in place instead of refetching the whole list per event (ACTV-07). An event
+  // for a session the list does not hold yet is dropped; the next list() carries
+  // the state anyway.
   useEffect(() => {
     const offStatus = api.on('session:status', refreshSessions)
     const offExit = api.on('session:exit', refreshSessions)
+    const offActivity = api.on('session:activity', ({ id, activity }) => {
+      setSessions((prev) => applyActivity(prev, id, activity))
+    })
     return () => {
       offStatus()
       offExit()
+      offActivity()
     }
   }, [refreshSessions])
 
@@ -58,7 +69,7 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
       })
       .catch((err) => {
         console.error(err)
-        onToast("Couldn't start session")
+        onToast(failureToast("Couldn't start session", err))
       })
   }
 
@@ -78,7 +89,7 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
       })
       .catch((err) => {
         console.error(err)
-        onToast("Couldn't duplicate session")
+        onToast(failureToast("Couldn't duplicate session", err))
       })
   }
 

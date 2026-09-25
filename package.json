@@ -33,6 +33,7 @@
     "ajv": "^8.17.1",
     "electron-updater": "^6.8.9",
     "esbuild": "0.25.12",
+    "monaco-editor": "0.56.0",
     "node-pty": "^1.1.0"
   },
   "devDependencies": {

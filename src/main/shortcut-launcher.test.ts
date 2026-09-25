@@ -3,6 +3,8 @@ import {
   ShortcutLauncher,
   VS_EDITIONS,
   buildElevatedOpen,
+  buildExplorerArgs,
+  buildVsCodeLaunch,
   buildVswhereArgs,
   parseVswhereProductPath,
   vsFailureMessages
@@ -175,5 +177,36 @@ describe('ShortcutLauncher VS routing', () => {
       ok: false,
       error: "Couldn't launch Visual Studio 2026 — the worktree path no longer exists"
     })
+  })
+})
+
+describe('buildExplorerArgs', () => {
+  it('selects a file in its folder instead of opening it', () => {
+    expect(buildExplorerArgs('C:\\tmp\\a b, c\\x.txt', true)).toEqual({
+      args: ['/select,"C:\\tmp\\a b, c\\x.txt"'],
+      verbatim: true
+    })
+  })
+
+  it('passes a folder through unchanged', () => {
+    expect(buildExplorerArgs('C:\\code\\repo', false)).toEqual({
+      args: ['C:\\code\\repo'],
+      verbatim: false
+    })
+  })
+})
+
+describe('buildVsCodeLaunch', () => {
+  it('keeps the path out of the command line', () => {
+    const { commandLine } = buildVsCodeLaunch('C:\\tmp\\%PATH%.txt')
+
+    expect(commandLine).toBe('code "%PLAYGROUND_TARGET%"')
+    expect(commandLine).not.toContain('tmp')
+  })
+
+  it('carries the path in the environment, verbatim', () => {
+    const { env } = buildVsCodeLaunch('C:\\tmp\\%PATH%.txt')
+
+    expect(env).toEqual({ PLAYGROUND_TARGET: 'C:\\tmp\\%PATH%.txt' })
   })
 })

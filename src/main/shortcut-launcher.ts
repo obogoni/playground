@@ -1,5 +1,5 @@
 import { execFile, spawn } from 'child_process'
-import { existsSync } from 'fs'
+import { existsSync, statSync } from 'fs'
 import type { LaunchResult, ShortcutTool } from '../shared/shortcuts'
 
 /** The `ShortcutTool` members that open a Visual Studio version. */
@@ -52,8 +52,9 @@ export class ShortcutLauncher {
   }
 
   openExplorer(path: string): Promise<LaunchResult> {
+    const { args, verbatim } = buildExplorerArgs(path, isFilePath(path))
     return launchAt('File Explorer (explorer.exe)', path, () =>
-      spawnDetached('explorer.exe', [path])
+      spawnDetached('explorer.exe', args, verbatim)
     )
   }
 
@@ -64,7 +65,8 @@ export class ShortcutLauncher {
   openVsCode(path: string): Promise<LaunchResult> {
     // `code` is a .cmd shim, which Node refuses to spawn directly; going
     // through a shell masks ENOENT, so failure is read from the exit code.
-    return launchAt('VS Code (code)', path, () => spawnShellChecked(`code "${path}"`))
+    const { commandLine, env } = buildVsCodeLaunch(path)
+    return launchAt('VS Code (code)', path, () => spawnShellChecked(commandLine, env))
   }
 
   /**
@@ -90,6 +92,56 @@ export class ShortcutLauncher {
     return (await spawnChecked(command, args))
       ? { ok: true }
       : { ok: false, error: messages.cancelled }
+  }
+}
+
+/**
+ * How to spawn `explorer.exe` for one target (FXPL-27). A file goes as
+ * `/select,"<path>"`, which opens its folder with the file highlighted: plain
+ * `explorer.exe <file>` would *open* the file in its default app.
+ *
+ * Explorer parses its own command line, and the quotes have to wrap the path
+ * alone. Letting Node quote the argument yields `"/select,<path>"` for any path
+ * with a space, which Explorer discards — it then opens the default folder and
+ * selects nothing. Verified on this machine with `a b, c\x.txt`: the verbatim
+ * line selects the file, the Node-quoted one does not. A folder needs neither
+ * and is passed exactly as before.
+ */
+export function buildExplorerArgs(
+  path: string,
+  isFile: boolean
+): { args: string[]; verbatim: boolean } {
+  return isFile
+    ? { args: [`/select,"${path}"`], verbatim: true }
+    : { args: [path], verbatim: false }
+}
+
+/** The environment variable the VS Code target travels in. */
+export const VSCODE_TARGET_VAR = 'PLAYGROUND_TARGET'
+
+/**
+ * The VS Code launch, with the path kept out of the command line. `code` is a
+ * .cmd shim and has to go through a shell, and `cmd` expands `%VAR%` even
+ * inside double quotes — so a file named `%PATH%.txt` interpolated into the
+ * line would launch the wrong path. `cmd` expands a variable once and does not
+ * re-scan the value, so the path arrives literally (FXPL-25/30).
+ */
+export function buildVsCodeLaunch(path: string): {
+  commandLine: string
+  env: Record<string, string>
+} {
+  return {
+    commandLine: `code "%${VSCODE_TARGET_VAR}%"`,
+    env: { [VSCODE_TARGET_VAR]: path }
+  }
+}
+
+/** Whether the launch target is a file rather than a folder; a vanished path is neither. */
+function isFilePath(path: string): boolean {
+  try {
+    return statSync(path).isFile()
+  } catch {
+    return false
   }
 }
 
@@ -188,9 +240,13 @@ async function launchAt(
   return (await run()) ? { ok: true } : { ok: false, error: `Couldn't launch ${label}` }
 }
 
-function spawnDetached(command: string, args: string[]): Promise<boolean> {
+function spawnDetached(command: string, args: string[], verbatim = false): Promise<boolean> {
   return new Promise((resolve) => {
-    const child = spawn(command, args, { detached: true, stdio: 'ignore' })
+    const child = spawn(command, args, {
+      detached: true,
+      stdio: 'ignore',
+      windowsVerbatimArguments: verbatim
+    })
     child.once('error', () => resolve(false))
     child.once('spawn', () => {
       child.unref()
@@ -207,9 +263,14 @@ function spawnChecked(command: string, args: string[]): Promise<boolean> {
   })
 }
 
-function spawnShellChecked(commandLine: string): Promise<boolean> {
+function spawnShellChecked(commandLine: string, env?: Record<string, string>): Promise<boolean> {
   return new Promise((resolve) => {
-    const child = spawn(commandLine, { shell: true, stdio: 'ignore', windowsHide: true })
+    const child = spawn(commandLine, {
+      shell: true,
+      stdio: 'ignore',
+      windowsHide: true,
+      env: env ? { ...process.env, ...env } : process.env
+    })
     child.once('error', () => resolve(false))
     child.once('exit', (code) => resolve(code === 0))
   })

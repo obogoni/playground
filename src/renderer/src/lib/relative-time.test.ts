@@ -22,4 +22,14 @@ describe('relativeTime', () => {
     expect(relativeTime(NOW - 59_000, NOW)).toBe('just now')
     expect(relativeTime(NOW - 61_000, NOW)).toBe('1m ago')
   })
+
+  it('crosses the hour/day boundary at 24h (23h → 23h ago, 24h → 1d ago)', () => {
+    expect(relativeTime(NOW - 23 * 3_600_000, NOW)).toBe('23h ago')
+    expect(relativeTime(NOW - 24 * 3_600_000, NOW)).toBe('1d ago')
+  })
+
+  it('renders days for a multi-day age (72h → 3d ago, floored)', () => {
+    expect(relativeTime(NOW - 72 * 3_600_000, NOW)).toBe('3d ago')
+    expect(relativeTime(NOW - 95 * 3_600_000, NOW)).toBe('3d ago')
+  })
 })

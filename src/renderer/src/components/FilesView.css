@@ -1,0 +1,21 @@
+/*
+ * The Files direction's shell (FXPL-02/03): one flex row inside `.content`,
+ * the tree pane on the left and the tabs taking the rest.
+ */
+
+.files-view {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.files-view-empty {
+  margin: auto;
+  padding-top: 120px;
+  text-align: center;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-faint);
+}

@@ -1,0 +1,145 @@
+/* Status bar — window-wide footer below the content (STBR-01). */
+
+:root {
+  /* The bar's height; Toast.css lifts the toast above it. */
+  --status-bar-height: 26px;
+}
+
+.status-bar {
+  flex: 0 0 auto;
+  height: var(--status-bar-height);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.status-bar-empty,
+.status-bar-note {
+  color: var(--text-faint);
+}
+
+.status-bar-repo {
+  flex: 0 0 auto;
+  max-width: 25%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* SPEC_DEVIATION: tasks.md T13 puts the width cap on the head span.
+   Reason: the cap sits on the branch element, which holds head + tail, so the
+   whole name never passes 70% of the bar (STBR-06); a capped head plus a
+   non-shrinking tail could. Head and tail are each half the name and each at
+   most half the element, so a long name keeps as much start as end. */
+.status-bar-branch {
+  flex: 0 1 auto;
+  max-width: 70%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+}
+
+/* Spaced by its own margin, not a flex gap: a gap would also split the head
+   from the tail and print the branch name with a space in it. */
+.status-bar-branch > svg {
+  flex: 0 0 auto;
+  margin-right: 5px;
+  color: var(--text-faint);
+}
+
+.status-bar-branch-head,
+.status-bar-branch-tail {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 50%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.status-bar-branch-head {
+  text-overflow: ellipsis;
+}
+
+/* Right-to-left so the overflow is cut at the start; the bdi inside keeps the
+   text itself left-to-right, so `-` and `/` at the edges stay in place. */
+.status-bar-branch-tail {
+  direction: rtl;
+}
+
+.status-bar-folder {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+}
+
+.status-bar-folder-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-bar-spacer {
+  flex: 1 1 auto;
+}
+
+/* Anchors a popover to its trigger (sidebar-ctx-menu pattern, D4). */
+.status-bar-anchor {
+  position: relative;
+  flex: 0 1 auto;
+  max-width: 40%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* The two right-hand triggers: sync section and changed-file counter. */
+.status-bar-sync,
+.status-bar-changes {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: calc(var(--status-bar-height) - 6px);
+  padding: 0 7px;
+  border-radius: 6px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.status-bar-sync.muted {
+  color: var(--text-faint);
+}
+
+.status-bar-sync.error {
+  flex: 0 1 auto;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  line-height: calc(var(--status-bar-height) - 6px);
+  color: var(--red);
+}
+
+button.status-bar-sync:hover,
+button.status-bar-changes:hover,
+button.status-bar-sync.open,
+button.status-bar-changes.open {
+  background: var(--panel-2);
+}

@@ -42,3 +42,41 @@ export function selectionAfterRemove(tree: WorkspaceNode[], repoPath: string): s
   const repo = tree.flatMap((ws) => ws.repos).find((r) => r.path === repoPath)
   return repo?.worktrees.find((w) => w.isDefault)?.id ?? null
 }
+
+/**
+ * The worktree a path lies in, by its selection id, or null when none does.
+ *
+ * A session records the folder it was spawned in, and that folder is a
+ * worktree's — or one inside it, since an agent may be started deeper. The
+ * deepest match wins, so a worktree nested inside another resolves to itself
+ * rather than to its parent.
+ *
+ * Comparison is case-insensitive and separator-agnostic: the app is Windows
+ * only, where `D:\repo` and `d:/repo` name the same folder, and the two
+ * spellings do reach this from different sources.
+ */
+export function worktreeIdForPath(tree: WorkspaceNode[], path: string | null): string | null {
+  if (!path) return null
+  const target = comparable(path)
+  let best: string | null = null
+  let bestLength = -1
+  for (const workspace of tree) {
+    for (const repo of workspace.repos) {
+      for (const worktree of repo.worktrees) {
+        const candidate = comparable(worktree.id)
+        if (candidate === '') continue
+        if (target !== candidate && !target.startsWith(`${candidate}/`)) continue
+        if (candidate.length > bestLength) {
+          best = worktree.id
+          bestLength = candidate.length
+        }
+      }
+    }
+  }
+  return best
+}
+
+/** One spelling of a path, for comparing two of them. */
+function comparable(path: string): string {
+  return path.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()
+}

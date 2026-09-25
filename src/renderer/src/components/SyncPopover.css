@@ -1,0 +1,142 @@
+/* Sync popover — floats above the bar's sync section (STBR-15), styled like
+   the sidebar-ctx-menu surface. */
+
+.sync-pop {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 70;
+  width: 380px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 12px 36px var(--shadow);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  white-space: normal;
+  cursor: default;
+  animation: popIn 0.16s ease;
+}
+
+.sync-pop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.sync-pop-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sync-pop-btn:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.sync-pop-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.sync-pop-remote {
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.sync-pop-reason {
+  color: var(--text-muted);
+}
+
+.sync-pop-fetched {
+  color: var(--text-muted);
+  font-size: 11.5px;
+}
+
+.sync-pop-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.sync-pop-status.failed {
+  color: var(--red);
+}
+
+.sync-pop-loader {
+  display: inline-flex;
+  animation: sync-pop-spin 1s linear infinite;
+}
+
+@keyframes sync-pop-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sync-pop-loader {
+    animation: none;
+  }
+}
+
+.sync-pop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sync-pop-commit {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sync-pop-sha {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-text);
+}
+
+.sync-pop-subject {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-pop-age {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.sync-pop-empty,
+.sync-pop-more {
+  color: var(--text-faint);
+  font-size: 11.5px;
+}

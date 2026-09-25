@@ -6,6 +6,7 @@ import {
   adjacentRowId,
   buildRailGroups,
   flatRows,
+  headerCounts,
   statusClass,
   type OrphanGroup,
   type TaskGroup
@@ -478,5 +479,127 @@ describe('flatRows and adjacentRowId', () => {
 
     expect(adjacentRowId(groups, 'removed', 1)).toBeNull()
     expect(adjacentRowId(groups, 'removed', -1)).toBeNull()
+  })
+})
+
+describe('rail rows with agent activity', () => {
+  const running = (activity?: SessionView['activity']): SessionView =>
+    session({ id: 's1', status: 'running', ...(activity ? { activity } : {}) })
+
+  const statusOf = (s: SessionView): string =>
+    flatRows(buildRailGroups([s], tree(WT_A), []))[0].status
+
+  const tooltipOf = (s: SessionView): string =>
+    flatRows(buildRailGroups([s], tree(WT_A), []))[0].tooltip
+
+  it.each([
+    ['working', 'working'],
+    ['compacting', 'compacting'],
+    ['waiting', 'waiting'],
+    ['needs-approval', 'approval'],
+    ['needs-input', 'input'],
+    ['error', 'error'],
+    ['exited', 'shell']
+  ])('labels a session whose agent reports %s as %s', (state, label) => {
+    expect(statusOf(running({ state: state as never, subagents: 0 }))).toBe(label)
+  })
+
+  it('keeps the bare running label when the agent reports nothing (ACTV-19)', () => {
+    expect(statusOf(running())).toBe('running')
+  })
+
+  it('keeps stopped and path-missing rows exactly as they were (ACTV-19)', () => {
+    expect(statusOf(session({ id: 's1' }))).toBe('stopped')
+    expect(statusOf(session({ id: 's1', pathMissing: true }))).toBe('path missing')
+  })
+
+  it.each(['working', 'waiting', 'needs-approval', 'error', 'exited'])(
+    'offers Stop and nothing else while the agent is %s',
+    (state) => {
+      const rows = flatRows(
+        buildRailGroups([running({ state: state as never, subagents: 0 })], tree(WT_A), [])
+      )
+      expect(rows[0].actions).toEqual(['stop'])
+    }
+  )
+
+  it('names the running tool in the tooltip (ACTV-24)', () => {
+    expect(tooltipOf(running({ state: 'working', tool: 'Bash', subagents: 0 }))).toBe(
+      'Claude · 24173-fix-login · user/otavio/24173-fix-login · Bash'
+    )
+  })
+
+  it.each([
+    [1, '1 subagent'],
+    [3, '3 subagents']
+  ])('counts %i active subagents in the tooltip (ACTV-25)', (subagents, text) => {
+    expect(tooltipOf(running({ state: 'working', subagents }))).toContain(` · ${text}`)
+  })
+
+  it('names the API error in the tooltip (ACTV-26)', () => {
+    expect(tooltipOf(running({ state: 'error', subagents: 0, error: 'rate_limit' }))).toContain(
+      ' · rate_limit'
+    )
+  })
+
+  it('leaves the tooltip byte-identical when the agent reports nothing (RAIL-15)', () => {
+    expect(tooltipOf(running())).toBe('Claude · 24173-fix-login · user/otavio/24173-fix-login')
+  })
+
+  it('does not reorder rows when a status changes (RAIL-04, RAIL-05)', () => {
+    const before = buildRailGroups(
+      [
+        session({ id: 'a', status: 'running', activity: { state: 'waiting', subagents: 0 } }),
+        session({ id: 'b', status: 'running', cwd: WT_B.path })
+      ],
+      tree(WT_A, WT_B),
+      []
+    )
+    const after = buildRailGroups(
+      [
+        session({ id: 'a', status: 'running', activity: { state: 'error', subagents: 0 } }),
+        session({ id: 'b', status: 'running', cwd: WT_B.path })
+      ],
+      tree(WT_A, WT_B),
+      []
+    )
+
+    expect(flatRows(after).map((r) => r.id)).toEqual(flatRows(before).map((r) => r.id))
+  })
+})
+
+describe('headerCounts', () => {
+  const s = (id: string, activity?: SessionView['activity']): SessionView =>
+    session({ id, status: 'running', ...(activity ? { activity } : {}) })
+
+  it('counts working and compacting agents as working (ACTV-22)', () => {
+    const counts = headerCounts([
+      s('a', { state: 'working', subagents: 0 }),
+      s('b', { state: 'compacting', subagents: 0 }),
+      s('c', { state: 'waiting', subagents: 0 })
+    ])
+
+    // `waiting` is not "needs you": ACTV-23 names only approval, input and error.
+    expect(counts).toEqual({ running: 3, working: 2, needYou: 0 })
+  })
+
+  it('counts blocked and failed agents as needing the user (ACTV-23)', () => {
+    const counts = headerCounts([
+      s('a', { state: 'needs-approval', subagents: 0 }),
+      s('b', { state: 'needs-input', subagents: 0 }),
+      s('c', { state: 'error', subagents: 0 })
+    ])
+
+    expect(counts.needYou).toBe(3)
+  })
+
+  it('counts live shells as running whether or not they report activity', () => {
+    const counts = headerCounts([
+      s('a'),
+      s('b', { state: 'working', subagents: 0 }),
+      session({ id: 'c' })
+    ])
+
+    expect(counts).toEqual({ running: 2, working: 1, needYou: 0 })
   })
 })

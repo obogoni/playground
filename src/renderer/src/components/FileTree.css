@@ -1,0 +1,176 @@
+/*
+ * The Files direction's left column (FXPL-07..12): mode selector, base picker,
+ * tree. Rows borrow the sidebar's geometry — 9px radius, hover fill, one line
+ * of mono text — so the two trees in the app read as the same control.
+ */
+
+.file-tree {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+}
+
+.file-tree-modes {
+  flex: 0 0 auto;
+  display: flex;
+  /* Four modes no longer fit one line at the column's 200px minimum, and
+     "Diff to origin" must not break mid-label, so the row wraps instead. */
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.file-tree-mode {
+  flex: 1 1 auto;
+  padding: 5px 4px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+
+.file-tree-mode:hover {
+  background: var(--panel-2);
+}
+
+.file-tree-mode.active {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.file-tree-base {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 8px;
+}
+
+.file-tree-base-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.file-tree-base-select {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.file-tree-base-select:disabled {
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+.file-tree-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 6px 8px 10px;
+}
+
+.file-tree-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: 7px;
+  text-align: left;
+  color: var(--text-muted);
+  transition: background 0.12s;
+}
+
+.file-tree-row:hover {
+  background: var(--panel-2);
+}
+
+.file-tree-name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Closed points right, open points down — one glyph, rotated. */
+.file-tree-chevron {
+  display: flex;
+  flex: none;
+  transform: rotate(-90deg);
+  transition: transform 0.12s;
+}
+
+.file-tree-chevron.open {
+  transform: none;
+}
+
+.file-tree-pill {
+  flex: none;
+  width: 16px;
+  text-align: center;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.file-tree-pill.modified {
+  background: color-mix(in oklab, var(--amber) 16%, transparent);
+  color: var(--amber);
+}
+
+.file-tree-pill.added {
+  background: color-mix(in oklab, var(--green) 16%, transparent);
+  color: var(--green);
+}
+
+.file-tree-pill.deleted {
+  background: color-mix(in oklab, var(--red) 16%, transparent);
+  color: var(--red);
+}
+
+.file-tree-pill.renamed {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.file-tree-pill.untracked {
+  background: color-mix(in oklab, var(--text-faint) 20%, transparent);
+  color: var(--text-muted);
+}
+
+.file-tree-note {
+  padding: 10px 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+/* Git's own line, shown in place of the rows (spec §Edge Cases, AD-032). */
+.file-tree-error {
+  padding: 8px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--red);
+  word-break: break-word;
+}

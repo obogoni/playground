@@ -1,5 +1,6 @@
 import type { AgentDef, Shell } from '../main/spawn-plan'
 import { SEEDED_AGENTS } from './agents'
+import type { FilesMode } from './files'
 import type { PinnedTask } from './tasks'
 import { DEFAULT_BRANCH_TEMPLATE } from './tasks'
 import type { WorkspaceEntry } from './tree'
@@ -8,6 +9,31 @@ import { DEFAULT_WORKTREE_TEMPLATE } from './worktrees'
 /** Lifecycle of an agent session's hosting shell. The amber `agent-exited`
  * sub-status (shell alive but the agent quit) is deferred to AM3. */
 export type SessionStatus = 'running' | 'stopped'
+
+/**
+ * What a running agent is doing, folded in main from the agent CLI's own
+ * lifecycle hooks (AD-019). Orthogonal to `SessionStatus`, which is about the
+ * hosting shell: a session can be `running` with no activity at all, which is
+ * every session whose agent publishes no hooks.
+ */
+export type ActivityState =
+  | 'working'
+  | 'waiting'
+  | 'needs-approval'
+  | 'needs-input'
+  | 'error'
+  | 'compacting'
+  | 'exited'
+
+export interface SessionActivity {
+  state: ActivityState
+  /** Tool currently running, or the one awaiting approval. */
+  tool?: string
+  /** Active subagents, counted by the ids the hooks report. */
+  subagents: number
+  /** The `StopFailure` error type (`rate_limit`, `overloaded`, …); `error` only. */
+  error?: string
+}
 
 /** Persisted across restarts; the PTY itself never survives, so on load every
  * status is normalized to `stopped` (one-click Respawn re-runs in the same cwd). */
@@ -29,12 +55,23 @@ export interface SessionView extends PersistedSession {
   pathMissing: boolean
   /** Up to 2 tail lines from a retained buffer; absent after restart (AGCF-08). */
   lastOutput?: string
+  /** What the agent is doing, derived in main from its lifecycle hooks. Absent
+   *  for ad-hoc and non-Claude sessions, for stopped sessions, and until the
+   *  first hook event arrives. Never persisted (ACTV-09). */
+  activity?: SessionActivity
+}
+
+/** One worktree's remembered Files lens (FXPL-13). `base` is absent until the
+ *  user picks one; the diff mode then falls back to `origin/HEAD` (FXPL-10). */
+export interface FilesState {
+  mode: FilesMode
+  base?: string
 }
 
 export interface AppConfig {
   ui: {
     theme: 'dark' | 'light'
-    direction: 'tree' | 'board' | 'agents' | 'workflows' | 'hours'
+    direction: 'tree' | 'board' | 'agents' | 'workflows' | 'files' | 'hours'
     /** Hosting shell for new agent PTYs; running sessions keep their own (AGCF-02). */
     defaultShell: Shell
     /** Persisted sidebar width; absent = 230px default (PANE-01). */
@@ -47,6 +84,17 @@ export interface AppConfig {
     tasksCollapsed?: boolean
     /** Workspace ids folded in the sidebar tree; absent = every workspace expanded (WSCL-06). */
     collapsedWorkspaces?: string[]
+    /** What the Files direction last showed per worktree; absent = full folder
+     *  and the `origin/HEAD` default (FXPL-13, design D4). */
+    files?: Record<string, FilesState>
+    /** The worktree selected when the app last closed, restored on launch
+     *  (FXPL-33); absent, or naming a worktree that is gone, selects nothing. */
+    selectedWorktree?: string
+    /** How every open diff is laid out; absent = side by side (FDIF-11/12). */
+    diffLayout?: 'side-by-side' | 'inline'
+    /** Hide leading and trailing whitespace changes, and the line-ending strip
+     *  and markers with them; absent = whitespace shown (FDIF-15/16). */
+    diffIgnoreWhitespace?: boolean
   }
   workspaces: WorkspaceEntry[]
   /** Editable coding-agent registry; seeded from `SEEDED_AGENTS` (AGCF-01). */
