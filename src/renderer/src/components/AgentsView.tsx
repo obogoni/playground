@@ -33,6 +33,7 @@ interface AgentsViewProps {
   onNew: () => void
   onPauseTime: (id: string) => void
   onResumeTime: (id: string) => void
+  onToast: (message: string) => void
 }
 
 /**
@@ -57,7 +58,8 @@ export function AgentsView({
   onOpenWorktree,
   onNew,
   onPauseTime,
-  onResumeTime
+  onResumeTime,
+  onToast
 }: AgentsViewProps): JSX.Element {
   const active = sessions.find((s) => s.id === selectedId) ?? sessions[0] ?? null
 
@@ -91,6 +93,7 @@ export function AgentsView({
           onOpenWorktree={onOpenWorktree}
           onPauseTime={onPauseTime}
           onResumeTime={onResumeTime}
+          onToast={onToast}
         />
       ) : (
         <div className="agents-detail-empty">
@@ -119,6 +122,7 @@ interface SessionDetailProps {
   onOpenWorktree: (cwd: string) => void
   onPauseTime: (id: string) => void
   onResumeTime: (id: string) => void
+  onToast: (message: string) => void
 }
 
 function SessionDetail({
@@ -134,7 +138,8 @@ function SessionDetail({
   onDuplicate,
   onOpenWorktree,
   onPauseTime,
-  onResumeTime
+  onResumeTime,
+  onToast
 }: SessionDetailProps): JSX.Element {
   const { branch, taskId, detached } = deriveAttribution(tree, session.cwd)
   const pin = linkedPinFor(tasks, taskId)
@@ -295,6 +300,8 @@ function SessionDetail({
           key={session.id}
           sessionId={session.id}
           undoByte={undoByteFor(agents, session.agent)}
+          cwd={session.cwd}
+          onToast={onToast}
         />
       ) : (
         <div className="agents-detail-stopped">

@@ -603,3 +603,97 @@ describe('headerCounts', () => {
     expect(counts).toEqual({ running: 2, working: 1, needYou: 0 })
   })
 })
+
+describe("rail rows with the agent's session name (AD-040)", () => {
+  const named = (id: string, name: string, overrides: Partial<SessionView> = {}): SessionView =>
+    session({ id, status: 'running', name, ...overrides })
+
+  it('labels the row with the name Claude gives the session (SNAME-01)', () => {
+    const [row] = flatRows(buildRailGroups([named('s1', 'alpha')], tree(WT_A), pinned))
+
+    expect(row.label).toBe('alpha')
+  })
+
+  it('keeps the agent name for unnamed, ad-hoc and stopped sessions (SNAME-03)', () => {
+    const groups = buildRailGroups(
+      [
+        session({ id: 's1', status: 'running' }),
+        session({ id: 's2', agent: 'Ad-hoc', status: 'running' }),
+        session({ id: 's3', agent: 'Codex', status: 'stopped' })
+      ],
+      tree(WT_A),
+      pinned
+    )
+
+    expect(groups[0].rows.map((r) => r.label)).toEqual(['Claude', 'Ad-hoc', 'Codex'])
+  })
+
+  it('ordinal-suffixes two rows that share a name in one group (SNAME-06)', () => {
+    const groups = buildRailGroups(
+      [named('s1', 'refactor'), named('s2', 'refactor')],
+      tree(WT_A),
+      pinned
+    )
+
+    expect(groups[0].rows.map((r) => r.label)).toEqual(['refactor 1', 'refactor 2'])
+  })
+
+  it('leaves a named row bare beside agent-named rows that collide (SNAME-06)', () => {
+    const groups = buildRailGroups(
+      [
+        named('s1', 'alpha'),
+        session({ id: 's2', status: 'running' }),
+        session({ id: 's3', status: 'running' })
+      ],
+      tree(WT_A),
+      pinned
+    )
+
+    expect(groups[0].rows.map((r) => r.label)).toEqual(['alpha', 'Claude 1', 'Claude 2'])
+  })
+
+  it('scopes the ordinal to the group, leaving a name unique per group bare (SNAME-06)', () => {
+    const groups = buildRailGroups(
+      [named('s1', 'alpha'), named('s2', 'alpha', { cwd: 'C:/x' })],
+      tree(WT_A),
+      pinned
+    )
+
+    expect(groups[0].rows[0].label).toBe('alpha')
+    expect(groups[1].rows[0].label).toBe('alpha')
+  })
+
+  it('reads `<agent> · <name>` in the tooltip in place of the title (SNAME-05)', () => {
+    const [row] = flatRows(
+      buildRailGroups([named('s1', 'alpha', { title: 'renamed by hand' })], tree(WT_A), pinned)
+    )
+
+    expect(row.tooltip).toBe('Claude · alpha · user/otavio/24173-fix-login')
+  })
+
+  it('keeps the activity detail after the name in the tooltip (SNAME-05, ACTV-24)', () => {
+    const [row] = flatRows(
+      buildRailGroups(
+        [named('s1', 'alpha', { activity: { state: 'working', tool: 'Bash', subagents: 0 } })],
+        tree(WT_A),
+        pinned
+      )
+    )
+
+    expect(row.tooltip).toBe('Claude · alpha · user/otavio/24173-fix-login · Bash')
+  })
+
+  it('changes neither the group head nor the header counts (SNAME-07)', () => {
+    const sessions = [named('s1', 'alpha'), named('s2', 'beta')]
+    const groups = buildRailGroups(sessions, tree(WT_A), pinned)
+
+    expect(groups[0].ariaLabel).toBe('#24173 Fix the login redirect')
+    expect(headerCounts(sessions)).toEqual({ running: 2, working: 0, needYou: 0 })
+  })
+
+  it('still hands the component the agent for the tile (SNAME-07, RAIL-12)', () => {
+    const [row] = flatRows(buildRailGroups([named('s1', 'alpha')], tree(WT_A), pinned))
+
+    expect(row.session.agent).toBe('Claude')
+  })
+})

@@ -2,6 +2,7 @@ import { app, shell, dialog, BrowserWindow, Notification, powerMonitor } from 'e
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, watch, writeFileSync } from 'node:fs'
+import { stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { promisify } from 'node:util'
 import { join, resolve } from 'path'
@@ -26,8 +27,11 @@ import { createMcpResultServer } from './mcp-result-server'
 import { withPostCreateHook } from './post-create-hook'
 import { PtyPort } from './pty-port'
 import { resolvePostCreateCommand } from './repo-config'
+import { scrubAuthEnv } from './scrub-auth-env'
 import { SessionManager, type ActivityHooks, type EmitFn } from './session-manager'
-import { ShortcutLauncher } from './shortcut-launcher'
+import { LinkOpener } from './link-opener'
+import { SessionNamePoller } from './session-name-poller'
+import { ShortcutLauncher, spawnDetached } from './shortcut-launcher'
 import { TaskBoard } from './task-board'
 import { TimeLogStore } from './time-log-store'
 import { buildSnapshot, readGit } from './time-snapshot'
@@ -129,6 +133,7 @@ const spawnAgent: AgentSpawn = (bin, argv, { cwd, env }): AgentChild => {
   return {
     onStdout: (listener) => child.stdout?.on('data', (chunk) => listener(chunk.toString())),
     onStderr: (listener) => child.stderr?.on('data', (chunk) => listener(chunk.toString())),
+    onError: (listener) => child.on('error', listener),
     onClose: (listener) => child.on('close', (code) => listener(code)),
     kill: () => child.kill()
   }
@@ -141,6 +146,8 @@ let sessionManager: SessionManager | null = null
 let timeTracker: TimeTracker | null = null
 /** Closes the activity hook listener on quit; set once the server is created. */
 let stopHookServer: (() => Promise<void>) | null = null
+/** Kills the in-flight `claude agents --json` on quit (SNAME-14). */
+let namePoller: SessionNamePoller | null = null
 
 function createWindow(): void {
   // Create the browser window.
@@ -289,6 +296,25 @@ app.whenReady().then(() => {
   const launcher = new ShortcutLauncher()
   handle('shortcuts:launch', ({ tool, path }) => launcher.launch(tool, path))
 
+  const linkOpener = new LinkOpener({
+    homedir,
+    stat,
+    openPath: (path) => shell.openPath(path),
+    openExternal: (url) => shell.openExternal(url),
+    spawnDetached,
+    // `assoc` exits 0 only when the extension has a ProgId; a plain `exec`
+    // would resolve either way, so the exit code is what answers the question.
+    hasAssociation: (ext) =>
+      execFileAsync('cmd.exe', ['/c', 'assoc', ext], { windowsHide: true }).then(
+        () => true,
+        () => false
+      )
+  })
+  handle('links:probe', ({ cwd, paths }) => linkOpener.probe(cwd, paths))
+  handle('links:openUrl', ({ url }) => linkOpener.openUrl(url))
+  handle('links:openPath', ({ cwd, pathText }) => linkOpener.openPath(cwd, pathText))
+  handle('links:openFileUrl', ({ url }) => linkOpener.openFileUrl(url))
+
   const adoGateway = new AdoGateway()
   const taskBoard = new TaskBoard(configStore, adoGateway)
   handle('tasks:list', () => taskBoard.list())
@@ -387,16 +413,49 @@ app.whenReady().then(() => {
     })
     .catch((err) => console.error('[activity-hooks] server did not start', err))
 
+  // Resolve the `claude` binary (WF3-23): the first `where claude` hit on PATH, else the
+  // optional `agent.claudePath` config override, else throw so the step fails clearly
+  // without spawning. `agent` is not a typed AppConfig section yet (WF4+), read via cast.
+  // Declared here, ahead of the SessionManager, because the name poller needs it too.
+  const resolveClaude = (): string => {
+    try {
+      const out = execFileSync('where', ['claude'], { encoding: 'utf8', windowsHide: true })
+      const first = out
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .find((line) => line.length > 0)
+      if (first) return first
+    } catch {
+      // not on PATH — fall through to the config override
+    }
+    const configured = (configStore.get() as { agent?: { claudePath?: string } }).agent?.claudePath
+    if (configured) return configured
+    throw new Error('agent binary not found')
+  }
+
+  // Session names (AD-040): the poller reads `claude agents --json` through the
+  // same spawn seam and env posture as the headless runner; `cwd` is only there
+  // because spawn needs one — the listing is machine-wide. This wiring is the
+  // hand-verified boundary (TESTING.md); the CDP smoke in T8 exercises it.
+  namePoller = new SessionNamePoller({
+    spawn: spawnAgent,
+    resolveBin: resolveClaude,
+    cwd: app.getPath('userData'),
+    env: scrubAuthEnv(process.env),
+    log: (msg) => console.error(msg)
+  })
   sessionManager = new SessionManager({
     port: new PtyPort(),
     config: configStore,
     emit: emitToWindow,
     fsExists: existsSync,
     lifecycle: tracker,
-    hooks: activityHooks
+    hooks: activityHooks,
+    names: namePoller
   })
   const sessions = sessionManager
   hookServer.onEvent((sessionId, payload) => sessions.handleHookEvent(sessionId, payload))
+  namePoller.onListing((names) => sessions.applyNames(names))
   handle('sessions:list', () => sessions.list())
   handle('sessions:spawn', ({ agentName, cwd, adhocCommand }) =>
     sessions.spawn(agentName, cwd, adhocCommand)
@@ -427,24 +486,6 @@ app.whenReady().then(() => {
   // DI'd runner drives a headless `claude` child through it (real spawn seam,
   // `resolveClaude`, `randomUUID` tokens) and is injected as the ctx `agent` capability.
   const resultServer = createMcpResultServer()
-  // Resolve the `claude` binary (WF3-23): the first `where claude` hit on PATH, else the
-  // optional `agent.claudePath` config override, else throw so the step fails clearly
-  // without spawning. `agent` is not a typed AppConfig section yet (WF4+), read via cast.
-  const resolveClaude = (): string => {
-    try {
-      const out = execFileSync('where', ['claude'], { encoding: 'utf8', windowsHide: true })
-      const first = out
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .find((line) => line.length > 0)
-      if (first) return first
-    } catch {
-      // not on PATH — fall through to the config override
-    }
-    const configured = (configStore.get() as { agent?: { claudePath?: string } }).agent?.claudePath
-    if (configured) return configured
-    throw new Error('agent binary not found')
-  }
   const agentRunner = new AgentStepRunner({
     server: resultServer,
     spawn: spawnAgent,
@@ -531,6 +572,7 @@ app.on('window-all-closed', () => {
   // After killAll: its synchronous finalize already ended each run, so this only
   // closes whatever is still open, at the quit instant (TIME-09).
   timeTracker?.closeAll()
+  namePoller?.dispose()
   void stopHookServer?.()
   if (process.platform !== 'darwin') {
     app.quit()

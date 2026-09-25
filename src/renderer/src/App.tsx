@@ -436,6 +436,7 @@ function App(): JSX.Element {
             onNew={() => openNewSession()}
             onPauseTime={time.pause}
             onResumeTime={time.resume}
+            onToast={setToast}
           />
         ) : ui.direction === 'workflows' ? (
           <WorkflowsView

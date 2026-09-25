@@ -44,6 +44,10 @@ Handoff snapshot.
 | AD-037 | 2026-09-20 | **Selecting a session selects the worktree it runs in.** `worktreeIdForPath` resolves a session's `cwd` to the deepest worktree containing it — case-insensitively and separator-agnostically, since the app is Windows only — and every session-selection entry point sets the worktree selection with it. A `cwd` no worktree holds leaves the selection untouched. | The app has one current worktree and every direction reads it: the Files tree, the status bar, the launcher row. Only the Tree set it, so moving between agents left the Files direction pointing at whatever branch was last clicked there — reported by the owner against PR #100. Resolving the containing worktree rather than requiring an exact match covers an agent spawned in a subfolder, which the New Session dialog allows. |
 | AD-038 | 2026-09-20 | **A commit row leads with the subject, and its two actions move to a right-click menu.** The short sha leaves the row — it stays in the row's tooltip, in the menu's Copy sha, and in the commit tab's title, where two commits sharing a subject still need telling apart. Copy sha and Open in browser become items of a context menu built like the sidebar's. FCMT-03, 21 and 23 amended; 22, 25 and 26 hold as written, one menu level down. | Owner review of PR #102. The subject is what a reader scans for, and the sha led instead. The two buttons were worse than redundant: `opacity: 0` hides a button but does not release its width, so ~150px of row was reserved for actions that were not on screen, and the author's name was clipped to its first letter. Moving them fixes both complaints with one change, and the layout defect is now asserted rather than eyeballed — the smoke compares `scrollWidth` against `clientWidth` on every row, which reading `textContent` cannot detect. |
 | AD-039 | 2026-09-20 | **The app reopens on the worktree it closed on, and Files sits beside Agents.** `ui.selectedWorktree` persists the selection; it is restored once, after both the config and the tree have arrived, and only when the tree still holds that worktree. The write is held back until the restore has run. The top bar's order becomes Tree, Board, Agents, Files, Workflows. | Owner request after reviewing PR #100. The selection was plain React state, so every launch started on nothing and the Files direction had no worktree to open on — the one thing it needs before it can show anything. The restore waits for the tree because only the tree can say the folder still exists, and the write waits for the restore because persisting from the first render would save the mount's empty selection over the stored one. Files moves next to Agents because both are about the worktree an agent is working in, and the two are switched between constantly. FXPL-33 added. |
+| AD-040 | 2026-09-18 | **A Claude session's name on the rail comes from `claude agents --json`, matched by the `session_id` its lifecycle hooks report — never from the terminal title and never from the transcript.** The listing is documented ("Print active sessions (interactive and background) as a JSON array and exit (for scripting; does not require a TTY)") and measured on 2.1.277: foreground interactive sessions appear with `sessionId` and `name`; only those two fields are read. Main polls it on the first hook event of a session (debounced 1 s), on later events for a still-unnamed session, and every 30 s while an eligible session is live — one call serves every row, ~2 s each. A failed call keeps every name; a successful listing without the id clears it. The name is ephemeral (never in `config.json`), lives on the row only — tooltip `<agent> · <name>`, RAIL-13 numbering on the rendered label — and the app's own `title`/rename are untouched. Sessions the app cannot name (no hook event yet, non-Claude, ad-hoc, stopped) keep the agent display name. **Numbered 022 because `AD-021` is already claimed by two open branches** (`time-tracking` #93 and `terminal-links`). | AD-019's rule was applied to the name as the owner's choice, with the alternatives measured first and recorded in the spec: the terminal title reaches node-pty as `OSC 0` and would carry the AI-generated title, but it is documented nowhere and AD-019 names its glyphs among the rejected markers; the transcript's `ai-title`/`custom-title` lines exist but `sessions.md` declares the entry format internal and breakable on any release; the statusline `session_name` is documented but reachable only by injecting a shell-dependent `command` statusline that overrides the user's (the AD-020 objection). Accepted consequence, stated at decision time: the AI-generated first-prompt title is not in the listing, so an unnamed session shows its default display name (`repos-a2`) until `/rename` or an accepted plan. Spec/context/design: `.specs/features/session-name/` (SNAME-01..15). |
+| AD-041 | 2026-09-18 | **Terminal file links open through the Windows file association with no executable block list.** A Ctrl+click on a path the agent printed launches whatever Windows associates with its extension — including `.exe`, `.cmd`, `.bat`, `.ps1`, `.msi`, `.lnk`, `.vbs`, `.js`, `.jar`. Directories open in File Explorer; a file with no association gets the native "Open with" chooser (`rundll32 shell32.dll,OpenAs_RunDLL`), launched by main explicitly because `shell.openPath` no-ops on Windows 11 (electron#36605). | Owner decision at `terminal-links` Specify (2026-09-18), taken with the risk on the table: one destination, no editor coupling, and Orca behaves the same. Recorded here so the posture is explicit and revisitable — a block list is a single guard in `LinkOpener.openPath`. Spec/design: `.specs/features/terminal-links/`. |
+| AD-042 | 2026-09-19 | **Every agent session runs with `FORCE_HYPERLINK=1`; the app claims hyperlink support for the whole PTY, alongside `TERM=xterm-256color` and `COLORTERM=truecolor`, and still never claims a `TERM_PROGRAM`.** Hyperlink-aware CLIs (Claude Code inlines the `supports-hyperlinks` check and tests this variable before `TERM_PROGRAM`) then emit OSC 8 for every path and URL they print, and xterm renders those cells with its own dashed underline — the look the owner wanted from Orca, which forces the same variable. | Measured 2026-09-19 on Claude Code 2.1.278: without the variable every path is plain text (the first `terminal-links` delivery never saw an OSC 8); with it the `Write(...)` header carries `file:///C:/…` and a markdown link its `https://` target in `blueBright`. `TERM_PROGRAM` stays unclaimed because the CSI-u finding of INPUT-12 is untouched by this variable. Any other CLI honouring the convention emits OSC 8 that xterm renders harmlessly. Spec: `terminal-links` LINK-33. |
+| AD-043 | 2026-09-19 | **An OSC 8 hyperlink whose target is `file://` opens through the same file rules as a printed path; every other non-`http(s)` OSC 8 scheme is provided to xterm (hover underline, pointer) but never opened — Ctrl+click passes through to the agent.** `linkHandler.allowNonHttpProtocols` is on, the pane classifies the hovered target by scheme, and main converts the URL to a path (`fileURLToPath`, host must be empty or `localhost`, fragment dropped) before the LINK-09..13 rules. | Reverses the Design-time withdrawal of LINK-21, taken when no agent had been seen emitting OSC 8. With AD-042 every path Claude Code prints is a `file://` OSC 8, and the URL is more reliable than re-detecting the visible text (absolute, percent-encoded, unaffected by wrapping). The all-or-nothing gate costs only a hover underline on schemes whose cells already carry xterm's dashed one. Orca sets the same option. Spec: `terminal-links` LINK-21/22. |
 
 
 ## Handoff
@@ -94,3 +98,119 @@ tip**, not the common ancestor, or the range replays F3's own commits. Re-measur
 as the first act of Execute; it is **1177** on F3's tip. **F4's T1 writes to a real Azure DevOps pull
 request**: a sandbox PR the owner names, with a go-ahead at that moment. F4 also flips the README's
 "ADO is read-only" claim, per AD-027.
+
+### `session-name` (PR #96, merged with the Files epic on 2026-09-25)
+
+Decision renumbered AD-022 → **AD-040** at merge time: `origin/main` had already claimed AD-022..039 for the Files epic.
+
+**Status (2026-09-19): `session-name` EXECUTED + independent Verifier **PASS** on branch
+`feature/session-name`, cut from `main` `6ecd19c` (= `origin/main`; PR #88 activity already in).
+12 commits (`3e69ce9..579819a`), tree clean. PR not opened — push to `fork` (mrpaiva) and the draft
+PR to `obogoni/playground` (`Closes #92`) need an explicit go-ahead.**
+
+A running Claude Code session's row in the Agents rail now shows the name Claude gives that session
+(`/rename`, an accepted plan, or the default `<folder>-xx`), read from the documented listing
+`claude agents --json` and matched by the `session_id` the session's hooks already report (AD-040).
+Main owns a `SessionNamePoller` (`src/main/session-name-poller.ts`: debounced 1 s on the first hook
+event, every 30 s while a session holds an id, 20 s timeout, one call in flight with a coalesced
+rerun, one log line per failure streak); `SessionManager` records the id, watches/nudges/unwatches,
+applies each listing and pushes `session:name` only on change; the renderer applies it in place
+(`applyName`) and `resolveRows` labels, numbers (RAIL-13) and describes rows by `rowLabel` — tooltip
+`<agent> · <name> · <branch>`. Nothing is persisted (`PersistedSession` untouched); a stopped session
+falls back to the agent name through the existing `session:status` refetch. Suite 917 → **987**
+(+70 in three new test files and two extended ones), typecheck + lint clean, `electron-vite build`
+green. Verifier: 15/15 ACs evidenced, 13/14 mutants killed (the survivor is equivalent by
+construction: a field reset on an object dropped two lines later). Owner smoke run by the author over
+CDP against the dev app on Claude Code 2.1.278: `scripts/smoke-session-name.mjs` **14/14**.
+
+**Scope addition approved at task time:** `AgentChild.onError?` on the spawn seam
+(`agent-step-runner.ts`) and `child.on('error')` in `spawnAgent` — Node emits `error` (not a throw)
+for `ENOENT`/`EACCES`, and an unlistened `error` on a `ChildProcess` is an uncaught exception in main.
+
+**Environment gotcha found by the smoke, not a product defect:** a second dev instance of the app on
+the same `userData` rewrites `agent-hooks/claude-settings.json` with *its* hook port at launch, so the
+other instance's sessions get HTTP 401 on every hook — no `session_id`, no activity, no name. Run one
+instance at a time (`smoke-session-name.mjs` header, `TESTING.md`). Also: orphan groups (untagged
+branch) are one per session, so RAIL-13 ordinals never apply there.
+
+**Spec text aligned with what shipped (Verifier gaps, closed in `579819a`):** SNAME-05 now says
+"tooltip (`title`)" — the row has no `aria-label` and gains none; the listing-binary edge case names
+`resolveClaude` (PATH first, else `agent.claudePath`) as the accepted v1 deviation.
+
+**Lessons NOT recorded with `scripts/lessons.py`** (the installed script rewrites `lessons.json` on
+any call — see the terminal-links handoff): four candidates are listed at the end of
+`.specs/features/session-name/validation.md`, three already applied in this range.
+
+**Next steps:**
+1. Owner decides: push `feature/session-name` to `fork` and open the draft PR to
+   `obogoni/playground` — title from the feature, description from `validation.md` §Summary,
+   `Closes #92`. Update the body of issue #92 first: it still proposes the transcript's `ai-title`
+   record as the source, which AD-040 rejects (documented as internal; the AI-generated title is
+   therefore **not** shown — an unnamed session reads `<folder>-xx` until `/rename` or an accepted
+   plan). Upstream PRs #93 (`time-tracking`) and #95 (`terminal-scroll-paste`) touch
+   `session-manager.ts` / `rail-groups.ts` neighbours — rebase if either lands first.
+2. Deferred ideas in `context.md`: the terminal title (OSC 0) as a second source (would add the
+   AI-generated title and cover any agent; needs an AD-019 exception), naming the Claude session
+   from the app (`claude -n <title>`), hiding the default display name.
+3. `feature/terminal-links` (main worktree, `cb18b7a`) is still at its own verified gate, unpushed.
+
+**Uncommitted files:** none. **Branch:** `feature/session-name` @ `579819a`.
+
+### `terminal-links` (PR #104, merged on 2026-09-25)
+
+Decisions renumbered AD-021/022/023 → **AD-041/042/043** at merge time: AD-021 belongs to `time-tracking` (#93) and AD-022..039 to the Files epic.
+
+**Status (2026-09-24): `terminal-links` complete on `feature/terminal-links` — amendment T12–T15 and fix F3
+committed, independent Verifier PASS (pass 4, `dd83777..77d4e34`; pass 3 over `3563b91..a83e62b` found one
+Minor LINK-21 gap, closed by F3). All 33 LINK requirements Verified. Gate: typecheck 0, lint 0 errors (18
+pre-existing prettier warnings), `npm test` 1036/1036 (917 before T1). Pushed to `fork` and opened as
+[PR #104](https://github.com/obogoni/playground/pull/104) on 2026-09-24 — a regular PR; playground PRs are
+not drafts.**
+
+**What landed since the 2026-09-19 handoff:**
+
+- **T15 `a83e62b`** — live smoke in Claude Code 2.1.281, `validation.md` rows 22–30: a plain URL in the
+  alternate buffer hovers and opens through text detection (LINK-32); the `Write(hello.txt)` header is an
+  OSC 8 `file://` link and opens Notepad through `links:openFileUrl` (LINK-21, LINK-33); a markdown link opens
+  the browser (LINK-20); an OSC 8 `mailto:` is provided but never opened (LINK-22). The owner cross-checked
+  by hand in the smoke window. Also pointed `design.md`/T14 at `terminal-link-provider.ts`.
+- **Pass 3 `dd83777`**, **F3 `7da1cc1`** — `openFileUrl` let `fileURLToPath` throw across IPC for file URLs
+  with no local drive path (`file:////server/share/…`, `file:///tmp/…`); it now answers
+  `Only local file links open here — <url>`, and a test pins the `localhost` form. **Docs `77d4e34`** — T14's
+  Done-when said a `null` OSC 8 target falls through to text detection (it does not, and must not, for
+  LINK-22); a `C:\dir\a.txt` example had lost its `\a` to a BEL byte; the never-hovered OSC 8 Ctrl+click is a
+  deferred idea in `context.md`. **Pass 4 `3635409`**, then traceability with this handoff.
+
+**Findings worth keeping:**
+
+- **`WT_SESSION` also turns Claude Code's hyperlinks on.** A dev app launched from a Windows Terminal tab
+  passes it to every session through `buildPtyEnv`, so links show up on `main` without this branch; the
+  installed build (Start menu) gets none. Any smoke of link work must run with `WT_SESSION` and
+  `WT_PROFILE_ID` removed, or it passes for the wrong reason.
+- Claude Code 2.1.281 emits no OSC 8 for `mailto:` — it prints `text (address)`.
+- **A second dev instance without breaking the first:** `--user-data-dir=<scratch>` after the `--` isolates
+  the config and `agent-hooks/claude-settings.json`, so the owner's instance keeps its hooks. On Windows the
+  Bash tool's `TaskStop` leaves the Electron tree running — `taskkill /T /F` on the smoke's `npx` root, never
+  on the owner's PIDs.
+- **`window.api` is frozen** (AD-020 already says so; the 2026-09-19 note calling it patchable was wrong).
+  The IPC channel was read from CDP logpoints instead: `Debugger.setBreakpointByUrl` on the served
+  `TerminalPane.tsx` with a condition that logs and returns `false`; `Runtime.enable` replays old console
+  messages.
+- `npx` in a shell that descends from the running dev app resolves binaries through that app's
+  `node_modules/.bin` on `PATH`; run gates with `npm test` / `npm run …` inside the worktree.
+
+**Next steps:**
+
+1. Follow the PR. Rebase onto `origin/main` if #95 (`terminal-scroll-paste`, also edits `TerminalPane.tsx`)
+   lands first. Today the branch is 3 commits behind `main` (PR #90) and `git merge-tree` reports no conflict.
+2. Deferred ideas in `context.md`, notably the Ctrl+click on a never-hovered OSC 8 link.
+3. Lessons are still unrecorded with `scripts/lessons.py` (the installed script rewrites `lessons.json`):
+   candidates under `### Lesson candidates` in `validation.md` passes 3 and 4, plus the 2026-09-18 ones
+   (`cb18b7a`).
+
+**Traps still valid from 2026-09-19:** editing main while the dev app runs restarts Electron, and the restart
+dies on an unhandled `ERR_SERVER_NOT_RUNNING` (#91) — relaunch instead; ConPTY drops DECSET mouse requests
+from a process without `ENABLE_VIRTUAL_TERMINAL_INPUT`; Bash-tool heredocs halve backslashes (write TS/JS and
+spec prose with Edit/Write — the BEL byte above came from this); 18 pre-existing prettier warnings.
+
+**Uncommitted files:** none. **Branch:** `feature/terminal-links`, this handoff's commit.

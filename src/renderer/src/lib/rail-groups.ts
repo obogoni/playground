@@ -2,6 +2,7 @@ import type { ActivityState, SessionView } from '../../../shared/config'
 import type { PinnedTaskView, WorkItemDetails } from '../../../shared/tasks'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { deriveAttribution, linkedPinFor } from './session-attribution'
+import { rowLabel } from './session-name'
 
 /** Short row status, ordered by precedence (RAIL-14). A running session whose
  *  agent reports what it is doing shows that instead of the bare `running`
@@ -39,10 +40,12 @@ export interface RailRow {
   /** session.id — selection key and focus-map key. */
   id: string
   session: SessionView
-  /** Agent name, ordinal-suffixed when ambiguous inside the group (RAIL-13). */
+  /** The agent's own session name, else the agent name (SNAME-01, SNAME-03);
+   *  ordinal-suffixed when ambiguous inside the group (RAIL-13). */
   label: string
   status: RowStatus
-  /** `<session.title> · <branch>`, cwd substituted when detached (RAIL-15). */
+  /** `<session.title> · <branch>` — `<agent> · <name>` in place of the title when
+   *  the session has a name (SNAME-05); cwd substituted when detached (RAIL-15). */
   tooltip: string
   /** In render order (RAIL-16). */
   actions: RowAction[]
@@ -252,28 +255,32 @@ function toRailGroup(group: PendingGroup): RailGroup {
 }
 
 /**
- * One row per session, fully resolved. An agent name appearing twice or more in
- * the same group is suffixed with its 1-based position among its namesakes
- * (RAIL-13); a name unique within its group stays bare.
+ * One row per session, fully resolved. A label appearing twice or more in the
+ * same group is suffixed with its 1-based position among its namesakes
+ * (RAIL-13); a label unique within its group stays bare. The label is the
+ * agent's own session name when it reports one, else the agent name (AD-040).
  */
 function resolveRows(group: PendingGroup): RailRow[] {
   const counts = new Map<string, number>()
   for (const entry of group.entries) {
-    counts.set(entry.session.agent, (counts.get(entry.session.agent) ?? 0) + 1)
+    const label = rowLabel(entry.session)
+    counts.set(label, (counts.get(label) ?? 0) + 1)
   }
   const seen = new Map<string, number>()
 
   return group.entries.map(({ session, branch, detached }) => {
-    const ordinal = (seen.get(session.agent) ?? 0) + 1
-    seen.set(session.agent, ordinal)
-    const ambiguous = (counts.get(session.agent) ?? 0) > 1
+    const label = rowLabel(session)
+    const ordinal = (seen.get(label) ?? 0) + 1
+    seen.set(label, ordinal)
+    const ambiguous = (counts.get(label) ?? 0) > 1
     const status = rowStatus(session)
+    const who = session.name ? `${session.agent} · ${session.name}` : session.title
     return {
       id: session.id,
       session,
-      label: ambiguous ? `${session.agent} ${ordinal}` : session.agent,
+      label: ambiguous ? `${label} ${ordinal}` : label,
       status,
-      tooltip: `${session.title} · ${detached || branch === null ? session.cwd : branch}${activityDetail(session)}`,
+      tooltip: `${who} · ${detached || branch === null ? session.cwd : branch}${activityDetail(session)}`,
       actions: rowActions(status)
     }
   })

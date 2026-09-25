@@ -23,6 +23,18 @@ export interface ActivityHooks {
   revoke(token: string): void
 }
 
+/**
+ * The session-name poller, as this module needs it (AD-040). The manager says
+ * which app sessions hold a Claude `session_id`; the poller reads the listing
+ * and hands the names back through `applyNames`.
+ */
+export interface SessionNames {
+  watch(id: string, claudeSessionId: string): void
+  unwatch(id: string): void
+  /** A hook event for a watched session that still has no name. */
+  nudge(id: string): void
+}
+
 /** The only agent command that publishes lifecycle hooks the app consumes. */
 const HOOKED_COMMAND = 'claude'
 
@@ -34,6 +46,8 @@ export interface SessionManagerDeps {
   fsExists: (path: string) => boolean
   /** Absent means no session reports activity — the pre-feature behaviour. */
   hooks?: ActivityHooks
+  /** Absent means no session is named — the pre-feature rendering. */
+  names?: SessionNames
   /** Told when a session's PTY starts and ends (the time tracker, AD-021); absent = no observer. */
   lifecycle?: SessionLifecycle
 }
@@ -66,6 +80,10 @@ interface RunningSession {
   token: string | null
   /** What the agent is doing, folded from its hooks; `null` until the first event. */
   activity: MachineState | null
+  /** Claude's `session_id`, from the latest hook payload; `null` until one arrives. */
+  claudeSessionId: string | null
+  /** Last name the listing reported for `claudeSessionId`; `null` when none. */
+  name: string | null
 }
 
 /**
@@ -241,6 +259,30 @@ export class SessionManager {
     const session = this.#running.get(sessionId)
     if (!session) return
     this.#setActivity(session, applyHookEvent(session.activity, payload))
+    // The most recent id wins: `/clear` and `/resume` change it mid-session, and
+    // the listing keys on it (SNAME-08). A first or changed id needs a listing;
+    // a repeat id only matters while the session is still unnamed (SNAME-09).
+    const claudeId = payload.session_id
+    if (typeof claudeId !== 'string' || claudeId === '') return
+    if (claudeId !== session.claudeSessionId) {
+      session.claudeSessionId = claudeId
+      this.deps.names?.watch(sessionId, claudeId)
+    } else if (session.name === null) {
+      this.deps.names?.nudge(sessionId)
+    }
+  }
+
+  /**
+   * One successful listing, `sessionId → name`. Every running session with an
+   * id takes the entry's name or loses its own when the entry is gone — the
+   * listing is the source of truth for "live"; a failed call never reaches
+   * here, so a hiccup cannot drop a name (SNAME-11, SNAME-12).
+   */
+  applyNames(names: Map<string, string>): void {
+    for (const session of this.#running.values()) {
+      if (session.claudeSessionId === null) continue
+      this.#setName(session, names.get(session.claudeSessionId) ?? null)
+    }
   }
 
   resize(id: string, cols: number, rows: number): void {
@@ -303,7 +345,9 @@ export class SessionManager {
       buffer,
       exited,
       token,
-      activity: null
+      activity: null,
+      claudeSessionId: null,
+      name: null
     })
     this.deps.lifecycle?.started(meta)
   }
@@ -339,11 +383,23 @@ export class SessionManager {
       // rejected, and the activity goes with the PTY (ACTV-08, ACTV-31).
       if (session.token !== null) this.deps.hooks?.revoke(session.token)
       session.activity = null
+      // No `session:name` push: the `session:status` refetch already renders
+      // the stopped row without a name (SNAME-04).
+      session.name = null
+      session.claudeSessionId = null
+      this.deps.names?.unwatch(id)
     }
     const wasRunning = this.#running.delete(id)
     if (wasRunning) this.#setStatus(id, 'stopped')
     if (wasRunning) this.deps.lifecycle?.ended(id)
     if (exitCode !== undefined) this.deps.emit('session:exit', { id, exitCode })
+  }
+
+  /** Adopt a name and push it only when it changed (SNAME-11). */
+  #setName(session: RunningSession, next: string | null): void {
+    if (session.name === next) return
+    session.name = next
+    this.deps.emit('session:name', { id: session.meta.id, name: next })
   }
 
   /** Adopt a folded state and push it only when the rendering would change (ACTV-06). */
@@ -385,7 +441,8 @@ export class SessionManager {
       status: live ? 'running' : 'stopped',
       pathMissing: !this.deps.fsExists(meta.cwd),
       ...(preview ? { lastOutput: preview } : {}),
-      ...(live?.activity ? { activity: live.activity.view } : {})
+      ...(live?.activity ? { activity: live.activity.view } : {}),
+      ...(live?.name ? { name: live.name } : {})
     }
   }
 }

@@ -4,6 +4,7 @@ import type { SessionView } from '../../../shared/config'
 import { api } from './api'
 import { failureToast } from './failure-toast'
 import { applyActivity } from './session-activity'
+import { applyName } from './session-name'
 
 export interface UseSessionsOptions {
   /** Show a transient error toast (spawn / duplicate failures). */
@@ -45,17 +46,22 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
   // Activity is the exception: it changes on every tool call, so it is applied
   // in place instead of refetching the whole list per event (ACTV-07). An event
   // for a session the list does not hold yet is dropped; the next list() carries
-  // the state anyway.
+  // the state anyway. The agent's own session name rides the same pattern
+  // (SNAME-02).
   useEffect(() => {
     const offStatus = api.on('session:status', refreshSessions)
     const offExit = api.on('session:exit', refreshSessions)
     const offActivity = api.on('session:activity', ({ id, activity }) => {
       setSessions((prev) => applyActivity(prev, id, activity))
     })
+    const offName = api.on('session:name', ({ id, name }) => {
+      setSessions((prev) => applyName(prev, id, name))
+    })
     return () => {
       offStatus()
       offExit()
       offActivity()
+      offName()
     }
   }, [refreshSessions])
 
