@@ -207,6 +207,11 @@ export interface IpcEvents {
   /** What the session's agent is doing, folded from its lifecycle hooks; `null`
    *  clears it back to the plain `running` rendering (ACTV-05). */
   'session:activity': { id: string; activity: SessionActivity | null }
+  /** An activity transition to show as an in-app notice: the window is focused
+   *  but another session is on screen (NOTF-02). */
+  'session:notice': { id: string; title: string; body: string }
+  /** A session notification was clicked: open this session in the agents direction (NOTF-05). */
+  'session:focus': { id: string }
   /** The agent's own session name changed; `null` clears it back to the agent
    *  display name (SNAME-02, SNAME-04). */
   'session:name': { id: string; name: string | null }

@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SEEDED_AGENTS } from '../shared/agents'
 import type { PersistedSession } from '../shared/config'
+import type { ActivityChange } from './activity-notification'
 import { ConfigStore } from './config-store'
 import type { PtyHandle, PtyPort } from './pty-port'
 import type { SpawnPlan } from './spawn-plan'
@@ -145,6 +146,7 @@ function makeManager(
     fsExists?: (p: string) => boolean
     seed?: PersistedSession[]
     hooks?: FakeHooks
+    onActivityChange?: (change: ActivityChange) => void
     /** `null` builds a manager without the names dep (pre-feature wiring). */
     names?: FakeNames | null
   } = {}
@@ -171,6 +173,7 @@ function makeManager(
     emit: emit as unknown as EmitFn,
     fsExists: opts.fsExists ?? (() => true),
     hooks,
+    onActivityChange: opts.onActivityChange,
     ...(opts.names === null ? {} : { names })
   })
   return { manager, config, port, emit, hooks, names }
@@ -672,6 +675,116 @@ describe('SessionManager activity hooks', () => {
     for (const session of config.get().sessions) {
       expect(session).not.toHaveProperty('activity')
     }
+  })
+})
+
+describe('SessionManager activity transitions', () => {
+  function recording(): {
+    changes: ActivityChange[]
+    onActivityChange: (change: ActivityChange) => void
+  } {
+    const changes: ActivityChange[] = []
+    return { changes, onActivityChange: (change) => changes.push(change) }
+  }
+
+  it('reports the first state with no previous one', () => {
+    const { changes, onActivityChange } = recording()
+    const { manager } = makeManager({ onActivityChange })
+    const view = manager.spawn('Claude', CWD)
+
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+
+    expect(changes).toEqual([
+      {
+        id: view.id,
+        agent: 'Claude',
+        title: view.title,
+        cwd: CWD,
+        before: null,
+        after: { state: 'working', subagents: 0 },
+        attached: false
+      }
+    ])
+  })
+
+  it('reports the previous view as before on the next transition', () => {
+    const { changes, onActivityChange } = recording()
+    const { manager } = makeManager({ onActivityChange })
+    const view = manager.spawn('Claude', CWD)
+
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    manager.handleHookEvent(view.id, hookEvent('PermissionRequest', { tool_name: 'Bash' }))
+
+    expect(changes[1]).toMatchObject({
+      before: { state: 'working', subagents: 0 },
+      after: { state: 'needs-approval', tool: 'Bash', subagents: 0 }
+    })
+  })
+
+  it('reports whether the session is the attached one', () => {
+    const { changes, onActivityChange } = recording()
+    const { manager } = makeManager({ onActivityChange })
+    const view = manager.spawn('Claude', CWD)
+
+    manager.attach(view.id)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    manager.detach(view.id)
+    manager.handleHookEvent(view.id, hookEvent('Stop'))
+
+    expect(changes.map((c) => c.attached)).toEqual([true, false])
+  })
+
+  it('reports the current title of a renamed session (NOTF-12)', () => {
+    const { changes, onActivityChange } = recording()
+    const { manager } = makeManager({ onActivityChange })
+    const view = manager.spawn('Claude', CWD)
+
+    manager.rename(view.id, 'Fix login redirect')
+    manager.handleHookEvent(view.id, hookEvent('Stop'))
+
+    expect(changes[0].title).toBe('Fix login redirect')
+  })
+
+  it('reports nothing when the view does not change (NOTF-22)', () => {
+    const { changes, onActivityChange } = recording()
+    const { manager } = makeManager({ onActivityChange })
+    const view = manager.spawn('Claude', CWD)
+
+    manager.handleHookEvent(view.id, hookEvent('Stop'))
+    manager.handleHookEvent(view.id, hookEvent('Stop'))
+
+    expect(changes).toHaveLength(1)
+  })
+
+  it('reports nothing when the PTY stops while the session is blocked (NOTF-26)', () => {
+    const { changes, onActivityChange } = recording()
+    const { manager, port } = makeManager({ onActivityChange })
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    manager.handleHookEvent(view.id, hookEvent('PermissionRequest', { tool_name: 'Bash' }))
+
+    port.handles[0].emitExit(0)
+    void manager.stop(view.id)
+
+    expect(changes.map((c) => c.after?.state)).toEqual(['working', 'needs-approval'])
+  })
+
+  it('still pushes the activity when the listener throws', () => {
+    const { manager, emit } = makeManager({
+      onActivityChange: () => {
+        throw new Error('notifier bug')
+      }
+    })
+    const view = manager.spawn('Claude', CWD)
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    manager.handleHookEvent(view.id, hookEvent('Stop'))
+
+    expect(activityEvents(emit)).toEqual([
+      { id: view.id, activity: { state: 'waiting', subagents: 0 } }
+    ])
+    expect(manager.list()[0].activity).toEqual({ state: 'waiting', subagents: 0 })
+    error.mockRestore()
   })
 })
 
