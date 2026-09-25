@@ -147,6 +147,7 @@
 
 /* Day card: the drawer's whole surface (HCAL-15). */
 .hours-day {
+  flex: none;
   width: 100%;
   min-height: 100%;
   box-sizing: border-box;

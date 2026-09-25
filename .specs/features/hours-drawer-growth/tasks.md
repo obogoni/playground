@@ -301,10 +301,16 @@ the border at the visible area's bottom edge (within 1 px), and the spec's AC 2 
 
 **Done when**:
 
-- [ ] The full smoke passes on a fresh seed, steps 1–10, and cleans up after itself
-- [ ] `%APPDATA%\playground\time-log.jsonl` is unchanged by the whole run (size and hash)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
-- [ ] Test count: baseline (+3 if T2 ran), no silent deletions
+- [x] The full smoke passes on a fresh seed, steps 1–10, and cleans up after itself
+- [x] `%APPDATA%\playground\time-log.jsonl` is unchanged by the whole run (size and hash)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+- [x] Test count: baseline (+3 if T2 ran), no silent deletions
+
+**Result (2026-09-25):** on a fresh seed the smoke ran **34/34**, exit 0 — step 10 now reads `card bottom 1182.7,
+last group 1170.0, card 923/923` and `card bottom 598.0 vs drawer bottom 598.0`, the short day `card 432.0 vs
+drawer 432` — then closed the app and deleted the directory and the pointer. `time-log.jsonl`, `config.json` and
+`time-open.json` in `%APPDATA%\playground` kept their SHA-256. Gate: typecheck 0, lint 0 errors / 18 warnings,
+**1691 tests** (the baseline; T2 did not run), `electron-vite build` green.
 
 **Tests**: none
 **Gate**: build

@@ -113,17 +113,17 @@ Proving the fix needs a day that overflows, and producing one must not touch the
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| HDRW-01 | P1: tall day stays inside its card — AC 1 | Tasks | In Tasks |
-| HDRW-02 | P1: tall day — AC 2 | Tasks | In Tasks |
-| HDRW-03 | P1: tall day — AC 3 | Tasks | In Tasks |
-| HDRW-04 | P1: tall day — AC 4 | Tasks | In Tasks |
-| HDRW-05 | P1: seeded smoke — AC 5 | Tasks | In Tasks |
-| HDRW-06 | P1: seeded smoke — AC 6 | Tasks | In Tasks |
-| HDRW-07 | P1: seeded smoke — AC 7 | Tasks | In Tasks |
-| HDRW-08 | P1: seeded smoke — AC 8 | Tasks | In Tasks |
-| HDRW-09 | P1: seeded smoke — AC 9 | Tasks | In Tasks |
-| HDRW-10 | P1: seeded smoke — AC 10 | Tasks | In Tasks |
-| HDRW-11 | P1: seeded smoke — AC 11 | Tasks | In Tasks |
+| HDRW-01 | P1: tall day stays inside its card — AC 1 | Tasks | Implemented |
+| HDRW-02 | P1: tall day — AC 2 | Tasks | Implemented |
+| HDRW-03 | P1: tall day — AC 3 | Tasks | Implemented |
+| HDRW-04 | P1: tall day — AC 4 | Tasks | Implemented |
+| HDRW-05 | P1: seeded smoke — AC 5 | Tasks | Implemented |
+| HDRW-06 | P1: seeded smoke — AC 6 | Tasks | Implemented |
+| HDRW-07 | P1: seeded smoke — AC 7 | Tasks | Implemented |
+| HDRW-08 | P1: seeded smoke — AC 8 | Tasks | Implemented |
+| HDRW-09 | P1: seeded smoke — AC 9 | Tasks | Implemented |
+| HDRW-10 | P1: seeded smoke — AC 10 | Tasks | Implemented |
+| HDRW-11 | P1: seeded smoke — AC 11 | Tasks | Implemented |
 | HDRW-12 | P2: dev-only override — AC 12 | Tasks | N/A — T1: switch honoured |
 | HDRW-13 | P2: dev-only override — AC 13 | Tasks | N/A — T1: switch honoured |
 | HDRW-14 | P2: dev-only override — AC 14 | Tasks | N/A — T1: switch honoured |
@@ -134,5 +134,5 @@ Proving the fix needs a day that overflows, and producing one must not touch the
 
 ## Success Criteria
 
-- [ ] The smoke's drawer check FAILS on the CSS before the fix and PASSES after it
-- [ ] A full smoke run leaves `%APPDATA%\playground\time-log.jsonl` byte-identical to before it
+- [x] The smoke's drawer check FAILS on the CSS before the fix and PASSES after it
+- [x] A full smoke run leaves `%APPDATA%\playground\time-log.jsonl` byte-identical to before it
