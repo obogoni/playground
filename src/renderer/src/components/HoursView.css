@@ -1,0 +1,252 @@
+/* Hours direction (TIME-31..43): week header, then one card per day. */
+.hours-view {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.hours-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 22px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.hours-head-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hours-head-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+.hours-head-range {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hours-head-total {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.hours-head-spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+.hours-nav {
+  display: flex;
+  gap: 6px;
+}
+
+.hours-nav-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.hours-nav-btn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.hours-nav-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.hours-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 22px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hours-empty {
+  margin: 48px auto;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+/* Day card */
+.hours-day {
+  max-width: 880px;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hours-day-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hours-day-title {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hours-day-total {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-text);
+}
+
+.hours-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.hours-copy-btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.hours-copy-btn.copied {
+  color: var(--green);
+  border-color: color-mix(in oklab, var(--green) 45%, transparent);
+}
+
+/* Group: task or No task · folder */
+.hours-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.hours-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0 4px 4px;
+}
+
+.hours-group-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hours-group-label.no-task {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.hours-group-total {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+/* Merged block line and its expander */
+.hours-block-line {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  padding: 4px 4px;
+  text-align: left;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.hours-block-line:hover {
+  background: var(--panel-2);
+}
+
+.hours-block-chevron {
+  display: flex;
+  color: var(--text-faint);
+  transform: rotate(-90deg);
+  transition: transform 0.12s;
+}
+
+.hours-block-chevron.expanded {
+  transform: none;
+}
+
+.hours-block-range,
+.hours-block-duration {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hours-block-range {
+  color: var(--text);
+}
+
+.hours-block-count {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.hours-block-periods {
+  margin: 2px 0 6px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

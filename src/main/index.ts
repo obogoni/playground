@@ -1,4 +1,4 @@
-import { app, shell, clipboard, dialog, BrowserWindow, Notification } from 'electron'
+import { app, shell, clipboard, dialog, BrowserWindow, Notification, powerMonitor } from 'electron'
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, watch, writeFileSync } from 'node:fs'
@@ -38,6 +38,9 @@ import { SessionNamePoller } from './session-name-poller'
 import { SessionNotifier } from './session-notifier'
 import { ShortcutLauncher, spawnDetached } from './shortcut-launcher'
 import { TaskBoard } from './task-board'
+import { TimeLogStore } from './time-log-store'
+import { buildSnapshot, readGit } from './time-snapshot'
+import { TimeTracker } from './time-tracker'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
 import type { CtxDeps, GitFetchOptions, ShellResult } from './workflow-ctx'
@@ -193,6 +196,7 @@ const spawnAgent: AgentSpawn = (bin, argv, { cwd, env }): AgentChild => {
 // emit() (the app is single-window) and window-all-closed can killAll().
 let mainWindow: BrowserWindow | null = null
 let sessionManager: SessionManager | null = null
+let timeTracker: TimeTracker | null = null
 /** Closes the activity hook listener on quit; set once the server is created. */
 let stopHookServer: (() => Promise<void>) | null = null
 /** Kills the in-flight `claude agents --json` on quit (SNAME-14). */
@@ -436,6 +440,41 @@ app.whenReady().then(() => {
     )
   }
 
+  // Time tracking (AD-021). The tracker must recover the periods a crash left
+  // open before SessionManager exists, so no new run can mix with them.
+  const tracker = new TimeTracker({
+    store: new TimeLogStore(app.getPath('userData')),
+    now: Date.now,
+    newId: randomUUID,
+    resolveSnapshot: (cwd) => {
+      const pinnedTitles = new Map<number, string>()
+      for (const task of taskBoard.list().tasks) {
+        if (task.details && !pinnedTitles.has(task.id))
+          pinnedTitles.set(task.id, task.details.title)
+      }
+      return buildSnapshot({
+        cwd,
+        ...readGit(cwd),
+        workspacePaths: registry.list().map((ws) => ws.path),
+        pinnedTitles
+      })
+    },
+    emit: () => emitToWindow('time:changed', { at: new Date().toISOString() })
+  })
+  tracker.recover()
+  timeTracker = tracker
+  handle('time:snapshot', () => tracker.snapshot())
+  handle('time:pause', ({ sessionId }) => tracker.pause(sessionId))
+  handle('time:resume', ({ sessionId }) => tracker.resume(sessionId))
+  handle('time:delete', ({ id }) => tracker.deletePeriod(id))
+  handle('time:adjust', ({ id, start, end }) => tracker.adjustPeriod(id, start, end))
+  // The sidecar heartbeat bounds what a crash can lose to 60 s (TIME-04); unref'd
+  // so it never keeps the process alive.
+  setInterval(() => tracker.heartbeat(), 60_000).unref()
+  powerMonitor.on('suspend', () => tracker.suspend())
+  powerMonitor.on('resume', () => tracker.resumeFromSuspend())
+  // lock-screen / unlock-screen are deliberately not subscribed (TIME-08).
+
   const sessionNotifier = new SessionNotifier({
     prefs: () => readNotificationPrefs(configStore.get().ui),
     windowFocused,
@@ -510,6 +549,7 @@ app.whenReady().then(() => {
     config: configStore,
     emit: emitToWindow,
     fsExists: existsSync,
+    lifecycle: tracker,
     hooks: activityHooks,
     // handle() is async since it looks the task up; a failure after the lookup
     // (in showOs, say) must be logged, not left as an unhandled rejection.
@@ -668,6 +708,9 @@ app.on('window-all-closed', () => {
   // PTYs die on quit — no daemon (PRD Out of Scope). Kill every live session
   // so no orphaned shell/agent survives the window closing.
   sessionManager?.killAll()
+  // After killAll: its synchronous finalize already ended each run, so this only
+  // closes whatever is still open, at the quit instant (TIME-09).
+  timeTracker?.closeAll()
   namePoller?.dispose()
   void stopHookServer?.()
   if (process.platform !== 'darwin') {

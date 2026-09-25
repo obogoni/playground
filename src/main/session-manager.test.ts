@@ -487,6 +487,83 @@ describe('SessionManager', () => {
   })
 })
 
+describe('SessionManager lifecycle observer', () => {
+  function withObserver<P extends PtyPort>(
+    port: P
+  ): {
+    manager: SessionManager
+    calls: string[]
+    port: P
+  } {
+    const dir = mkdtempSync(join(tmpdir(), 'sm-life-'))
+    dirs.push(dir)
+    const calls: string[] = []
+    const manager = new SessionManager({
+      port,
+      config: new ConfigStore(dir),
+      emit: recordingEmit() as unknown as EmitFn,
+      fsExists: () => true,
+      lifecycle: {
+        started: (meta) => calls.push(`started:${meta.id}:${meta.agent}:${meta.cwd}`),
+        ended: (id) => calls.push(`ended:${id}`)
+      }
+    })
+    return { manager, calls, port }
+  }
+
+  it('calls started once on spawn with the session meta (TIME-01)', () => {
+    const { manager, calls } = withObserver(fakePort())
+    const view = manager.spawn('Claude', CWD)
+    expect(calls).toEqual([`started:${view.id}:Claude:${CWD}`])
+  })
+
+  it('calls started once on duplicate, for the new session (TIME-01)', () => {
+    const { manager, calls } = withObserver(fakePort())
+    const src = manager.spawn('Claude', CWD)
+    calls.length = 0
+    const copy = manager.duplicate(src.id)
+    expect(calls).toEqual([`started:${copy.id}:Claude:${CWD}`])
+  })
+
+  it('calls started once on respawn (TIME-01)', async () => {
+    const { manager, calls, port } = withObserver(fakePort())
+    const view = manager.spawn('Claude', CWD)
+    const stopping = manager.stop(view.id)
+    port.handles[0].emitExit(0)
+    await stopping
+    calls.length = 0
+    manager.respawn(view.id)
+    expect(calls).toEqual([`started:${view.id}:Claude:${CWD}`])
+  })
+
+  it('calls ended once on stop, and not again when the PTY really exits (TIME-02)', async () => {
+    const { manager, calls, port } = withObserver(fakePort())
+    const view = manager.spawn('Claude', CWD)
+    const stopping = manager.stop(view.id)
+    port.handles[0].emitExit(0)
+    await stopping
+    expect(calls.slice(1)).toEqual([`ended:${view.id}`])
+  })
+
+  it('calls ended once when the PTY exits on its own (TIME-02)', () => {
+    const { manager, calls, port } = withObserver(fakePort())
+    const view = manager.spawn('Claude', CWD)
+    port.handles[0].emitExit(1)
+    expect(calls.slice(1)).toEqual([`ended:${view.id}`])
+  })
+
+  it('calls nothing when the spawn throws', () => {
+    const failing: PtyPort = {
+      spawn: () => {
+        throw new Error('shell not found')
+      }
+    }
+    const { manager, calls } = withObserver(failing)
+    expect(() => manager.spawn('Claude', CWD)).toThrow(/shell not found/)
+    expect(calls).toEqual([])
+  })
+})
+
 /** Payload shapes from the Claude Code hooks reference. */
 function hookEvent(name: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
   return { session_id: 'claude-side-id', hook_event_name: name, ...extra }

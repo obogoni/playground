@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { AgentDef } from '../../shared/agents'
 import type { AppConfig } from '../../shared/config'
@@ -9,6 +9,7 @@ import type { WorkspaceNode } from '../../shared/tree'
 import { AgentsView } from './components/AgentsView'
 import { BoardView } from './components/BoardView'
 import { FilesView } from './components/FilesView'
+import { HoursView } from './components/HoursView'
 import { NewSessionDialog, type NewSessionSource } from './components/NewSessionDialog'
 import { NewWorktreeDialog } from './components/NewWorktreeDialog'
 import { SessionNotices } from './components/SessionNotices'
@@ -35,6 +36,7 @@ import { dropCollapsedId, isCollapsed, toggleCollapsedId } from './lib/workspace
 import { filesStateFor } from './lib/files-view'
 import { useFiles } from './lib/use-files'
 import { useSessions } from './lib/use-sessions'
+import { useTime } from './lib/use-time'
 import { useTree } from './lib/use-tree'
 import { useWorkflowRuns } from './lib/use-workflow-runs'
 import './App.css'
@@ -126,6 +128,18 @@ function App(): JSX.Element {
   // Always mounted (above the direction switch) so runs accumulate from the
   // workflow:* stream even while another direction is active (WF5-04, AD-011).
   const workflows = useWorkflowRuns()
+  // Time snapshot (AD-021): refetched on time:changed; counters tick in their own
+  // components, so App does not re-render every second.
+  const time = useTime()
+  // Live pinned titles for the Hours labels; the first pin of an id wins, like the rail (TIME-40).
+  const liveTitles = useMemo(() => {
+    const titles = new Map<number, string>()
+    for (const task of tasks.tasks) {
+      if (task.details && !titles.has(task.id)) titles.set(task.id, task.details.title)
+    }
+    return titles
+  }, [tasks.tasks])
+
   // Same reason, and one more: the Files watch follows the direction, so leaving
   // Files has to send `files:watch(null)` instead of racing FilesView's unmount
   // (FXPL-23). The hook reads the persisted lens out of `ui` and writes it back
@@ -415,6 +429,7 @@ function App(): JSX.Element {
                 linkedTaskId={linkedTaskId}
                 linkedPin={linkedPin}
                 sessions={sessions.filter((s) => s.cwd === selected.worktree.path)}
+                time={time.snapshot}
                 onSpawnAgent={() => openNewSession({ cwd: selected.worktree.path })}
                 onOpenSession={openSession}
                 onToast={setToast}
@@ -426,6 +441,7 @@ function App(): JSX.Element {
             <TasksPane
               snapshot={tasks}
               worktreeCounts={worktreeCounts}
+              time={time.snapshot}
               onSnapshot={setTasks}
               onStartWork={setStartWorkTask}
               onSpawnAgent={spawnAgentForTask}
@@ -441,6 +457,7 @@ function App(): JSX.Element {
             tree={tree}
             agents={agents}
             tasks={tasks.tasks}
+            time={time.snapshot}
             selectedId={selectedSessionId}
             onSelect={selectSession}
             onStop={stopSession}
@@ -450,6 +467,8 @@ function App(): JSX.Element {
             onDuplicate={duplicateSession}
             onOpenWorktree={openWorktreeForSession}
             onNew={() => openNewSession()}
+            onPauseTime={time.pause}
+            onResumeTime={time.resume}
             onToast={setToast}
           />
         ) : ui.direction === 'workflows' ? (
@@ -465,6 +484,13 @@ function App(): JSX.Element {
             onReload={workflows.refresh}
             onScaffold={workflows.scaffold}
             onSelectRun={workflows.selectRun}
+          />
+        ) : ui.direction === 'hours' ? (
+          <HoursView
+            snapshot={time.snapshot}
+            liveTitles={liveTitles}
+            onDelete={time.deletePeriod}
+            onAdjust={time.adjustPeriod}
           />
         ) : ui.direction === 'files' ? (
           <FilesView

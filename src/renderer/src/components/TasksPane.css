@@ -271,3 +271,17 @@
   opacity: 0.45;
   cursor: default;
 }
+
+/* Task time total (TIME-26): in the header beside the id — the footer has no
+   room left for it at the pane's default width. */
+.task-card-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  white-space: nowrap;
+}

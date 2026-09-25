@@ -186,6 +186,42 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: V7 src/main/activity-notification.ts:86 (validation.md round 5) (notifications)
 - last seen: 2026-09-17T01:50:57Z
 
+### L-035 - In renderer components and hooks keep Date.now() out of render and setState out of synchronous effect bodies, because eslint-plugin-react-hooks v7 purity and set-state-in-effect rules fail the lint gate
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: time-tracking
+- evidence: src/renderer/src/components/HoursView.tsx:53, src/renderer/src/lib/use-time.ts:60 (renderer)
+- last seen: 2026-09-16T22:26:36Z
+
+### L-036 - Assert the persisted store or sidecar write after every orchestrator state transition, not only the emitted change event
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `main-orchestrators` · harmful: 0
+- features: time-tracking
+- evidence: M6 src/main/time-tracker.ts:95; M19 src/main/time-tracker.ts:104 (main-orchestrators)
+- last seen: 2026-09-16T22:26:36Z
+
+### L-037 - Test an atomic file rewrite by failing the write or rename through an injected seam and asserting the previous content survives, not by checking that no tmp file remains
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `file-stores` · harmful: 0
+- features: time-tracking
+- evidence: M13 src/main/time-log-store.ts:138 (file-stores)
+- last seen: 2026-09-16T22:26:37Z
+
+### L-038 - When a spec promises retry on the next write, cover every write path of the store with a fail-then-succeed test, including whole-file rewrites
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `file-stores` · harmful: 0
+- features: time-tracking
+- evidence: TIME-14 src/main/time-log-store.ts:98 (file-stores)
+- last seen: 2026-09-16T22:26:37Z
+
+### L-039 - When a spec cites an owner-selected sample output, paste the literal sample into the spec, including line endings, so tests can assert it byte-for-byte
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: time-tracking
+- evidence: TIME-39 / T8 src/renderer/src/lib/hours-copy.test.ts:28 (specs)
+- last seen: 2026-09-16T22:26:37Z
+
+### L-040 - After a test proves a failed write is retried, perform one more write and assert the result, so a retry flag that is never cleared is caught
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `file-stores` · harmful: 0
+- features: time-tracking
+- evidence: M21 src/main/time-log-store.ts:107 (file-stores)
+- last seen: 2026-09-16T22:42:48Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

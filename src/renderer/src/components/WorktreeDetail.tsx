@@ -3,13 +3,16 @@ import type { JSX } from 'react'
 import type { SessionView } from '../../../shared/config'
 import type { ShortcutTool } from '../../../shared/shortcuts'
 import type { PinnedTaskView } from '../../../shared/tasks'
+import type { TimeSnapshot } from '../../../shared/time'
 import type { WorktreeNode } from '../../../shared/tree'
 import type { ChangedFile, RemovalLeftover } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
+import { worktreeTotalMs } from '../lib/time-totals'
 import { Icon } from './Icon'
 import type { IconName } from './Icon'
 import { RemoveWorktreeConfirm } from './RemoveWorktreeConfirm'
+import { TotalClock } from './TimeCounter'
 import './WorktreeDetail.css'
 
 interface WorktreeDetailProps {
@@ -23,6 +26,8 @@ interface WorktreeDetailProps {
   linkedPin: PinnedTaskView | null
   /** Sessions already running in this worktree (cwd === worktree.path). */
   sessions: SessionView[]
+  /** Time snapshot for the worktree total (TIME-25). */
+  time: TimeSnapshot
   /** Opens the New Session dialog pre-filled with this worktree's cwd. */
   onSpawnAgent: () => void
   /** Deep-links to a session (switches to Agents + selects it). */
@@ -82,6 +87,7 @@ export function WorktreeDetail({
   linkedTaskId,
   linkedPin,
   sessions,
+  time,
   onSpawnAgent,
   onOpenSession,
   onToast,
@@ -223,6 +229,11 @@ export function WorktreeDetail({
             </span>
           )}
           {worktree.isDefault && <span className="detail-pill neutral">primary</span>}
+          <TotalClock
+            className="detail-pill neutral detail-time"
+            totalAt={(now) => worktreeTotalMs(time, worktree.path, now)}
+            live={time.open.some((p) => p.cwd.toLowerCase() === worktree.path.toLowerCase())}
+          />
         </div>
 
         <section className="detail-section">

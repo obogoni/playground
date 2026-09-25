@@ -272,3 +272,18 @@
   border-color: var(--accent);
   background: color-mix(in oklab, var(--accent) 10%, transparent);
 }
+
+/* Session time (TIME-23): tabular digits so the ticking seconds do not shift the
+   actions; a paused counter dims to read as frozen (TIME-17). */
+.agents-detail-time {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.agents-detail-time.paused {
+  color: var(--text-faint);
+}

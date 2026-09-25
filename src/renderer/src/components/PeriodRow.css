@@ -1,0 +1,149 @@
+/* Raw period row under a merged Hours line (TIME-38, TIME-44..47). */
+.period-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 7px;
+}
+
+.period-row:hover {
+  background: var(--panel-2);
+}
+
+.period-row-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 24px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.period-row-range,
+.period-row-duration {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.period-row-range {
+  color: var(--text);
+}
+
+.period-row-agent {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.period-row-spacer {
+  flex: 1;
+}
+
+.period-row-live {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--green);
+}
+
+.period-row-icon {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-faint);
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.period-row-icon:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.period-row-icon.red:hover {
+  color: var(--red);
+  border-color: color-mix(in oklab, var(--red) 45%, transparent);
+}
+
+.period-row-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.period-row-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.period-row-field input {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 5px 8px;
+  color-scheme: dark;
+}
+
+/* The native picker glyph follows color-scheme, which the tokens do not set. */
+:root[data-theme='light'] .period-row-field input {
+  color-scheme: light;
+}
+
+.period-row-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.period-row-confirm {
+  font-size: 12px;
+  color: var(--text-muted);
+  align-self: center;
+}
+
+.period-row-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 7px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.period-row-btn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.period-row-btn.primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+}
+
+.period-row-btn.danger {
+  border-color: color-mix(in oklab, var(--red) 45%, transparent);
+  color: var(--red);
+}
+
+.period-row-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.period-row-error {
+  font-size: 12px;
+  color: var(--red);
+}

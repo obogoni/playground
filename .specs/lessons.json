@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 35,
+  "next_id": 41,
   "lessons": [
     {
       "id": "L-001",
@@ -532,6 +532,114 @@
       ],
       "created": "2026-09-17T01:50:57Z",
       "last_seen": "2026-09-17T01:50:57Z"
+    },
+    {
+      "id": "L-035",
+      "key": "gate_fail::in renderer components and hooks keep date now out of render and setstate out of synchronous effect bodies because eslint plugin react hooks v7 purity and set state in effect rules fail the lint gate",
+      "text": "In renderer components and hooks keep Date.now() out of render and setState out of synchronous effect bodies, because eslint-plugin-react-hooks v7 purity and set-state-in-effect rules fail the lint gate",
+      "signal": "gate_fail",
+      "scope": "renderer",
+      "status": "candidate",
+      "features": [
+        "time-tracking"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/renderer/src/components/HoursView.tsx:53, src/renderer/src/lib/use-time.ts:60 (renderer)"
+      ],
+      "created": "2026-09-16T22:26:36Z",
+      "last_seen": "2026-09-16T22:26:36Z"
+    },
+    {
+      "id": "L-036",
+      "key": "surviving_mutant::assert the persisted store or sidecar write after every orchestrator state transition not only the emitted change event",
+      "text": "Assert the persisted store or sidecar write after every orchestrator state transition, not only the emitted change event",
+      "signal": "surviving_mutant",
+      "scope": "main-orchestrators",
+      "status": "candidate",
+      "features": [
+        "time-tracking"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M6 src/main/time-tracker.ts:95; M19 src/main/time-tracker.ts:104 (main-orchestrators)"
+      ],
+      "created": "2026-09-16T22:26:36Z",
+      "last_seen": "2026-09-16T22:26:36Z"
+    },
+    {
+      "id": "L-037",
+      "key": "surviving_mutant::test an atomic file rewrite by failing the write or rename through an injected seam and asserting the previous content survives not by checking that no tmp file remains",
+      "text": "Test an atomic file rewrite by failing the write or rename through an injected seam and asserting the previous content survives, not by checking that no tmp file remains",
+      "signal": "surviving_mutant",
+      "scope": "file-stores",
+      "status": "candidate",
+      "features": [
+        "time-tracking"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M13 src/main/time-log-store.ts:138 (file-stores)"
+      ],
+      "created": "2026-09-16T22:26:37Z",
+      "last_seen": "2026-09-16T22:26:37Z"
+    },
+    {
+      "id": "L-038",
+      "key": "ac_gap::when a spec promises retry on the next write cover every write path of the store with a fail then succeed test including whole file rewrites",
+      "text": "When a spec promises retry on the next write, cover every write path of the store with a fail-then-succeed test, including whole-file rewrites",
+      "signal": "ac_gap",
+      "scope": "file-stores",
+      "status": "candidate",
+      "features": [
+        "time-tracking"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "TIME-14 src/main/time-log-store.ts:98 (file-stores)"
+      ],
+      "created": "2026-09-16T22:26:37Z",
+      "last_seen": "2026-09-16T22:26:37Z"
+    },
+    {
+      "id": "L-039",
+      "key": "spec_precision_gap::when a spec cites an owner selected sample output paste the literal sample into the spec including line endings so tests can assert it byte for byte",
+      "text": "When a spec cites an owner-selected sample output, paste the literal sample into the spec, including line endings, so tests can assert it byte-for-byte",
+      "signal": "spec_precision_gap",
+      "scope": "specs",
+      "status": "candidate",
+      "features": [
+        "time-tracking"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "TIME-39 / T8 src/renderer/src/lib/hours-copy.test.ts:28 (specs)"
+      ],
+      "created": "2026-09-16T22:26:37Z",
+      "last_seen": "2026-09-16T22:26:37Z"
+    },
+    {
+      "id": "L-040",
+      "key": "surviving_mutant::after a test proves a failed write is retried perform one more write and assert the result so a retry flag that is never cleared is caught",
+      "text": "After a test proves a failed write is retried, perform one more write and assert the result, so a retry flag that is never cleared is caught",
+      "signal": "surviving_mutant",
+      "scope": "file-stores",
+      "status": "candidate",
+      "features": [
+        "time-tracking"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M21 src/main/time-log-store.ts:107 (file-stores)"
+      ],
+      "created": "2026-09-16T22:42:48Z",
+      "last_seen": "2026-09-16T22:42:48Z"
     }
   ]
 }
