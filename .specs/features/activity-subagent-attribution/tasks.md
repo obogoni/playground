@@ -8,16 +8,16 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 ---
 
-**Design**: none as a separate file — one module changes (`activity-machine.ts`) and its shape is fixed below. The machine grows two private fields on `MachineState`: whether the main agent's turn has ended (`mainStopped`), and who asked the pending question (`askedBy`: an `agent_id`, or `main`). The view (`SessionActivity`) does not change, so IPC, renderer and notifications are untouched.
-**Status**: Approved by the owner 2026-09-25 (planned 2026-09-22) — in Execute
+**Design**: none as a separate file — one module changes (`activity-machine.ts`) and its shape is fixed below. `MachineState` grows four private fields: whether the main agent's turn has ended (`mainStopped`), the ids in the last main-agent `Stop`'s `background_tasks` (`background`, absent until a `Stop` carries the field), the subagents that stopped and still owe their result (`owed`), and who asked the pending question (`askedBy`: an `agent_id`, or `main`). The view (`SessionActivity`) does not change, so IPC, renderer and notifications are untouched.
+**Status**: Re-planned 2026-09-25 after T1's findings — awaiting owner approval of T2..T7 (first plan approved 2026-09-25, planned 2026-09-22)
 
 **Branch**: `feature/activity-subagent-attribution`, rebased onto `origin/main` `c31bb9a` on 2026-09-25 after #94 merged. The PR goes to `obogoni:main` with `Closes #106`, and no longer depends on #94.
 
-**Test baseline**: **re-measure** with `npx vitest run` as the first act of Execute; record the lint warning count at the same time.
+**Test baseline** (measured 2026-09-25, T1): 1663 tests in 90 files, all passing; lint 0 errors, **18 warnings**. The first run had one intermittent failure among the git-backed tests and the second run none; it is unrelated to this feature.
 
 **Stop points**:
-- **T1 needs the owner** at the keyboard: approvals must be answered by a person.
-- **After T1**, execution stops if `idle_prompt` fired while a subagent was active (spec, Q8 row) — the owner decides again.
+- ~~T1 needs the owner at the keyboard~~ — done.
+- ~~After T1, stop if `idle_prompt` fired while a subagent was active~~ — it did (S3a, S3b); execution stopped and the owner decided the `idle_prompt` rule again (spec, assumptions table).
 
 ---
 
@@ -27,8 +27,8 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 | Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
 | ---------- | ------------------ | -------------------- | ---------------- | ----------- |
-| Pure activity machine (`activity-machine.ts`) | unit | 1:1 to ASUB-01..11; every edge case in the spec; each captured sequence replayed with the view asserted after every named event | `src/main/activity-machine.test.ts` | `npm test` |
-| Test fixtures (`activity-sequences.fixture.ts`) | unit | ASUB-13: a test fails on any path, drive letter, UUID-shaped id or non-fictitious text | `src/main/activity-sequences.fixture.test.ts` | `npm test` |
+| Pure activity machine (`activity-machine.ts`) | unit | 1:1 to ASUB-01..08, 11, 14..18; every edge case in the spec; each captured sequence replayed with the view asserted after every named event | `src/main/activity-machine.test.ts` | `npm test` |
+| Test fixtures (`activity-sequences.fixture.ts`) | unit | ASUB-13: a test fails on any path, drive letter, UUID-shaped id, real-shaped agent id or free text | `src/main/activity-sequences.fixture.test.ts` | `npm test` |
 | Notification decision (`activity-notification.ts`, unchanged) | unit | ASUB-04 by replay; existing tests pass unedited | `src/main/activity-notification.test.ts` | `npm test` |
 | Spike listener and settings | none | Throwaway, scratchpad only, never committed | — | — |
 | Real app check | manual | Success criteria, owner-driven | — | `npm run dev` |
@@ -40,9 +40,9 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | Quick | After a task whose only tests are unit tests | `npm test` |
 | Full | After a code task | `npm run typecheck && npm run lint && npm test` |
 | Build | At the end | `npx electron-vite build` |
-| Manual | T1, T6 | owner-driven Claude Code session |
+| Manual | T1, T7 | owner-driven Claude Code session |
 
-**Lint is judged by exit code AND by warning count** — record the count at T1 and diff it at every gate.
+**Lint is judged by exit code AND by warning count** — 18 at T1; diff it at every gate.
 
 ---
 
@@ -57,22 +57,22 @@ T1
 ### Phase 2: The machine
 
 ```
-T1 → T2 → T3 → T4 → T5
+T1 → T2 → T3 → T4 → T5 → T6
 ```
 
 ### Phase 3: Real app
 
 ```
-T5 → T6
+T6 → T7
 ```
 
 ---
 
 ## Task Breakdown
 
-### T1: Capture the real hook sequences
+### T1: Capture the real hook sequences ✅
 
-**What**: In a scratch folder, run an owner-driven interactive `claude --settings <scratch settings>` whose http hooks post every event to a throwaway listener that logs each payload in order; drive three scenarios — (S1) two background subagents each running a 30 s sleep, main agent ends its turn and is woken; (S2) one background subagent asks for approval while another keeps running tools; (S3) a background subagent sleeping 120 s with no input for over 60 s — and record the findings in this file.
+**What**: In a scratch folder, run an owner-driven interactive `claude --settings <scratch settings>` whose http hooks post every event to a throwaway listener that logs each payload in order; drive the scenarios below and record the findings in this file.
 **Where**: `.specs/features/activity-subagent-attribution/tasks.md` (findings); listener, settings and raw logs stay in the scratchpad
 **Depends on**: None
 **Reuses**: the hook list of `src/main/claude-hook-settings.ts`, so the probe hears exactly what the app hears; http hooks, not command hooks (AD-020: they differ)
@@ -85,23 +85,51 @@ T5 → T6
 
 **Done when**:
 
-- [ ] Recorded, with the event order of each scenario: does `Stop` fire with a subagent active; what fires when the main agent is woken (`UserPromptSubmit` or only tool events); does `SubagentStop` precede the wake-up
-- [ ] Recorded: do `PreToolUse`, `PostToolUse`, `PermissionRequest` and `Notification` fired inside a subagent carry `agent_id` — decides ASUB-07/08 versus ASUB-09/10
-- [ ] Recorded: did `idle_prompt` fire in S3 while the subagent was active — if yes, **stop** and return the Q8 decision to the owner
-- [ ] Recorded, if seen: a background Bash waking the main agent (out of scope; noted for a later item)
-- [ ] The owner's `~/.claude/settings.json` unchanged (hash before and after)
-- [ ] Baselines recorded: test count, lint warning count
+- [x] Recorded, with the event order of each scenario: does `Stop` fire with a subagent active; what fires when the main agent is woken (`UserPromptSubmit` or only tool events); does `SubagentStop` precede the wake-up
+- [x] Recorded: do `PreToolUse`, `PostToolUse`, `PermissionRequest` and `Notification` fired inside a subagent carry `agent_id` — decides ASUB-07/08 versus ASUB-09/10
+- [x] Recorded: did `idle_prompt` fire in S3 while the subagent was active — if yes, **stop** and return the Q8 decision to the owner
+- [x] Recorded, if seen: a background Bash waking the main agent (out of scope; noted for a later item)
+- [x] The owner's `~/.claude/settings.json` unchanged (hash before and after)
+- [x] Baselines recorded: test count, lint warning count
 
 **Tests**: none
 **Gate**: manual
 
 **Commit**: `docs(specs): record how claude code reports background subagents`
 
+#### Findings (Claude Code 2.1.283, 2026-09-25)
+
+Probe: the app's 16 hooks as http hooks, same shape as `buildClaudeHookSettings`, posting to a listener in the scratchpad; `--allowedTools "Bash(sleep:*)"` (round 2 added `"Bash(node -e:*)"`). The owner's `~/.claude/settings.json` hashed identical before and after both rounds. Two rounds, 214 events.
+
+**Payload fields.**
+
+- The main agent's `Stop` carries `background_tasks`: a list of `{ id, type: 'subagent' | 'shell', status: 'running', description, agent_type | command }`. It lists background subagents and background shells, including shells a subagent started. It was non-empty at every `Stop` in the middle of a job and `[]` at every job's end.
+- `SubagentStop` carries the same `background_tasks`, and a stopping background subagent is still listed in its own `SubagentStop`.
+- `PreToolUse`, `PostToolUse` and `PermissionRequest` fired inside a subagent carry `agent_id` and `agent_type`; the main agent's carry neither. **Decides ASUB-07/08; ASUB-09/10 are N/A.**
+- `Notification` (`permission_prompt`, `idle_prompt`) carries no `agent_id`. The `permission_prompt` came 6 s after the subagent's `PermissionRequest`.
+- `PreToolUse` for `Agent` carries only `subagent_type` in `tool_input`: background and foreground cannot be told apart from the call.
+
+**How the main agent is woken.** A `UserPromptSubmit` without `agent_id` whose prompt is `<task-notification>` with `<task-id>{id}</task-id>` (a finished background subagent or shell), or `<agent-message from="{id}">` (a subagent's `SubagentHandback` tool, which arrives before that subagent's `SubagentStop`). Each wake-up ends with its own `Stop`.
+
+**Side agents.** After nearly every main-agent `Stop`, one or two `SubagentStop` arrive with an `agent_id`, no `agent_type` and no `SubagentStart`: Claude Code's prompt-suggestion and session-recap agents (their last messages predict the owner's next prompt or summarise the session). Twice they ran tools (a `Bash`, a `SendFeedback`) that the machine today maps to `working`.
+
+**S1: two background subagents, main agent woken.** Claude Code blocks a foreground `sleep 30`, so each subagent ran it as a background shell, handed back "done" early, stopped, and was started again (`SubagentStart`, same id) 30 s later when its shell ended. Order: `UserPromptSubmit` → 2× (`PreToolUse Agent`, `SubagentStart`, `PostToolUse Agent`) → `Stop` [2 subagents] → hand-back of subagent 1 → `UserPromptSubmit <agent-message>` → `SubagentStop` 1 → `Stop` [subagent 2 + 2 shells] → `UserPromptSubmit <task-notification>` 1 → `SubagentStop` 2 → `Stop` [2 shells] → `UserPromptSubmit <task-notification>` 2 → side-agent tool event → `Stop` [2 shells] → 18 s → `SubagentStart` 1 and 2 → hand-back → `SubagentStop` 2 and 1 → `Stop` **[]** → 28 ms → 2× `UserPromptSubmit <task-notification>` → `Stop` [] (the job's real end). Today: six `waiting` notifications. Counting `SubagentStart`/`SubagentStop` (the first plan): `waiting` at the two `Stop`s with only shells running, and twice at the end.
+
+**S2: approval while another subagent works.** Subagent B's `PreToolUse Write` → `PermissionRequest Write` (B's `agent_id`) → subagent A's tool events → `Notification permission_prompt` (no `agent_id`) → A's ten tool events over 30 s while the question is open → the owner approves → `PostToolUse Write` (B) → `SubagentStop` B → `UserPromptSubmit <task-notification>` B → `Stop` [A] → `SubagentStop` A → `UserPromptSubmit <task-notification>` A → `Stop` []. Today the view drops to `working` at A's first event after the question.
+
+**S3: the idle subagent.** The first attempt did not measure anything, because Claude Code refused a foreground `sleep 120` and the subagent returned within 10 s. Round 2 re-ran it two ways. S3a had one background subagent running `sleep 5` twenty times, about 2.5 min. S3b had one background subagent blocked on a single silent 100 s command. **In both, `idle_prompt` fired 60 s after the main agent's `Stop` while the subagent was still running.** That is the stop point. The owner then decided the rule: `idle_prompt` counts only when the last `Stop` listed nothing. After each job's real end, `idle_prompt` fired again 60 s later. Every S3 job also showed the end race: `Stop` [] → 3 to 26 ms → `UserPromptSubmit <task-notification>` → `Stop` [].
+
+**S4: a background Bash (was out of scope).** `PreToolUse Bash` (`run_in_background`) → `Stop` [1 shell] → 30 s → `UserPromptSubmit <task-notification>` with the shell's task id → `Stop` []. The case is visible through `background_tasks`, so it is in scope now.
+
+**S5: a foreground subagent.** Asked explicitly for the foreground, the subagent still ran in the background: `Stop` came right after the launch, listing it. Foreground subagents were not observed on this version. So a subagent owes a result only when its own `SubagentStop` lists it (ASUB-14).
+
+**Owner decisions taken on these findings** (spec, assumptions table): decide at `Stop` by `background_tasks`, shells included; hold `working` for owed results; ignore tool events from agents outside the active set; `idle_prompt` counts only when the last `Stop` listed nothing; resync the subagent count at every `Stop`.
+
 ---
 
 ### T2: Sanitised fixtures of the captured sequences
 
-**What**: The S1, S2 (and S3, if it produced `idle_prompt`) sequences as typed arrays of hook payloads, reduced to the fields the machine reads, with fictitious ids and text, plus a test that rejects anything that looks real.
+**What**: S1, S2, S3a and S4 as typed arrays of hook payloads, keeping the captured event order and reduced to the fields the machine reads: `hook_event_name`, `agent_id`, `agent_type`, `tool_name`, `notification_type`, `reason`, `background_tasks` as `{ id, type }`, and a `UserPromptSubmit` prompt kept only as its `<task-notification>` / `<task-id>` marker or a fixed fictitious sentence. Every id is fictitious and readable (`sub-1`, `side-1`, `shell-1`). A test rejects anything that looks real.
 **Where**: `src/main/activity-sequences.fixture.ts` (new) and `src/main/activity-sequences.fixture.test.ts` (new)
 **Depends on**: T1
 **Reuses**: payload field names read by `applyHookEvent`
@@ -114,8 +142,8 @@ T5 → T6
 
 **Done when**:
 
-- [ ] Each fixture keeps the captured event order exactly
-- [ ] The sanitisation test fails on a planted `C:\Users\…` string, a drive-letter path and a UUID-shaped id (seen failing, then the plant removed)
+- [ ] Each fixture keeps the captured event order exactly, side agents included
+- [ ] The sanitisation test fails on a planted `C:\Users\…` string, a drive-letter path, a UUID-shaped id and a 17-hex agent id (seen failing, then the plant removed)
 - [ ] Gate check passes: `npm test`
 - [ ] Test count: baseline + the sanitisation tests (no silent deletions)
 
@@ -126,13 +154,13 @@ T5 → T6
 
 ---
 
-### T3: The main agent's end of turn waits for its subagents
+### T3: The end of a turn waits for background work
 
-**What**: `Stop` with subagents active maps to `working` and sets `mainStopped`; a `SubagentStop` never moves the state to `waiting`; `UserPromptSubmit` and main-agent tool events clear `mainStopped`; `idle_prompt` maps to `waiting` and empties the active set.
+**What**: A main-agent `Stop` (no `agent_id`) records `mainStopped` and `background` from its `background_tasks` and replaces the active set with its `subagent` entries; it maps to `working` when the list is non-empty and to `waiting` when empty. Without the field, the active set decides (ASUB-16). A `SubagentStop` never moves the state to `waiting`. `UserPromptSubmit` and main-agent tool events clear `mainStopped`. `idle_prompt` maps to `waiting` only when `background` is empty (or, without it, the active set is), emptying the set; otherwise it changes nothing.
 **Where**: `src/main/activity-machine.ts`
 **Depends on**: T2
 **Reuses**: `to`, `withSubagents`, `applySubagent`
-**Requirement**: ASUB-01, ASUB-02, ASUB-03, ASUB-05
+**Requirement**: ASUB-01, ASUB-02, ASUB-03, ASUB-05, ASUB-16, ASUB-17
 
 **Tools**:
 
@@ -141,26 +169,26 @@ T5 → T6
 
 **Done when**:
 
-- [ ] Unit tests, one per criterion, plus the S1 replay asserting `working` from the first `Stop` to the last and `waiting` only after it
-- [ ] The spec's edge cases (new prompt keeps the active set; `SessionEnd` empties it; unknown `SubagentStop`) covered
-- [ ] Existing machine tests pass unedited, except `waits on an idle_prompt …`, which gains the emptied set — the only edit, stated in the commit body
+- [ ] Unit tests, one per criterion, plus the S3a and S4 replays asserting `working` at every `Stop` that listed work and after the mid-job `idle_prompt`
+- [ ] The spec's edge cases covered: a new prompt keeps the active set; a restarted subagent is counted again; `SessionEnd` empties the set; an unknown `SubagentStop`
+- [ ] Existing machine tests pass unedited, except `keeps the subagent count across a state change` (`activity-machine.test.ts:225`), whose `Stop` with an active subagent now means `working` (ASUB-16): its transition becomes a `PermissionRequest`, which keeps what it tests, and the change is stated in the commit body — **owner approval needed**
 - [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
 - [ ] Test count: T2 count + the new tests
 
 **Tests**: unit
 **Gate**: full
 
-**Commit**: `fix(activity): keep a session working while its subagents run`
+**Commit**: `fix(activity): keep a session working while background work runs`
 
 ---
 
-### T4: A pending question stays until the agent that asked moves
+### T4: The end of a job waits for the results it owes
 
-**What**: `PermissionRequest`, `Elicitation` and the approval/input notifications record `askedBy`; while a question is pending, events are filtered by the rule T1 chose (by `agent_id`: ASUB-07/08; without it: ASUB-09/10); clearing resolves to `working` or `waiting` by `mainStopped` and the active set; the keystroke keeps clearing (ASUB-11).
+**What**: A `SubagentStop` whose `background_tasks` lists the stopping subagent adds it to `owed`; a main-agent `Stop` maps to `working` while `owed` is non-empty; a `UserPromptSubmit` whose prompt contains `<task-id>{id}</task-id>` drops `{id}` from `owed`; an accepted `idle_prompt` and `SessionEnd` empty it.
 **Where**: `src/main/activity-machine.ts`
 **Depends on**: T3
-**Reuses**: `applyKeystroke`; T3's `mainStopped`
-**Requirement**: ASUB-06, ASUB-07, ASUB-08 **or** ASUB-09, ASUB-10; ASUB-11
+**Reuses**: T3's `background` and the `Stop` rule
+**Requirement**: ASUB-14, ASUB-15
 
 **Tools**:
 
@@ -169,10 +197,37 @@ T5 → T6
 
 **Done when**:
 
-- [ ] Unit tests, one per kept criterion, plus the S2 replay asserting `needs-approval` holds across the other subagent's tool events and clears at the asker's event (or at the fallback's triggers)
-- [ ] The two criteria of the unused pair marked `N/A — T1: <finding>` in the spec
+- [ ] Unit tests, one per criterion, plus the S1 replay asserting `working` from the first `Stop` to the last and `waiting` only at the last
+- [ ] A `SubagentStop` that does not list its own agent owes nothing (the foreground shape, S5)
 - [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
 - [ ] Test count: T3 count + the new tests
+
+**Tests**: unit
+**Gate**: full
+
+**Commit**: `fix(activity): wait for owed subagent results before the turn ends`
+
+---
+
+### T5: Events count only for the agent that sent them
+
+**What**: A tool event whose `agent_id` is not in the active set changes nothing (side agents, ASUB-18). `PermissionRequest`, `Elicitation` and the approval/input notifications record `askedBy` (a `Notification` without `agent_id` keeps an existing one). While a question is pending, events from other agents update the bookkeeping but not the state. The asker's tool event, `ElicitationResult` or `SubagentStop` clears it to `working` or `waiting` by `mainStopped`, `background` and `owed`. The keystroke keeps clearing (ASUB-11).
+**Where**: `src/main/activity-machine.ts`
+**Depends on**: T4
+**Reuses**: `applyKeystroke`; T3's `mainStopped` and `background`; T4's `owed`
+**Requirement**: ASUB-06, ASUB-07, ASUB-08, ASUB-11, ASUB-18
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] Unit tests, one per criterion, plus the S2 replay asserting `needs-approval` holds across the other subagent's tool events and the no-`agent_id` notification, and clears at the asker's `PostToolUse`
+- [ ] The S1 side-agent tool event leaves the view unchanged
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [ ] Test count: T4 count + the new tests
 
 **Tests**: unit
 **Gate**: full
@@ -181,12 +236,12 @@ T5 → T6
 
 ---
 
-### T5: One notification for a whole fan-out
+### T6: One notification per background job
 
-**What**: A test that replays S1 through `applyHookEvent` and `decideNotification` (app unfocused, `waiting` enabled) and counts exactly one `waiting` notification, at the final `Stop`.
+**What**: A test that replays each fixture (S1, S2, S3a, S4) through `applyHookEvent` and `decideNotification` (app unfocused, `waiting` enabled) and counts exactly one `waiting` notification per job, at its last `Stop`.
 **Where**: `src/main/activity-notification.test.ts`
-**Depends on**: T4
-**Reuses**: T2's S1 fixture; the file's existing input builders
+**Depends on**: T5
+**Reuses**: T2's fixtures; the file's existing input builders
 **Requirement**: ASUB-04
 
 **Tools**:
@@ -198,22 +253,22 @@ T5 → T6
 
 - [ ] The test fails on T2's tree state (before T3) — checked by running it against `activity-machine.ts` from T2's commit in a scratch copy — and passes now
 - [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
-- [ ] Test count: T4 count + 1
+- [ ] Test count: T5 count + the new tests
 
 **Tests**: unit
 **Gate**: build
 
-**Commit**: `test(notifications): notify a background fan-out once, at its end`
+**Commit**: `test(notifications): notify a background job once, at its end`
 
 ---
 
-### T6: Check it in the real app
+### T7: Check it in the real app
 
 **What**: With the dev app unfocused, the owner runs a registry Claude session that fans out to two background subagents, one of which asks for approval; record the notifications received and the states seen.
 **Where**: `.specs/features/activity-subagent-attribution/tasks.md` (result)
-**Depends on**: T5
+**Depends on**: T6
 **Reuses**: T1's S1 and S2 prompts
-**Requirement**: success criteria (ASUB-04, ASUB-06..10 end to end)
+**Requirement**: success criteria (ASUB-04, ASUB-06..08 end to end)
 
 **Tools**:
 
@@ -239,11 +294,11 @@ T5 → T6
 Phase 1 → Phase 2 → Phase 3
 
 Phase 1:  T1
-Phase 2:  T1 ------→ T2 ------→ T3 ------→ T4 ------→ T5
-Phase 3:  T5 ------→ T6
+Phase 2:  T1 ---→ T2 ---→ T3 ---→ T4 ---→ T5 ---→ T6
+Phase 3:  T6 ---→ T7
 ```
 
-Six tasks: a single batch, executed inline. The Verifier runs after T6.
+Seven tasks: a single batch, executed inline. The Verifier runs after T7.
 
 ---
 
@@ -253,10 +308,11 @@ Six tasks: a single batch, executed inline. The Verifier runs after T6.
 | ---- | ----- | ------ |
 | T1: capture | 1 measurement, recorded | ✅ Granular |
 | T2: fixtures | 1 fixture module + its guard test | ✅ Granular |
-| T3: end of turn | 1 rule in 1 function | ✅ Granular |
-| T4: pending question | 1 rule in 1 function | ✅ Granular |
-| T5: notification replay | 1 test | ✅ Granular |
-| T6: real app | 1 manual check | ✅ Granular |
+| T3: end of turn | 1 rule (the `Stop` / `idle_prompt` decision) in 1 function | ✅ Granular |
+| T4: owed results | 1 rule in 1 function | ✅ Granular |
+| T5: attribution | 1 rule (who may change the state) in 1 function | ✅ Granular |
+| T6: notification replay | 1 test | ✅ Granular |
+| T7: real app | 1 manual check | ✅ Granular |
 
 ## Diagram-Definition Cross-Check
 
@@ -268,6 +324,7 @@ Six tasks: a single batch, executed inline. The Verifier runs after T6.
 | T4 | T3 | T3 → T4 | ✅ Match |
 | T5 | T4 | T4 → T5 | ✅ Match |
 | T6 | T5 | T5 → T6 | ✅ Match |
+| T7 | T6 | T6 → T7 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -276,6 +333,7 @@ Six tasks: a single batch, executed inline. The Verifier runs after T6.
 | T1: capture | spec docs | none | none | ✅ OK |
 | T2: fixtures | test fixtures | unit | unit | ✅ OK |
 | T3: end of turn | activity machine | unit | unit | ✅ OK |
-| T4: pending question | activity machine | unit | unit | ✅ OK |
-| T5: notification replay | notification tests | unit | unit | ✅ OK |
-| T6: real app | spec docs | none (manual) | none | ✅ OK |
+| T4: owed results | activity machine | unit | unit | ✅ OK |
+| T5: attribution | activity machine | unit | unit | ✅ OK |
+| T6: notification replay | notification tests | unit | unit | ✅ OK |
+| T7: real app | spec docs | none (manual) | none | ✅ OK |
