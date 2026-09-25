@@ -1,8 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import { basename } from 'node:path'
+import { commandKey } from '../shared/command-key'
 import type { PersistedSession, SessionStatus, SessionView } from '../shared/config'
 import type { IpcEvent, IpcEvents } from '../shared/ipc-contract'
+import { applyHookEvent, applyKeystroke, sameView, type MachineState } from './activity-machine'
+import { ACTIVITY_TOKEN_ENV } from './claude-hook-settings'
 import type { ConfigStore } from './config-store'
+import { isKeystroke } from './keystroke'
 import type { PtyHandle, PtyPort } from './pty-port'
 import { SessionRingBuffer } from './session-ring-buffer'
 import { buildRawSpawnPlan, buildSpawnPlan, type AgentDef } from './spawn-plan'
@@ -10,12 +14,26 @@ import { buildRawSpawnPlan, buildSpawnPlan, type AgentDef } from './spawn-plan'
 /** Typed main→renderer push, bound to the live window's webContents by index.ts. */
 export type EmitFn = <E extends IpcEvent>(channel: E, payload: IpcEvents[E]) => void
 
+/** The activity hook server, as this module needs it (AD-019). */
+export interface ActivityHooks {
+  /** Generated `--settings` file; `null` when the server never started, which
+   *  degrades every session to the pre-feature rendering (ACTV-29). */
+  settingsPath: string | null
+  register(token: string, sessionId: string): void
+  revoke(token: string): void
+}
+
+/** The only agent command that publishes lifecycle hooks the app consumes. */
+const HOOKED_COMMAND = 'claude'
+
 export interface SessionManagerDeps {
   port: PtyPort
   config: ConfigStore
   emit: EmitFn
   /** Injectable for reconcile tests (fs.existsSync in production). */
   fsExists: (path: string) => boolean
+  /** Absent means no session reports activity — the pre-feature behaviour. */
+  hooks?: ActivityHooks
 }
 
 /** Stored on ad-hoc sessions in place of a registry agent name. */
@@ -36,6 +54,10 @@ interface RunningSession {
   buffer: SessionRingBuffer
   /** Resolves when the PTY's own onExit fires — what `stop` actually waits on. */
   exited: Promise<void>
+  /** Hook token for this run; `null` when the session reports no activity. */
+  token: string | null
+  /** What the agent is doing, folded from its hooks; `null` until the first event. */
+  activity: MachineState | null
 }
 
 /**
@@ -196,7 +218,21 @@ export class SessionManager {
   }
 
   input(id: string, data: string): void {
-    this.#running.get(id)?.handle.write(data)
+    const session = this.#running.get(id)
+    if (!session) return
+    session.handle.write(data)
+    // The keystroke that answers a permission dialog is the only signal that
+    // work resumed: no hook fires between the approval and the tool's end
+    // (ACTV-12). Mouse and focus reports ride this same channel, so they must
+    // not answer for the user (ACTV-33).
+    if (isKeystroke(data)) this.#setActivity(session, applyKeystroke(session.activity))
+  }
+
+  /** A hook event for one session, routed here by the activity hook server. */
+  handleHookEvent(sessionId: string, payload: Record<string, unknown>): void {
+    const session = this.#running.get(sessionId)
+    if (!session) return
+    this.#setActivity(session, applyHookEvent(session.activity, payload))
   }
 
   resize(id: string, cols: number, rows: number): void {
@@ -228,10 +264,18 @@ export class SessionManager {
   /** Spawn the PTY for a meta and wire its streams; registers the Map entry. */
   #start(meta: PersistedSession): void {
     const shell = this.deps.config.get().ui.defaultShell
+    // Resolved here, once, so a registry edit mid-session cannot change how a
+    // running session was launched (ACTV-30).
+    const agent = meta.command ? null : this.#resolve(meta.agent)
+    const token = agent && this.#hookable(agent) ? randomUUID() : null
+    if (token !== null) this.deps.hooks?.register(token, meta.id)
     const plan = meta.command
       ? buildRawSpawnPlan(meta.command, meta.cwd, shell)
-      : buildSpawnPlan(this.#resolve(meta.agent), meta.cwd, shell)
-    const handle = this.deps.port.spawn(plan)
+      : buildSpawnPlan(token === null ? agent! : this.#withHookSettings(agent!), meta.cwd, shell)
+    const handle = this.deps.port.spawn(
+      plan,
+      token === null ? undefined : { [ACTIVITY_TOKEN_ENV]: token }
+    )
     const buffer = new SessionRingBuffer()
     handle.onData((data) => {
       buffer.append(data)
@@ -245,7 +289,32 @@ export class SessionManager {
       markExited()
       this.#finalize(meta.id, exitCode)
     })
-    this.#running.set(meta.id, { meta: { ...meta, status: 'running' }, handle, buffer, exited })
+    this.#running.set(meta.id, {
+      meta: { ...meta, status: 'running' },
+      handle,
+      buffer,
+      exited,
+      token,
+      activity: null
+    })
+  }
+
+  /**
+   * Whether this agent's launch carries the app's hook settings. Only Claude
+   * Code publishes the lifecycle hooks the app reads, and only when the server
+   * is up (ACTV-01, ACTV-02, ACTV-29). An agent the user already launches with
+   * its own `--settings` is left alone: two flags have no documented precedence.
+   */
+  #hookable(agent: AgentDef): boolean {
+    return (
+      this.deps.hooks?.settingsPath != null &&
+      commandKey(agent.command) === HOOKED_COMMAND &&
+      !agent.args.includes('--settings')
+    )
+  }
+
+  #withHookSettings(agent: AgentDef): AgentDef {
+    return { ...agent, args: [...agent.args, '--settings', this.deps.hooks!.settingsPath!] }
   }
 
   /** Idempotent transition to stopped: drop the Map entry, persist, push status. */
@@ -255,10 +324,25 @@ export class SessionManager {
     // "[shell exited with code …]") fire even after a stop() — only the
     // redundant persist/status push is skipped.
     const session = this.#running.get(id)
-    if (session) this.#retained.set(id, session.buffer) // keep scrollback for the preview
+    if (session) {
+      this.#retained.set(id, session.buffer) // keep scrollback for the preview
+      // Stop wins: the token is dead, so a late hook from the dying agent is
+      // rejected, and the activity goes with the PTY (ACTV-08, ACTV-31).
+      if (session.token !== null) this.deps.hooks?.revoke(session.token)
+      session.activity = null
+    }
     const wasRunning = this.#running.delete(id)
     if (wasRunning) this.#setStatus(id, 'stopped')
     if (exitCode !== undefined) this.deps.emit('session:exit', { id, exitCode })
+  }
+
+  /** Adopt a folded state and push it only when the rendering would change (ACTV-06). */
+  #setActivity(session: RunningSession, next: MachineState | null): void {
+    const before = session.activity?.view ?? null
+    const after = next?.view ?? null
+    session.activity = next
+    if (sameView(before, after)) return
+    this.deps.emit('session:activity', { id: session.meta.id, activity: after })
   }
 
   #setStatus(id: string, status: SessionStatus): void {
@@ -285,11 +369,13 @@ export class SessionManager {
 
   #toView(meta: PersistedSession): SessionView {
     const preview = this.#retained.get(meta.id)?.tail(2)
+    const live = this.#running.get(meta.id)
     return {
       ...meta,
-      status: this.#running.has(meta.id) ? 'running' : 'stopped',
+      status: live ? 'running' : 'stopped',
       pathMissing: !this.deps.fsExists(meta.cwd),
-      ...(preview ? { lastOutput: preview } : {})
+      ...(preview ? { lastOutput: preview } : {}),
+      ...(live?.activity ? { activity: live.activity.view } : {})
     }
   }
 }

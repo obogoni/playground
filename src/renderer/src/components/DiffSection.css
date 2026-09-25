@@ -1,0 +1,116 @@
+/*
+ * One file of the All changes stack (FDIF-19/22). The header is always
+ * rendered; the editor under it comes and goes with the mount plan, so the
+ * section must not depend on the editor for its own box.
+ */
+
+.diff-section {
+  /* The stack is a flex column. Without this every section shrinks to share
+     the scroller's height between all of them — 44 files turned into 44
+     stripes a few pixels tall, with their editors clipped inside. */
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.diff-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.diff-section-header:hover {
+  background: color-mix(in oklab, var(--text-faint) 8%, transparent);
+}
+
+.diff-section-chevron {
+  flex: none;
+  display: flex;
+  transform: rotate(-90deg);
+  transition: transform 0.12s;
+}
+
+.diff-section-chevron.open {
+  transform: none;
+}
+
+/* The letters the tree already uses for a change status, at the same weight. */
+.diff-section-pill {
+  flex: none;
+  width: 16px;
+  text-align: center;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.diff-section-pill.modified {
+  background: color-mix(in oklab, var(--amber) 16%, transparent);
+  color: var(--amber);
+}
+
+.diff-section-pill.added {
+  background: color-mix(in oklab, var(--green) 16%, transparent);
+  color: var(--green);
+}
+
+.diff-section-pill.deleted {
+  background: color-mix(in oklab, var(--red) 16%, transparent);
+  color: var(--red);
+}
+
+.diff-section-pill.renamed {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.diff-section-pill.untracked {
+  background: color-mix(in oklab, var(--text-faint) 20%, transparent);
+  color: var(--text-muted);
+}
+
+.diff-section-path {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diff-section-counts {
+  flex: none;
+  display: flex;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.diff-section-counts .added {
+  color: var(--green);
+}
+
+.diff-section-counts .removed {
+  color: var(--red);
+}
+
+/*
+ * The space an editor had, or is about to have. Keeping it is what stops the
+ * page from lurching when a section far from the viewport loses its editor (D1)
+ * and what keeps the scrollbar honest before the first measurement.
+ */
+.diff-section-hold {
+  border-top: 1px solid var(--border);
+}
+
+.diff-section .diff-viewer {
+  border-top: 1px solid var(--border);
+}

@@ -1,6 +1,7 @@
 /** Key-chord classification for the embedded terminal (INPUT-04..08, TCU-01..09). */
 
 import type { AgentDef } from '../../../shared/agents'
+import { commandKey } from '../../../shared/command-key'
 
 export type TerminalKeyAction = 'copy-selection' | 'newline' | 'paste' | 'undo' | 'swallow' | 'pass'
 
@@ -66,13 +67,6 @@ export function undoByteFor(agents: AgentDef[], agentName: string): string {
  * deliberately absent.
  */
 const UNDO_BYTE_BY_COMMAND: Record<string, string> = { claude: '\x1f' }
-
-/** Bare command name, lowercased and stripped of any path and `.exe`, so
- * `C:\...\claude.exe` and `claude` are the same agent. */
-function commandKey(command: string): string {
-  const leaf = command.split(/[\\/]/).pop() ?? command
-  return leaf.toLowerCase().replace(/\.(exe|cmd|bat)$/, '')
-}
 
 /**
  * Grace-window state, passed in so the classifier stays pure and testable

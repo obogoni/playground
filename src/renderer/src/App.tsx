@@ -2,16 +2,19 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { AgentDef } from '../../shared/agents'
 import type { AppConfig } from '../../shared/config'
+import { DEFAULT_CONFIG } from '../../shared/config'
 import type { PinnedTaskView, TasksSnapshot } from '../../shared/tasks'
 import { taskIdFromBranch } from '../../shared/tasks'
 import type { WorkspaceNode } from '../../shared/tree'
 import { AgentsView } from './components/AgentsView'
 import { BoardView } from './components/BoardView'
+import { FilesView } from './components/FilesView'
 import { NewSessionDialog, type NewSessionSource } from './components/NewSessionDialog'
 import { NewWorktreeDialog } from './components/NewWorktreeDialog'
 import { SettingsDialog } from './components/SettingsDialog'
 import { Sidebar } from './components/Sidebar'
 import { StartWorkDialog } from './components/StartWorkDialog'
+import { StatusBar } from './components/StatusBar'
 import { TasksPane } from './components/TasksPane'
 import { Toast } from './components/Toast'
 import { TopBar } from './components/TopBar'
@@ -25,8 +28,10 @@ import {
   TASKS_DEFAULT_WIDTH,
   resolvePaneWidth
 } from './lib/pane-layout'
-import { findWorktree } from './lib/tree-selection'
+import { findWorktree, worktreeIdForPath } from './lib/tree-selection'
 import { dropCollapsedId, isCollapsed, toggleCollapsedId } from './lib/workspace-collapse'
+import { filesStateFor } from './lib/files-view'
+import { useFiles } from './lib/use-files'
 import { useSessions } from './lib/use-sessions'
 import { useTree } from './lib/use-tree'
 import { useWorkflowRuns } from './lib/use-workflow-runs'
@@ -114,6 +119,70 @@ function App(): JSX.Element {
   // Always mounted (above the direction switch) so runs accumulate from the
   // workflow:* stream even while another direction is active (WF5-04, AD-011).
   const workflows = useWorkflowRuns()
+  // Same reason, and one more: the Files watch follows the direction, so leaving
+  // Files has to send `files:watch(null)` instead of racing FilesView's unmount
+  // (FXPL-23). The hook reads the persisted lens out of `ui` and writes it back
+  // through `update`, the one config writer (FXPL-13).
+  /**
+   * The worktree the app closed on comes back on launch (FXPL-33).
+   *
+   * Restored once, and only after both the config and the tree have arrived —
+   * the tree is what says whether that worktree still exists. A saved folder
+   * that has since been removed selects nothing rather than a stale row.
+   *
+   * The write is held back until the restore has run. Persisting on every
+   * change from the first render would save the mount's empty selection over
+   * the stored one before there was anything to restore from.
+   */
+  const restored = useRef(false)
+  const live = useRef(update)
+  useEffect(() => {
+    live.current = update
+  })
+  useEffect(() => {
+    if (restored.current || !ui || tree.length === 0) return
+    restored.current = true
+    const saved = ui.selectedWorktree
+    if (saved && findWorktree(tree, saved)) setSelectedId(saved)
+  }, [ui, tree, setSelectedId])
+  useEffect(() => {
+    if (!restored.current) return
+    live.current({ selectedWorktree: selectedId ?? undefined })
+  }, [selectedId])
+
+  const selected = findWorktree(tree, selectedId)
+  const files = useFiles({
+    worktreePath: selected?.worktree.path ?? null,
+    active: ui?.direction === 'files',
+    ui: ui ?? DEFAULT_CONFIG.ui,
+    onPersist: update,
+    // The status bar re-reads the tree when a push, sync, publish or fetch
+    // succeeds, and that is the only in-app signal those give. The Commits
+    // list follows it to recompute its not-pushed markers (FCMT-32).
+    treeRevision: tree
+  })
+
+  /**
+   * The status bar's changed-file counter lands in the Files direction on that
+   * worktree, in uncommitted-changes mode (FXPL-31, superseding STBR-30/32).
+   *
+   * One config write does both halves: the mode is read back from `ui` on every
+   * render, so the mode forced here *is* the mode that worktree restores next
+   * time (FXPL-32). Direction and mode go in the same patch rather than two,
+   * so a failed second write cannot leave the direction switched with the mode
+   * unchanged.
+   */
+  const openChangedFiles = (worktreeId: string): void => {
+    const current = ui ?? DEFAULT_CONFIG.ui
+    setSelectedId(worktreeId)
+    update({
+      direction: 'files',
+      files: {
+        ...current.files,
+        [worktreeId]: { ...filesStateFor(current, worktreeId), mode: 'uncommitted' }
+      }
+    })
+  }
 
   const refreshTasks = useCallback((): void => {
     api.invoke('tasks:refresh').then(setTasks).catch(console.error)
@@ -203,9 +272,28 @@ function App(): JSX.Element {
     setNsSource(source)
   }
 
+  /**
+   * Picking a session also picks the worktree it runs in.
+   *
+   * The app has one current worktree, and every direction reads it — the
+   * Files tree, the status bar, the launcher row. Without this the Files
+   * direction kept showing whatever was last clicked in the Tree, so moving
+   * between agents left it pointing at another agent's branch.
+   *
+   * A session spawned in a folder that is no worktree, or in one the tree no
+   * longer holds, leaves the selection alone: there is nothing better to
+   * point at than where the user already was.
+   */
+  const selectSession = (id: string | null): void => {
+    setSelectedSessionId(id)
+    const cwd = sessions.find((session) => session.id === id)?.cwd ?? null
+    const worktreeId = worktreeIdForPath(tree, cwd)
+    if (worktreeId) setSelectedId(worktreeId)
+  }
+
   // Deep-link from an entry-point chip: select the session and switch to Agents.
   const openSession = (id: string): void => {
-    setSelectedSessionId(id)
+    selectSession(id)
     update({ direction: 'agents' })
   }
 
@@ -234,7 +322,6 @@ function App(): JSX.Element {
     return <></>
   }
 
-  const selected = findWorktree(tree, selectedId)
   const worktreeCounts = countWorktreesByTask(tree)
   const linkedTaskId = selected ? taskIdFromBranch(selected.worktree.branch) : null
   // First pin in config order wins when IDs collide across orgs (spec §Edge Cases).
@@ -322,7 +409,7 @@ function App(): JSX.Element {
             agents={agents}
             tasks={tasks.tasks}
             selectedId={selectedSessionId}
-            onSelect={setSelectedSessionId}
+            onSelect={selectSession}
             onStop={stopSession}
             onRespawn={respawnSession}
             onRemove={removeSession}
@@ -345,6 +432,15 @@ function App(): JSX.Element {
             onScaffold={workflows.scaffold}
             onSelectRun={workflows.selectRun}
           />
+        ) : ui.direction === 'files' ? (
+          <FilesView
+            worktreePath={selected?.worktree.path ?? null}
+            // A selection the tree no longer resolves is a worktree whose folder
+            // is gone; `refreshTree` clears it, but not before this render.
+            pathMissing={selectedId !== null && selected === null}
+            files={files}
+            onToast={setToast}
+          />
         ) : (
           <BoardView
             tree={tree}
@@ -356,6 +452,16 @@ function App(): JSX.Element {
           />
         )}
       </main>
+      <StatusBar
+        tree={tree}
+        selectedId={selectedId}
+        sessions={sessions}
+        selectedSessionId={selectedSessionId}
+        direction={ui.direction}
+        onToast={setToast}
+        onOpenChanges={openChangedFiles}
+        onRefreshTree={refreshTree}
+      />
       {dialogRepoPath && (
         <NewWorktreeDialog
           tree={tree}

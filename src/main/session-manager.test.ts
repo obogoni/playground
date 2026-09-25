@@ -7,7 +7,13 @@ import type { PersistedSession } from '../shared/config'
 import { ConfigStore } from './config-store'
 import type { PtyHandle, PtyPort } from './pty-port'
 import type { SpawnPlan } from './spawn-plan'
-import { SessionManager, SESSION_EXIT_WAIT_MS, type EmitFn } from './session-manager'
+import { ACTIVITY_TOKEN_ENV } from './claude-hook-settings'
+import {
+  SessionManager,
+  SESSION_EXIT_WAIT_MS,
+  type ActivityHooks,
+  type EmitFn
+} from './session-manager'
 
 interface FakeHandle extends PtyHandle {
   plan: SpawnPlan
@@ -47,16 +53,39 @@ function makeFakeHandle(plan: SpawnPlan): FakeHandle {
   return h
 }
 
-function fakePort(): PtyPort & { handles: FakeHandle[] } {
+function fakePort(): PtyPort & { handles: FakeHandle[]; envs: (NodeJS.ProcessEnv | undefined)[] } {
   const handles: FakeHandle[] = []
+  const envs: (NodeJS.ProcessEnv | undefined)[] = []
   return {
     handles,
-    spawn(plan: SpawnPlan): PtyHandle {
+    envs,
+    spawn(plan: SpawnPlan, env?: NodeJS.ProcessEnv): PtyHandle {
       const h = makeFakeHandle(plan)
       handles.push(h)
+      envs.push(env)
       return h
     }
   }
+}
+
+interface FakeHooks extends ActivityHooks {
+  registered: { token: string; sessionId: string }[]
+  revoked: string[]
+}
+
+function fakeHooks(settingsPath: string | null = 'C:\\app\\hooks.json'): FakeHooks {
+  const hooks: FakeHooks = {
+    settingsPath,
+    registered: [],
+    revoked: [],
+    register: (token, sessionId) => {
+      hooks.registered.push({ token, sessionId })
+    },
+    revoke: (token) => {
+      hooks.revoked.push(token)
+    }
+  }
+  return hooks
 }
 
 interface EmittedEvent {
@@ -86,11 +115,18 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-function makeManager(opts: { fsExists?: (p: string) => boolean; seed?: PersistedSession[] } = {}): {
+function makeManager(
+  opts: {
+    fsExists?: (p: string) => boolean
+    seed?: PersistedSession[]
+    hooks?: FakeHooks
+  } = {}
+): {
   manager: SessionManager
   config: ConfigStore
-  port: PtyPort & { handles: FakeHandle[] }
+  port: PtyPort & { handles: FakeHandle[]; envs: (NodeJS.ProcessEnv | undefined)[] }
   emit: EmitFnRecorder
+  hooks: FakeHooks
 } {
   const dir = mkdtempSync(join(tmpdir(), 'sm-'))
   dirs.push(dir)
@@ -98,14 +134,16 @@ function makeManager(opts: { fsExists?: (p: string) => boolean; seed?: Persisted
   if (opts.seed) config.patch({ sessions: opts.seed })
   const port = fakePort()
   const emit = recordingEmit()
+  const hooks = opts.hooks ?? fakeHooks()
   const manager = new SessionManager({
     port,
     config,
     // the recorder is intentionally loosely typed; cast to the manager's EmitFn
     emit: emit as unknown as EmitFn,
-    fsExists: opts.fsExists ?? (() => true)
+    fsExists: opts.fsExists ?? (() => true),
+    hooks
   })
-  return { manager, config, port, emit }
+  return { manager, config, port, emit, hooks }
 }
 
 const CWD = 'C:\\work\\repo-feature'
@@ -413,5 +451,193 @@ describe('SessionManager', () => {
 
     // Drain the two pending waits so nothing outlives the test.
     await vi.advanceTimersByTimeAsync(SESSION_EXIT_WAIT_MS)
+  })
+})
+
+/** Payload shapes from the Claude Code hooks reference. */
+function hookEvent(name: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return { session_id: 'claude-side-id', hook_event_name: name, ...extra }
+}
+
+const activityEvents = (emit: EmitFnRecorder): unknown[] =>
+  emit.events.filter((e) => e.channel === 'session:activity').map((e) => e.payload)
+
+describe('SessionManager activity hooks', () => {
+  it('launches Claude with the hook settings and the session token (ACTV-01)', () => {
+    const { manager, port, hooks } = makeManager()
+
+    const view = manager.spawn('Claude', CWD)
+
+    expect(port.handles[0].plan.autoCommand).toBe('claude --settings C:\\app\\hooks.json')
+    const token = port.envs[0]?.[ACTIVITY_TOKEN_ENV]
+    expect(token).toBeTruthy()
+    expect(hooks.registered).toEqual([{ token, sessionId: view.id }])
+  })
+
+  it('leaves an ad-hoc session untouched (ACTV-02)', () => {
+    const { manager, port, hooks } = makeManager()
+
+    manager.spawn('Ad-hoc', CWD, 'claude --resume')
+
+    expect(port.handles[0].plan.autoCommand).toBe('claude --resume')
+    expect(port.envs[0]).toBeUndefined()
+    expect(hooks.registered).toEqual([])
+  })
+
+  it('leaves an agent that is not Claude Code untouched (ACTV-02)', () => {
+    const { manager, port, hooks } = makeManager()
+
+    manager.spawn('Codex', CWD)
+
+    expect(port.handles[0].plan.autoCommand).not.toContain('--settings')
+    expect(port.envs[0]).toBeUndefined()
+    expect(hooks.registered).toEqual([])
+  })
+
+  it('still resolves Claude behind a full path and a .exe suffix (ACTV-01)', () => {
+    const { manager, config, port } = makeManager()
+    config.patch({
+      agents: [{ name: 'Claude', command: 'C:\\Users\\dev\\bin\\CLAUDE.EXE', args: [] }]
+    })
+
+    manager.spawn('Claude', CWD)
+
+    expect(port.handles[0].plan.autoCommand).toContain('--settings')
+  })
+
+  it('injects nothing when the hook server never started (ACTV-29)', () => {
+    const { manager, port, hooks } = makeManager({ hooks: fakeHooks(null) })
+
+    manager.spawn('Claude', CWD)
+
+    expect(port.handles[0].plan.autoCommand).not.toContain('--settings')
+    expect(port.envs[0]).toBeUndefined()
+    expect(hooks.registered).toEqual([])
+  })
+
+  it('injects nothing when the agent already carries its own --settings', () => {
+    const { manager, config, port, hooks } = makeManager()
+    config.patch({
+      agents: [{ name: 'Claude', command: 'claude', args: ['--settings', 'C:\\mine.json'] }]
+    })
+
+    manager.spawn('Claude', CWD)
+
+    expect(port.handles[0].plan.autoCommand).toBe('claude --settings C:\\mine.json')
+    expect(hooks.registered).toEqual([])
+  })
+
+  it('folds an event into the session view and pushes it once (ACTV-03, ACTV-05)', () => {
+    const { manager, emit } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+
+    manager.handleHookEvent(view.id, hookEvent('SessionStart', { source: 'startup' }))
+
+    expect(manager.list()[0].activity).toEqual({ state: 'waiting', subagents: 0 })
+    expect(activityEvents(emit)).toEqual([
+      { id: view.id, activity: { state: 'waiting', subagents: 0 } }
+    ])
+  })
+
+  it('pushes nothing when an event repeats the state the session holds (ACTV-06)', () => {
+    const { manager, emit } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+
+    manager.handleHookEvent(view.id, hookEvent('Stop'))
+    manager.handleHookEvent(view.id, hookEvent('Stop'))
+    manager.handleHookEvent(
+      view.id,
+      hookEvent('Notification', { notification_type: 'idle_prompt' })
+    )
+
+    expect(activityEvents(emit)).toHaveLength(1)
+  })
+
+  it('ignores an event for a session that is not running (ACTV-31, ACTV-32)', () => {
+    const { manager, emit } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    void manager.stop(view.id)
+    emit.events.length = 0
+
+    manager.handleHookEvent(view.id, hookEvent('Stop'))
+    manager.handleHookEvent('no-such-session', hookEvent('Stop'))
+
+    expect(activityEvents(emit)).toEqual([])
+    expect(manager.list()[0].activity).toBeUndefined()
+  })
+
+  it('revokes the token and drops the activity when the session stops (ACTV-08)', async () => {
+    const { manager, port, hooks } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    const token = port.envs[0]?.[ACTIVITY_TOKEN_ENV]
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+
+    await manager.stop(view.id)
+
+    expect(hooks.revoked).toEqual([token])
+    expect(manager.list()[0]).toMatchObject({ status: 'stopped' })
+    expect(manager.list()[0].activity).toBeUndefined()
+  })
+
+  it('issues a fresh token on respawn and starts with no activity (ACTV-13)', async () => {
+    const { manager, port, hooks } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('Stop'))
+    await manager.stop(view.id)
+
+    manager.respawn(view.id)
+
+    const tokens = hooks.registered.map((r) => r.token)
+    expect(tokens).toHaveLength(2)
+    expect(tokens[0]).not.toBe(tokens[1])
+    expect(port.envs[1]?.[ACTIVITY_TOKEN_ENV]).toBe(tokens[1])
+    expect(manager.list()[0].activity).toBeUndefined()
+  })
+
+  it('keeps a running session on the launch it started with when the registry changes (ACTV-30)', () => {
+    const { manager, config, port } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+
+    config.patch({ agents: [{ name: 'Claude', command: 'other-cli', args: [] }] })
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+
+    expect(port.handles[0].plan.autoCommand).toContain('--settings')
+    expect(manager.list()[0].activity).toEqual({ state: 'working', subagents: 0 })
+  })
+
+  it('treats the keystroke that answers a permission dialog as work resuming (ACTV-12)', () => {
+    const { manager, port } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('PermissionRequest', { tool_name: 'Bash' }))
+
+    manager.input(view.id, '1')
+
+    expect(manager.list()[0].activity).toEqual({ state: 'working', subagents: 0 })
+    expect(port.handles[0].writes).toEqual(['1'])
+  })
+
+  it('does not let a mouse report answer for the user (ACTV-33)', () => {
+    const { manager, port } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('PermissionRequest', { tool_name: 'Bash' }))
+
+    manager.input(view.id, '\x1b[<0;10;20M')
+
+    expect(manager.list()[0].activity).toMatchObject({ state: 'needs-approval' })
+    expect(port.handles[0].writes).toEqual(['\x1b[<0;10;20M'])
+  })
+
+  it('never writes activity to the config (ACTV-09)', () => {
+    const { manager, config } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+
+    manager.handleHookEvent(view.id, hookEvent('PreToolUse', { tool_name: 'Bash' }))
+    manager.handleHookEvent(view.id, hookEvent('SubagentStart', { agent_id: 'a1' }))
+
+    expect(manager.list()[0].activity).toEqual({ state: 'working', tool: 'Bash', subagents: 1 })
+    for (const session of config.get().sessions) {
+      expect(session).not.toHaveProperty('activity')
+    }
   })
 })

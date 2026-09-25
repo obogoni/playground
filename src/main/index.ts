@@ -1,18 +1,27 @@
 import { app, shell, clipboard, dialog, BrowserWindow, Notification } from 'electron'
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import { randomBytes, randomUUID } from 'node:crypto'
-import { existsSync } from 'node:fs'
+import { existsSync, mkdirSync, watch, writeFileSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
 import { promisify } from 'node:util'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
 import { AdoGateway } from './ado-gateway'
 import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-runner'
+import { createActivityHookServer } from './activity-hook-server'
+import { buildClaudeHookSettings } from './claude-hook-settings'
 import { readClipboardPaste } from './clipboard-reader'
 import { ConfigStore } from './config-store'
+import { commitFiles, listCommits, openCommit } from './commit-log'
+import { diffStats, readDiffSides } from './file-diff'
+import { readForView } from './file-reader'
+import { changedSince, listBases, listDir } from './file-tree'
+import { FileWatcher, type WatchPort } from './file-watcher'
+import { git } from './git'
+import { readCommits, readSyncState, runGitOp } from './git-sync'
 import { runHookShell } from './hook-shell'
 import { emit, handle, onSend } from './ipc'
 import { createMcpResultServer } from './mcp-result-server'
@@ -20,7 +29,7 @@ import { purgePasteDir } from './paste-temp'
 import { withPostCreateHook } from './post-create-hook'
 import { PtyPort } from './pty-port'
 import { resolvePostCreateCommand } from './repo-config'
-import { SessionManager, type EmitFn } from './session-manager'
+import { SessionManager, type ActivityHooks, type EmitFn } from './session-manager'
 import { ShortcutLauncher } from './shortcut-launcher'
 import { TaskBoard } from './task-board'
 import { buildTree } from './tree'
@@ -97,6 +106,24 @@ async function readFileDropList(): Promise<string> {
 }
 
 /**
+ * The real `fs.watch` behind `FileWatcher`'s port. A path that vanishes between
+ * the selection and the watch throws synchronously, and an unwatchable path
+ * errors asynchronously; neither may take the main process down, so both come
+ * back as a handle that watches nothing.
+ */
+const watchPort: WatchPort = (path, opts, listener) => {
+  try {
+    const watcher = watch(path, { recursive: opts.recursive }, (_event, filename) =>
+      listener(typeof filename === 'string' ? filename : '')
+    )
+    watcher.on('error', () => watcher.close())
+    return { close: () => watcher.close() }
+  } catch {
+    return { close: () => {} }
+  }
+}
+
+/**
  * WF2 real `ctx.sh` runner (WF2-06, WF2-D6): spawn the command **through a
  * shell** and capture `{code, stdout, stderr}`. It never throws — the `ctx.sh`
  * gate in `workflow-ctx` decides throw-vs-`allowFail` from the exit code.
@@ -139,6 +166,8 @@ const spawnAgent: AgentSpawn = (bin, argv, { cwd, env }): AgentChild => {
 // emit() (the app is single-window) and window-all-closed can killAll().
 let mainWindow: BrowserWindow | null = null
 let sessionManager: SessionManager | null = null
+/** Closes the activity hook listener on quit; set once the server is created. */
+let stopHookServer: (() => Promise<void>) | null = null
 
 function createWindow(): void {
   // Create the browser window.
@@ -238,6 +267,51 @@ app.whenReady().then(() => {
     removeWorktree(repoPath, worktreePath, { force })
   )
   handle('worktrees:changes', ({ worktreePath }) => changedFilesOf(worktreePath))
+  handle('git:sync-state', ({ worktreePath }) => readSyncState(worktreePath))
+  handle('git:commits', ({ worktreePath }) => readCommits(worktreePath))
+  handle('git:run', ({ worktreePath, op, remote }) => runGitOp(worktreePath, op, remote))
+
+  // The Files direction (FXPL-02/08/09/16/21). Every handler delegates; the
+  // modules behind them are unit-tested, this is only the wiring.
+  const fileWatcher = new FileWatcher({
+    watch: watchPort,
+    // `--git-dir` answers relatively for a primary checkout and absolutely for
+    // a linked worktree, whose git dir lives outside its own root.
+    resolveGitDir: async (worktreePath) => {
+      const { stdout } = await git(worktreePath, ['rev-parse', '--git-dir'])
+      return resolve(worktreePath, stdout.trim())
+    },
+    schedule: {
+      after: (ms, fn) => {
+        const timer = setTimeout(fn, ms)
+        return () => clearTimeout(timer)
+      }
+    },
+    emit: (event) => {
+      if (mainWindow) emit(mainWindow.webContents, 'files:changed', event)
+    }
+  })
+  handle('files:list-dir', ({ worktreePath, dir }) => listDir(worktreePath, dir))
+  handle('files:changed-since', ({ worktreePath, base }) => changedSince(worktreePath, base))
+  handle('files:bases', ({ worktreePath }) => listBases(worktreePath))
+  handle('files:read', ({ worktreePath, relPath }) => readForView(worktreePath, relPath))
+  handle('files:watch', ({ worktreePath }) => fileWatcher.select(worktreePath))
+  handle('files:diff-sides', ({ worktreePath, request }) => readDiffSides(worktreePath, request))
+  handle('files:diff-stats', ({ worktreePath, mode, base }) => diffStats(worktreePath, mode, base))
+  handle('commits:list', ({ worktreePath, base, cursor }) =>
+    listCommits(worktreePath, base, cursor)
+  )
+  handle('commits:files', ({ worktreePath, sha }) => commitFiles(worktreePath, sha))
+  // The renderer sends a sha, never an address: `shell.openExternal` is only
+  // ever reached through `openCommit`, which builds the URL itself and refuses
+  // anything that is not https (FCMT-28).
+  handle('commits:open', ({ worktreePath, sha }) =>
+    openCommit(worktreePath, sha, (url) => shell.openExternal(url))
+  )
+  // Close every watch handle before the process goes away (FXPL-23).
+  app.on('will-quit', () => {
+    void fileWatcher.select(null)
+  })
 
   const launcher = new ShortcutLauncher()
   handle('shortcuts:launch', ({ tool, path }) => launcher.launch(tool, path))
@@ -277,13 +351,43 @@ app.whenReady().then(() => {
     notification.show()
   }
 
+  // Claude Code activity hooks (AD-019). The loopback server takes a moment to
+  // bind, so `settingsPath` starts null and is filled once it is listening;
+  // SessionManager reads it per spawn, and a null means the session launches
+  // exactly as it did before the feature (ACTV-29).
+  // SPEC_DEVIATION: design.md says the server starts *before* SessionManager is
+  // constructed.
+  // Reason: `app.whenReady().then()` is synchronous here, and making the whole
+  // block async to await one bind would reorder every other handler's
+  // registration. A session spawned in the first milliseconds simply reports no
+  // activity, which is the documented degrade path.
+  const hookServer = createActivityHookServer()
+  stopHookServer = () => hookServer.stop()
+  const activityHooks: ActivityHooks = {
+    settingsPath: null,
+    register: (token, sessionId) => hookServer.register(token, sessionId),
+    revoke: (token) => hookServer.revoke(token)
+  }
+  hookServer
+    .start()
+    .then(({ url }) => {
+      // Rewritten every launch: the port is ephemeral.
+      const settingsPath = join(app.getPath('userData'), 'agent-hooks', 'claude-settings.json')
+      mkdirSync(join(app.getPath('userData'), 'agent-hooks'), { recursive: true })
+      writeFileSync(settingsPath, JSON.stringify(buildClaudeHookSettings(url), null, 2), 'utf8')
+      activityHooks.settingsPath = settingsPath
+    })
+    .catch((err) => console.error('[activity-hooks] server did not start', err))
+
   sessionManager = new SessionManager({
     port: new PtyPort(),
     config: configStore,
     emit: emitToWindow,
-    fsExists: existsSync
+    fsExists: existsSync,
+    hooks: activityHooks
   })
   const sessions = sessionManager
+  hookServer.onEvent((sessionId, payload) => sessions.handleHookEvent(sessionId, payload))
   handle('sessions:list', () => sessions.list())
   handle('sessions:spawn', ({ agentName, cwd, adhocCommand }) =>
     sessions.spawn(agentName, cwd, adhocCommand)
@@ -447,6 +551,7 @@ app.on('window-all-closed', () => {
   // PTYs die on quit — no daemon (PRD Out of Scope). Kill every live session
   // so no orphaned shell/agent survives the window closing.
   sessionManager?.killAll()
+  void stopHookServer?.()
   if (process.platform !== 'darwin') {
     app.quit()
   }

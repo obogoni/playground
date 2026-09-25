@@ -122,6 +122,31 @@
   color: var(--text-faint);
 }
 
+/* Activity states (ACTV-27); the tokens match the rail's row indicators. */
+.agents-detail-pill.blue {
+  color: var(--blue);
+  border-color: color-mix(in oklab, var(--blue) 45%, transparent);
+  background: color-mix(in oklab, var(--blue) 10%, transparent);
+}
+
+.agents-detail-pill.pink {
+  color: var(--pink);
+  border-color: color-mix(in oklab, var(--pink) 45%, transparent);
+  background: color-mix(in oklab, var(--pink) 10%, transparent);
+}
+
+.agents-detail-pill.red {
+  color: var(--red);
+  border-color: color-mix(in oklab, var(--red) 45%, transparent);
+  background: color-mix(in oklab, var(--red) 10%, transparent);
+}
+
+.agents-detail-pill.amber {
+  color: var(--amber);
+  border-color: color-mix(in oklab, var(--amber) 45%, transparent);
+  background: color-mix(in oklab, var(--amber) 10%, transparent);
+}
+
 .agents-detail-actions {
   display: flex;
   gap: 8px;

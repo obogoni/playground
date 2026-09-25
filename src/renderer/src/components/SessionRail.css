@@ -34,6 +34,16 @@
   color: var(--text-muted);
 }
 
+/* The two activity counts read at a glance against the plain shell count. */
+.session-rail-count .working {
+  color: var(--green);
+}
+
+.session-rail-count .need-you {
+  color: var(--pink);
+  font-weight: 600;
+}
+
 .session-rail-new {
   width: 100%;
   border: 1px solid var(--border);
@@ -322,6 +332,72 @@
 
 .rail-row-dot.missing {
   background: var(--red);
+}
+
+/* Agent activity (ACTV-14..18). Working keeps running's green, because it is
+   the same fact stated precisely; waiting is calm; a block on the user is the
+   loudest; `shell` keeps the amber the rail v2 handoff reserved for it. */
+.rail-row-loader {
+  display: inline-flex;
+  flex: 0 0 auto;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail-row-loader {
+    animation: none;
+  }
+}
+
+.rail-row-status.working,
+.rail-row-status.compacting {
+  color: var(--green);
+}
+
+.rail-row-loader.working,
+.rail-row-loader.compacting {
+  color: var(--green);
+}
+
+.rail-row-status.waiting {
+  color: var(--blue);
+}
+
+.rail-row-dot.waiting {
+  background: var(--blue);
+}
+
+.rail-row-status.approval,
+.rail-row-status.input {
+  color: var(--pink);
+}
+
+.rail-row-dot.approval,
+.rail-row-dot.input {
+  background: var(--pink);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--pink) 22%, transparent);
+}
+
+.rail-row-status.error {
+  color: var(--red);
+}
+
+.rail-row-dot.error {
+  background: var(--red);
+}
+
+.rail-row-status.shell {
+  color: var(--amber);
+}
+
+.rail-row-dot.shell {
+  background: var(--amber);
 }
 
 /* The wrapper only groups the buttons for React; the buttons themselves sit in

@@ -1,6 +1,4 @@
-import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { promisify } from 'node:util'
 import type { WorktreeNode } from '../shared/tree'
 import type {
   ChangedFile,
@@ -10,8 +8,7 @@ import type {
 } from '../shared/worktrees'
 import { worktreeNameFor, worktreePathFor } from '../shared/worktrees'
 import { removeDirTree, type DirRemovalResult } from './dir-remover'
-
-const run = promisify(execFile)
+import { git, gitFailureLine } from './git'
 
 /** Raised when git itself fails for a repo (not installed, not a repo, …). */
 export class GitError extends Error {
@@ -361,14 +358,6 @@ function samePath(a: string, b: string): boolean {
   return norm(a) === norm(b)
 }
 
-/** Git's own first stderr line (e.g. "fatal: …") reads better than execFile's wrapper message. */
-function gitFailureLine(err: unknown): string {
-  const stderr = (err as { stderr?: string }).stderr
-  const line = stderr?.split(/\r?\n/).find((l) => l.trim() !== '')
-  if (line) return line.trim()
-  return err instanceof Error ? err.message.split('\n')[0] : String(err)
-}
-
 export interface PorcelainBlock {
   path: string
   branch: string
@@ -517,14 +506,4 @@ function unquotePath(raw: string): string {
     }
   }
   return Buffer.from(bytes).toString('utf8')
-}
-
-function git(cwd: string, args: string[]): Promise<{ stdout: string }> {
-  // GIT_TERMINAL_PROMPT=0: a fetch with no cached credentials fails fast instead
-  // of hanging the main process on an un-answerable prompt (WBR-02 → blocks).
-  return run('git', args, {
-    cwd,
-    windowsHide: true,
-    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
-  })
 }

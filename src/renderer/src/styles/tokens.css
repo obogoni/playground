@@ -6,6 +6,10 @@
 
 :root,
 :root[data-theme='dark'] {
+  /* Native UI the app does not draw itself — scrollbars above all — follows
+     this, not the tokens below. Without it Chromium keeps the light scrollbar
+     on every scroller in the app, including Monaco's and the terminal's. */
+  color-scheme: dark;
   --bg: #1a1815;
   --panel: #221f1b;
   --panel-2: #2a2621;
@@ -25,6 +29,7 @@
 }
 
 :root[data-theme='light'] {
+  color-scheme: light;
   --bg: #f6f2eb;
   --panel: #ffffff;
   --panel-2: #faf6ef;

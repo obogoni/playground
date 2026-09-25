@@ -1,11 +1,33 @@
-import type { SessionView } from '../../../shared/config'
+import type { ActivityState, SessionView } from '../../../shared/config'
 import type { PinnedTaskView, WorkItemDetails } from '../../../shared/tasks'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { deriveAttribution, linkedPinFor } from './session-attribution'
 
-/** Short row status, ordered by precedence (RAIL-14). A future `'shell'`
- *  sub-status slots in as one more member without touching any call site. */
-export type RowStatus = 'running' | 'stopped' | 'path missing'
+/** Short row status, ordered by precedence (RAIL-14). A running session whose
+ *  agent reports what it is doing shows that instead of the bare `running`
+ *  (ACTV-19); everything else is unchanged. */
+export type RowStatus =
+  | 'working'
+  | 'compacting'
+  | 'waiting'
+  | 'approval'
+  | 'input'
+  | 'error'
+  | 'shell'
+  | 'running'
+  | 'stopped'
+  | 'path missing'
+
+/** Row label for each activity state the agent's hooks can produce. */
+const ACTIVITY_STATUS: Record<ActivityState, RowStatus> = {
+  working: 'working',
+  compacting: 'compacting',
+  waiting: 'waiting',
+  'needs-approval': 'approval',
+  'needs-input': 'input',
+  error: 'error',
+  exited: 'shell'
+}
 
 /** Row action buttons, in render order (RAIL-16). */
 export type RowAction = 'stop' | 'respawn' | 'remove'
@@ -66,19 +88,58 @@ function folderLeaf(cwd: string): string {
   return segments[segments.length - 1] ?? cwd
 }
 
-/** Status precedence `running` > `path missing` > `stopped` (RAIL-14). */
+/** Status precedence `running` > `path missing` > `stopped` (RAIL-14), with a
+ *  running session's activity taking the label when its agent reports one. */
 function rowStatus(session: SessionView): RowStatus {
-  if (session.status === 'running') return 'running'
+  if (session.status === 'running') {
+    return session.activity ? ACTIVITY_STATUS[session.activity.state] : 'running'
+  }
   if (session.pathMissing) return 'path missing'
   return 'stopped'
 }
 
-/** Stop when running; Remove alone on a non-running path-missing row;
- *  Respawn then Remove otherwise (RAIL-16). */
+/** Stop when running (whatever the agent is doing); Remove alone on a
+ *  non-running path-missing row; Respawn then Remove otherwise (RAIL-16). */
 function rowActions(status: RowStatus): RowAction[] {
-  if (status === 'running') return ['stop']
+  if (status === 'stopped') return ['respawn', 'remove']
   if (status === 'path missing') return ['remove']
-  return ['respawn', 'remove']
+  return ['stop']
+}
+
+/** What a running agent is doing right now, appended to the row tooltip
+ *  (ACTV-24..26). Empty when the session reports nothing. */
+function activityDetail(session: SessionView): string {
+  const activity = session.activity
+  if (!activity) return ''
+  const parts: string[] = []
+  if (activity.tool) parts.push(activity.tool)
+  if (activity.subagents > 0) {
+    parts.push(`${activity.subagents} subagent${activity.subagents === 1 ? '' : 's'}`)
+  }
+  if (activity.error) parts.push(activity.error)
+  return parts.map((part) => ` · ${part}`).join('')
+}
+
+export interface HeaderCounts {
+  /** Live shells, the pre-feature counter. */
+  running: number
+  /** Agents actually doing something (ACTV-22). */
+  working: number
+  /** Agents blocked on the user or failed (ACTV-23). */
+  needYou: number
+}
+
+export function headerCounts(sessions: SessionView[]): HeaderCounts {
+  const states = sessions
+    .filter((session) => session.status === 'running')
+    .map((session) => session.activity?.state)
+  return {
+    running: states.length,
+    working: states.filter((state) => state === 'working' || state === 'compacting').length,
+    needYou: states.filter(
+      (state) => state === 'needs-approval' || state === 'needs-input' || state === 'error'
+    ).length
+  }
 }
 
 interface PendingGroup {
@@ -212,7 +273,7 @@ function resolveRows(group: PendingGroup): RailRow[] {
       session,
       label: ambiguous ? `${session.agent} ${ordinal}` : session.agent,
       status,
-      tooltip: `${session.title} · ${detached || branch === null ? session.cwd : branch}`,
+      tooltip: `${session.title} · ${detached || branch === null ? session.cwd : branch}${activityDetail(session)}`,
       actions: rowActions(status)
     }
   })

@@ -24,30 +24,6 @@ Corroborated across multiple features. Safe to apply as guidance.
 
 Seen once or not yet corroborated. Tracked, not trusted.
 
-### L-003 - When wrapping a spawned process with a timeout, settle the promise on 'exit' plus a short flush grace period, never on 'close' alone: 'close' waits for stdio EOF and killing a shell does not kill its children, so a surviving grandchild holds the inherited pipes and the promise can lag by seconds or never settle
-- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `child-process` · harmful: 0
-- features: worktree-post-create-hook
-- evidence: validation.md round-1 blocker; src/main/hook-shell.ts:71 (child-process)
-- last seen: 2026-07-29T22:37:03Z
-
-### L-004 - Assert a spec-defined bound against its literal value, not against the constant that implements it: expect(x).toHaveLength(MAX_CHARS) is self-referential and survives a mutation of MAX_CHARS itself
-- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
-- features: worktree-post-create-hook
-- evidence: mutant R1/M7; post-create-hook.test.ts output-tail test (testing)
-- last seen: 2026-07-29T22:37:04Z
-
-### L-006 - Assert a returned payload field by its value, not by the value you handed an injected fake: a field that appears in the test only as a spy's input reads like coverage in review, but a mutation dropping it from the real return still passes
-- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
-- features: worktree-removal-fault-tolerance
-- evidence: round-1 mutant M6; worktree-manager.test.ts leftover: at :844/:867/:882 were spyDeleter inputs, not assertions - dropping the field from worktree-manager.ts:335-339 left all 80 tests green; closed by F1 124340c (testing)
-- last seen: 2026-07-31T12:27:40Z
-
-### L-007 - When writing a test to kill a specific surviving mutant, check the fixture does not encode that mutant's own blind spot: pick one whose readings differ under every wrong implementation, not just the one you saw. A directories-only residue pinned the recursive count yet let a directories-only count survive
-- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
-- features: worktree-removal-fault-tolerance
-- evidence: round-2 mutant N3 survived the round-1 fix F2 (dir-remover.test.ts:328-348 fixture wt/keep/a/b was directories-only); closed by F3 1abe8aa with a mixed chain giving 3/2/1/1 for every-entry/dirs-only/files-only/top-level (testing)
-- last seen: 2026-07-31T12:27:40Z
-
 ### L-008 - When a hard-coded value becomes a lookup table keyed by an existing enum, test the wiring from key to entry, not just the table: asserting the table's contents leaves the new key free to silently resolve to the old entry, and a guard that returns before any side effect (a missing-path check) usually makes that routing assertable without touching the real subsystem.
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main/**` · harmful: 0
 - features: vs2026-admin-shortcut
@@ -101,6 +77,84 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: agents-rail-v2
 - evidence: src/renderer/src/components/SessionRail.tsx:264 SPEC_DEVIATION (renderer)
 - last seen: 2026-09-13T16:05:00Z
+
+### L-017 - Assert a reset-to-zero effect from a state that actually holds a non-zero value: a test that drives the event from an already-zero state passes whether or not the reset happens
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: session-activity-status
+- evidence: activity-machine.ts:77,:108 (testing)
+- last seen: 2026-09-16T00:25:09Z
+
+### L-018 - When an AC lands in a layer the project exempts from unit tests, extract the decision into a lib module and test that, rather than deferring the evidence to a smoke script that has not been written yet
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: session-activity-status
+- evidence: ACTV-07, ACTV-27 (renderer)
+- last seen: 2026-09-16T00:25:09Z
+
+### L-019 - Pin a spec-mandated numeric limit with a literal assertion on the default production uses; a test that overrides the value to run fast leaves the default free to drift.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main/**` · harmful: 0
+- features: status-bar
+- evidence: M17 src/main/git-sync.ts:7 OP_TIMEOUT_MS (STBR-24) (src/main/**)
+- last seen: 2026-09-19T16:44:45Z
+
+### L-020 - When an AC mandates an environment variable or spawn option for a child process, assert it from inside the spawned process or on the spawn call; testing the wrapper's outcomes never observes it.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main/**` · harmful: 0
+- features: status-bar
+- evidence: M18 src/main/git.ts:22 GIT_TERMINAL_PROMPT (STBR-27) (src/main/**)
+- last seen: 2026-09-19T16:44:45Z
+
+### L-021 - When a task names a smoke script as the sole evidence for an AC, confirm the script has a numbered check asserting that AC before marking it done; listing the requirement ID is not a check.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
+- features: status-bar
+- evidence: STBR-23 / M19 src/renderer/src/components/SyncPopover.tsx:94; tasks.md T18 claims sole evidence (scripts/smoke)
+- last seen: 2026-09-19T16:44:45Z
+
+### L-022 - Before an edge case cites a state the app already derives, confirm the model carries it at that level; otherwise name the state the feature must add.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: status-bar
+- evidence: spec.md Edge Cases: path-missing state the tree already derives (only WorkspaceNode.missing exists) (spec)
+- last seen: 2026-09-19T16:44:45Z
+
+### L-023 - Git pull and push write progress and hint lines to stderr before the error, so report the first fatal or error line rather than the first stderr line.
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `src/main/**` · harmful: 0
+- features: status-bar
+- evidence: src/main/git-sync.ts:69-80 errorLine vs gitFailureLine (src/main/**)
+- last seen: 2026-09-19T16:44:46Z
+
+### L-024 - When an error extractor accepts several prefixes, drive a real failure for each prefix; testing only one leaves the others, and flags that turn the refusal into success, free to change unseen.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `main/git` · harmful: 0
+- features: status-bar
+- evidence: validation.md M29, M30 (src/main/git-sync.ts:81, :35) (main/git)
+- last seen: 2026-09-19T17:53:18Z
+
+### L-025 - Map every spec edge case to its own test or numbered smoke check in tasks.md, as ACs are; edge cases left to structure or to the tool's own behaviour reach validation with no evidence.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `specs/edge-cases` · harmful: 0
+- features: status-bar
+- evidence: validation.md edge cases: dirty pull, Escape, one popover at a time, no toast; STBR-25 refresh (specs/edge-cases)
+- last seen: 2026-09-19T17:53:18Z
+
+### L-026 - When a spec names a git command, name the flags that keep its behaviour independent of user and system git config such as pull.rebase, and pin that config in the real-git tests.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `git, main-process` · harmful: 0
+- features: status-bar
+- evidence: validation.md spec-precision note 3; src/main/git-sync.ts:35; src/main/git-sync.test.ts:337 (git, main-process)
+- last seen: 2026-09-19T18:18:03Z
+
+### L-027 - A rejection fixture must reach the guard it claims to test: a wrong-shape input that is also the wrong length dies on the length check, leaving the real guard unproven.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `tests/fixtures` · harmful: 0
+- features: files-commits
+- evidence: validation.md M1 (src/main/remote-url.ts:29; src/main/remote-url.test.ts:59) (tests/fixtures)
+- last seen: 2026-09-20T22:58:11Z
+
+### L-028 - When an AC says 'more than N', seed a fixture at exactly N: counts above and below it cannot tell > from >=.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `tests/boundaries` · harmful: 0
+- features: files-commits
+- evidence: validation.md M5 (src/main/commit-log.ts:82) (tests/boundaries)
+- last seen: 2026-09-20T22:58:11Z
+
+### L-029 - Promise.all returns on the first rejection and abandons its siblings still running; on Windows a child holding a temp directory as its cwd then blocks its removal, so use allSettled when every branch spawns a process.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `src/main/**, windows` · harmful: 0
+- features: files-commits
+- evidence: src/main/commit-log.ts commitFiles; intermittent EPERM in commit-log.test.ts teardown (src/main/**, windows)
+- last seen: 2026-09-20T22:58:11Z
 
 ## Quarantined (failed when applied - ignore)
 
