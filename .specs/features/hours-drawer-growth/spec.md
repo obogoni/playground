@@ -61,7 +61,7 @@ Proving the fix needs a day that overflows, and producing one must not touch the
 **Acceptance Criteria**:
 
 1. WHEN the selected day's content is taller than the drawer THEN the day card SHALL extend to at least the bottom of its last group (`card.bottom >= lastGroup.bottom`, and `card.scrollHeight <= card.clientHeight + 1`)
-2. WHEN the selected day's content is taller than the drawer THEN the drawer SHALL scroll (`drawer.scrollHeight > drawer.clientHeight`), and scrolling it to the end SHALL bring the card's bottom border into the drawer's visible area
+2. WHEN the selected day's content is taller than the drawer THEN the drawer SHALL scroll (`drawer.scrollHeight > drawer.clientHeight`), and scrolling it to the end SHALL bring the card's bottom border to the bottom edge of the drawer's visible area (`|card.bottom - drawer.bottom| <= 1`). *Precision added at Execute (T6): with the defect the card's border also enters the visible area, above the groups that spill past it, so "into the visible area" alone does not tell the two apart.*
 3. WHILE the selected day's content is shorter than the drawer the day card SHALL fill the drawer's height (`card.height >= drawer.clientHeight - 1`)
 4. WHILE a tall day is open at 1100 × 640 the Hours page SHALL NOT scroll (`.hours-body` `scrollHeight <= clientHeight + 1`) — HCAL-26 still holds
 

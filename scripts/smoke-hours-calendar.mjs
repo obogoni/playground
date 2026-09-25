@@ -25,6 +25,10 @@
  *   9. a day with no time opens a drawer that says so; time recorded on that
  *      open day fills it, and deleting that time closes it (HCAL-17, HCAL-27,
  *      edge case)
+ *  10. at 1100 × 640 the seeded Sunday, taller than the drawer, stays inside its
+ *      card: the card reaches past its last group, the drawer scrolls it as one
+ *      unit and the page does not scroll; a short day still fills the drawer
+ *      (HDRW-01..04)
  *
  * NOT automatable here, all from the same fact — ad-hoc sessions in a non-git
  * cwd carry no task: the colours of the task slots (HCAL-11 and the frozen
@@ -639,6 +643,77 @@ try {
     )
     await nav('This week')
   }
+
+  // 10. A tall day stays inside its card, at 1100 × 640 (HDRW-01..04).
+  const seedStart = new Date(before.periods.find((p) => p.id === seedId(0)).start)
+  const seedHeader = dayHeader(
+    new Date(seedStart.getFullYear(), seedStart.getMonth(), seedStart.getDate())
+  )
+  const cardGeometry = () =>
+    evaluate(
+      `(() => { const d = document.querySelector('.hours-drawer'); const c = d?.querySelector('.hours-day'); const groups = [...(c?.querySelectorAll('.hours-group') ?? [])]; if (!c || groups.length === 0) return null; const dr = d.getBoundingClientRect(); const cr = c.getBoundingClientRect(); return { groups: groups.length, drawerTop: dr.top, drawerBottom: dr.top + d.clientHeight, drawerClient: d.clientHeight, drawerScroll: d.scrollHeight, cardBottom: cr.bottom, cardHeight: cr.height, cardClient: c.clientHeight, cardScroll: c.scrollHeight, lastBottom: groups[groups.length - 1].getBoundingClientRect().bottom } })()`
+    )
+  await send('Emulation.setDeviceMetricsOverride', {
+    width: 1100,
+    height: 640,
+    deviceScaleFactor: 1,
+    mobile: false
+  })
+  await sleep(400)
+  for (let i = 0; i < 8 && !(await headLabels()).some((l) => l.startsWith(seedHeader)); i++) {
+    await nav('Previous week')
+    await sleep(300)
+  }
+  await clickHead(seedHeader)
+  await sleep(400)
+  const tall = await cardGeometry()
+  const tallFit = await fits()
+  check(
+    'precondition: the seeded Sunday holds 14 groups and overflows the drawer',
+    tall?.groups === 14 && tall.lastBottom > tall.drawerBottom,
+    JSON.stringify(tall)
+  )
+  check(
+    "a tall day's card reaches past its last group and does not overflow",
+    Boolean(tall) && tall.cardBottom >= tall.lastBottom && tall.cardScroll <= tall.cardClient + 1,
+    tall
+      ? `card bottom ${tall.cardBottom.toFixed(1)}, last group ${tall.lastBottom.toFixed(1)}, card ${tall.cardScroll}/${tall.cardClient}`
+      : 'no card'
+  )
+  await evaluate(
+    `(() => { const d = document.querySelector('.hours-drawer'); d.scrollTop = d.scrollHeight; return true })()`
+  )
+  await sleep(200)
+  const scrolled = await cardGeometry()
+  check(
+    "the drawer scrolls, and at its end shows the card's bottom border at its bottom edge",
+    Boolean(tall && scrolled) &&
+      tall.drawerScroll > tall.drawerClient &&
+      Math.abs(scrolled.cardBottom - scrolled.drawerBottom) <= 1,
+    scrolled
+      ? `drawer ${tall.drawerScroll}/${tall.drawerClient}, card bottom ${scrolled.cardBottom.toFixed(1)} vs drawer bottom ${scrolled.drawerBottom.toFixed(1)}`
+      : 'no card'
+  )
+  check(
+    'the page does not scroll with a tall day open',
+    !tallFit.scrolls && tallFit.gridBottom <= tallFit.height,
+    JSON.stringify(tallFit)
+  )
+  await nav('This week')
+  await sleep(300)
+  await clickHead(todayHeader)
+  await sleep(400)
+  const short = await cardGeometry()
+  await send('Emulation.clearDeviceMetricsOverride')
+  check(
+    "a short day's card still fills the drawer's height",
+    Boolean(short) &&
+      short.lastBottom < short.drawerBottom &&
+      short.cardHeight >= short.drawerClient - 1,
+    short
+      ? `card ${short.cardHeight.toFixed(1)} vs drawer ${short.drawerClient}, last group ${short.lastBottom.toFixed(1)}`
+      : 'no card'
+  )
 } finally {
   for (const id of sessionIds) {
     await invoke('sessions:stop', { id }).catch(() => {})

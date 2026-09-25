@@ -256,9 +256,28 @@ left the log (hash and mtime) and the pointer file untouched. Lint 0 errors / 18
 
 **Done when**:
 
-- [ ] Run on the **current** CSS: HDRW-01 and HDRW-02 **FAIL**, HDRW-03 and HDRW-04 pass — output pasted into this task as the red evidence
-- [ ] HDRW-03 seen to fail with `min-height: 100%` temporarily removed from `.hours-day`, then restored
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Run on the **current** CSS: HDRW-01 and HDRW-02 **FAIL**, HDRW-03 and HDRW-04 pass — output pasted into this task as the red evidence
+- [x] HDRW-03 seen to fail with `min-height: 100%` temporarily removed from `.hours-day`, then restored
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Red evidence (2026-09-25, seeded Sunday 20/09/2026, CSS of `1a89301`), 32/34, exit 1:**
+
+```
+30. PASS  precondition: the seeded Sunday holds 14 groups and overflows the drawer — {"groups":14,"drawerTop":258,"drawerBottom":598,"drawerClient":340,"drawerScroll":912,"cardBottom":598,"cardHeight":340,"cardClient":339,"cardScroll":911,"lastBottom":1170}
+31. FAIL  a tall day's card reaches past its last group and does not overflow — card bottom 598.0, last group 1170.0, card 911/339
+32. FAIL  the drawer scrolls, and at its end shows the card's bottom border at its bottom edge — drawer 912/340, card bottom 26.0 vs drawer bottom 598.0
+33. PASS  the page does not scroll with a tall day open — {"scrolls":false,"gridBottom":598,"gridWidth":664,"height":640}
+34. PASS  a short day's card still fills the drawer's height — card 432.0 vs drawer 432, last group 324.0
+```
+
+With `min-height: 100%` removed from `.hours-day` (HMR, same app and seed), check 34 FAILED — `card 170.7 vs drawer
+432` — and 31 and 32 passed: the shrink comes from `min-height: 100%` on a shrinkable flex item, so dropping it
+would also cure the tall day, but lose the short day's full height the owner kept (grill Q2). `flex: none` keeps
+both. The CSS was restored from a copy; `git status` showed only the smoke script modified.
+
+**Spec-precision gap, closed:** AC 2 said the card's bottom border must come "into the drawer's visible area". On
+the defect it does, above the spilling groups, whenever the overflow is shorter than the drawer. Step 10 asserts
+the border at the visible area's bottom edge (within 1 px), and the spec's AC 2 now says so.
 
 **Tests**: manual
 **Gate**: manual
