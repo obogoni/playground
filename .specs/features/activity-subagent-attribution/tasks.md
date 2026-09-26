@@ -182,7 +182,7 @@ Probe: the app's 16 hooks as http hooks, same shape as `buildClaudeHookSettings`
 
 ---
 
-### T4: The end of a job waits for the results it owes
+### T4: The end of a job waits for the results it owes ✅
 
 **What**: A `SubagentStop` whose `background_tasks` lists the stopping subagent adds it to `owed`; a main-agent `Stop` maps to `working` while `owed` is non-empty; a `UserPromptSubmit` whose prompt contains `<task-id>{id}</task-id>` drops `{id}` from `owed`; an accepted `idle_prompt` and `SessionEnd` empty it.
 **Where**: `src/main/activity-machine.ts`
@@ -197,10 +197,10 @@ Probe: the app's 16 hooks as http hooks, same shape as `buildClaudeHookSettings`
 
 **Done when**:
 
-- [ ] Unit tests, one per criterion, plus the S1 replay asserting `working` from the first `Stop` to the last and `waiting` only at the last
-- [ ] A `SubagentStop` that does not list its own agent owes nothing (the foreground shape, S5)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: T3 count + the new tests
+- [x] Unit tests, one per criterion, plus the S1 replay asserting `working` from the first `Stop` to the last and `waiting` only at the last (S3a replayed the same way)
+- [x] A `SubagentStop` that does not list its own agent owes nothing (the foreground shape, S5)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (lint still 18 warnings)
+- [x] Test count: T3 count + the new tests — 1693 + 9 = 1702
 
 **Tests**: unit
 **Gate**: full

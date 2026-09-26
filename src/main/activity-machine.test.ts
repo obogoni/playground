@@ -3,6 +3,7 @@ import type { ActivityState } from '../shared/config'
 import { applyHookEvent, applyKeystroke, sameView, type MachineState } from './activity-machine'
 import {
   backgroundShell,
+  fanOutWithWakeUps,
   idlePromptWhileSubagentRuns,
   type CapturedEvent
 } from './activity-sequences.fixture'
@@ -353,6 +354,91 @@ describe('applyHookEvent with background work (activity-subagent-attribution)', 
     })
   })
 
+  describe('results owed by stopped subagents', () => {
+    /** A background subagent stops; Claude Code still lists it in its own SubagentStop. */
+    const stopOwing = (id: string): Record<string, unknown> =>
+      event('SubagentStop', {
+        agent_id: id,
+        agent_type: 'general-purpose',
+        background_tasks: [{ id, type: 'subagent', status: 'running' }]
+      })
+    const result = (id: string): Record<string, unknown> =>
+      event('UserPromptSubmit', {
+        prompt: `<task-notification>\n<task-id>${id}</task-id>\n<status>completed</status>\n</task-notification>`
+      })
+    const owing = (): MachineState | null =>
+      drive(event('UserPromptSubmit'), start('sub-1'), stopOwing('sub-1'))
+
+    it('keeps working at a Stop that lists nothing while a result is owed (ASUB-14)', () => {
+      expect(applyHookEvent(owing(), stopListing())?.view).toEqual({
+        state: 'working',
+        subagents: 0
+      })
+    })
+
+    it('owes nothing for a subagent its own SubagentStop does not list (ASUB-14)', () => {
+      const after = drive(
+        event('UserPromptSubmit'),
+        start('sub-1'),
+        event('SubagentStop', { agent_id: 'sub-1', background_tasks: [] }),
+        stopListing()
+      )
+      expect(after?.view.state).toBe('waiting')
+    })
+
+    it('waits at the next empty Stop once the owed result is delivered (ASUB-15)', () => {
+      const after = drive(
+        event('UserPromptSubmit'),
+        start('sub-1'),
+        stopOwing('sub-1'),
+        result('sub-1'),
+        stopListing()
+      )
+      expect(after?.view.state).toBe('waiting')
+    })
+
+    it('keeps a result owed when the prompt delivers another one (ASUB-15)', () => {
+      const after = drive(
+        event('UserPromptSubmit'),
+        start('sub-1'),
+        start('sub-2'),
+        stopOwing('sub-1'),
+        stopOwing('sub-2'),
+        result('sub-2'),
+        stopListing()
+      )
+      expect(after?.view.state).toBe('working')
+    })
+
+    it('does not take a hand-back message for the delivered result (ASUB-15)', () => {
+      const after = drive(
+        event('UserPromptSubmit'),
+        start('sub-1'),
+        stopOwing('sub-1'),
+        event('UserPromptSubmit', {
+          prompt: '<agent-message from="sub-1">Fictitious hand-back.</agent-message>'
+        }),
+        stopListing()
+      )
+      expect(after?.view.state).toBe('working')
+    })
+
+    /** A plain turn after `state`: a prompt that delivers nothing, then an empty Stop. */
+    const nextTurn = (state: MachineState | null): MachineState | null =>
+      applyHookEvent(applyHookEvent(state, event('UserPromptSubmit')), stopListing())
+
+    it('drops owed results on an idle_prompt that counts (ASUB-05)', () => {
+      const idled = applyHookEvent(applyHookEvent(owing(), stopListing()), idle)
+      expect(idled?.view.state).toBe('waiting')
+      expect(nextTurn(idled)?.view.state).toBe('waiting')
+    })
+
+    it('drops owed results when the session ends', () => {
+      const ended = applyHookEvent(owing(), event('SessionEnd', { reason: 'clear' }))
+      expect(nextTurn(ended)?.view.state).toBe('waiting')
+    })
+  })
+
   describe('replaying captured sequences (ASUB-12)', () => {
     /** The state after each event, replayed from no activity. */
     const replay = (events: readonly CapturedEvent[]): (ActivityState | undefined)[] => {
@@ -393,6 +479,24 @@ describe('applyHookEvent with background work (activity-subagent-attribution)', 
       expect(states[idles[0]]).toBe('working')
       expect(states[stops[stops.length - 1]]).toBe('waiting')
       expect(states[idles[idles.length - 1]]).toBe('waiting')
+    })
+
+    /** Working from the first Stop up to the last one, and waiting from there on. */
+    const expectOneEnd = (events: readonly CapturedEvent[]): void => {
+      const states = replay(events)
+      const stops = positions(events, (e) => e.hook_event_name === 'Stop')
+      const first = stops[0]
+      const last = stops[stops.length - 1]
+      expect(states.slice(first, last)).toEqual(Array(last - first).fill('working'))
+      expect(states.slice(last)).toEqual(Array(states.length - last).fill('waiting'))
+    }
+
+    it('S1: works from the first Stop to the last, through restarts and the end race (ASUB-14)', () => {
+      expectOneEnd(fanOutWithWakeUps)
+    })
+
+    it('S3a: works from the first Stop to the last, through the end race (ASUB-14)', () => {
+      expectOneEnd(idlePromptWhileSubagentRuns)
     })
   })
 })

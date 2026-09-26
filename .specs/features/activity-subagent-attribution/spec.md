@@ -140,7 +140,7 @@ The Claude Code docs were silent on the facts a fix depends on. T1 measured them
 | ASUB-02 | P1: no "your turn" — AC 2 | Execute | Done (T3) |
 | ASUB-03 | P1: no "your turn" — AC 3 | Execute | Done (T3) |
 | ASUB-04 | P1: no "your turn" — AC 4 | Tasks | In Tasks |
-| ASUB-05 | P1: no "your turn" — AC 5 | Execute | Done (T3); emptying the owed results lands with T4 |
+| ASUB-05 | P1: no "your turn" — AC 5 | Execute | Done (T3, T4) |
 | ASUB-06 | P1: question stays — AC 6 | Tasks | In Tasks |
 | ASUB-07 | P1: question stays — AC 7 | Tasks | In Tasks |
 | ASUB-08 | P1: question stays — AC 8 | Tasks | In Tasks |
@@ -149,8 +149,8 @@ The Claude Code docs were silent on the facts a fix depends on. T1 measured them
 | ASUB-11 | P1: question stays — AC 11 | Tasks | In Tasks |
 | ASUB-12 | P1: real sequences — AC 12 | Tasks | In Tasks |
 | ASUB-13 | P1: real sequences — AC 13 | Execute | Done (T2) |
-| ASUB-14 | P1: no "your turn" — AC 14 | Tasks | In Tasks |
-| ASUB-15 | P1: no "your turn" — AC 15 | Tasks | In Tasks |
+| ASUB-14 | P1: no "your turn" — AC 14 | Execute | Done (T4) |
+| ASUB-15 | P1: no "your turn" — AC 15 | Execute | Done (T4) |
 | ASUB-16 | P1: no "your turn" — AC 16 | Execute | Done (T3) |
 | ASUB-17 | P1: no "your turn" — AC 17 | Execute | Done (T3) |
 | ASUB-18 | P1: question stays — AC 18 | Tasks | In Tasks |

@@ -27,6 +27,12 @@ export interface MachineState {
    * `Stop` carries the list (it is undocumented; measured on Claude Code 2.1.283).
    */
   background?: string[]
+  /**
+   * Background subagents that stopped but whose result has not reached the
+   * main agent yet. It arrives as a `<task-notification>` prompt a few
+   * milliseconds after a `Stop` that already lists nothing (measured).
+   */
+  owed?: string[]
 }
 
 interface BackgroundTask {
@@ -111,6 +117,7 @@ export function applyHookEvent(
       // and PostCompact is what resumes it.
       return str(payload, 'source') === 'compact' ? state : to(null, 'waiting')
     case 'UserPromptSubmit':
+      return withResultDelivered(to(state, 'working'), str(payload, 'prompt'))
     case 'PostToolUse':
     case 'PostToolUseFailure':
     case 'ElicitationResult':
@@ -136,7 +143,7 @@ export function applyHookEvent(
     case 'SubagentStart':
       return applySubagent(state, str(payload, 'agent_id'), 'start')
     case 'SubagentStop':
-      return applySubagent(state, str(payload, 'agent_id'), 'stop')
+      return applySubagentStop(state, payload)
     case 'SessionEnd':
       return CONTINUING_END_REASONS.includes(str(payload, 'reason') ?? '')
         ? to(null, 'waiting')
@@ -166,14 +173,42 @@ function applyNotification(
  * the counted subagents (ASUB-16).
  */
 function applyStop(state: MachineState | null, tasks: BackgroundTask[] | undefined): MachineState {
+  const owing = (state?.owed ?? []).length > 0
   if (tasks === undefined) {
-    const busy = (state?.subagentIds.length ?? 0) > 0
+    const busy = owing || (state?.subagentIds.length ?? 0) > 0
     return { ...to(state, busy ? 'working' : 'waiting'), background: undefined }
   }
   const background = tasks.map((task) => task.id)
   const subagentIds = tasks.filter((task) => task.type === 'subagent').map((task) => task.id)
-  const next = to(state, background.length > 0 ? 'working' : 'waiting')
+  const next = to(state, owing || background.length > 0 ? 'working' : 'waiting')
   return { ...withSubagents(next, subagentIds), background }
+}
+
+/**
+ * A background subagent stopping is still listed in its own `SubagentStop`,
+ * and its result will wake the main agent once more: until that result is
+ * delivered, the job is not over (ASUB-14). Side agents and foreground
+ * subagents are not listed, so they owe nothing.
+ */
+function applySubagentStop(
+  state: MachineState | null,
+  payload: Record<string, unknown>
+): MachineState | null {
+  const agentId = str(payload, 'agent_id')
+  const next = applySubagent(state, agentId, 'stop')
+  if (next === null || agentId === undefined) return next
+  const listed = backgroundTasks(payload)?.some(
+    (task) => task.id === agentId && task.type === 'subagent'
+  )
+  const owed = next.owed ?? []
+  return listed && !owed.includes(agentId) ? { ...next, owed: [...owed, agentId] } : next
+}
+
+/** A `<task-notification>` prompt delivers the result of the task it names (ASUB-15). */
+function withResultDelivered(state: MachineState, prompt: string | undefined): MachineState {
+  if (prompt === undefined || state.owed === undefined) return state
+  const owed = state.owed.filter((id) => !prompt.includes(`<task-id>${id}</task-id>`))
+  return owed.length === state.owed.length ? state : { ...state, owed }
 }
 
 /**
@@ -187,7 +222,8 @@ function applyIdlePrompt(state: MachineState | null): MachineState | null {
     state?.background !== undefined
       ? state.background.length > 0
       : (state?.subagentIds.length ?? 0) > 0
-  return busy ? state : withSubagents(to(state, 'waiting'), [])
+  // A result still owed at this point was lost; waiting is the recovery.
+  return busy ? state : { ...withSubagents(to(state, 'waiting'), []), owed: [] }
 }
 
 function applySubagent(
