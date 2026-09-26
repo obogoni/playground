@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { AdoGateway, fetchWithTimeout, parseChildRefs, parseParentRefs } from './ado-gateway'
 
@@ -195,5 +197,14 @@ describe('parseParentRefs', () => {
 
   it('returns [] for undefined relations', () => {
     expect(parseParentRefs(undefined, { id: 1, org: 'o', project: 'p' })).toEqual([])
+  })
+})
+
+describe('ado-gateway.ts source', () => {
+  it('holds no control byte below tab, so text tools read it as text (#117)', () => {
+    const bytes = readFileSync(fileURLToPath(new URL('./ado-gateway.ts', import.meta.url)))
+    const offsets = [...bytes.entries()].filter(([, byte]) => byte < 0x09).map(([at]) => at)
+
+    expect(offsets).toEqual([])
   })
 })
