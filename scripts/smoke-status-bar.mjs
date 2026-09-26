@@ -1255,9 +1255,13 @@ async function main() {
   }
 }
 
-/** Changed files in the SCRF worktree right now, as git sees them. */
+/**
+ * Changed files in the SCRF worktree right now, as git sees them. Plain
+ * `status` rewrites the index (T1), which would trigger the very watcher
+ * these checks observe.
+ */
 const scrfChanges = () =>
-  git(wtDir.scrf, 'status', '--porcelain').split('\n').filter(Boolean).length
+  git(wtDir.scrf, '--no-optional-locks', 'status', '--porcelain').split('\n').filter(Boolean).length
 
 /** A window focus as Chromium delivers it: blur first, then focus. */
 const fireFocus = (ws) =>
