@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 41,
+  "next_id": 43,
   "lessons": [
     {
       "id": "L-001",
@@ -640,6 +640,42 @@
       ],
       "created": "2026-09-16T22:42:48Z",
       "last_seen": "2026-09-16T22:42:48Z"
+    },
+    {
+      "id": "L-041",
+      "key": "surviving_mutant::when a criterion names several events or conditions a b or c write one test per event or condition in which it alone decides the outcome an it each keeps it cheap",
+      "text": "When a criterion names several events or conditions (A, B or C), write one test per event or condition in which it alone decides the outcome; an it.each keeps it cheap",
+      "signal": "surviving_mutant",
+      "scope": "activity-machine",
+      "status": "candidate",
+      "features": [
+        "activity-subagent-attribution"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M09 M20 M24 M26 M27 src/main/activity-machine.ts:176 (activity-machine)"
+      ],
+      "created": "2026-09-26T01:30:53Z",
+      "last_seen": "2026-09-26T01:30:53Z"
+    },
+    {
+      "id": "L-042",
+      "key": "surviving_mutant::an edge case phrased whatever x is pending needs a test with x actually pending",
+      "text": "An edge case phrased 'whatever X is pending' needs a test with X actually pending",
+      "signal": "surviving_mutant",
+      "scope": "activity-machine",
+      "status": "candidate",
+      "features": [
+        "activity-subagent-attribution"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M10 src/main/activity-machine.ts:161 (activity-machine)"
+      ],
+      "created": "2026-09-26T01:30:53Z",
+      "last_seen": "2026-09-26T01:30:53Z"
     }
   ]
 }
