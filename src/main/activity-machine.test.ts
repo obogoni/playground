@@ -438,6 +438,13 @@ describe('applyHookEvent with background work (activity-subagent-attribution)', 
       const ended = applyHookEvent(owing(), event('SessionEnd', { reason: 'clear' }))
       expect(nextTurn(ended)?.view.state).toBe('waiting')
     })
+
+    it('keeps working at a Stop without a list while a result is owed (ASUB-14)', () => {
+      expect(applyHookEvent(owing(), event('Stop'))?.view).toEqual({
+        state: 'working',
+        subagents: 0
+      })
+    })
   })
 
   describe('events count only for the agent that sent them', () => {
@@ -602,6 +609,20 @@ describe('applyHookEvent with background work (activity-subagent-attribution)', 
       expect(applyHookEvent(asking, subagentStop('sub-1'))?.view.state).toBe('working')
     })
 
+    it("clears to working on the asker's SubagentStop while its result is owed (ASUB-08)", () => {
+      // The main agent stopped with nothing listed, so only the owed result is left.
+      const asking = drive(event('UserPromptSubmit'), stopListing(), start('sub-9'), ask('sub-9'))
+      const after = applyHookEvent(
+        asking,
+        event('SubagentStop', {
+          agent_id: 'sub-9',
+          agent_type: 'general-purpose',
+          background_tasks: [{ id: 'sub-9', type: 'subagent', status: 'running' }]
+        })
+      )
+      expect(after?.view).toEqual({ state: 'working', subagents: 0 })
+    })
+
     it('holds the question until every agent that asked has moved', () => {
       const both = applyHookEvent(asked(), ask('sub-1', 'Edit'))
       const oneMoved = applyHookEvent(both, tool('PostToolUse', 'sub-2', 'Write'))
@@ -609,6 +630,25 @@ describe('applyHookEvent with background work (activity-subagent-attribution)', 
       expect(applyHookEvent(oneMoved, tool('PostToolUse', 'sub-1', 'Edit'))?.view.state).toBe(
         'working'
       )
+    })
+
+    it('holds the question when the second agent that asked moves first', () => {
+      const both = applyHookEvent(asked(), ask('sub-1', 'Edit'))
+      const secondMoved = applyHookEvent(both, tool('PostToolUse', 'sub-1', 'Edit'))
+      expect(secondMoved?.view).toEqual({ state: 'needs-approval', tool: 'Edit', subagents: 2 })
+      expect(applyHookEvent(secondMoved, tool('PostToolUse', 'sub-2', 'Write'))?.view.state).toBe(
+        'working'
+      )
+    })
+
+    it.each([
+      ['other', 'exited'],
+      ['clear', 'waiting']
+    ])('ends a session with a question pending: %s means %s', (reason, state) => {
+      expect(applyHookEvent(asked(), event('SessionEnd', { reason }))?.view).toEqual({
+        state,
+        subagents: 0
+      })
     })
 
     it('answers every pending question on a keystroke (ASUB-11)', () => {

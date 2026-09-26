@@ -98,7 +98,7 @@ The Claude Code docs were silent on the facts a fix depends on. T1 measured them
 
 6. WHEN a subagent's `PermissionRequest` or `Elicitation` arrives THEN the machine SHALL set `needs-approval` (naming the tool) or `needs-input`, and record that subagent as the one that asked
 7. WHILE a question is pending, an event from any agent other than the one that asked SHALL NOT change the state; a `Notification` without `agent_id` SHALL NOT change who asked
-8. WHEN the agent that asked sends a tool event, an `ElicitationResult` or its `SubagentStop` THEN the machine SHALL clear the question to `working` if the main agent's turn is running, `background_tasks` was non-empty at the last `Stop`, or a result is owed, and to `waiting` otherwise
+8. WHEN the agent that asked sends a tool event or an `ElicitationResult` THEN the machine SHALL clear the question and map that event as usual (`working`: the asker is running); WHEN it sends its `SubagentStop` THEN the machine SHALL clear the question to `working` if the main agent's turn is running, `background_tasks` was non-empty at the last `Stop`, or a result is owed, and to `waiting` otherwise (wording sharpened after validation; behaviour unchanged)
 9. N/A — T1: tool hooks fired inside a subagent carry `agent_id`, so the fallback for hooks that do not identify their agent is not built
 10. N/A — T1: same finding as criterion 9
 11. WHEN the owner types into the session's terminal WHILE a question is pending THEN the machine SHALL set the state to `working` (ACTV-12, unchanged)
@@ -128,8 +128,8 @@ The Claude Code docs were silent on the facts a fix depends on. T1 measured them
 - IF a `SubagentStop` names an agent not in the active set THEN the machine SHALL apply it without error and the count SHALL stay at or above zero (ACTV-34, unchanged)
 - WHEN a `SubagentStart` names an agent that stopped before THEN the machine SHALL add it to the active set again (T1: a subagent restarts when its background shell ends)
 - WHEN the owner submits a new prompt WHILE subagents are active THEN the machine SHALL set `working` and keep the active set (background subagents outlive a turn)
-- WHEN `SessionEnd` arrives THEN the active set and the owed results SHALL be emptied, whatever question is pending
-- WHEN a second agent asks WHILE a question is pending THEN the machine SHALL keep the question until every agent that asked has moved (decided at Execute, T5: clearing on the first asker's act would drop the second question early)
+- WHEN `SessionEnd` arrives THEN the active set and the owed results SHALL be emptied and the state SHALL follow the existing `SessionEnd` rule (`exited`, or `waiting` for `clear` / `resume`), whatever question is pending
+- WHEN a second agent asks WHILE a question is pending THEN the machine SHALL keep the question until every agent that asked has moved, in any order; the view keeps the tool of the latest question (decided at Execute, T5: clearing on the first asker's act would drop the second question early)
 
 ---
 
