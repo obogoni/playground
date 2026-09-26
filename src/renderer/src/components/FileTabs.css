@@ -65,6 +65,12 @@
   font-size: 12px;
 }
 
+/* The file's icon sits on the label's text line, inside its ellipsis. */
+.file-tab-label .file-icon {
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
 /* FDIF-08: a diff tab and a file tab of the same path read apart at a glance. */
 .file-tab-glyph {
   margin-right: 5px;
