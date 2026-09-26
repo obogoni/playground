@@ -37,7 +37,7 @@ import { LinkOpener } from './link-opener'
 import { SessionNamePoller } from './session-name-poller'
 import { SessionNotifier } from './session-notifier'
 import { ShortcutLauncher, spawnDetached } from './shortcut-launcher'
-import { TaskBoard } from './task-board'
+import { openPinnedTask, TaskBoard } from './task-board'
 import { TimeLogStore } from './time-log-store'
 import { buildSnapshot, readGit } from './time-snapshot'
 import { TimeTracker } from './time-tracker'
@@ -381,6 +381,13 @@ app.whenReady().then(() => {
   handle('tasks:unpin', (ref) => taskBoard.unpin(ref))
   handle('tasks:refresh', () => taskBoard.refresh())
   handle('tasks:parent', ({ id, org, project }) => adoGateway.parentOf({ id, org, project }))
+  // The renderer names the task; main opens the URL it stored at pin time (PTOP-01..07).
+  handle('tasks:open', (ref) =>
+    openPinnedTask(
+      { tasks: configStore.get().pinnedTasks, openExternal: (url) => shell.openExternal(url) },
+      ref
+    )
+  )
 
   // Agent sessions (AM2). SessionManager owns every session's lifecycle,
   // persistence, and stream routing; emit is lazily bound to the live window.

@@ -129,7 +129,7 @@ T5 → T6
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
 
 **Tests**: none
 **Gate**: build
