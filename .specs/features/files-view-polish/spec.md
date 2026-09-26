@@ -116,23 +116,23 @@ expect from a tab strip and a multi-file diff.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FPOL-01 | P1: pin — AC 1 | Tasks | In Tasks |
-| FPOL-02 | P1: pin — AC 2 | Tasks | In Tasks |
-| FPOL-03 | P1: pin — AC 3 | Tasks | In Tasks |
-| FPOL-04 | P1: pin — AC 4 | Tasks | In Tasks |
-| FPOL-05 | P1: pin — AC 5 | Tasks | In Tasks |
-| FPOL-06 | P1: close many — AC 6 | Tasks | In Tasks |
-| FPOL-07 | P1: close many — AC 7 | Tasks | In Tasks |
-| FPOL-08 | P1: close many — AC 8 | Tasks | In Tasks |
-| FPOL-09 | P1: close many — AC 9 | Tasks | In Tasks |
-| FPOL-10 | P1: close many — AC 10 | Tasks | In Tasks |
-| FPOL-11 | P1: close many — AC 11 | Tasks | In Tasks |
-| FPOL-12 | P1: close many — AC 12 | Tasks | In Tasks |
-| FPOL-13 | P1: close many — AC 13 | Tasks | In Tasks |
-| FPOL-14 | P1: expand — AC 14 | Tasks | In Tasks |
-| FPOL-15 | P1: expand — AC 15 | Tasks | In Tasks |
-| FPOL-16 | P1: expand — AC 16 | Tasks | In Tasks |
-| FPOL-17 | P1: expand — AC 17 | Tasks | In Tasks |
+| FPOL-01 | P1: pin — AC 1 | Execute | Done |
+| FPOL-02 | P1: pin — AC 2 | Execute | Done |
+| FPOL-03 | P1: pin — AC 3 | Execute | Done |
+| FPOL-04 | P1: pin — AC 4 | Execute | Done |
+| FPOL-05 | P1: pin — AC 5 | Execute | Done |
+| FPOL-06 | P1: close many — AC 6 | Execute | Done |
+| FPOL-07 | P1: close many — AC 7 | Execute | Done |
+| FPOL-08 | P1: close many — AC 8 | Execute | Done |
+| FPOL-09 | P1: close many — AC 9 | Execute | Done |
+| FPOL-10 | P1: close many — AC 10 | Execute | Done |
+| FPOL-11 | P1: close many — AC 11 | Execute | Done |
+| FPOL-12 | P1: close many — AC 12 | Execute | Done |
+| FPOL-13 | P1: close many — AC 13 | Execute | Done |
+| FPOL-14 | P1: expand — AC 14 | Execute | Done |
+| FPOL-15 | P1: expand — AC 15 | Execute | Done |
+| FPOL-16 | P1: expand — AC 16 | Execute | Done |
+| FPOL-17 | P1: expand — AC 17 | Execute | Done |
 
 **Coverage:** 17 total, 17 mapped to tasks, 0 unmapped.
 
