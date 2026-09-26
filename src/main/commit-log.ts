@@ -4,6 +4,7 @@ import { parseNumstat, type GitRunner } from './file-diff'
 import { parseNameStatus } from './file-tree'
 import { git, gitFailureLine } from './git'
 import { commitUrl, parseRemote } from './remote-url'
+import { isHttpsUrl } from './url-policy'
 
 /** How many commits one page holds before Load more appears (FCMT-08/09). */
 export const PAGE_SIZE = 100
@@ -241,7 +242,7 @@ export async function openCommit(
     return { ok: false, error: 'This commit has not been pushed yet.' }
   }
   const url = commitUrl(ref, sha)
-  if (!url.startsWith('https://')) {
+  if (!isHttpsUrl(url)) {
     return { ok: false, error: 'Refused to open an address that is not https.' }
   }
   try {

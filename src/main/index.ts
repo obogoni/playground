@@ -43,6 +43,7 @@ import { buildSnapshot, readGit } from './time-snapshot'
 import { TimeTracker } from './time-tracker'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
+import { windowOpenDecision } from './url-policy'
 import type { CtxDeps, GitFetchOptions, ShellResult } from './workflow-ctx'
 import {
   discoverWorkflows,
@@ -222,8 +223,13 @@ function createWindow(): void {
     win.show()
   })
 
+  // Every new window is denied; an https link one asked for opens in the
+  // browser, anything else is only logged by its scheme (#115, AD-044). The
+  // linked task card's `target="_blank"` link lands here.
   win.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    const decision = windowOpenDecision(details.url)
+    if (decision.open) void shell.openExternal(details.url)
+    else console.warn(`[window-open] ${decision.reason}`)
     return { action: 'deny' }
   })
 
