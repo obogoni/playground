@@ -300,6 +300,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: HTF-01; scripts/smoke-hours-calendar.mjs:739 (smoke)
 - last seen: 2026-09-26T21:15:09Z
 
+### L-054 - When a spec edge case states what an element shows, assert each stated value on screen, not only that the element is present
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: validation.md SM7; scripts/smoke-hours-calendar.mjs:928; spec edge case 4 (smoke) (smoke)
+- last seen: 2026-09-26T21:48:16Z
+
+### L-055 - Quote UI text in the spec only as the app renders it; check a literal against the formatter before writing it in backticks
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: hours-task-focus
+- evidence: spec.md edge case 4; src/renderer/src/components/HoursLegend.tsx:54 (0m vs 0h00) (specs)
+- last seen: 2026-09-26T21:48:16Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

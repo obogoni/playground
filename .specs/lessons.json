@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 54,
+  "next_id": 56,
   "lessons": [
     {
       "id": "L-001",
@@ -875,6 +875,42 @@
       ],
       "created": "2026-09-26T21:15:09Z",
       "last_seen": "2026-09-26T21:15:09Z"
+    },
+    {
+      "id": "L-054",
+      "key": "surviving_mutant::when a spec edge case states what an element shows assert each stated value on screen not only that the element is present",
+      "text": "When a spec edge case states what an element shows, assert each stated value on screen, not only that the element is present",
+      "signal": "surviving_mutant",
+      "scope": "smoke",
+      "status": "candidate",
+      "features": [
+        "hours-task-focus"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md SM7; scripts/smoke-hours-calendar.mjs:928; spec edge case 4 (smoke) (smoke)"
+      ],
+      "created": "2026-09-26T21:48:16Z",
+      "last_seen": "2026-09-26T21:48:16Z"
+    },
+    {
+      "id": "L-055",
+      "key": "spec_precision_gap::quote ui text in the spec only as the app renders it check a literal against the formatter before writing it in backticks",
+      "text": "Quote UI text in the spec only as the app renders it; check a literal against the formatter before writing it in backticks",
+      "signal": "spec_precision_gap",
+      "scope": "specs",
+      "status": "candidate",
+      "features": [
+        "hours-task-focus"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "spec.md edge case 4; src/renderer/src/components/HoursLegend.tsx:54 (0m vs 0h00) (specs)"
+      ],
+      "created": "2026-09-26T21:48:16Z",
+      "last_seen": "2026-09-26T21:48:16Z"
     }
   ]
 }
