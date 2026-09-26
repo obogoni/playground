@@ -277,7 +277,7 @@ export interface ChangedFile {
 | -------- | ------ | --------- |
 | Where the action per status is decided | Main, from the entry's status | The dialog grouped by status; main acts on exactly what was shown (FDSC-45) |
 | Recycle Bin before git | Phase A then phase B | A refused move leaves the entry untouched (FDSC-18, 27) |
-| Added and a rename's new file | Recycle Bin | Recoverable; the spec's `owner to confirm` rows |
+| Added and a rename's new file | Recycle Bin | Recoverable; the spec's `owner confirmed 2026-09-26` rows |
 | Restore command | `git --literal-pathspecs restore --source=HEAD --staged --worktree` | Index and working tree in one call; literal paths |
 | Unstage an added file | `git rm --cached --quiet --ignore-unmatch` | Works with no commit yet |
 | Kept message | The dialog's second state | A 2.2 s toast cannot carry a list |

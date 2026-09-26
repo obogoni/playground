@@ -17,7 +17,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **T-setup (before T1, no commit)**: the worktree has no `node_modules`. Run `npm ci --ignore-scripts` then `node node_modules/electron/install.js` in the worktree; the unit gate needs the first, the dev app for T20 and T21 needs both.
 
-**Owner rows**: the spec's Assumptions table carries five `owner to confirm` rows (added file and a rename's new file to the Recycle Bin, links kept, an occupied restore target to the Recycle Bin first, the kept list in the dialog). If the owner changes one, the tasks that name its requirement change with it before Execute.
+**Owner rows**: the spec's Assumptions table carries five `owner confirmed 2026-09-26` rows (added file and a rename's new file to the Recycle Bin, links kept, an occupied restore target to the Recycle Bin first, the kept list in the dialog). If the owner changes one, the tasks that name its requirement change with it before Execute.
 
 ---
 

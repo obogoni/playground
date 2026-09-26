@@ -48,18 +48,18 @@ This feature **supersedes, for uncommitted changes only,** the read-only rule be
 | Always confirm | A dialog in the remove-worktree style lists the files, says which go to the Recycle Bin and which cannot be undone, and warns when a session runs in the worktree | Owner decision (issue #132) | y |
 | Afterwards | The discarded file's uncommitted diff tab closes; its file tab reloads, or closes when the file went to the Recycle Bin | Owner decision (issue #132) | y |
 | Rename's old path | Kept by the uncommitted parser, so the diff compares against the old file and discard can restore it | Owner decision (issue #132) | y |
-| An added file (new, staged, not in the last commit) | Its working copy goes to the Recycle Bin and its index entry is removed | "Back to the last commit" would delete new content permanently; the Recycle Bin keeps it recoverable, as for untracked files | owner to confirm |
-| A rename's new file | Goes to the Recycle Bin (then leaves the index) while the old path is restored | The issue says "the new one removed"; a rename often carries edits, and the Recycle Bin is the only way back for them | owner to confirm |
-| A link or junction listed as untracked | Kept, not moved, reason `Links and junctions are never moved.` | A worktree can hold an untracked skills junction (AD-013, `file-reader.ts:43-45`); moving a junction whose target is a shared folder must never risk that folder | owner to confirm |
-| A file sitting where a path is about to be restored | Goes to the Recycle Bin before the restore (a deleted file recreated as untracked, or something at a rename's old path) | Restoring would overwrite it with no way back | owner to confirm |
-| How the kept message is shown | The confirmation stays open and turns into a `Some changes were kept` list, one line per kept file with its reason, and a `Close` button | The app's toast lasts 2.2 s (`Toast.tsx:13`), too short to read a list of paths | owner to confirm |
+| An added file (new, staged, not in the last commit) | Its working copy goes to the Recycle Bin and its index entry is removed | "Back to the last commit" would delete new content permanently; the Recycle Bin keeps it recoverable, as for untracked files | owner confirmed 2026-09-26 |
+| A rename's new file | Goes to the Recycle Bin (then leaves the index) while the old path is restored | The issue says "the new one removed"; a rename often carries edits, and the Recycle Bin is the only way back for them | owner confirmed 2026-09-26 |
+| A link or junction listed as untracked | Kept, not moved, reason `Links and junctions are never moved.` | A worktree can hold an untracked skills junction (AD-013, `file-reader.ts:43-45`); moving a junction whose target is a shared folder must never risk that folder | owner confirmed 2026-09-26 |
+| A file sitting where a path is about to be restored | Goes to the Recycle Bin before the restore (a deleted file recreated as untracked, or something at a rename's old path) | Restoring would overwrite it with no way back | owner confirmed 2026-09-26 |
+| How the kept message is shown | The confirmation stays open and turns into a `Some changes were kept` list, one line per kept file with its reason, and a `Close` button | The app's toast lasts 2.2 s (`Toast.tsx:13`), too short to read a list of paths | owner confirmed 2026-09-26 |
 | A successful discard | Closes the confirmation with no message; the list, tabs and status bar show the result | Only a kept file is news | y |
 | Session warning source | Sessions whose `cwd` equals the worktree path and whose status is `running`, the same rule the remove-worktree confirmation uses (`WorktreeDetail.tsx:111`, `App.tsx:431`) | One definition of "a session runs in this worktree" | y |
 | Hover ↶ on folder rows | Shown too, at the row's end where a file row has its glyph; it discards everything under the folder, like the folder's menu | The issue says "each row" | y |
 | Status bar count | After a discard the renderer re-reads the worktree tree the way the status bar does after a sync (`App.tsx:523`, `onRefreshTree`) | "Refresh through the existing mechanisms"; on this branch chain the counter has no watcher of its own | y |
 | Order of work | Stacked on #131 (status glyph at the row's end, in `.file-tree-end` / `.diff-section-end`); the ↶ goes inside that end group, before the glyph | Owner decision (issue #132); #131 plan `b0fae25` hands the end group over | y |
 
-**Open questions:** none. Every gap is logged above; the rows marked `owner to confirm` carry the recommended default.
+**Open questions:** none. Every gap is logged above; the rows marked `owner confirmed 2026-09-26` carry the recommended default.
 
 ---
 
