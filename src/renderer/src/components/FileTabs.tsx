@@ -31,17 +31,6 @@ const LAUNCHERS: { tool: ShortcutTool; label: string; icon: IconName }[] = [
 ]
 
 /**
- * VS Code's own binding for next / previous change in its diff editor, read out
- * of the installed build by the F2 spike: `Alt+F5` and `Shift+Alt+F5`
- * (FDIF-25). Not F7, which most references still name and which now belongs to
- * the accessible diff viewer.
- *
- * One listener for the whole column, here rather than inside each editor: the
- * strip is what knows whether a diff tab or the All changes stack is in front
- * of the reader, and the stack answers the same keys by walking across files
- * (FDIF-26). Twelve mounted editors each binding the key would race for it.
- */
-/**
  * The strip's menu (FPOL-12/13): a tab's own, opened by right-clicking it, or
  * the ⋯ button's, which names no tab and offers only the closes that need none.
  */
@@ -53,6 +42,17 @@ interface StripMenu {
   pinned: boolean
 }
 
+/**
+ * VS Code's own binding for next / previous change in its diff editor, read out
+ * of the installed build by the F2 spike: `Alt+F5` and `Shift+Alt+F5`
+ * (FDIF-25). Not F7, which most references still name and which now belongs to
+ * the accessible diff viewer.
+ *
+ * One listener for the whole column, here rather than inside each editor: the
+ * strip is what knows whether a diff tab or the All changes stack is in front
+ * of the reader, and the stack answers the same keys by walking across files
+ * (FDIF-26). Twelve mounted editors each binding the key would race for it.
+ */
 function changeShortcut(event: KeyboardEvent): 'next' | 'previous' | null {
   if (event.key !== 'F5' || !event.altKey || event.ctrlKey || event.metaKey) return null
   return event.shiftKey ? 'previous' : 'next'
