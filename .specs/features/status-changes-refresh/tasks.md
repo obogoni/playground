@@ -162,9 +162,9 @@ T8 → T9 → T10
 
 **Done when**:
 
-- [ ] Fake-port tests: an `index` event settles once after 250 ms; three events in 250 ms settle once; an unrelated entry name never settles; `sync` adding a path opens it and dropping one closes it; a path whose git dir fails to resolve is skipped while the others open; a selection that moved on while resolving does not open; `closeAll` closes every handle
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: T2 count + the new tests
+- [x] Fake-port tests: an `index` event settles once after 250 ms; three events in 250 ms settle once; an unrelated entry name never settles; `sync` adding a path opens it and dropping one closes it; a path whose git dir fails to resolve is skipped while the others open; a selection that moved on while resolving does not open; `closeAll` closes every handle
+- [x] Gate check passes: `npm test`
+- [x] Test count: T2 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
