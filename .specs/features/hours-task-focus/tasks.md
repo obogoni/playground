@@ -9,11 +9,11 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: inline. `ColourRole` grows to `slot1`..`slot8`; `assignColours` becomes a greedy colouring of the week's same-day conflict graph, in week-total order. Focus is two keys held by `HoursView` — `hoverKey` (transient) and `selectedKey` (kept across weeks) — and two pure helpers decide what they mean: which columns show, and which groups are dimmed. Components only receive the answers.
-**Status**: Draft — awaiting owner approval (planned 2026-09-22)
+**Status**: Approved by the owner 2026-09-26 (planned 2026-09-22); executing inline
 
-**Branch**: `feature/hours-task-focus` off `feature/hours-calendar` `c97aec5`. **Execute after `hours-drawer-growth` (B1) lands**: rebase onto `feature/hours-calendar` first, so its seeded smoke is here.
+**Branch**: `feature/hours-task-focus`, cut from `feature/hours-calendar` `c97aec5` and rebased on 2026-09-26 onto `feature/hours-calendar` `7d85337`, which carries B1 and its seeded smoke. The PR stacks on #99.
 
-**Test baseline**: **re-measure** with `npx vitest run` as the first act of Execute (after the rebase); record the lint warning count at the same time.
+**Test baseline** (measured 2026-09-26 after the rebase): `npx vitest run` 1691 passed in 91 files; typecheck clean; lint 0 errors, 18 warnings.
 
 **Palette**: exactly the hex values in the spec's Assumptions table. Changing one means re-running the dataviz validator with `--pairs all` against `#ffffff` and `#221f1b` and updating the weak-pair row.
 
@@ -108,7 +108,7 @@ T11 → T12 → T13
 
 ### T2: Record the decision
 
-**What**: AD-034 (or the next free number) in `STATE.md`: the Hours calendar uses eight colours, superseding AD-030 there only, with the measured weak pairs and the relief.
+**What**: AD-045 (checked free on 2026-09-26: `develop` holds AD-044) in `STATE.md`: the Hours calendar uses eight colours, superseding AD-030 there only, with the measured weak pairs and the relief.
 **Where**: `.specs/STATE.md`
 **Depends on**: T1
 **Reuses**: AD-030's wording
@@ -351,7 +351,7 @@ T11 → T12 → T13
 
 ### T12: Smoke — colours and the day summary
 
-**What**: On the seeded Sunday: eight distinct computed bar colours and six Other bars, legend and drawer swatches matching the bars, and the drawer summary `14 tasks`.
+**What**: On the seeded Sunday: eight distinct computed bar colours and six Other bars, legend and drawer swatches matching the bars, and the drawer summary `14 tasks`. The header's "NOT automatable" paragraph drops the two items the seed now covers.
 **Where**: `scripts/smoke-hours-calendar.mjs`
 **Depends on**: T11
 **Reuses**: B1's seed and step 10's navigation

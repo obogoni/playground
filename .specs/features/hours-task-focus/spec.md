@@ -30,7 +30,7 @@ detail to its bars, and there is no way to see just the days one task took.
 | --------------------- | -------------- | --------- | ---------- |
 | Palette | The dataviz reference palette's eight categorical slots in its order — blue, orange, aqua, yellow, magenta, green, violet, red — light `#2a78d6 #eb6834 #1baf7a #eda100 #e87ba4 #008300 #4a3aa7 #e34948`, dark `#3987e5 #d95926 #199e70 #c98500 #d55181 #008300 #9085e9 #e66767` | Owner decisions (grill Q1, Q5) | y |
 | Known weak pairs | Validator, `--pairs all` on `#ffffff` / `#221f1b` (measured 2026-09-22): normal-vision floor FAIL — red ↔ orange ΔE 7.1 (both themes), violet ↔ blue 9.8 (dark); CVD FAIL — green ↔ orange 3.2 (light, protan), magenta ↔ aqua 1.6 (dark, deutan). Relief: legend, tooltips and bar labels name every task; hover and filter isolate one | Owner accepted the trade-off (grill Q1); dataviz requires the relief when the floor is not met | y |
-| AD-030 | Superseded **for the Hours calendar only** by a new decision (AD-034 — confirm the number is free at Execute) | Other charts keep the three-colour rule | y |
+| AD-030 | Superseded **for the Hours calendar only** by a new decision (AD-045: at Execute `develop` held AD-044 and no planned branch reserved a higher number) | Other charts keep the three-colour rule | y |
 | Assignment | Per week: tasks in order of week total (ties by first start) each take the first slot, in palette order, not taken by any already-coloured task that shares a day with it; a task with all eight slots taken by same-day neighbours is Other | Owner decision (grill Q4): the "no repeat on a day" rule, greedily | y |
 | Freeze | Colours are computed when the week is shown and kept while it stays (HCAL-24, unchanged) | Colour follows the entity; a live change must not repaint | y |
 | Task-less folders | Keep the outlined `no-task` look; they are not assigned slots | Unchanged from HCAL-11 | y |
@@ -42,7 +42,7 @@ detail to its bars, and there is no way to see just the days one task took.
 | Filter and colours | Selecting never repaints any bar's colour | dataviz non-negotiable: a filter must not repaint survivors | y |
 | Deferred from B1 | The smoke now checks task-slot colours (HCAL-11) and the `N tasks` summary wording, using the seeded Sunday | Owner decision on B1 (grill Q10) | y |
 | Order | Executes after `hours-drawer-growth` (B1), whose seeded smoke it extends | The seed exists only once B1 runs | y |
-| Base branch | `feature/hours-task-focus` off `feature/hours-calendar` (at planning `c97aec5`); rebased onto it again after B1 lands | Owner-approved plan of 2026-09-22 | y |
+| Base branch | `feature/hours-task-focus` off `feature/hours-calendar` (at planning `c97aec5`); rebased onto it at `7d85337` on 2026-09-26, after B1 landed | Owner-approved plan of 2026-09-22 | y |
 
 **Open questions:** none — all resolved or logged above.
 
