@@ -609,6 +609,16 @@ describe('applyHookEvent with background work (activity-subagent-attribution)', 
       expect(applyHookEvent(asking, subagentStop('sub-1'))?.view.state).toBe('working')
     })
 
+    it("maps the asker's own tool event as usual, even when nothing was listed (ASUB-08)", () => {
+      // The SubagentStop rule would say waiting here; the asker running a tool is working.
+      const asking = drive(event('UserPromptSubmit'), stopListing(), start('sub-9'), ask('sub-9'))
+      expect(applyHookEvent(asking, tool('PreToolUse', 'sub-9', 'Read'))?.view).toEqual({
+        state: 'working',
+        tool: 'Read',
+        subagents: 1
+      })
+    })
+
     it("clears to working on the asker's SubagentStop while its result is owed (ASUB-08)", () => {
       // The main agent stopped with nothing listed, so only the owed result is left.
       const asking = drive(event('UserPromptSubmit'), stopListing(), start('sub-9'), ask('sub-9'))
