@@ -277,7 +277,7 @@ function expiryOf(token: { expiresOn?: string; expires_on?: number | string }): 
 function groupByProject(refs: WorkItemRef[]): { org: string; project: string; ids: number[] }[] {
   const groups = new Map<string, { org: string; project: string; ids: number[] }>()
   for (const ref of refs) {
-    const key = `${ref.org} ${ref.project}`
+    const key = `${ref.org}\x00${ref.project}`
     const group = groups.get(key) ?? { org: ref.org, project: ref.project, ids: [] }
     group.ids.push(ref.id)
     groups.set(key, group)
