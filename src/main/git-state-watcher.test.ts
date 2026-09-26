@@ -112,7 +112,9 @@ describe('GitStateWatcher', () => {
     handleOf(h.handles, A).fire('index')
 
     expect(h.settled).toEqual([])
-    expect(h.delays).toEqual([BATCH_MS])
+    // The spec's window, as a number: a change to the shared constant must show here.
+    expect(h.delays).toEqual([250])
+    expect(BATCH_MS).toBe(250)
     h.flush()
     expect(h.settled).toEqual([A])
   })
@@ -137,7 +139,7 @@ describe('GitStateWatcher', () => {
     handle.fire('index')
     h.flush()
 
-    expect(h.delays).toEqual([BATCH_MS])
+    expect(h.delays).toEqual([250])
     expect(h.settled).toEqual([A])
   })
 
@@ -202,6 +204,18 @@ describe('GitStateWatcher', () => {
     await h.watcher.sync([A, B])
 
     expect(h.open().map((x) => x.path)).toEqual([GIT_DIRS[B]])
+  })
+
+  it('watches a worktree on a later sync once its git dir resolves (SCRF-05)', async () => {
+    const failing = [A]
+    const h = harness({ failing })
+    await h.watcher.sync([A, B])
+    expect(h.open().map((x) => x.path)).toEqual([GIT_DIRS[B]])
+
+    failing.length = 0
+    await h.watcher.sync([A, B])
+
+    expect(h.open().map((x) => x.path)).toEqual([GIT_DIRS[B], GIT_DIRS[A]])
   })
 
   it('does not open a worktree dropped while its git dir was resolving (SCRF-04)', async () => {
