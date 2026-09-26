@@ -133,7 +133,7 @@ detail to its bars, and there is no way to see just the days one task took.
 | HTF-02 | P1: colours — AC 2 | Execute | Implemented (T1) |
 | HTF-03 | P1: colours — AC 3 | Execute | Implemented (T1) |
 | HTF-04 | P1: colours — AC 4 | Execute | Implemented (T1) |
-| HTF-05 | P1: colours — AC 5 | Tasks | In Tasks |
+| HTF-05 | P1: colours — AC 5 | Execute | Implemented (T3, T4, T5) |
 | HTF-06 | P1: colours — AC 6 | Execute | Implemented (T1) |
 | HTF-07 | P1: hover — AC 7 | Tasks | In Tasks |
 | HTF-08 | P1: hover — AC 8 | Tasks | In Tasks |

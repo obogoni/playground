@@ -268,6 +268,26 @@
   background: var(--hcal-slot3);
 }
 
+.hours-group-swatch.role-slot4 {
+  background: var(--hcal-slot4);
+}
+
+.hours-group-swatch.role-slot5 {
+  background: var(--hcal-slot5);
+}
+
+.hours-group-swatch.role-slot6 {
+  background: var(--hcal-slot6);
+}
+
+.hours-group-swatch.role-slot7 {
+  background: var(--hcal-slot7);
+}
+
+.hours-group-swatch.role-slot8 {
+  background: var(--hcal-slot8);
+}
+
 .hours-group-swatch.role-other {
   background: var(--text-faint);
 }
