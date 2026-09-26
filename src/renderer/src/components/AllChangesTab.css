@@ -37,6 +37,27 @@
   color: var(--red);
 }
 
+/* FPOL-14/15: Expand all and Collapse all, at the header's right, matching
+   the strip's .file-tabs-toggle. */
+.all-changes-header-gap {
+  flex: 1;
+}
+
+.all-changes-toggle {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  transition: border-color 0.12s;
+}
+
+.all-changes-toggle:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
 .all-changes-stack {
   flex: 1;
   min-height: 0;
