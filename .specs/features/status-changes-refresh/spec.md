@@ -21,7 +21,7 @@ after four were committed. Window focus re-fetches tasks, not the tree.
 | ------- | ------ |
 | Periodic polling | Owner decision (grill Q1): `git status` on a timer weighs on large repositories |
 | Seeing a working-tree edit the moment it is saved, from outside any agent turn and while the app keeps focus | Not among the owner's triggers (grill Q1); focus and turn end cover the edits that matter. A recursive watch of every worktree would cost what polling costs |
-| Reusing the Files direction's `FileWatcher` | It watches one worktree, and only while Files is open (FXPL-23); this branch is not stacked on Files |
+| Reusing the Files direction's `FileWatcher` as-is | It watches one worktree, and only while Files is open (FXPL-23). Its seams (`WatchPort`, `Scheduler`, `BATCH_MS`) and the real watch port are reused |
 
 ---
 
@@ -39,8 +39,8 @@ after four were committed. Window focus re-fetches tasks, not the tree.
 | What "turn ended" means | A session's activity going from `working` to `waiting` or `exited` | The states `session-activity-status` already pushes (`session:activity`) | y |
 | Which worktree a session belongs to | The worktree containing the session's `cwd`, by the existing `deriveAttribution` | Same join the rail uses; a session outside every worktree recounts nothing | y |
 | Focus | Rebuilds the whole tree, sharing the tasks' 5 s debounce | A return to the app may follow edits in any worktree | y |
-| Base branch | `feature/status-changes-refresh` off `feature/status-bar` `09c4b4f` (PR #97); PR says "depends on #97" | Owner decision (grill Q2) | y |
-| Smoke data | Temp repositories registered as a workspace, the owner's workspace list snapshotted and restored, as `smoke-status-bar.mjs` already does on this branch | The accepted pattern of the stack this branch sits on | y |
+| Base branch | `feature/status-changes-refresh` off `feature/status-bar` (PR #97), rebased onto `origin/main` after #97 merged; the PR closes #107 | Owner decision (grill Q2); rebase approved 2026-09-26 | y |
+| Smoke data | Temp repositories registered as a workspace, the owner's workspace list snapshotted and restored, as `smoke-status-bar.mjs` already does | The accepted pattern of the status bar smoke | y |
 
 **Open questions:** none — all resolved or logged above. The `n` row is settled by T1; if a trigger does not reach the watched entries, execution stops and the owner decides.
 

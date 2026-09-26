@@ -8,12 +8,14 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 ---
 
-**Design**: inline — no separate file. Main gains a `GitStateWatcher` (DI'd like `FileWatcher` on the Files branch: a watch port, a git-dir resolver, a scheduler) that reconciles its set to each `tree:get` result and emits one `worktree:status` push per settled burst, carrying `{ worktreePath, dirty, changes }` from the existing `statusOf`. The renderer patches that into the tree through a pure helper. Turn end and focus live in the renderer: a pure helper finds the worktree a session's turn just ended in, and `use-tree` gains `recount(path)` over a new `worktrees:status` invoke.
-**Status**: Draft — awaiting owner approval (planned 2026-09-22)
+**Design**: inline — no separate file. Main gains a `GitStateWatcher` (DI'd like `src/main/file-watcher.ts`, reusing its `WatchPort`, `Scheduler`, `WatchHandle` and `BATCH_MS`: a watch port, a git-dir resolver, a scheduler) that reconciles its set to each `tree:get` result and emits one `worktree:status` push per settled burst, carrying `{ worktreePath, dirty, changes }` from the existing `statusOf`. The renderer patches that into the tree through a pure helper. Turn end and focus live in the renderer: a pure helper finds the worktree a session's turn just ended in, and `use-tree` gains `recount(path)` over a new `worktrees:status` invoke.
+**Status**: Approved 2026-09-26, with the reconciliation below (planned 2026-09-22)
 
-**Branch**: `feature/status-changes-refresh` off `feature/status-bar` `09c4b4f` (PR #97). PR carries "depends on #97"; once #97 merges, `git rebase --onto origin/main feature/status-bar feature/status-changes-refresh`.
+**Branch**: `feature/status-changes-refresh`, rebased onto `origin/main` `c31bb9a` on 2026-09-26 (#97 merged as `951def7`). The PR closes #107 and depends on nothing.
 
-**Test baseline**: **re-measure** with `npx vitest run` as the first act of Execute (979 per the Files hand-off, on this tip); record the lint warning count at the same time.
+**Reconciled with `main` (2026-09-26)**: the Files direction's `FileWatcher` (`src/main/file-watcher.ts`) and the real `watchPort` / `--git-dir` resolver in `src/main/index.ts` are on `main` now, so T3 imports the watcher seams instead of copying them and T5 shares the resolver. `FileWatcher` watches `index` and `HEAD` as **files**; T1 measures the file watch next to the directory watch, and a file watch that goes deaf after git's rename is recorded as a Files defect, not fixed here.
+
+**Test baseline**: **re-measure** with `npx vitest run` as the first act of Execute; record the lint warning count at the same time.
 
 **Stop point**: after T1, if any of commit, stage or checkout produces no `index`/`HEAD` event in the git dir, execution stops and the owner decides.
 
@@ -76,7 +78,7 @@ T8 → T9 → T10
 
 ### T1: Measure what a terminal commit does to the git dir
 
-**What**: In a scratch repository with a linked worktree, watch each git dir non-recursively with `fs.watch` and record which entry names fire for `git add`, `git commit` and `git checkout -b`, in the linked worktree and in the primary checkout; record the result and the baselines here.
+**What**: In a scratch repository with a linked worktree, watch each git dir non-recursively with `fs.watch` and record which entry names fire for `git add`, `git commit` and `git checkout -b`, in the linked worktree and in the primary checkout; alongside, watch `index` and `HEAD` as files, as `FileWatcher` does, and record whether they still fire after the first rename; record the result and the baselines here.
 **Where**: `.specs/features/status-changes-refresh/tasks.md`
 **Depends on**: None
 **Reuses**: nothing committed — a scratchpad probe
@@ -131,7 +133,7 @@ T8 → T9 → T10
 **What**: A class that `sync(paths)` to a set of worktrees — opening a non-recursive watch on each resolvable git dir and closing the rest — batches `index`/`HEAD` events per worktree for 250 ms, then calls `onSettled(path)`; `closeAll()` closes everything.
 **Where**: `src/main/git-state-watcher.ts` (new) and its test
 **Depends on**: T2
-**Reuses**: the port-and-scheduler shape of `FileWatcher` on `feature/files-explore` (copied in spirit; that branch is not in this stack)
+**Reuses**: `WatchPort`, `WatchHandle`, `Scheduler` and `BATCH_MS` exported by `src/main/file-watcher.ts`
 **Requirement**: SCRF-01, SCRF-02, SCRF-04, SCRF-05
 
 **Tools**:
@@ -181,7 +183,7 @@ T8 → T9 → T10
 **What**: Create the watcher with the real `fs.watch` port and `git rev-parse --git-dir`; `sync` it with every `tree:get` result's worktree paths; on settle, run `worktreeStatus` and push `worktree:status` unless it returned `null` (logged); handle `worktrees:status`; `closeAll` on `window-all-closed`.
 **Where**: `src/main/index.ts`
 **Depends on**: T4
-**Reuses**: `emit`, `handle`, the `window-all-closed` teardown
+**Reuses**: `emit`, `handle`, the `window-all-closed` teardown, `watchPort` and the `--git-dir` resolver already built for `FileWatcher` (hoisted to one function both watchers use)
 **Requirement**: SCRF-01, SCRF-04, SCRF-06
 
 **Tools**:
