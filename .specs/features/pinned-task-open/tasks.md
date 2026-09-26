@@ -9,9 +9,11 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: inline. Main gets `openPinnedTask(deps, ref)` in `task-board.ts` — `deps` is the board's stored tasks and an injected `openExternal` — so every refusal and failure is unit-tested without Electron. `index.ts` wires it to `shell.openExternal`. The pane renders the title and `#id` as buttons styled as links.
-**Status**: Draft — awaiting owner approval (planned 2026-09-22)
+**Status**: Draft — reconciled 2026-09-26, awaiting owner approval (planned 2026-09-22)
 
-**Branch**: `feature/pinned-task-open` off `main`.
+**Branch**: `feature/pinned-task-open`, stacked on `feature/window-open-https` (PR #123, issue #115). The PR closes #109 and says "depends on #123"; once #123 merges, `git rebase --onto origin/main feature/window-open-https feature/pinned-task-open`.
+
+**Reconciled with `main` (2026-09-26)**: every anchor holds (`TaskBoard.pin` builds the URL, `tasks:unpin`'s request shape, `task-card-id` / `task-card-title`, the `shortcuts:launch` toast handling in `WorktreeDetail` and `FileTabs`). PTOP-06's scheme half now uses AD-044's `isHttpsUrl`. T6 stays owner-driven: agent-run dev apps use a throwaway user-data dir, which holds no pinned task, so the owner runs `npm run dev` on their own data.
 
 **Test baseline**: **re-measure** with `npx vitest run` as the first act of Execute; record the lint warning count at the same time.
 
@@ -67,7 +69,7 @@ T5 → T6
 **What**: `openPinnedTask({ tasks, openExternal }, ref)` finds the pinned task by `{ id, org, project }`, refuses a missing one and a URL that is not `https://dev.azure.com/…`, awaits `openExternal(url)` and returns a `LaunchResult`.
 **Where**: `src/main/task-board.ts`
 **Depends on**: None
-**Reuses**: `LaunchResult`; the stored `PinnedTask.url`
+**Reuses**: `LaunchResult`; the stored `PinnedTask.url`; `isHttpsUrl` from `src/main/url-policy.ts` (AD-044) for the scheme, plus a `dev.azure.com` host check
 **Requirement**: PTOP-05, PTOP-06, PTOP-07
 
 **Tools**:

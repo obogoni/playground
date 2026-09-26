@@ -18,7 +18,7 @@ the card does nothing. The canonical URL is already stored with every pinned tas
 | ------- | ------ |
 | Clicking the whole card | Owner decision (grill Q1): a missed click beside Start work or Agent would open the browser |
 | Board view task chips | Their click already toggles the task highlight |
-| Restricting the generic `setWindowOpenHandler` to https (AD-026) | A separate pending item; this feature does not route through it |
+| Restricting the generic `setWindowOpenHandler` to https (AD-026) | Done by #115 (PR #123, AD-044); this feature does not route through it |
 | Showing the work item inside the app | Owner decision (backlog, M3): it opens in the browser |
 
 ---
@@ -29,10 +29,10 @@ the card does nothing. The canonical URL is already stored with every pinned tas
 | --------------------- | -------------- | --------- | ---------- |
 | What is clickable | The card's title and its `#id`, styled as links (pointer cursor, underline on hover), keyboard-focusable | Owner decision (grill Q1) | y |
 | What the renderer sends | The task's `{ id, org, project }` over a new `tasks:open` invoke | Same identity `tasks:unpin` and `tasks:parent` take | y |
-| What main opens | The URL stored with that pinned task, only when its scheme is `https:` and its host is `dev.azure.com` | F3's posture for `commits:open`: main builds or holds the URL, the renderer only names the item | y |
+| What main opens | The URL stored with that pinned task, only when `isHttpsUrl` (AD-044) accepts it and its host is `dev.azure.com` | F3's posture for `commits:open`: main builds or holds the URL, the renderer only names the item; the scheme rule is AD-044's one helper, the host check is this feature's own | y |
 | A card with no details | Its `#id` stays a link; the title slot shows "details unavailable", which is not a link | The URL is stored at pin time, independent of the details fetch | y |
 | Failure | `tasks:open` returns `{ ok: false, error }` and the pane shows the app's toast with that error | Mirrors `shortcuts:launch` and its toast | y |
-| Base branch | `feature/pinned-task-open` off `main` | The Tasks pane is on `main`; nothing here depends on another open branch | y |
+| Base branch | `feature/pinned-task-open` stacked on `feature/window-open-https` (PR #123); the PR says "depends on #123" | Owner decision (2026-09-26): reuse AD-044's `isHttpsUrl` rather than a second https check; rebased with `--onto origin/main` once #123 merges | y |
 
 **Open questions:** none — all resolved or logged above.
 
