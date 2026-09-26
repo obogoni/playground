@@ -609,15 +609,39 @@ describe('applyHookEvent with background work (activity-subagent-attribution)', 
       expect(applyHookEvent(asking, subagentStop('sub-1'))?.view.state).toBe('working')
     })
 
-    it("maps the asker's own tool event as usual, even when nothing was listed (ASUB-08)", () => {
-      // The SubagentStop rule would say waiting here; the asker running a tool is working.
-      const asking = drive(event('UserPromptSubmit'), stopListing(), start('sub-9'), ask('sub-9'))
-      expect(applyHookEvent(asking, tool('PreToolUse', 'sub-9', 'Read'))?.view).toEqual({
-        state: 'working',
-        tool: 'Read',
-        subagents: 1
-      })
-    })
+    it.each([
+      [
+        'PreToolUse',
+        ask('sub-9'),
+        tool('PreToolUse', 'sub-9', 'Read'),
+        { state: 'working', tool: 'Read', subagents: 1 }
+      ],
+      [
+        'PostToolUse',
+        ask('sub-9'),
+        tool('PostToolUse', 'sub-9', 'Write'),
+        { state: 'working', subagents: 1 }
+      ],
+      [
+        'PostToolUseFailure',
+        ask('sub-9'),
+        tool('PostToolUseFailure', 'sub-9', 'Write'),
+        { state: 'working', subagents: 1 }
+      ],
+      [
+        'ElicitationResult',
+        event('Elicitation', { agent_id: 'sub-9', agent_type: 'general-purpose' }),
+        event('ElicitationResult', { agent_id: 'sub-9', agent_type: 'general-purpose' }),
+        { state: 'working', subagents: 1 }
+      ]
+    ])(
+      "maps the asker's own %s as usual, even when nothing was listed (ASUB-08)",
+      (_, question, answer, view) => {
+        // The SubagentStop rule would say waiting here; the asker acting is working.
+        const asking = drive(event('UserPromptSubmit'), stopListing(), start('sub-9'), question)
+        expect(applyHookEvent(asking, answer)?.view).toEqual(view)
+      }
+    )
 
     it("clears to working on the asker's SubagentStop while its result is owed (ASUB-08)", () => {
       // The main agent stopped with nothing listed, so only the owed result is left.
