@@ -1,4 +1,5 @@
-/* CDP smoke for the Files diffs (FDIF-01..32).
+/* CDP smoke for the Files diffs (FDIF-01..32), with pinned tabs and bulk closes
+ * (FPOL-01..13).
  *
  * Same three modes as scripts/smoke-files.mjs, for the same reason: the app
  * loads its config once at startup, so a workspace registered afterwards is
@@ -285,6 +286,107 @@ const activeToggles = `
 
 /** Clicks a toggle by its label and returns whether it was there. */
 const clickToggle = (label) => clickByText('.file-tabs-toggle', label)
+
+/* ------------------------------------------------ pinned tabs (FPOL) -- */
+
+const J = JSON.stringify
+
+/** A tab's label as the strip shows it, without the diff glyph. */
+const tabName = `(e) => e.textContent.replace('±', '').trim()`
+
+/** The strip's labels, in order. */
+const strip = (ws) =>
+  evaluate(ws, `[...document.querySelectorAll('.file-tab-label')].map(${tabName})`)
+
+const activeTab = (ws) =>
+  evaluate(
+    ws,
+    `(() => { const el = document.querySelector('.file-tab.active .file-tab-label'); return el ? (${tabName})(el) : null })()`
+  )
+
+/** For every tab, whether it ends in a pin or a close button (FPOL-02). */
+const tabMarks = (ws) =>
+  evaluate(
+    ws,
+    `Object.fromEntries([...document.querySelectorAll('.file-tab')].map((tab) => [
+       (${tabName})(tab.querySelector('.file-tab-label')),
+       tab.querySelector('.file-tab-pin') ? 'pin' : tab.querySelector('.file-tab-close') ? 'close' : 'none'
+     ]))`
+  )
+
+const tabElement = (name) => `
+  [...document.querySelectorAll('.file-tab')].find(
+    (tab) => (${tabName})(tab.querySelector('.file-tab-label')) === ${J(name)}
+  )`
+
+/** Right-clicks a tab the way the browser does: a contextmenu event at its label. */
+const rightClickTab = (name) => `
+  (() => {
+    const tab = ${tabElement(name)}
+    if (!tab) return false
+    const box = tab.getBoundingClientRect()
+    tab.querySelector('.file-tab-label').dispatchEvent(new MouseEvent('contextmenu', {
+      bubbles: true, cancelable: true, button: 2, clientX: box.left + 8, clientY: box.bottom - 4
+    }))
+    return true
+  })()`
+
+const clickPinOf = (name) => `
+  (() => {
+    const pin = (${tabElement(name)})?.querySelector('.file-tab-pin')
+    if (!pin) return false
+    pin.click()
+    return true
+  })()`
+
+/** The open menu's entries, or null when no menu is open. */
+const menuItems = (ws) =>
+  evaluate(
+    ws,
+    `(() => {
+       const menu = document.querySelector('.file-tabs-menu')
+       return menu ? [...menu.querySelectorAll('.file-tabs-menu-item')].map((e) => e.textContent.trim()) : null
+     })()`
+  )
+
+/** Opens a tab's menu and chooses one entry. */
+async function tabMenu(ws, name, item) {
+  if (!(await evaluate(ws, rightClickTab(name)))) throw new Error(`No tab named ${name}`)
+  await sleep(250)
+  if (!(await evaluate(ws, clickByText('.file-tabs-menu-item', item)))) {
+    throw new Error(`No menu entry ${item} on ${name}: ${J(await menuItems(ws))}`)
+  }
+  await sleep(450)
+}
+
+async function openStripMenuMore(ws) {
+  await evaluate(ws, `(document.querySelector('.file-tabs-more')?.click(), true)`)
+  await sleep(300)
+}
+
+async function focusTabNamed(ws, name) {
+  await evaluate(
+    ws,
+    `(() => { (${tabElement(name)})?.querySelector('.file-tab-label').click(); return true })()`
+  )
+  await sleep(300)
+}
+
+/** Opens one of the stack's files from the tree, unfolding `stack` if it is folded. */
+async function openStackFile(ws, name) {
+  const visible = await evaluate(
+    ws,
+    `[...document.querySelectorAll('.file-tree-name')].some((e) => e.textContent.trim() === ${J(name)})`
+  )
+  if (!visible) {
+    await evaluate(ws, clickByText('.file-tree-name', 'stack'))
+    await sleep(600)
+  }
+  if (!(await evaluate(ws, clickByText('.file-tree-name', name)))) {
+    throw new Error(`${name} is not in the tree`)
+  }
+  await sleep(700)
+}
 
 /* ----------------------------------------------------------------- drive -- */
 
@@ -735,6 +837,147 @@ async function drive() {
     beforeCommit.some((p) => (p ?? '').includes('modified.ts')) &&
       !afterCommit.some((p) => (p ?? '').includes('modified.ts')),
     `${beforeCommit.length} sections -> ${afterCommit.length}`
+  )
+
+  // 12. Pinned tabs and the strip's bulk closes (FPOL-01..13).
+  await evaluate(ws, clickByText('.file-tree-mode', 'Diff to origin'))
+  await sleep(1600)
+  // A clean strip first: every earlier section left tabs open.
+  await openStripMenuMore(ws)
+  await evaluate(ws, clickByText('.file-tabs-menu-item', 'Close all'))
+  await sleep(500)
+  for (const name of ['f00.ts', 'f01.ts', 'f02.ts', 'f03.ts', 'f04.ts'])
+    await openStackFile(ws, name)
+  await focusTabNamed(ws, 'f00.ts')
+  check(
+    'Five stack files open as five tabs after All changes',
+    J(await strip(ws)) === J(['All changes', 'f00.ts', 'f01.ts', 'f02.ts', 'f03.ts', 'f04.ts']),
+    J(await strip(ws))
+  )
+
+  await tabMenu(ws, 'f02.ts', 'Pin')
+  await tabMenu(ws, 'f04.ts', 'Pin')
+  const pinnedStrip = await strip(ws)
+  const marks = await tabMarks(ws)
+  check(
+    'Pinning moves a tab after All changes and the tabs pinned before it (FPOL-01)',
+    J(pinnedStrip) === J(['All changes', 'f02.ts', 'f04.ts', 'f00.ts', 'f01.ts', 'f03.ts']),
+    J(pinnedStrip)
+  )
+  check(
+    'A pinned tab shows a pin where its close button was (FPOL-02)',
+    marks['f02.ts'] === 'pin' && marks['f04.ts'] === 'pin' && marks['f00.ts'] === 'close',
+    J(marks)
+  )
+  check(
+    'Pinning leaves the active tab where it was (FPOL-04)',
+    (await activeTab(ws)) === 'f00.ts',
+    await activeTab(ws)
+  )
+
+  await evaluate(ws, clickPinOf('f02.ts'))
+  await sleep(400)
+  const unpinnedStrip = await strip(ws)
+  check(
+    'Clicking the pin unpins the tab to the front of the unpinned tabs (FPOL-03)',
+    J(unpinnedStrip) === J(['All changes', 'f04.ts', 'f02.ts', 'f00.ts', 'f01.ts', 'f03.ts']) &&
+      (await tabMarks(ws))['f02.ts'] === 'close',
+    J(unpinnedStrip)
+  )
+  await tabMenu(ws, 'f02.ts', 'Pin')
+
+  // All changes carries no menu at all.
+  await evaluate(ws, rightClickTab('All changes'))
+  await sleep(300)
+  const allChangesMenu = await menuItems(ws)
+  await evaluate(ws, `(document.body.click(), true)`)
+  check(
+    'All changes offers neither Pin nor any close (FPOL-05)',
+    allChangesMenu === null,
+    J(allChangesMenu)
+  )
+
+  // A menu dismissed by Escape or by a click outside changes nothing.
+  const beforeDismiss = await strip(ws)
+  await evaluate(ws, rightClickTab('f01.ts'))
+  await sleep(300)
+  const tabItems = await menuItems(ws)
+  await send(ws, 'Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' })
+  await send(ws, 'Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' })
+  await sleep(300)
+  const afterEscape = await menuItems(ws)
+  await evaluate(ws, rightClickTab('f01.ts'))
+  await sleep(300)
+  await evaluate(ws, `(document.querySelector('.file-tabs-launchers')?.click(), true)`)
+  await sleep(300)
+  const afterOutside = await menuItems(ws)
+  check(
+    "A tab's menu lists Pin, Close, Close others, Close to the right, Close unpinned and Close all",
+    J(tabItems) ===
+      J(['Pin', 'Close', 'Close others', 'Close to the right', 'Close unpinned', 'Close all']),
+    J(tabItems)
+  )
+  check(
+    'Escape and a click outside close the menu and change no tab (FPOL-13)',
+    tabItems !== null &&
+      afterEscape === null &&
+      afterOutside === null &&
+      J(await strip(ws)) === J(beforeDismiss),
+    `after Escape ${J(afterEscape)}, after outside ${J(afterOutside)}`
+  )
+
+  // Close to the right, with the active tab among the closed ones.
+  await focusTabNamed(ws, 'f03.ts')
+  await tabMenu(ws, 'f00.ts', 'Close to the right')
+  check(
+    'Close to the right closes only the unpinned tabs right of it (FPOL-09)',
+    J(await strip(ws)) === J(['All changes', 'f04.ts', 'f02.ts', 'f00.ts']),
+    J(await strip(ws))
+  )
+  check(
+    'A closed active tab hands the focus to the nearest survivor (FPOL-11)',
+    (await activeTab(ws)) === 'f00.ts',
+    await activeTab(ws)
+  )
+
+  for (const name of ['f01.ts', 'f03.ts']) await openStackFile(ws, name)
+  await tabMenu(ws, 'f01.ts', 'Close others')
+  check(
+    'Close others keeps that tab and every pinned one (FPOL-08)',
+    J(await strip(ws)) === J(['All changes', 'f04.ts', 'f02.ts', 'f01.ts']),
+    J(await strip(ws))
+  )
+
+  for (const name of ['f00.ts', 'f03.ts']) await openStackFile(ws, name)
+  await openStripMenuMore(ws)
+  const moreItems = await menuItems(ws)
+  await evaluate(ws, clickByText('.file-tabs-menu-item', 'Close unpinned'))
+  await sleep(500)
+  check(
+    'The ⋯ button offers exactly Close unpinned and Close all (FPOL-12)',
+    J(moreItems) === J(['Close unpinned', 'Close all']),
+    J(moreItems)
+  )
+  check(
+    'Close unpinned keeps every pinned tab and nothing else (FPOL-07)',
+    J(await strip(ws)) === J(['All changes', 'f04.ts', 'f02.ts']),
+    J(await strip(ws))
+  )
+
+  await tabMenu(ws, 'f04.ts', 'Close')
+  check(
+    'Close on a pinned tab closes it (FPOL-10)',
+    J(await strip(ws)) === J(['All changes', 'f02.ts']),
+    J(await strip(ws))
+  )
+
+  await openStackFile(ws, 'f00.ts')
+  await focusTabNamed(ws, 'f02.ts')
+  await tabMenu(ws, 'f00.ts', 'Close all')
+  check(
+    'Close all closes pinned tabs too and leaves All changes, focused (FPOL-06, FPOL-11)',
+    J(await strip(ws)) === J(['All changes']) && (await activeTab(ws)) === 'All changes',
+    `${J(await strip(ws))}, active ${await activeTab(ws)}`
   )
 
   const failed = checks.filter((c) => !c.ok)

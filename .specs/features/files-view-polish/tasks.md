@@ -273,8 +273,14 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] Every new check seen **failing** with its rule broken (T2's `unpinned` keeping nothing; the pin reorder removed), then passing
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Every new check seen **failing** with its rule broken (T2's `unpinned` keeping nothing; the pin reorder removed), then passing
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Done (2026-09-26)**: section 12 of `smoke-files-diff.mjs`, 15 checks, run through a seed → fresh dev app on a throwaway `--user-data-dir` → drive → clean cycle. Passing run: 34/34. Falsified on a fresh launch each time:
+- pin reorder removed and All changes given a menu: FPOL-01, FPOL-03 and FPOL-05 FAIL (plus the closes that depend on the order);
+- `unpinned` closing pinned tabs too and Escape not dismissing: FPOL-07 and FPOL-13 FAIL.
+
+The first mutant runs stopped in the pre-existing section 8 with `Input.dispatchMouseEvent timed out`, as did one cold unmutated run (16/19): an occluded window stops rendering. Launching with `--disable-renderer-backgrounding --disable-backgrounding-occluded-windows --disable-background-timer-throttling` made every later run complete; `origin/main` itself passed 19/19 on a run that happened not to be occluded.
 
 **Tests**: manual
 **Gate**: manual
