@@ -1,7 +1,7 @@
 import { app, shell, clipboard, dialog, BrowserWindow, Notification, powerMonitor } from 'electron'
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import { randomBytes, randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, watch, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { mkdir, stat, writeFile } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
 import { promisify } from 'node:util'
@@ -21,7 +21,7 @@ import { commitFiles, listCommits, openCommit } from './commit-log'
 import { diffStats, readDiffSides } from './file-diff'
 import { readForView } from './file-reader'
 import { changedSince, listBases, listDir } from './file-tree'
-import { FileWatcher, type WatchPort } from './file-watcher'
+import { FileWatcher } from './file-watcher'
 import { git } from './git'
 import { readCommits, readSyncState, runGitOp } from './git-sync'
 import { runHookShell } from './hook-shell'
@@ -43,6 +43,7 @@ import { buildSnapshot, readGit } from './time-snapshot'
 import { TimeTracker } from './time-tracker'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
+import { watchPort } from './watch-port'
 import type { CtxDeps, GitFetchOptions, ShellResult } from './workflow-ctx'
 import {
   discoverWorkflows,
@@ -132,24 +133,6 @@ async function readFileDropList(): Promise<string> {
     { timeout: 5_000, windowsHide: true, encoding: 'utf8' }
   )
   return stdout
-}
-
-/**
- * The real `fs.watch` behind `FileWatcher`'s port. A path that vanishes between
- * the selection and the watch throws synchronously, and an unwatchable path
- * errors asynchronously; neither may take the main process down, so both come
- * back as a handle that watches nothing.
- */
-const watchPort: WatchPort = (path, opts, listener) => {
-  try {
-    const watcher = watch(path, { recursive: opts.recursive }, (_event, filename) =>
-      listener(typeof filename === 'string' ? filename : '')
-    )
-    watcher.on('error', () => watcher.close())
-    return { close: () => watcher.close() }
-  } catch {
-    return { close: () => {} }
-  }
 }
 
 /**
