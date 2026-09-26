@@ -1051,4 +1051,4 @@ Every AC and edge case has its own unit test or numbered smoke check (L-021, L-0
 | Edge: split across midnight | T5 unit |
 | Edge: lookup of a pinned id | T8 unit |
 | Edge: split at start + 1 s / end − 1 s | T5 unit |
-| Edge: Other colour after an edit | HCAL-24 unchanged, so no new check; one is added only if the owner asks for a repaint instead (owner to confirm) |
+| Edge: Other colour after an edit | HCAL-24 unchanged, so no new check; one is added only if the owner asks for a repaint instead (owner confirmed 2026-09-26) |

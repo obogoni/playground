@@ -209,7 +209,7 @@ A session link is `SessionTask | null` in every API; `From branch` in a session 
 | ------- | -------------------- | ------ | ---------- |
 | Version bump temptation | `src/main/time-log-store.ts:13, 24` | A `v: 2` line is skipped by the previous build and lost on its next rewrite | Keep `v: 1` and an optional field (HTSK-42); a store test round-trips a flagged line and one without the key |
 | The flag drifting from the branch rule | `src/shared/tasks.ts:53-59` | If the branch rule changes, a derived mark would appear on old periods | The flag is **stored** at write time, not derived at read time |
-| Colour freeze hides a reassigned task | `src/renderer/src/lib/hours-calendar.ts:221-223`, `HoursView.tsx:118-125` | A task new to the week wears Other until the week is reopened | Spec edge case and an `owner to confirm` row; the smoke asserts the legend chip by label, not its colour |
+| Colour freeze hides a reassigned task | `src/renderer/src/lib/hours-calendar.ts:221-223`, `HoursView.tsx:118-125` | A task new to the week wears Other until the week is reopened | Spec edge case and an `owner confirmed 2026-09-26` row; the smoke asserts the legend chip by label, not its colour |
 | `deriveAttribution` has no tests today | `src/renderer/src/lib/session-attribution.ts` | The link-over-branch rule would land untested | T11 creates `session-attribution.test.ts` |
 | Renderer components have no unit tests (AD-004) | `src/renderer/src/components/*` | Picker and drawer decisions regress silently (L-012, L-018) | Decisions live in `task-picker.ts` and `period-edit.ts`, unit-tested; components only render and call |
 | Main-process mutants in the smoke | `npm run dev` does not restart main on `src/main` edits | A mutant would be silently absent | Every main mutant is followed by a relaunch of the dev app (noted per smoke task) |
@@ -223,11 +223,11 @@ A session link is `SessionTask | null` in every API; `From branch` in a session 
 | Decision | Choice | Rationale |
 | -------- | ------ | --------- |
 | Where a hand-set task lives on the period | Overwrite `taskId` / `taskTitle`, add `taskByHand` | Every report already groups by `taskId`; a separate `assignedTask` field would need an effective-task helper in every reader, and the previous build would ignore it |
-| When the flag is written | Only when the hand-set task differs from the branch's | Keeps a task-card session in its own worktree unmarked (owner to confirm) |
+| When the flag is written | Only when the hand-set task differs from the branch's | Keeps a task-card session in its own worktree unmarked (owner confirmed 2026-09-26) |
 | Session link storage | `PersistedSession.task`, owned by `SessionManager` | The session already persists there; the tracker learns it through the lifecycle it already observes |
 | Link change seam | `SessionLifecycle.taskChanged`, not a second IPC to the tracker | One handler, one ordering: persist, then close/open; the renderer cannot update one without the other |
 | Picker lookup channel | `tasks:lookup` on `TaskBoard` | Reuses the pin fetch and its error texts; keeps Azure DevOps calls in one module |
-| Rail row gesture | Context menu | RAIL-12 forbids new controls on the row (owner to confirm) |
+| Rail row gesture | Context menu | RAIL-12 forbids new controls on the row (owner confirmed 2026-09-26) |
 
 ### AD-TBD (number chosen at Execute)
 
