@@ -304,9 +304,11 @@ The first mutant runs stopped in the pre-existing section 8 with `Input.dispatch
 
 **Done when**:
 
-- [ ] Each check seen failing with its button wired to the wrong set, then passing
-- [ ] The mounted-editor bound read from the DOM (`.monaco-editor` count), not assumed
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Each check seen failing with its button wired to the wrong set, then passing
+- [x] The mounted-editor bound read from the DOM (`.monaco-editor` count), not assumed
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Done (2026-09-26)**: section 13 of `smoke-files-diff.mjs`, 4 checks. Passing run: 38/38. On the 44-file stack, Expand all took 10 → 44 open sections with 9 diff editors (27 `.monaco-editor` nodes, read from the DOM) live; Collapse all folded all 44, with 0 editors; after the script commits everything left, Uncommitted shows the empty state and no toggle. Falsified with Expand all wired to the first ten, Collapse all to the initial set, and a toggle added to the empty state: FPOL-14, FPOL-15 and FPOL-17 FAIL. FPOL-16 first passed under that mutant with only 10 sections open, so its check now requires every section open before it counts editors, and it then FAILs too.
 
 **Tests**: manual
 **Gate**: manual

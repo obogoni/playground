@@ -1,5 +1,5 @@
-/* CDP smoke for the Files diffs (FDIF-01..32), with pinned tabs and bulk closes
- * (FPOL-01..13).
+/* CDP smoke for the Files diffs (FDIF-01..32), with pinned tabs, bulk closes
+ * and expanding or collapsing every change (FPOL-01..17).
  *
  * Same three modes as scripts/smoke-files.mjs, for the same reason: the app
  * loads its config once at startup, so a workspace registered afterwards is
@@ -978,6 +978,67 @@ async function drive() {
     'Close all closes pinned tabs too and leaves All changes, focused (FPOL-06, FPOL-11)',
     J(await strip(ws)) === J(['All changes']) && (await activeTab(ws)) === 'All changes',
     `${J(await strip(ws))}, active ${await activeTab(ws)}`
+  )
+
+  // 13. Expand all and Collapse all on the All changes stack (FPOL-14..17).
+  await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
+  await sleep(2200)
+  const stackState = `({
+    sections: document.querySelectorAll('.diff-section').length,
+    expanded: [...document.querySelectorAll('.diff-section-header')]
+      .filter((e) => e.getAttribute('aria-expanded') === 'true').length,
+    diffEditors: ${liveDiffEditors},
+    monacoEditors: document.querySelectorAll('.all-changes .monaco-editor').length
+  })`
+  const beforeExpandAll = await evaluate(ws, stackState)
+  await evaluate(ws, clickByText('.all-changes-toggle', 'Expand all'))
+  await sleep(2600)
+  const afterExpandAll = await evaluate(ws, stackState)
+  check(
+    'Expand all opens every listed section (FPOL-14)',
+    beforeExpandAll.expanded < beforeExpandAll.sections &&
+      afterExpandAll.sections >= 40 &&
+      afterExpandAll.expanded === afterExpandAll.sections,
+    `${beforeExpandAll.expanded} -> ${afterExpandAll.expanded} of ${afterExpandAll.sections}`
+  )
+  check(
+    'With every section open, only the ones near the viewport hold an editor (FPOL-16)',
+    // Every section must really be open, or the bound is met for free.
+    afterExpandAll.expanded === afterExpandAll.sections &&
+      afterExpandAll.diffEditors > 0 &&
+      afterExpandAll.diffEditors <= 12,
+    `${afterExpandAll.diffEditors} diff editors (${afterExpandAll.monacoEditors} Monaco editors) for ${afterExpandAll.expanded} open sections`
+  )
+
+  await evaluate(ws, clickByText('.all-changes-toggle', 'Collapse all'))
+  await sleep(1600)
+  const afterCollapseAll = await evaluate(ws, stackState)
+  check(
+    'Collapse all folds every listed section (FPOL-15)',
+    afterCollapseAll.sections === afterExpandAll.sections &&
+      afterCollapseAll.expanded === 0 &&
+      afterCollapseAll.diffEditors === 0,
+    J(afterCollapseAll)
+  )
+
+  // A mode with nothing listed: commit everything left, then look at Uncommitted.
+  git(['add', '-A'])
+  git(['commit', '-m', 'commit everything left'])
+  await evaluate(ws, clickByText('.file-tree-mode', 'Uncommitted'))
+  await sleep(2600)
+  await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
+  await sleep(1200)
+  const emptyMode = await evaluate(
+    ws,
+    `({
+       empty: document.querySelector('.all-changes-empty')?.textContent?.trim() ?? null,
+       toggles: [...document.querySelectorAll('.all-changes-toggle')].map((e) => e.textContent.trim())
+     })`
+  )
+  check(
+    'With nothing listed, Expand all and Collapse all are not shown (FPOL-17)',
+    emptyMode.empty !== null && emptyMode.toggles.length === 0,
+    J(emptyMode)
   )
 
   const failed = checks.filter((c) => !c.ok)
