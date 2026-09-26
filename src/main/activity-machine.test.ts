@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { ActivityState } from '../shared/config'
+import type { ActivityState, SessionActivity } from '../shared/config'
 import { applyHookEvent, applyKeystroke, sameView, type MachineState } from './activity-machine'
 import {
+  approvalWhileAnotherWorks,
   backgroundShell,
   fanOutWithWakeUps,
   idlePromptWhileSubagentRuns,
@@ -439,17 +440,202 @@ describe('applyHookEvent with background work (activity-subagent-attribution)', 
     })
   })
 
+  describe('events count only for the agent that sent them', () => {
+    const tool = (
+      name: string,
+      agentId: string | undefined,
+      toolName = 'Bash'
+    ): Record<string, unknown> =>
+      event(name, {
+        tool_name: toolName,
+        ...(agentId ? { agent_id: agentId, agent_type: 'general-purpose' } : {})
+      })
+    const ask = (agentId: string, toolName = 'Write'): Record<string, unknown> =>
+      event('PermissionRequest', {
+        agent_id: agentId,
+        agent_type: 'general-purpose',
+        tool_name: toolName
+      })
+    const subagentStop = (agentId: string): Record<string, unknown> =>
+      event('SubagentStop', { agent_id: agentId, agent_type: 'general-purpose' })
+    /** Two background subagents; sub-2 asks to run Write while the main agent's turn is over. */
+    const asked = (): MachineState | null =>
+      drive(
+        event('UserPromptSubmit'),
+        start('sub-1'),
+        start('sub-2'),
+        stopListing(['sub-1', 'subagent'], ['sub-2', 'subagent']),
+        ask('sub-2')
+      )
+    const question = { state: 'needs-approval', tool: 'Write', subagents: 2 }
+
+    it.each(['PreToolUse', 'PostToolUse', 'PostToolUseFailure'])(
+      "ignores a side agent's %s (ASUB-18)",
+      (name) => {
+        const waiting = drive(event('UserPromptSubmit'), stopListing())
+        expect(applyHookEvent(waiting, tool(name, 'side-1'))).toBe(waiting)
+      }
+    )
+
+    it("applies a live subagent's tool event", () => {
+      const stopped = drive(
+        event('UserPromptSubmit'),
+        start('sub-1'),
+        stopListing(['sub-1', 'subagent'])
+      )
+      expect(applyHookEvent(stopped, tool('PreToolUse', 'sub-1'))?.view).toEqual({
+        state: 'working',
+        tool: 'Bash',
+        subagents: 1
+      })
+    })
+
+    it("needs approval for a subagent's PermissionRequest, naming the tool (ASUB-06)", () => {
+      expect(asked()?.view).toEqual(question)
+    })
+
+    it("needs input for a subagent's Elicitation (ASUB-06)", () => {
+      const after = drive(
+        event('UserPromptSubmit'),
+        start('sub-1'),
+        event('Elicitation', { agent_id: 'sub-1', agent_type: 'general-purpose' })
+      )
+      expect(after?.view).toEqual({ state: 'needs-input', subagents: 1 })
+    })
+
+    it.each([
+      ["another subagent's tool event", tool('PreToolUse', 'sub-1')],
+      ["another subagent's tool result", tool('PostToolUse', 'sub-1')],
+      ["the main agent's tool event", tool('PreToolUse', undefined)],
+      ["the main agent's Stop", stopListing(['sub-1', 'subagent'], ['sub-2', 'subagent'])],
+      ["the main agent's wake-up", event('UserPromptSubmit', { prompt: 'Fictitious prompt.' })],
+      [
+        'the permission_prompt notification',
+        event('Notification', { notification_type: 'permission_prompt' })
+      ],
+      ['an idle_prompt', event('Notification', { notification_type: 'idle_prompt' })],
+      ["another subagent's SubagentStop", subagentStop('sub-1')]
+    ])('keeps the question on screen across %s (ASUB-07)', (_, other) => {
+      const after = applyHookEvent(asked(), other)
+      expect(after?.view.state).toBe('needs-approval')
+      expect(after?.view.tool).toBe('Write')
+    })
+
+    it('still lets the asker clear the question after a notification without agent_id (ASUB-07)', () => {
+      const notified = applyHookEvent(
+        asked(),
+        event('Notification', { notification_type: 'permission_prompt' })
+      )
+      expect(applyHookEvent(notified, tool('PostToolUse', 'sub-1'))?.view.state).toBe(
+        'needs-approval'
+      )
+      expect(applyHookEvent(notified, tool('PostToolUse', 'sub-2', 'Write'))?.view).toEqual({
+        state: 'working',
+        subagents: 2
+      })
+    })
+
+    it("keeps the main agent's own question, and its tool, across its permission_prompt (ASUB-07)", () => {
+      const asking = drive(
+        event('UserPromptSubmit'),
+        event('PermissionRequest', { tool_name: 'Bash' })
+      )
+      const after = applyHookEvent(
+        asking,
+        event('Notification', { notification_type: 'permission_prompt' })
+      )
+      expect(after?.view).toEqual({ state: 'needs-approval', tool: 'Bash', subagents: 0 })
+      expect(applyHookEvent(after, tool('PostToolUse', 'sub-1'))?.view.state).toBe('needs-approval')
+    })
+
+    it("clears the question on the asker's ElicitationResult (ASUB-08)", () => {
+      const asking = drive(
+        event('UserPromptSubmit'),
+        start('sub-1'),
+        start('sub-2'),
+        event('Elicitation', { agent_id: 'sub-2', agent_type: 'general-purpose' })
+      )
+      expect(
+        applyHookEvent(asking, event('ElicitationResult', { agent_id: 'sub-1' }))?.view.state
+      ).toBe('needs-input')
+      expect(
+        applyHookEvent(asking, event('ElicitationResult', { agent_id: 'sub-2' }))?.view.state
+      ).toBe('working')
+    })
+
+    it("clears to working on the asker's SubagentStop while the last Stop listed work (ASUB-08)", () => {
+      expect(applyHookEvent(asked(), subagentStop('sub-2'))?.view).toEqual({
+        state: 'working',
+        subagents: 1
+      })
+    })
+
+    it("clears to working on the asker's SubagentStop while the main agent's turn runs (ASUB-08)", () => {
+      const asking = drive(event('UserPromptSubmit'), start('sub-1'), ask('sub-1'))
+      expect(applyHookEvent(asking, subagentStop('sub-1'))?.view.state).toBe('working')
+    })
+
+    it("clears to waiting on the asker's SubagentStop when nothing else runs (ASUB-08)", () => {
+      // A Stop without a list (older Claude Code) and a subagent's own tool event,
+      // which does not reopen the main agent's turn.
+      const asking = drive(
+        event('UserPromptSubmit'),
+        start('sub-1'),
+        event('Stop'),
+        tool('PreToolUse', 'sub-1'),
+        ask('sub-1')
+      )
+      expect(applyHookEvent(asking, subagentStop('sub-1'))?.view).toEqual({
+        state: 'waiting',
+        subagents: 0
+      })
+    })
+
+    it('counts a main-agent tool event as its turn running again (ASUB-08)', () => {
+      const asking = drive(
+        event('UserPromptSubmit'),
+        start('sub-1'),
+        event('Stop'),
+        tool('PreToolUse', undefined),
+        ask('sub-1')
+      )
+      expect(applyHookEvent(asking, subagentStop('sub-1'))?.view.state).toBe('working')
+    })
+
+    it('holds the question until every agent that asked has moved', () => {
+      const both = applyHookEvent(asked(), ask('sub-1', 'Edit'))
+      const oneMoved = applyHookEvent(both, tool('PostToolUse', 'sub-2', 'Write'))
+      expect(oneMoved?.view.state).toBe('needs-approval')
+      expect(applyHookEvent(oneMoved, tool('PostToolUse', 'sub-1', 'Edit'))?.view.state).toBe(
+        'working'
+      )
+    })
+
+    it('answers every pending question on a keystroke (ASUB-11)', () => {
+      const answered = applyKeystroke(asked())
+      expect(answered?.view).toEqual({ state: 'working', subagents: 2 })
+      // sub-2's answered question must not hold a new one from sub-1.
+      const again = applyHookEvent(answered, ask('sub-1', 'Edit'))
+      expect(applyHookEvent(again, tool('PostToolUse', 'sub-1', 'Edit'))?.view.state).toBe(
+        'working'
+      )
+    })
+  })
+
   describe('replaying captured sequences (ASUB-12)', () => {
-    /** The state after each event, replayed from no activity. */
-    const replay = (events: readonly CapturedEvent[]): (ActivityState | undefined)[] => {
-      const states: (ActivityState | undefined)[] = []
+    /** The view after each event, replayed from no activity. */
+    const replayViews = (events: readonly CapturedEvent[]): (SessionActivity | undefined)[] => {
+      const views: (SessionActivity | undefined)[] = []
       events.reduce<MachineState | null>((state, e) => {
         const next = applyHookEvent(state, e)
-        states.push(next?.view.state)
+        views.push(next?.view)
         return next
       }, null)
-      return states
+      return views
     }
+    /** The state after each event, replayed from no activity. */
+    const replay = (events: readonly CapturedEvent[]): (ActivityState | undefined)[] =>
+      replayViews(events).map((view) => view?.state)
     const positions = (
       events: readonly CapturedEvent[],
       match: (e: CapturedEvent) => boolean
@@ -497,6 +683,29 @@ describe('applyHookEvent with background work (activity-subagent-attribution)', 
 
     it('S3a: works from the first Stop to the last, through the end race (ASUB-14)', () => {
       expectOneEnd(idlePromptWhileSubagentRuns)
+    })
+
+    it("S1: a side agent's tool event leaves the view as it was (ASUB-18)", () => {
+      const views = replayViews(fanOutWithWakeUps)
+      const [side] = positions(fanOutWithWakeUps, (e) => e.tool_name === 'SendFeedback')
+      expect(side).toBeDefined()
+      expect(views[side]).toEqual(views[side - 1])
+    })
+
+    it("S2: the question holds across the other subagent's work until the asker moves (ASUB-07, ASUB-08)", () => {
+      const events = approvalWhileAnotherWorks
+      const states = replay(events)
+      const [asked] = positions(events, (e) => e.hook_event_name === 'PermissionRequest')
+      const [answered] = positions(
+        events,
+        (e) => e.hook_event_name === 'PostToolUse' && e.agent_id === events[asked].agent_id
+      )
+      const stops = positions(events, (e) => e.hook_event_name === 'Stop')
+      const last = stops[stops.length - 1]
+      expect(answered - asked).toBeGreaterThan(10)
+      expect(states.slice(asked, answered)).toEqual(Array(answered - asked).fill('needs-approval'))
+      expect(states.slice(answered, last)).toEqual(Array(last - answered).fill('working'))
+      expect(states.slice(last)).toEqual(Array(states.length - last).fill('waiting'))
     })
   })
 })

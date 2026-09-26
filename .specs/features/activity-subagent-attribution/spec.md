@@ -129,6 +129,7 @@ The Claude Code docs were silent on the facts a fix depends on. T1 measured them
 - WHEN a `SubagentStart` names an agent that stopped before THEN the machine SHALL add it to the active set again (T1: a subagent restarts when its background shell ends)
 - WHEN the owner submits a new prompt WHILE subagents are active THEN the machine SHALL set `working` and keep the active set (background subagents outlive a turn)
 - WHEN `SessionEnd` arrives THEN the active set and the owed results SHALL be emptied, whatever question is pending
+- WHEN a second agent asks WHILE a question is pending THEN the machine SHALL keep the question until every agent that asked has moved (decided at Execute, T5: clearing on the first asker's act would drop the second question early)
 
 ---
 
@@ -141,19 +142,19 @@ The Claude Code docs were silent on the facts a fix depends on. T1 measured them
 | ASUB-03 | P1: no "your turn" — AC 3 | Execute | Done (T3) |
 | ASUB-04 | P1: no "your turn" — AC 4 | Tasks | In Tasks |
 | ASUB-05 | P1: no "your turn" — AC 5 | Execute | Done (T3, T4) |
-| ASUB-06 | P1: question stays — AC 6 | Tasks | In Tasks |
-| ASUB-07 | P1: question stays — AC 7 | Tasks | In Tasks |
-| ASUB-08 | P1: question stays — AC 8 | Tasks | In Tasks |
+| ASUB-06 | P1: question stays — AC 6 | Execute | Done (T5) |
+| ASUB-07 | P1: question stays — AC 7 | Execute | Done (T5) |
+| ASUB-08 | P1: question stays — AC 8 | Execute | Done (T5) |
 | ASUB-09 | P1: question stays — AC 9 | — | N/A — T1: tool hooks carry `agent_id` |
 | ASUB-10 | P1: question stays — AC 10 | — | N/A — T1: tool hooks carry `agent_id` |
-| ASUB-11 | P1: question stays — AC 11 | Tasks | In Tasks |
+| ASUB-11 | P1: question stays — AC 11 | Execute | Done (T5) |
 | ASUB-12 | P1: real sequences — AC 12 | Tasks | In Tasks |
 | ASUB-13 | P1: real sequences — AC 13 | Execute | Done (T2) |
 | ASUB-14 | P1: no "your turn" — AC 14 | Execute | Done (T4) |
 | ASUB-15 | P1: no "your turn" — AC 15 | Execute | Done (T4) |
 | ASUB-16 | P1: no "your turn" — AC 16 | Execute | Done (T3) |
 | ASUB-17 | P1: no "your turn" — AC 17 | Execute | Done (T3) |
-| ASUB-18 | P1: question stays — AC 18 | Tasks | In Tasks |
+| ASUB-18 | P1: question stays — AC 18 | Execute | Done (T5) |
 
 **Coverage:** 18 total, 16 mapped to tasks, 2 N/A by T1's finding, 0 unmapped.
 

@@ -33,7 +33,23 @@ export interface MachineState {
    * milliseconds after a `Stop` that already lists nothing (measured).
    */
   owed?: string[]
+  /** Whether the main agent's turn has ended: set by its `Stop`, cleared by its next act. */
+  mainStopped?: boolean
+  /**
+   * Who asked the question on screen: `agent_id`s, or {@link MAIN}. Only their
+   * own next act answers it (ASUB-07, ASUB-08). Empty or absent means the asker
+   * is unknown, and any event moves the state on, as before.
+   */
+  askedBy?: string[]
 }
+
+/** The sender of a hook that carries no `agent_id`: the main agent. */
+const MAIN = 'main'
+
+const TOOL_EVENTS = ['PreToolUse', 'PostToolUse', 'PostToolUseFailure']
+const QUESTION_EVENTS = ['PermissionRequest', 'Elicitation']
+/** Events that start over from nothing, whatever was pending. */
+const RESET_EVENTS = ['SessionStart', 'SessionEnd']
 
 interface BackgroundTask {
   id: string
@@ -106,7 +122,78 @@ export function applyHookEvent(
 ): MachineState | null {
   const event = str(payload, 'hook_event_name')
   if (event === undefined) return state
+  const sender = str(payload, 'agent_id') ?? MAIN
+  // Claude Code's side agents (prompt suggestion, session recap) run tools with
+  // an agent_id that never started as a subagent; they are not the session's work.
+  if (TOOL_EVENTS.includes(event) && sender !== MAIN && !state?.subagentIds.includes(sender)) {
+    return state
+  }
+  const next = applyEvent(state, event, payload)
+  const acted =
+    next !== null &&
+    sender === MAIN &&
+    (event === 'UserPromptSubmit' || TOOL_EVENTS.includes(event))
+      ? { ...next, mainStopped: false }
+      : next
+  return attribute(state, acted, event, sender)
+}
 
+function isBlocked(state: MachineState | null): boolean {
+  return state?.view.state === 'needs-approval' || state?.view.state === 'needs-input'
+}
+
+function withoutAskers(state: MachineState): MachineState {
+  return state.askedBy === undefined ? state : { ...state, askedBy: undefined }
+}
+
+/**
+ * Keeps a question on screen until the agent that asked moves (ASUB-07,
+ * ASUB-08). While it is pending, anyone else's event still updates the
+ * bookkeeping — subagents, background, owed results — but not the view.
+ * Notifications are nobody's act: they repeat the question or report idleness.
+ */
+function attribute(
+  before: MachineState | null,
+  next: MachineState | null,
+  event: string,
+  sender: string
+): MachineState | null {
+  if (next === null || next === before || RESET_EVENTS.includes(event)) return next
+  const askers = before?.askedBy ?? []
+  if (QUESTION_EVENTS.includes(event)) {
+    return { ...next, askedBy: askers.includes(sender) ? askers : [...askers, sender] }
+  }
+  if (before === null || !isBlocked(before) || askers.length === 0) {
+    return isBlocked(next) ? next : withoutAskers(next)
+  }
+  const remaining = event === 'Notification' ? askers : askers.filter((id) => id !== sender)
+  if (remaining.length > 0) {
+    return { ...next, view: { ...before.view, subagents: next.view.subagents }, askedBy: remaining }
+  }
+  // The asker acted, so the question is answered. Its tool event or answer maps
+  // as usual; its SubagentStop maps to nothing, so it settles here.
+  return withoutAskers(
+    event === 'SubagentStop' ? to(next, stillBusy(next) ? 'working' : 'waiting') : next
+  )
+}
+
+/** Whether work is still going on once a question is answered (ASUB-08). */
+function stillBusy(state: MachineState): boolean {
+  return !state.mainStopped || backgroundBusy(state) || (state.owed ?? []).length > 0
+}
+
+/** What the last `Stop` listed, or without a list, the live subagents (ASUB-16). */
+function backgroundBusy(state: MachineState | null): boolean {
+  return state?.background !== undefined
+    ? state.background.length > 0
+    : (state?.subagentIds.length ?? 0) > 0
+}
+
+function applyEvent(
+  state: MachineState | null,
+  event: string,
+  payload: Record<string, unknown>
+): MachineState | null {
   switch (event) {
     case 'SessionStart':
       // Currently unreachable: Claude Code 2.1.273 does not deliver SessionStart
@@ -176,12 +263,12 @@ function applyStop(state: MachineState | null, tasks: BackgroundTask[] | undefin
   const owing = (state?.owed ?? []).length > 0
   if (tasks === undefined) {
     const busy = owing || (state?.subagentIds.length ?? 0) > 0
-    return { ...to(state, busy ? 'working' : 'waiting'), background: undefined }
+    return { ...to(state, busy ? 'working' : 'waiting'), background: undefined, mainStopped: true }
   }
   const background = tasks.map((task) => task.id)
   const subagentIds = tasks.filter((task) => task.type === 'subagent').map((task) => task.id)
   const next = to(state, owing || background.length > 0 ? 'working' : 'waiting')
-  return { ...withSubagents(next, subagentIds), background }
+  return { ...withSubagents(next, subagentIds), background, mainStopped: true }
 }
 
 /**
@@ -218,12 +305,8 @@ function withResultDelivered(state: MachineState, prompt: string | undefined): M
  * ASUB-16). It stays the only signal after an interrupt, which fires nothing.
  */
 function applyIdlePrompt(state: MachineState | null): MachineState | null {
-  const busy =
-    state?.background !== undefined
-      ? state.background.length > 0
-      : (state?.subagentIds.length ?? 0) > 0
   // A result still owed at this point was lost; waiting is the recovery.
-  return busy ? state : { ...withSubagents(to(state, 'waiting'), []), owed: [] }
+  return backgroundBusy(state) ? state : { ...withSubagents(to(state, 'waiting'), []), owed: [] }
 }
 
 function applySubagent(
@@ -252,7 +335,7 @@ function applySubagent(
 export function applyKeystroke(state: MachineState | null): MachineState | null {
   if (state === null) return state
   const blocked = state.view.state === 'needs-approval' || state.view.state === 'needs-input'
-  return blocked ? to(state, 'working') : state
+  return blocked ? withoutAskers(to(state, 'working')) : state
 }
 
 /** Whether two views would render identically — the ACTV-06 emit gate. */

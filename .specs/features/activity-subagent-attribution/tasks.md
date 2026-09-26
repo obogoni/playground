@@ -209,7 +209,7 @@ Probe: the app's 16 hooks as http hooks, same shape as `buildClaudeHookSettings`
 
 ---
 
-### T5: Events count only for the agent that sent them
+### T5: Events count only for the agent that sent them ✅
 
 **What**: A tool event whose `agent_id` is not in the active set changes nothing (side agents, ASUB-18). `PermissionRequest`, `Elicitation` and the approval/input notifications record `askedBy` (a `Notification` without `agent_id` keeps an existing one). While a question is pending, events from other agents update the bookkeeping but not the state. `mainStopped` (moved here from T3) is set by a main-agent `Stop` and cleared by `UserPromptSubmit` and main-agent tool events. The asker's tool event, `ElicitationResult` or `SubagentStop` clears it to `working` or `waiting` by `mainStopped`, `background` and `owed`. The keystroke keeps clearing (ASUB-11).
 **Where**: `src/main/activity-machine.ts`
@@ -224,10 +224,11 @@ Probe: the app's 16 hooks as http hooks, same shape as `buildClaudeHookSettings`
 
 **Done when**:
 
-- [ ] Unit tests, one per criterion, plus the S2 replay asserting `needs-approval` holds across the other subagent's tool events and the no-`agent_id` notification, and clears at the asker's `PostToolUse`
-- [ ] The S1 side-agent tool event leaves the view unchanged
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: T4 count + the new tests
+- [x] Unit tests, one per criterion, plus the S2 replay asserting `needs-approval` holds across the other subagent's tool events and the no-`agent_id` notification, and clears at the asker's `PostToolUse`
+- [x] The S1 side-agent tool event leaves the view unchanged
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (lint still 18 warnings)
+- [x] Test count: T4 count + the new tests — 1702 + 25 = 1727
+- [x] Decided at Execute, not in the spec before: two agents asking at once. The question stays until every asker has moved (spec, edge cases); a notification is nobody's act, which matters when the main agent asked (a test kills the mutant without that exception)
 
 **Tests**: unit
 **Gate**: full
