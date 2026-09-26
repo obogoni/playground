@@ -75,6 +75,12 @@ T7 → T8 → T9 → T10 → T11
 T11 → T12 → T13
 ```
 
+### Phase 6: Fix round 1
+
+```
+T13 → T14 → T15
+```
+
 ---
 
 ## Task Breakdown
@@ -417,16 +423,71 @@ T11 → T12 → T13
 
 ---
 
+## Fix Round 1 (verifier round 1: FAIL on test evidence)
+
+The Verifier found every AC met in code; a smoke mutant removing the bars' leave and focus handlers and the drawer headers' leave handler passed all 48 checks (L-051, L-052), and the palette's exact values were never asserted (L-053).
+
+### T14: Smoke — leaving each source, focusing a bar, the exact palette
+
+**What**: Read the bars after leaving the drawer header and after leaving the bar, before the next source enters; focus a bar and blur it; compare the first eight seeded tasks' computed bar colours with AD-045's hex values in order, in both themes.
+**Where**: `scripts/smoke-hours-calendar.mjs`
+**Depends on**: T13
+**Reuses**: section 12's probes; section 11's seeded Sunday
+**Requirement**: HTF-01, HTF-08, HTF-09
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] The Verifier's mutant (bar leave, blur and focus, header leave removed) fails, and each source's own mutant fails its own check
+- [x] Two light-theme slots swapped fail the palette check
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Done**: 2026-09-26. 51/51 on the seeded app. The Verifier's mutant (bar leave, blur and focus, header leave) failed the two new checks (42, 43); bar leave alone failed 42; bar focus alone failed 43; header leave with two light slots swapped failed 42 and the palette check (38). Bar blur was not run alone; it is inside the Verifier's mutant.
+
+**Tests**: manual
+**Gate**: manual
+
+**Commit**: `test(hours): check leaving each focus source and the exact palette`
+
+### T15: Spec — the picked chip in a week without its group
+
+**What**: Record as an edge case that the picked chip stays in the legend with `0m` and its × where its group has no time (the Verifier's judgement call (b)).
+**Where**: `.specs/features/hours-task-focus/spec.md`
+**Depends on**: T14
+**Reuses**: T7's note
+**Requirement**: HTF-11, HTF-13
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] The edge case names the neutral swatch and HCAL-21's amendment
+
+**Tests**: none
+**Gate**: quick
+
+**Commit**: `docs(specs): keep the picked chip in a week without its task`
+
+---
+
 ## Phase Execution Map
 
 ```
-Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5
+Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6
 
 Phase 1:  T1 ------→ T2
 Phase 2:  T2 ------→ T3 ------→ T4 ------→ T5
 Phase 3:  T5 ------→ T6 ------→ T7
 Phase 4:  T7 ------→ T8 ------→ T9 ------→ T10 ------→ T11
 Phase 5:  T11 ------→ T12 ------→ T13
+Phase 6:  T13 ------→ T14 ------→ T15
 ```
 
 Thirteen tasks: two batches (Phases 1–3, Phases 4–5). At Execute the sub-agent offer is made first.
@@ -465,6 +526,8 @@ Thirteen tasks: two batches (Phases 1–3, Phases 4–5). At Execute the sub-age
 | T11 | T10 | T10 → T11 | ✅ Match |
 | T12 | T11 | T11 → T12 | ✅ Match |
 | T13 | T12 | T12 → T13 | ✅ Match |
+| T14 | T13 | T13 → T14 | ✅ Match |
+| T15 | T14 | T14 → T15 | ✅ Match |
 
 ## Test Co-location Validation
 

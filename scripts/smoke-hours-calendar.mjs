@@ -30,11 +30,12 @@
  *      unit and the page does not scroll; a short day still fills the drawer
  *      (HDRW-01..04)
  *  11. the seeded Sunday's fourteen tasks wear eight distinct colours and six
- *      Other bars; each task's legend and drawer swatches wear its bar's
- *      colour; the summary reads `14 tasks · 14 blocks` (HTF-01, 03, 05, 16, 17)
+ *      Other bars, the first eight in the palette's colours and order in both
+ *      themes; each task's legend and drawer swatches wear its bar's colour;
+ *      the summary reads `14 tasks · 14 blocks` (HTF-01, 03, 05, 16, 17)
  *  12. pointing at a legend chip, a drawer group header or a bar, or focusing a
- *      chip, leaves only that task's bars at full opacity, and leaving restores
- *      them; clicking a chip shows only the seeded Sunday, closes a drawer open
+ *      chip or a bar, leaves only that task's bars at full opacity, and leaving
+ *      each restores them; clicking a chip shows only the seeded Sunday, closes a drawer open
  *      on Monday and marks the chip with a ×; ◀ ▶ keep the pick and the current
  *      week says it has no time for it; the × and a second click clear it; no
  *      bar changes colour throughout (HTF-07..15)
@@ -755,6 +756,31 @@ try {
     sunday.count === '14 tasks · 14 blocks',
     `${sunday.count}`
   )
+  // The seed's first eight tasks share the day and have equal time, so they
+  // take the slots in seed order: their bars wear AD-045's palette in order.
+  const PALETTE = {
+    dark: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'],
+    light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948']
+  }
+  const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`
+  const shownTheme = await evaluate(`document.documentElement.dataset.theme`)
+  const worn = {}
+  for (const theme of ['dark', 'light']) {
+    worn[theme] = await evaluate(
+      `(() => { document.documentElement.dataset.theme = ${JSON.stringify(theme)}; const bars = [...document.querySelectorAll('.hcal-col.selected .hcal-bar')]; return ${JSON.stringify(SEED_TITLES.slice(0, 8))}.map(t => { const b = bars.find(x => x.getAttribute('aria-label').split(', ')[0].includes(t)); return b ? getComputedStyle(b).backgroundColor : null }) })()`
+    )
+  }
+  await evaluate(`document.documentElement.dataset.theme = ${JSON.stringify(shownTheme)}, true`)
+  const offPalette = Object.entries(PALETTE).flatMap(([theme, hexes]) =>
+    hexes
+      .map((hex, i) => [theme, i + 1, rgb(hex), worn[theme][i]])
+      .filter(([, , want, got]) => want !== got)
+  )
+  check(
+    "the seeded Sunday's first eight tasks wear the palette's eight colours in order, in both themes",
+    offPalette.length === 0,
+    JSON.stringify(offPalette.slice(0, 3))
+  )
 
   // 12. Hover and filter by task, in the seeded week (HTF-07..15).
   const labelOf = (title) =>
@@ -818,13 +844,33 @@ try {
   const pointedRow = await pointAt(rowOf(taskB))
   const rowHover = await bars()
   await pointAway()
+  // Read after each leave, before the next source enters: an enter would
+  // overwrite a hover that never cleared.
+  const rowLeft = await bars()
   const pointedBar = await pointAt(barOf(taskC))
   const barHover = await bars()
   await pointAway()
+  const barLeft = await bars()
   check(
     'pointing at a drawer group header or at a bar does the same for its task',
     pointedRow && onlyFull(rowHover, taskB) && pointedBar && onlyFull(barHover, taskC),
     `row ${pointedRow}, bar ${pointedBar}`
+  )
+  check(
+    'leaving a drawer group header or a bar restores every bar',
+    onlyFull(rowHover, taskB) && allFull(rowLeft) && onlyFull(barHover, taskC) && allFull(barLeft),
+    `${opacities(rowLeft)} / ${opacities(barLeft)}`
+  )
+  await evaluate(`${barOf(taskB)}?.focus(), true`)
+  await sleep(400)
+  const barFocus = await bars()
+  await evaluate(`document.activeElement.blur(), true`)
+  await sleep(400)
+  const barBlurred = await bars()
+  check(
+    'keyboard focus on a bar fades the other tasks, and leaving it restores them',
+    onlyFull(barFocus, taskB) && allFull(barBlurred),
+    `${opacities(barFocus)} / ${opacities(barBlurred)}`
   )
   await evaluate(`${chipOf(taskD)}?.querySelector('.hleg-pick')?.focus(), true`)
   await sleep(400)
@@ -913,7 +959,7 @@ try {
   )
   check(
     'no bar changes colour while tasks are pointed at, picked or cleared',
-    [chipHover, rowHover, barHover, chipFocus, picked, cleared, recleared].every((list) =>
+    [chipHover, rowHover, barHover, barFocus, chipFocus, picked, cleared, recleared].every((list) =>
       sameColours(list, palette)
     ) && palette.size === 14,
     `${palette.size} bars`
