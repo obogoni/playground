@@ -1,5 +1,5 @@
 /* CDP smoke for the Files diffs (FDIF-01..32), with pinned tabs, bulk closes
- * and expanding or collapsing every change (FPOL-01..17).
+ * and expanding or collapsing every change (FPOL-01..18).
  *
  * Same three modes as scripts/smoke-files.mjs, for the same reason: the app
  * loads its config once at startup, so a workspace registered afterwards is
@@ -54,6 +54,7 @@ const BASE = process.env.SMOKE_BASE ?? process.argv[3] ?? process.env.TEMP ?? '.
 const WS_PATH = join(BASE, 'fxd-smoke-seed')
 const REPO = join(WS_PATH, 'app')
 const ORIGIN = join(BASE, 'fxd-smoke-origin.git')
+const OTHER = join(BASE, 'fxd-smoke-other')
 const CONFIG_PATH =
   process.env.SMOKE_CONFIG ?? join(process.env.APPDATA ?? '', 'playground', 'config.json')
 
@@ -141,6 +142,7 @@ function seed() {
 }
 
 function clean() {
+  rmTree(OTHER)
   if (existsSync(CONFIG_PATH)) {
     const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'))
     if (Array.isArray(config.workspaces)) {
@@ -357,6 +359,16 @@ async function tabMenu(ws, name, item) {
     throw new Error(`No menu entry ${item} on ${name}: ${J(await menuItems(ws))}`)
   }
   await sleep(450)
+}
+
+/** Selects one worktree by its branch in the Tree direction, then returns to Files. */
+async function selectBranch(ws, branch) {
+  await evaluate(ws, clickByText('.topbar-segment', 'Tree'))
+  await sleep(600)
+  if (!(await evaluate(ws, clickBranch(branch)))) throw new Error(`No worktree on ${branch}`)
+  await sleep(900)
+  await evaluate(ws, clickByText('.topbar-segment', 'Files'))
+  await sleep(1600)
 }
 
 async function openStripMenuMore(ws) {
@@ -881,10 +893,60 @@ async function drive() {
   check(
     'Clicking the pin unpins the tab to the front of the unpinned tabs (FPOL-03)',
     J(unpinnedStrip) === J(['All changes', 'f04.ts', 'f02.ts', 'f00.ts', 'f01.ts', 'f03.ts']) &&
-      (await tabMarks(ws))['f02.ts'] === 'close',
-    J(unpinnedStrip)
+      (await tabMarks(ws))['f02.ts'] === 'close' &&
+      (await activeTab(ws)) === 'f00.ts',
+    `${J(unpinnedStrip)}, active ${await activeTab(ws)}`
   )
   await tabMenu(ws, 'f02.ts', 'Pin')
+
+  // Opening a file already open in a pinned tab focuses that tab (edge case, FXPL-16).
+  await focusTabNamed(ws, 'f00.ts')
+  const beforeReopen = await strip(ws)
+  await openStackFile(ws, 'f02.ts')
+  check(
+    'Opening a file already open in a pinned tab focuses it, pinned, with no second tab (edge case)',
+    J(await strip(ws)) === J(beforeReopen) &&
+      (await activeTab(ws)) === 'f02.ts' &&
+      (await tabMarks(ws))['f02.ts'] === 'pin',
+    `${J(await strip(ws))}, active ${await activeTab(ws)}`
+  )
+
+  // Pins belong to the worktree: another worktree has none, and they are there on return.
+  git(['worktree', 'add', '-q', '-b', 'other', OTHER])
+  await evaluate(ws, `(document.querySelector('.topbar-icon-btn[title="Refresh"]')?.click(), true)`)
+  await sleep(1500)
+  await selectBranch(ws, 'other')
+  const otherPins = await evaluate(ws, `document.querySelectorAll('.file-tab-pin').length`)
+  const otherStrip = await strip(ws)
+  await selectBranch(ws, 'feature/diff')
+  const backStrip = await strip(ws)
+  check(
+    'Each worktree keeps its own pinned tabs (edge case, FXPL-18)',
+    otherPins === 0 &&
+      !otherStrip.includes('f02.ts') &&
+      J(backStrip) === J(beforeReopen) &&
+      (await tabMarks(ws))['f04.ts'] === 'pin',
+    `other: ${otherPins} pins ${J(otherStrip)}; back: ${J(backStrip)}`
+  )
+
+  // A pinned diff tab whose file stops being changed stays pinned and open.
+  writeFileSync(join(REPO, 'stack', 'f02.ts'), 'export const n2 = 2\nexport const tail = 0\n')
+  git(['add', 'stack/f02.ts'])
+  git(['commit', '-q', '-m', 'put f02 back as it is on main'])
+  await sleep(2600)
+  const stillChanged = git(['diff', '--name-only', 'origin/main', 'HEAD']).split('\n')
+  const inTree = await evaluate(
+    ws,
+    `[...document.querySelectorAll('.file-tree-name')].some((e) => e.textContent.trim() === 'f02.ts')`
+  )
+  check(
+    'A pinned tab whose file stops being changed stays open and pinned (edge case)',
+    !stillChanged.includes('stack/f02.ts') &&
+      !inTree &&
+      (await strip(ws)).includes('f02.ts') &&
+      (await tabMarks(ws))['f02.ts'] === 'pin',
+    `git lists f02: ${stillChanged.includes('stack/f02.ts')}, tree lists it: ${inTree}, strip ${J(await strip(ws))}`
+  )
 
   // All changes carries no menu at all.
   await evaluate(ws, rightClickTab('All changes'))
@@ -924,6 +986,30 @@ async function drive() {
       afterOutside === null &&
       J(await strip(ws)) === J(beforeDismiss),
     `after Escape ${J(afterEscape)}, after outside ${J(afterOutside)}`
+  )
+
+  // A click that dismisses a menu still does what it lands on, and the ⋯ menu
+  // closes on Escape as a tab's does (FPOL-13 as amended 2026-09-26).
+  await focusTabNamed(ws, 'f01.ts')
+  await evaluate(ws, rightClickTab('f03.ts'))
+  await sleep(300)
+  const openBeforeTabClick = (await menuItems(ws)) !== null
+  await focusTabNamed(ws, 'f00.ts')
+  const afterTabClick = { menu: await menuItems(ws), active: await activeTab(ws) }
+  await openStripMenuMore(ws)
+  const moreOpen = (await menuItems(ws)) !== null
+  await send(ws, 'Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' })
+  await send(ws, 'Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' })
+  await sleep(300)
+  check(
+    'A click on another tab closes the menu and activates that tab; Escape closes the ⋯ menu (FPOL-13)',
+    openBeforeTabClick &&
+      afterTabClick.menu === null &&
+      afterTabClick.active === 'f00.ts' &&
+      moreOpen &&
+      (await menuItems(ws)) === null &&
+      J(await strip(ws)) === J(beforeDismiss),
+    `${J(afterTabClick)}, ⋯ open ${moreOpen} then ${J(await menuItems(ws))}`
   )
 
   // Close to the right, with the active tab among the closed ones.
@@ -1019,6 +1105,37 @@ async function drive() {
       afterCollapseAll.expanded === 0 &&
       afterCollapseAll.diffEditors === 0,
     J(afterCollapseAll)
+  )
+
+  // A commit tab's stack has the same two buttons (FPOL-18, owner decision 2026-09-26).
+  await evaluate(ws, clickByText('.file-tree-mode', 'Commits'))
+  await sleep(2200)
+  const openedCommit = await evaluate(
+    ws,
+    `(() => {
+       const row = [...document.querySelectorAll('.commit-row')].find(
+         (r) => r.querySelector('.commit-subject')?.textContent.trim() === 'work on the branch')
+       if (!row) return false
+       row.querySelector('.commit-open').click()
+       return true
+     })()`
+  )
+  await sleep(2600)
+  const commitBefore = await evaluate(ws, stackState)
+  await evaluate(ws, clickByText('.all-changes-toggle', 'Expand all'))
+  await sleep(2200)
+  const commitExpanded = await evaluate(ws, stackState)
+  await evaluate(ws, clickByText('.all-changes-toggle', 'Collapse all'))
+  await sleep(1600)
+  const commitCollapsed = await evaluate(ws, stackState)
+  check(
+    "A commit tab's Expand all and Collapse all open and fold every file of the commit (FPOL-18)",
+    openedCommit &&
+      commitBefore.sections >= 40 &&
+      commitBefore.expanded < commitBefore.sections &&
+      commitExpanded.expanded === commitExpanded.sections &&
+      commitCollapsed.expanded === 0,
+    `opened ${openedCommit}: ${commitBefore.expanded} -> ${commitExpanded.expanded} -> ${commitCollapsed.expanded} of ${commitExpanded.sections}`
   )
 
   // A mode with nothing listed: commit everything left, then look at Uncommitted.
