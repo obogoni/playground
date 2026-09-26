@@ -44,6 +44,26 @@
   background: var(--hcal-slot3);
 }
 
+.hleg-swatch.role-slot4 {
+  background: var(--hcal-slot4);
+}
+
+.hleg-swatch.role-slot5 {
+  background: var(--hcal-slot5);
+}
+
+.hleg-swatch.role-slot6 {
+  background: var(--hcal-slot6);
+}
+
+.hleg-swatch.role-slot7 {
+  background: var(--hcal-slot7);
+}
+
+.hleg-swatch.role-slot8 {
+  background: var(--hcal-slot8);
+}
+
 .hleg-swatch.role-other {
   background: var(--text-faint);
 }
