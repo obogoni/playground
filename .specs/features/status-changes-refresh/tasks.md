@@ -216,6 +216,8 @@ T8 → T9 → T10
 
 **Done**: the watchers close on `will-quit`, beside the Files watcher, rather than on `window-all-closed`; both fire on quit. A failed recount is logged once in `recountWorktree`, for pushes and for `worktrees:status` alike.
 
+**Accepted without executable evidence (2026-09-26)**: SCRF-06's keep-the-last-count and logging live in this wiring (`recountWorktree` logs and answers `null`; the push is skipped) and in `use-tree`'s `recount`, which ignores `null`. The Test Coverage Matrix gives these layers no tests, and the smoke cannot make a recount fail for a worktree that stays in the tree, so they rest on code reading and on `worktreeStatus`'s `null` test (T2).
+
 **Tests**: none
 **Gate**: build
 
@@ -292,7 +294,7 @@ T8 → T9 → T10
 
 - [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
 
-**Done**: the turn-end trigger reads transitions off the `sessions` state `use-sessions` already patches, keeping each session's last seen state in a ref, rather than adding a second `session:activity` subscription.
+**Done**: the turn-end trigger first read transitions off the `sessions` state `use-sessions` patches. The Verifier flagged that two pushes applied in one render would hide `working` → `waiting`, so `e632b96` moved it to its own `session:activity` subscription, comparing each push with the session's last seen state (seeded from the list); the smoke's SCRF-07 check passed on it and failed with its `recount` removed (3 → 3).
 
 **Tests**: none
 **Gate**: build

@@ -37,7 +37,7 @@ after four were committed. Window focus re-fetches tasks, not the tree.
 | A patched tree | A new tree identity whenever a git-state recount lands, even with an unchanged count | The status bar recomputes ahead/behind on every new tree identity (STBR-11); a commit changes "ahead" without necessarily changing the count | y |
 | Which worktrees are watched | Exactly those in the latest `tree:get` result; a worktree whose path is missing gets no watcher | The set follows creation and removal with no extra bookkeeping | y |
 | What "turn ended" means | A session's activity going from `working` to `waiting` or `exited` | The states `session-activity-status` already pushes (`session:activity`) | y |
-| Which worktree a session belongs to | The worktree containing the session's `cwd`, by the existing `deriveAttribution` | Same join the rail uses; a session outside every worktree recounts nothing | y |
+| Which worktree a session belongs to | The worktree containing the session's `cwd`, by the existing `worktreeIdForPath` (longest containing path) | `deriveAttribution`, the rail's join, matches only an exact path, so it misses a `cwd` in a subfolder (changed at T6, 2026-09-26); a session outside every worktree recounts nothing | y |
 | Focus | Rebuilds the whole tree, sharing the tasks' 5 s debounce | A return to the app may follow edits in any worktree | y |
 | Base branch | `feature/status-changes-refresh` off `feature/status-bar` (PR #97), rebased onto `origin/main` after #97 merged; the PR closes #107 | Owner decision (grill Q2); rebase approved 2026-09-26 | y |
 | Smoke data | Temp repositories registered as a workspace, the owner's workspace list snapshotted and restored, as `smoke-status-bar.mjs` already does | The accepted pattern of the status bar smoke | y |
@@ -113,16 +113,16 @@ Added after T1's measurement (2026-09-26):
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| SCRF-01 | P1: commit — AC 1 | Tasks | In Tasks |
-| SCRF-02 | P1: commit — AC 2 | Tasks | In Tasks |
-| SCRF-03 | P1: commit — AC 3 | Tasks | In Tasks |
-| SCRF-04 | P1: commit — AC 4 | Tasks | In Tasks |
-| SCRF-05 | P1: commit — AC 5 | Tasks | In Tasks |
-| SCRF-06 | P1: commit — AC 6 | Tasks | In Tasks |
-| SCRF-07 | P1: turn end — AC 7 | Tasks | In Tasks |
-| SCRF-08 | P1: turn end — AC 8 | Tasks | In Tasks |
-| SCRF-09 | P1: focus — AC 9 | Tasks | In Tasks |
-| SCRF-10 | P1: focus — AC 10 | Tasks | In Tasks |
+| SCRF-01 | P1: commit — AC 1 | Execute | Done (T3, T5, T6, T7, T9) |
+| SCRF-02 | P1: commit — AC 2 | Execute | Done (T3) |
+| SCRF-03 | P1: commit — AC 3 | Execute | Done (T6, T7) |
+| SCRF-04 | P1: commit — AC 4 | Execute | Done (T3, T5) |
+| SCRF-05 | P1: commit — AC 5 | Execute | Done (T3) |
+| SCRF-06 | P1: commit — AC 6 | Execute | Done (T2, T5, T7) |
+| SCRF-07 | P1: turn end — AC 7 | Execute | Done (T6, T8, T10) |
+| SCRF-08 | P1: turn end — AC 8 | Execute | Done (T6) |
+| SCRF-09 | P1: focus — AC 9 | Execute | Done (T8, T9) |
+| SCRF-10 | P1: focus — AC 10 | Execute | Done (T8, T9) |
 | SCRF-11 | P1: commit — AC 11 | Execute | Done (T2) |
 
 **Coverage:** 11 total, 11 mapped to tasks, 0 unmapped. SCRF-11 was added on 2026-09-26 from T1's measurement (owner's choice: both status calls run with `--no-optional-locks`).
