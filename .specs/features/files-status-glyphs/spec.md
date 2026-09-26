@@ -32,7 +32,7 @@ right after the chevron and before the path.
 | --------------------- | -------------- | --------- | ---------- |
 | Glyphs | Added `+`; modified `M`, deleted `D`, renamed `R` stay letters; untracked keeps `U` | Owner decision (issue #131) | y |
 | Tones | Today's: M amber, `+` green, D red, R accent, U muted text on a faint tint (`FileTree.css:136-159`) | Owner decision (issue #131): "colours stay as today" | y |
-| Glyph look | Today's 16 px tinted pill, 10 px bold, only its content and place change | "Colours stay as today"; the issue's mockup is plain text and cannot show a tint | n (owner to confirm) |
+| Glyph look | Today's 16 px tinted pill, 10 px bold, only its content and place change | "Colours stay as today"; the issue's mockup is plain text and cannot show a tint | n (owner confirmed 2026-09-26) |
 | Tree position | Last element of a file row, flush with the row's right padding; the name flexes and ellipses | Owner decision (issue #131) | y |
 | Header position | Last element of the header, after the `+N −N` counts, flush with the header's right padding | Owner decision (issue #131) | y |
 | Strikethrough | `text-decoration: line-through` on the name (tree) or path (header) text only | Owner decision (issue #131) | y |
@@ -40,13 +40,13 @@ right after the chevron and before the path.
 | Shared mapping | A pure `changeStatusView(status)` in `src/renderer/src/lib/change-status.ts` returns glyph, label and strike; one `StatusGlyph` component and stylesheet replace both letter maps and both pill stylesheets | Owner decision (issue #131) for the mapping; one stylesheet keeps the two places from drifting apart | y |
 | Commit tab headers | Covered by reuse: `CommitTab.tsx:43` mounts `AllChangesTab`, which renders `DiffSection` | Issue #131 names commit headers; nothing commit-specific to build | y |
 | Untracked in diff-to-origin | Never listed: that mode reads `git diff --name-status` (`file-tree.ts:216`), which has no untracked status; `U` appears only in the uncommitted list and its stack | Fact of the data source | y |
-| Very deep rows | Where the indent alone fills the row (about ten levels at the column's 200 px minimum), the glyph is pushed past the column like the name already is; no change | The indent grows 13 px per level (`FileTree.tsx:46-48`); fixing it means a different indent model, outside this issue | n (owner to confirm) |
+| Very deep rows | Where the indent alone fills the row (about ten levels at the column's 200 px minimum), the glyph is pushed past the column like the name already is; no change | The indent grows 13 px per level (`FileTree.tsx:46-48`); fixing it means a different indent model, outside this issue | n (owner confirmed 2026-09-26) |
 | Room for the discard action (#132) | The glyph sits inside an end group (`.file-tree-end`, `.diff-section-end`) that #132 fills with its action before the glyph | Orchestrator instruction; see the hand-off note in `tasks.md` | y |
 | Smoke home | `scripts/smoke-files-diff.mjs`, a new section before the icon section (which reloads the window and must stay last) | Its seed already has M, A, D, R in diff-to-origin and M, U uncommitted, plus the All changes stack | y |
 | Seed additions | An untracked file with a long name in `src/` (12 lines) and an uncommitted change to the binary `assets/logo.bin` | The long name proves the ellipsis; the 12 lines and the binary give headers of different count widths and one with no counts, so a glyph misplaced before the counts cannot pass | y |
 | Base branch | `feature/files-status-glyphs` off `feature/file-icons` `422d68d` (PR #126); rebased once #126 lands | Owner-approved stack (issue #131: depends on #126) | y |
 
-**Open questions:** none — the two `owner to confirm` defaults above are logged and reported.
+**Open questions:** none — the two `owner confirmed 2026-09-26` defaults above are logged and reported.
 
 ---
 
