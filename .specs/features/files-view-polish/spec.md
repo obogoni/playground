@@ -57,8 +57,8 @@ expect from a tab strip and a multi-file diff.
 **Acceptance Criteria**:
 
 1. WHEN the owner chooses Pin on an unpinned tab THEN the view SHALL mark it pinned and move it right after All changes and any tabs pinned before it
-2. WHILE a tab is pinned it SHALL show a pin in place of its close button
-3. WHEN the owner clicks a pinned tab's pin, or chooses Unpin THEN the view SHALL unpin it and move it to the front of the unpinned tabs
+2. Every tab but All changes SHALL show a pin button before its close button, drawn outlined while the tab is unpinned and filled in the accent colour while it is pinned (owner decision, 2026-09-26, after PR #125: the pin is always there, like the close button)
+3. WHEN the owner clicks a pinned tab's pin, or chooses Unpin THEN the view SHALL unpin it and move it to the front of the unpinned tabs; WHEN the owner clicks an unpinned tab's pin THEN the view SHALL pin it as in AC 1
 4. WHEN a tab is pinned or unpinned THEN the active tab SHALL stay the same
 5. The All changes tab SHALL offer neither Pin nor any close entry
 
@@ -78,7 +78,7 @@ expect from a tab strip and a multi-file diff.
 7. WHEN the owner chooses Close unpinned THEN the view SHALL close every unpinned tab and keep every pinned one
 8. WHEN the owner chooses Close others on a tab THEN the view SHALL close every other unpinned tab and keep that tab and every pinned one
 9. WHEN the owner chooses Close to the right on a tab THEN the view SHALL close every unpinned tab to its right in the strip
-10. WHEN the owner chooses Close on a pinned tab THEN the view SHALL close it
+10. WHEN the owner chooses Close on a pinned tab, or clicks its close button, THEN the view SHALL close it
 11. WHEN a bulk close closes the active tab THEN the view SHALL activate the nearest surviving tab to its right, else to its left, else All changes in a diff mode, else nothing
 12. WHEN the owner clicks ⋯ at the end of the strip THEN the view SHALL open a menu with Close unpinned and Close all
 13. WHEN a menu is open and the owner clicks outside it or presses Escape THEN the view SHALL close the menu; dismissing it SHALL change no tab by itself, and a click that lands on a control SHALL still do what that control does, as the sidebar's and the commit list's menus behave (owner decision, 2026-09-26)
@@ -118,15 +118,15 @@ expect from a tab strip and a multi-file diff.
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | FPOL-01 | P1: pin — AC 1 | Execute | Done |
-| FPOL-02 | P1: pin — AC 2 | Execute | Done |
-| FPOL-03 | P1: pin — AC 3 | Execute | Done |
+| FPOL-02 | P1: pin — AC 2 | Execute | Done (amended, A1) |
+| FPOL-03 | P1: pin — AC 3 | Execute | Done (amended, A1) |
 | FPOL-04 | P1: pin — AC 4 | Execute | Done |
 | FPOL-05 | P1: pin — AC 5 | Execute | Done |
 | FPOL-06 | P1: close many — AC 6 | Execute | Done |
 | FPOL-07 | P1: close many — AC 7 | Execute | Done |
 | FPOL-08 | P1: close many — AC 8 | Execute | Done |
 | FPOL-09 | P1: close many — AC 9 | Execute | Done |
-| FPOL-10 | P1: close many — AC 10 | Execute | Done |
+| FPOL-10 | P1: close many — AC 10 | Execute | Done (amended, A1) |
 | FPOL-11 | P1: close many — AC 11 | Execute | Done |
 | FPOL-12 | P1: close many — AC 12 | Execute | Done |
 | FPOL-13 | P1: close many — AC 13 | Execute | Done |

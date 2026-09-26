@@ -331,6 +331,15 @@ The Verifier failed iteration 1 on evidence, not behaviour. Fixes:
   - set C: the buttons wired to the wrong set → checks 38 to 43 FAIL, FPOL-18 included.
 - **Code**: `StripMenu` moved above `changeShortcut`'s doc comment.
 
+### Amendment 1 (owner, 2026-09-26, after PR #125)
+
+The owner wants the pin on every tab, like the close button, with its icon telling whether the tab is pinned: outlined when unpinned, filled in the accent colour when pinned, placed before the close button, and the close button kept on pinned tabs. FPOL-02, FPOL-03 and FPOL-10 are amended in `spec.md`. The rules (`pinTab`, `unpinTab`, `togglePin`, `tabsAfterClose`) already cover it, so no unit test changes.
+
+- **A1 — the pin on every tab.** `FileTabs.tsx` renders the pin button and the close button on every tab but All changes, the pin first, with `aria-label` Pin/Unpin and `aria-pressed`; `FileTabs.css` draws it outlined and muted, filled and accented on a pinned tab. Gate: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`.
+  - [ ] Done
+- **A2 — smoke.** Section 12 checks a pin and a close on every tab, the pin's computed fill (none when unpinned, the accent when pinned), a click on an unpinned tab's pin pinning it without moving the focus, and a pinned tab's close button closing it; the per-worktree check counts pinned tabs, not pin buttons. Each changed check seen failing against a mutant, then passing on a fresh launch.
+  - [ ] Done
+
 ## Phase Execution Map
 
 ```
