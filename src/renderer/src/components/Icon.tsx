@@ -147,7 +147,7 @@ const PATHS: Record<IconName, JSX.Element> = {
       <path d="m6 6 12 12" />
     </>
   ),
-  // Lucide `pin`: a pinned tab shows it where its close button was (FPOL-02).
+  // Lucide `pin`: every tab's pin button, filled while the tab is pinned (FPOL-02).
   pin: (
     <>
       <path d="M12 17v5" />

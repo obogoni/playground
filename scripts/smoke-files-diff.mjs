@@ -309,28 +309,39 @@ const activeTab = (ws) =>
   )
 
 /**
- * For every tab, what its buttons show (FPOL-02): `pinned` is a filled, pressed
- * pin before a close button, `unpinned` an outlined one before a close button.
- * Anything else is spelled out, so a failure says what is on screen.
+ * For every tab, what its buttons show (FPOL-02): `pinned` is a pressed pin
+ * filled in the theme's accent before a close button, `unpinned` an outlined one
+ * before a close button, `bare` neither button (All changes). Anything else is
+ * spelled out, so a failure says what is on screen.
  */
 const tabMarks = (ws) =>
   evaluate(
     ws,
-    `Object.fromEntries([...document.querySelectorAll('.file-tab')].map((tab) => {
-       const pin = tab.querySelector('.file-tab-pin')
-       const close = tab.querySelector('.file-tab-close')
-       const filled = pin ? getComputedStyle(pin.querySelector('svg')).fill !== 'none' : null
-       const pressed = pin?.getAttribute('aria-pressed') ?? null
-       const pinFirst = !!pin && !!close && !!(pin.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING)
-       const mark =
-         pinFirst && filled && pressed === 'true'
-           ? 'pinned'
-           : pinFirst && !filled && pressed === 'false'
-             ? 'unpinned'
-             : 'pin ' + (pin ? (filled ? 'filled' : 'outlined') + ' pressed=' + pressed : 'none') +
-               ', close ' + (close ? 'yes' : 'no') + ', pin first ' + pinFirst
-       return [(${tabName})(tab.querySelector('.file-tab-label')), mark]
-     }))`
+    `(() => {
+       // The accent as the browser resolves it, to compare with a computed fill.
+       const probe = document.createElement('span')
+       probe.style.color = 'var(--accent)'
+       document.body.append(probe)
+       const accent = getComputedStyle(probe).color
+       probe.remove()
+       return Object.fromEntries([...document.querySelectorAll('.file-tab')].map((tab) => {
+         const pin = tab.querySelector('.file-tab-pin')
+         const close = tab.querySelector('.file-tab-close')
+         const fill = pin ? getComputedStyle(pin.querySelector('svg')).fill : null
+         const pressed = pin?.getAttribute('aria-pressed') ?? null
+         const pinFirst = !!pin && !!close && !!(pin.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING)
+         const mark =
+           pinFirst && fill === accent && pressed === 'true'
+             ? 'pinned'
+             : pinFirst && fill === 'none' && pressed === 'false'
+               ? 'unpinned'
+               : !pin && !close
+                 ? 'bare'
+                 : 'pin ' + (pin ? 'fill ' + fill + ' (accent ' + accent + ') pressed=' + pressed : 'none') +
+                   ', close ' + (close ? 'yes' : 'no') + ', pin first ' + pinFirst
+         return [(${tabName})(tab.querySelector('.file-tab-label')), mark]
+       }))
+     })()`
   )
 
 const tabElement = (name) => `
@@ -902,8 +913,9 @@ async function drive() {
     J(pinnedStrip)
   )
   check(
-    'Every tab shows a pin before its close button, filled only while pinned (FPOL-02)',
-    marks['f02.ts'] === 'pinned' &&
+    'Every tab but All changes shows a pin before its close button, filled in the accent only while pinned (FPOL-02)',
+    marks['All changes'] === 'bare' &&
+      marks['f02.ts'] === 'pinned' &&
       marks['f04.ts'] === 'pinned' &&
       ['f00.ts', 'f01.ts', 'f03.ts'].every((name) => marks[name] === 'unpinned'),
     J(marks)
@@ -925,7 +937,9 @@ async function drive() {
     `${J(unpinnedStrip)}, active ${await activeTab(ws)}`
   )
 
-  // The same pin, on an unpinned tab, pins it (FPOL-03, as amended).
+  // The same pin, on an unpinned tab, pins it (FPOL-03, as amended). The tab
+  // pinned is not the active one, so a pin that focused its tab would show.
+  await focusTabNamed(ws, 'f01.ts')
   await evaluate(ws, clickPinOf('f00.ts'))
   await sleep(400)
   const pinnedByButton = await strip(ws)
@@ -933,7 +947,7 @@ async function drive() {
     "Clicking an unpinned tab's pin pins it, and the focus stays (FPOL-03, FPOL-04)",
     J(pinnedByButton) === J(['All changes', 'f04.ts', 'f00.ts', 'f02.ts', 'f01.ts', 'f03.ts']) &&
       (await tabMarks(ws))['f00.ts'] === 'pinned' &&
-      (await activeTab(ws)) === 'f00.ts',
+      (await activeTab(ws)) === 'f01.ts',
     `${J(pinnedByButton)}, marks ${J(await tabMarks(ws))}, active ${await activeTab(ws)}`
   )
   await evaluate(ws, clickPinOf('f00.ts'))
@@ -1099,12 +1113,15 @@ async function drive() {
   )
 
   // A pinned tab keeps its close button, and it closes the tab (FPOL-10, as amended).
+  const beforeClose = await tabMarks(ws)
   const closedByButton = await evaluate(ws, clickCloseOf('f02.ts'))
   await sleep(400)
   check(
     "A pinned tab's close button closes it (FPOL-10)",
-    closedByButton && J(await strip(ws)) === J(['All changes']),
-    `clicked: ${closedByButton}, strip ${J(await strip(ws))}`
+    beforeClose['f02.ts'] === 'pinned' &&
+      closedByButton &&
+      J(await strip(ws)) === J(['All changes']),
+    `before ${J(beforeClose)}, clicked: ${closedByButton}, strip ${J(await strip(ws))}`
   )
 
   await openStackFile(ws, 'f00.ts')
