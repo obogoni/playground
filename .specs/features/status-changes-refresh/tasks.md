@@ -91,8 +91,27 @@ T8 → T9 → T10
 
 **Done when**:
 
-- [ ] Each of the six operations shows an event naming `index` or `HEAD`, or execution stops
-- [ ] Baselines recorded: test count, lint warning count
+- [x] Each of the six operations shows an event naming `index` or `HEAD`, or execution stops
+- [x] Baselines recorded: test count, lint warning count
+
+**Measured (2026-09-26, git 2.55.0.windows.4, Node 24.19.0, win32)**:
+
+| Checkout | Operation | Directory watch: `index` / `HEAD` | File watch `index` | File watch `HEAD` |
+| -------- | --------- | --------------------------------- | ------------------ | ----------------- |
+| primary | `git add` | `index` | 2 | 0 |
+| primary | `git commit` | `index` | 2 | 0 |
+| primary | `git checkout -b` | `index`, `HEAD` | 2 | 2 |
+| linked | `git add` | `index` | 2 | 0 |
+| linked | `git commit` | `index` | 2 | 0 |
+| linked | `git checkout -b` | `index`, `HEAD` | 2 | 2 |
+
+- A commit reaches the watcher through the rewritten `index`, as the spec assumed; `HEAD` fires only for a checkout. The other entries seen (`index.lock`, `HEAD.lock`, `COMMIT_EDITMSG`, `AUTO_MERGE.lock`, `packed-refs.lock`, `objects`) are filtered out by name.
+- The same table held for a second round on the same watchers, so a **file** watch survives git's rename on Windows: `FileWatcher` has no defect here.
+- No cross-talk: an operation in the linked worktree fires nothing named `index` or `HEAD` in the primary's git dir, and vice versa.
+- **A plain `git status --porcelain` rewrites the index** (`index.lock` → `index`, 2 events) after a stat-only change, after a content edit, and even on a repeat with nothing new. With `git --no-optional-locks status --porcelain` it fires nothing. A recount run the plain way re-triggers the watcher that asked for it.
+- `fs.watch` on a path spelled with 8.3 short names (`C:\Users\VINICI~1\…`) aborts the process in libuv (`Assertion failed: !_wcsnicmp(filename, dir, dirlen), src\win\fs-event.c:72`), which no `try` catches. Worktree paths come from `git worktree list` in long form, so the app is not exposed today; the probe needed `realpathSync.native`.
+
+**Baselines**: 1663 tests in 90 files (`npx vitest run`); lint 0 errors, **18 warnings**.
 
 **Tests**: none
 **Gate**: manual
