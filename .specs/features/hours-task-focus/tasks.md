@@ -123,7 +123,9 @@ T11 → T12 → T13
 
 **Done when**:
 
-- [ ] The number checked free across `develop` and every planned branch's `STATE.md`
+- [x] The number checked free across `develop` and every planned branch's `STATE.md`
+
+**Done**: 2026-09-26. AD-045 checked free on develop (AD-044), origin/main (AD-043) and every local and fork feature branch.
 
 **Tests**: none
 **Gate**: quick
