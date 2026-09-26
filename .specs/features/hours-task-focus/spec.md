@@ -135,15 +135,15 @@ detail to its bars, and there is no way to see just the days one task took.
 | HTF-04 | P1: colours — AC 4 | Execute | Implemented (T1) |
 | HTF-05 | P1: colours — AC 5 | Execute | Implemented (T3, T4, T5) |
 | HTF-06 | P1: colours — AC 6 | Execute | Implemented (T1) |
-| HTF-07 | P1: hover — AC 7 | Execute | Implemented (T6..T11), smoke pending (T13) |
-| HTF-08 | P1: hover — AC 8 | Execute | Implemented (T6..T11), smoke pending (T13) |
-| HTF-09 | P1: hover — AC 9 | Execute | Implemented (T6..T11), smoke pending (T13) |
-| HTF-10 | P1: filter — AC 10 | Execute | Implemented (T6..T11), smoke pending (T13) |
-| HTF-11 | P1: filter — AC 11 | Execute | Implemented (T6..T11), smoke pending (T13) |
-| HTF-12 | P1: filter — AC 12 | Execute | Implemented (T6..T11), smoke pending (T13) |
-| HTF-13 | P1: filter — AC 13 | Execute | Implemented (T6..T11), smoke pending (T13) |
-| HTF-14 | P1: filter — AC 14 | Execute | Implemented (T6..T11), smoke pending (T13) |
-| HTF-15 | P1: filter — AC 15 | Execute | Implemented (T6..T11), smoke pending (T13) |
+| HTF-07 | P1: hover — AC 7 | Execute | Verified (T13 smoke) |
+| HTF-08 | P1: hover — AC 8 | Execute | Verified (T13 smoke) |
+| HTF-09 | P1: hover — AC 9 | Execute | Verified (T13 smoke) |
+| HTF-10 | P1: filter — AC 10 | Execute | Verified (T13 smoke) |
+| HTF-11 | P1: filter — AC 11 | Execute | Verified (T13 smoke) |
+| HTF-12 | P1: filter — AC 12 | Execute | Verified (T13 smoke) |
+| HTF-13 | P1: filter — AC 13 | Execute | Verified (T13 smoke) |
+| HTF-14 | P1: filter — AC 14 | Execute | Verified (T13 smoke) |
+| HTF-15 | P1: filter — AC 15 | Execute | Verified (T13 smoke) |
 | HTF-16 | P2: smoke — AC 16 | Execute | Verified (T12 smoke) |
 | HTF-17 | P2: smoke — AC 17 | Execute | Verified (T12 smoke) |
 

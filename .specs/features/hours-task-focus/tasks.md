@@ -405,8 +405,10 @@ T11 → T12 → T13
 
 **Done when**:
 
-- [ ] Each check seen failing with its rule broken (no `dimmed` class; `visibleColumns` ignoring the selection), then passing
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Each check seen failing with its rule broken (no `dimmed` class; `visibleColumns` ignoring the selection), then passing
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Done**: 2026-09-26. 48/48 on the seeded app, twice. Falsified on the running app, each mutant restored from a `.orig`: no `dimmed` class failed the four fading checks (38, 40, 41, 44); `visibleColumns` ignoring the pick failed 42, 45, 46, 47; a faded bar painted Other failed only the colour check (48); chips never reporting leave or blur failed 39 and 41, and 44 and 47 through the hover left stuck on chip D; no × failed 43 and 47.
 
 **Tests**: manual
 **Gate**: manual
