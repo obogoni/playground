@@ -222,6 +222,96 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: M21 src/main/time-log-store.ts:107 (file-stores)
 - last seen: 2026-09-16T22:42:48Z
 
+### L-041 - Test interval-layout logic with several clusters in one input, not one cluster per case
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer/lib` · harmful: 0
+- features: hours-calendar
+- evidence: M12,M13 hours-calendar.ts:127 (renderer/lib)
+- last seen: 2026-09-19T20:43:35Z
+
+### L-042 - Cover the exact-boundary case where one interval ends as the next starts for every interval comparison
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer/lib` · harmful: 0
+- features: hours-calendar
+- evidence: M10 hours-calendar.ts:128 (renderer/lib)
+- last seen: 2026-09-19T20:43:36Z
+
+### L-043 - Test rounding with inputs on both sides of the half so floor, ceil and round are distinguishable
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer/lib` · harmful: 0
+- features: hours-calendar
+- evidence: M8 hours-calendar.ts:75 (renderer/lib)
+- last seen: 2026-09-19T20:43:36Z
+
+### L-044 - State numeric UI thresholds in the spec acceptance criterion, not only in the design
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-12 (+1 more)
+- last seen: 2026-09-19T20:43:36Z
+
+### L-045 - A check whose assertion is satisfied by either branch of a conditional render is not evidence for either; drive the branch the criterion names from data the check itself creates.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-17 - scripts/smoke-hours-calendar.mjs:303-313 (smoke)
+- last seen: 2026-09-19T21:43:36Z
+
+### L-046 - A state flag that re-arms a close or cleanup rule needs a check that starts from the state where the flag is still false, not only from the common state where it is already true.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: MH - src/renderer/src/components/HoursView.tsx:123-126 (renderer)
+- last seen: 2026-09-19T21:43:36Z
+
+### L-047 - A global key handler that exempts text fields is behaviour the acceptance criterion must state, or the exemption is untestable and a mutant removing it survives.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-25 - src/renderer/src/components/HoursView.tsx:66-67 (renderer)
+- last seen: 2026-09-19T21:43:36Z
+
+### L-048 - When an acceptance criterion gains a clause about rendered text or a visual token, add its assertion in the same change; a clause no check reads is where wrong output ships unnoticed.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: N1, N4, N5 - src/renderer/src/components/HoursView.tsx:306-327 (renderer)
+- last seen: 2026-09-19T22:02:37Z
+
+### L-049 - A count shown to the user must count what its label names; do not label a group count as a task count when a group may carry no task.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-15 - src/renderer/src/components/HoursView.tsx:309 (renderer)
+- last seen: 2026-09-19T22:02:37Z
+
+### L-050 - Exercise a fix at the boundary value it was made for; an end-to-end check whose fixture never reaches that value cannot fail when the fix is undone.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-calendar
+- evidence: P1 - src/renderer/src/components/HoursView.tsx:286 vs scripts/smoke-hours-calendar.mjs:342-356 (smoke)
+- last seen: 2026-09-19T22:19:57Z
+
+### L-051 - When several sources feed one hover or focus state, read the view after each source's leave before the next source enters, because the next enter overwrites a leave that never fired
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: validation.md SM1; scripts/smoke-hours-calendar.mjs:818-838; HTF-08 (smoke)
+- last seen: 2026-09-26T21:15:08Z
+
+### L-052 - When an acceptance criterion names several sources for one behaviour, give each source its own check; covering one source leaves the others unverified
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: HTF-09; scripts/smoke-hours-calendar.mjs:829-838 (smoke)
+- last seen: 2026-09-26T21:15:08Z
+
+### L-053 - When the spec fixes exact colour values, assert the computed colours against those values in order, not only that they are distinct
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: HTF-01; scripts/smoke-hours-calendar.mjs:739 (smoke)
+- last seen: 2026-09-26T21:15:09Z
+
+### L-054 - When a spec edge case states what an element shows, assert each stated value on screen, not only that the element is present
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: validation.md SM7; scripts/smoke-hours-calendar.mjs:928; spec edge case 4 (smoke) (smoke)
+- last seen: 2026-09-26T21:48:16Z
+
+### L-055 - Quote UI text in the spec only as the app renders it; check a literal against the formatter before writing it in backticks
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: hours-task-focus
+- evidence: spec.md edge case 4; src/renderer/src/components/HoursLegend.tsx:54 (0m vs 0h00) (specs)
+- last seen: 2026-09-26T21:48:16Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

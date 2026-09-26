@@ -1,0 +1,143 @@
+/* Hours calendar legend (HCAL-21): a row of chips; swatches mirror the bars of HoursCalendar.css. */
+
+.hleg {
+  flex: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hleg-chip {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 340px;
+  box-sizing: border-box;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.hleg-chip:hover {
+  border-color: var(--border-strong);
+}
+
+/* The picked chip filters the week (HTF-11). */
+.hleg-chip.picked {
+  background: color-mix(in oklab, var(--accent) 14%, var(--panel));
+  border-color: var(--accent);
+}
+
+/* The chip's body is the button that picks its group (HTF-10). */
+.hleg-pick {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 4px 10px;
+  background: none;
+  border: none;
+  border-radius: inherit;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.hleg-chip.picked .hleg-pick {
+  padding-right: 4px;
+}
+
+.hleg-pick:focus-visible,
+.hleg-clear:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+/* The × that shows every day again (HTF-12). */
+.hleg-clear {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 5px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.hleg-clear:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.hleg-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  border-radius: 3px;
+}
+
+.hleg-swatch.role-slot1 {
+  background: var(--hcal-slot1);
+}
+
+.hleg-swatch.role-slot2 {
+  background: var(--hcal-slot2);
+}
+
+.hleg-swatch.role-slot3 {
+  background: var(--hcal-slot3);
+}
+
+.hleg-swatch.role-slot4 {
+  background: var(--hcal-slot4);
+}
+
+.hleg-swatch.role-slot5 {
+  background: var(--hcal-slot5);
+}
+
+.hleg-swatch.role-slot6 {
+  background: var(--hcal-slot6);
+}
+
+.hleg-swatch.role-slot7 {
+  background: var(--hcal-slot7);
+}
+
+.hleg-swatch.role-slot8 {
+  background: var(--hcal-slot8);
+}
+
+.hleg-swatch.role-other {
+  background: var(--text-faint);
+}
+
+.hleg-swatch.role-no-task {
+  background: transparent;
+  border: 1.5px solid var(--text-muted);
+}
+
+.hleg-label {
+  min-width: 0;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hleg-total {
+  flex: none;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
