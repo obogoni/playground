@@ -235,7 +235,7 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Each notice copied from the installed package's LICENSE, not retyped
+- [x] Each notice copied from the installed package's LICENSE, not retyped (by script: vscode-icons-js from its LICENSE; `@iconify-json/vscode-icons` ships none, so the vscode-icons LICENSE its `info.json` points to was fetched from GitHub. No README licence section existed: the link went under Project docs)
 
 **Tests**: none
 **Gate**: quick
