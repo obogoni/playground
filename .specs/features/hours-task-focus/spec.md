@@ -122,7 +122,7 @@ detail to its bars, and there is no way to see just the days one task took.
 - WHEN a task first appears while the week is shown THEN it SHALL be Other until the week is reopened (HCAL-24, unchanged)
 - WHEN the selected group is a task-less folder THEN the filter SHALL work the same way
 - WHEN a week has no tasks, only folders THEN no slot SHALL be assigned
-- WHEN the selected group has no time in the shown week THEN its chip SHALL stay in the legend, selected, with a `0m` total and its ×, so the selection stays visible and clearable (HTF-11, HTF-13); a task there wears the neutral swatch, since it holds no colour that week. Added at Execute (verifier round 1), amending HCAL-21's "groups of the shown week" for this one chip
+- WHEN the selected group has no time in the shown week THEN its chip SHALL stay in the legend, selected, with a zero total, shown `0h00`, and its ×, so the selection stays visible and clearable (HTF-11, HTF-13); a task there wears the neutral swatch, since it holds no colour that week. Added at Execute (verifier round 1), amending HCAL-21's "groups of the shown week" for this one chip
 
 ---
 

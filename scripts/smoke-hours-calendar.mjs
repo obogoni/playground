@@ -37,7 +37,8 @@
  *      chip or a bar, leaves only that task's bars at full opacity, and leaving
  *      each restores them; clicking a chip shows only the seeded Sunday, closes a drawer open
  *      on Monday and marks the chip with a ×; ◀ ▶ keep the pick and the current
- *      week says it has no time for it; the × and a second click clear it; no
+ *      week says it has no time for it, keeping the chip at 0h00 with the
+ *      neutral swatch and its ×; the × and a second click clear it; no
  *      bar changes colour throughout (HTF-07..15)
  *
  * NOT automatable here: keyboard focus showing the tooltip, and the two-theme
@@ -824,7 +825,7 @@ try {
     list.length > 0 && list.every((b) => reference.get(b.label) === b.bg)
   const pressedChips = () =>
     evaluate(
-      `[...document.querySelectorAll('.hleg-chip')].filter(c => c.querySelector('.hleg-pick').getAttribute('aria-pressed') === 'true').map(c => ({ label: c.querySelector('.hleg-label').textContent, clear: c.querySelector('.hleg-clear') !== null }))`
+      `[...document.querySelectorAll('.hleg-chip')].filter(c => c.querySelector('.hleg-pick').getAttribute('aria-pressed') === 'true').map(c => ({ label: c.querySelector('.hleg-label').textContent, total: c.querySelector('.hleg-total').textContent, swatch: [...c.querySelector('.hleg-swatch').classList].find(x => x.startsWith('role-')), clear: c.querySelector('.hleg-clear') !== null }))`
     )
   const allFull = (list) => list.length === 14 && list.every((b) => b.opacity === 1)
 
@@ -934,6 +935,14 @@ try {
       backHeads.length === 1 &&
       backHeads[0].startsWith(seedHeader),
     `${away.empty.join(' | ')}; back: ${backHeads.map((l) => l.slice(0, 16)).join(' | ')}`
+  )
+  check(
+    'in that week the picked chip stays, with a zero total, the neutral swatch and its ×',
+    away.pressed.length === 1 &&
+      away.pressed[0].total === '0h00' &&
+      away.pressed[0].swatch === 'role-other' &&
+      away.pressed[0].clear,
+    JSON.stringify(away.pressed)
   )
   await evaluate(`${chipOf(taskA)}?.querySelector('.hleg-clear')?.click(), true`)
   await sleep(400)

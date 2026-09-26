@@ -81,6 +81,12 @@ T11 → T12 → T13
 T13 → T14 → T15
 ```
 
+### Phase 7: Fix round 2
+
+```
+T15 → T16
+```
+
 ---
 
 ## Task Breakdown
@@ -477,10 +483,41 @@ The Verifier found every AC met in code; a smoke mutant removing the bars' leave
 
 ---
 
+## Fix Round 2 (verifier round 2: FAIL on one minor gap)
+
+The round-1 gaps closed; the edge case T15 added was checked only for the picked chip's presence, so a chip painted slot 1 with a 1 min total survived (L-054), and the spec quoted `0m` where the legend renders `0h00` (L-055).
+
+### T16: Smoke and spec — the kept chip's total, swatch and ×
+
+**What**: In the week without the picked task, assert the kept chip's total `0h00`, its `role-other` swatch and its ×; write the spec's literal as the legend renders it.
+**Where**: `scripts/smoke-hours-calendar.mjs`, `.specs/features/hours-task-focus/spec.md`
+**Depends on**: T15
+**Reuses**: section 12's `pressedChips` probe
+**Requirement**: HTF-11, HTF-13
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] The kept chip painted slot 1 fails the new check, and so does its total set to 1 min
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Done**: 2026-09-26. 52/52 on the seeded app. The kept chip painted slot 1 failed only the new check (50, `role-slot1`); its total set to 1 min failed only 50 (`0h01`). The spec now quotes `0h00`.
+
+**Tests**: manual
+**Gate**: manual
+
+**Commit**: `test(hours): check the picked chip kept in a week without its task`
+
+---
+
 ## Phase Execution Map
 
 ```
-Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6
+Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7
 
 Phase 1:  T1 ------→ T2
 Phase 2:  T2 ------→ T3 ------→ T4 ------→ T5
@@ -488,6 +525,7 @@ Phase 3:  T5 ------→ T6 ------→ T7
 Phase 4:  T7 ------→ T8 ------→ T9 ------→ T10 ------→ T11
 Phase 5:  T11 ------→ T12 ------→ T13
 Phase 6:  T13 ------→ T14 ------→ T15
+Phase 7:  T15 ------→ T16
 ```
 
 Thirteen tasks: two batches (Phases 1–3, Phases 4–5). At Execute the sub-agent offer is made first.
@@ -528,6 +566,7 @@ Thirteen tasks: two batches (Phases 1–3, Phases 4–5). At Execute the sub-age
 | T13 | T12 | T12 → T13 | ✅ Match |
 | T14 | T13 | T13 → T14 | ✅ Match |
 | T15 | T14 | T14 → T15 | ✅ Match |
+| T16 | T15 | T15 → T16 | ✅ Match |
 
 ## Test Co-location Validation
 
