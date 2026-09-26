@@ -202,11 +202,15 @@ T5 → T6
 
 **Done when**:
 
-- [ ] Each click opened the right `…/_workitems/edit/<id>`, and no button opened the browser
-- [ ] No work item number or title recorded in the repository (public): the result names what happened, not which item
+- [x] Each click opened the right `…/_workitems/edit/<id>`, and no button opened the browser
+- [x] No work item number or title recorded in the repository (public): the result names what happened, not which item
 
 **Tests**: none
 **Gate**: manual
+
+**Agent-side check (2026-09-26, before the owner's)**: a dev app on a throwaway `--user-data-dir` seeded with one pin whose stored URL is `http://dev.azure.com/acme/platform/_workitems/edit/12345`, driven through CDP. The card rendered `#12345` as a `BUTTON` (padding 0, cursor pointer) and "details unavailable" as plain text (PTOP-04); clicking `#12345` showed the toast "Refusing to open an unexpected work item URL." and opened nothing (PTOP-06 and PTOP-08 end to end). No browser was opened on purpose, so the happy path stays with the owner.
+
+**Owner check (2026-09-26)**: in the dev app on the owner's own data, clicking a pinned task's title and its `#id` each opened that work item in the browser; tabbing to the title showed the focus ring and Enter opened it; both links underline on hover; Start work and Agent opened their dialogs and never the browser. Passed as specified; no item is named here.
 
 **Commit**: `docs(specs): record the owner check of opening pinned tasks`
 

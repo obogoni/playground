@@ -73,15 +73,15 @@ the card does nothing. The canonical URL is already stored with every pinned tas
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| PTOP-01 | P1 — AC 1 | Tasks | In Tasks |
-| PTOP-02 | P1 — AC 2 | Tasks | In Tasks |
-| PTOP-03 | P1 — AC 3 | Tasks | In Tasks |
-| PTOP-04 | P1 — AC 4 | Tasks | In Tasks |
-| PTOP-05 | P1 — AC 5 | Tasks | In Tasks |
-| PTOP-06 | P1 — AC 6 | Tasks | In Tasks |
-| PTOP-07 | P1 — AC 7 | Tasks | In Tasks |
-| PTOP-08 | P1 — AC 8 | Tasks | In Tasks |
-| PTOP-09 | P1 — AC 9 | Tasks | In Tasks |
+| PTOP-01 | P1 — AC 1 | Execute | Done |
+| PTOP-02 | P1 — AC 2 | Execute | Done |
+| PTOP-03 | P1 — AC 3 | Execute | Done |
+| PTOP-04 | P1 — AC 4 | Execute | Done |
+| PTOP-05 | P1 — AC 5 | Execute | Done |
+| PTOP-06 | P1 — AC 6 | Execute | Done |
+| PTOP-07 | P1 — AC 7 | Execute | Done |
+| PTOP-08 | P1 — AC 8 | Execute | Done |
+| PTOP-09 | P1 — AC 9 | Execute | Done |
 
 **Coverage:** 9 total, 9 mapped to tasks, 0 unmapped.
 
