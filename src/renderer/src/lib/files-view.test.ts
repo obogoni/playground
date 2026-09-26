@@ -11,6 +11,7 @@ import {
   launcherTarget,
   pinTab,
   tabsAffected,
+  tabsAfterBulkClose,
   tabsAfterClose,
   unpinTab
 } from './files-view'
@@ -263,5 +264,87 @@ describe('pinTab and unpinTab (FPOL-01, 03, 04, 05)', () => {
 
     expect(pinTab(tabs, 'file:b.ts').map(tabKeyOf).sort()).toEqual(keys)
     expect(unpinTab(pinTab(tabs, 'file:b.ts'), 'file:b.ts').map(tabKeyOf).sort()).toEqual(keys)
+  })
+})
+
+describe('tabsAfterBulkClose (FPOL-06..11)', () => {
+  const AC = { key: ALL_CHANGES_KEY, pinned: false }
+  const t = (key: string, pinned = false): { key: string; pinned: boolean } => ({ key, pinned })
+  // All changes, two pinned tabs, three unpinned: the strip of a diff mode.
+  const strip = [AC, t('p1', true), t('p2', true), t('a'), t('b'), t('c')]
+
+  it('Close all keeps only All changes, pinned tabs included in the close (FPOL-06)', () => {
+    expect(tabsAfterBulkClose(strip, 'p1', { kind: 'all' })).toEqual({
+      keys: [ALL_CHANGES_KEY],
+      active: ALL_CHANGES_KEY
+    })
+  })
+
+  it('Close unpinned keeps every pinned tab (FPOL-07)', () => {
+    expect(tabsAfterBulkClose(strip, 'p2', { kind: 'unpinned' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p1', 'p2'],
+      active: 'p2'
+    })
+  })
+
+  it('Close others keeps the anchor and every pinned tab (FPOL-08)', () => {
+    expect(tabsAfterBulkClose(strip, 'b', { kind: 'others', anchor: 'b' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p1', 'p2', 'b'],
+      active: 'b'
+    })
+  })
+
+  it('Close to the right closes only the unpinned tabs right of the anchor (FPOL-09)', () => {
+    expect(tabsAfterBulkClose(strip, 'a', { kind: 'right', anchor: 'a' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p1', 'p2', 'a'],
+      active: 'a'
+    })
+    // From a pinned anchor: the other pinned tab to its right survives.
+    expect(tabsAfterBulkClose(strip, 'p1', { kind: 'right', anchor: 'p1' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p1', 'p2'],
+      active: 'p1'
+    })
+  })
+
+  it('Close on a pinned tab closes it (FPOL-10)', () => {
+    expect(tabsAfterBulkClose(strip, 'a', { kind: 'close', anchor: 'p1' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p2', 'a', 'b', 'c'],
+      active: 'a'
+    })
+  })
+
+  it('never closes All changes', () => {
+    expect(tabsAfterBulkClose(strip, 'a', { kind: 'close', anchor: ALL_CHANGES_KEY })).toEqual({
+      keys: strip.map((x) => x.key),
+      active: 'a'
+    })
+  })
+
+  it('moves a closed active tab to the nearest survivor on its right first (FPOL-11)', () => {
+    expect(tabsAfterBulkClose(strip, 'a', { kind: 'others', anchor: 'c' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p1', 'p2', 'c'],
+      active: 'c'
+    })
+  })
+
+  it('falls back to the nearest survivor on its left (FPOL-11)', () => {
+    expect(tabsAfterBulkClose(strip, 'c', { kind: 'right', anchor: 'a' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p1', 'p2', 'a'],
+      active: 'a'
+    })
+  })
+
+  it('falls back to All changes when nothing else survives in a diff mode (FPOL-11)', () => {
+    expect(tabsAfterBulkClose([AC, t('a'), t('b')], 'b', { kind: 'unpinned' })).toEqual({
+      keys: [ALL_CHANGES_KEY],
+      active: ALL_CHANGES_KEY
+    })
+  })
+
+  it('leaves nothing active when nothing survives in Explore (FPOL-11)', () => {
+    expect(tabsAfterBulkClose([t('a', true), t('b')], 'b', { kind: 'all' })).toEqual({
+      keys: [],
+      active: null
+    })
   })
 })

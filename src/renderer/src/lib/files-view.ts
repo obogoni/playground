@@ -119,6 +119,54 @@ export function unpinTab<T extends PinnableTab>(tabs: T[], key: string): T[] {
   return [...rest.slice(0, pinnedCount), unpinned, ...rest.slice(pinnedCount)]
 }
 
+/** One of the strip's bulk closes (FPOL-06..10); the first three act from a tab. */
+export type BulkClose =
+  | { kind: 'close' | 'others' | 'right'; anchor: string }
+  | { kind: 'unpinned' | 'all' }
+
+/**
+ * Which tabs a bulk close leaves, and which is focused (FPOL-06..11). Close
+ * all closes pinned tabs too; Close unpinned, Close others and Close to the
+ * right never close a pinned one; Close closes its anchor, pinned or not. All
+ * changes is never closed (FDIF-17). An active tab that survives stays active;
+ * a closed one hands the focus to the nearest survivor on its right, else on
+ * its left — which in a diff mode is at worst All changes, the first tab —
+ * and to nothing when no tab survives, as in Explore.
+ */
+export function tabsAfterBulkClose(
+  strip: { key: string; pinned: boolean }[],
+  active: string | null,
+  action: BulkClose
+): { keys: string[]; active: string | null } {
+  const anchorAt =
+    action.kind === 'close' || action.kind === 'others' || action.kind === 'right'
+      ? strip.findIndex((tab) => tab.key === action.anchor)
+      : -1
+  const closes = (tab: { key: string; pinned: boolean }, at: number): boolean => {
+    if (tab.key === ALL_CHANGES_KEY) return false
+    switch (action.kind) {
+      case 'all':
+        return true
+      case 'unpinned':
+        return !tab.pinned
+      case 'close':
+        return at === anchorAt
+      case 'others':
+        return anchorAt !== -1 && at !== anchorAt && !tab.pinned
+      case 'right':
+        return anchorAt !== -1 && at > anchorAt && !tab.pinned
+    }
+  }
+  const survives = strip.map((tab, at) => !closes(tab, at))
+  const keys = strip.filter((_, at) => survives[at]).map((tab) => tab.key)
+  const activeAt = strip.findIndex((tab) => tab.key === active)
+  if (activeAt === -1 || survives[activeAt]) return { keys, active }
+  const right = strip.findIndex((_, at) => at > activeAt && survives[at])
+  if (right !== -1) return { keys, active: strip[right].key }
+  const left = survives.lastIndexOf(true, activeAt)
+  return { keys, active: left === -1 ? null : strip[left].key }
+}
+
 /** A path the user picked, and when — the recency FXPL-26 compares. */
 export interface Selected {
   path: string

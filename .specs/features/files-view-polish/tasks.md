@@ -118,10 +118,10 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] Tests, one per action and per FPOL criterion: `all` keeps only All changes; `unpinned` keeps every pinned; `others` keeps the anchor and pinned; `right` closes only unpinned to the anchor's right; `close` on a pinned tab closes it; the active survives when kept; a closed active falls right, then left, then All changes, then `null` in Explore
-- [ ] `tabsAfterClose`'s existing tests pass unedited
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: T1 count + the new tests
+- [x] Tests, one per action and per FPOL criterion: `all` keeps only All changes; `unpinned` keeps every pinned; `others` keeps the anchor and pinned; `right` closes only unpinned to the anchor's right; `close` on a pinned tab closes it; the active survives when kept; a closed active falls right, then left, then All changes, then `null` in Explore
+- [x] `tabsAfterClose`'s existing tests pass unedited
+- [x] Gate check passes: `npm test`
+- [x] Test count: T1 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
