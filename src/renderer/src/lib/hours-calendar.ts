@@ -245,6 +245,36 @@ export function legendEntries(report: WeekReport, colours: Map<string, ColourRol
     )
 }
 
+/**
+ * The columns a selection leaves: every column when nothing is selected, else
+ * only the days where the selected task or folder has time (HTF-10, HTF-13).
+ */
+export function visibleColumns(
+  columns: CalendarColumn[],
+  selectedKey: string | null
+): CalendarColumn[] {
+  if (selectedKey === null) return columns
+  return columns.filter((column) => column.day?.groups.some((group) => group.key === selectedKey))
+}
+
+/**
+ * The week's groups whose bars fade: every group but the focused one, the
+ * hovered group taking precedence over the selected one (HTF-07, HTF-10).
+ */
+export function dimmedGroups(
+  report: WeekReport,
+  hoverKey: string | null,
+  selectedKey: string | null
+): Set<string> {
+  const focused = hoverKey ?? selectedKey
+  if (focused === null) return new Set()
+  return new Set(
+    weekGroups(report)
+      .map((group) => group.groupKey)
+      .filter((key) => key !== focused)
+  )
+}
+
 /** Where a bar sits in its column, as percentages of the axis height (HCAL-08, HCAL-23). */
 export interface BarBox {
   topPct: number

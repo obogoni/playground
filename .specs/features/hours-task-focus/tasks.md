@@ -221,9 +221,11 @@ T11 → T12 → T13
 
 **Done when**:
 
-- [ ] Tests: no selection keeps every column; a selection keeps only its days; a selection absent from the week yields none; hover over a selection dims by the hover; neither changes the colour map; a folder key works as a task key
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: T1 count + the new tests
+- [x] Tests: no selection keeps every column; a selection keeps only its days; a selection absent from the week yields none; hover over a selection dims by the hover; neither changes the colour map; a folder key works as a task key
+- [x] Gate check passes: `npm test`
+- [x] Test count: T1 count + the new tests
+
+**Done**: 2026-09-26. 1704 tests (T1's 1695 + 9). `visibleColumns` takes no report: each column already carries its day's groups.
 
 **Tests**: unit
 **Gate**: quick

@@ -4,10 +4,12 @@ import { buildWeekReport, weekRange, type Block, type WeekReport } from './hours
 import {
   assignColours,
   barBox,
+  dimmedGroups,
   layoutLanes,
   legendEntries,
   roleOf,
   timeAxis,
+  visibleColumns,
   weekColumns,
   type LaidOutBlock
 } from './hours-calendar'
@@ -451,5 +453,74 @@ describe('barBox', () => {
     const tuesday = barBox(blockOf(r, 15), axis, LATER)
     expect(tuesday.topPct).toBe(0)
     expect(tuesday.heightPct).toBeCloseTo((1 / 24) * 100, 6)
+  })
+})
+
+describe('visibleColumns and dimmedGroups', () => {
+  const FOLDER = 'cwd:d:/acme/scratch'
+  /** `hours` of task `taskId` (or of the scratch folder when null) on day `d`, from `from` o'clock. */
+  const work = (taskId: number | null, d: number, from: number, hours: number): TimePeriod =>
+    closed({
+      id: `${taskId}-${d}-${from}`,
+      sessionId: `s-${taskId}`,
+      taskId,
+      cwd: taskId === null ? 'D:/acme/scratch' : `D:/acme/app-${taskId}`,
+      start: at(d, from),
+      end: at(d, from) + hours * HOUR
+    })
+  // Task 1 on Monday and Wednesday, task 2 on Tuesday and Wednesday, the folder on Thursday.
+  const r = report({
+    periods: [
+      work(1, 14, 9, 2),
+      work(1, 16, 9, 1),
+      work(2, 15, 9, 3),
+      work(2, 16, 13, 1),
+      work(null, 17, 9, 1)
+    ]
+  })
+  const cols = weekColumns(r, WEEK.start, LATER)
+
+  it('keeps every column when nothing is selected (HTF-12)', () => {
+    expect(visibleColumns(cols, null)).toEqual(cols)
+  })
+
+  it('keeps only the days where the selected task has time (HTF-10)', () => {
+    expect(dates(visibleColumns(cols, 'task:1'))).toEqual([14, 16])
+    expect(dates(visibleColumns(cols, 'task:2'))).toEqual([15, 16])
+  })
+
+  it('keeps only the days of a selected folder (HTF edge case)', () => {
+    expect(dates(visibleColumns(cols, FOLDER))).toEqual([17])
+  })
+
+  it('keeps no column for a selection with no time this week (HTF-13)', () => {
+    expect(visibleColumns(cols, 'task:99')).toEqual([])
+  })
+
+  it('dims nothing when nothing is focused (HTF-08)', () => {
+    expect(dimmedGroups(r, null, null)).toEqual(new Set())
+  })
+
+  it('dims every other task and folder of the week while one is hovered (HTF-07)', () => {
+    expect(dimmedGroups(r, 'task:1', null)).toEqual(new Set(['task:2', FOLDER]))
+    expect(dimmedGroups(r, FOLDER, null)).toEqual(new Set(['task:1', 'task:2']))
+  })
+
+  it('dims every other group while one is selected (HTF-10)', () => {
+    expect(dimmedGroups(r, null, 'task:2')).toEqual(new Set(['task:1', FOLDER]))
+  })
+
+  it('dims by the hovered group over the selected one (HTF-07)', () => {
+    expect(dimmedGroups(r, 'task:1', 'task:2')).toEqual(new Set(['task:2', FOLDER]))
+  })
+
+  it('leaves the colours alone: a selection neither recolours nor rebuilds a day (HTF-15)', () => {
+    const colours = assignColours(r)
+    const before = [...colours]
+    const shown = visibleColumns(cols, 'task:1')
+    dimmedGroups(r, 'task:2', 'task:1')
+    expect([...colours]).toEqual(before)
+    expect(shown.map((c) => c.day)).toEqual([cols[0].day, cols[2].day])
+    expect(shown[0].day).toBe(cols[0].day)
   })
 })
