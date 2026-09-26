@@ -237,7 +237,7 @@ Probe: the app's 16 hooks as http hooks, same shape as `buildClaudeHookSettings`
 
 ---
 
-### T6: One notification per background job
+### T6: One notification per background job ✅
 
 **What**: A test that replays each fixture (S1, S2, S3a, S4) through `applyHookEvent` and `decideNotification` (app unfocused, `waiting` enabled) and counts exactly one `waiting` notification per job, at its last `Stop`.
 **Where**: `src/main/activity-notification.test.ts`
@@ -252,9 +252,9 @@ Probe: the app's 16 hooks as http hooks, same shape as `buildClaudeHookSettings`
 
 **Done when**:
 
-- [ ] The test fails on T2's tree state (before T3) — checked by running it against `activity-machine.ts` from T2's commit in a scratch copy — and passes now
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
-- [ ] Test count: T5 count + the new tests
+- [x] The test fails on T2's tree state (before T3) — checked by running it against `activity-machine.ts` from T2's commit in a scratch copy — and passes now. On T2's machine the `waiting` notifications were S1 6, S2 3, S3a 4, S4 2; now 1 each, at the last `Stop`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build` (lint still 18 warnings)
+- [x] Test count: T5 count + the new tests — 1727 + 4 = 1731
 
 **Tests**: unit
 **Gate**: build

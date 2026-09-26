@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { ActivityState, SessionActivity } from '../shared/config'
 import { NOTIFIABLE_STATES, type NotificationPrefs } from '../shared/notifications'
 import type { PinnedTaskView } from '../shared/tasks'
+import { applyHookEvent, sameView, type MachineState } from './activity-machine'
 import { decideNotification, describeNotification, linkTask } from './activity-notification'
+import { CAPTURED_SEQUENCES, type CapturedEvent } from './activity-sequences.fixture'
 
 function activity(state: ActivityState, extra: Partial<SessionActivity> = {}): SessionActivity {
   return { state, subagents: 0, ...extra }
@@ -101,6 +103,36 @@ describe('decideNotification', () => {
       })
     ).toBe('os')
   })
+})
+
+describe('decideNotification over captured background jobs (activity-subagent-attribution)', () => {
+  /** Every notification a replayed sequence raises, as the app would: only on a changed view. */
+  function notifications(events: readonly CapturedEvent[]): { at: number; state: ActivityState }[] {
+    const raised: { at: number; state: ActivityState }[] = []
+    events.reduce<MachineState | null>((machine, e, at) => {
+      const next = applyHookEvent(machine, e)
+      const before = machine?.view ?? null
+      const after = next?.view ?? null
+      if (
+        after !== null &&
+        !sameView(before, after) &&
+        decideNotification({ before, after, ...UNFOCUSED }) !== null
+      ) {
+        raised.push({ at, state: after.state })
+      }
+      return next
+    }, null)
+    return raised
+  }
+
+  it.each(Object.entries(CAPTURED_SEQUENCES))(
+    '%s says "your turn" once, at the last Stop (ASUB-04)',
+    (_, events) => {
+      const lastStop = events.map((e) => e.hook_event_name).lastIndexOf('Stop')
+      const waiting = notifications(events).filter((n) => n.state === 'waiting')
+      expect(waiting).toEqual([{ at: lastStop, state: 'waiting' }])
+    }
+  )
 })
 
 describe('describeNotification', () => {
