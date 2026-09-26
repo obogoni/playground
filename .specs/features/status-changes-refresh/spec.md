@@ -123,7 +123,7 @@ Added after T1's measurement (2026-09-26):
 | SCRF-08 | P1: turn end — AC 8 | Tasks | In Tasks |
 | SCRF-09 | P1: focus — AC 9 | Tasks | In Tasks |
 | SCRF-10 | P1: focus — AC 10 | Tasks | In Tasks |
-| SCRF-11 | P1: commit — AC 11 | Tasks | In Tasks |
+| SCRF-11 | P1: commit — AC 11 | Execute | Done (T2) |
 
 **Coverage:** 11 total, 11 mapped to tasks, 0 unmapped. SCRF-11 was added on 2026-09-26 from T1's measurement (owner's choice: both status calls run with `--no-optional-locks`).
 

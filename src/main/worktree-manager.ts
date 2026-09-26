@@ -411,16 +411,35 @@ export function parsePorcelainBlocks(stdout: string): PorcelainBlock[] {
   return blocks
 }
 
-async function statusOf(worktreePath: string): Promise<{ dirty: boolean; changes: number }> {
+/**
+ * `git status --porcelain` without the index refresh plain `status` does on the
+ * side (SCRF-11). That refresh rewrites `index`, which is exactly what the
+ * git-state watcher reacts to, so a count run the plain way would trigger
+ * another count.
+ */
+const STATUS_ARGS = ['--no-optional-locks', 'status', '--porcelain']
+
+/**
+ * One worktree's change count, or `null` when git could not answer — a path
+ * that vanished, a broken gitdir — so a recount can keep the last count
+ * instead of showing a clean zero (SCRF-06).
+ */
+export async function worktreeStatus(
+  worktreePath: string
+): Promise<{ dirty: boolean; changes: number } | null> {
   try {
-    const { stdout } = await git(worktreePath, ['status', '--porcelain'])
+    const { stdout } = await git(worktreePath, STATUS_ARGS)
     const changes = stdout.split(/\r?\n/).filter(Boolean).length
     return { dirty: changes > 0, changes }
   } catch {
-    // A worktree whose path vanished or whose gitdir is broken: report clean
-    // rather than failing the whole repo listing.
-    return { dirty: false, changes: 0 }
+    return null
   }
+}
+
+async function statusOf(worktreePath: string): Promise<{ dirty: boolean; changes: number }> {
+  // A worktree whose path vanished or whose gitdir is broken: report clean
+  // rather than failing the whole repo listing.
+  return (await worktreeStatus(worktreePath)) ?? { dirty: false, changes: 0 }
 }
 
 /**
@@ -431,7 +450,7 @@ async function statusOf(worktreePath: string): Promise<{ dirty: boolean; changes
  */
 export async function changedFilesOf(worktreePath: string): Promise<ChangedFile[]> {
   try {
-    const { stdout } = await git(worktreePath, ['status', '--porcelain'])
+    const { stdout } = await git(worktreePath, STATUS_ARGS)
     return parseChangedFiles(stdout)
   } catch {
     return []

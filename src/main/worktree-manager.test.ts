@@ -6,6 +6,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  statSync,
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -20,7 +21,8 @@ import {
   listWorktrees,
   parseChangedFiles,
   parsePorcelainBlocks,
-  removeWorktree
+  removeWorktree,
+  worktreeStatus
 } from './worktree-manager'
 
 const git = (cwd: string, ...args: string[]): string =>
@@ -114,6 +116,65 @@ describe('listWorktrees', () => {
     mkdirSync(plain)
 
     await expect(listWorktrees(plain)).rejects.toBeInstanceOf(GitError)
+  })
+})
+
+describe('worktreeStatus (SCRF-06, SCRF-11)', () => {
+  let root: string
+  let repo: string
+
+  beforeEach(() => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-st-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    writeFileSync(join(repo, 'b.txt'), 'two', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  /** The index as git left it: its bytes and its mtime, so a rewrite shows either way. */
+  const indexState = (): { bytes: string; mtimeMs: number } => {
+    const path = join(repo, '.git', 'index')
+    return { bytes: readFileSync(path).toString('base64'), mtimeMs: statSync(path).mtimeMs }
+  }
+
+  it('counts modified, staged and untracked files', async () => {
+    writeFileSync(join(repo, 'a.txt'), 'changed', 'utf8')
+    writeFileSync(join(repo, 'staged.txt'), 'staged', 'utf8')
+    git(repo, 'add', 'staged.txt')
+    writeFileSync(join(repo, 'untracked.txt'), 'untracked', 'utf8')
+
+    expect(await worktreeStatus(repo)).toEqual({ dirty: true, changes: 3 })
+  })
+
+  it('reports null, not a clean zero, for a path that vanished', async () => {
+    expect(await worktreeStatus(join(root, 'gone'))).toBeNull()
+  })
+
+  it('leaves the index untouched while counting an edit', async () => {
+    writeFileSync(join(repo, 'a.txt'), 'changed', 'utf8')
+    const before = indexState()
+
+    await worktreeStatus(repo)
+
+    expect(indexState()).toEqual(before)
+  })
+
+  it('leaves the index untouched while listing an edit', async () => {
+    writeFileSync(join(repo, 'b.txt'), 'changed', 'utf8')
+    const before = indexState()
+
+    await changedFilesOf(repo)
+
+    expect(indexState()).toEqual(before)
   })
 })
 

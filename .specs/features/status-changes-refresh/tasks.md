@@ -135,10 +135,10 @@ T8 → T9 → T10
 
 **Done when**:
 
-- [ ] Real-git tests: a count of mixed changes; `null` for a vanished path; after an edit, neither `worktreeStatus` nor `changedFilesOf` rewrites the index (its bytes and mtime unchanged)
-- [ ] Existing worktree-manager tests pass unedited
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: baseline + 4
+- [x] Real-git tests: a count of mixed changes; `null` for a vanished path; after an edit, neither `worktreeStatus` nor `changedFilesOf` rewrites the index (its bytes and mtime unchanged)
+- [x] Existing worktree-manager tests pass unedited
+- [x] Gate check passes: `npm test`
+- [x] Test count: baseline + 4
 
 **Tests**: unit
 **Gate**: quick
