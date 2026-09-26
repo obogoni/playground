@@ -56,13 +56,12 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current, 2026-09-26): `hours-task-focus` (issue #110) is COMPLETE locally, Verifier PASS
-on round 3 of 3. Not pushed, no PR yet.**
+**Status (current, 2026-09-26): `hours-task-focus` (issue #110) is COMPLETE, Verifier PASS on round 3
+of 3, and shipped as PR #129 (closes #110, depends on #99).**
 
 - **Branch:** `feature/hours-task-focus`, rebased on 2026-09-26 from the pre-rebase
   `feature/hours-calendar` onto `7d85337` (PR #99 plus the drawer growth fix). The rebase rewrote
-  the plan commit, so `fork/feature/hours-task-focus` needs a force-push, and only with the owner's
-  go-ahead. The PR stacks on #99 ("depends on #99", `Closes #110`).
+  the plan commit; force-pushed to `fork` with the owner's go-ahead. PR #129 stacks on #99.
 - **What shipped:** eight task colours per week, never repeated on a day (AD-045, superseding AD-030
   for the Hours calendar only); hovering or focusing a legend chip, a drawer group header or a bar
   fades the other groups to 30%; clicking a chip shows only that group's days, kept across weeks,
@@ -79,6 +78,5 @@ on round 3 of 3. Not pushed, no PR yet.**
 - **Judgement calls, both accepted by the Verifier:** the legend keeps coloured tasks in the order
   they were coloured, so live time never reorders them; the picked chip stays in the legend with
   `0h00`, the neutral swatch and its × in a week without its group (spec edge case 4).
-- **Next:** with the owner's go-ahead, force-push to `fork` and open the PR against `obogoni:main`.
-  Once #99 merges, run `git rebase --onto origin/main feature/hours-calendar feature/hours-task-focus`.
+- **Next:** once #99 merges, run `git rebase --onto origin/main feature/hours-calendar feature/hours-task-focus`.
   Merge into local `develop` after that, replaying lessons by key and appending AD-045 after AD-044.
