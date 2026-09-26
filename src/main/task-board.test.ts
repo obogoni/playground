@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { WorkItemDetails } from '../shared/tasks'
 import { refKey, type WorkItemRef } from './ado-gateway'
 import { ConfigStore } from './config-store'
-import { parseTaskInput, TaskBoard, type WorkItemSource } from './task-board'
+import type { PinnedTask } from '../shared/tasks'
+import { openPinnedTask, parseTaskInput, TaskBoard, type WorkItemSource } from './task-board'
 
 const noDefaults = { defaultOrg: null, defaultProject: null }
 const acme = { defaultOrg: 'acme', defaultProject: 'platform' }
@@ -399,5 +400,97 @@ describe('TaskBoard', () => {
     expect(result.ok).toBe(true)
     expect(new ConfigStore(dir).get().pinnedTasks).toHaveLength(1)
     expect(board.list().tasks[0].details).toEqual({ ...task, parentType: 'Fault' })
+  })
+})
+
+describe('openPinnedTask (PTOP-05..07)', () => {
+  const url = (org: string, project: string, id: number): string =>
+    `https://dev.azure.com/${org}/${project}/_workitems/edit/${id}`
+  const pinned = (
+    org: string,
+    project: string,
+    id: number,
+    at = url(org, project, id)
+  ): PinnedTask => ({
+    id,
+    org,
+    project,
+    url: at
+  })
+
+  /** An openExternal that records every address and optionally fails. */
+  const opener = (
+    fail?: Error
+  ): { calls: string[]; openExternal: (u: string) => Promise<void> } => {
+    const calls: string[] = []
+    return {
+      calls,
+      openExternal: async (u) => {
+        calls.push(u)
+        if (fail) throw fail
+      }
+    }
+  }
+
+  it('opens exactly the stored URL', async () => {
+    const o = opener()
+    const tasks = [pinned('acme', 'platform', 12345)]
+
+    const result = await openPinnedTask({ tasks, openExternal: o.openExternal }, tasks[0])
+
+    expect(result).toEqual({ ok: true })
+    expect(o.calls).toEqual(['https://dev.azure.com/acme/platform/_workitems/edit/12345'])
+  })
+
+  it('refuses a task that is no longer pinned and opens nothing (PTOP-05)', async () => {
+    const o = opener()
+
+    const result = await openPinnedTask(
+      { tasks: [pinned('acme', 'platform', 1)], openExternal: o.openExternal },
+      { id: 2, org: 'acme', project: 'platform' }
+    )
+
+    expect(result).toEqual({ ok: false, error: 'That task is no longer pinned.' })
+    expect(o.calls).toEqual([])
+  })
+
+  it.each([
+    ['an http URL', 'http://dev.azure.com/acme/platform/_workitems/edit/7'],
+    ['a foreign host', 'https://example.com/acme/platform/_workitems/edit/7'],
+    ['a look-alike host', 'https://dev.azure.com.example.com/acme/platform/_workitems/edit/7'],
+    ['a URL that does not parse', 'not a url']
+  ])('refuses %s and opens nothing (PTOP-06)', async (_label, stored) => {
+    const o = opener()
+    const tasks = [pinned('acme', 'platform', 7, stored)]
+
+    const result = await openPinnedTask({ tasks, openExternal: o.openExternal }, tasks[0])
+
+    expect(result).toEqual({ ok: false, error: 'Refusing to open an unexpected work item URL.' })
+    expect(o.calls).toEqual([])
+  })
+
+  it("reports the system's message when the browser cannot open (PTOP-07)", async () => {
+    const o = opener(new Error('No application is associated with https'))
+    const tasks = [pinned('acme', 'platform', 3)]
+
+    const result = await openPinnedTask({ tasks, openExternal: o.openExternal }, tasks[0])
+
+    expect(result).toEqual({ ok: false, error: 'No application is associated with https' })
+  })
+
+  it("opens each project's own item when the same id is pinned twice (edge case)", async () => {
+    const o = opener()
+    const tasks = [pinned('acme', 'platform', 42), pinned('acme', 'billing', 42)]
+
+    await openPinnedTask(
+      { tasks, openExternal: o.openExternal },
+      { id: 42, org: 'acme', project: 'billing' }
+    )
+    await openPinnedTask(
+      { tasks, openExternal: o.openExternal },
+      { id: 42, org: 'acme', project: 'platform' }
+    )
+
+    expect(o.calls).toEqual([url('acme', 'billing', 42), url('acme', 'platform', 42)])
   })
 })

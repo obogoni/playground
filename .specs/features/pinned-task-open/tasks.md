@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: inline. Main gets `openPinnedTask(deps, ref)` in `task-board.ts` — `deps` is the board's stored tasks and an injected `openExternal` — so every refusal and failure is unit-tested without Electron. `index.ts` wires it to `shell.openExternal`. The pane renders the title and `#id` as buttons styled as links.
-**Status**: Draft — reconciled 2026-09-26, awaiting owner approval (planned 2026-09-22)
+**Status**: Approved 2026-09-26; executing (planned 2026-09-22). Baseline: 1676 tests, lint 0 errors / 18 warnings
 
 **Branch**: `feature/pinned-task-open`, stacked on `feature/window-open-https` (PR #123, issue #115). The PR closes #109 and says "depends on #123"; once #123 merges, `git rebase --onto origin/main feature/window-open-https feature/pinned-task-open`.
 
@@ -79,9 +79,9 @@ T5 → T6
 
 **Done when**:
 
-- [ ] Tests: opens exactly the stored URL and returns `ok: true`; not pinned → PTOP-05's message, nothing opened; `http:` and a foreign host → PTOP-06's message, nothing opened; `openExternal` rejecting → `ok: false` with its message; same id in two projects opens each one's own URL
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: baseline + the new tests
+- [x] Tests: opens exactly the stored URL and returns `ok: true`; not pinned → PTOP-05's message, nothing opened; `http:` and a foreign host → PTOP-06's message, nothing opened; `openExternal` rejecting → `ok: false` with its message; same id in two projects opens each one's own URL
+- [x] Gate check passes: `npm test`
+- [x] Test count: baseline + the new tests
 
 **Tests**: unit
 **Gate**: quick

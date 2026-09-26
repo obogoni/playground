@@ -6,9 +6,11 @@ import type {
   TasksSnapshot,
   WorkItemDetails
 } from '../shared/tasks'
+import type { LaunchResult } from '../shared/shortcuts'
 import type { GetWorkItemWithRelationsResult, GetWorkItemsResult, WorkItemRef } from './ado-gateway'
 import { refKey } from './ado-gateway'
 import type { ConfigStore } from './config-store'
+import { isHttpsUrl } from './url-policy'
 
 /** The slice of AdoGateway TaskBoard depends on — tests inject a stub. */
 export interface WorkItemSource {
@@ -76,6 +78,28 @@ function makeRef(org: string, project: string, id: number): PinnedTask {
 
 function sameRef(a: WorkItemRef, b: WorkItemRef): boolean {
   return a.id === b.id && a.org === b.org && a.project === b.project
+}
+
+/**
+ * Opens a pinned task's work item in the browser (PTOP-05..07). The renderer
+ * only names the task; the address is the one stored when it was pinned, and
+ * it opens only over https (AD-044) on `dev.azure.com`.
+ */
+export async function openPinnedTask(
+  deps: { tasks: PinnedTask[]; openExternal: (url: string) => Promise<void> },
+  ref: WorkItemRef
+): Promise<LaunchResult> {
+  const task = deps.tasks.find((candidate) => sameRef(candidate, ref))
+  if (!task) return { ok: false, error: 'That task is no longer pinned.' }
+  if (!isHttpsUrl(task.url) || new URL(task.url).hostname !== 'dev.azure.com') {
+    return { ok: false, error: 'Refusing to open an unexpected work item URL.' }
+  }
+  try {
+    await deps.openExternal(task.url)
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  }
 }
 
 /**
