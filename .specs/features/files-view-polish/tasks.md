@@ -198,7 +198,7 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run lint` and `npx electron-vite build`
+- [x] Gate check passes: `npm run lint` and `npx electron-vite build`
 
 **Tests**: none
 **Gate**: build
