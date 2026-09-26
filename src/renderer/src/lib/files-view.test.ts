@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AppConfig } from '../../../shared/config'
 import type { ChangedPath } from '../../../shared/files'
-import { ALL_CHANGES_KEY } from './diff-view'
+import { ALL_CHANGES_KEY, tabKeyOf, type TabRef } from './diff-view'
 import {
   buildTree,
   fileType,
@@ -9,8 +9,10 @@ import {
   formatSize,
   isSolution,
   launcherTarget,
+  pinTab,
   tabsAffected,
-  tabsAfterClose
+  tabsAfterClose,
+  unpinTab
 } from './files-view'
 
 function ui(files?: AppConfig['ui']['files']): AppConfig['ui'] {
@@ -208,5 +210,58 @@ describe('fileType', () => {
     // `GITIGNORE file`.
     expect(fileType('.gitignore')).toBe('No extension')
     expect(fileType('LICENSE')).toBe('No extension')
+  })
+})
+
+describe('pinTab and unpinTab (FPOL-01, 03, 04, 05)', () => {
+  type Tab = TabRef & { pinned?: boolean }
+  const file = (path: string, pinned?: boolean): Tab =>
+    pinned ? { kind: 'file', path, pinned } : { kind: 'file', path }
+  const commit = (sha: string): Tab => ({ kind: 'commit', sha })
+  const strip = (tabs: Tab[]): string[] =>
+    tabs.map((t) => `${tabKeyOf(t)}${t.pinned ? ' (pinned)' : ''}`)
+
+  it('moves a pinned tab to the front, after the tabs pinned before it (FPOL-01)', () => {
+    const tabs = [file('a.ts', true), file('b.ts'), file('c.ts'), commit('abc123')]
+
+    expect(strip(pinTab(tabs, 'commit:abc123'))).toEqual([
+      'file:a.ts (pinned)',
+      'commit:abc123 (pinned)',
+      'file:b.ts',
+      'file:c.ts'
+    ])
+  })
+
+  it('moves an unpinned tab to the front of the unpinned tabs (FPOL-03)', () => {
+    const tabs = [file('a.ts', true), file('b.ts', true), file('c.ts'), file('d.ts')]
+
+    expect(strip(unpinTab(tabs, 'file:a.ts'))).toEqual([
+      'file:b.ts (pinned)',
+      'file:a.ts',
+      'file:c.ts',
+      'file:d.ts'
+    ])
+  })
+
+  it('changes nothing when pinning a pinned tab or unpinning an unpinned one', () => {
+    const tabs = [file('a.ts', true), file('b.ts')]
+
+    expect(pinTab(tabs, 'file:a.ts')).toBe(tabs)
+    expect(unpinTab(tabs, 'file:b.ts')).toBe(tabs)
+  })
+
+  it('never pins or moves All changes, nor a key it does not hold (FPOL-05)', () => {
+    const tabs = [file('a.ts'), file('b.ts')]
+
+    expect(pinTab(tabs, ALL_CHANGES_KEY)).toBe(tabs)
+    expect(pinTab(tabs, 'file:gone.ts')).toBe(tabs)
+  })
+
+  it('keeps every tab key, so the active key still names the same tab (FPOL-04)', () => {
+    const tabs = [file('a.ts'), file('b.ts'), commit('abc123')]
+    const keys = tabs.map(tabKeyOf).sort()
+
+    expect(pinTab(tabs, 'file:b.ts').map(tabKeyOf).sort()).toEqual(keys)
+    expect(unpinTab(pinTab(tabs, 'file:b.ts'), 'file:b.ts').map(tabKeyOf).sort()).toEqual(keys)
   })
 })

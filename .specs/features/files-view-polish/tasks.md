@@ -90,9 +90,11 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] Tests: pin moves after earlier pins; unpin moves to the front of the unpinned; pinning the already-pinned and unpinning the unpinned change nothing; All changes is never moved or pinned; the active key is untouched by both
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: baseline + the new tests
+- [x] Tests: pin moves after earlier pins; unpin moves to the front of the unpinned; pinning the already-pinned and unpinning the unpinned change nothing; All changes is never moved or pinned; the active key is untouched by both
+- [x] Gate check passes: `npm test`
+- [x] Test count: baseline + the new tests
+
+**Done**: no separate strip-order helper was needed. The stored tabs are the strip minus All changes, new tabs are appended (`[...s.tabs, tab]`), and `pinTab`/`unpinTab` keep the pinned ones first, so `tabsWithAllChanges` already puts them right after All changes. 1663 → 1668 tests.
 
 **Tests**: unit
 **Gate**: quick

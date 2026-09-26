@@ -62,8 +62,11 @@ export interface CommitTab {
   at: number
 }
 
-/** Everything the tab strip can hold: the open tabs, plus the fixed one. */
-export type ViewTab = FileTab | DiffTab | CommitTab
+/**
+ * Everything the tab strip can hold: the open tabs, plus the fixed one. Any
+ * open tab can be pinned (FPOL-01); absent means unpinned.
+ */
+export type ViewTab = (FileTab | DiffTab | CommitTab) & { pinned?: boolean }
 export type StripTab = ViewTab | { kind: 'all-changes' }
 
 /**

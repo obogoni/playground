@@ -1,7 +1,7 @@
 import type { AppConfig, FilesState } from '../../../shared/config'
 import type { ChangedPath } from '../../../shared/files'
 import type { ChangeStatus } from '../../../shared/worktrees'
-import { ALL_CHANGES_KEY } from './diff-view'
+import { ALL_CHANGES_KEY, tabKeyOf, type TabRef } from './diff-view'
 
 /** A changed file as the tree renders it, carrying the status it was listed with. */
 export interface FileNode {
@@ -83,6 +83,40 @@ export function tabsAfterClose(
   if (tabs[closedIndex] !== activePath) return { tabs: left, active: activePath }
   const adjacent = left[closedIndex] ?? left[closedIndex - 1] ?? null
   return { tabs: left, active: adjacent }
+}
+
+/** An open tab as the pin rules see it: its identity, and whether it is pinned. */
+export type PinnableTab = TabRef & { pinned?: boolean }
+
+/**
+ * Pins a tab (FPOL-01): it moves to the front of the strip, after the tabs
+ * pinned before it, so pinned tabs sit right after All changes in pin order.
+ * The strip keeps that order on its own because new tabs are appended. The
+ * same list comes back for a key it does not hold, All changes included
+ * (FPOL-05), and for a tab already pinned. Keys never change, so the active
+ * tab stays the same one (FPOL-04).
+ */
+export function pinTab<T extends PinnableTab>(tabs: T[], key: string): T[] {
+  const index = tabs.findIndex((tab) => tabKeyOf(tab) === key)
+  if (index === -1 || tabs[index].pinned) return tabs
+  const rest = tabs.filter((_, at) => at !== index)
+  const pinnedCount = rest.filter((tab) => tab.pinned).length
+  return [
+    ...rest.slice(0, pinnedCount),
+    { ...tabs[index], pinned: true },
+    ...rest.slice(pinnedCount)
+  ]
+}
+
+/** Unpins a tab (FPOL-03): it moves to the front of the unpinned tabs. */
+export function unpinTab<T extends PinnableTab>(tabs: T[], key: string): T[] {
+  const index = tabs.findIndex((tab) => tabKeyOf(tab) === key)
+  if (index === -1 || !tabs[index].pinned) return tabs
+  const rest = tabs.filter((_, at) => at !== index)
+  const pinnedCount = rest.filter((tab) => tab.pinned).length
+  const unpinned = { ...tabs[index] }
+  delete unpinned.pinned
+  return [...rest.slice(0, pinnedCount), unpinned, ...rest.slice(pinnedCount)]
 }
 
 /** A path the user picked, and when — the recency FXPL-26 compares. */
