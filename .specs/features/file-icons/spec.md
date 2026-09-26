@@ -113,20 +113,20 @@ never have to do. The changed-files list and the tab strip show no file icon at 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | FICN-01 | P1: files — AC 1 | Tasks | In Tasks |
-| FICN-02 | P1: files — AC 2 | Tasks | In Tasks |
-| FICN-03 | P1: files — AC 3 | Tasks | In Tasks |
-| FICN-04 | P1: files — AC 4 | Tasks | In Tasks |
-| FICN-05 | P1: files — AC 5 | Tasks | In Tasks |
-| FICN-06 | P1: files — AC 6 | Tasks | In Tasks |
-| FICN-07 | P1: files — AC 7 | Tasks | In Tasks |
+| FICN-02 | P1: files — AC 2 | Execute | Resolved (T2) |
+| FICN-03 | P1: files — AC 3 | Execute | Resolved (T2) |
+| FICN-04 | P1: files — AC 4 | Execute | Resolved (T2) |
+| FICN-05 | P1: files — AC 5 | Execute | Resolved (T2) |
+| FICN-06 | P1: files — AC 6 | Execute | Resolved (T2) |
+| FICN-07 | P1: files — AC 7 | Execute | Resolved (T2) |
 | FICN-08 | P1: files — AC 8 | Tasks | In Tasks |
-| FICN-09 | P1: folders — AC 9 | Tasks | In Tasks |
-| FICN-10 | P1: folders — AC 10 | Tasks | In Tasks |
+| FICN-09 | P1: folders — AC 9 | Execute | Resolved (T2) |
+| FICN-10 | P1: folders — AC 10 | Execute | Resolved (T2) |
 | FICN-11 | P1: folders — AC 11 | Tasks | In Tasks |
 | FICN-12 | P1: no slowdown — AC 12 | Tasks | In Tasks |
 | FICN-13 | P1: no slowdown — AC 13 | Tasks | In Tasks |
 | FICN-14 | P1: no slowdown — AC 14 | Tasks | In Tasks |
-| FICN-15 | P1: files — AC 15 | Tasks | In Tasks |
+| FICN-15 | P1: files — AC 15 | Execute | Resolved (T2) |
 
 **Coverage:** 15 total, 15 mapped to tasks, 0 unmapped.
 

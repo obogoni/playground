@@ -108,9 +108,9 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Table test over the 91 rows of `expected-icons.md`, expected names copied from it (not computed by the resolver); the three corrections; a light variant chosen only in light; a light answer from the mapping replaced by its base in dark, and kept in light; `file-type-go-lightblue` not taken for a light variant; a missing name taking its `2`; an unmapped name and an unknown folder taking the defaults; `Dockerfile` and `LICENSE` matched case-insensitively; a name with non-ASCII letters
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: baseline + the new tests
+- [x] Table test over the 91 rows of `expected-icons.md`, expected names copied from it (not computed by the resolver); the three corrections; a light variant chosen only in light; a light answer from the mapping replaced by its base in dark, and kept in light; `file-type-go-lightblue` not taken for a light variant; a missing name taking its `2`; an unmapped name and an unknown folder taking the defaults; `Dockerfile` and `LICENSE` matched case-insensitively; a name with non-ASCII letters
+- [x] Gate check passes: `npm test`
+- [x] Test count: baseline + the new tests (1663 → 1771: 108 new)
 
 **Tests**: unit
 **Gate**: quick
