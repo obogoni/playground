@@ -37,12 +37,13 @@ import { LinkOpener } from './link-opener'
 import { SessionNamePoller } from './session-name-poller'
 import { SessionNotifier } from './session-notifier'
 import { ShortcutLauncher, spawnDetached } from './shortcut-launcher'
-import { TaskBoard } from './task-board'
+import { openPinnedTask, TaskBoard } from './task-board'
 import { TimeLogStore } from './time-log-store'
 import { buildSnapshot, readGit } from './time-snapshot'
 import { TimeTracker } from './time-tracker'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
+import { windowOpenDecision } from './url-policy'
 import type { CtxDeps, GitFetchOptions, ShellResult } from './workflow-ctx'
 import {
   discoverWorkflows,
@@ -222,8 +223,13 @@ function createWindow(): void {
     win.show()
   })
 
+  // Every new window is denied; an https link one asked for opens in the
+  // browser, anything else is only logged by its scheme (#115, AD-044). The
+  // linked task card's `target="_blank"` link lands here.
   win.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    const decision = windowOpenDecision(details.url)
+    if (decision.open) void shell.openExternal(details.url)
+    else console.warn(`[window-open] ${decision.reason}`)
     return { action: 'deny' }
   })
 
@@ -375,6 +381,13 @@ app.whenReady().then(() => {
   handle('tasks:unpin', (ref) => taskBoard.unpin(ref))
   handle('tasks:refresh', () => taskBoard.refresh())
   handle('tasks:parent', ({ id, org, project }) => adoGateway.parentOf({ id, org, project }))
+  // The renderer names the task; main opens the URL it stored at pin time (PTOP-01..07).
+  handle('tasks:open', (ref) =>
+    openPinnedTask(
+      { tasks: configStore.get().pinnedTasks, openExternal: (url) => shell.openExternal(url) },
+      ref
+    )
+  )
 
   // Agent sessions (AM2). SessionManager owns every session's lifecycle,
   // persistence, and stream routing; emit is lazily bound to the live window.

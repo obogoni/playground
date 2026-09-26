@@ -445,6 +445,7 @@ function App(): JSX.Element {
               onSnapshot={setTasks}
               onStartWork={setStartWorkTask}
               onSpawnAgent={spawnAgentForTask}
+              onToast={setToast}
               width={tasksWidth}
               collapsed={tasksCollapsed}
               onWidthChange={(w) => update({ tasksWidth: w })}
