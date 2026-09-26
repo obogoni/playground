@@ -144,8 +144,8 @@ detail to its bars, and there is no way to see just the days one task took.
 | HTF-13 | P1: filter — AC 13 | Execute | Implemented (T6..T11), smoke pending (T13) |
 | HTF-14 | P1: filter — AC 14 | Execute | Implemented (T6..T11), smoke pending (T13) |
 | HTF-15 | P1: filter — AC 15 | Execute | Implemented (T6..T11), smoke pending (T13) |
-| HTF-16 | P2: smoke — AC 16 | Tasks | In Tasks |
-| HTF-17 | P2: smoke — AC 17 | Tasks | In Tasks |
+| HTF-16 | P2: smoke — AC 16 | Execute | Verified (T12 smoke) |
+| HTF-17 | P2: smoke — AC 17 | Execute | Verified (T12 smoke) |
 
 **Coverage:** 17 total, 17 mapped to tasks, 0 unmapped.
 

@@ -378,8 +378,10 @@ T11 → T12 → T13
 
 **Done when**:
 
-- [ ] Each check seen failing with `assignColours` reverted to top-three, then passing
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Each check seen failing with `assignColours` reverted to top-three, then passing
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Done**: 2026-09-26. 37/37 on the seeded app. Falsified on the running app: top-three colouring failed only the eight-colours check (3 slot bars in 3 colours, 11 Other); dropping the legend's slot 4-8 swatch rules failed only the swatch check (chip `rgba(0, 0, 0, 0)`); wording tasks as items failed only the summary check (`14 items · 14 blocks`). Swatches are compared by computed colour, not role class, so a missing rule shows.
 
 **Tests**: manual
 **Gate**: manual

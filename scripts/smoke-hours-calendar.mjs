@@ -29,12 +29,13 @@
  *      card: the card reaches past its last group, the drawer scrolls it as one
  *      unit and the page does not scroll; a short day still fills the drawer
  *      (HDRW-01..04)
+ *  11. the seeded Sunday's fourteen tasks wear eight distinct colours and six
+ *      Other bars; each task's legend and drawer swatches wear its bar's
+ *      colour; the summary reads `14 tasks · 14 blocks` (HTF-01, 03, 05, 16, 17)
  *
- * NOT automatable here, all from the same fact — ad-hoc sessions in a non-git
- * cwd carry no task: the colours of the task slots (HCAL-11 and the frozen
- * ranking are unit-tested) and the summary line's `N tasks` wording, since
- * every fixture day counts zero tasks and that branch never renders. Nor is
- * keyboard focus showing the tooltip, nor the two-theme look.
+ * NOT automatable here: keyboard focus showing the tooltip, and the two-theme
+ * look. The ad-hoc sessions carry no task, so every task colour is read on the
+ * seeded Sunday.
  *
  * The sessions are ad-hoc `pwsh` in C:/Windows and C:/Windows/System32 — never a
  * registry agent, which on a machine with the CLI installed starts a real agent.
@@ -713,6 +714,40 @@ try {
     short
       ? `card ${short.cardHeight.toFixed(1)} vs drawer ${short.drawerClient}, last group ${short.lastBottom.toFixed(1)}`
       : 'no card'
+  )
+
+  // 11. Eight colours on the seeded Sunday, never two on one day (HTF-01, 03, 05, 16, 17).
+  for (let i = 0; i < 8 && !(await headLabels()).some((l) => l.startsWith(seedHeader)); i++) {
+    await nav('Previous week')
+    await sleep(300)
+  }
+  await clickHead(seedHeader)
+  await sleep(400)
+  const sunday = await evaluate(
+    `(() => { const roleOf = el => [...el.classList].find(c => c.startsWith('role-')); const bg = el => getComputedStyle(el).backgroundColor; const bars = [...document.querySelectorAll('.hcal-col.selected .hcal-bar')].map(b => ({ label: b.getAttribute('aria-label').split(', ')[0], role: roleOf(b), bg: bg(b) })); const chips = new Map([...document.querySelectorAll('.hleg-chip')].map(c => [c.querySelector('.hleg-label').textContent, bg(c.querySelector('.hleg-swatch'))])); const rows = new Map([...document.querySelectorAll('.hours-drawer .hours-group')].map(g => [g.querySelector('.hours-group-label').textContent, bg(g.querySelector('.hours-group-swatch'))])); return { bars: bars.map(b => ({ ...b, chip: chips.get(b.label) ?? null, row: rows.get(b.label) ?? null })), count: document.querySelector('.hours-drawer .hours-day-count')?.textContent ?? null } })()`
+  )
+  const slotBars = sunday.bars.filter((b) => /^role-slot[1-8]$/.test(b.role))
+  const otherBars = sunday.bars.filter((b) => b.role === 'role-other')
+  const slotColours = new Set(slotBars.map((b) => b.bg))
+  check(
+    "the seeded Sunday's fourteen tasks wear eight distinct colours and six Other bars",
+    sunday.bars.length === 14 &&
+      slotBars.length === 8 &&
+      slotColours.size === 8 &&
+      otherBars.length === 6 &&
+      new Set(otherBars.map((b) => b.bg)).size === 1 &&
+      !slotColours.has(otherBars[0].bg),
+    `${slotBars.length} slot bars in ${slotColours.size} colours, ${otherBars.length} Other`
+  )
+  check(
+    "each seeded task's legend and drawer swatches wear its bar's colour",
+    sunday.bars.length === 14 && sunday.bars.every((b) => b.chip === b.bg && b.row === b.bg),
+    JSON.stringify(sunday.bars.filter((b) => b.chip !== b.bg || b.row !== b.bg).slice(0, 2))
+  )
+  check(
+    "the seeded Sunday's summary counts its tasks",
+    sunday.count === '14 tasks · 14 blocks',
+    `${sunday.count}`
   )
 } finally {
   for (const id of sessionIds) {
