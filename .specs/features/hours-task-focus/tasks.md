@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: inline. `ColourRole` grows to `slot1`..`slot8`; `assignColours` becomes a greedy colouring of the week's same-day conflict graph, in week-total order. Focus is two keys held by `HoursView` — `hoverKey` (transient) and `selectedKey` (kept across weeks) — and two pure helpers decide what they mean: which columns show, and which groups are dimmed. Components only receive the answers.
-**Status**: Approved by the owner 2026-09-26 (planned 2026-09-22); executing inline
+**Status**: Complete 2026-09-26 — Verifier PASS on round 3 of 3 (approved by the owner 2026-09-26, planned 2026-09-22)
 
 **Branch**: `feature/hours-task-focus`, cut from `feature/hours-calendar` `c97aec5` and rebased on 2026-09-26 onto `feature/hours-calendar` `7d85337`, which carries B1 and its seeded smoke. The PR stacks on #99.
 
