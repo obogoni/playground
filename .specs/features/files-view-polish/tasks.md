@@ -8,10 +8,12 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 ---
 
-**Design**: inline. A `ViewTab` gains `pinned: boolean`. Every rule lives in pure functions in `files-view.ts` — the strip order, pin and unpin, and one `tabsAfterBulkClose(action)` that returns the surviving keys and the next active key — so `use-files` only stores their answers and `FileTabs` only renders them. The context menu is inline in `FileTabs`, like the sidebar's and F3's.
-**Status**: Draft — awaiting owner approval (planned 2026-09-22)
+**Design**: inline. A `ViewTab` (`use-files.ts`: file, diff and commit tabs) gains an optional `pinned`, absent meaning unpinned. Every rule lives in pure functions in `files-view.ts` — the strip order, pin and unpin, and one `tabsAfterBulkClose(action)` that returns the surviving keys and the next active key — so `use-files` only stores their answers and `FileTabs` only renders them. The context menu is inline in `FileTabs`, like the sidebar's and F3's.
+**Status**: Approved 2026-09-26 with the reconciliation below, executed inline (planned 2026-09-22)
 
-**Branch**: `feature/files-view-polish` off `feature/files-diff` `bf2fc7e` (F2). It is a sibling of F3–F5, not stacked under them; both meet in `develop`.
+**Branch**: `feature/files-view-polish`, rebased onto `origin/main` `c31bb9a` on 2026-09-26 (F2 #101 and F3 #102 merged). The PR closes #108 and depends on nothing.
+
+**Reconciled with `main` (2026-09-26)**: `ViewTab` lives in `use-files.ts` and now includes F3's `CommitTab`, so `pinned` goes on that union (T1 touches `use-files.ts` for the type only) and commit tabs follow every rule; `tabKeyOf`, `ALL_CHANGES_KEY` and `tabsWithAllChanges` live in `diff-view.ts`; the menu's dismiss effect and look come from `CommitList` (`.commit-ctx-menu`, AD-038) as much as from the sidebar. Every other anchor holds: `tabsAfterClose` in `files-view.ts`, `closeTab` in `use-files`, `file-tab-close` / `file-tabs-toggle` in `FileTabs`, `setExpanded` / `shown` / `mountPlan` in `AllChangesTab`, the 40-file seed in `smoke-files-diff.mjs`.
 
 **Test baseline**: **re-measure** with `npx vitest run` as the first act of Execute; record the lint warning count at the same time.
 
@@ -75,10 +77,10 @@ T7 → T8 → T9
 
 ### T1: Pin and strip order
 
-**What**: `pinned` on `ViewTab`; `pinTab(tabs, key)` and `unpinTab(tabs, key)` returning the reordered list (pinned first in pin order; an unpinned tab first among the unpinned); a strip order helper that `tabsWithAllChanges` keeps putting after All changes.
-**Where**: `src/renderer/src/lib/files-view.ts`
+**What**: an optional `pinned` on `ViewTab` (type only, in `use-files.ts`); `pinTab(tabs, key)` and `unpinTab(tabs, key)` returning the reordered list (pinned first in pin order; an unpinned tab first among the unpinned); a strip order helper that `tabsWithAllChanges` keeps putting after All changes.
+**Where**: `src/renderer/src/lib/files-view.ts`; the `ViewTab` type in `src/renderer/src/lib/use-files.ts`
 **Depends on**: None
-**Reuses**: `tabKeyOf`, `ALL_CHANGES_KEY`
+**Reuses**: `tabKeyOf`, `ALL_CHANGES_KEY` (`diff-view.ts`)
 **Requirement**: FPOL-01, FPOL-03, FPOL-04, FPOL-05
 
 **Tools**:
@@ -155,7 +157,7 @@ T7 → T8 → T9
 **What**: Right-click on a tab opens its menu (Pin/Unpin, Close, Close others, Close to the right, Close unpinned, Close all); a pinned tab shows a pin button in place of ×; a ⋯ button ends the strip and opens Close unpinned and Close all; click outside or Escape dismisses; All changes gets no menu.
 **Where**: `src/renderer/src/components/FileTabs.tsx`
 **Depends on**: T3
-**Reuses**: the dismiss effect of `CommitList`/`Sidebar`; `Icon`
+**Reuses**: the dismiss effect of `CommitList`/`Sidebar` (any click or Escape); `Icon`
 **Requirement**: FPOL-02, FPOL-05, FPOL-12, FPOL-13
 
 **Tools**:
@@ -180,7 +182,7 @@ T7 → T8 → T9
 **What**: The menu styled like `.sidebar-ctx-menu`, the pin button and the ⋯ button in both themes.
 **Where**: `src/renderer/src/components/FileTabs.css`
 **Depends on**: T4
-**Reuses**: the sidebar menu's tokens
+**Reuses**: the tokens of `.commit-ctx-menu` and `.sidebar-ctx-menu`
 **Requirement**: FPOL-02, FPOL-12
 
 **Tools**:

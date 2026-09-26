@@ -21,7 +21,7 @@ expect from a tab strip and a multi-file diff.
 | Pinned tabs surviving a restart | Owner decision (grill Q5): tabs live in memory (FXPL-18); pinning is one more fact about a tab |
 | Keyboard shortcuts (Ctrl+W, Ctrl+K W, …) | Not requested |
 | Dragging tabs to reorder | Not requested |
-| A shared context-menu component | The sidebar and F3's commit rows each render their menu inline; this follows that convention rather than refactoring two features on other branches |
+| A shared context-menu component | The sidebar and F3's commit rows (both on `main`) each render their menu inline; this follows that convention rather than refactoring two shipped features |
 | Pinning or closing the All changes tab | FDIF-17: it is fixed, has no close button, and is derived from the mode |
 
 ---
@@ -39,7 +39,8 @@ expect from a tab strip and a multi-file diff.
 | A file listed after Expand all | Folded | From the first toggle on, the reader's set is the whole answer (FDIF-21's rule); Expand all is a toggle of every section listed at that moment | y |
 | Mounting after Expand all | Unchanged: only sections near the viewport hold an editor (`mountPlan`) | Expanding forty sections must not create forty Monaco editors | y |
 | Dismissing the menu | Any click outside it, or Escape | The sidebar's and F3's menus behave so | y |
-| Base branch | `feature/files-view-polish` off `feature/files-diff` `bf2fc7e` (F2); it does not touch F3–F5 | Owner-approved plan of 2026-09-22 | y |
+| Base branch | `feature/files-view-polish`, rebased onto `origin/main` on 2026-09-26 (F2 #101 and F3 #102 merged); the PR closes #108 | Owner-approved plan of 2026-09-22; F2's base is on `main` now | y |
+| Commit tabs | A commit tab (F3, `CommitTab`) is a tab like a file or diff tab: it can be pinned and every bulk close treats it the same | The rules are about the strip, not the tab's content; F3 shipped after the plan was written | y (owner, 2026-09-26) |
 
 **Open questions:** none — all resolved or logged above.
 
