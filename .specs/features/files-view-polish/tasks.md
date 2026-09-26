@@ -171,8 +171,10 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] A `pin` icon exists in `Icon` (added here if missing)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] A `pin` icon exists in `Icon` (added here if missing)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Done**: `Icon` gains Lucide's `pin` and `ellipsis`; the menu is one inline `StripMenu` state whose `anchor` is the right-clicked tab's key, or `null` for the ⋯ menu, which then shows only Close unpinned and Close all.
 
 **Tests**: none
 **Gate**: full
