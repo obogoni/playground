@@ -134,9 +134,9 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Tests with an injected importer: one import for many calls; an alias resolves to its parent's body; a missing name → `null`; a rejecting importer → `null` for every name and exactly one log
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: T2 count + the new tests
+- [x] Tests with an injected importer: one import for many calls; an alias resolves to its parent's body; a missing name → `null`; a rejecting importer → `null` for every name and exactly one log
+- [x] Gate check passes: `npm test`
+- [x] Test count: T2 count + the new tests (1771 → 1778: 7 new)
 
 **Tests**: unit
 **Gate**: quick

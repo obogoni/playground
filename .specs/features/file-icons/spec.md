@@ -125,7 +125,7 @@ never have to do. The changed-files list and the tab strip show no file icon at 
 | FICN-11 | P1: folders — AC 11 | Tasks | In Tasks |
 | FICN-12 | P1: no slowdown — AC 12 | Tasks | In Tasks |
 | FICN-13 | P1: no slowdown — AC 13 | Tasks | In Tasks |
-| FICN-14 | P1: no slowdown — AC 14 | Tasks | In Tasks |
+| FICN-14 | P1: no slowdown — AC 14 | Execute | Loader (T3) |
 | FICN-15 | P1: files — AC 15 | Execute | Resolved (T2) |
 
 **Coverage:** 15 total, 15 mapped to tasks, 0 unmapped.
