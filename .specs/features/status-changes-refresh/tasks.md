@@ -228,7 +228,7 @@ T8 → T9 → T10
 **What**: `patchWorktreeStatus(tree, path, status)` returns a new tree with that worktree's `dirty`/`changes` replaced, or the same tree when the path is absent; `worktreeForTurnEnd(tree, before, after, cwd)` returns the worktree path to recount when activity went `working` → `waiting`/`exited`, else `null`.
 **Where**: `src/renderer/src/lib/tree-status.ts` (new) and its test
 **Depends on**: T5
-**Reuses**: `deriveAttribution`
+**Reuses**: `worktreeIdForPath` (`tree-selection.ts`), not `deriveAttribution`
 **Requirement**: SCRF-03, SCRF-07, SCRF-08
 
 **Tools**:
@@ -238,9 +238,11 @@ T8 → T9 → T10
 
 **Done when**:
 
-- [ ] Tests: a patch yields a new identity even with an equal count (SCRF-03); an absent path returns the same tree (removed-worktree edge case); each transition into and out of `working` (only `working` → `waiting`/`exited` recounts); a `cwd` in a subfolder resolves to its worktree; a `cwd` outside every worktree yields `null`
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: T3 count + the new tests
+- [x] Tests: a patch yields a new identity even with an equal count (SCRF-03); an absent path returns the same tree (removed-worktree edge case); each transition into and out of `working` (only `working` → `waiting`/`exited` recounts); a `cwd` in a subfolder resolves to its worktree; a `cwd` outside every worktree yields `null`
+- [x] Gate check passes: `npm test`
+- [x] Test count: T3 count + the new tests
+
+**Done**: `deriveAttribution` matches a `cwd` only when it equals a worktree path, so it cannot satisfy the subfolder criterion. `worktreeIdForPath` is the existing containment join (longest prefix, case and slash normalised); for a `cwd` equal to a worktree path both agree, and one outside every worktree is `null` in both. 1678 → 1687 tests.
 
 **Tests**: unit
 **Gate**: quick
