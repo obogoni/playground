@@ -28,7 +28,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
 | ---------- | ------------------ | -------------------- | ---------------- | ----------- |
 | Main watcher (`git-state-watcher.ts`) | unit (fakes) | 1:1 to SCRF-01, 02, 04, 05 and the quit edge case | `src/main/git-state-watcher.test.ts` | `npm test` |
-| Worktree status (`worktree-manager.ts`) | unit (real git) | SCRF-06: a count, and the last-known fallback on a broken worktree | `src/main/worktree-manager.test.ts` | `npm test` |
+| Worktree status (`worktree-manager.ts`) | unit (real git) | SCRF-06: a count, and the last-known fallback on a broken worktree; SCRF-11: counting leaves the index untouched | `src/main/worktree-manager.test.ts` | `npm test` |
 | Renderer pure helpers (`tree-status.ts`) | unit | SCRF-03, 07, 08 and the removed-worktree and race edge cases | `src/renderer/src/lib/tree-status.test.ts` | `npm test` |
 | IPC contract, main wiring, hooks, App | none (build + smoke) | — | — | `npx electron-vite build` |
 | End to end | manual CDP smoke | SCRF-01, 07, 09, 10 in the running app, each seen failing on a broken build | `scripts/smoke-status-bar.mjs` | live dev app |
@@ -122,11 +122,11 @@ T8 → T9 → T10
 
 ### T2: `worktreeStatus` exported, failures reported
 
-**What**: Export the counting behind `statusOf` as `worktreeStatus(path)`, which reports a failure as `null` instead of a clean zero, so a recount can keep the last count; `buildTree` keeps its clean-on-failure stance.
+**What**: Export the counting behind `statusOf` as `worktreeStatus(path)`, which reports a failure as `null` instead of a clean zero, so a recount can keep the last count; `buildTree` keeps its clean-on-failure stance. Both `git status` calls in the file (`statusOf`/`worktreeStatus` and `changedFilesOf`) run as `git --no-optional-locks status --porcelain`, so counting never rewrites the index (T1).
 **Where**: `src/main/worktree-manager.ts`
 **Depends on**: T1
 **Reuses**: `statusOf`, the file's real-git test fixtures
-**Requirement**: SCRF-06
+**Requirement**: SCRF-06, SCRF-11
 
 **Tools**:
 
@@ -135,10 +135,10 @@ T8 → T9 → T10
 
 **Done when**:
 
-- [ ] Real-git tests: a count of mixed changes; `null` for a vanished path
+- [ ] Real-git tests: a count of mixed changes; `null` for a vanished path; after an edit, neither `worktreeStatus` nor `changedFilesOf` rewrites the index (its bytes and mtime unchanged)
 - [ ] Existing worktree-manager tests pass unedited
 - [ ] Gate check passes: `npm test`
-- [ ] Test count: baseline + 2
+- [ ] Test count: baseline + 4
 
 **Tests**: unit
 **Gate**: quick

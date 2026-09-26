@@ -63,6 +63,10 @@ after four were committed. Window focus re-fetches tasks, not the tree.
 5. IF a worktree's path is missing THEN the app SHALL NOT watch it and SHALL NOT fail the others
 6. IF a recount fails THEN the worktree SHALL keep its last count and the failure SHALL be logged, never thrown
 
+Added after T1's measurement (2026-09-26):
+
+11. WHEN the app runs `git status` in a worktree (tree, recount or changed-file list) THEN it SHALL NOT rewrite that worktree's index, so its own count never triggers the watcher
+
 **Independent Test**: Commit in a temp worktree from a terminal; the counter drops within 2 seconds.
 
 ---
@@ -119,8 +123,9 @@ after four were committed. Window focus re-fetches tasks, not the tree.
 | SCRF-08 | P1: turn end — AC 8 | Tasks | In Tasks |
 | SCRF-09 | P1: focus — AC 9 | Tasks | In Tasks |
 | SCRF-10 | P1: focus — AC 10 | Tasks | In Tasks |
+| SCRF-11 | P1: commit — AC 11 | Tasks | In Tasks |
 
-**Coverage:** 10 total, 10 mapped to tasks, 0 unmapped.
+**Coverage:** 11 total, 11 mapped to tasks, 0 unmapped. SCRF-11 was added on 2026-09-26 from T1's measurement (owner's choice: both status calls run with `--no-optional-locks`).
 
 ---
 
