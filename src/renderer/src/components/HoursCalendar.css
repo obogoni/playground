@@ -1,7 +1,8 @@
 /*
- * Hours week calendar (HCAL). Task colours are the three validated steps of
- * AD-030 — change one only after re-running the dataviz validator with
- * `--pairs all` against this view's --panel in both themes.
+ * Hours week calendar (HCAL). Task colours are the dataviz reference palette's
+ * eight categorical slots in order (AD-045, superseding AD-030 here) — change
+ * one only after re-running the dataviz validator with `--pairs all` against
+ * this view's --panel in both themes and updating AD-045's weak pairs.
  */
 
 :root,
@@ -9,12 +10,22 @@
   --hcal-slot1: #3987e5;
   --hcal-slot2: #d95926;
   --hcal-slot3: #199e70;
+  --hcal-slot4: #c98500;
+  --hcal-slot5: #d55181;
+  --hcal-slot6: #008300;
+  --hcal-slot7: #9085e9;
+  --hcal-slot8: #e66767;
 }
 
 :root[data-theme='light'] {
   --hcal-slot1: #2a78d6;
   --hcal-slot2: #eb6834;
   --hcal-slot3: #1baf7a;
+  --hcal-slot4: #eda100;
+  --hcal-slot5: #e87ba4;
+  --hcal-slot6: #008300;
+  --hcal-slot7: #4a3aa7;
+  --hcal-slot8: #e34948;
 }
 
 /* Takes the height the Hours body leaves; the hour rows divide it (HCAL-26). */
@@ -148,6 +159,26 @@
 
 .hcal-bar.role-slot3 {
   --hcal-c: var(--hcal-slot3);
+}
+
+.hcal-bar.role-slot4 {
+  --hcal-c: var(--hcal-slot4);
+}
+
+.hcal-bar.role-slot5 {
+  --hcal-c: var(--hcal-slot5);
+}
+
+.hcal-bar.role-slot6 {
+  --hcal-c: var(--hcal-slot6);
+}
+
+.hcal-bar.role-slot7 {
+  --hcal-c: var(--hcal-slot7);
+}
+
+.hcal-bar.role-slot8 {
+  --hcal-c: var(--hcal-slot8);
 }
 
 .hcal-bar.role-other {

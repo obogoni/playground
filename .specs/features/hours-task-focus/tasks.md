@@ -149,7 +149,7 @@ T11 → T12 → T13
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run lint` and `npx electron-vite build`
+- [x] Gate check passes: `npm run lint` and `npx electron-vite build`
 
 **Tests**: none
 **Gate**: build
