@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: none as a separate file — one module changes (`activity-machine.ts`) and its shape is fixed below. `MachineState` grows four private fields: whether the main agent's turn has ended (`mainStopped`), the ids in the last main-agent `Stop`'s `background_tasks` (`background`, absent until a `Stop` carries the field), the subagents that stopped and still owe their result (`owed`), and who asked the pending question (`askedBy`: an `agent_id`, or `main`). The view (`SessionActivity`) does not change, so IPC, renderer and notifications are untouched.
-**Status**: Re-planned 2026-09-25 after T1's findings and approved by the owner the same day — in Execute (planned 2026-09-22)
+**Status**: Done 2026-09-25 — Verifier PASS after three fix rounds and an owner-approved re-check (`validation.md`). Re-planned after T1's findings and approved the same day; planned 2026-09-22
 
 **Branch**: `feature/activity-subagent-attribution`, rebased onto `origin/main` `c31bb9a` on 2026-09-25 after #94 merged. The PR goes to `obogoni:main` with `Closes #106`, and no longer depends on #94.
 
