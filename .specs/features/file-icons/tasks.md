@@ -83,8 +83,8 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `npm view <pkg> license` recorded as MIT for both in the commit body
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `npm view <pkg> license` recorded as MIT for both in the commit body
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full
