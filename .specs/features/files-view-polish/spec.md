@@ -81,7 +81,7 @@ expect from a tab strip and a multi-file diff.
 10. WHEN the owner chooses Close on a pinned tab THEN the view SHALL close it
 11. WHEN a bulk close closes the active tab THEN the view SHALL activate the nearest surviving tab to its right, else to its left, else All changes in a diff mode, else nothing
 12. WHEN the owner clicks ⋯ at the end of the strip THEN the view SHALL open a menu with Close unpinned and Close all
-13. WHEN a menu is open and the owner clicks outside it or presses Escape THEN the view SHALL close the menu and change no tab
+13. WHEN a menu is open and the owner clicks outside it or presses Escape THEN the view SHALL close the menu; dismissing it SHALL change no tab by itself, and a click that lands on a control SHALL still do what that control does, as the sidebar's and the commit list's menus behave (owner decision, 2026-09-26)
 
 **Independent Test**: With two pinned and three unpinned tabs, Close unpinned leaves the two; Close all leaves only All changes.
 
@@ -99,6 +99,7 @@ expect from a tab strip and a multi-file diff.
 15. WHEN the owner clicks Collapse all THEN every section listed in All changes SHALL be folded
 16. WHILE every section is expanded, only the sections near the viewport SHALL hold an editor (`mountPlan`, unchanged)
 17. WHILE All changes lists nothing, Expand all and Collapse all SHALL NOT be shown
+18. WHEN the owner clicks Expand all or Collapse all in a commit tab's stack THEN every section of that commit SHALL be expanded or folded (owner decision, 2026-09-26: the commit tab reuses the All changes stack and keeps its buttons)
 
 **Independent Test**: On the forty-file seed, Expand all shows forty open sections and the editor count stays bounded; Collapse all folds them.
 
@@ -133,8 +134,9 @@ expect from a tab strip and a multi-file diff.
 | FPOL-15 | P1: expand — AC 15 | Execute | Done |
 | FPOL-16 | P1: expand — AC 16 | Execute | Done |
 | FPOL-17 | P1: expand — AC 17 | Execute | Done |
+| FPOL-18 | P1: expand — AC 18 | Execute | Done (fix round 1) |
 
-**Coverage:** 17 total, 17 mapped to tasks, 0 unmapped.
+**Coverage:** 18 total, 18 mapped to tasks, 0 unmapped. FPOL-18 and FPOL-13's wording come from the Verifier's first iteration (2026-09-26).
 
 ---
 

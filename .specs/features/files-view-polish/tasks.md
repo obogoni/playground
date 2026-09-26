@@ -27,7 +27,8 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 | Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
 | ---------- | ------------------ | -------------------- | ---------------- | ----------- |
-| Pure tab rules (`files-view.ts`) | unit | 1:1 to FPOL-01, 03, 04, 06–11 and the three edge cases | `src/renderer/src/lib/files-view.test.ts` | `npm test` |
+| Pure tab rules (`files-view.ts`) | unit | 1:1 to FPOL-01, 03, 04, 06–11 | `src/renderer/src/lib/files-view.test.ts` | `npm test` |
+| Edge cases (per-worktree pins, a pinned tab whose file stops changing, reopening a pinned file) | CDP smoke | They live in `use-files`, which has no unit tests; corrected from "pure tab rules" after the Verifier's first iteration | `scripts/smoke-files-diff.mjs` section 12 | live dev app |
 | Hook (`use-files.ts`) | none (smoke) | — | — | smoke |
 | Components and CSS (`FileTabs`, `AllChangesTab`) | none (CDP smoke) | FPOL-02, 05, 12–17 in the running app | — | `node scripts/smoke-files-diff.mjs` |
 | End to end | manual CDP smoke | Every new check seen failing on a broken build | `scripts/smoke-files-diff.mjs` | live dev app |
@@ -316,6 +317,19 @@ The first mutant runs stopped in the pre-existing section 8 with `Input.dispatch
 **Commit**: `test(files): check expanding and collapsing every change`
 
 ---
+
+### Fix round 1 (Verifier iteration 1, 2026-09-26)
+
+The Verifier failed iteration 1 on evidence, not behaviour. Fixes:
+- **Unit**: no focus stays none, an unknown anchor closes nothing, unpinning an absent key changes nothing; its surviving mutants M11–M13 re-run and killed.
+- **Spec**: FPOL-13 amended per the owner: dismissing a menu changes no tab by itself, and a click that lands on a control still acts, as the sidebar's and the commit list's menus do. FPOL-18 added per the owner: a commit tab's stack keeps Expand all and Collapse all. The coverage matrix no longer claims the pure rules cover the three edge cases.
+- **Smoke** (section 12 and 13): FPOL-04 after unpinning; the three edge cases (reopening a pinned file, per-worktree pins through a second worktree `fxd-smoke-other`, a pinned tab whose file stops changing); the amended FPOL-13, including the ⋯ menu's Escape; FPOL-18. Final run 43/43. Each new check was seen failing on a fresh launch:
+  - set D: reopening rebuilds the tab and dismissal swallows the click → checks 25 and 31 FAIL;
+  - set E: one shared Files state → check 26 FAIL;
+  - set F: a git state change closes diff tabs → check 27 FAIL;
+  - set G: pinning moves the focus → checks 23 and 24 FAIL;
+  - set C: the buttons wired to the wrong set → checks 38 to 43 FAIL, FPOL-18 included.
+- **Code**: `StripMenu` moved above `changeShortcut`'s doc comment.
 
 ## Phase Execution Map
 
