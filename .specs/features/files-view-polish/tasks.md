@@ -145,7 +145,9 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Done**: `closeTabs` takes T2's `BulkClose` value, which carries the anchor for Close, Close others and Close to the right, instead of a separate `anchorKey` argument.
 
 **Tests**: none
 **Gate**: full
