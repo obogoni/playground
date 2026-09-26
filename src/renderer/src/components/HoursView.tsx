@@ -372,7 +372,15 @@ function daySummary(day: DayReport): string {
     .join(' · ')
 }
 
-function DayCard({ day, onDelete, onAdjust, focus, colours, onClose }: DayCardProps): JSX.Element {
+function DayCard({
+  day,
+  onDelete,
+  onAdjust,
+  focus,
+  colours,
+  onClose,
+  onHover
+}: DayCardProps): JSX.Element {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -414,6 +422,7 @@ function DayCard({ day, onDelete, onAdjust, focus, colours, onClose }: DayCardPr
           onDelete={onDelete}
           onAdjust={onAdjust}
           focus={focus?.groupKey === group.key ? focus : undefined}
+          onHover={onHover}
         />
       ))}
     </section>
@@ -426,12 +435,25 @@ interface GroupSectionProps {
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
   focus?: BlockFocus
+  onHover: (key: string | null) => void
 }
 
-function GroupSection({ group, role, onDelete, onAdjust, focus }: GroupSectionProps): JSX.Element {
+function GroupSection({
+  group,
+  role,
+  onDelete,
+  onAdjust,
+  focus,
+  onHover
+}: GroupSectionProps): JSX.Element {
   return (
     <div className="hours-group">
-      <div className="hours-group-head">
+      {/* Pointing at a group's header fades the other groups' bars (HTF-07, HTF-08). */}
+      <div
+        className="hours-group-head"
+        onMouseEnter={() => onHover(group.key)}
+        onMouseLeave={() => onHover(null)}
+      >
         <span className={`hours-group-swatch role-${role}`} />
         <span
           className={`hours-group-label${group.taskId === null ? ' no-task' : ''}`}
