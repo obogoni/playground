@@ -351,8 +351,10 @@ T11 → T12 → T13
 
 **Done when**:
 
-- [ ] The selected-chip rule lives in `HoursLegend.css` if the chip styles are there (one-line move, stated in the commit)
-- [ ] Gate check passes: `npm run lint` and `npx electron-vite build`
+- [x] The selected-chip rule lives in `HoursLegend.css` if the chip styles are there (one-line move, stated in the commit)
+- [x] Gate check passes: `npm run lint` and `npx electron-vite build`
+
+**Done**: 2026-09-26. The chip rules live in `HoursLegend.css` with the other chip styles; `.hcal-bar.dimmed` in `HoursCalendar.css`.
 
 **Tests**: none
 **Gate**: build

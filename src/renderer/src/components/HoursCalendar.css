@@ -140,6 +140,12 @@
   border-radius: 4px;
   background: var(--hcal-c);
   container-type: size;
+  transition: opacity 0.12s;
+}
+
+/* Another task is in focus: this bar steps back (HTF-07, HTF-10). */
+.hcal-bar.dimmed {
+  opacity: 0.3;
 }
 
 /* The hit target is the bar plus a 4 px halo. */

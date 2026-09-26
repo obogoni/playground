@@ -13,15 +13,69 @@
 .hleg-chip {
   display: flex;
   align-items: center;
-  gap: 7px;
   min-width: 0;
   max-width: 340px;
-  padding: 4px 10px;
   box-sizing: border-box;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 12px;
+}
+
+.hleg-chip:hover {
+  border-color: var(--border-strong);
+}
+
+/* The picked chip filters the week (HTF-11). */
+.hleg-chip.picked {
+  background: color-mix(in oklab, var(--accent) 14%, var(--panel));
+  border-color: var(--accent);
+}
+
+/* The chip's body is the button that picks its group (HTF-10). */
+.hleg-pick {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 4px 10px;
+  background: none;
+  border: none;
+  border-radius: inherit;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.hleg-chip.picked .hleg-pick {
+  padding-right: 4px;
+}
+
+.hleg-pick:focus-visible,
+.hleg-clear:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+/* The × that shows every day again (HTF-12). */
+.hleg-clear {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 5px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.hleg-clear:hover {
+  background: var(--panel-2);
+  color: var(--text);
 }
 
 .hleg-swatch {
