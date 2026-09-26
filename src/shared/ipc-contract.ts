@@ -112,6 +112,8 @@ export interface IpcContract {
   'tasks:refresh': { req: void; res: TasksSnapshot }
   /** Resolves the first Hierarchy-Reverse parent (the US) of a pinned task; null when absent (PARENT-02). */
   'tasks:parent': { req: { id: number; org: string; project: string }; res: ParentOfResult }
+  /** Opens a pinned task's stored work item URL in the browser; main refuses anything not https on dev.azure.com (PTOP-01..07). */
+  'tasks:open': { req: { id: number; org: string; project: string }; res: LaunchResult }
   /** Persisted ∪ running sessions, reconciled with pathMissing (no network/spawn). */
   'sessions:list': { req: void; res: SessionView[] }
   /** Resolve agent (or run `adhocCommand` raw) + cwd, shell-host the PTY, persist, return the view. */
