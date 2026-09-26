@@ -83,16 +83,25 @@
   color: var(--text);
 }
 
-/* FPOL-02: a pinned tab's pin sits where its close button was, and unpins it. */
+/* FPOL-02: every tab's pin, before its close button: outlined while the tab is
+   unpinned, filled in the accent colour while it is pinned. */
 .file-tab-pin {
   display: flex;
   align-items: center;
-  padding: 5px 8px 5px 4px;
-  color: var(--text-muted);
+  padding: 5px 2px 5px 4px;
+  color: var(--text-faint);
 }
 
 .file-tab-pin:hover {
   color: var(--accent);
+}
+
+.file-tab.pinned .file-tab-pin {
+  color: var(--accent);
+}
+
+.file-tab.pinned .file-tab-pin svg {
+  fill: currentColor;
 }
 
 /* FPOL-12: the ⋯ button ends the strip, at its right edge. */

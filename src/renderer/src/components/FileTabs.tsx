@@ -236,21 +236,23 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
                 )}
                 {label}
               </button>
-              {/* FPOL-02/03: a pinned tab shows its pin where the close button
-                  was, and clicking the pin unpins it. */}
-              {pinned && (
+              {/* FPOL-02/03: every tab carries its pin before the close button;
+                  it is filled while the tab is pinned, and a click toggles it. */}
+              {!fixed && (
                 <button
                   type="button"
                   className="file-tab-pin"
-                  aria-label={`Unpin ${title}`}
-                  title="Unpin"
+                  aria-label={`${pinned ? 'Unpin' : 'Pin'} ${title}`}
+                  aria-pressed={pinned}
+                  title={pinned ? 'Unpin' : 'Pin'}
                   onClick={() => files.togglePin(key)}
                 >
                   <Icon name="pin" size={12} />
                 </button>
               )}
-              {/* FDIF-17: the fixed tab cannot be closed, so it carries no close button. */}
-              {!fixed && !pinned && (
+              {/* FDIF-17: the fixed tab cannot be closed, so it carries no close button.
+                  FPOL-10: a pinned tab keeps it. */}
+              {!fixed && (
                 <button
                   type="button"
                   className="file-tab-close"
