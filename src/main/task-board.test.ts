@@ -458,6 +458,11 @@ describe('openPinnedTask (PTOP-05..07)', () => {
     ['an http URL', 'http://dev.azure.com/acme/platform/_workitems/edit/7'],
     ['a foreign host', 'https://example.com/acme/platform/_workitems/edit/7'],
     ['a look-alike host', 'https://dev.azure.com.example.com/acme/platform/_workitems/edit/7'],
+    ['a prefixed host', 'https://xdev.azure.com/acme/platform/_workitems/edit/7'],
+    [
+      'the right host on another port',
+      'https://dev.azure.com:8443/acme/platform/_workitems/edit/7'
+    ],
     ['a URL that does not parse', 'not a url']
   ])('refuses %s and opens nothing (PTOP-06)', async (_label, stored) => {
     const o = opener()
@@ -492,5 +497,50 @@ describe('openPinnedTask (PTOP-05..07)', () => {
     )
 
     expect(o.calls).toEqual([url('acme', 'billing', 42), url('acme', 'platform', 42)])
+  })
+
+  it('opens the stored URL, never one the caller sends or one rebuilt from the ref (Goal 2)', async () => {
+    const o = opener()
+    const stored = 'https://dev.azure.com/acme/platform/_workitems/edit/12345?view=discussion'
+    const tasks = [pinned('acme', 'platform', 12345, stored)]
+    // A request carrying its own address, as a compromised renderer could send.
+    const ref = {
+      id: 12345,
+      org: 'acme',
+      project: 'platform',
+      url: 'https://dev.azure.com/other/place/_workitems/edit/1'
+    }
+
+    await openPinnedTask({ tasks, openExternal: o.openExternal }, ref)
+
+    expect(o.calls).toEqual([stored])
+  })
+
+  it('tells two orgs apart when id and project match (edge case)', async () => {
+    const o = opener()
+    const tasks = [pinned('acme', 'platform', 42), pinned('contoso', 'platform', 42)]
+
+    await openPinnedTask(
+      { tasks, openExternal: o.openExternal },
+      { id: 42, org: 'contoso', project: 'platform' }
+    )
+
+    expect(o.calls).toEqual([url('contoso', 'platform', 42)])
+  })
+
+  it('reports a rejection that is not an Error by its own text (PTOP-07)', async () => {
+    const tasks = [pinned('acme', 'platform', 3)]
+
+    const result = await openPinnedTask(
+      {
+        tasks,
+        openExternal: async () => {
+          throw 'blocked by policy'
+        }
+      },
+      tasks[0]
+    )
+
+    expect(result).toEqual({ ok: false, error: 'blocked by policy' })
   })
 })

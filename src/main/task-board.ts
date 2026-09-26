@@ -91,7 +91,7 @@ export async function openPinnedTask(
 ): Promise<LaunchResult> {
   const task = deps.tasks.find((candidate) => sameRef(candidate, ref))
   if (!task) return { ok: false, error: 'That task is no longer pinned.' }
-  if (!isHttpsUrl(task.url) || new URL(task.url).hostname !== 'dev.azure.com') {
+  if (!isHttpsUrl(task.url) || new URL(task.url).host !== 'dev.azure.com') {
     return { ok: false, error: 'Refusing to open an unexpected work item URL.' }
   }
   try {
