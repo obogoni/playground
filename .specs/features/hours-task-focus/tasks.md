@@ -301,7 +301,9 @@ T11 → T12 → T13
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Done**: 2026-09-26. The calendar already receives only the visible columns from T7; here each bar gets `dimmed` from the set and reports pointer and focus.
 
 **Tests**: none
 **Gate**: full
