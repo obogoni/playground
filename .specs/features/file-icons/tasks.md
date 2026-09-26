@@ -160,7 +160,7 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full

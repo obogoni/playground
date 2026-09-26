@@ -1,0 +1,17 @@
+/* A 16 px box whichever icon it holds, so rows do not shift when the set arrives.
+   The negative margin keeps 22 px rows at 22 px: the icon is 2 px taller than
+   the 14 px line it sits on. */
+.file-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin: -1px 0;
+  color: var(--text-muted);
+}
+
+.file-icon img {
+  display: block;
+}
