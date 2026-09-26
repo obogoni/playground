@@ -122,6 +122,7 @@ detail to its bars, and there is no way to see just the days one task took.
 - WHEN a task first appears while the week is shown THEN it SHALL be Other until the week is reopened (HCAL-24, unchanged)
 - WHEN the selected group is a task-less folder THEN the filter SHALL work the same way
 - WHEN a week has no tasks, only folders THEN no slot SHALL be assigned
+- WHEN the selected group has no time in the shown week THEN its chip SHALL stay in the legend, selected, with a `0m` total and its ×, so the selection stays visible and clearable (HTF-11, HTF-13); a task there wears the neutral swatch, since it holds no colour that week. Added at Execute (verifier round 1), amending HCAL-21's "groups of the shown week" for this one chip
 
 ---
 
@@ -129,15 +130,15 @@ detail to its bars, and there is no way to see just the days one task took.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| HTF-01 | P1: colours — AC 1 | Execute | Implemented (T1, T3) |
+| HTF-01 | P1: colours — AC 1 | Execute | Verified (T12, T13, T14 smoke) |
 | HTF-02 | P1: colours — AC 2 | Execute | Implemented (T1) |
 | HTF-03 | P1: colours — AC 3 | Execute | Implemented (T1) |
 | HTF-04 | P1: colours — AC 4 | Execute | Implemented (T1) |
 | HTF-05 | P1: colours — AC 5 | Execute | Implemented (T3, T4, T5) |
 | HTF-06 | P1: colours — AC 6 | Execute | Implemented (T1) |
 | HTF-07 | P1: hover — AC 7 | Execute | Verified (T13 smoke) |
-| HTF-08 | P1: hover — AC 8 | Execute | Verified (T13 smoke) |
-| HTF-09 | P1: hover — AC 9 | Execute | Verified (T13 smoke) |
+| HTF-08 | P1: hover — AC 8 | Execute | Verified (T12, T13, T14 smoke) |
+| HTF-09 | P1: hover — AC 9 | Execute | Verified (T12, T13, T14 smoke) |
 | HTF-10 | P1: filter — AC 10 | Execute | Verified (T13 smoke) |
 | HTF-11 | P1: filter — AC 11 | Execute | Verified (T13 smoke) |
 | HTF-12 | P1: filter — AC 12 | Execute | Verified (T13 smoke) |

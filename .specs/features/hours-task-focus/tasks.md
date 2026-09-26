@@ -468,7 +468,7 @@ The Verifier found every AC met in code; a smoke mutant removing the bars' leave
 
 **Done when**:
 
-- [ ] The edge case names the neutral swatch and HCAL-21's amendment
+- [x] The edge case names the neutral swatch and HCAL-21's amendment
 
 **Tests**: none
 **Gate**: quick
