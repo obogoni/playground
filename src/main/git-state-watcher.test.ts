@@ -156,7 +156,13 @@ describe('GitStateWatcher', () => {
     await h.watcher.sync([A])
     const handle = handleOf(h.handles, A)
 
-    for (const name of ['index.lock', 'HEAD.lock', 'COMMIT_EDITMSG', 'packed-refs.lock', 'objects']) {
+    for (const name of [
+      'index.lock',
+      'HEAD.lock',
+      'COMMIT_EDITMSG',
+      'packed-refs.lock',
+      'objects'
+    ]) {
       handle.fire(name)
     }
     h.flush()
