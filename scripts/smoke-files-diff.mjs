@@ -34,10 +34,14 @@
  *     big.txt              2 MB, past the 1 MB view cap
  *     stack/f00..f39.ts    40 changed files, for the All changes stack
  *     untracked.txt        untracked, so the uncommitted mode has one
+ *     Acme.Widget.slnx     committed on main, for the .slnx icon correction
+ *     settings.json        committed on main, for the dark-theme icon rule
+ *     vite.config.ts       committed on main, for the light-theme icon rule
  */
 
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { join } from 'node:path'
 
 const PORT = Number(process.env.SMOKE_PORT ?? 9222)
@@ -92,6 +96,10 @@ function seed() {
   writeFileSync(join(REPO, 'crlf.txt'), ['alpha', 'beta', 'gamma'].join(CR + LF) + CR + LF)
   writeFileSync(join(REPO, 'assets', 'logo.bin'), Buffer.from([0x89, 0x50, 0x00, 0x4e, 0x47]))
   writeFileSync(join(REPO, 'big.txt'), 'x'.repeat(2 * 1024 * 1024))
+  // Committed on main, so the diff modes never list them (FICN-03, FICN-15).
+  writeFileSync(join(REPO, 'Acme.Widget.slnx'), '<Solution />\n')
+  writeFileSync(join(REPO, 'settings.json'), '{ "theme": "dark" }\n')
+  writeFileSync(join(REPO, 'vite.config.ts'), 'export default {}\n')
   for (let i = 0; i < 40; i++) {
     const name = `f${String(i).padStart(2, '0')}.ts`
     writeFileSync(join(REPO, 'stack', name), `export const n${i} = ${i}\nexport const tail = 0\n`)
@@ -737,6 +745,8 @@ async function drive() {
     `${beforeCommit.length} sections -> ${afterCommit.length}`
   )
 
+  await iconChecks(ws)
+
   const failed = checks.filter((c) => !c.ok)
   console.log(`\n${checks.length - failed.length}/${checks.length} checks passed`)
   console.log('\nHand checks this smoke does NOT script:')
@@ -744,6 +754,204 @@ async function drive() {
   console.log('  B. Judge side-by-side against inline as the daily default.')
   ws.close()
   return failed.length
+}
+
+/* ----------------------------------------------------------------- icons -- */
+
+/** The body of a vscode-icons icon, as the installed set draws it; aliases take their parent's. */
+const iconSet = createRequire(import.meta.url)('@iconify-json/vscode-icons/icons.json')
+const iconBody = (name) =>
+  (iconSet.icons[name] ?? iconSet.icons[iconSet.aliases?.[name]?.parent])?.body ?? null
+
+/** The icons the checks name; any other drawn icon reads `unknown`. */
+const KNOWN_ICONS = [
+  'default-file',
+  'default-folder',
+  'default-folder-opened',
+  'file-type-typescript',
+  'file-type-light-typescript',
+  'file-type-sln',
+  'file-type-json',
+  'file-type-light-json',
+  'file-type-vite',
+  'file-type-light-vite',
+  'folder-type-src',
+  'folder-type-src-opened'
+]
+
+/**
+ * The icon each matching element draws, as the name of the set's icon whose body
+ * its data: URI carries — or `generic` for the stand-in Icon, `none` for nothing.
+ */
+const drawnIcons = (selector) => `
+  (() => {
+    const bodies = ${JSON.stringify(Object.fromEntries(KNOWN_ICONS.map((n) => [n, iconBody(n)])))}
+    return [...document.querySelectorAll(${JSON.stringify(selector)})].map((row) => {
+      const img = row.querySelector('.file-icon img')
+      if (!img) return row.querySelector('.file-icon svg') ? 'generic' : 'none'
+      const svg = decodeURIComponent(img.src.slice('data:image/svg+xml,'.length))
+      const inner = svg.slice(svg.indexOf('>') + 1, svg.lastIndexOf('</svg>'))
+      return Object.keys(bodies).find((name) => bodies[name] === inner) ?? 'unknown'
+    })
+  })()
+`
+
+/** The icon of the tree row whose name reads `name`. */
+async function rowIcon(ws, name) {
+  const names = await evaluate(
+    ws,
+    `[...document.querySelectorAll('.file-tree-row')].map((r) => r.querySelector('.file-tree-name')?.textContent)`
+  )
+  const icons = await evaluate(ws, drawnIcons('.file-tree-row'))
+  const index = names.indexOf(name)
+  return index < 0 ? 'no row' : icons[index]
+}
+
+async function clickThemeToggle(ws, to) {
+  const clicked = await evaluate(
+    ws,
+    `(() => { const b = document.querySelector('[title="Switch to ${to} theme"]'); b?.click(); return !!b })()`
+  )
+  await sleep(700)
+  return clicked && (await evaluate(ws, `document.documentElement.dataset.theme`)) === to
+}
+
+/** 12. File and folder icons (FICN-01, 03, 07, 08, 10, 11, 13, 14, 15). */
+async function iconChecks(ws) {
+  // Guards: each check below tells two icons apart by body, so the bodies must differ.
+  const pairs = [
+    ['file-type-sln', 'default-file'],
+    ['file-type-json', 'file-type-light-json'],
+    ['file-type-vite', 'file-type-light-vite'],
+    ['folder-type-src', 'folder-type-src-opened']
+  ]
+  for (const [a, b] of pairs) {
+    if (!iconBody(a) || !iconBody(b) || iconBody(a) === iconBody(b)) {
+      throw new Error(`Icon bodies do not tell ${a} from ${b}`)
+    }
+  }
+
+  if ((await evaluate(ws, `document.documentElement.dataset.theme`)) !== 'dark') {
+    await clickThemeToggle(ws, 'dark')
+  }
+  await evaluate(ws, clickByText('.file-tree-mode', 'Folder'))
+  await sleep(1600)
+  const srcOpen = await evaluate(
+    ws,
+    `[...document.querySelectorAll('.file-tree-row')].find((r) => r.querySelector('.file-tree-name')?.textContent === 'src')?.getAttribute('aria-expanded')`
+  )
+  if (srcOpen === 'true') {
+    await evaluate(ws, clickByText('.file-tree-name', 'src'))
+    await sleep(700)
+  }
+  const srcClosed = await rowIcon(ws, 'src')
+  await evaluate(ws, clickByText('.file-tree-name', 'src'))
+  await sleep(900)
+  const srcOpened = await rowIcon(ws, 'src')
+  const tsRow = await rowIcon(ws, 'added.ts')
+  const slnx = await rowIcon(ws, 'Acme.Widget.slnx')
+  const json = await rowIcon(ws, 'settings.json')
+
+  check(
+    'A .ts row in the tree shows the TypeScript icon (FICN-01)',
+    tsRow === 'file-type-typescript',
+    tsRow
+  )
+  check('A .slnx row shows the .sln icon (FICN-03)', slnx === 'file-type-sln', slnx)
+  check(
+    'The src folder shows its own closed and open icons (FICN-09, FICN-10)',
+    srcClosed === 'folder-type-src' && srcOpened === 'folder-type-src-opened',
+    `${srcClosed} -> ${srcOpened}`
+  )
+  check(
+    'A .json row shows the base JSON icon in the dark theme (FICN-15)',
+    json === 'file-type-json',
+    json
+  )
+
+  // The tab of a file opened from the tree, and its editor still mounting.
+  await evaluate(ws, clickByText('.file-tree-name', 'added.ts'))
+  await sleep(1800)
+  const tabIcons = await evaluate(ws, drawnIcons('.file-tab.active'))
+  const editor = await evaluate(ws, `document.querySelectorAll('.monaco-editor').length`)
+  check(
+    'A file tab shows its icon, and the editor still mounts (FICN-01)',
+    tabIcons[0] === 'file-type-typescript' && editor > 0,
+    `${tabIcons[0]}, ${editor} editor(s)`
+  )
+
+  // Light theme: a file with a light variant swaps without a restart (FICN-07, FICN-08).
+  // vite.config.ts is the one that proves the light rule: the mapping answers it
+  // with the base icon, while .json is answered light already and only proves
+  // that the dark rule stays out of the light theme.
+  const viteDark = await rowIcon(ws, 'vite.config.ts')
+  const toLight = await clickThemeToggle(ws, 'light')
+  const viteLight = await rowIcon(ws, 'vite.config.ts')
+  const jsonLight = await rowIcon(ws, 'settings.json')
+  const tsLight = await rowIcon(ws, 'added.ts')
+  check(
+    'Switching to light swaps icons with a light variant, in place (FICN-07, FICN-08)',
+    toLight &&
+      viteDark === 'file-type-vite' &&
+      viteLight === 'file-type-light-vite' &&
+      jsonLight === 'file-type-light-json' &&
+      tsLight === 'file-type-typescript',
+    `theme switched: ${toLight}; vite ${viteDark} -> ${viteLight}, json ${jsonLight}, ts ${tsLight}`
+  )
+  await clickThemeToggle(ws, 'dark')
+
+  // The changed list: a file row and the folder around it (FICN-01, FICN-11).
+  await evaluate(ws, clickByText('.file-tree-mode', 'Diff to origin'))
+  await sleep(1800)
+  const changedTs = await rowIcon(ws, 'added.ts')
+  const changedSrc = await rowIcon(ws, 'src')
+  check(
+    'The changed list shows file and open folder icons (FICN-01, FICN-11)',
+    changedTs === 'file-type-typescript' && changedSrc === 'folder-type-src-opened',
+    `added.ts ${changedTs}, src ${changedSrc}`
+  )
+  const allChanges = await evaluate(
+    ws,
+    `[...document.querySelectorAll('.file-tab.fixed .file-icon')].length`
+  )
+  check('The All changes tab shows no icon', allChanges === 0, `${allChanges} icon(s)`)
+
+  // A chunk that fails to load: rows keep the generic icon, logged once (FICN-13, FICN-14).
+  // Last, because it reloads the window.
+  const failures = []
+  const onConsole = (event) => {
+    const msg = JSON.parse(event.data)
+    if (msg.method !== 'Runtime.consoleAPICalled') return
+    const text = msg.params.args.map((a) => a.value ?? a.description ?? '').join(' ')
+    if (text.includes('File icons failed to load')) failures.push(text)
+  }
+  ws.addEventListener('message', onConsole)
+  await send(ws, 'Network.enable')
+  await send(ws, 'Network.setBlockedURLs', { urls: ['*icon-data*'] })
+  await send(ws, 'Page.reload', { ignoreCache: true })
+  await sleep(1500)
+  for (let i = 0; i < 30; i++) {
+    if (await evaluate(ws, `document.querySelector('.topbar') !== null`)) break
+    await sleep(1000)
+  }
+  await selectWorktree(ws)
+  await evaluate(ws, clickByText('.file-tree-mode', 'Folder'))
+  await sleep(1600)
+  await evaluate(ws, clickByText('.file-tree-name', 'src'))
+  await sleep(1500)
+  const blocked = await evaluate(ws, drawnIcons('.file-tree-row'))
+  await send(ws, 'Network.setBlockedURLs', { urls: [] })
+  ws.removeEventListener('message', onConsole)
+  check(
+    'With the icon chunk blocked, rows keep the generic icon (FICN-13, FICN-14)',
+    blocked.length > 3 && blocked.every((icon) => icon === 'generic'),
+    `${blocked.length} rows: ${[...new Set(blocked)].join(', ')}`
+  )
+  check(
+    'The failed load is logged once (FICN-14)',
+    failures.length === 1,
+    `${failures.length} log line(s)`
+  )
 }
 
 /* --------------------------------------------------------- after restart -- */

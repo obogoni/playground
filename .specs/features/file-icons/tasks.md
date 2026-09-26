@@ -259,9 +259,9 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Each check seen failing with the corrections table emptied or the light rule removed, then passing
-- [ ] The seed stays fictitious
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Each check seen failing, then passing: four mutant runs on a fresh userData — A (corrections emptied, dark rule off, icon on All changes only) failed 21, 23, 24, 27; B (light rule off, no stand-in, loader not cached) failed 25, 28, 29; C (open state ignored, theme not followed) failed 22, 25, 26; D (Explore file rows back to the generic icon) failed 20 (with 21, 23, 25, 28 that read the same row); clean run 29/29. The first B run let 25 pass: `.json` is answered light by the mapping itself, so `vite.config.ts` was added to prove the light rule
+- [x] The seed stays fictitious
+- [x] Gate check passes: `npm run lint` (18 warnings, unchanged)
 
 **Tests**: manual
 **Gate**: manual

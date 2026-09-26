@@ -119,12 +119,12 @@ never have to do. The changed-files list and the tab strip show no file icon at 
 | FICN-05 | P1: files — AC 5 | Execute | Resolved (T2) |
 | FICN-06 | P1: files — AC 6 | Execute | Resolved (T2) |
 | FICN-07 | P1: files — AC 7 | Execute | Resolved (T2) |
-| FICN-08 | P1: files — AC 8 | Tasks | In Tasks |
+| FICN-08 | P1: files — AC 8 | Execute | Smoke (T8) |
 | FICN-09 | P1: folders — AC 9 | Execute | Resolved (T2) |
 | FICN-10 | P1: folders — AC 10 | Execute | Resolved (T2) |
 | FICN-11 | P1: folders — AC 11 | Execute | Wired (T5) |
 | FICN-12 | P1: no slowdown — AC 12 | Execute | Own chunk (T6) |
-| FICN-13 | P1: no slowdown — AC 13 | Tasks | In Tasks |
+| FICN-13 | P1: no slowdown — AC 13 | Execute | Smoke (T8) |
 | FICN-14 | P1: no slowdown — AC 14 | Execute | Loader (T3) |
 | FICN-15 | P1: files — AC 15 | Execute | Resolved (T2) |
 
