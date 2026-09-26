@@ -21,9 +21,10 @@
  * Sessions: ad-hoc `pwsh -NoLogo` sessions only (never a registry agent, never
  * any input sent). Only the sessions this script spawned are stopped/removed.
  *
- * Owner state: the dev app runs on the owner's real user data, so the UI
- * direction, theme, workspace list and the Agents selection are snapshotted
- * first and restored in a `finally`, even on failure.
+ * Owner state: run the dev app on a throwaway --user-data-dir, never the
+ * owner's real one. The UI direction, theme, workspace list and the Agents
+ * selection are still snapshotted first and restored in a `finally`, even on
+ * failure.
  *
  * Screenshots (light + dark) go to %TEMP%\status-bar-smoke\ — never the repo.
  *
