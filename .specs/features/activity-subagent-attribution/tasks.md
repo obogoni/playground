@@ -263,7 +263,7 @@ Probe: the app's 16 hooks as http hooks, same shape as `buildClaudeHookSettings`
 
 ---
 
-### T7: Check it in the real app
+### T7: Check it in the real app ✅
 
 **What**: With the dev app unfocused, the owner runs a registry Claude session that fans out to two background subagents, one of which asks for approval; record the notifications received and the states seen.
 **Where**: `.specs/features/activity-subagent-attribution/tasks.md` (result)
@@ -278,14 +278,21 @@ Probe: the app's 16 hooks as http hooks, same shape as `buildClaudeHookSettings`
 
 **Done when**:
 
-- [ ] Exactly one `waiting` notification, at the job's real end
-- [ ] The approval shows `needs-approval` until answered, with the other subagent running
-- [ ] The test session is removed from the app afterwards
+- [x] Exactly one `waiting` notification, at the job's real end — owner report, 2026-09-25: after approving, one "Finished its turn"
+- [x] The approval shows `needs-approval` until answered, with the other subagent running — owner report: one approval notification for `WebFetch` while subagent A ran its sleeps, no other notification until the end
+- [ ] The test session is removed from the app afterwards — left to the owner, who drove the dev app
 
 **Tests**: none
 **Gate**: manual
 
 **Commit**: `docs(specs): record the real-app check of subagent attribution`
+
+#### Result (2026-09-25)
+
+Dev app from this branch, window unfocused, a registry Claude session, prompt: two background subagents, A running `sleep 5` eight times, B needing approval.
+
+- First run: B used `Write` on a file in the temp folder and Claude Code did not ask, even in the default permission mode; the file was written. The owner's global rules allow no `Write`, and the registry launch only adds `--add-dir`, so the grant came from elsewhere (not pursued). No approval was exercised.
+- Second run: B used `WebFetch` on a domain the rules do not allow. One notification asked for approval of `WebFetch`; after the owner approved it, one "Finished its turn" arrived at the end, and nothing else.
 
 ---
 
