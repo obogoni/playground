@@ -1,6 +1,6 @@
 /* A 16 px box whichever icon it holds, so rows do not shift when the set arrives.
-   The negative margin keeps 22 px rows at 22 px: the icon is 2 px taller than
-   the 14 px line it sits on. */
+   The negative margin keeps the tree's rows at their height: the icon is taller
+   than the name's line, and without it a 23.3 px row measured 24 px. */
 .file-icon {
   flex: none;
   display: inline-flex;

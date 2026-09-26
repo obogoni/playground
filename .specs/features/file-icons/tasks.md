@@ -184,8 +184,8 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Row height unchanged (22 px rows stay 22 px)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+- [x] Row height unchanged (measured 23.3 px with and without the icons, Folder and Diff to origin; the plan's 22 px was approximate)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
 
 **Tests**: none
 **Gate**: build

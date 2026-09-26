@@ -122,7 +122,7 @@ never have to do. The changed-files list and the tab strip show no file icon at 
 | FICN-08 | P1: files — AC 8 | Tasks | In Tasks |
 | FICN-09 | P1: folders — AC 9 | Execute | Resolved (T2) |
 | FICN-10 | P1: folders — AC 10 | Execute | Resolved (T2) |
-| FICN-11 | P1: folders — AC 11 | Tasks | In Tasks |
+| FICN-11 | P1: folders — AC 11 | Execute | Wired (T5) |
 | FICN-12 | P1: no slowdown — AC 12 | Tasks | In Tasks |
 | FICN-13 | P1: no slowdown — AC 13 | Tasks | In Tasks |
 | FICN-14 | P1: no slowdown — AC 14 | Execute | Loader (T3) |
