@@ -222,8 +222,10 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] `mountPlan` untouched
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `mountPlan` untouched
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Done**: FPOL-17 needs no condition of its own. With nothing listed, `AllChangesTab` returns its empty state, which has no header, so the two buttons are never drawn.
 
 **Tests**: none
 **Gate**: full
