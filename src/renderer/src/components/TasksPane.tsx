@@ -21,6 +21,8 @@ interface TasksPaneProps {
   onStartWork: (task: PinnedTaskView) => void
   /** Opens the New Session dialog for a task (0/1/many worktree resolution). */
   onSpawnAgent: (task: PinnedTaskView) => void
+  /** Shows a failure to open a task in the browser (PTOP-08). */
+  onToast: (message: string) => void
   /** Persisted tasks pane width; absent = 322px default (PANE-08). */
   width?: number
   /** Persisted collapsed state; absent = expanded (PANE-09). */
@@ -36,6 +38,7 @@ export function TasksPane({
   onSnapshot,
   onStartWork,
   onSpawnAgent,
+  onToast,
   width,
   collapsed = false,
   onWidthChange,
@@ -70,6 +73,16 @@ export function TasksPane({
       .invoke('tasks:unpin', { id: task.id, org: task.org, project: task.project })
       .then(onSnapshot)
       .catch(console.error)
+  }
+
+  // Main opens the URL it stored at pin time; the pane only names the task (PTOP-01..08).
+  const open = (task: PinnedTaskView): void => {
+    api
+      .invoke('tasks:open', { id: task.id, org: task.org, project: task.project })
+      .then((result) => {
+        if (!result.ok) onToast(result.error ?? 'Could not open the work item.')
+      })
+      .catch((err) => onToast(err instanceof Error ? err.message : String(err)))
   }
 
   return (
@@ -134,6 +147,7 @@ export function TasksPane({
               task={task}
               worktreeCount={worktreeCounts.get(task.id) ?? 0}
               time={time}
+              onOpen={() => open(task)}
               onUnpin={() => unpin(task)}
               onStartWork={() => onStartWork(task)}
               onSpawnAgent={() => onSpawnAgent(task)}
@@ -149,6 +163,8 @@ interface TaskCardProps {
   task: PinnedTaskView
   worktreeCount: number
   time: TimeSnapshot
+  /** Opens the work item in the browser, from the title or the #id (PTOP-01/02). */
+  onOpen: () => void
   onUnpin: () => void
   onStartWork: () => void
   onSpawnAgent: () => void
@@ -158,6 +174,7 @@ function TaskCard({
   task,
   worktreeCount,
   time,
+  onOpen,
   onUnpin,
   onStartWork,
   onSpawnAgent
@@ -182,13 +199,27 @@ function TaskCard({
           totalAt={(now) => taskTotalMs(time, task.id, now)}
           live={time.open.some((p) => p.taskId === task.id)}
         />
-        <span className="task-card-id">#{task.id}</span>
+        <button
+          type="button"
+          className="task-card-id task-card-link"
+          title="Open in Azure DevOps"
+          onClick={onOpen}
+        >
+          #{task.id}
+        </button>
         <button type="button" className="task-unpin-btn" title="Unpin" onClick={onUnpin}>
           <Icon name="x" size={12} strokeWidth={2.2} />
         </button>
       </div>
       {task.details ? (
-        <div className="task-card-title">{task.details.title}</div>
+        <button
+          type="button"
+          className="task-card-title task-card-link"
+          title="Open in Azure DevOps"
+          onClick={onOpen}
+        >
+          {task.details.title}
+        </button>
       ) : (
         <div className="task-card-unavailable">details unavailable</div>
       )}

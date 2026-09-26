@@ -153,8 +153,8 @@ T5 → T6
 
 **Done when**:
 
-- [ ] App's `<TasksPane>` receives `onToast` (one line in `App.tsx`, forced by the new required prop)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] App's `<TasksPane>` receives `onToast` (one line in `App.tsx`, forced by the new required prop)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full
