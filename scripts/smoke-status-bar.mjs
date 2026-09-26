@@ -17,11 +17,14 @@
  *   <tmp>/acme-workspace/acme-gizmo  a second repo with no remote at all
  *   <tmp>/other       a second clone that pushes the "remote" commits
  *   <tmp>/loose       a plain folder, the cwd of the non-worktree session
- *   <tmp>/wt/scrf     added mid-run: the counter follows a terminal commit
- *                     and focus (SCRF-01/09/10)
+ *   <tmp>/wt/scrf     added mid-run: the counter follows a terminal commit,
+ *                     focus and a turn end (SCRF-01/07/09/10)
+ *   <tmp>/fakebin     a fake `claude.cmd` that only records its hook token
  *
- * Sessions: ad-hoc `pwsh -NoLogo` sessions only (never a registry agent, never
- * any input sent). Only the sessions this script spawned are stopped/removed.
+ * Sessions: ad-hoc `pwsh -NoLogo` sessions, plus one session of a throwaway
+ * agent whose command is the fake `claude.cmd` above: never a real agent,
+ * never any input sent. Only the sessions this script spawned are
+ * stopped/removed, and the throwaway agent is removed on the way out.
  *
  * Owner state: the dev app runs on the owner's real user data, so the UI
  * direction, theme, workspace list and the Agents selection are snapshotted
@@ -37,7 +40,15 @@
  */
 
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 
@@ -60,6 +71,8 @@ const FOLDER_TITLE = 'stbr-smoke folder'
 const SUBFOLDER_TITLE = 'stbr-smoke subfolder'
 const DUMMY_TITLE = 'stbr-smoke nudge'
 const SCRF_BRANCH = 'user/dev/4821-fix-login/12350-counter-refresh'
+const TURN_TITLE = 'stbr-smoke turn end'
+const FAKE_AGENT = 'Fake claude (status bar smoke)'
 /** A window narrow enough that LONG_BRANCH overflows 70% of the bar (STBR-06). */
 const NARROW_WIDTH = 900
 
@@ -184,6 +197,7 @@ const wtDir = {
   many: join(root, 'wt', 'many'),
   scrf: join(root, 'wt', 'scrf')
 }
+const fakeBin = join(root, 'fakebin')
 
 function seed() {
   git(root, 'init', '-q', '--bare', '-b', 'main', originBare)
@@ -533,6 +547,7 @@ const owner = JSON.parse(
 const mine = [] // session ids this script spawned
 let ownerTreeSelection = null
 let registered = false
+let fakeAgentRegistered = false
 
 async function spawn(cwd, title) {
   const id = await evaluate(
@@ -900,7 +915,7 @@ async function main() {
   )
   await closePopovers(ws)
 
-  // --- The counter follows the git state and focus (SCRF-01, 09, 10) ---
+  // --- The counter follows the git state, focus and a turn end (SCRF-01, 07, 09, 10) ---
   // Runs ahead of the changes-popover section, which still drives the popover
   // FXPL-31 replaced (816059d) and stops the script there.
   await counterRefresh()
@@ -1251,6 +1266,52 @@ const fireFocus = (ws) =>
     `(window.dispatchEvent(new Event('blur')), window.dispatchEvent(new Event('focus')), true)`
   )
 
+/**
+ * A fake `claude` for the turn-end check: its name makes the app hand it the
+ * hook token (only `claude` publishes hooks), and it writes that token and the
+ * `--settings` path it was given next to itself, then idles. No real agent
+ * runs and no input is ever sent to the session.
+ */
+function writeFakeClaude() {
+  mkdirSync(fakeBin, { recursive: true })
+  writeFileSync(
+    join(fakeBin, 'claude.cmd'),
+    [
+      '@echo off',
+      '>"%~dp0settings.txt" echo %~2',
+      '>"%~dp0token.txt" echo %PLAYGROUND_ACTIVITY_TOKEN%',
+      ':idle',
+      'ping -n 3600 127.0.0.1 >nul',
+      'goto idle',
+      ''
+    ].join('\r\n')
+  )
+}
+
+/** Wait for a file the fake agent writes, and return its trimmed content. */
+async function readWhenWritten(path, timeoutMs = 8000) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    try {
+      const text = readFileSync(path, 'utf8').trim()
+      if (text !== '') return text
+    } catch {
+      /* not written yet */
+    }
+    await sleep(150)
+  }
+  return null
+}
+
+async function postHook(url, token, event) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ hook_event_name: event })
+  })
+  return res.status
+}
+
 async function counterRefresh() {
   // A worktree of its own, so no earlier check's state leaks in.
   git(primary, 'worktree', 'add', '-q', '-b', SCRF_BRANCH, wtDir.scrf, 'main')
@@ -1306,6 +1367,69 @@ async function counterRefresh() {
     b.changes === '3' && scrfChanges() === 4,
     `${b.changes}; git sees ${scrfChanges()}`
   )
+
+  // SCRF-07: an agent's turn ending in the worktree recounts it.
+  writeFakeClaude()
+  await evaluate(
+    ws,
+    `(async () => {
+       const cfg = await window.api.invoke('config:get')
+       const agents = cfg.agents.filter((a) => a.name !== ${J(FAKE_AGENT)})
+       await window.api.invoke('config:patch', {
+         agents: [...agents, { name: ${J(FAKE_AGENT)}, command: ${J(join(fakeBin, 'claude.cmd'))}, args: [], color: '--accent' }]
+       })
+       return true
+     })()`
+  )
+  fakeAgentRegistered = true
+  const agentId = await evaluate(
+    ws,
+    `(async () => {
+       const v = await window.api.invoke('sessions:spawn', { agentName: ${J(FAKE_AGENT)}, cwd: ${J(wtDir.scrf)} })
+       await window.api.invoke('sessions:rename', { id: v.id, title: ${J(TURN_TITLE)} })
+       return v.id
+     })()`
+  )
+  mine.push(agentId)
+  // A direct-IPC spawn pushes nothing; a session that exits at once makes the
+  // renderer re-fetch the list, so the fake session's pushes are not dropped.
+  const nudge = await spawn(loose, DUMMY_TITLE)
+  await evaluate(
+    ws,
+    `(async () => { await window.api.invoke('sessions:stop', { id: ${J(nudge)} }); return true })()`
+  )
+  const token = await readWhenWritten(join(fakeBin, 'token.txt'))
+  const settingsPath = await readWhenWritten(join(fakeBin, 'settings.txt'))
+  let url = null
+  try {
+    url = JSON.parse(readFileSync(settingsPath, 'utf8')).hooks?.Stop?.[0]?.hooks?.[0]?.url ?? null
+  } catch {
+    /* reported below */
+  }
+  check(
+    'the fake agent received a hook token and the hook settings',
+    Boolean(token) && token !== '%PLAYGROUND_ACTIVITY_TOKEN%' && Boolean(url),
+    `token ${token ? 'yes' : 'no'}; url ${url ?? settingsPath}`
+  )
+  if (!token || !url) return
+  await sleep(800)
+  const working = await postHook(url, token, 'UserPromptSubmit')
+  writeFileSync(join(wtDir.scrf, 'seven.txt'), 'seven\n')
+  await sleep(1500)
+  b = await bar(ws)
+  check(
+    'a turn in progress leaves the counter as it was',
+    working === 204 && b.changes === '3' && scrfChanges() === 5,
+    `POST ${working}; ${b.changes}; git sees ${scrfChanges()}`
+  )
+  const beforeStop = b.changes
+  const stopped = await postHook(url, token, 'Stop')
+  b = await waitBar(ws, (v) => v.changes === '5', 4000)
+  check(
+    "the agent's turn ending recounts its worktree (SCRF-07)",
+    stopped === 204 && beforeStop !== '5' && b.changes === '5',
+    `POST ${stopped}; ${beforeStop} → ${b.changes}`
+  )
 }
 
 /** Stop and remove this script's sessions through the rail (so the renderer drops them). */
@@ -1320,7 +1444,7 @@ async function removeMySessions() {
   )
   await sleep(800)
   await direction(ws, 'Agents')
-  for (const title of [TARGET_TITLE, FOLDER_TITLE, SUBFOLDER_TITLE, DUMMY_TITLE]) {
+  for (const title of [TARGET_TITLE, FOLDER_TITLE, SUBFOLDER_TITLE, DUMMY_TITLE, TURN_TITLE]) {
     await evaluate(
       ws,
       `(() => {
@@ -1355,6 +1479,17 @@ try {
     await send(ws, 'Emulation.clearDeviceMetricsOverride').catch(() => {})
     await closePopovers(ws)
     await removeMySessions()
+    if (fakeAgentRegistered) {
+      const left = await evaluate(
+        ws,
+        `(async () => {
+           const cfg = await window.api.invoke('config:get')
+           await window.api.invoke('config:patch', { agents: cfg.agents.filter((a) => a.name !== ${J(FAKE_AGENT)}) })
+           return (await window.api.invoke('config:get')).agents.some((a) => a.name === ${J(FAKE_AGENT)})
+         })()`
+      )
+      check('the throwaway fake-claude agent is removed', left === false)
+    }
     if (registered) {
       await evaluate(
         ws,

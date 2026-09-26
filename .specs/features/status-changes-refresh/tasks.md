@@ -346,9 +346,11 @@ T8 → T9 → T10
 
 **Done when**:
 
-- [ ] The check seen failing with T8's turn-end recount removed, then passing — or the hand-verification recorded
-- [ ] No input ever sent to a registry-agent session
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] The check seen failing with T8's turn-end recount removed, then passing — or the hand-verification recorded
+- [x] No input ever sent to a registry-agent session
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Done (2026-09-26)**: an ad-hoc session never gets a hook token (only an agent whose command is `claude` does), so no hand-verification with a registry session was needed: the smoke registers a throwaway agent whose command is a fake `claude.cmd` in the temp dir. It records the token and the `--settings` path it is given and idles; no real agent runs and no input is sent. The smoke POSTs `UserPromptSubmit` then `Stop` with that token. Passing run: 3 → 5 after `Stop`, with the count held at 3 during the turn. Falsified: turn-end `recount` removed → SCRF-07 FAIL (1 → 1). The check requires the pre-`Stop` count to differ from 5. The agent is removed in `finally`, checked by its own line.
 
 **Tests**: manual
 **Gate**: manual
