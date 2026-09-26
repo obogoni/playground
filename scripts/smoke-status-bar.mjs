@@ -1,4 +1,4 @@
-/* CDP smoke for the status bar (STBR-01..32). Drives the bar and both popovers
+/* CDP smoke for the status bar (STBR-01..29, 31). Drives the bar and the sync popover
  * through the states the unit tests cannot reach, against real git: a temp
  * workspace whose repo clones a temp BARE remote, plus a second bare remote.
  * Nothing here touches a real remote — every push goes to a bare repo under
@@ -28,9 +28,15 @@
  * Screenshots (light + dark) go to %TEMP%\status-bar-smoke\ — never the repo.
  *
  * NOT automatable here (hand-verify from the screenshots): both themes read
- * well; the middle ellipsis looks right; the popovers sit above the bar.
+ * well; the middle ellipsis looks right; the sync popover sits above the bar.
  *
- * Run: npm run dev -- -- --remote-debugging-port=9222   (in one shell)
+ * The changed-file counter's click is not driven here: since FXPL-31 it opens
+ * the Files direction in uncommitted mode instead of a popover (STBR-30 and
+ * STBR-32 are superseded), and scripts/smoke-files.mjs covers it in step 15,
+ * "The status-bar counter lands in Files". This script reads the counter only.
+ *
+ * Run: npm run dev -- -- --user-data-dir=<a throwaway dir> --remote-debugging-port=9222
+ *                                                      (in one shell)
  *      node scripts/smoke-status-bar.mjs                  (in another)
  */
 
@@ -236,7 +242,7 @@ function seed() {
   for (let i = 1; i <= MANY_COMMITS; i++) commit(other, 'many.txt', `Remote batch commit ${i}`)
   git(other, 'push', '-q')
 
-  // The primary checkout carries one change of each status (STBR-30).
+  // The primary checkout carries one change of each status: the counter reads 5 (STBR-29).
   writeFileSync(join(primary, 'modify-me.txt'), 'changed\n')
   unlinkSync(join(primary, 'delete-me.txt'))
   git(primary, 'mv', 'rename-me.txt', 'renamed.txt')
@@ -443,7 +449,7 @@ const waitOutcome = async (ws) => {
 const closePopovers = (ws) => evaluate(ws, `(document.body.click(), true)`)
 
 /** Let every running CSS animation (popIn, toastIn) finish before reading or shooting. */
-const settle = (ws, selector = '.sync-pop, .changes-pop, .toast') =>
+const settle = (ws, selector = '.sync-pop, .toast') =>
   evaluate(
     ws,
     `Promise.race([
@@ -896,83 +902,18 @@ async function main() {
   )
   await closePopovers(ws)
 
-  // --- Changes popover: all five statuses (STBR-29, 30) ---
+  // --- The counter: five changed files, and 0 on a clean worktree (STBR-29, 31) ---
   await selectWorktree(ws, 'main')
   b = await bar(ws)
   check('the primary checkout counts five changed files (STBR-29)', b.changes === '5', b.changes)
-  await evaluate(ws, `(document.querySelector('button.status-bar-changes').click(), true)`)
-  const rows = await waitFor(
-    ws,
-    `JSON.stringify([...document.querySelectorAll('.changes-pop .changes-pop-row')].map((r) => {
-       const pill = r.querySelector('.changes-pop-pill')
-       return { label: pill?.textContent, cls: pill?.className, path: r.querySelector('.changes-pop-path')?.textContent }
-     }))`,
-    (v) => v.length > 0
-  )
-  await settle(ws)
-  const changesLayer = JSON.parse(await evaluate(ws, TOPMOST('.changes-pop')))
-  check(
-    'the changes popover is the topmost layer across its whole box, fully opaque',
-    changesLayer.covered === 0 && changesLayer.opacity === '1',
-    JSON.stringify(changesLayer)
-  )
-  const labels = rows.map((r) => r.label).sort()
-  check(
-    'the changes popover shows Modified, Added, Deleted, Renamed and Untracked (STBR-30)',
-    labels.join() === 'Added,Deleted,Modified,Renamed,Untracked' &&
-      rows.every((r) => r.cls.includes(r.label.toLowerCase())),
-    rows.map((r) => `${r.label}:${r.path}`).join(', ')
-  )
-  // React keeps a node's handlers on its `__reactProps$…` key, so a row wired
-  // to a click shows up here even though the DOM carries no onclick attribute.
-  const inert = JSON.parse(
-    await evaluate(
-      ws,
-      `(() => {
-         const pop = document.querySelector('.changes-pop')
-         const rows = [...pop.querySelectorAll('.changes-pop-row')]
-         const nodes = [...pop.querySelectorAll('.changes-pop-list, .changes-pop-list *')]
-         const handlers = nodes.filter((el) => {
-           const key = Object.keys(el).find((k) => k.startsWith('__reactProps'))
-           const props = key ? el[key] : {}
-           return Object.keys(props).some((k) => /^on(Click|MouseDown|MouseUp|DoubleClick|KeyDown|ContextMenu)/.test(k))
-         })
-         return JSON.stringify({
-           rows: rows.length,
-           rowTags: [...new Set(rows.map((r) => r.tagName))],
-           controls: pop.querySelectorAll('button, a, input, select, [role=button], [role=link], [tabindex], [onclick]').length,
-           handlers: handlers.map((el) => el.className)
-         })
-       })()`
-    )
-  )
-  check(
-    'no changed-file row is, or holds, a control or a click handler (STBR-32)',
-    inert.rows === 5 &&
-      inert.rowTags.join() === 'DIV' &&
-      inert.controls === 0 &&
-      inert.handlers.length === 0,
-    JSON.stringify(inert)
-  )
-  await closePopovers(ws)
 
-  // --- A clean worktree: counter 0, popover says so (STBR-31) ---
   await selectWorktree(ws, PUBLISH_BRANCH)
   b = await bar(ws)
-  await evaluate(ws, `(document.querySelector('button.status-bar-changes').click(), true)`)
-  const emptyText = await waitFor(
-    ws,
-    `JSON.stringify(document.querySelector('.changes-pop .changes-pop-empty')?.textContent ?? null)`,
-    (v) => v !== null && v !== 'Loading…'
-  )
   check(
-    'a clean worktree counts 0 and its popover says "No changes." (STBR-31)',
-    b.changes === '0' &&
-      emptyText === 'No changes.' &&
-      git(wtDir.pub, 'status', '--porcelain') === '',
-    `counter ${b.changes}; popover "${emptyText}"`
+    'a clean worktree counts 0 (STBR-31)',
+    b.changes === '0' && git(wtDir.pub, 'status', '--porcelain') === '',
+    `counter ${b.changes}`
   )
-  await closePopovers(ws)
 
   // --- Detached HEAD: its label, and no operation offered (STBR-08, 13) ---
   await selectWorktree(ws, detachedLabel)
@@ -1121,67 +1062,23 @@ async function main() {
     `counter before ${staleChanges} (porcelain ${porcelain}), after the Fetch ${b.changes}`
   )
 
-  // --- Dismissal: Escape and an outside click close either popover (edge case) ---
-  const POPS = `JSON.stringify({
-    sync: Boolean(document.querySelector('.sync-pop')),
-    changes: Boolean(document.querySelector('.changes-pop'))
-  })`
-  // A synthetic keydown on the body reaches the popovers' window listeners and
+  // --- Dismissal: Escape closes the sync popover (edge case) ---
+  const POPS = `JSON.stringify({ sync: Boolean(document.querySelector('.sync-pop')) })`
+  // A synthetic keydown on the body reaches the popover's window listener and
   // nothing focused, so no terminal ever receives it.
   const escape = () =>
     evaluate(
       ws,
       `(document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })), true)`
     )
-  const clickSync = () =>
-    evaluate(ws, `(document.querySelector('button.status-bar-sync').click(), true)`)
-  const clickChanges = () =>
-    evaluate(ws, `(document.querySelector('button.status-bar-changes').click(), true)`)
   let pops = JSON.parse(await evaluate(ws, POPS))
   const syncWasOpen = pops.sync
   await escape()
   pops = await waitFor(ws, POPS, (p) => !p.sync, 2000)
   check(
     'Escape closes the sync popover',
-    syncWasOpen && !pops.sync && !pops.changes,
+    syncWasOpen && !pops.sync,
     JSON.stringify({ before: syncWasOpen, after: pops })
-  )
-  await clickChanges()
-  const changesOpened = (await waitFor(ws, POPS, (p) => p.changes, 2000)).changes
-  await escape()
-  pops = await waitFor(ws, POPS, (p) => !p.changes, 2000)
-  check(
-    'Escape closes the changes popover',
-    changesOpened && !pops.changes && !pops.sync,
-    JSON.stringify({ before: changesOpened, after: pops })
-  )
-  await clickChanges()
-  const changesReopened = (await waitFor(ws, POPS, (p) => p.changes, 2000)).changes
-  await closePopovers(ws)
-  pops = await waitFor(ws, POPS, (p) => !p.changes, 2000)
-  check(
-    'a click outside closes the changes popover',
-    changesReopened && !pops.changes && !pops.sync,
-    JSON.stringify({ before: changesReopened, after: pops })
-  )
-
-  // --- One popover at a time (edge case) ---
-  await openSync(ws)
-  await clickChanges()
-  await sleep(300)
-  pops = await waitFor(ws, POPS, (p) => p.changes && !p.sync, 2000)
-  check(
-    'with the sync popover open, clicking the counter leaves only the changes popover open',
-    pops.changes && !pops.sync,
-    JSON.stringify(pops)
-  )
-  await clickSync()
-  await sleep(300)
-  pops = await waitFor(ws, POPS, (p) => p.sync && !p.changes, 2000)
-  check(
-    'with the changes popover open, clicking the sync section leaves only the sync popover open',
-    pops.sync && !pops.changes,
-    JSON.stringify(pops)
   )
   await closePopovers(ws)
   rmSync(join(wtDir.sync, 'tree-refresh-probe.txt'), { force: true })
@@ -1213,15 +1110,6 @@ async function main() {
     await openSync(ws)
     await waitFor(ws, POP, (p) => p.lists.every((l) => l.commits.length > 0))
     await shot(ws, `sync-popover-${theme}.png`)
-    await closePopovers(ws)
-    await selectWorktree(ws, 'main')
-    await evaluate(ws, `(document.querySelector('button.status-bar-changes').click(), true)`)
-    await waitFor(
-      ws,
-      `JSON.stringify(document.querySelectorAll('.changes-pop-row').length)`,
-      (n) => n === 5
-    )
-    await shot(ws, `changes-popover-${theme}.png`)
     await closePopovers(ws)
     await selectWorktree(ws, SYNC_BRANCH)
     const t = await toastFromClosedPopover(ws)
