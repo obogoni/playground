@@ -212,7 +212,9 @@ T8 → T9 → T10
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+
+**Done**: the watchers close on `will-quit`, beside the Files watcher, rather than on `window-all-closed`; both fire on quit. A failed recount is logged once in `recountWorktree`, for pushes and for `worktrees:status` alike.
 
 **Tests**: none
 **Gate**: build
