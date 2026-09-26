@@ -73,6 +73,8 @@ const git = (args, cwd = REPO) =>
 function seed() {
   rmTree(WS_PATH)
   rmTree(ORIGIN)
+  // The second worktree an earlier drive added (FXPL-18): git refuses to add it again.
+  rmTree(OTHER)
   for (const dir of ['src', 'docs', 'assets', 'stack']) {
     mkdirSync(join(REPO, dir), { recursive: true })
   }
@@ -306,14 +308,29 @@ const activeTab = (ws) =>
     `(() => { const el = document.querySelector('.file-tab.active .file-tab-label'); return el ? (${tabName})(el) : null })()`
   )
 
-/** For every tab, whether it ends in a pin or a close button (FPOL-02). */
+/**
+ * For every tab, what its buttons show (FPOL-02): `pinned` is a filled, pressed
+ * pin before a close button, `unpinned` an outlined one before a close button.
+ * Anything else is spelled out, so a failure says what is on screen.
+ */
 const tabMarks = (ws) =>
   evaluate(
     ws,
-    `Object.fromEntries([...document.querySelectorAll('.file-tab')].map((tab) => [
-       (${tabName})(tab.querySelector('.file-tab-label')),
-       tab.querySelector('.file-tab-pin') ? 'pin' : tab.querySelector('.file-tab-close') ? 'close' : 'none'
-     ]))`
+    `Object.fromEntries([...document.querySelectorAll('.file-tab')].map((tab) => {
+       const pin = tab.querySelector('.file-tab-pin')
+       const close = tab.querySelector('.file-tab-close')
+       const filled = pin ? getComputedStyle(pin.querySelector('svg')).fill !== 'none' : null
+       const pressed = pin?.getAttribute('aria-pressed') ?? null
+       const pinFirst = !!pin && !!close && !!(pin.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING)
+       const mark =
+         pinFirst && filled && pressed === 'true'
+           ? 'pinned'
+           : pinFirst && !filled && pressed === 'false'
+             ? 'unpinned'
+             : 'pin ' + (pin ? (filled ? 'filled' : 'outlined') + ' pressed=' + pressed : 'none') +
+               ', close ' + (close ? 'yes' : 'no') + ', pin first ' + pinFirst
+       return [(${tabName})(tab.querySelector('.file-tab-label')), mark]
+     }))`
   )
 
 const tabElement = (name) => `
@@ -330,6 +347,14 @@ const rightClickTab = (name) => `
     tab.querySelector('.file-tab-label').dispatchEvent(new MouseEvent('contextmenu', {
       bubbles: true, cancelable: true, button: 2, clientX: box.left + 8, clientY: box.bottom - 4
     }))
+    return true
+  })()`
+
+const clickCloseOf = (name) => `
+  (() => {
+    const close = (${tabElement(name)})?.querySelector('.file-tab-close')
+    if (!close) return false
+    close.click()
     return true
   })()`
 
@@ -877,8 +902,10 @@ async function drive() {
     J(pinnedStrip)
   )
   check(
-    'A pinned tab shows a pin where its close button was (FPOL-02)',
-    marks['f02.ts'] === 'pin' && marks['f04.ts'] === 'pin' && marks['f00.ts'] === 'close',
+    'Every tab shows a pin before its close button, filled only while pinned (FPOL-02)',
+    marks['f02.ts'] === 'pinned' &&
+      marks['f04.ts'] === 'pinned' &&
+      ['f00.ts', 'f01.ts', 'f03.ts'].every((name) => marks[name] === 'unpinned'),
     J(marks)
   )
   check(
@@ -893,10 +920,24 @@ async function drive() {
   check(
     'Clicking the pin unpins the tab to the front of the unpinned tabs (FPOL-03)',
     J(unpinnedStrip) === J(['All changes', 'f04.ts', 'f02.ts', 'f00.ts', 'f01.ts', 'f03.ts']) &&
-      (await tabMarks(ws))['f02.ts'] === 'close' &&
+      (await tabMarks(ws))['f02.ts'] === 'unpinned' &&
       (await activeTab(ws)) === 'f00.ts',
     `${J(unpinnedStrip)}, active ${await activeTab(ws)}`
   )
+
+  // The same pin, on an unpinned tab, pins it (FPOL-03, as amended).
+  await evaluate(ws, clickPinOf('f00.ts'))
+  await sleep(400)
+  const pinnedByButton = await strip(ws)
+  check(
+    "Clicking an unpinned tab's pin pins it, and the focus stays (FPOL-03, FPOL-04)",
+    J(pinnedByButton) === J(['All changes', 'f04.ts', 'f00.ts', 'f02.ts', 'f01.ts', 'f03.ts']) &&
+      (await tabMarks(ws))['f00.ts'] === 'pinned' &&
+      (await activeTab(ws)) === 'f00.ts',
+    `${J(pinnedByButton)}, marks ${J(await tabMarks(ws))}, active ${await activeTab(ws)}`
+  )
+  await evaluate(ws, clickPinOf('f00.ts'))
+  await sleep(400)
   await tabMenu(ws, 'f02.ts', 'Pin')
 
   // Opening a file already open in a pinned tab focuses that tab (edge case, FXPL-16).
@@ -907,7 +948,7 @@ async function drive() {
     'Opening a file already open in a pinned tab focuses it, pinned, with no second tab (edge case)',
     J(await strip(ws)) === J(beforeReopen) &&
       (await activeTab(ws)) === 'f02.ts' &&
-      (await tabMarks(ws))['f02.ts'] === 'pin',
+      (await tabMarks(ws))['f02.ts'] === 'pinned',
     `${J(await strip(ws))}, active ${await activeTab(ws)}`
   )
 
@@ -916,7 +957,7 @@ async function drive() {
   await evaluate(ws, `(document.querySelector('.topbar-icon-btn[title="Refresh"]')?.click(), true)`)
   await sleep(1500)
   await selectBranch(ws, 'other')
-  const otherPins = await evaluate(ws, `document.querySelectorAll('.file-tab-pin').length`)
+  const otherPins = await evaluate(ws, `document.querySelectorAll('.file-tab.pinned').length`)
   const otherStrip = await strip(ws)
   await selectBranch(ws, 'feature/diff')
   const backStrip = await strip(ws)
@@ -925,7 +966,7 @@ async function drive() {
     otherPins === 0 &&
       !otherStrip.includes('f02.ts') &&
       J(backStrip) === J(beforeReopen) &&
-      (await tabMarks(ws))['f04.ts'] === 'pin',
+      (await tabMarks(ws))['f04.ts'] === 'pinned',
     `other: ${otherPins} pins ${J(otherStrip)}; back: ${J(backStrip)}`
   )
 
@@ -944,7 +985,7 @@ async function drive() {
     !stillChanged.includes('stack/f02.ts') &&
       !inTree &&
       (await strip(ws)).includes('f02.ts') &&
-      (await tabMarks(ws))['f02.ts'] === 'pin',
+      (await tabMarks(ws))['f02.ts'] === 'pinned',
     `git lists f02: ${stillChanged.includes('stack/f02.ts')}, tree lists it: ${inTree}, strip ${J(await strip(ws))}`
   )
 
@@ -1057,8 +1098,20 @@ async function drive() {
     J(await strip(ws))
   )
 
+  // A pinned tab keeps its close button, and it closes the tab (FPOL-10, as amended).
+  const closedByButton = await evaluate(ws, clickCloseOf('f02.ts'))
+  await sleep(400)
+  check(
+    "A pinned tab's close button closes it (FPOL-10)",
+    closedByButton && J(await strip(ws)) === J(['All changes']),
+    `clicked: ${closedByButton}, strip ${J(await strip(ws))}`
+  )
+
   await openStackFile(ws, 'f00.ts')
-  await focusTabNamed(ws, 'f02.ts')
+  await openStackFile(ws, 'f01.ts')
+  await evaluate(ws, clickPinOf('f01.ts'))
+  await sleep(400)
+  await focusTabNamed(ws, 'f01.ts')
   await tabMenu(ws, 'f00.ts', 'Close all')
   check(
     'Close all closes pinned tabs too and leaves All changes, focused (FPOL-06, FPOL-11)',

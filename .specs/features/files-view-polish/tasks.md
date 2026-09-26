@@ -338,7 +338,7 @@ The owner wants the pin on every tab, like the close button, with its icon telli
 - **A1 — the pin on every tab.** `FileTabs.tsx` renders the pin button and the close button on every tab but All changes, the pin first, with `aria-label` Pin/Unpin and `aria-pressed`; `FileTabs.css` draws it outlined and muted, filled and accented on a pinned tab. Gate: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`.
   - [x] Done (1680 tests, 18 lint warnings, build passes; seen in the app: outlined pins and closes on every tab, the pinned one filled in the accent)
 - **A2 — smoke.** Section 12 checks a pin and a close on every tab, the pin's computed fill (none when unpinned, the accent when pinned), a click on an unpinned tab's pin pinning it without moving the focus, and a pinned tab's close button closing it; the per-worktree check counts pinned tabs, not pin buttons. Each changed check seen failing against a mutant, then passing on a fresh launch.
-  - [ ] Done
+  - [x] Done: 45/45 on a fresh launch (two new checks). Mutants, each on a fresh launch: E (the old look, pin only on pinned tabs) failed 22, 24-28, 39; F (pinned pin not filled) failed 22, 25-28; G (the pin only unpins) failed 25; H (pinned tabs lose the close) failed 22, 25-28, 39. The seed now also removes `fxd-smoke-other`, which a second seed left behind and git refused to add again
 
 ## Phase Execution Map
 
