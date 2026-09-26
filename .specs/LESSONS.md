@@ -282,6 +282,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: P1 - src/renderer/src/components/HoursView.tsx:286 vs scripts/smoke-hours-calendar.mjs:342-356 (smoke)
 - last seen: 2026-09-19T22:19:57Z
 
+### L-051 - When several sources feed one hover or focus state, read the view after each source's leave before the next source enters, because the next enter overwrites a leave that never fired
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: validation.md SM1; scripts/smoke-hours-calendar.mjs:818-838; HTF-08 (smoke)
+- last seen: 2026-09-26T21:15:08Z
+
+### L-052 - When an acceptance criterion names several sources for one behaviour, give each source its own check; covering one source leaves the others unverified
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: HTF-09; scripts/smoke-hours-calendar.mjs:829-838 (smoke)
+- last seen: 2026-09-26T21:15:08Z
+
+### L-053 - When the spec fixes exact colour values, assert the computed colours against those values in order, not only that they are distinct
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: HTF-01; scripts/smoke-hours-calendar.mjs:739 (smoke)
+- last seen: 2026-09-26T21:15:09Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
