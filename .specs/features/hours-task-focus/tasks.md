@@ -249,7 +249,9 @@ T11 → T12 → T13
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Done**: 2026-09-26. The picked chip stays in the legend with a 0m total in a week where its group has no time, so the pick is always visible and clearable (HTF-11); the spec left that week's legend open. Hover is kept per week and cleared when the drawer closes, since a header unmounted under the pointer never fires a leave. The new child props are declared here and wired in T8 to T10, keeping each task's typecheck green.
 
 **Tests**: none
 **Gate**: full

@@ -10,11 +10,14 @@ import {
 } from '../lib/hours-report'
 import {
   assignColours,
+  dimmedGroups,
   legendEntries,
   roleOf,
   timeAxis,
+  visibleColumns,
   weekColumns,
-  type ColourRole
+  type ColourRole,
+  type LegendEntry
 } from '../lib/hours-calendar'
 import { formatDayCopy } from '../lib/hours-copy'
 import { COPIED_FEEDBACK_MS } from '../lib/terminal-keys'
@@ -61,6 +64,18 @@ interface Selection {
   focus?: BlockFocus
   /** The selected day held time when last seen, so emptying it closes the drawer (edge case). */
   hadTime: boolean
+}
+
+/** The task or folder picked from the legend; kept across weeks (HTF-10, HTF-13). */
+interface PickedGroup {
+  key: string
+  label: string
+}
+
+/** The group under the pointer or keyboard focus, for the week it was seen in (HTF-07). */
+interface HoveredGroup {
+  weekStart: number
+  key: string
 }
 
 /** Esc typed into a field belongs to the field, not to the drawer. */
@@ -110,15 +125,48 @@ export function HoursView({
     setFrozen({ weekStart, colours })
   }
 
+  // A group picked from the legend stays picked across weeks and leaves only
+  // its days; hovering a group fades the others, hover winning over the pick
+  // (HTF-07, HTF-10, HTF-13). Colours never follow either (HTF-15).
+  const [picked, setPicked] = useState<PickedGroup | null>(null)
+  const [hovered, setHovered] = useState<HoveredGroup | null>(null)
+  const hoverKey = hovered?.weekStart === weekStart ? hovered.key : null
+  const shown = visibleColumns(columns, picked?.key ?? null)
+  const dimmed = useMemo(
+    () => dimmedGroups(report, hoverKey, picked?.key ?? null),
+    [report, hoverKey, picked]
+  )
+  const hover = (key: string | null): void => setHovered(key === null ? null : { weekStart, key })
+  const togglePick = (entry: LegendEntry): void =>
+    setPicked((cur) =>
+      cur?.key === entry.groupKey ? null : { key: entry.groupKey, label: entry.label }
+    )
+  // The picked chip stays in the legend, to show the pick and clear it, even in
+  // a week where its group has no time (HTF-11, HTF-13).
+  const legend = legendEntries(report, colours)
+  if (picked && !legend.some((e) => e.groupKey === picked.key)) {
+    legend.push({
+      groupKey: picked.key,
+      label: picked.label,
+      role: roleOf(colours, picked.key),
+      totalMs: 0
+    })
+  }
+
   // Nothing is selected when the view opens or the week changes; the drawer
-  // closes too when its day loses its last period (HCAL-16, edge case).
+  // closes too when its day loses its last period (HCAL-16, edge case), or
+  // when the pick filters its day out (HTF-14).
   const [selection, setSelection] = useState<Selection | null>(null)
   let current = selection
   const shownDay =
     selection && selection.weekStart === weekStart
-      ? (columns.find((c) => c.date.getTime() === selection.date)?.day ?? null)
+      ? (shown.find((c) => c.date.getTime() === selection.date)?.day ?? null)
       : null
-  if (selection && (selection.weekStart !== weekStart || (selection.hadTime && !shownDay))) {
+  const filteredOut = selection !== null && !shown.some((c) => c.date.getTime() === selection.date)
+  if (
+    selection &&
+    (selection.weekStart !== weekStart || filteredOut || (selection.hadTime && !shownDay))
+  ) {
     current = null
     setSelection(null)
   } else if (selection && !selection.hadTime && shownDay) {
@@ -132,14 +180,21 @@ export function HoursView({
   }
   const selectBlock = (date: number, focus: BlockFocus): void =>
     setSelection({ weekStart, date, focus, hadTime: true })
-  const closeDrawer = (): void => setSelection(null)
+  // A drawer header under the pointer never sees it leave when the drawer closes.
+  const closeDrawer = (): void => {
+    setSelection(null)
+    setHovered(null)
+  }
 
   // Esc closes the drawer (HCAL-25).
   const drawerOpen = current !== null
   useEffect(() => {
     if (!drawerOpen) return
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape' && !e.defaultPrevented && !isTextField(e.target)) setSelection(null)
+      if (e.key === 'Escape' && !e.defaultPrevented && !isTextField(e.target)) {
+        setSelection(null)
+        setHovered(null)
+      }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -200,19 +255,32 @@ export function HoursView({
       </header>
 
       <div className="hours-body">
-        {report.days.length === 0 && <div className="hours-empty">No time recorded this week.</div>}
-        <HoursLegend entries={legendEntries(report, colours)} />
+        {report.days.length === 0 && !picked && (
+          <div className="hours-empty">No time recorded this week.</div>
+        )}
+        <HoursLegend
+          entries={legend}
+          pickedKey={picked?.key ?? null}
+          onHover={hover}
+          onTogglePick={togglePick}
+        />
         <div className="hours-main">
-          <HoursCalendar
-            columns={columns}
-            axis={axis}
-            colours={colours}
-            now={now}
-            selected={current?.date ?? null}
-            focus={current?.focus}
-            onSelectDay={selectDay}
-            onSelectBlock={selectBlock}
-          />
+          {picked && shown.length === 0 ? (
+            <div className="hours-empty">No time for {picked.label} this week.</div>
+          ) : (
+            <HoursCalendar
+              columns={shown}
+              axis={axis}
+              colours={colours}
+              now={now}
+              selected={current?.date ?? null}
+              focus={current?.focus}
+              dimmed={dimmed}
+              onHover={hover}
+              onSelectDay={selectDay}
+              onSelectBlock={selectBlock}
+            />
+          )}
           {current && (
             <aside
               className="hours-drawer"
@@ -227,6 +295,7 @@ export function HoursView({
                   focus={current.focus}
                   colours={colours}
                   onClose={closeDrawer}
+                  onHover={hover}
                 />
               ) : (
                 <section className="hours-day">
@@ -281,6 +350,8 @@ interface DayCardProps {
   /** Colour roles of the shown week, for the swatch beside each group (HCAL-11). */
   colours: Map<string, ColourRole>
   onClose: () => void
+  /** A group header under the pointer, or null when it leaves (HTF-07, HTF-08). */
+  onHover: (key: string | null) => void
 }
 
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`

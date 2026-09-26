@@ -5,6 +5,12 @@ import './HoursLegend.css'
 
 interface HoursLegendProps {
   entries: LegendEntry[]
+  /** The group picked to filter the week, or null (HTF-10, HTF-11). */
+  pickedKey: string | null
+  /** A chip under the pointer or keyboard focus, or null when it leaves (HTF-07..09). */
+  onHover: (key: string | null) => void
+  /** A chip clicked, or its × — picks the group, or clears the pick (HTF-10, HTF-12). */
+  onTogglePick: (entry: LegendEntry) => void
 }
 
 /**

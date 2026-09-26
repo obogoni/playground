@@ -21,6 +21,10 @@ interface HoursCalendarProps {
   /** Local midnight of the selected day, or null. */
   selected: number | null
   focus?: BlockFocus
+  /** Groups whose bars fade while another is in focus (HTF-07, HTF-10). */
+  dimmed: Set<string>
+  /** A bar under the pointer or keyboard focus, or null when it leaves (HTF-07..09). */
+  onHover: (key: string | null) => void
   onSelectDay: (date: number) => void
   onSelectBlock: (date: number, focus: BlockFocus) => void
 }
