@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { AgentDef } from '../../shared/agents'
-import type { AppConfig } from '../../shared/config'
+import type { ActivityState, AppConfig } from '../../shared/config'
 import { DEFAULT_CONFIG } from '../../shared/config'
 import type { PinnedTaskView, TasksSnapshot } from '../../shared/tasks'
 import { taskIdFromBranch } from '../../shared/tasks'
@@ -32,6 +32,7 @@ import {
 } from './lib/pane-layout'
 import { dropNotice, upsertNotice, type Notice } from './lib/session-notices'
 import { findWorktree, worktreeIdForPath } from './lib/tree-selection'
+import { worktreeForTurnEnd } from './lib/tree-status'
 import { dropCollapsedId, isCollapsed, toggleCollapsedId } from './lib/workspace-collapse'
 import { filesStateFor } from './lib/files-view'
 import { useFiles } from './lib/use-files'
@@ -111,7 +112,8 @@ function App(): JSX.Element {
     setSelectedId,
     refreshTree,
     refreshAndSelect,
-    refreshAndSelectDefault
+    refreshAndSelectDefault,
+    recount
   } = useTree()
   const {
     sessions,
@@ -238,10 +240,26 @@ function App(): JSX.Element {
       if (Date.now() - lastFocusRefresh.current < 5_000) return
       lastFocusRefresh.current = Date.now()
       refreshTasks()
+      // Edits made in an editor reach the counts no other way (SCRF-09/10).
+      refreshTree()
     }
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
-  }, [refreshTasks])
+  }, [refreshTasks, refreshTree])
+
+  // An agent's turn just ended: recount the worktree it worked in, so its
+  // uncommitted edits show (SCRF-07/08). Each session's last seen state is
+  // kept here, since a push carries only the new one.
+  const lastActivity = useRef(new Map<string, ActivityState | undefined>())
+  useEffect(() => {
+    const seen = lastActivity.current
+    for (const session of sessions) {
+      const after = session.activity?.state
+      const path = worktreeForTurnEnd(tree, seen.get(session.id), after, session.cwd)
+      seen.set(session.id, after)
+      if (path) recount(path)
+    }
+  }, [sessions, tree, recount])
 
   useEffect(() => {
     if (ui) document.documentElement.dataset.theme = ui.theme

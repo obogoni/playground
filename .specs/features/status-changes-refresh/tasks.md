@@ -290,7 +290,9 @@ T8 → T9 → T10
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+
+**Done**: the turn-end trigger reads transitions off the `sessions` state `use-sessions` already patches, keeping each session's last seen state in a ref, rather than adding a second `session:activity` subscription.
 
 **Tests**: none
 **Gate**: build
