@@ -8,10 +8,10 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 ---
 
-**Design**: inline. A pure resolver (`file-icons.ts`) turns `(name, kind, open, theme)` into an Iconify icon **name** — `vscode-icons-js` lower-cased, then our corrections, then the `2` and light-variant rules against a list of available names — so it is unit-tested without the 3.7 MB set. A small loader (`icon-set.ts`) lazily imports the set once and turns a name into a `data:` URI. A `FileIcon` component asks both and renders an `<img>`, falling back to today's generic icon while the set loads.
-**Status**: Draft — awaiting owner approval (planned 2026-09-22)
+**Design**: inline. A pure resolver (`file-icons.ts`) turns `(name, kind, open, theme)` into an Iconify icon **name** — `vscode-icons-js` lower-cased, then our corrections, then the dark, `2` and light-variant rules against a list of available names — so it is unit-tested without the 3.7 MB set. The mapping is passed in, not imported: `vscode-icons-js` is ~105 KB and must ride in the lazy chunk with the set, not in the entry chunk (FICN-12). A small loader (`icon-set.ts`) lazily imports one data module (set + mapping) once and turns a name into a `data:` URI. A `FileIcon` component asks both and renders an `<img>`, falling back to today's generic icon while the set loads.
+**Status**: Approved 2026-09-26 (owner, at Execute), with the dark rule FICN-15 added
 
-**Branch**: `feature/file-icons` off `feature/files-diff` `bf2fc7e`; sibling of `feature/files-view-polish`.
+**Branch**: `feature/file-icons`, rebased onto `origin/main` `c31bb9a` on 2026-09-26 (was off `feature/files-diff` `bf2fc7e`); sibling of `feature/files-view-polish` (PR #125), which also edits `FileTabs.tsx`.
 
 **Test baseline**: **re-measure** with `npx vitest run` as the first act of Execute; record the lint warning count at the same time.
 
@@ -25,7 +25,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 | Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
 | ---------- | ------------------ | -------------------- | ---------------- | ----------- |
-| Pure resolver (`file-icons.ts`) | unit | 1:1 to FICN-01..07, 09, 10 and the three edge cases, table-driven over the comparison page's sample names | `src/renderer/src/lib/file-icons.test.ts` | `npm test` |
+| Pure resolver (`file-icons.ts`) | unit | 1:1 to FICN-01..07, 09, 10, 15 and the four edge cases, table-driven over the comparison page's sample names | `src/renderer/src/lib/file-icons.test.ts` | `npm test` |
 | Loader (`icon-set.ts`) | unit | FICN-06 (name → data URI, missing name → null) and FICN-14 (a failing import resolves to null, logged once), with the import injected | `src/renderer/src/lib/icon-set.test.ts` | `npm test` |
 | Component and wiring (`FileIcon`, `FileTree`, `FileTabs`) | none (CDP smoke) | FICN-08, 11, 13 in the running app | — | `node scripts/smoke-files-diff.mjs` |
 | Build output | manual | FICN-12: the set is a separate chunk, absent from the entry chunk | `out/renderer/assets` | `npx electron-vite build` |
@@ -95,11 +95,11 @@ T6 → T7 → T8
 
 ### T2: The pure resolver
 
-**What**: `resolveIconName({ name, kind: 'file' | 'folder', open, theme }, available)` returning an Iconify icon name: `vscode-icons-js` with the lower-cased name; then the corrections table (`slnx` → `file-type-sln`, `razor` → `file-type-razor`, `resx` → `file-type-xml`); then the light variant when `theme` is light and it is in `available`; then the `2` variant when the name is missing; else the default file or folder name.
+**What**: `resolveIconName({ name, kind: 'file' | 'folder', open, theme }, available, mapping)` returning an Iconify icon name: `mapping` (the `vscode-icons-js` functions, passed in) with the lower-cased name; then the corrections table (`slnx` → `file-type-sln`, `razor` → `file-type-razor`, `resx` → `file-type-xml`); then, in dark, a `file-type-light-` / `folder-type-light-` answer replaced by its base when it is in `available`; then the `2` variant when the name is missing, else the default file or folder name; then the light variant when `theme` is light and it is in `available`.
 **Where**: `src/renderer/src/lib/file-icons.ts` (new) and its test
 **Depends on**: T1
 **Reuses**: `expected-icons.md` as the table of expected names
-**Requirement**: FICN-01..07, FICN-09, FICN-10
+**Requirement**: FICN-01..07, FICN-09, FICN-10, FICN-15
 
 **Tools**:
 
@@ -108,7 +108,7 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Table test over the 91 rows of `expected-icons.md`, expected names copied from it (not computed by the resolver); the three corrections; a light variant chosen only in light; a missing name taking its `2`; an unmapped name and an unknown folder taking the defaults; `Dockerfile` and `LICENSE` matched case-insensitively; a name with non-ASCII letters
+- [ ] Table test over the 91 rows of `expected-icons.md`, expected names copied from it (not computed by the resolver); the three corrections; a light variant chosen only in light; a light answer from the mapping replaced by its base in dark, and kept in light; `file-type-go-lightblue` not taken for a light variant; a missing name taking its `2`; an unmapped name and an unknown folder taking the defaults; `Dockerfile` and `LICENSE` matched case-insensitively; a name with non-ASCII letters
 - [ ] Gate check passes: `npm test`
 - [ ] Test count: baseline + the new tests
 
@@ -121,7 +121,7 @@ T6 → T7 → T8
 
 ### T3: The lazy icon set
 
-**What**: `iconUri(name)` that lazily `import()`s the Iconify JSON once, builds a `data:image/svg+xml` URI for a name (resolving aliases), returns `null` for a missing name, and resolves to `null` for every name — logging once — if the import fails; plus `availableIconNames()` for T2's `available`.
+**What**: `iconUri(name)` that lazily `import()`s the data module (Iconify JSON + the `vscode-icons-js` mapping) once, builds a `data:image/svg+xml` URI for a name (resolving aliases), returns `null` for a missing name, and resolves to `null` for every name — logging once — if the import fails; plus `availableIconNames()` for T2's `available`.
 **Where**: `src/renderer/src/lib/icon-set.ts` (new) and its test
 **Depends on**: T2
 **Reuses**: the alias resolution of the comparison page
@@ -245,11 +245,11 @@ T6 → T7 → T8
 
 ### T8: Smoke — icons on screen
 
-**What**: A section in `smoke-files-diff.mjs`: in the seeded repo, a `.ts` row, a `.slnx`-named file (added to the seed), a `src` folder closed and open, a changed-list row and a tab each render an `<img>` whose `src` decodes to the expected icon; switching to the light theme swaps a file with a light variant; no `.monaco-editor` or other view regresses.
+**What**: A section in `smoke-files-diff.mjs`: in the seeded repo, a `.ts` row, a `.slnx`-named file (added to the seed), a `src` folder closed and open, a changed-list row and a tab each render an `<img>` whose `src` decodes to the expected icon; a `.json` row shows the base `file-type-json` in dark; switching to the light theme swaps a file with a light variant; no `.monaco-editor` or other view regresses.
 **Where**: `scripts/smoke-files-diff.mjs`
 **Depends on**: T7
 **Reuses**: the script's seed and probes
-**Requirement**: FICN-01, FICN-03, FICN-07, FICN-08, FICN-10, FICN-11, FICN-13
+**Requirement**: FICN-01, FICN-03, FICN-07, FICN-08, FICN-10, FICN-11, FICN-13, FICN-15
 
 **Tools**:
 

@@ -3,7 +3,11 @@
 The resolver's table test (T2) starts from this list: the 91 fictitious names of the comparison page
 published 2026-09-22, resolved with `vscode-icons-js` 11.6.1 on the lower-cased name, the `2`-variant
 rule, and the three approved corrections (`.slnx`, `.razor`, `.resx`). Icon names are Iconify names
-from `@iconify-json/vscode-icons` 1.2.80. Light-theme variants are added by T2's own cases.
+from `@iconify-json/vscode-icons` 1.2.82. Light-theme variants are added by T2's own cases.
+
+Re-derived 2026-09-26 against 1.2.82 with the dark rule (FICN-15): the mapping answers eleven of these
+names with a light variant (`.json`, `.js`, `.mjs`, `.yml`, `.rs`, `.env`, `node_modules`), and in the
+dark theme each now expects its base icon. No other row changed from 1.2.80.
 
 Re-derive this table only if a package version changes, and review every changed row by eye.
 
@@ -11,31 +15,31 @@ Re-derive this table only if a package version changes, and review every changed
 | ---- | ---- | -------------------- | ----------- |
 | `.github` | folder | `folder-type-github` | `folder-type-github-opened` |
 | `workflows` | folder | `default-folder` | `default-folder-opened` |
-| `ci.yml` | file | `file-type-light-yaml` | — |
+| `ci.yml` | file | `file-type-yaml` | — |
 | `.vscode` | folder | `folder-type-vscode` | `folder-type-vscode-opened` |
-| `settings.json` | file | `file-type-light-json` | — |
+| `settings.json` | file | `file-type-json` | — |
 | `launch.json` | file | `file-type-vscode` | — |
 | `.git` | folder | `folder-type-git` | `folder-type-git-opened` |
 | `bin` | folder | `folder-type-binary` | `folder-type-binary-opened` |
 | `obj` | folder | `default-folder` | `default-folder-opened` |
-| `node_modules` | folder | `folder-type-light-node` | `folder-type-light-node-opened` |
+| `node_modules` | folder | `folder-type-node` | `folder-type-node-opened` |
 | `src` | folder | `folder-type-src` | `folder-type-src-opened` |
 | `Acme.Widget.Api` | folder | `default-folder` | `default-folder-opened` |
 | `Controllers` | folder | `folder-type-controller` | `folder-type-controller-opened` |
 | `OrdersController.cs` | file | `file-type-csharp` | — |
 | `Properties` | folder | `default-folder` | `default-folder-opened` |
-| `launchSettings.json` | file | `file-type-light-json` | — |
+| `launchSettings.json` | file | `file-type-json` | — |
 | `Views` | folder | `folder-type-view` | `folder-type-view-opened` |
 | `Index.cshtml` | file | `file-type-razor` | — |
 | `Counter.razor` | file | `file-type-razor` | — |
 | `wwwroot` | folder | `folder-type-www` | `folder-type-www-opened` |
 | `site.css` | file | `file-type-css` | — |
-| `site.js` | file | `file-type-light-js` | — |
+| `site.js` | file | `file-type-js` | — |
 | `favicon.ico` | file | `file-type-favicon` | — |
 | `Acme.Widget.Api.csproj` | file | `file-type-csproj` | — |
 | `Program.cs` | file | `file-type-csharp` | — |
-| `appsettings.json` | file | `file-type-light-json` | — |
-| `appsettings.Development.json` | file | `file-type-light-json` | — |
+| `appsettings.json` | file | `file-type-json` | — |
+| `appsettings.Development.json` | file | `file-type-json` | — |
 | `Web.config` | file | `file-type-xml` | — |
 | `Acme.Widget.Desktop` | folder | `default-folder` | `default-folder-opened` |
 | `MainWindow.xaml` | file | `file-type-xml` | — |
@@ -61,7 +65,7 @@ Re-derive this table only if a package version changes, and review every changed
 | `package.json` | file | `file-type-npm` | — |
 | `tsconfig.json` | file | `file-type-tsconfig` | — |
 | `vite.config.ts` | file | `file-type-vite` | — |
-| `eslint.config.mjs` | file | `file-type-light-js` | — |
+| `eslint.config.mjs` | file | `file-type-js` | — |
 | `tests` | folder | `folder-type-test` | `folder-type-test-opened` |
 | `OrdersTests.cs` | file | `file-type-csharp` | — |
 | `orders.spec.ts` | file | `file-type-testts` | — |
@@ -79,7 +83,7 @@ Re-derive this table only if a package version changes, and review every changed
 | `logo.svg` | file | `file-type-svg` | — |
 | `tools` | folder | `folder-type-tools` | `folder-type-tools-opened` |
 | `main.go` | file | `file-type-go` | — |
-| `lib.rs` | file | `file-type-light-rust` | — |
+| `lib.rs` | file | `file-type-rust` | — |
 | `Cargo.toml` | file | `file-type-cargo` | — |
 | `App.java` | file | `file-type-java` | — |
 | `pom.xml` | file | `file-type-maven` | — |
@@ -87,11 +91,11 @@ Re-derive this table only if a package version changes, and review every changed
 | `Acme.Widget.slnx` | file | `file-type-sln` | — |
 | `Directory.Build.props` | file | `file-type-xml` | — |
 | `NuGet.Config` | file | `file-type-xml` | — |
-| `global.json` | file | `file-type-light-json` | — |
+| `global.json` | file | `file-type-json` | — |
 | `.editorconfig` | file | `file-type-editorconfig` | — |
 | `.gitignore` | file | `file-type-git` | — |
 | `.gitattributes` | file | `file-type-git` | — |
-| `.env` | file | `file-type-light-config` | — |
+| `.env` | file | `file-type-config` | — |
 | `Dockerfile` | file | `file-type-docker` | — |
 | `docker-compose.yml` | file | `file-type-docker` | — |
 | `package-lock.json` | file | `file-type-npm` | — |
