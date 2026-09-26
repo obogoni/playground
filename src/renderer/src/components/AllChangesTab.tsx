@@ -297,6 +297,27 @@ export function AllChangesTab({
         </span>
         <span className="all-changes-added">+{header.added}</span>
         <span className="all-changes-removed">&minus;{header.removed}</span>
+        {/* FPOL-14/15: every listed section at once. Expanding them all still
+            mounts only the ones near the viewport (FPOL-16, mountPlan). The
+            empty state above has no header, so these never show with nothing
+            listed (FPOL-17). */}
+        <span className="all-changes-header-gap" />
+        <button
+          type="button"
+          className="all-changes-toggle"
+          title="Expand every file"
+          onClick={() => setExpanded(new Set(ordered.map((file) => file.path)))}
+        >
+          Expand all
+        </button>
+        <button
+          type="button"
+          className="all-changes-toggle"
+          title="Collapse every file"
+          onClick={() => setExpanded(new Set())}
+        >
+          Collapse all
+        </button>
       </div>
       <div className="all-changes-stack" ref={scrollRef}>
         {ordered.map((file, index) => (
