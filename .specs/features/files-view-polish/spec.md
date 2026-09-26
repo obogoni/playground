@@ -118,15 +118,15 @@ expect from a tab strip and a multi-file diff.
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | FPOL-01 | P1: pin — AC 1 | Execute | Done |
-| FPOL-02 | P1: pin — AC 2 | Execute | Done (amended, A1) |
-| FPOL-03 | P1: pin — AC 3 | Execute | Done (amended, A1) |
+| FPOL-02 | P1: pin — AC 2 | Execute | Verified (amended, A1-A3) |
+| FPOL-03 | P1: pin — AC 3 | Execute | Verified (amended, A1-A3) |
 | FPOL-04 | P1: pin — AC 4 | Execute | Done |
 | FPOL-05 | P1: pin — AC 5 | Execute | Done |
 | FPOL-06 | P1: close many — AC 6 | Execute | Done |
 | FPOL-07 | P1: close many — AC 7 | Execute | Done |
 | FPOL-08 | P1: close many — AC 8 | Execute | Done |
 | FPOL-09 | P1: close many — AC 9 | Execute | Done |
-| FPOL-10 | P1: close many — AC 10 | Execute | Done (amended, A1) |
+| FPOL-10 | P1: close many — AC 10 | Execute | Verified (amended, A1-A3) |
 | FPOL-11 | P1: close many — AC 11 | Execute | Done |
 | FPOL-12 | P1: close many — AC 12 | Execute | Done |
 | FPOL-13 | P1: close many — AC 13 | Execute | Done |
