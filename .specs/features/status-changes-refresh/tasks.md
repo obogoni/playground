@@ -316,9 +316,13 @@ T8 → T9 → T10
 
 **Done when**:
 
-- [ ] Each new check seen **failing** with its trigger disabled (watcher `sync` skipped; focus `refreshTree` removed), then passing
-- [ ] The owner's workspace list, direction and theme restored (existing `finally`)
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Each new check seen **failing** with its trigger disabled (watcher `sync` skipped; focus `refreshTree` removed), then passing
+- [x] The owner's workspace list, direction and theme restored (existing `finally`)
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Done (2026-09-26)**: `counterRefresh()` in the smoke, on its own worktree `wt/scrf`, run against a dev app on a throwaway `--user-data-dir`. Passing run: the commit reached the counter in 597 ms; focus 1 → 3; a second focus within 5 s kept 3 with 4 on disk. Falsified on a restarted app each time (a main-process edit does not restart the dev app's main: the first attempt passed on a mutation that was not live, caught by the unchanged hook port): watcher `sync` skipped → SCRF-01 FAIL (3 after 4357 ms); focus `refreshTree` removed → SCRF-09 FAIL (1 → 1); debounce removed → SCRF-10 FAIL (4). The first falsification exposed SCRF-09 passing on a count that was already 3, so the check now requires the pre-focus count to differ.
+
+**Pre-existing, not fixed here**: the smoke's changes-popover section (STBR-29/30 and the screenshot loop) still drives the popover `816059d` replaced with the Files direction (FXPL-31), so the script stops there with `Cannot read properties of null (reading 'getBoundingClientRect')` on `main` too. `counterRefresh()` runs ahead of that section for this reason.
 
 **Tests**: manual
 **Gate**: manual

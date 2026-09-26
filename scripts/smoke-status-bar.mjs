@@ -17,6 +17,8 @@
  *   <tmp>/acme-workspace/acme-gizmo  a second repo with no remote at all
  *   <tmp>/other       a second clone that pushes the "remote" commits
  *   <tmp>/loose       a plain folder, the cwd of the non-worktree session
+ *   <tmp>/wt/scrf     added mid-run: the counter follows a terminal commit
+ *                     and focus (SCRF-01/09/10)
  *
  * Sessions: ad-hoc `pwsh -NoLogo` sessions only (never a registry agent, never
  * any input sent). Only the sessions this script spawned are stopped/removed.
@@ -57,6 +59,7 @@ const TARGET_TITLE = 'stbr-smoke target'
 const FOLDER_TITLE = 'stbr-smoke folder'
 const SUBFOLDER_TITLE = 'stbr-smoke subfolder'
 const DUMMY_TITLE = 'stbr-smoke nudge'
+const SCRF_BRANCH = 'user/dev/4821-fix-login/12350-counter-refresh'
 /** A window narrow enough that LONG_BRANCH overflows 70% of the bar (STBR-06). */
 const NARROW_WIDTH = 900
 
@@ -178,7 +181,8 @@ const wtDir = {
   pub: join(root, 'wt', 'publish'),
   detached: join(root, 'wt', 'detached'),
   gone: join(root, 'wt', 'gone'),
-  many: join(root, 'wt', 'many')
+  many: join(root, 'wt', 'many'),
+  scrf: join(root, 'wt', 'scrf')
 }
 
 function seed() {
@@ -896,6 +900,11 @@ async function main() {
   )
   await closePopovers(ws)
 
+  // --- The counter follows the git state and focus (SCRF-01, 09, 10) ---
+  // Runs ahead of the changes-popover section, which still drives the popover
+  // FXPL-31 replaced (816059d) and stops the script there.
+  await counterRefresh()
+
   // --- Changes popover: all five statuses (STBR-29, 30) ---
   await selectWorktree(ws, 'main')
   b = await bar(ws)
@@ -1229,6 +1238,74 @@ async function main() {
     else console.log(`      no toast appeared for the ${theme} screenshot`)
     await sleep(2400)
   }
+}
+
+/** Changed files in the SCRF worktree right now, as git sees them. */
+const scrfChanges = () =>
+  git(wtDir.scrf, 'status', '--porcelain').split('\n').filter(Boolean).length
+
+/** A window focus as Chromium delivers it: blur first, then focus. */
+const fireFocus = (ws) =>
+  evaluate(
+    ws,
+    `(window.dispatchEvent(new Event('blur')), window.dispatchEvent(new Event('focus')), true)`
+  )
+
+async function counterRefresh() {
+  // A worktree of its own, so no earlier check's state leaks in.
+  git(primary, 'worktree', 'add', '-q', '-b', SCRF_BRANCH, wtDir.scrf, 'main')
+  for (const f of ['one.txt', 'two.txt', 'three.txt']) writeFileSync(join(wtDir.scrf, f), `${f}\n`)
+  await refresh(ws)
+  await selectWorktree(ws, SCRF_BRANCH)
+  let b = await waitBar(ws, (v) => v.changes === '3')
+  check('the counter worktree starts with three untracked files', b.changes === '3', b.changes)
+  // The watcher opens once tree:get has returned; give its git-dir lookup a beat.
+  await sleep(500)
+
+  // SCRF-01: a commit made outside the app, with no click.
+  const committedAt = Date.now()
+  gitRetryingLock(wtDir.scrf, 'add', 'one.txt', 'two.txt')
+  gitRetryingLock(wtDir.scrf, 'commit', '-q', '-m', 'Commit two of three')
+  b = await waitBar(ws, (v) => v.changes === '1', 4000)
+  const took = Date.now() - committedAt
+  check(
+    'a commit made in a terminal drops the counter within 2 s, with no click (SCRF-01)',
+    b.changes === '1' && took <= 2000 && scrfChanges() === 1,
+    `${b.changes} after ${took} ms; git sees ${scrfChanges()}`
+  )
+
+  // Edits alone reach nothing: no timer, no watch on the working tree.
+  for (const f of ['four.txt', 'five.txt']) writeFileSync(join(wtDir.scrf, f), `${f}\n`)
+  await sleep(1500)
+  b = await bar(ws)
+  check(
+    'edits with no commit, focus or turn end leave the counter as it was',
+    b.changes === '1' && scrfChanges() === 3,
+    `${b.changes}; git sees ${scrfChanges()}`
+  )
+
+  // SCRF-09: a focus past the 5 s debounce rebuilds the tree. The count must
+  // not already read 3 before the focus, or the focus proved nothing.
+  await sleep(5500)
+  const beforeFocus = (await bar(ws)).changes
+  await fireFocus(ws)
+  b = await waitBar(ws, (v) => v.changes === '3', 4000)
+  check(
+    'regaining focus rebuilds the tree and shows the edits (SCRF-09)',
+    beforeFocus !== '3' && b.changes === '3',
+    `${beforeFocus} → ${b.changes}`
+  )
+
+  // SCRF-10: a second focus inside the debounce rebuilds nothing.
+  writeFileSync(join(wtDir.scrf, 'six.txt'), 'six\n')
+  await fireFocus(ws)
+  await sleep(1500)
+  b = await bar(ws)
+  check(
+    'a second focus within 5 s rebuilds nothing (SCRF-10)',
+    b.changes === '3' && scrfChanges() === 4,
+    `${b.changes}; git sees ${scrfChanges()}`
+  )
 }
 
 /** Stop and remove this script's sessions through the rail (so the renderer drops them). */
