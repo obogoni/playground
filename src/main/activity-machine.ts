@@ -21,6 +21,17 @@ export interface MachineState {
   subagentIds: string[]
   /** State to restore when the compaction that interrupted it finishes. */
   beforeCompact?: ActivityState
+  /**
+   * Ids the main agent's last `Stop` listed in `background_tasks`: subagents and
+   * shells still running, whose results will wake it again. Absent until a
+   * `Stop` carries the list (it is undocumented; measured on Claude Code 2.1.283).
+   */
+  background?: string[]
+}
+
+interface BackgroundTask {
+  id: string
+  type: string
 }
 
 /** Notification types that mean the agent is blocked on the user. */
@@ -43,7 +54,19 @@ function str(payload: Record<string, unknown>, key: string): string | undefined 
   return typeof value === 'string' ? value : undefined
 }
 
-/** Build the next state, keeping the subagent set and dropping stale detail. */
+function backgroundTasks(payload: Record<string, unknown>): BackgroundTask[] | undefined {
+  const value = payload.background_tasks
+  if (!Array.isArray(value)) return undefined
+  return value.filter(
+    (task): task is BackgroundTask =>
+      typeof task === 'object' &&
+      task !== null &&
+      typeof (task as Record<string, unknown>).id === 'string' &&
+      typeof (task as Record<string, unknown>).type === 'string'
+  )
+}
+
+/** Build the next state, keeping the private fields and dropping stale detail. */
 function to(
   state: MachineState | null,
   next: ActivityState,
@@ -51,14 +74,14 @@ function to(
 ): MachineState {
   const subagentIds = state?.subagentIds ?? []
   return {
+    ...state,
     view: {
       state: next,
       subagents: subagentIds.length,
       ...(detail.tool ? { tool: detail.tool } : {}),
       ...(detail.error ? { error: detail.error } : {})
     },
-    subagentIds,
-    ...(state?.beforeCompact ? { beforeCompact: state.beforeCompact } : {})
+    subagentIds
   }
 }
 
@@ -99,7 +122,7 @@ export function applyHookEvent(
     case 'Elicitation':
       return to(state, 'needs-input')
     case 'Stop':
-      return to(state, 'waiting')
+      return applyStop(state, backgroundTasks(payload))
     case 'StopFailure':
       return to(state, 'error', { error: str(payload, 'error') })
     case 'Notification':
@@ -130,8 +153,41 @@ function applyNotification(
   if (type === undefined) return state
   if (APPROVAL_NOTIFICATIONS.includes(type)) return to(state, 'needs-approval')
   if (INPUT_NOTIFICATIONS.includes(type)) return to(state, 'needs-input')
-  if (type === 'idle_prompt') return to(state, 'waiting')
+  if (type === 'idle_prompt') return applyIdlePrompt(state)
   return state
+}
+
+/**
+ * The main agent ended a turn. Background work it started wakes it again with
+ * its result, so the turn is the user's only when its `background_tasks` lists
+ * nothing still running, subagents and shells alike (ASUB-01, ASUB-03). The
+ * list is also the truth about live subagents, so it replaces the counted set
+ * (ASUB-17). A `Stop` without the list — an older Claude Code — falls back to
+ * the counted subagents (ASUB-16).
+ */
+function applyStop(state: MachineState | null, tasks: BackgroundTask[] | undefined): MachineState {
+  if (tasks === undefined) {
+    const busy = (state?.subagentIds.length ?? 0) > 0
+    return { ...to(state, busy ? 'working' : 'waiting'), background: undefined }
+  }
+  const background = tasks.map((task) => task.id)
+  const subagentIds = tasks.filter((task) => task.type === 'subagent').map((task) => task.id)
+  const next = to(state, background.length > 0 ? 'working' : 'waiting')
+  return { ...withSubagents(next, subagentIds), background }
+}
+
+/**
+ * `idle_prompt` fires 60 s after the main agent stops even while background
+ * work runs (measured), so it means "your turn" only when the last `Stop`
+ * listed nothing — or, without a list, when no subagent is live (ASUB-05,
+ * ASUB-16). It stays the only signal after an interrupt, which fires nothing.
+ */
+function applyIdlePrompt(state: MachineState | null): MachineState | null {
+  const busy =
+    state?.background !== undefined
+      ? state.background.length > 0
+      : (state?.subagentIds.length ?? 0) > 0
+  return busy ? state : withSubagents(to(state, 'waiting'), [])
 }
 
 function applySubagent(

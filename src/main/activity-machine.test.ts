@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import type { ActivityState } from '../shared/config'
 import { applyHookEvent, applyKeystroke, sameView, type MachineState } from './activity-machine'
+import {
+  backgroundShell,
+  idlePromptWhileSubagentRuns,
+  type CapturedEvent
+} from './activity-sequences.fixture'
 
 /** Payload shapes are copied from the Claude Code hooks reference examples. */
 function event(name: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
@@ -224,7 +230,11 @@ describe('applyHookEvent', () => {
 
   it('keeps the subagent count across a state change', () => {
     const one = applyHookEvent(working(), event('SubagentStart', { agent_id: 'a1' }))
-    expect(applyHookEvent(one, event('Stop'))?.view).toEqual({ state: 'waiting', subagents: 1 })
+    expect(applyHookEvent(one, event('PermissionRequest', { tool_name: 'Bash' }))?.view).toEqual({
+      state: 'needs-approval',
+      tool: 'Bash',
+      subagents: 1
+    })
   })
 
   it('ignores an event it does not consume', () => {
@@ -239,6 +249,151 @@ describe('applyHookEvent', () => {
 
   it('ignores a PreToolUse with no tool name rather than inventing one', () => {
     expect(drive(event('PreToolUse'))?.view).toEqual({ state: 'working', subagents: 0 })
+  })
+})
+
+describe('applyHookEvent with background work (activity-subagent-attribution)', () => {
+  const start = (id: string): Record<string, unknown> =>
+    event('SubagentStart', { agent_id: id, agent_type: 'general-purpose' })
+  const stopListing = (...tasks: [string, 'subagent' | 'shell'][]): Record<string, unknown> =>
+    event('Stop', {
+      background_tasks: tasks.map(([id, type]) => ({ id, type, status: 'running' }))
+    })
+  const idle = event('Notification', { notification_type: 'idle_prompt' })
+
+  it('keeps working when the main agent stops while a subagent runs (ASUB-01)', () => {
+    const after = drive(
+      event('UserPromptSubmit'),
+      start('sub-1'),
+      stopListing(['sub-1', 'subagent'])
+    )
+    expect(after?.view).toEqual({ state: 'working', subagents: 1 })
+  })
+
+  it('keeps working when the main agent stops while only a shell runs (ASUB-01)', () => {
+    const after = drive(event('UserPromptSubmit'), stopListing(['shell-1', 'shell']))
+    expect(after?.view).toEqual({ state: 'working', subagents: 0 })
+  })
+
+  it('does not wait when the last subagent stops after the main agent did (ASUB-02)', () => {
+    const stopped = drive(
+      event('UserPromptSubmit'),
+      start('sub-1'),
+      stopListing(['sub-1', 'subagent'])
+    )
+    const after = applyHookEvent(
+      stopped,
+      event('SubagentStop', { agent_id: 'sub-1', agent_type: 'general-purpose' })
+    )
+    expect(after?.view).toEqual({ state: 'working', subagents: 0 })
+  })
+
+  it('waits when the main agent stops with nothing listed, whatever the count said (ASUB-03)', () => {
+    const after = drive(event('UserPromptSubmit'), start('sub-1'), stopListing())
+    expect(after?.view).toEqual({ state: 'waiting', subagents: 0 })
+  })
+
+  it('ignores idle_prompt while the last Stop listed work (ASUB-05)', () => {
+    const stopped = drive(
+      event('UserPromptSubmit'),
+      start('sub-1'),
+      stopListing(['sub-1', 'subagent'])
+    )
+    expect(applyHookEvent(stopped, idle)).toBe(stopped)
+  })
+
+  it('waits on idle_prompt when the last Stop listed nothing, emptying the subagents (ASUB-05)', () => {
+    const restarted = drive(event('UserPromptSubmit'), stopListing(), start('sub-9'))
+    expect(restarted?.view).toEqual({ state: 'waiting', subagents: 1 })
+    expect(applyHookEvent(restarted, idle)?.view).toEqual({ state: 'waiting', subagents: 0 })
+  })
+
+  it('decides by the live subagents when a Stop carries no list (ASUB-16)', () => {
+    const stopped = drive(event('UserPromptSubmit'), start('sub-1'), event('Stop'))
+    expect(stopped?.view).toEqual({ state: 'working', subagents: 1 })
+    expect(applyHookEvent(stopped, idle)).toBe(stopped)
+  })
+
+  it('waits on idle_prompt with no list and no live subagent (ASUB-16)', () => {
+    const stopped = drive(event('UserPromptSubmit'), event('PreToolUse', { tool_name: 'Bash' }))
+    expect(applyHookEvent(stopped, idle)?.view).toEqual({ state: 'waiting', subagents: 0 })
+  })
+
+  it('takes the subagents from the list at every Stop, healing a lost SubagentStop (ASUB-17)', () => {
+    const stopped = drive(
+      event('UserPromptSubmit'),
+      start('sub-1'),
+      start('sub-2'),
+      stopListing(['sub-2', 'subagent'], ['shell-1', 'shell'])
+    )
+    expect(stopped?.view).toEqual({ state: 'working', subagents: 1 })
+    const afterSub2 = applyHookEvent(stopped, event('SubagentStop', { agent_id: 'sub-2' }))
+    expect(afterSub2?.view.subagents).toBe(0)
+  })
+
+  it('counts a subagent again when it starts after stopping', () => {
+    const after = drive(
+      event('UserPromptSubmit'),
+      start('sub-1'),
+      event('SubagentStop', { agent_id: 'sub-1' }),
+      start('sub-1')
+    )
+    expect(after?.view.subagents).toBe(1)
+  })
+
+  it('keeps the subagents across a new prompt', () => {
+    const stopped = drive(
+      event('UserPromptSubmit'),
+      start('sub-1'),
+      stopListing(['sub-1', 'subagent'])
+    )
+    expect(applyHookEvent(stopped, event('UserPromptSubmit'))?.view).toEqual({
+      state: 'working',
+      subagents: 1
+    })
+  })
+
+  describe('replaying captured sequences (ASUB-12)', () => {
+    /** The state after each event, replayed from no activity. */
+    const replay = (events: readonly CapturedEvent[]): (ActivityState | undefined)[] => {
+      const states: (ActivityState | undefined)[] = []
+      events.reduce<MachineState | null>((state, e) => {
+        const next = applyHookEvent(state, e)
+        states.push(next?.view.state)
+        return next
+      }, null)
+      return states
+    }
+    const positions = (
+      events: readonly CapturedEvent[],
+      match: (e: CapturedEvent) => boolean
+    ): number[] => events.flatMap((e, index) => (match(e) ? [index] : []))
+
+    it('S4: a background shell keeps the session working until its result is handled', () => {
+      expect(replay(backgroundShell)).toEqual([
+        'working', // UserPromptSubmit
+        'working', // PreToolUse Bash (run in the background)
+        'working', // PostToolUse Bash
+        'working', // Stop listing the shell
+        'working', // a side agent's SubagentStop
+        'working', // UserPromptSubmit with the shell's result
+        'waiting', // Stop listing nothing: the job's end
+        'waiting' // a side agent's SubagentStop
+      ])
+    })
+
+    it('S3a: idle_prompt mid-job changes nothing; the job ends waiting', () => {
+      const states = replay(idlePromptWhileSubagentRuns)
+      const stops = positions(idlePromptWhileSubagentRuns, (e) => e.hook_event_name === 'Stop')
+      const idles = positions(
+        idlePromptWhileSubagentRuns,
+        (e) => e.notification_type === 'idle_prompt'
+      )
+      expect(states[stops[0]]).toBe('working')
+      expect(states[idles[0]]).toBe('working')
+      expect(states[stops[stops.length - 1]]).toBe('waiting')
+      expect(states[idles[idles.length - 1]]).toBe('waiting')
+    })
   })
 })
 

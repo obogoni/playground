@@ -154,9 +154,9 @@ Probe: the app's 16 hooks as http hooks, same shape as `buildClaudeHookSettings`
 
 ---
 
-### T3: The end of a turn waits for background work
+### T3: The end of a turn waits for background work ✅
 
-**What**: A main-agent `Stop` (no `agent_id`) records `mainStopped` and `background` from its `background_tasks` and replaces the active set with its `subagent` entries; it maps to `working` when the list is non-empty and to `waiting` when empty. Without the field, the active set decides (ASUB-16). A `SubagentStop` never moves the state to `waiting`. `UserPromptSubmit` and main-agent tool events clear `mainStopped`. `idle_prompt` maps to `waiting` only when `background` is empty (or, without it, the active set is), emptying the set; otherwise it changes nothing.
+**What**: A main-agent `Stop` (no `agent_id`) records `background` from its `background_tasks` and replaces the active set with its `subagent` entries; it maps to `working` when the list is non-empty and to `waiting` when empty. Without the field, the active set decides (ASUB-16). A `SubagentStop` never moves the state to `waiting`. `idle_prompt` maps to `waiting` only when `background` is empty (or, without it, the active set is), emptying the set; otherwise it changes nothing. *Moved at Execute:* `mainStopped` is read only by T5's clearing rule, so it is built and tested there.
 **Where**: `src/main/activity-machine.ts`
 **Depends on**: T2
 **Reuses**: `to`, `withSubagents`, `applySubagent`
@@ -169,11 +169,11 @@ Probe: the app's 16 hooks as http hooks, same shape as `buildClaudeHookSettings`
 
 **Done when**:
 
-- [ ] Unit tests, one per criterion, plus the S3a and S4 replays asserting `working` at every `Stop` that listed work and after the mid-job `idle_prompt`
-- [ ] The spec's edge cases covered: a new prompt keeps the active set; a restarted subagent is counted again; `SessionEnd` empties the set; an unknown `SubagentStop`
-- [ ] Existing machine tests pass unedited, except `keeps the subagent count across a state change` (`activity-machine.test.ts:225`), whose `Stop` with an active subagent now means `working` (ASUB-16): its transition becomes a `PermissionRequest`, which keeps what it tests, and the change is stated in the commit body — **owner approval needed**
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: T2 count + the new tests
+- [x] Unit tests, one per criterion, plus the S3a and S4 replays asserting `working` at every `Stop` that listed work and after the mid-job `idle_prompt`
+- [x] The spec's edge cases covered: a new prompt keeps the active set; a restarted subagent is counted again; `SessionEnd` empties the set; an unknown `SubagentStop`
+- [x] Existing machine tests pass unedited, except `keeps the subagent count across a state change` (`activity-machine.test.ts:225`), whose `Stop` with an active subagent now means `working` (ASUB-16): its transition becomes a `PermissionRequest`, which keeps what it tests, and the change is stated in the commit body — approved by the owner with the re-plan
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (lint still 18 warnings)
+- [x] Test count: T2 count + the new tests — 1680 + 13 = 1693
 
 **Tests**: unit
 **Gate**: full
@@ -211,7 +211,7 @@ Probe: the app's 16 hooks as http hooks, same shape as `buildClaudeHookSettings`
 
 ### T5: Events count only for the agent that sent them
 
-**What**: A tool event whose `agent_id` is not in the active set changes nothing (side agents, ASUB-18). `PermissionRequest`, `Elicitation` and the approval/input notifications record `askedBy` (a `Notification` without `agent_id` keeps an existing one). While a question is pending, events from other agents update the bookkeeping but not the state. The asker's tool event, `ElicitationResult` or `SubagentStop` clears it to `working` or `waiting` by `mainStopped`, `background` and `owed`. The keystroke keeps clearing (ASUB-11).
+**What**: A tool event whose `agent_id` is not in the active set changes nothing (side agents, ASUB-18). `PermissionRequest`, `Elicitation` and the approval/input notifications record `askedBy` (a `Notification` without `agent_id` keeps an existing one). While a question is pending, events from other agents update the bookkeeping but not the state. `mainStopped` (moved here from T3) is set by a main-agent `Stop` and cleared by `UserPromptSubmit` and main-agent tool events. The asker's tool event, `ElicitationResult` or `SubagentStop` clears it to `working` or `waiting` by `mainStopped`, `background` and `owed`. The keystroke keeps clearing (ASUB-11).
 **Where**: `src/main/activity-machine.ts`
 **Depends on**: T4
 **Reuses**: `applyKeystroke`; T3's `mainStopped` and `background`; T4's `owed`
