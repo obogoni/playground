@@ -256,6 +256,7 @@ describe('pinTab and unpinTab (FPOL-01, 03, 04, 05)', () => {
 
     expect(pinTab(tabs, ALL_CHANGES_KEY)).toBe(tabs)
     expect(pinTab(tabs, 'file:gone.ts')).toBe(tabs)
+    expect(unpinTab(tabs, 'file:gone.ts')).toBe(tabs)
   })
 
   it('keeps every tab key, so the active key still names the same tab (FPOL-04)', () => {
@@ -339,6 +340,24 @@ describe('tabsAfterBulkClose (FPOL-06..11)', () => {
       keys: [ALL_CHANGES_KEY],
       active: ALL_CHANGES_KEY
     })
+  })
+
+  it('leaves no focus when there was none', () => {
+    expect(tabsAfterBulkClose(strip, null, { kind: 'unpinned' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p1', 'p2'],
+      active: null
+    })
+  })
+
+  it('closes nothing for an anchor the strip does not hold', () => {
+    const keys = strip.map((x) => x.key)
+
+    for (const kind of ['close', 'others', 'right'] as const) {
+      expect(tabsAfterBulkClose(strip, 'a', { kind, anchor: 'gone' })).toEqual({
+        keys,
+        active: 'a'
+      })
+    }
   })
 
   it('leaves nothing active when nothing survives in Explore (FPOL-11)', () => {
