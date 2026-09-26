@@ -137,8 +137,18 @@ export function layoutLanes(entries: { block: Block; groupKey: string }[]): Laid
   return laidOut
 }
 
-/** Which colour treatment a group's bars wear (HCAL-11). */
-export type ColourRole = 'slot1' | 'slot2' | 'slot3' | 'other' | 'no-task'
+/** Which colour treatment a group's bars wear (HCAL-11, HTF-01). */
+export type ColourRole =
+  | 'slot1'
+  | 'slot2'
+  | 'slot3'
+  | 'slot4'
+  | 'slot5'
+  | 'slot6'
+  | 'slot7'
+  | 'slot8'
+  | 'other'
+  | 'no-task'
 
 /** One legend line: a task or folder with its colour and week total (HCAL-21). */
 export interface LegendEntry {
@@ -148,8 +158,10 @@ export interface LegendEntry {
   totalMs: number
 }
 
-const SLOTS: ColourRole[] = ['slot1', 'slot2', 'slot3']
-const ROLE_ORDER: ColourRole[] = [...SLOTS, 'other', 'no-task']
+const SLOTS: ColourRole[] = ['slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6', 'slot7', 'slot8']
+
+/** Legend rank: every coloured task first, then Other, then folders (HCAL-21). */
+const legendRank = (role: ColourRole): number => (role === 'no-task' ? 2 : role === 'other' ? 1 : 0)
 
 const isFolder = (groupKey: string): boolean => groupKey.startsWith('cwd:')
 
@@ -183,15 +195,24 @@ function weekGroups(report: WeekReport): WeekGroup[] {
 }
 
 /**
- * The three tasks with the most time in the week get the three colours, the
- * other tasks share Other, and task-less folders are No task (HCAL-11).
+ * Tasks in order of week time each take the first slot no task sharing one of
+ * its days holds yet; with all eight held, the task is Other. Task-less folders
+ * are No task (HTF-02, HTF-04, HCAL-11).
  */
 export function assignColours(report: WeekReport): Map<string, ColourRole> {
   const colours = new Map<string, ColourRole>()
-  let slot = 0
+  const dayKeys = report.days.map((day) => day.groups.map((group) => group.key))
   for (const { groupKey } of weekGroups(report)) {
-    if (isFolder(groupKey)) colours.set(groupKey, 'no-task')
-    else colours.set(groupKey, SLOTS[slot++] ?? 'other')
+    if (isFolder(groupKey)) {
+      colours.set(groupKey, 'no-task')
+      continue
+    }
+    const held = new Set(
+      dayKeys
+        .filter((keys) => keys.includes(groupKey))
+        .flatMap((keys) => keys.map((k) => colours.get(k)))
+    )
+    colours.set(groupKey, SLOTS.find((slot) => !held.has(slot)) ?? 'other')
   }
   return colours
 }
@@ -201,8 +222,13 @@ export function roleOf(colours: Map<string, ColourRole>, groupKey: string): Colo
   return colours.get(groupKey) ?? (isFolder(groupKey) ? 'no-task' : 'other')
 }
 
-/** Every task and folder of the week, slots first, then Other's tasks, then folders (HCAL-21). */
+/**
+ * Every task and folder of the week: coloured tasks in the order they were
+ * coloured, so live time never reorders them (HCAL-24), then Other's tasks,
+ * then folders (HCAL-21).
+ */
 export function legendEntries(report: WeekReport, colours: Map<string, ColourRole>): LegendEntry[] {
+  const colouredAt = new Map([...colours.keys()].map((key, i) => [key, i]))
   return weekGroups(report)
     .map(({ groupKey, label, totalMs }) => ({
       groupKey,
@@ -210,7 +236,13 @@ export function legendEntries(report: WeekReport, colours: Map<string, ColourRol
       role: roleOf(colours, groupKey),
       totalMs
     }))
-    .sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role))
+    .sort(
+      (a, b) =>
+        legendRank(a.role) - legendRank(b.role) ||
+        (legendRank(a.role) === 0
+          ? (colouredAt.get(a.groupKey) ?? 0) - (colouredAt.get(b.groupKey) ?? 0)
+          : 0)
+    )
 }
 
 /** Where a bar sits in its column, as percentages of the axis height (HCAL-08, HCAL-23). */

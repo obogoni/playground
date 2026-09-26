@@ -275,12 +275,16 @@ describe('assignColours and legendEntries', () => {
       end: at(d, from) + hours * HOUR
     })
 
-  it('gives the three tasks with the most week time the three slots in order (HCAL-11)', () => {
+  /** Tasks 1..n on day `d`, one per hour from 8, task k lasting less than task k - 1. */
+  const crowdedDay = (n: number, d: number): TimePeriod[] =>
+    Array.from({ length: n }, (_, i) => work(i + 1, d, 8 + i, (10 - i) / 10))
+
+  it('gives three tasks on one day slots 1 to 3 in order of week time (HTF-02, HTF-03)', () => {
     const r = report({
       periods: [
         work(1, 14, 9, 1),
         work(2, 14, 11, 2),
-        work(3, 15, 9, 4),
+        work(3, 14, 13, 4),
         // Task 1 also works Thursday: 1 h + 2.5 h = 3.5 h, above task 2's 2 h.
         work(1, 17, 9, 2.5)
       ]
@@ -291,31 +295,63 @@ describe('assignColours and legendEntries', () => {
     expect(colours.get('task:2')).toBe('slot3')
   })
 
-  it('breaks a tie in week time by the earlier first start (HCAL-11)', () => {
-    const r = report({ periods: [work(8, 15, 9, 2), work(9, 14, 13, 2)] })
+  it('gives two tasks on different days both slot 1 (HTF-02)', () => {
+    const r = report({ periods: [work(1, 14, 9, 5), work(2, 15, 9, 1)] })
+    const colours = assignColours(r)
+    expect(colours.get('task:1')).toBe('slot1')
+    expect(colours.get('task:2')).toBe('slot1')
+  })
+
+  it('breaks a tie in week time by the earlier first start (HTF-02)', () => {
+    const r = report({ periods: [work(8, 14, 13, 2), work(9, 14, 9, 2)] })
     const colours = assignColours(r)
     expect(colours.get('task:9')).toBe('slot1')
     expect(colours.get('task:8')).toBe('slot2')
   })
 
-  it('folds a fourth and fifth task into Other (HCAL-11)', () => {
+  it('skips the slots of every task sharing any of its days (HTF-02)', () => {
     const r = report({
       periods: [
-        work(1, 14, 8, 5),
-        work(2, 14, 14, 4),
-        work(3, 15, 8, 3),
-        work(4, 15, 12, 2),
-        work(5, 16, 8, 1)
+        // Task 1 on Monday and Wednesday, task 2 on Monday and Tuesday, task 3 on
+        // Tuesday and Wednesday: no day holds all three.
+        work(1, 14, 8, 3),
+        work(1, 16, 8, 3),
+        work(2, 14, 12, 2),
+        work(2, 15, 8, 2),
+        work(3, 15, 12, 1),
+        work(3, 16, 12, 1)
       ]
     })
     const colours = assignColours(r)
-    expect([1, 2, 3, 4, 5].map((id) => colours.get(`task:${id}`))).toEqual([
+    expect([1, 2, 3].map((id) => colours.get(`task:${id}`))).toEqual(['slot1', 'slot2', 'slot3'])
+  })
+
+  it('gives eight tasks on one day eight different slots in palette order (HTF-01, HTF-03)', () => {
+    const colours = assignColours(report({ periods: crowdedDay(8, 14) }))
+    expect([1, 2, 3, 4, 5, 6, 7, 8].map((id) => colours.get(`task:${id}`))).toEqual([
       'slot1',
       'slot2',
       'slot3',
-      'other',
-      'other'
+      'slot4',
+      'slot5',
+      'slot6',
+      'slot7',
+      'slot8'
     ])
+  })
+
+  it('makes a ninth task on one day Other (HTF-04)', () => {
+    const colours = assignColours(report({ periods: crowdedDay(9, 14) }))
+    expect(colours.get('task:8')).toBe('slot8')
+    expect(colours.get('task:9')).toBe('other')
+  })
+
+  it('assigns no slot in a week of folders only (HTF edge case)', () => {
+    const r = report({
+      periods: [work(null, 14, 8, 2), { ...work(null, 15, 8, 1), cwd: 'D:\\acme\\notes' }]
+    })
+    const colours = assignColours(r)
+    expect([...colours.values()]).toEqual(['no-task', 'no-task'])
   })
 
   it('makes every folder No task however large, and one task uses only slot 1 (HCAL-11)', () => {
@@ -326,25 +362,31 @@ describe('assignColours and legendEntries', () => {
     expect([...colours.values()].filter((role) => role.startsWith('slot'))).toEqual(['slot1'])
   })
 
-  it('lists slots, then Other tasks, then folders, each with its week total (HCAL-21)', () => {
+  it('lists coloured tasks by week time, then Other tasks, then folders (HCAL-21)', () => {
     const r = report({
       periods: [
-        work(null, 14, 6, 8),
-        work(1, 14, 15, 1),
-        work(2, 15, 9, 2),
-        work(3, 15, 12, 3),
-        work(4, 16, 9, 4),
-        work(4, 17, 9, 1)
+        work(null, 16, 6, 8),
+        ...crowdedDay(9, 14),
+        // Task 10 has the least time, alone on Tuesday, so it takes slot 1.
+        work(10, 15, 9, 0.05)
       ]
     })
     const legend = legendEntries(r, assignColours(r))
-    expect(legend.map((e) => [e.label, e.role, e.totalMs])).toEqual([
-      ['Task #4', 'slot1', 5 * HOUR],
-      ['Task #3', 'slot2', 3 * HOUR],
-      ['Task #2', 'slot3', 2 * HOUR],
-      ['Task #1', 'other', 1 * HOUR],
-      ['No task · scratch', 'no-task', 8 * HOUR]
+    expect(legend.map((e) => [e.label, e.role])).toEqual([
+      ['Task #1', 'slot1'],
+      ['Task #2', 'slot2'],
+      ['Task #3', 'slot3'],
+      ['Task #4', 'slot4'],
+      ['Task #5', 'slot5'],
+      ['Task #6', 'slot6'],
+      ['Task #7', 'slot7'],
+      ['Task #8', 'slot8'],
+      ['Task #10', 'slot1'],
+      ['Task #9', 'other'],
+      ['No task · scratch', 'no-task']
     ])
+    expect(legend[0].totalMs).toBe(1 * HOUR)
+    expect(legend[10].totalMs).toBe(8 * HOUR)
   })
 
   it('keeps frozen colours while live time reorders tasks, new ones neutral (HCAL-24)', () => {

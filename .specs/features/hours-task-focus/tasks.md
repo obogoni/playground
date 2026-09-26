@@ -94,10 +94,12 @@ T11 → T12 → T13
 
 **Done when**:
 
-- [ ] Tests: two tasks on different days both take `slot1`; three tasks on one day take `slot1..3`; a ninth same-day task is `other`; a task sharing days with two others skips both their slots; ties by first start; a week of folders only assigns no slot
-- [ ] The existing top-three ranking tests are rewritten to the new rule, each rewrite named in the commit body (the rule they pinned is superseded by the spec)
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: baseline ± the stated rewrites + the new tests
+- [x] Tests: two tasks on different days both take `slot1`; three tasks on one day take `slot1..3`; a ninth same-day task is `other`; a task sharing days with two others skips both their slots; ties by first start; a week of folders only assigns no slot
+- [x] The existing top-three ranking tests are rewritten to the new rule, each rewrite named in the commit body (the rule they pinned is superseded by the spec)
+- [x] Gate check passes: `npm test`
+- [x] Test count: baseline ± the stated rewrites + the new tests
+
+**Done**: 2026-09-26. 1695 tests (baseline 1691 + 4 new; 4 rewritten). The legend keeps coloured tasks in the order they were coloured, which the unchanged HCAL-24 test pins; sorting by slot did that only while slots were unique.
 
 **Tests**: unit
 **Gate**: quick

@@ -130,11 +130,11 @@ detail to its bars, and there is no way to see just the days one task took.
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | HTF-01 | P1: colours — AC 1 | Tasks | In Tasks |
-| HTF-02 | P1: colours — AC 2 | Tasks | In Tasks |
-| HTF-03 | P1: colours — AC 3 | Tasks | In Tasks |
-| HTF-04 | P1: colours — AC 4 | Tasks | In Tasks |
+| HTF-02 | P1: colours — AC 2 | Execute | Implemented (T1) |
+| HTF-03 | P1: colours — AC 3 | Execute | Implemented (T1) |
+| HTF-04 | P1: colours — AC 4 | Execute | Implemented (T1) |
 | HTF-05 | P1: colours — AC 5 | Tasks | In Tasks |
-| HTF-06 | P1: colours — AC 6 | Tasks | In Tasks |
+| HTF-06 | P1: colours — AC 6 | Execute | Implemented (T1) |
 | HTF-07 | P1: hover — AC 7 | Tasks | In Tasks |
 | HTF-08 | P1: hover — AC 8 | Tasks | In Tasks |
 | HTF-09 | P1: hover — AC 9 | Tasks | In Tasks |
