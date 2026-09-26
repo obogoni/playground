@@ -131,6 +131,8 @@ T5 → T6
 
 - [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
 
+**Done**: the handler reads the pins from `configStore.get().pinnedTasks`, the list `TaskBoard` persists, rather than through the board instance; the board has no accessor for the stored refs, and the stored list is the same data.
+
 **Tests**: none
 **Gate**: build
 
@@ -208,9 +210,15 @@ T5 → T6
 **Tests**: none
 **Gate**: manual
 
-**Agent-side check (2026-09-26, before the owner's)**: a dev app on a throwaway `--user-data-dir` seeded with one pin whose stored URL is `http://dev.azure.com/acme/platform/_workitems/edit/12345`, driven through CDP. The card rendered `#12345` as a `BUTTON` (padding 0, cursor pointer) and "details unavailable" as plain text (PTOP-04); clicking `#12345` showed the toast "Refusing to open an unexpected work item URL." and opened nothing (PTOP-06 and PTOP-08 end to end). No browser was opened on purpose, so the happy path stays with the owner.
+**Agent-side check (2026-09-26, before the owner's)**: a dev app on a throwaway `--user-data-dir` seeded with one pin whose stored URL is `http://dev.azure.com/acme/platform/_workitems/edit/12345`, driven through CDP. The card rendered `#12345` as a `BUTTON` (padding 0, cursor pointer) and "details unavailable" as plain text (PTOP-04); clicking `#12345` showed the toast "Refusing to open an unexpected work item URL." and opened nothing (PTOP-06 and PTOP-08 end to end). No browser was opened on purpose, so the happy path stays with the owner. The probe's output, verbatim:
 
-**Owner check (2026-09-26)**: in the dev app on the owner's own data, clicking a pinned task's title and its `#id` each opened that work item in the browser; tabbing to the title showed the focus ring and Enter opened it; both links underline on hover; Start work and Agent opened their dialogs and never the browser. Passed as specified; no item is named here.
+```
+before {"cards":1,"idTag":"BUTTON","idText":"#12345","padding":"0px","cursor":"pointer","unavailableIsButton":false,"unavailable":"details unavailable"}
+toast "Refusing to open an unexpected work item URL."
+```
+
+
+**Owner check (2026-09-26)**: in the dev app on the owner's own data, clicking a pinned task's title and its `#id` each opened that work item in the browser; tabbing to the title showed the focus ring and Enter opened it; both links underline on hover; Start work and Agent opened their dialogs and never the browser. The owner's reply, verbatim: "funcionou tudo, pode seguir" ("everything worked, go ahead"), to a checklist naming exactly those steps. No item is named here.
 
 **Commit**: `docs(specs): record the owner check of opening pinned tasks`
 
