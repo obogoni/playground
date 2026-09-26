@@ -275,7 +275,9 @@ T11 → T12 → T13
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Done**: 2026-09-26. Each chip holds a pick button (`aria-pressed`) and, when picked, a × button; hover and focus are read on the chip, so the × counts too. `.hleg-chip`, `.hleg-label` and the chip's title stay, as the smoke reads them.
 
 **Tests**: none
 **Gate**: full
