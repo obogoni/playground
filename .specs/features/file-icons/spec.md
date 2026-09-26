@@ -112,21 +112,21 @@ never have to do. The changed-files list and the tab strip show no file icon at 
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FICN-01 | P1: files — AC 1 | Execute | Wired (T5, T6) |
-| FICN-02 | P1: files — AC 2 | Execute | Resolved (T2) |
-| FICN-03 | P1: files — AC 3 | Execute | Resolved (T2) |
-| FICN-04 | P1: files — AC 4 | Execute | Resolved (T2) |
-| FICN-05 | P1: files — AC 5 | Execute | Resolved (T2) |
-| FICN-06 | P1: files — AC 6 | Execute | Resolved (T2) |
-| FICN-07 | P1: files — AC 7 | Execute | Resolved (T2) |
-| FICN-08 | P1: files — AC 8 | Execute | Smoke (T8) |
-| FICN-09 | P1: folders — AC 9 | Execute | Resolved (T2) |
-| FICN-10 | P1: folders — AC 10 | Execute | Resolved (T2) |
-| FICN-11 | P1: folders — AC 11 | Execute | Wired (T5) |
-| FICN-12 | P1: no slowdown — AC 12 | Execute | Own chunk (T6) |
-| FICN-13 | P1: no slowdown — AC 13 | Execute | Smoke (T8) |
-| FICN-14 | P1: no slowdown — AC 14 | Execute | Loader (T3) |
-| FICN-15 | P1: files — AC 15 | Execute | Resolved (T2) |
+| FICN-01 | P1: files — AC 1 | Execute | Verified |
+| FICN-02 | P1: files — AC 2 | Execute | Verified |
+| FICN-03 | P1: files — AC 3 | Execute | Verified |
+| FICN-04 | P1: files — AC 4 | Execute | Verified |
+| FICN-05 | P1: files — AC 5 | Execute | Verified |
+| FICN-06 | P1: files — AC 6 | Execute | Verified |
+| FICN-07 | P1: files — AC 7 | Execute | Verified |
+| FICN-08 | P1: files — AC 8 | Execute | Verified |
+| FICN-09 | P1: folders — AC 9 | Execute | Verified |
+| FICN-10 | P1: folders — AC 10 | Execute | Verified |
+| FICN-11 | P1: folders — AC 11 | Execute | Verified |
+| FICN-12 | P1: no slowdown — AC 12 | Execute | Verified |
+| FICN-13 | P1: no slowdown — AC 13 | Execute | Verified |
+| FICN-14 | P1: no slowdown — AC 14 | Execute | Verified |
+| FICN-15 | P1: files — AC 15 | Execute | Verified |
 
 **Coverage:** 15 total, 15 mapped to tasks, 0 unmapped.
 
