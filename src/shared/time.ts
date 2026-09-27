@@ -8,6 +8,9 @@ export interface PeriodSnapshotFields {
   taskId: number | null
   /** Pinned task title from the TaskBoard cache at open time; null when unknown. */
   taskTitle: string | null
+  /** Present and true only when the task was set by hand and differs from the
+   *  branch's (HTSK-36, HTSK-37); absent on every line written before the feature. */
+  taskByHand?: boolean
 }
 
 /** A closed span of time a session's terminal was alive and not paused. One JSON

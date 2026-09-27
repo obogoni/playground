@@ -112,9 +112,9 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Tests: a line with `taskByHand: true` round-trips through `append` and `readPeriods`; a line without the key reads with no `taskByHand` key (`'taskByHand' in period` is false); a line with `taskByHand: "yes"` is skipped and counted; an appended period without the flag is written as `{"v":1,...}` with no `taskByHand` key
-- [ ] Gate check passes: `npx vitest run src/main/time-log-store.test.ts` then `npm test`
-- [ ] Test count: baseline + the new tests
+- [x] Tests: a line with `taskByHand: true` round-trips through `append` and `readPeriods`; a line without the key reads with no `taskByHand` key (`'taskByHand' in period` is false); a line with `taskByHand: "yes"` is skipped and counted; an appended period without the flag is written as `{"v":1,...}` with no `taskByHand` key
+- [x] Gate check passes: `npx vitest run src/main/time-log-store.test.ts` then `npm test`
+- [x] Test count: baseline + the new tests
 
 **Tests**: unit
 **Gate**: quick

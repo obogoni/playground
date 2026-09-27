@@ -249,9 +249,9 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | HTSK-38 | P1: mark — AC 38 | Tasks | In Tasks |
 | HTSK-39 | P1: mark — AC 39 | Tasks | In Tasks |
 | HTSK-40 | P1: reports — AC 40 | Tasks | In Tasks |
-| HTSK-41 | P1: reports — AC 41 | Tasks | In Tasks |
-| HTSK-42 | P1: reports — AC 42 | Tasks | In Tasks |
-| HTSK-43 | P1: reports — AC 43 | Tasks | In Tasks |
+| HTSK-41 | P1: reports — AC 41 | Execute | Implemented: T1 |
+| HTSK-42 | P1: reports — AC 42 | Execute | Implemented: T1 |
+| HTSK-43 | P1: reports — AC 43 | Execute | Implemented: T1 |
 
 **Coverage:** 43 total, 43 mapped to tasks, 0 unmapped.
 

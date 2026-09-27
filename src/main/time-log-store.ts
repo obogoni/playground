@@ -24,7 +24,8 @@ function isPeriodLine(value: unknown): value is TimePeriod & { v: number } {
     p.v === VERSION &&
     ['id', 'sessionId', 'agent', 'cwd', 'start', 'end'].every((k) => typeof p[k] === 'string') &&
     ['workspacePath', 'repoName', 'branch', 'taskTitle'].every((k) => isStringOrNull(p[k])) &&
-    (p.taskId === null || typeof p.taskId === 'number')
+    (p.taskId === null || typeof p.taskId === 'number') &&
+    (p.taskByHand === undefined || typeof p.taskByHand === 'boolean')
   )
 }
 
