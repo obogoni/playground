@@ -582,6 +582,29 @@ describe('TimeTracker session task link', () => {
     expect(t.emits()).toBe(emits + 1)
   })
 
+  it('ends the old period and starts the new one at one instant while the clock moves (HTSK-12)', () => {
+    // A real clock moves between two reads; every read here is 1 ms later.
+    let now = T0
+    const store = fakeStore()
+    let ids = 0
+    const tracker = new TimeTracker({
+      store,
+      now: () => (now += 1),
+      newId: () => `p${++ids}`,
+      resolveSnapshot: () => SNAPSHOT,
+      pinnedTitle: (id) => PINNED.get(id) ?? null,
+      emit: () => {}
+    })
+    tracker.started(meta())
+    now += 10 * MIN
+
+    tracker.taskChanged('s1', LINK)
+
+    const [open] = tracker.snapshot().open
+    expect(store.appended).toHaveLength(1)
+    expect(open.start).toBe(store.appended[0].end)
+  })
+
   it('changes nothing when the link is the one the session already has (HTSK-14)', () => {
     const t = setup()
     t.tracker.started({ ...meta('s1'), task: LINK })

@@ -871,8 +871,8 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Each check seen failing on its mutant, then passing: the menu without its item (14.2); the picker offering `No task` to sessions (14.2); `buildRailGroups` ignoring `session.task` (14.3); `taskChanged` storing the link without closing and opening, relaunched (14.4); `setTask` not persisting, relaunched (14.5); the same-link guard removed, relaunched (14.6); the strip sending the current link instead of `null` (14.7)
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Each check seen failing on its mutant, then passing: the menu without its item (14.2); the picker offering `No task` to sessions (14.2); `buildRailGroups` ignoring `session.task` (14.3); `taskChanged` storing the link without closing and opening, relaunched (14.4); `setTask` not persisting, relaunched (14.5); the same-link guard removed, relaunched (14.6); the strip sending the current link instead of `null` (14.7)
+- [x] Gate check passes: `npm run lint` (warning count unchanged: 0 errors / 18 warnings); 14.4 first failed on a real defect (1 ms gap between the closed and the new period), fixed in `TimeTracker.taskChanged` with a unit test
 
 **Tests**: manual
 **Gate**: manual

@@ -97,8 +97,9 @@ export class TimeTracker {
     if (!run || (run.task?.id ?? null) === (task?.id ?? null)) return
     run.task = task
     if (run.open) {
-      this.#close(run.open, this.#nowIso())
-      run.open = this.#open(sessionId, run)
+      const at = this.#nowIso()
+      this.#close(run.open, at)
+      run.open = this.#open(sessionId, run, at)
     }
     this.#changed()
   }
@@ -260,8 +261,11 @@ export class TimeTracker {
     }
   }
 
-  #open(sessionId: string, run: Pick<Run, 'agent' | 'cwd' | 'task'>): OpenPeriod {
-    const at = this.#nowIso()
+  #open(
+    sessionId: string,
+    run: Pick<Run, 'agent' | 'cwd' | 'task'>,
+    at: string = this.#nowIso()
+  ): OpenPeriod {
     return {
       id: this.deps.newId(),
       sessionId,

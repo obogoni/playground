@@ -1274,6 +1274,129 @@ async function periodSection() {
   )
 }
 
+/** A rail row, found by its tooltip: a detached row names its cwd, a worktree row its branch. */
+const railRow = (tooltipEnd) =>
+  `[...document.querySelectorAll('.rail-row')].find(r => (r.getAttribute('title') ?? '').endsWith(${JSON.stringify(tooltipEnd)}))`
+/** The rail group holding `row`: its task id (null for an orphan) and its note. */
+const railGroupOf = (row) =>
+  evaluate(
+    `(() => { const g = ${row}?.closest('.rail-group'); if (!g) return null; return { id: g.querySelector('.rail-group-id')?.textContent ?? null, note: g.querySelector('.rail-group-note')?.textContent ?? null } })()`
+  )
+/** Right-clicks `row`, then its menu's `Change task…`; answers the menu's item texts. */
+async function rowChangeTask(row) {
+  await evaluate(
+    `(() => { const r = ${row}; if (!r) return false; const b = r.getBoundingClientRect(); r.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX: b.x + 40, clientY: b.y + b.height / 2 })); return true })()`
+  )
+  await sleep(250)
+  const items = await evaluate(
+    `[...document.querySelectorAll('.rail-ctx-menu .rail-ctx-item')].map(i => i.textContent.trim())`
+  )
+  await evaluate(`document.querySelector('.rail-ctx-menu .rail-change-task')?.click(), true`)
+  await sleep(300)
+  return items
+}
+const RAIL_PICKER = `document.querySelector('.task-picker.task-picker-at')`
+const STRIP_HOST = `document.querySelector('.agents-strip-task-host')`
+
+/** 14. Link the C:/Windows session from its rail row and its strip (HTSK-11..14, 17..19). */
+async function railSection() {
+  const id = sessionIds[0]
+  const row = railRow(` · ${FOLDERS[0]}`)
+  const openOf = async () =>
+    (await invoke('time:snapshot')).open.find((p) => p.sessionId === id) ?? null
+  const closedOf = async () =>
+    (await invoke('time:snapshot')).periods.filter(
+      (p) => p.sessionId === id && !knownPeriods.has(p.id)
+    )
+  const persisted = async () => (await invoke('config:get')).sessions.find((s) => s.id === id)
+
+  await reloadInto('agents')
+  await until(`${row} !== undefined`, 40)
+  const group0 = await railGroupOf(row)
+  const open0 = await openOf()
+  check(
+    'precondition: the C:/Windows session sits in a detached orphan group, its open period with no task',
+    group0?.id === null && group0.note === 'detached · Windows' && open0?.taskId === null,
+    `${JSON.stringify(group0)}; open task ${open0?.taskId}`
+  )
+
+  const items = await rowChangeTask(row)
+  const entries = await evaluate(
+    `[...(${RAIL_PICKER}?.querySelectorAll('.task-picker-entry .task-picker-label') ?? [])].map(l => l.textContent)`
+  )
+  check(
+    'right-clicking its row offers `Change task…`, opening a picker with From branch and both pins, no No task',
+    JSON.stringify(items) === JSON.stringify(['Change task…']) &&
+      JSON.stringify(entries) === JSON.stringify(['From branch', '#9201', '#9202']),
+    `${JSON.stringify(items)}; ${JSON.stringify(entries)}`
+  )
+
+  const linked = await choose(RAIL_PICKER, '#9201')
+  await sleep(1200)
+  const group1 = await railGroupOf(row)
+  check(
+    'choosing #9201 puts its row in the group headed #9201, out of every orphan group',
+    linked && group1?.id === '#9201' && group1.note === null,
+    JSON.stringify(group1)
+  )
+
+  const open1 = await openOf()
+  const previous = (await closedOf()).find((p) => p.id === open0?.id)
+  check(
+    'its open period records 9201 with the flag, and the one before ends where it starts',
+    open1?.taskId === 9201 &&
+      open1.taskByHand === true &&
+      open1.id !== open0?.id &&
+      previous !== undefined &&
+      previous.taskId === null &&
+      previous.end === open1.start,
+    `open ${JSON.stringify(open1 && [open1.taskId, open1.taskByHand, open1.start])}; previous ${JSON.stringify(previous && [previous.taskId, previous.end])}`
+  )
+
+  const saved = await persisted()
+  check(
+    'the config holds the session linked to 9201',
+    saved?.task?.id === 9201,
+    JSON.stringify(saved?.task)
+  )
+
+  // Past the 1 s floor, so a needless close would leave a period behind.
+  await sleep(1500)
+  const closedBefore = (await closedOf()).length
+  await rowChangeTask(row)
+  const again = await choose(RAIL_PICKER, '#9201')
+  await sleep(1200)
+  const closedAfter = (await closedOf()).length
+  const open2 = await openOf()
+  check(
+    'choosing #9201 again closes and opens nothing',
+    again && closedAfter === closedBefore && open2?.id === open1?.id,
+    `closed ${closedBefore} → ${closedAfter}; open ${open1?.id === open2?.id ? 'kept' : 'replaced'}`
+  )
+
+  await evaluate(`${row}?.click(), true`)
+  await sleep(600)
+  const strip = await evaluate(`document.querySelector('.agents-strip-task')?.textContent ?? null`)
+  await evaluate(`document.querySelector('.agents-strip-task-btn')?.click(), true`)
+  await sleep(300)
+  const unlinked = await choose(STRIP_HOST, 'From branch')
+  await sleep(1200)
+  const group3 = await railGroupOf(row)
+  const open3 = await openOf()
+  const saved3 = await persisted()
+  check(
+    "its strip shows #9201, and the strip's From branch puts it back in the orphan group with no task anywhere",
+    strip === '#9201' &&
+      unlinked &&
+      group3?.id === null &&
+      group3.note === 'detached · Windows' &&
+      open3?.taskId === null &&
+      saved3 !== undefined &&
+      !('task' in saved3),
+    `strip ${strip}; ${JSON.stringify(group3)}; open task ${open3?.taskId}; saved ${JSON.stringify(saved3?.task)}`
+  )
+}
+
 try {
   for (const cwd of FOLDERS) {
     const view = await invoke('sessions:spawn', {
@@ -1291,6 +1414,7 @@ try {
   // SMOKE_ONLY=assign skips sections 1 to 12: nothing in 13 to 15 reads them.
   if (ONLY !== 'assign') await calendarSections()
   await periodSection()
+  await railSection()
 } finally {
   for (const id of sessionIds) {
     await invoke('sessions:stop', { id }).catch(() => {})
