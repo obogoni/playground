@@ -139,6 +139,12 @@ T10 → T11 → T12 → T13 → T14
 T14 → T15 → T16 → T17
 ```
 
+### Phase 7: Fix round 3
+
+```
+T17 → T18 → T19
+```
+
 ---
 
 ## Task Breakdown
@@ -708,10 +714,73 @@ Gate:
 
 ---
 
+## Fix round 3 (Verifier FAIL, escalated; owner chose one focused round, 2026-09-27)
+
+The Verifier's round 3 (`validation.md`) failed on smoke evidence only; the production code is correct. Its mutants V1 and V1h (a negative right margin on the name or path) and V4 and V4h (the end group laid over the row's or header's end) survive every check: the name, the path or the counts are drawn under the glyph, while the DOM order and the glyph's edge still hold. Round 3 was the last automatic round. The owner decided on 2026-09-27 to run one more focused round: Fix 7, Fix 9 and the cosmetic notes, and to accept Fix 8's boundary limit and record it in `spec.md` without fixing it. Both fixes are in `scripts/smoke-files-diff.mjs` (plus `.specs` for T19), and each runs in the full drive and under `SMOKE_ONLY=glyphs`.
+
+### T18: No child of a row or header overlaps the next
+
+**What**: `treeRows` and `stackHeaders` also read, per row or header, its visible children in order (a box wider and taller than 0, not `visibility: hidden`), how many there are, and the most any of them runs into the next (`prev.right − next.left`, negative for a gap). The children are the icon or chevron, the name or path, the counts, and the end group. `columnFaults` faults any item whose visible children are fewer than it must have (3 for a tree file row: icon, name, end group; 4 for a header with counts, 3 without), and any item where one child overlaps the next by more than 0.5 px. Every check that runs the column (tree, headers, commit tab) inherits both, and their logs show the children counts and the worst overlap.
+**Where**: `scripts/smoke-files-diff.mjs`
+**Depends on**: T17
+**Reuses**: `columnFaults`, `treeRows`, `stackHeaders`, `headerFaults`; the Verifier's mutants V1, V1h, V4 and V4h (`fv3_mutants.py`)
+**Requirement**: FSTS-04, FSTS-16, FSTS-20, FSTS-21
+
+**Done when**:
+
+- [x] V1 (`.file-tree-name { margin-right: -40px }`) and V4 (`.file-tree-end` absolutely positioned) fail the tree's column checks; V1h (`.diff-section-path { margin-right: -60px }`) and V4h (`.diff-section-end` absolutely positioned) fail the header and commit tab column checks
+- [x] R5, R6, R7, T9 c and T10 c still fail their checks
+- [x] The precondition is real: on HEAD every checked row has 3 visible children and every header 4, or 3 without counts, as the logs show
+- [x] Gate check passes: `npm run lint` (0 errors, 18 warnings)
+
+**Result (2026-09-27)**: A `LAYOUT` read in `treeRows` and `stackHeaders` takes the row's or header's visible children in order: a box wider and taller than 0, not `visibility: hidden`. It returns how many there are and the worst `prev.right − next.left` between neighbours, with the pair's class names. Each item also carries `wantChildren`: 3 for a tree row (icon, name, end group), and 4 for a header with counts or 3 without (chevron, path, counts, end group). `columnFaults` now also faults an item whose visible children differ from `wantChildren`, and an item where one child runs more than 0.5 px into the next. Every column check inherits both: tree 3, 4 and 5, headers 11, 12 and 14, and commit tab 18 and 19. A `layoutDetail` helper puts the children counts and the worst overlap in each of their log lines.
+
+Focused run on the change: 19 / 19 in 35 s (`fr3-t18-base-drive.log`). Every checked row reads `children 3/3`, and every header `4/4`, or `3/3` for `logo.bin`. The worst overlap is a gap: −6.0 px in the tree (icon to name), and −8.0 px in the headers (counts to end group).
+
+Mutants, one focused run each (`fr3_mutants.py`, logs `fr3-t18-<id>-drive.log`):
+- V1 (`.file-tree-name { margin-right: -40px }`): fails 3, 4 and 5 (`file-tree-name over file-tree-end by 34.0 px`).
+- V4 (row `position: relative`, `.file-tree-end` absolute at `right: 8px`): fails 3, 4 and 5 (`file-tree-name over file-tree-end by 16.0 px`).
+- V1h (`.diff-section-path { margin-right: -60px }`): fails 11, 12, 14, 18 and 19 (`diff-section-path over diff-section-counts by 52.0 px`).
+- V4h (header `position: relative`, `.diff-section-end` absolute at `right: 10px`): fails 11, 12, 14, 18 and 19 (`diff-section-counts over diff-section-end by 16.0 px`).
+- P (the header chevron `visibility: hidden`, a precondition mutant): fails 11, 12, 14, 18 and 19 (`3 of 4 children visible`).
+- R5: fails 5 only. R6: fails 9 only. R7: fails 19 only.
+- T9 c (end group before the icon): fails 3, 4 and 5. T10 c (end group before the path): fails 11, 12, 14, 18 and 19.
+
+`git status --porcelain` matched the baseline after each. Lint: exit 0, 0 errors, 18 warnings, unchanged.
+
+**Tests**: manual
+**Gate**: manual
+
+**Commit**: `test(files): fault a row or header child drawn over the next`
+
+---
+
+### T19: The viewport is restored after the commit tab, and the notes are fixed
+
+**What**: `glyphCommitChecks` reads `window.innerWidth` before the narrowing and again after the commit tab is closed; its `restored` condition also requires the two to be equal, and the width before to exceed the 900 px the narrowing starts at. Check 18's log no longer shows the open button's click flag as if it proved the tab opened; it names the click and the active tab separately. T17's **What** is corrected: the natural width is read from a Range, not `scrollWidth`. The Phase Execution Map's task count is updated. `spec.md` records Fix 8's accepted limit as an Assumptions row.
+**Where**: `scripts/smoke-files-diff.mjs`, `.specs/features/files-status-glyphs/tasks.md`, `.specs/features/files-status-glyphs/spec.md`
+**Depends on**: T18
+**Reuses**: T16's `narrowUntilCut`; the Verifier's test-side mutant T-b (`fv3_mutants.py`)
+**Requirement**: FSTS-21, FSTS-22, FSTS-23
+
+**Done when**:
+
+- [ ] T-b (the narrowing not cleared after the commit tab) fails check 18
+- [ ] `python <skill-dir>/scripts/validate_spec.py files-status-glyphs` reports 0 errors
+- [ ] `spec.md` traceability: FSTS-04, 16, 20 and 21 read `Implementing`, naming their checks
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`, `npx electron-vite build`, and one full drive on a fresh seed and a fresh `--user-data-dir`, every check passing
+
+**Tests**: manual
+**Gate**: full
+
+**Commit**: `test(files): assert the viewport is restored after the commit tab`
+
+---
+
 ## Phase Execution Map
 
 ```
-Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6
+Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7
 
 Phase 1:  T1 ------→ T2 ------→ T3
 Phase 2:  T3 ------→ T4 ------→ T5
@@ -719,6 +788,7 @@ Phase 3:  T5 ------→ T6 ------→ T7
 Phase 4:  T7 ------→ T8 ------→ T9 ------→ T10
 Phase 5:  T10 -----→ T11 -----→ T12 -----→ T13 -----→ T14
 Phase 6:  T14 -----→ T15 -----→ T16 -----→ T17
+Phase 7:  T17 -----→ T18 -----→ T19
 ```
 
 Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent offer is made first. The Verifier runs after T10.
@@ -746,6 +816,8 @@ Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent of
 | T15: drawn ellipsis | 2 smoke checks tightened | ✅ Granular |
 | T16: commit tab cut path | 1 seed file + 1 smoke check | ✅ Granular |
 | T17: fitting text whole | 2 ACs + 2 smoke checks | ✅ Granular |
+| T18: no child overlaps the next | 1 smoke rule, in the shared column check | ✅ Granular |
+| T19: viewport restored, notes | 1 smoke condition + doc fixes | ✅ Granular |
 
 ## Diagram-Definition Cross-Check
 
@@ -768,6 +840,8 @@ Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent of
 | T15 | T14 | T14 → T15 | ✅ Match |
 | T16 | T15 | T15 → T16 | ✅ Match |
 | T17 | T16 | T16 → T17 | ✅ Match |
+| T18 | T17 | T17 → T18 | ✅ Match |
+| T19 | T18 | T18 → T19 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -790,24 +864,26 @@ Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent of
 | T15 | end to end | manual | manual | ✅ OK |
 | T16 | end to end (seed) | manual | manual | ✅ OK |
 | T17 | end to end | manual | manual | ✅ OK |
+| T18 | end to end | manual | manual | ✅ OK |
+| T19 | end to end | manual | manual | ✅ OK |
 
 ## Requirement Coverage
 
 | Requirement | Tasks | Evidence planned |
 | ----------- | ----- | ---------------- |
 | FSTS-01, 02, 03 | T4, T5, T9 | T9 checks 3 and 4 |
-| FSTS-04 | T5, T8, T9, T13, T15 | T9 check 5, with the drawn ellipsis (T13, T15) |
+| FSTS-04 | T5, T8, T9, T13, T15, T18 | T9 check 5, with the drawn ellipsis (T13, T15); nothing drawn under the glyph (T18) |
 | FSTS-05 | T4, T9 | T9 check 6 |
 | FSTS-06..10 | T1, T2, T9, T12, T14 | T1 unit table; T9 checks 1, 2, 4; header tones (T12); painted glyphs (T14) |
 | FSTS-11 | T1, T3, T9, T10 | T1 unit table; T9 checks 1, 4; T10 checks 1, 3 |
 | FSTS-12 | T1, T4, T6 | T1 unit tests; the `grep` in T4 and T6 |
 | FSTS-13, 15 | T1, T4, T5, T9 | T1 `struck` test; T9 check 7 |
 | FSTS-14 | T5, T9 | T9 check 7 |
-| FSTS-16, 18 | T6, T7, T10 | T10 checks 1, 2 |
+| FSTS-16, 18 | T6, T7, T10, T18 | T10 checks 1, 2; the counts not drawn under the glyph (T18) |
 | FSTS-17 | T7, T8, T10 | T10 check 3 |
 | FSTS-19 | T6, T7, T10 | T10 check 4 |
-| FSTS-20 | T7, T8, T10, T13, T15, T16 | T10 check 5, with the drawn ellipsis (T13, T15); the commit tab's cut path (T16) |
-| FSTS-21 | T6, T10, T11, T16 | the commit tab check (T11) and its cut path (T16) |
+| FSTS-20 | T7, T8, T10, T13, T15, T16 | T10 check 5, with the drawn ellipsis (T13, T15); the commit tab's cut path (T16); the path not drawn over the counts or the glyph (T18) |
+| FSTS-21 | T6, T10, T11, T16, T18, T19 | the commit tab check (T11) and its cut path (T16); no overlap (T18); the viewport restored (T19) |
 | FSTS-22 | T17 | the tree's fitting names check (T17) |
 | FSTS-23 | T17 | the headers' fitting paths check (T17) |
 | Edge cases | T9, T10 | T9 check 4 (depths, U in uncommitted); T10 check 3 (no counts) |

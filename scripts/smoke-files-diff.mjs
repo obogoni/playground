@@ -946,6 +946,27 @@ const TEXT_WIDTH = `(el) => {
   return range.getBoundingClientRect().width
 }`
 
+/**
+ * The visible children of a row or header, in order (a box wider and taller than
+ * 0, not `visibility: hidden`), and the most any of them runs into the next:
+ * `prev.right − next.left`, negative for a gap (FSTS-04, 16, 20). A box that
+ * runs past its space, or an end group laid over the row's end, reads positive
+ * here while the DOM order and the glyph's edge still hold.
+ */
+const LAYOUT = `(box) => {
+  const kids = [...box.children].filter((e) => {
+    const r = e.getBoundingClientRect()
+    return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'
+  })
+  const name = (e) => (e.getAttribute('class') || e.tagName).split(' ')[0]
+  let overlap = null
+  for (let i = 0; i + 1 < kids.length; i++) {
+    const px = kids[i].getBoundingClientRect().right - kids[i + 1].getBoundingClientRect().left
+    if (!overlap || px > overlap.px) overlap = { px, pair: name(kids[i]) + ' over ' + name(kids[i + 1]) }
+  }
+  return { children: kids.length, overlap }
+}`
+
 /** Every row of the tree, with its glyph and where that glyph ends. */
 const treeRows = `
   [...document.querySelectorAll('.file-tree-body .file-tree-row')].map((row) => {
@@ -954,6 +975,7 @@ const treeRows = `
     const glyph = glyphs[0]
     const end = glyph?.parentElement
     const name = row.querySelector('.file-tree-name')
+    const layout = (${LAYOUT})(row)
     return {
       path: row.getAttribute('title'),
       folder: row.querySelector('.file-tree-chevron') !== null,
@@ -970,6 +992,11 @@ const treeRows = `
         glyph === end.lastElementChild,
       right: glyph ? glyph.getBoundingClientRect().right : null,
       edge: box.right - parseFloat(getComputedStyle(row).paddingRight),
+      // FSTS-04: the icon (or chevron and icon), the name and the end group, none
+      // drawn over the next.
+      children: layout.children,
+      wantChildren: 3,
+      overlap: layout.overlap,
       overflows: name ? name.scrollWidth > name.clientWidth : null,
       // FSTS-04: a cut name ends in an ellipsis, not a bare clip. The ellipsis is
       // drawn only on a box that clips and does not wrap (see ellipsisFaults).
@@ -1010,7 +1037,9 @@ async function listRows(ws, mode, expected) {
 /**
  * The column FSTS-01/02/16/17 name: every item holds exactly one glyph, last in
  * its row or header, ending within 1 px of the right padding, and all of them
- * within 1 px of each other. Returns the reasons it fails, empty when it holds.
+ * within 1 px of each other. Nothing is drawn under the glyph either (FSTS-04,
+ * 16, 20): the item shows all its children, and none runs more than 0.5 px into
+ * the next. Returns the reasons it fails, empty when it holds.
  */
 function columnFaults(items) {
   const faults = []
@@ -1020,12 +1049,29 @@ function columnFaults(items) {
     else if (Math.abs(item.right - item.edge) > 1) {
       faults.push(`${item.path}: ends at ${item.right.toFixed(1)}, edge ${item.edge.toFixed(1)}`)
     }
+    if (item.children !== item.wantChildren) {
+      faults.push(`${item.path}: ${item.children} of ${item.wantChildren} children visible`)
+    } else if (item.overlap && item.overlap.px > 0.5) {
+      faults.push(`${item.path}: ${item.overlap.pair} by ${item.overlap.px.toFixed(1)} px`)
+    }
   }
   const rights = items.map((i) => i.right).filter((r) => typeof r === 'number')
   if (rights.length && Math.max(...rights) - Math.min(...rights) > 1) {
     faults.push(`rights spread ${(Math.max(...rights) - Math.min(...rights)).toFixed(1)} px`)
   }
   return faults
+}
+
+/** The children counts of a list and its worst overlap, for a check's log line. */
+function layoutDetail(items) {
+  const counts = [...new Set(items.map((i) => `${i.children}/${i.wantChildren}`))].join(', ')
+  const worst = items
+    .filter((i) => i.overlap)
+    .reduce((w, i) => (!w || i.overlap.px > w.overlap.px ? i : w), null)
+  return (
+    `children ${counts || 'none'}; worst overlap ` +
+    (worst ? `${worst.overlap.px.toFixed(1)} px (${worst.overlap.pair}, ${worst.path})` : 'none')
+  )
 }
 
 /**
@@ -1165,7 +1211,7 @@ async function glyphTreeChecks(ws) {
   check(
     'Diff to origin: one glyph per file row, last, in one column at the right padding (FSTS-01..03)',
     originFiles.length === Object.keys(ORIGIN_STATUS).length && originColumn.length === 0,
-    `${originFiles.length} file rows` +
+    `${originFiles.length} file rows; ${layoutDetail(originFiles)}` +
       (originColumn.length ? `; ${originColumn.slice(0, 3).join('; ')}` : '')
   )
 
@@ -1188,7 +1234,7 @@ async function glyphTreeChecks(ws) {
       uncommittedGlyphs.length === 0 &&
       uncommittedColumn.length === 0,
     `depths ${uncommittedFiles.map((r) => `${r.path.split('/').pop().slice(0, 12)}:${r.depth}`).join(', ')}; ` +
-      `untracked.txt ${untrackedRow?.text}/${untrackedRow?.title}` +
+      `untracked.txt ${untrackedRow?.text}/${untrackedRow?.title}; ${layoutDetail(uncommittedFiles)}` +
       (uncommittedGlyphs.length ? `; wrong: ${uncommittedGlyphs.join(', ')}` : '') +
       (uncommittedColumn.length ? `; ${uncommittedColumn.slice(0, 3).join('; ')}` : '')
   )
@@ -1200,7 +1246,8 @@ async function glyphTreeChecks(ws) {
   check(
     'A name too long for its row is cut with an ellipsis and its glyph keeps the column (FSTS-04)',
     longCut.length === 0 && longColumn.length === 0,
-    cutDetail(longRow) + (longColumn.length ? `; ${longColumn.join('; ')}` : '')
+    `${cutDetail(longRow)}; ${longRow ? layoutDetail([longRow]) : 'no row'}` +
+      (longColumn.length ? `; ${longColumn.join('; ')}` : '')
   )
 
   // 6. No folder row carries a glyph.
@@ -1261,6 +1308,7 @@ const stackHeaders = `
     const end = glyph?.parentElement
     const path = header.querySelector('.diff-section-path')
     const counts = header.querySelector('.diff-section-counts')
+    const layout = (${LAYOUT})(header)
     return {
       path: section.getAttribute('data-path'),
       glyphs: glyphs.length,
@@ -1279,6 +1327,11 @@ const stackHeaders = `
       right: glyph ? glyph.getBoundingClientRect().right : null,
       edge: box.right - parseFloat(getComputedStyle(header).paddingRight),
       counts: counts ? Math.round(counts.getBoundingClientRect().width * 10) / 10 : null,
+      // FSTS-16, 20: the chevron, the path, the counts (when there are any) and
+      // the end group, none drawn over the next.
+      children: layout.children,
+      wantChildren: counts ? 4 : 3,
+      overlap: layout.overlap,
       overflows: path ? path.scrollWidth > path.clientWidth : null,
       // FSTS-20: a cut path ends in an ellipsis, not a bare clip (see ellipsisFaults).
       ellipsis: path ? getComputedStyle(path).textOverflow : null,
@@ -1373,7 +1426,7 @@ async function glyphHeaderChecks(ws) {
   check(
     'Diff to origin: one glyph per header, last, in one column at the right padding (FSTS-16, FSTS-18)',
     origin.length === Object.keys(ORIGIN_STATUS).length && originColumn.length === 0,
-    `${origin.length} headers` +
+    `${origin.length} headers; ${layoutDetail(origin)}` +
       (originColumn.length ? `; ${originColumn.slice(0, 3).join('; ')}` : '')
   )
 
@@ -1393,7 +1446,7 @@ async function glyphHeaderChecks(ws) {
       untracked?.title === 'Untracked' &&
       uncommittedColumn.length === 0,
     `logo.bin counts ${binary ? binary.counts : 'no header'}; count widths ${[...widths].join(', ')}; ` +
-      `untracked.txt ${untracked?.text}/${untracked?.title}` +
+      `untracked.txt ${untracked?.text}/${untracked?.title}; ${layoutDetail(uncommitted)}` +
       (uncommittedColumn.length ? `; ${uncommittedColumn.slice(0, 3).join('; ')}` : '')
   )
 
@@ -1415,7 +1468,7 @@ async function glyphHeaderChecks(ws) {
     ellipsisFaults(long).length === 0 &&
       narrowed.length === Object.keys(UNCOMMITTED_STATUS).length &&
       narrowColumn.length === 0,
-    `at ${atWidth} px: ${cutDetail(long)}` +
+    `at ${atWidth} px: ${cutDetail(long)}; ${layoutDetail(narrowed ?? [])}` +
       (narrowColumn.length ? `; ${narrowColumn.slice(0, 3).join('; ')}` : '')
   )
 
@@ -1557,7 +1610,8 @@ async function glyphCommitChecks(ws) {
       struck[0] === 'docs/removed.md:path' &&
       restored,
     `opened ${opened}; active ${tabs.find((t) => t.active)?.label ?? 'none'}; ${headers.length} headers, ` +
-      `statuses ${[...statuses].join('/')}; struck ${struck.join(', ') || 'none'}; restored ${restored}` +
+      `statuses ${[...statuses].join('/')}; struck ${struck.join(', ') || 'none'}; restored ${restored}; ` +
+      layoutDetail(headers) +
       (faults.length ? `; ${faults.slice(0, 3).join('; ')}` : '')
   )
   check(
@@ -1567,7 +1621,7 @@ async function glyphCommitChecks(ws) {
       ellipsisFaults(longGuide).length === 0 &&
       narrowFaults.length === 0,
     `active ${tabs.find((t) => t.active)?.label ?? 'none'}; at ${atWidth} px, ${narrowed?.length ?? 0} headers: ` +
-      cutDetail(longGuide) +
+      `${cutDetail(longGuide)}; ${layoutDetail(narrowed ?? [])}` +
       (narrowFaults.length ? `; ${narrowFaults.slice(0, 3).join('; ')}` : '')
   )
 }
