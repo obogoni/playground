@@ -255,10 +255,10 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-35 | P2: many — AC 35 | Execute | Implementing: T9 (no helper: the list goes as it is), T17 (Discard all) |
 | FDSC-36 | P2: many — AC 36 | Execute | Implementing: T12 (icon), T16 (hover ↶) |
 | FDSC-37 | P2: many — AC 37 | Execute | Implementing: T16 (the ↶ click stays its own) |
-| FDSC-38 | P2: many — AC 38 | Execute | Implementing: T12 (icon), T18 (section ↶) |
+| FDSC-38 | P2: many — AC 38 | Execute | Implementing: T12 (icon), T18 (section ↶), T19 (uncommitted stack only) |
 | FDSC-39 | P2: many — AC 39 | Execute | Implementing: T18 (the ↶ click stays its own) |
-| FDSC-40 | P1: read-only — AC 40 | Execute | Implementing: T3 (AD-047), T15 (no menu outside uncommitted), T16 (no ↶ outside uncommitted), T17 (no Discard all outside uncommitted) |
-| FDSC-41 | P1: read-only — AC 41 | Execute | Implementing: T18 (CommitTab passes no onDiscard) |
+| FDSC-40 | P1: read-only — AC 40 | Execute | Implementing: T3 (AD-047), T15 (no menu outside uncommitted), T16 (no ↶ outside uncommitted), T17 (no Discard all outside uncommitted), T19 (no section ↶ in diff to origin) |
+| FDSC-41 | P1: read-only — AC 41 | Execute | Implementing: T18 (CommitTab passes no onDiscard), T19 (FileTabs gates by mode) |
 | FDSC-42 | P1: read-only — AC 42 | Execute | Implemented: T3 (AD-047), T4 (request type), T5 (recording runner), T8 (handler) |
 | FDSC-43 | Edge: untracked folder row | Execute | Implemented: T6, T9, T10 (unit) |
 | FDSC-44 | Edge: already gone | Execute | Implemented: T6 (unit) |

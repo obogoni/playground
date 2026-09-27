@@ -119,7 +119,7 @@ function DiffBody({
  * Only the active tab is mounted, keyed by its tab key, so Monaco creates one
  * editor per tab and disposes it when the tab loses focus or closes.
  */
-export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.Element {
+export function FileTabs({ worktreePath, files, onToast, onDiscard }: FileTabsProps): JSX.Element {
   const active: StripTab | null =
     files.strip.find((tab) => tabKeyOf(tab) === files.activeTab) ?? null
 
@@ -307,6 +307,9 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
             ignoreWhitespace={files.diffIgnoreWhitespace}
             refreshToken={files.refreshToken}
             onHandle={onHandle}
+            // FDSC-38/40: the section ↶ belongs to the uncommitted stack only;
+            // diff to origin gets none.
+            onDiscard={files.mode === 'uncommitted' ? (changed) => onDiscard([changed]) : undefined}
           />
         ) : active.kind === 'diff' ? (
           <DiffBody key={tabKeyOf(active)} files={files} tab={active} onHandle={onHandle} />

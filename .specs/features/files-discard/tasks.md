@@ -579,7 +579,7 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full
