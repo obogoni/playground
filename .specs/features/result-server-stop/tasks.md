@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/result-server-stop/spec.md`
 **Design**: none - no architectural decision; the guard copies the activity hook server's.
-**Status**: T1-T3 Done (2026-09-27). Awaiting the Verifier.
+**Status**: Done (2026-09-27). Verifier PASS on the first round: 8/8 ACs, 7/7 mutants killed; report in `validation.md`.
 **Branch**: `feature/result-server-stop` (cut from `main` = `origin/main` `c31bb9a`)
 **Test baseline**: measured green on the branch on 2026-09-27 before any production change - 1663 tests / 90 files, `typecheck` and `lint` exit 0 (18 prettier warnings, 0 errors).
 
@@ -77,7 +77,7 @@ T1 → T2 → T3
 **Tests**: none
 **Gate**: build
 
-**Commit**: `test(quit): add a smoke that quits the built app and reads the main process output`
+**Commit**: `test(quit): add a smoke that quits the built app and reads the main process output` (`e2e3113`)
 
 ---
 
@@ -120,7 +120,7 @@ Check B: every assertion targets the resolved value or the rejection itself; RST
 **Tests**: unit
 **Gate**: full
 
-**Commit**: `fix(workflows): resolve the result server's stop() when it is not listening`
+**Commit**: `fix(workflows): resolve the result server stop() when not listening` (`abaa9b3`)
 
 ---
 
@@ -148,7 +148,7 @@ Check B: every assertion targets the resolved value or the rejection itself; RST
 **Tests**: none
 **Gate**: build
 
-**Commit**: `fix(main): log a failed server stop at quit instead of leaving it unhandled`
+**Commit**: `fix(main): log a failed server stop at quit instead of dropping it` (`29ba5d3`)
 
 ---
 

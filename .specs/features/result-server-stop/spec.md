@@ -92,14 +92,14 @@ Measured on Node 24 (`http.createServer`):
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| RSTP-01 | P1: Quit without an unhandled rejection | T2 | Implementing |
-| RSTP-02 | P1: Quit without an unhandled rejection | T2 | Implementing |
-| RSTP-03 | P1: Quit without an unhandled rejection | T2 | Implementing |
-| RSTP-04 | P1: Quit without an unhandled rejection | T2 | Implementing |
-| RSTP-05 | P1: Quit without an unhandled rejection | T2 | Implementing |
-| RSTP-06 | P1: Quit without an unhandled rejection | T1, T3 | Implementing |
-| RSTP-07 | P2: Close failures at quit reach the log | T3 | Implementing |
-| RSTP-08 | P2: Close failures at quit reach the log | T3 | Implementing |
+| RSTP-01 | P1: Quit without an unhandled rejection | T2 | Verified |
+| RSTP-02 | P1: Quit without an unhandled rejection | T2 | Verified |
+| RSTP-03 | P1: Quit without an unhandled rejection | T2 | Verified |
+| RSTP-04 | P1: Quit without an unhandled rejection | T2 | Verified |
+| RSTP-05 | P1: Quit without an unhandled rejection | T2 | Verified |
+| RSTP-06 | P1: Quit without an unhandled rejection | T1, T3 | Verified |
+| RSTP-07 | P2: Close failures at quit reach the log | T3 | Verified |
+| RSTP-08 | P2: Close failures at quit reach the log | T3 | Verified |
 
 **Coverage:** 8 total, 8 mapped to tasks, 0 unmapped.
 
