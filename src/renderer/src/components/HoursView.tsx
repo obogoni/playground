@@ -38,6 +38,8 @@ interface HoursViewProps {
   liveTitles: Map<number, string>
   onDelete: (id: string) => Promise<TimeEditResult>
   onAdjust: (id: string, start: string, end: string) => Promise<TimeEditResult>
+  /** Splits a closed period at a UTC ISO instant (HTSK-28). */
+  onSplit: (id: string, at: string) => Promise<TimeEditResult>
 }
 
 const pad = (n: number): string => String(n).padStart(2, '0')
@@ -94,7 +96,8 @@ export function HoursView({
   snapshot,
   liveTitles,
   onDelete,
-  onAdjust
+  onAdjust,
+  onSplit
 }: HoursViewProps): JSX.Element {
   const [weekStart, setWeekStart] = useState(() => weekRange(new Date()).start)
   const week = weekRange(new Date(weekStart))
@@ -292,6 +295,7 @@ export function HoursView({
                   day={shownDay}
                   onDelete={onDelete}
                   onAdjust={onAdjust}
+                  onSplit={onSplit}
                   focus={current.focus}
                   colours={colours}
                   onClose={closeDrawer}
@@ -345,6 +349,7 @@ interface DayCardProps {
   day: DayReport
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
+  onSplit: HoursViewProps['onSplit']
   /** The block to focus; absent, the card renders as the list view did. */
   focus?: BlockFocus
   /** Colour roles of the shown week, for the swatch beside each group (HCAL-11). */
@@ -376,6 +381,7 @@ function DayCard({
   day,
   onDelete,
   onAdjust,
+  onSplit,
   focus,
   colours,
   onClose,
@@ -421,6 +427,7 @@ function DayCard({
           role={roleOf(colours, group.key)}
           onDelete={onDelete}
           onAdjust={onAdjust}
+          onSplit={onSplit}
           focus={focus?.groupKey === group.key ? focus : undefined}
           onHover={onHover}
         />
@@ -434,6 +441,7 @@ interface GroupSectionProps {
   role: ColourRole
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
+  onSplit: HoursViewProps['onSplit']
   focus?: BlockFocus
   onHover: (key: string | null) => void
 }
@@ -443,6 +451,7 @@ function GroupSection({
   role,
   onDelete,
   onAdjust,
+  onSplit,
   focus,
   onHover
 }: GroupSectionProps): JSX.Element {
@@ -469,6 +478,7 @@ function GroupSection({
           block={block}
           onDelete={onDelete}
           onAdjust={onAdjust}
+          onSplit={onSplit}
           focus={focus?.start === block.start ? focus : undefined}
         />
       ))}
@@ -480,10 +490,11 @@ interface BlockLineProps {
   block: Block
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
+  onSplit: HoursViewProps['onSplit']
   focus?: BlockFocus
 }
 
-function BlockLine({ block, onDelete, onAdjust, focus }: BlockLineProps): JSX.Element {
+function BlockLine({ block, onDelete, onAdjust, onSplit, focus }: BlockLineProps): JSX.Element {
   const [expanded, setExpanded] = useState(false)
   const [seenFocus, setSeenFocus] = useState<BlockFocus | undefined>(undefined)
   const ref = useRef<HTMLDivElement>(null)
@@ -528,6 +539,7 @@ function BlockLine({ block, onDelete, onAdjust, focus }: BlockLineProps): JSX.El
               row={row}
               onDelete={onDelete}
               onAdjust={onAdjust}
+              onSplit={onSplit}
             />
           ))}
         </div>

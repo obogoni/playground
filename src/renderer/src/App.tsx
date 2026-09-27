@@ -493,6 +493,7 @@ function App(): JSX.Element {
             liveTitles={liveTitles}
             onDelete={time.deletePeriod}
             onAdjust={time.adjustPeriod}
+            onSplit={time.splitPeriod}
           />
         ) : ui.direction === 'files' ? (
           <FilesView

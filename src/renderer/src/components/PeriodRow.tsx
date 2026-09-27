@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { JSX } from 'react'
 import type { TimeEditResult } from '../../../shared/time'
 import type { RawPeriodRow } from '../lib/hours-report'
-import { fromLocalInput, handMarkTitle, toLocalInput } from '../lib/period-edit'
+import { fromLocalInput, handMarkTitle, splitDefault, toLocalInput } from '../lib/period-edit'
 import { formatHmCompact } from '../lib/time-format'
 import { Icon } from './Icon'
 import './PeriodRow.css'
@@ -11,6 +11,8 @@ interface PeriodRowProps {
   row: RawPeriodRow
   onDelete: (id: string) => Promise<TimeEditResult>
   onAdjust: (id: string, start: string, end: string) => Promise<TimeEditResult>
+  /** Splits a closed period at a UTC ISO instant inside it (HTSK-28). */
+  onSplit: (id: string, at: string) => Promise<TimeEditResult>
 }
 
 const pad = (n: number): string => String(n).padStart(2, '0')
@@ -20,20 +22,23 @@ const clock = (ms: number): string => {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
-type Mode = 'view' | 'edit' | 'confirm-delete'
+type Mode = 'view' | 'edit' | 'confirm-delete' | 'split'
 
 /**
  * One raw period under a merged block (TIME-38): start, end, duration and agent.
  * A closed period can be edited (both bounds, local time) or deleted after a
  * confirm; an open one offers neither (TIME-47). Main validates and answers
  * with an inline error (TIME-46, TIME-49). A period whose task was set by hand
- * wears a hand mark naming its branch (HTSK-38).
+ * wears a hand mark naming its branch (HTSK-38). A closed period can also be
+ * split in two at a time inside it, the field starting on its midpoint
+ * (HTSK-28, HTSK-33); main's verdict shows inline (HTSK-29..32).
  */
-export function PeriodRow({ row, onDelete, onAdjust }: PeriodRowProps): JSX.Element {
+export function PeriodRow({ row, onDelete, onAdjust, onSplit }: PeriodRowProps): JSX.Element {
   const { period } = row
   const [mode, setMode] = useState<Mode>('view')
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
+  const [splitAt, setSplitAt] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -71,6 +76,22 @@ export function PeriodRow({ row, onDelete, onAdjust }: PeriodRowProps): JSX.Elem
     settle(onAdjust(period.id, startIso, endIso))
   }
 
+  const startSplit = (): void => {
+    if (!('end' in period)) return
+    setSplitAt(splitDefault(period.start, period.end))
+    setError(null)
+    setMode('split')
+  }
+
+  const split = (): void => {
+    const at = fromLocalInput(splitAt)
+    if (!at) {
+      setError('Split time must be a valid date.')
+      return
+    }
+    settle(onSplit(period.id, at))
+  }
+
   const cancel = (): void => {
     setMode('view')
     setError(null)
@@ -100,6 +121,15 @@ export function PeriodRow({ row, onDelete, onAdjust }: PeriodRowProps): JSX.Elem
         ) : (
           mode === 'view' && (
             <>
+              <button
+                type="button"
+                className="period-row-icon period-row-split"
+                title="Split at"
+                aria-label="Split at"
+                onClick={startSplit}
+              >
+                <Icon name="scissors" size={12} />
+              </button>
               <button
                 type="button"
                 className="period-row-icon"
@@ -148,6 +178,27 @@ export function PeriodRow({ row, onDelete, onAdjust }: PeriodRowProps): JSX.Elem
           </label>
           <button type="button" className="period-row-btn primary" disabled={busy} onClick={save}>
             Save
+          </button>
+          <button type="button" className="period-row-btn" disabled={busy} onClick={cancel}>
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {mode === 'split' && (
+        <div className="period-row-form period-row-split-form">
+          <label className="period-row-field">
+            Split at
+            <input
+              className="period-row-split-input"
+              type="datetime-local"
+              step={1}
+              value={splitAt}
+              onChange={(e) => setSplitAt(e.target.value)}
+            />
+          </label>
+          <button type="button" className="period-row-btn primary" disabled={busy} onClick={split}>
+            Split
           </button>
           <button type="button" className="period-row-btn" disabled={busy} onClick={cancel}>
             Cancel

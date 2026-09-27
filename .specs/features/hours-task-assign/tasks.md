@@ -728,8 +728,8 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Running rows keep showing only `running` (TIME-47)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Running rows keep showing only `running` (TIME-47)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full
