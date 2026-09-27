@@ -643,6 +643,10 @@ describe('foldPlan', () => {
     expect(foldPlan([revealed(earlier)], [touching], null, false)).toEqual([whole(touching)])
   })
 
+  it('folds a merged region when its only revealed source was revealed in part (FOLD-06, owner 2026-09-27)', () => {
+    expect(foldPlan([partial(B1, 5, 0), folded(B2)], [B], null, false)).toEqual([whole(B)])
+  })
+
   // other.ts: lines 50-70 changed, then only 50 and 70 differ.
   const top = both(1, 47)
   const bottom = both(74, 122)

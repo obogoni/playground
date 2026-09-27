@@ -626,9 +626,11 @@ The Verifier's round 1 (`validation.md`) failed on test evidence only: 16 of 20 
 
 **Done when**:
 
-- [ ] The test passes, and fails against U07 (a partly revealed source counts as revealed)
-- [ ] `spec.md` records both readings
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
+- [x] The test passes, and fails against U07 (a partly revealed source counts as revealed)
+- [x] `spec.md` records both readings
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
+
+**Result (2026-09-27)**: 1 new test, 71/71 in the file; U07 (a partly revealed source counts as revealed) fails exactly that test. `spec.md`: AC 6 reads "revealed whole", the merge row records the owner's 2026-09-27 confirmation of the partial case, and the partial row records the split case (each half keeps both counts, clamped). `validate_spec.py`: 0 errors.
 
 **Tests**: unit
 **Gate**: quick
