@@ -20,6 +20,12 @@ Corroborated across multiple features. Safe to apply as guidance.
 - evidence: validation.md round-2 gate section; tree.test.ts / worktree-manager.test.ts timeouts (testing) (+1 more)
 - last seen: 2026-07-31T12:27:40Z
 
+### L-018 - When an AC lands in a layer the project exempts from unit tests, extract the decision into a lib module and test that, rather than deferring the evidence to a smoke script that has not been written yet
+- signal: `ac_gap` · recurrence: 2 feature(s) · scope: `renderer` · harmful: 0
+- features: session-activity-status, diff-fold-refresh
+- evidence: ACTV-07, ACTV-27 (renderer) (+1 more)
+- last seen: 2026-09-27T13:52:57Z
+
 ## Candidates (under observation - do NOT load as guidance yet)
 
 Seen once or not yet corroborated. Tracked, not trusted.
@@ -82,12 +88,6 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
 - features: session-activity-status
 - evidence: activity-machine.ts:77,:108 (testing)
-- last seen: 2026-09-16T00:25:09Z
-
-### L-018 - When an AC lands in a layer the project exempts from unit tests, extract the decision into a lib module and test that, rather than deferring the evidence to a smoke script that has not been written yet
-- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
-- features: session-activity-status
-- evidence: ACTV-07, ACTV-27 (renderer)
 - last seen: 2026-09-16T00:25:09Z
 
 ### L-019 - Pin a spec-mandated numeric limit with a literal assertion on the default production uses; a test that overrides the value to run fast leaves the default free to drift.
@@ -233,6 +233,30 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: files-view-polish
 - evidence: FPOL-02 src/renderer/src/components/FileTabs.tsx:241 (smoke-ui)
 - last seen: 2026-09-26T17:54:24Z
+
+### L-043 - When a rule matches items by one of two coordinates, give the test a fixture where the two coordinates disagree, or matching by the wrong one still passes
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: diff-fold-refresh
+- evidence: U10 src/renderer/src/lib/diff-view.test.ts:616 (testing)
+- last seen: 2026-09-27T13:52:57Z
+
+### L-044 - Test a range-overlap rule with two ranges that only touch, or a strict and a non-strict comparison cannot be told apart
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: diff-fold-refresh
+- evidence: U15 src/renderer/src/lib/diff-view.ts overlaps (testing)
+- last seen: 2026-09-27T13:52:57Z
+
+### L-045 - When a spec defines a partial form of a state, every rule that names the state must say whether the partial form counts, and a test must pin that reading
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: diff-fold-refresh
+- evidence: FOLD-06 / U07 src/renderer/src/lib/diff-view.ts foldPlan (spec)
+- last seen: 2026-09-27T13:52:57Z
+
+### L-046 - Assert a Monaco editor's scroll position by its first rendered line number, never by a scrollable element's scrollTop, which stays 0 under virtual scrolling
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
+- features: diff-fold-refresh
+- evidence: FOLD-09 scripts/smoke-files-diff.mjs:876 (scripts/smoke)
+- last seen: 2026-09-27T13:52:57Z
 
 ## Quarantined (failed when applied - ignore)
 
