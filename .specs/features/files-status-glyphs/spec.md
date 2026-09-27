@@ -42,12 +42,13 @@ right after the chevron and before the path.
 | Untracked in diff-to-origin | Never listed: that mode reads `git diff --name-status` (`file-tree.ts:216`), which has no untracked status; `U` appears only in the uncommitted list and its stack | Fact of the data source | y |
 | Very deep rows | Where the indent alone fills the row (about ten levels at the column's 200 px minimum), the glyph is pushed past the column like the name already is; no change | The indent grows 13 px per level (`FileTree.tsx:46-48`); fixing it means a different indent model, outside this issue | n (owner confirmed 2026-09-26) |
 | A name or path that fits | Shows whole, with no ellipsis (FSTS-22, FSTS-23); criteria 4 and 20 only say what happens when it is too long | The Verifier's round 2 spec-precision note: a mutant that caps every name at 40 px, so names that fit are cut too, broke no criterion as written | y (owner confirmed 2026-09-27) |
+| Fitting samples near their bound (the Verifier's Fix 8) | Accepted, not fixed: checks 9 and 17 keep the seed's names and paths; a cap on the name or path width that falls between the widest fitting sample and its space is not caught | Any seed leaves some slack, and the 1 px spare in the fit check already catches every cut that reaches a sample (a 0.5 px cut fails); the Verifier's round 3 V6 (a 120 px name cap) and V6h (a 700 px path cap) survive on that slack | y (owner accepted 2026-09-27; the fit samples are ≥ 78 px (tree) / ≥ 210 px (headers) short of their space, so a width cap between them passes) |
 | Room for the discard action (#132) | The glyph sits inside an end group (`.file-tree-end`, `.diff-section-end`) that #132 fills with its action before the glyph | Orchestrator instruction; see the hand-off note in `tasks.md` | y |
 | Smoke home | `scripts/smoke-files-diff.mjs`, a new section before the icon section (which reloads the window and must stay last) | Its seed already has M, A, D, R in diff-to-origin and M, U uncommitted, plus the All changes stack | y |
 | Seed additions | An untracked file with a long name in `src/` (12 lines) and an uncommitted change to the binary `assets/logo.bin` | The long name proves the ellipsis; the 12 lines and the binary give headers of different count widths and one with no counts, so a glyph misplaced before the counts cannot pass | y |
 | Base branch | `feature/files-status-glyphs` off `feature/file-icons` `422d68d` (PR #126); rebased once #126 lands | Owner-approved stack (issue #131: depends on #126) | y |
 
-**Open questions:** none — the two `owner confirmed 2026-09-26` defaults above are logged and reported, and the fitting-name criterion was confirmed by the owner on 2026-09-27.
+**Open questions:** none — the two `owner confirmed 2026-09-26` defaults above are logged and reported, and the fitting-name criterion was confirmed by the owner on 2026-09-27, as was the fit checks' accepted boundary limit.
 
 ---
 
@@ -143,7 +144,7 @@ right after the chevron and before the path.
 | FSTS-01 | P1: one column — AC 1 | Execute | Verified (validation.md round 3) |
 | FSTS-02 | P1: one column — AC 2 | Execute | Verified (validation.md round 3) |
 | FSTS-03 | P1: one column — AC 3 | Execute | Verified (validation.md round 3) |
-| FSTS-04 | P1: one column — AC 4 | Execute | Needs Fix: Fix 7 (validation.md round 3), V1 and V4 draw the name and its ellipsis under the glyph and pass check 5 |
+| FSTS-04 | P1: one column — AC 4 | Execute | Implementing: T18 (fix round 3, Fix 7): the tree column checks (focused 3, 4, 5; full drive 22, 23, 24) also fault a name drawn over the end group, and check 5 the drawn ellipsis (T15); V1 and V4 fail 3, 4 and 5 |
 | FSTS-05 | P1: one column — AC 5 | Execute | Verified (validation.md round 3) |
 | FSTS-06 | P1: glyph — AC 6 | Execute | Verified (validation.md round 3) |
 | FSTS-07 | P1: glyph — AC 7 | Execute | Verified (validation.md round 3) |
@@ -155,12 +156,12 @@ right after the chevron and before the path.
 | FSTS-13 | P1: deleted — AC 13 | Execute | Verified (validation.md round 3) |
 | FSTS-14 | P1: deleted — AC 14 | Execute | Verified (validation.md round 3) |
 | FSTS-15 | P1: deleted — AC 15 | Execute | Verified (validation.md round 3) |
-| FSTS-16 | P1: headers — AC 16 | Execute | Needs Fix: Fix 7 (validation.md round 3), V4h draws the glyph over the counts and passes checks 11-12 |
+| FSTS-16 | P1: headers — AC 16 | Execute | Implementing: T18 (Fix 7): the header column checks (focused 11, 12, 14; full drive 30, 31, 33) and the commit tab's (focused 18, 19; full drive 37, 38) also fault counts drawn under the glyph; V4h fails all five |
 | FSTS-17 | P1: headers — AC 17 | Execute | Verified (validation.md round 3) |
 | FSTS-18 | P1: headers — AC 18 | Execute | Verified (validation.md round 3) |
 | FSTS-19 | P1: headers — AC 19 | Execute | Verified (validation.md round 3) |
-| FSTS-20 | P1: headers — AC 20 | Execute | Needs Fix: Fix 7 (validation.md round 3), V1h draws the path over the counts and passes check 14 |
-| FSTS-21 | P1: headers — AC 21 | Execute | Commit-specific clauses verified (validation.md round 3: S8b, R7, T-a killed); inherits Fix 7 via FSTS-16 and FSTS-20 |
+| FSTS-20 | P1: headers — AC 20 | Execute | Implementing: T18 (Fix 7): the cut path checks (focused 14, 19; full drive 33, 38) and the header column checks also fault a path drawn over the counts or the glyph; V1h fails 11, 12, 14, 18 and 19 |
+| FSTS-21 | P1: headers — AC 21 | Execute | Implementing: T18 and T19 (Fix 7, Fix 9): the commit tab checks (focused 18, 19; full drive 37, 38) inherit the overlap rule (V1h and V4h fail them), and 18 requires the window's width restored after the narrowing (T-b fails it) |
 | FSTS-22 | P1: one column — AC 22 | Execute | Verified (validation.md round 3); Fix 8 boundary limit, V6 (a 120 px cap) survives |
 | FSTS-23 | P1: headers — AC 23 | Execute | Verified (validation.md round 3); Fix 8 boundary limit, V6h (a 700 px cap) survives |
 

@@ -1539,10 +1539,12 @@ const isCommitTab = (label) => label.endsWith(` · ${BRANCH_COMMIT}`)
  */
 async function glyphCommitChecks(ws) {
   await evaluate(ws, clickByText('.file-tree-mode', 'Commits'))
-  let opened = false
-  for (let i = 0; i < 20 && !opened; i++) {
+  // Whether the open button was found and clicked; `showing` is what says the
+  // commit tab opened.
+  let clicked = false
+  for (let i = 0; i < 20 && !clicked; i++) {
     await sleep(500)
-    opened = await evaluate(
+    clicked = await evaluate(
       ws,
       `(() => {
         const row = [...document.querySelectorAll('.commit-row')].find(
@@ -1574,7 +1576,9 @@ async function glyphCommitChecks(ws) {
   const struck = headers.flatMap((h) => h.struck.map((what) => `${h.path}:${what}`))
 
   // Narrowed until the branch commit's long path is cut: FSTS-21 holds the commit
-  // tab to criterion 20 too, and at full width no commit path is cut.
+  // tab to criterion 20 too, and at full width no commit path is cut. The width
+  // before is read so the return can require the narrowing cleared.
+  const widthBefore = await evaluate(ws, `window.innerWidth`)
   const { headers: narrowed, width: atWidth } = await narrowUntilCut(ws, LONG_GUIDE)
   const longGuide = narrowed?.find((h) => h.path === LONG_GUIDE)
   const narrowFaults = narrowed ? headerFaults(narrowed) : ['nothing read']
@@ -1594,14 +1598,19 @@ async function glyphCommitChecks(ws) {
   await sleep(600)
   const back = await stackRows(ws, 'Uncommitted', UNCOMMITTED_STATUS)
   const tabsAfter = await evaluate(ws, tabStates)
+  const widthAfter = await evaluate(ws, `window.innerWidth`)
+  // The window is back at its width, which must exceed the 900 px narrowUntilCut
+  // starts at, or a narrowing left in place could read as restored.
   const restored =
+    widthBefore > 900 &&
+    widthAfter === widthBefore &&
     !tabsAfter.some((t) => isCommitTab(t.label)) &&
     tabsAfter.some((t) => t.active && t.label === 'All changes') &&
     back.length === Object.keys(UNCOMMITTED_STATUS).length
 
   check(
     "A commit tab's headers keep the glyph column, glyphs, tooltips and strike (FSTS-16..21)",
-    opened &&
+    clicked &&
       showing &&
       headers.length === Object.keys(ORIGIN_STATUS).length &&
       statuses.size >= 4 &&
@@ -1609,8 +1618,9 @@ async function glyphCommitChecks(ws) {
       struck.length === 1 &&
       struck[0] === 'docs/removed.md:path' &&
       restored,
-    `opened ${opened}; active ${tabs.find((t) => t.active)?.label ?? 'none'}; ${headers.length} headers, ` +
-      `statuses ${[...statuses].join('/')}; struck ${struck.join(', ') || 'none'}; restored ${restored}; ` +
+    `open button clicked ${clicked}; commit tab active ${showing} (${tabs.find((t) => t.active)?.label ?? 'none'}); ` +
+      `${headers.length} headers, statuses ${[...statuses].join('/')}; struck ${struck.join(', ') || 'none'}; ` +
+      `restored ${restored} (width ${widthBefore} px before the narrowing, ${widthAfter} px after); ` +
       layoutDetail(headers) +
       (faults.length ? `; ${faults.slice(0, 3).join('; ')}` : '')
   )

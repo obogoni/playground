@@ -655,7 +655,7 @@ The Verifier's round 2 (`validation.md`) failed on smoke evidence only; the prod
 
 ### T17: A name or path that fits shows whole
 
-**What**: In `spec.md`, FSTS-22 (tree story, after AC 4) and FSTS-23 (header story, after AC 20): WHEN a name or path fits the space its row or header leaves THEN it SHALL show whole, with no ellipsis; both in the traceability table, and an Assumptions row `owner confirmed 2026-09-27`. In the smoke, `treeRows` and `stackHeaders` also read, per name or path, its natural width (`scrollWidth`), its shown width (`clientWidth`) and the space its row or header leaves: from the text's left edge to the end group's left edge, less the row's gap and any element between them (the counts). The space is read from the siblings, not from the text's own box. A new tree check (both lists) and a new header check (both stacks) take every name or path whose natural width fits that space and require `scrollWidth <= clientWidth`. Preconditions: at least 47 file rows and 47 headers fit (every seeded file but the two long ones), and the long untracked name does not fit its row.
+**What**: In `spec.md`, FSTS-22 (tree story, after AC 4) and FSTS-23 (header story, after AC 20): WHEN a name or path fits the space its row or header leaves THEN it SHALL show whole, with no ellipsis; both in the traceability table, and an Assumptions row `owner confirmed 2026-09-27`. In the smoke, `treeRows` and `stackHeaders` also read, per name or path, its natural width (the text's own width, from a Range over it), its shown width (`clientWidth`) and the space its row or header leaves: from the text's left edge to the end group's left edge, less the row's gap and any element between them (the counts). The space is read from the siblings, not from the text's own box. A new tree check (both lists) and a new header check (both stacks) take every name or path whose natural width fits that space and require `scrollWidth <= clientWidth`. Preconditions: at least 47 file rows and 47 headers fit (every seeded file but the two long ones), and the long untracked name does not fit its row.
 **Where**: `.specs/features/files-status-glyphs/spec.md`, `scripts/smoke-files-diff.mjs`
 **Depends on**: T16
 **Reuses**: `treeRows`, `stackHeaders`; the Verifier's mutant R6
@@ -765,10 +765,26 @@ Mutants, one focused run each (`fr3_mutants.py`, logs `fr3-t18-<id>-drive.log`):
 
 **Done when**:
 
-- [ ] T-b (the narrowing not cleared after the commit tab) fails check 18
-- [ ] `python <skill-dir>/scripts/validate_spec.py files-status-glyphs` reports 0 errors
-- [ ] `spec.md` traceability: FSTS-04, 16, 20 and 21 read `Implementing`, naming their checks
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`, `npx electron-vite build`, and one full drive on a fresh seed and a fresh `--user-data-dir`, every check passing
+- [x] T-b (the narrowing not cleared after the commit tab) fails check 18
+- [x] `python <skill-dir>/scripts/validate_spec.py files-status-glyphs` reports 0 errors
+- [x] `spec.md` traceability: FSTS-04, 16, 20 and 21 read `Implementing`, naming their checks
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`, `npx electron-vite build`, and one full drive on a fresh seed and a fresh `--user-data-dir`, every check passing
+
+**Result (2026-09-27)**: `glyphCommitChecks` reads `window.innerWidth` before `narrowUntilCut` and again after the commit tab is closed and Uncommitted's stack is back. Its `restored` condition now also requires the two to be equal, and the width before to exceed 900 px, where the narrowing starts. Otherwise a narrowing left in place could read as restored. Check 18's log gives both widths. The open button's flag is now `clicked`, and the log reads `open button clicked true; commit tab active true (<sha> · work on the branch)`. The click is no longer shown as if it proved the tab opened: `showing`, the active tab, is what proves it. The flag stays in the condition.
+
+Focused run: 19 / 19 in 35 s (`fr3-t19-BASE-drive.log`). Check 18 reads `restored true (width 1266 px before the narrowing, 1266 px after)`. Mutant T-b (the override not cleared for the commit call, `fr3_mutants.py`): fails 18 only, with `restored false (width 1266 px before the narrowing, 900 px after)`. `git status --porcelain` matched the baseline after it.
+
+The notes are fixed:
+- T17's **What** now says the natural width is read from a Range, not `scrollWidth`.
+- The Phase Execution Map counts nineteen tasks and three fix rounds.
+- `spec.md` has an Assumptions row for the Verifier's Fix 8. The limit is accepted, not fixed: `y (owner accepted 2026-09-27; the fit samples are ≥ 78 px (tree) / ≥ 210 px (headers) short of their space, so a width cap between them passes)`.
+- `spec.md` traceability: FSTS-04, 16, 20 and 21 read `Implementing`, naming the checks, in focused and full drive numbers, and the mutants that fail them.
+
+`validate_spec`: 0 errors, 0 warnings.
+
+Gate:
+- typecheck exit 0; lint exit 0, 0 errors, 18 warnings, unchanged; `npm test` 1784 / 93, all passing; `npx electron-vite build` exit 0.
+- Full drive, run once on a fresh seed and a fresh `--user-data-dir`: 48 / 48 in 101 s (`fr3-full-drive.log`). The glyph checks are 20–38, and the icon checks 39–48 all pass after the commit tab's narrowing. Check 37 reads `restored true (width 1266 px before the narrowing, 1266 px after)`. Every column check reads `children 3/3` (tree) or `4/4`, `3/3` (headers), and a negative worst overlap.
 
 **Tests**: manual
 **Gate**: full
@@ -791,7 +807,7 @@ Phase 6:  T14 -----→ T15 -----→ T16 -----→ T17
 Phase 7:  T17 -----→ T18 -----→ T19
 ```
 
-Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent offer is made first. The Verifier runs after T10.
+Nineteen tasks. T1–T10 ran in two batches (Phases 1–2, Phases 3–4); each fix round (Phases 5, 6 and 7) ran as one batch after a Verifier FAIL. At Execute the sub-agent offer is made first. The Verifier runs after T10 and after each fix round.
 
 ---
 
