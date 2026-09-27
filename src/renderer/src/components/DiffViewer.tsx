@@ -5,13 +5,12 @@ import {
   choicePlan,
   eolStripText,
   foldPlan,
-  hiddenRangesOf,
-  regionStates,
+  readingBeforeUpdate,
   UNCHANGED_REGIONS,
   unchangedRegions,
   type LineSpan,
-  type Region,
-  type RegionState
+  type FoldReading,
+  type Region
 } from '../lib/diff-view'
 import type { UnchangedChoice } from '../lib/files-view'
 import { languageForPath, monaco } from '../lib/monaco-setup'
@@ -148,9 +147,8 @@ export function DiffViewer({
   const editorRef = useRef<monaco.editor.IStandaloneDiffEditor | null>(null)
   const markersRef = useRef<monaco.editor.IEditorDecorationsCollection | null>(null)
   // The fold states read just before new text went in, until Monaco has
-  // recomputed the diff for it (FOLD-02..08). `states` null means a button was
-  // pressed meanwhile: the new diff takes the choice, not the old reading.
-  const pendingRef = useRef<{ states: RegionState[] | null; left: string } | null>(null)
+  // recomputed the diff for it (FOLD-02..08, `FoldReading`).
+  const pendingRef = useRef<FoldReading | null>(null)
   const [identical, setIdentical] = useState(false)
   const [height, setHeight] = useState<number | null>(null)
 
@@ -292,18 +290,14 @@ export function DiffViewer({
     const editor = editorRef.current
     // `setValue` wipes the decorations Monaco carries its folds in, so every
     // region would come back revealed. The fold states are read first and
-    // re-applied once the new diff exists (FOLD-02..08). A second change before
-    // that keeps the first reading (FOLD-08); a state Monaco no longer saves in
-    // the expected shape takes no reading, and the update runs as before (FOLD-25).
-    if ((originalMoves || modifiedMoves) && editor && pendingRef.current === null) {
-      const regions = currentRegions(editor)
-      const hidden = hiddenRangesOf(editor.saveViewState()?.modelState)
-      if (regions && hidden) {
-        pendingRef.current = {
-          states: regionStates(regions, hidden),
-          left: models.original.getValue()
-        }
-      }
+    // re-applied once the new diff exists (FOLD-02..08, `readingBeforeUpdate`).
+    if ((originalMoves || modifiedMoves) && editor) {
+      pendingRef.current = readingBeforeUpdate(
+        pendingRef.current,
+        currentRegions(editor),
+        editor.saveViewState()?.modelState,
+        models.original.getValue()
+      )
     }
     if (originalMoves) models.original.setValue(nextOriginal)
     if (modifiedMoves) models.modified.setValue(nextModified)

@@ -504,3 +504,32 @@ export function foldPlan(
     return { start: region.modified.start + top, end: region.modified.end - bottom }
   })
 }
+
+/**
+ * The fold states read just before new text goes in, until Monaco has
+ * recomputed the diff for it, and the left side's text at that moment.
+ * `states` null means a Hide / Show press came meanwhile, so the new diff takes
+ * the tab's choice instead.
+ */
+export interface FoldReading {
+  states: RegionState[] | null
+  left: string
+}
+
+/**
+ * The reading an update keeps. One still pending is kept whatever arrives
+ * next, since the diff it waits for has not been computed (FOLD-08). No reading
+ * is taken before a first diff exists, nor when the saved state is out of shape,
+ * and then the update runs as Monaco would (FOLD-25).
+ */
+export function readingBeforeUpdate(
+  pending: FoldReading | null,
+  regions: readonly Region[] | null,
+  modelState: unknown,
+  left: string
+): FoldReading | null {
+  if (pending !== null) return pending
+  const hidden = hiddenRangesOf(modelState)
+  if (regions === null || hidden === null) return null
+  return { states: regionStates(regions, hidden), left }
+}

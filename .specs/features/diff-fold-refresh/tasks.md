@@ -654,9 +654,11 @@ The Verifier's round 1 (`validation.md`) failed on test evidence only: 16 of 20 
 
 **Done when**:
 
-- [ ] Tests: a pending reading is kept when a new state arrives, including one with `states: null` (T7's press); null regions give null; an unreadable state gives null; a readable one gives the region states and the left text
-- [ ] The S3 mutant (always take a new reading) fails a unit test
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Tests: a pending reading is kept when a new state arrives, including one with `states: null` (T7's press); null regions give null; an unreadable state gives null; a readable one gives the region states and the left text
+- [x] The S3 mutant (always take a new reading) fails a unit test
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Result (2026-09-27)**: `readingBeforeUpdate` and `FoldReading` in `diff-view.ts`; `DiffViewer`'s content effect calls it in place of the inline guard, and `pendingRef` takes the `FoldReading` type. 5 new tests, red before the code, then 76/76 in the file; full suite 1729/1729; typecheck 0; lint 0 errors / 18 warnings. S3 (always take a new reading) now fails 2 unit tests: the pending reading, and the pending press marker. Focused smoke 18/18 after the change.
 
 **Tests**: unit
 **Gate**: full

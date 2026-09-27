@@ -11,6 +11,7 @@ import {
   isSameTab,
   mountPlan,
   nextChangeTarget,
+  readingBeforeUpdate,
   regionStates,
   tabKeyOf,
   tabsWithAllChanges,
@@ -18,6 +19,7 @@ import {
   UNCHANGED_REGIONS,
   unchangedRegions,
   type ChangeSection,
+  type FoldReading,
   type LineChangeLike,
   type Region,
   type RegionState,
@@ -743,5 +745,44 @@ describe('choicePlan', () => {
       { start: 24, end: 24 },
       { start: 184, end: 184 }
     ])
+  })
+})
+
+describe('readingBeforeUpdate', () => {
+  const regions = [both(1, 17), both(24, 177)]
+  const saved = { collapsedRegions: [{ range: [1, 17] }, { range: [177, 177] }] }
+
+  it('keeps the reading taken before an update that is still pending (FOLD-08)', () => {
+    const pending: FoldReading = {
+      states: [{ region: both(1, 17), revealedTop: 0, revealedBottom: 0 }],
+      left: 'first'
+    }
+
+    expect(readingBeforeUpdate(pending, regions, saved, 'second')).toBe(pending)
+  })
+
+  it("keeps a pending press's marker, so the press still wins (FOLD-08)", () => {
+    const pressed: FoldReading = { states: null, left: 'first' }
+
+    expect(readingBeforeUpdate(pressed, regions, saved, 'second')).toBe(pressed)
+  })
+
+  it('takes no reading before the first diff has been computed', () => {
+    expect(readingBeforeUpdate(null, null, saved, 'left')).toBeNull()
+  })
+
+  it("takes no reading when Monaco's saved state is out of shape, so the update runs as before (FOLD-25)", () => {
+    expect(readingBeforeUpdate(null, regions, { collapsedRegions: 'nope' }, 'left')).toBeNull()
+    expect(readingBeforeUpdate(null, regions, undefined, 'left')).toBeNull()
+  })
+
+  it('reads every region and the left text otherwise (FOLD-02, FOLD-03)', () => {
+    expect(readingBeforeUpdate(null, regions, saved, 'left text')).toEqual({
+      states: [
+        { region: both(1, 17), revealedTop: 0, revealedBottom: 0 },
+        { region: both(24, 177), revealedTop: 153, revealedBottom: 0 }
+      ],
+      left: 'left text'
+    })
   })
 })
