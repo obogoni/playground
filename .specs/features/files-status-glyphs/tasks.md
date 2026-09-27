@@ -343,12 +343,12 @@ The new `.file-tree-end` wrapper adds no padding, height or vertical margin; its
 
 **Done when**:
 
-- [ ] T-setup done; a full drive on the new seed passes every existing check (count recorded before and after the seed change; the same numbers pass)
+- [x] T-setup done; a full drive on the new seed passes every existing check (count recorded before and after the seed change; the same numbers pass)
 - [x] In the uncommitted stack, `assets/logo.bin`'s header renders no `.diff-section-counts` and the long file's reads `+12` (read once by hand in the dev app, recorded in the commit body)
 - [x] The seed stays fictitious
 - [x] Gate check passes: `npm run lint` (warning count unchanged)
 
-**Result (2026-09-27)**: `seed()` now writes, after the two existing uncommitted files, `src/a-rather-long-untracked-file-name-that-has-to-be-cut-short-before-its-status-glyph.txt` (12 lines, `line 1` to `line 12`) and rewrites `assets/logo.bin` as `89 50 00 4e 47 0d 0a` (the NUL kept at byte 2); both are listed in the header's seed list. The name lives in one `LONG_NAME` constant for the checks to reuse. Hand read through CDP in the dev app, on a fresh seed and a fresh `--user-data-dir`, Uncommitted → All changes: `assets/logo.bin` header has no `.diff-section-counts` and glyph `M`; the long file's header reads `+12−0`, glyph `U`; `crlf.txt` reads `+3−3`, `M`; `untracked.txt` reads `+1−0`, `U`. The uncommitted tree lists `assets/` › `logo.bin` `M`, `src/` › the long name `U`, `crlf.txt` `M`, `untracked.txt` `U`, folders without a glyph. Names and content are fictitious. Lint: exit 0, 0 errors, 18 warnings, unchanged. Deviation (orchestrator's owner rule): the full drive on the new seed is not run here; the full smoke runs once, at the end of T10, and closes the open box above. Count before the seed change: 29 / 29, the last recorded full drive (file-icons T8); the drive has not changed since.
+**Result (2026-09-27)**: `seed()` now writes, after the two existing uncommitted files, `src/a-rather-long-untracked-file-name-that-has-to-be-cut-short-before-its-status-glyph.txt` (12 lines, `line 1` to `line 12`) and rewrites `assets/logo.bin` as `89 50 00 4e 47 0d 0a` (the NUL kept at byte 2); both are listed in the header's seed list. The name lives in one `LONG_NAME` constant for the checks to reuse. Hand read through CDP in the dev app, on a fresh seed and a fresh `--user-data-dir`, Uncommitted → All changes: `assets/logo.bin` header has no `.diff-section-counts` and glyph `M`; the long file's header reads `+12−0`, glyph `U`; `crlf.txt` reads `+3−3`, `M`; `untracked.txt` reads `+1−0`, `U`. The uncommitted tree lists `assets/` › `logo.bin` `M`, `src/` › the long name `U`, `crlf.txt` `M`, `untracked.txt` `U`, folders without a glyph. Names and content are fictitious. Lint: exit 0, 0 errors, 18 warnings, unchanged. Deviation (orchestrator's owner rule): the full drive on the new seed is not run here; the full smoke runs once, at the end of T10, and closes the open box above. Count before the seed change: 29 / 29, the last recorded full drive (file-icons T8); the drive has not changed since. Closed at T10: the one full drive on the new seed passed 41 / 41, and the 29 existing checks are among them (1–19 and 32–41), all passing. FDIF-31 now reads 5 sections → 4.
 
 **Tests**: manual
 **Gate**: manual
@@ -421,10 +421,19 @@ The new `.file-tree-end` wrapper adds no padding, height or vertical margin; its
 
 **Done when**:
 
-- [ ] Each check seen failing on its own mutant, then passing: (a) `changeStatusView('renamed')` answering the wrong glyph fails 1; (b) the end group moved before the counts fails 2 and 3 (the binary header has none, and the count widths differ); (c) the end group moved before the path fails 2; (d) `line-through` put on the whole header for deleted files fails 4; (e) `.diff-section-path` given `flex: none` fails 5
-- [ ] FSTS-21 evidence recorded: `CommitTab.tsx:43` mounts `AllChangesTab` unmodified, which renders `DiffSection` (`AllChangesTab.tsx:303`); no commit-specific header exists
-- [ ] Clean run of the whole drive, all checks passing, count recorded
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` (warning count unchanged)
+- [x] Each check seen failing on its own mutant, then passing: (a) `changeStatusView('renamed')` answering the wrong glyph fails 1; (b) the end group moved before the counts fails 2 and 3 (the binary header has none, and the count widths differ); (c) the end group moved before the path fails 2; (d) `line-through` put on the whole header for deleted files fails 4; (e) `.diff-section-path` given `flex: none` fails 5
+- [x] FSTS-21 evidence recorded: `CommitTab.tsx:43` mounts `AllChangesTab` unmodified, which renders `DiffSection` (`AllChangesTab.tsx:303`); no commit-specific header exists
+- [x] Clean run of the whole drive, all checks passing, count recorded
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (warning count unchanged)
+
+**Result (2026-09-27)**: `glyphHeaderChecks(ws)` (section 13) adds the five checks. It runs right after `glyphTreeChecks(ws)`, in the full drive and under `SMOKE_ONLY=glyphs`, so it is still before `iconChecks(ws)` and the uncommitted stack still holds the seed's four files. Each stack is read once every expected `data-path` has a header (44 in diff to origin, 4 uncommitted), off-screen headers included. Check 2 also requires the path to be the header's second child, right after the chevron, so no status element sits before the path (FSTS-18). Check 3's preconditions held: `assets/logo.bin` has no counts, and the other count widths are 41 px and 34.4 px. Check 5 narrows the page to 900 px (steps down to 600 px if the path still fits) and cuts the long path at 900 px. It clears the override in a `finally`. Focused run: 12 / 12 in 29 s. Mutants, one focused run each, all killed:
+- (a) renamed answering `N`: fails 1, and T9's check 1, which reads the same mapping in the tree.
+- (b) end group before the counts: fails 2 and 3, and also 5, which re-runs the column check at 900 px.
+- (c) end group before the path: fails 2, and also 3 and 5 (the same column check on the uncommitted stack).
+- (d) `line-through` on the whole header of a deleted file: fails 4 only (`docs/removed.md:header`).
+- (e) `.diff-section-path` `flex: none`: fails 5 only. The path never overflows down to 600 px, and its glyph ends at 1018 px against a 562 px edge.
+
+`git status --porcelain` matched the baseline after every mutant. FSTS-21 evidence: `CommitTab.tsx:43` mounts `AllChangesTab` unmodified, and `AllChangesTab.tsx:303` renders `DiffSection`, the only place that renders it (grep). No commit-specific header exists. Full drive, run once on a fresh seed and a fresh `--user-data-dir`: 41 / 41 in 95 s, with the glyph sections as checks 20–31. Full gate: typecheck exit 0; lint exit 0, 0 errors, 18 warnings, unchanged; `npm test` 1784 / 93, all passing.
 
 **Tests**: manual
 **Gate**: full

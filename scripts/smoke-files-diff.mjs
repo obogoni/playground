@@ -326,6 +326,7 @@ async function drive() {
   if (process.env.SMOKE_ONLY === 'glyphs') {
     await glyphSetup(ws)
     await glyphTreeChecks(ws)
+    await glyphHeaderChecks(ws)
     const failed = checks.filter((c) => !c.ok)
     console.log(
       `\n${checks.length - failed.length}/${checks.length} checks passed (status glyphs only)`
@@ -783,6 +784,7 @@ async function drive() {
   // untracked.txt, the long name, assets/logo.bin) are still uncommitted, since
   // FDIF-31 committed modified.ts alone. The icon checks reload and stay last.
   await glyphTreeChecks(ws)
+  await glyphHeaderChecks(ws)
 
   await iconChecks(ws)
 
@@ -1077,6 +1079,150 @@ async function glyphTreeChecks(ws) {
     "Only the deleted file's name is struck through (FSTS-13..15)",
     struck.length === 1 && struck[0] === 'docs/removed.md:name',
     `struck: ${struck.join(', ') || 'none'}`
+  )
+}
+
+/** Every section header of the stack on screen, with its glyph and where it ends. */
+const stackHeaders = `
+  [...document.querySelectorAll('.diff-section')].map((section) => {
+    const header = section.querySelector('.diff-section-header')
+    const box = header.getBoundingClientRect()
+    const glyphs = [...header.querySelectorAll('.status-glyph')]
+    const glyph = glyphs[0]
+    const end = glyph?.parentElement
+    const path = header.querySelector('.diff-section-path')
+    const counts = header.querySelector('.diff-section-counts')
+    return {
+      path: section.getAttribute('data-path'),
+      glyphs: glyphs.length,
+      text: glyph?.textContent ?? null,
+      title: glyph?.getAttribute('title') ?? null,
+      last:
+        !!glyph &&
+        end.classList.contains('diff-section-end') &&
+        end === header.lastElementChild &&
+        glyph === end.lastElementChild,
+      // FSTS-18: nothing between the chevron and the path.
+      pathSecond: header.children[1] === path,
+      right: glyph ? glyph.getBoundingClientRect().right : null,
+      edge: box.right - parseFloat(getComputedStyle(header).paddingRight),
+      counts: counts ? Math.round(counts.getBoundingClientRect().width * 10) / 10 : null,
+      overflows: path ? path.scrollWidth > path.clientWidth : null,
+      struck: (${STRUCK})(header).map((e) =>
+        e === path ? 'path' : e === header ? 'header' : e.className
+      )
+    }
+  })
+`
+
+/** The headers of one mode's All changes stack, once every expected section is there. */
+async function stackRows(ws, mode, expected) {
+  await evaluate(ws, clickByText('.file-tree-mode', mode))
+  await sleep(1200)
+  await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
+  await sleep(1200)
+  return readWhen(
+    ws,
+    stackHeaders,
+    (headers) =>
+      headers.length === Object.keys(expected).length &&
+      Object.keys(expected).every((path) => headers.some((h) => h.path === path))
+  )
+}
+
+/** The column faults of a stack, plus any header with something before its path. */
+const headerFaults = (headers) => [
+  ...columnFaults(headers),
+  ...headers.filter((h) => !h.pathSecond).map((h) => `${h.path}: something before the path`)
+]
+
+/** 13. The status glyphs of the All changes section headers (FSTS-11, 16..21). */
+async function glyphHeaderChecks(ws) {
+  const origin = await stackRows(ws, 'Diff to origin', ORIGIN_STATUS)
+  const uncommitted = await stackRows(ws, 'Uncommitted', UNCOMMITTED_STATUS)
+  const header = (headers, path) => headers.find((h) => h.path === path)
+
+  // 1. Every header of the diff-to-origin stack reads its status.
+  const named = ['src/modified.ts', 'src/added.ts', 'docs/removed.md', 'src/renamed-new.ts']
+  const namedHeaders = named.map((p) => header(origin, p)).filter(Boolean)
+  const originGlyphs = glyphFaults(origin, ORIGIN_STATUS)
+  check(
+    'The diff-to-origin stack shows M, +, D and R with their tooltips (FSTS-11, FSTS-18)',
+    origin.length === Object.keys(ORIGIN_STATUS).length &&
+      namedHeaders.length === 4 &&
+      originGlyphs.length === 0,
+    `${origin.length} headers; ${namedHeaders.map((h) => `${h.path.split('/').pop()} ${h.text}/${h.title}`).join(', ')}` +
+      (originGlyphs.length ? `; wrong: ${originGlyphs.slice(0, 3).join(', ')}` : '')
+  )
+
+  // 2. One column across every header in the DOM, off-screen ones included.
+  const originColumn = headerFaults(origin)
+  check(
+    'Diff to origin: one glyph per header, last, in one column at the right padding (FSTS-16, FSTS-18)',
+    origin.length === Object.keys(ORIGIN_STATUS).length && originColumn.length === 0,
+    `${origin.length} headers` +
+      (originColumn.length ? `; ${originColumn.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 3. Uncommitted: a header without counts, and counts of different widths,
+  // so a glyph placed before the counts cannot line up.
+  const binary = header(uncommitted, 'assets/logo.bin')
+  const widths = new Set(uncommitted.filter((h) => h !== binary).map((h) => h.counts))
+  const untracked = header(uncommitted, 'untracked.txt')
+  const uncommittedColumn = headerFaults(uncommitted)
+  check(
+    'Uncommitted: the glyphs keep one column with and without counts (FSTS-11, FSTS-17)',
+    binary !== undefined &&
+      binary.counts === null &&
+      !widths.has(null) &&
+      widths.size >= 2 &&
+      untracked?.text === 'U' &&
+      untracked?.title === 'Untracked' &&
+      uncommittedColumn.length === 0,
+    `logo.bin counts ${binary ? binary.counts : 'no header'}; count widths ${[...widths].join(', ')}; ` +
+      `untracked.txt ${untracked?.text}/${untracked?.title}` +
+      (uncommittedColumn.length ? `; ${uncommittedColumn.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 4. Only docs/removed.md's path is struck, in the whole diff-to-origin stack.
+  const struck = origin.flatMap((h) => h.struck.map((what) => `${h.path}:${what}`))
+  check(
+    "Only the deleted file's path is struck through in the headers (FSTS-19)",
+    struck.length === 1 && struck[0] === 'docs/removed.md:path',
+    `struck: ${struck.join(', ') || 'none'}`
+  )
+
+  // 5. A path too long for its header: narrow the page until it is cut.
+  const longPath = `src/${LONG_NAME}`
+  const height = await evaluate(ws, `window.innerHeight`)
+  let narrowed = null
+  let atWidth = null
+  try {
+    for (const width of [900, 800, 700, 600]) {
+      await send(ws, 'Emulation.setDeviceMetricsOverride', {
+        width,
+        height,
+        deviceScaleFactor: 1,
+        mobile: false
+      })
+      await sleep(900)
+      narrowed = await evaluate(ws, stackHeaders)
+      atWidth = width
+      if (header(narrowed, longPath)?.overflows) break
+    }
+  } finally {
+    await send(ws, 'Emulation.clearDeviceMetricsOverride')
+    await sleep(600)
+  }
+  const long = narrowed ? header(narrowed, longPath) : undefined
+  const narrowColumn = narrowed ? headerFaults(narrowed) : ['nothing read']
+  check(
+    'A path too long for its header is cut and its glyph keeps the column (FSTS-20)',
+    long?.overflows === true &&
+      narrowed.length === Object.keys(UNCOMMITTED_STATUS).length &&
+      narrowColumn.length === 0,
+    `at ${atWidth} px: overflows ${long?.overflows}` +
+      (narrowColumn.length ? `; ${narrowColumn.slice(0, 3).join('; ')}` : '')
   )
 }
 
