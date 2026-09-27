@@ -223,7 +223,7 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-03 | P1: one file — AC 3 | Tasks | Pending |
 | FDSC-04 | P1: one file — AC 4 | Execute | Implementing: T5 (unit) |
 | FDSC-05 | P1: one file — AC 5 | Execute | Implementing: T5 (unit) |
-| FDSC-06 | P1: one file — AC 6 | Execute | Implementing: T6 (unit) |
+| FDSC-06 | P1: one file — AC 6 | Execute | Implementing: T6 (unit), T8 (wired) |
 | FDSC-07 | P1: one file — AC 7 | Execute | Implementing: T6 (unit) |
 | FDSC-08 | P1: one file — AC 8 | Execute | Implemented: T5 (unit) |
 | FDSC-09 | P1: one file — AC 9 | Execute | Implemented: T5 (unit) |
@@ -234,7 +234,7 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-14 | P1: confirm — AC 14 | Tasks | Pending |
 | FDSC-15 | P1: confirm — AC 15 | Tasks | Pending |
 | FDSC-16 | P1: confirm — AC 16 | Tasks | Pending |
-| FDSC-17 | P1: nothing permanent — AC 17 | Execute | Implementing: T3 (AD-047), T5 (no delete call), T6, T7 (refusal tests) |
+| FDSC-17 | P1: nothing permanent — AC 17 | Execute | Implementing: T3 (AD-047), T5 (no delete call), T6, T7 (refusal tests), T8 (trashItem only) |
 | FDSC-18 | P1: nothing permanent — AC 18 | Execute | Implemented: T6 (unit) |
 | FDSC-19 | P1: nothing permanent — AC 19 | Tasks | Pending |
 | FDSC-20 | P1: nothing permanent — AC 20 | Tasks | Pending |
@@ -259,7 +259,7 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-39 | P2: many — AC 39 | Tasks | Pending |
 | FDSC-40 | P1: read-only — AC 40 | Execute | Implementing: T3 (AD-047) |
 | FDSC-41 | P1: read-only — AC 41 | Tasks | Pending |
-| FDSC-42 | P1: read-only — AC 42 | Execute | Implementing: T3 (AD-047), T4 (request type), T5 (recording runner) |
+| FDSC-42 | P1: read-only — AC 42 | Execute | Implemented: T3 (AD-047), T4 (request type), T5 (recording runner), T8 (handler) |
 | FDSC-43 | Edge: untracked folder row | Execute | Implementing: T6 (unit) |
 | FDSC-44 | Edge: already gone | Execute | Implemented: T6 (unit) |
 | FDSC-45 | Edge: changed after opening | Tasks | Pending |

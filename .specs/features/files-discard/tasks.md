@@ -297,8 +297,8 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] `shell` is the one already imported for `commits:open` (`:340-342`); `resolveInside` hands `trashItem` a backslashed absolute path, as its typings require (`electron.d.ts:13179-13181`)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `shell` is the one already imported for `commits:open` (`:340-342`); `resolveInside` hands `trashItem` a backslashed absolute path, as its typings require (`electron.d.ts:13179-13181`)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full
