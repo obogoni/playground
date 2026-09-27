@@ -392,8 +392,10 @@ through `onPersist`.
 
 **Done when**:
 
-- [ ] `EMPTY` gains `unchanged: {}` and stays a constant
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `EMPTY` gains `unchanged: {}` and stays a constant
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Result (2026-09-27)**: `WorktreeFiles.unchanged` with `EMPTY.unchanged = {}` (still a module constant); `unchangedFor(key)` and `pressUnchanged(key, mode)` on `UseFiles`; `closeTab` keeps the choices of `after.tabs` and `closeTabs` those of `after.keys`, the strip keys each already computed. No `unchanged` reaches `onPersist` (grep). The rule's `pressUnchanged` is imported as `recordPress`, since the hook's own callback takes the name. Gate: typecheck 0, lint 0 errors / 18 warnings, 1721/1721 tests.
 
 **Tests**: none
 **Gate**: full
