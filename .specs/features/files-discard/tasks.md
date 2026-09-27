@@ -138,9 +138,9 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] Asserts `{ original: { rev: 'HEAD', path: 'src/gadget.ts' }, modified: { disk: true, path: 'src/widget.ts' } }` literally
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
-- [ ] Test count: T1 count + 1
+- [x] Asserts `{ original: { rev: 'HEAD', path: 'src/gadget.ts' }, modified: { disk: true, path: 'src/widget.ts' } }` literally
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
+- [x] Test count: T1 count + 1
 
 **Tests**: unit
 **Gate**: quick
