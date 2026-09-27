@@ -37,6 +37,14 @@
   text-overflow: ellipsis;
 }
 
+/* The hand mark: the task was set by hand (HTSK-38). */
+.period-row-hand {
+  flex: none;
+  display: flex;
+  align-items: center;
+  color: var(--amber);
+}
+
 .period-row-spacer {
   flex: 1;
 }

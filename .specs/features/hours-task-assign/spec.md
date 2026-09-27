@@ -246,7 +246,7 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | HTSK-35 | P1: drawer — AC 35 | Execute | Implementing: T4, T5, T16 |
 | HTSK-36 | P1: mark — AC 36 | Execute | Implementing: T2, T3, T4 |
 | HTSK-37 | P1: mark — AC 37 | Execute | Implementing: T2, T3, T4 |
-| HTSK-38 | P1: mark — AC 38 | Execute | Implementing: T14, T20 |
+| HTSK-38 | P1: mark — AC 38 | Execute | Implementing: T14, T20, T24 |
 | HTSK-39 | P1: mark — AC 39 | Execute | Implementing: T4 |
 | HTSK-40 | P1: reports — AC 40 | Execute | Implementing: T15 |
 | HTSK-41 | P1: reports — AC 41 | Execute | Implemented: T1 |

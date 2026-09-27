@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { JSX } from 'react'
 import type { TimeEditResult } from '../../../shared/time'
 import type { RawPeriodRow } from '../lib/hours-report'
-import { fromLocalInput, toLocalInput } from '../lib/period-edit'
+import { fromLocalInput, handMarkTitle, toLocalInput } from '../lib/period-edit'
 import { formatHmCompact } from '../lib/time-format'
 import { Icon } from './Icon'
 import './PeriodRow.css'
@@ -26,7 +26,8 @@ type Mode = 'view' | 'edit' | 'confirm-delete'
  * One raw period under a merged block (TIME-38): start, end, duration and agent.
  * A closed period can be edited (both bounds, local time) or deleted after a
  * confirm; an open one offers neither (TIME-47). Main validates and answers
- * with an inline error (TIME-46, TIME-49).
+ * with an inline error (TIME-46, TIME-49). A period whose task was set by hand
+ * wears a hand mark naming its branch (HTSK-38).
  */
 export function PeriodRow({ row, onDelete, onAdjust }: PeriodRowProps): JSX.Element {
   const { period } = row
@@ -83,6 +84,16 @@ export function PeriodRow({ row, onDelete, onAdjust }: PeriodRowProps): JSX.Elem
         </span>
         <span className="period-row-duration">{formatHmCompact(row.durationMs)}</span>
         <span className="period-row-agent">{period.agent}</span>
+        {period.taskByHand === true && (
+          <span
+            className="period-row-hand"
+            role="img"
+            title={handMarkTitle(period.branch)}
+            aria-label={handMarkTitle(period.branch)}
+          >
+            <Icon name="hand" size={12} />
+          </span>
+        )}
         <span className="period-row-spacer" />
         {row.open ? (
           <span className="period-row-live">running</span>
