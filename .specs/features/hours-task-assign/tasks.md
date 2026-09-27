@@ -427,9 +427,9 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Tests: the session set is `From branch` then the pins, with no `No task`; the drawer set is `No task`, `From branch`, then the pins; a pin with details reads `#9201` plus its title and badge type, one without reads `#9201` with no title; a repeated id keeps the first pin only; `lookupEntry({ id: 4821, type: 'User Story', title: 'Diagnose login loop' })` reads `User Story #4821 Diagnose login loop` and chooses `{ kind: 'task', id: 4821, title: 'Diagnose login loop' }`; `From branch` chooses `{ kind: 'branch' }`, `No task` chooses `{ kind: 'none' }`
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/task-picker.test.ts` then `npm test`
-- [ ] Test count: T12 count + the new tests
+- [x] Tests: the session set is `From branch` then the pins, with no `No task`; the drawer set is `No task`, `From branch`, then the pins; a pin with details reads `#9201` plus its title and badge type, one without reads `#9201` with no title; a repeated id keeps the first pin only; `lookupEntry({ id: 4821, type: 'User Story', title: 'Diagnose login loop' })` reads `User Story #4821 Diagnose login loop` and chooses `{ kind: 'task', id: 4821, title: 'Diagnose login loop' }`; `From branch` chooses `{ kind: 'branch' }`, `No task` chooses `{ kind: 'none' }`
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/task-picker.test.ts` then `npm test`
+- [x] Test count: T12 count + the new tests: 1775 + 8 = 1783 (94 files). A pin entry is { key, label: '#id', badgeType, title, choice } (title added to design's shape: the pill sits between id and title, HTSK-01); lookupEntry returns { key, text, choice }
 
 **Tests**: unit
 **Gate**: quick
