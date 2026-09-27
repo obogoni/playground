@@ -422,8 +422,10 @@ which passes it to its `DiffViewer`.
 
 **Done when**:
 
-- [ ] The empty state still has no header, so the new buttons never show with nothing listed (the existing FPOL-17 check counts every `.all-changes-toggle`)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] The empty state still has no header, so the new buttons never show with nothing listed (the existing FPOL-17 check counts every `.all-changes-toggle`)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Result (2026-09-27)**: Hide unchanged and Show unchanged sit after Collapse all, class `all-changes-toggle`, with the planned titles; `unchanged` goes `AllChangesTab` → `DiffSection` → `DiffViewer`. The empty state returns before the header (`AllChangesTab.tsx`, the `all-changes-empty` branch), so neither button shows with nothing listed. Both new props are optional on `AllChangesTab` so the tree compiles before T10 wires them. Gate: typecheck 0, lint 0 errors / 18 warnings, 1721/1721 tests.
 
 **Tests**: none
 **Gate**: full
