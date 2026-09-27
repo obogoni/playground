@@ -1,7 +1,7 @@
 # Files Discard Design
 
 **Spec**: `.specs/features/files-discard/spec.md`
-**Status**: Draft (planned 2026-09-26, awaiting owner approval)
+**Status**: Approved (owner 2026-09-26); executed 2026-09-27
 
 Line numbers below are from `feature/files-discard` as cut from `feature/file-icons` `422d68d`.
 The branch is rebased onto `feature/files-status-glyphs` (#131) before Execute; `FileTree.tsx`
@@ -283,7 +283,7 @@ export interface ChangedFile {
 | Kept message | The dialog's second state | A 2.2 s toast cannot carry a list |
 | Session warning data | Props from App | App already holds sessions; FilesView had none |
 
-**AD-TBD (number chosen at Execute): the Files direction's one write is discarding uncommitted
+**AD-047 (numbered at Execute): the Files direction's one write is discarding uncommitted
 changes.** Whole files only, always confirmed with the exact list; tracked files go back to `HEAD`
 in index and working tree; a path the last commit does not hold leaves through the Recycle Bin;
 nothing is ever deleted by the app itself; the main process owns every git call

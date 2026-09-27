@@ -33,7 +33,7 @@ path too.
 
 This feature **supersedes, for uncommitted changes only,** the read-only rule behind the
 `files-explore` row "Editing, saving, or any write to a file" and the reason given in the
-`files-diff` hunk row. Recorded as a new decision at Execute (design.md, AD-TBD).
+`files-diff` hunk row. Recorded at Execute as AD-047 (`.specs/STATE.md`).
 
 ---
 

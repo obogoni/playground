@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/files-discard/design.md`
-**Status**: Draft (planned 2026-09-26, awaiting owner approval)
+**Status**: Approved (owner 2026-09-26); executed 2026-09-27
 
 **Branch**: `feature/files-discard`, cut from `feature/file-icons` `422d68d` (PR #126). Before Execute it is rebased onto `feature/files-status-glyphs` (#131, plan `b0fae25`), which puts the status glyph in `.file-tree-end` / `.diff-section-end` through `StatusGlyph` and `changeStatusView`. Every task below assumes that rebase is done and #131 is implemented. The future PR targets upstream `main` with `Closes #132` and "depends on #131" in its body.
 
