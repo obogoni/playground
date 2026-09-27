@@ -41,12 +41,13 @@ right after the chevron and before the path.
 | Commit tab headers | Covered by reuse: `CommitTab.tsx:43` mounts `AllChangesTab`, which renders `DiffSection` | Issue #131 names commit headers; nothing commit-specific to build | y |
 | Untracked in diff-to-origin | Never listed: that mode reads `git diff --name-status` (`file-tree.ts:216`), which has no untracked status; `U` appears only in the uncommitted list and its stack | Fact of the data source | y |
 | Very deep rows | Where the indent alone fills the row (about ten levels at the column's 200 px minimum), the glyph is pushed past the column like the name already is; no change | The indent grows 13 px per level (`FileTree.tsx:46-48`); fixing it means a different indent model, outside this issue | n (owner confirmed 2026-09-26) |
+| A name or path that fits | Shows whole, with no ellipsis (FSTS-22, FSTS-23); criteria 4 and 20 only say what happens when it is too long | The Verifier's round 2 spec-precision note: a mutant that caps every name at 40 px, so names that fit are cut too, broke no criterion as written | y (owner confirmed 2026-09-27) |
 | Room for the discard action (#132) | The glyph sits inside an end group (`.file-tree-end`, `.diff-section-end`) that #132 fills with its action before the glyph | Orchestrator instruction; see the hand-off note in `tasks.md` | y |
 | Smoke home | `scripts/smoke-files-diff.mjs`, a new section before the icon section (which reloads the window and must stay last) | Its seed already has M, A, D, R in diff-to-origin and M, U uncommitted, plus the All changes stack | y |
 | Seed additions | An untracked file with a long name in `src/` (12 lines) and an uncommitted change to the binary `assets/logo.bin` | The long name proves the ellipsis; the 12 lines and the binary give headers of different count widths and one with no counts, so a glyph misplaced before the counts cannot pass | y |
 | Base branch | `feature/files-status-glyphs` off `feature/file-icons` `422d68d` (PR #126); rebased once #126 lands | Owner-approved stack (issue #131: depends on #126) | y |
 
-**Open questions:** none — the two `owner confirmed 2026-09-26` defaults above are logged and reported.
+**Open questions:** none — the two `owner confirmed 2026-09-26` defaults above are logged and reported, and the fitting-name criterion was confirmed by the owner on 2026-09-27.
 
 ---
 
@@ -64,9 +65,10 @@ right after the chevron and before the path.
 2. The file rows of one list SHALL show their glyphs at the same right edge, within 1 px, whatever each row's depth
 3. The tree SHALL show exactly one status glyph per changed file row
 4. WHEN a file name is wider than the space its row leaves THEN the name SHALL be cut with an ellipsis and the glyph SHALL keep the position of criteria 1 and 2
+22. WHEN a file name fits the space its row leaves THEN the name SHALL show whole, with no ellipsis
 5. The tree SHALL show no status glyph on the folder rows of the changed lists
 
-**Independent Test**: In diff-to-origin and in uncommitted, every file row's glyph ends at the same x, the long untracked name included.
+**Independent Test**: In diff-to-origin and in uncommitted, every file row's glyph ends at the same x, the long untracked name included; every name that fits its row shows whole.
 
 ---
 
@@ -119,9 +121,10 @@ right after the chevron and before the path.
 18. The section header SHALL show exactly one status glyph, and no status element before the path
 19. WHEN the section's file is deleted THEN its path SHALL be struck through, and the header, chevron, counts and glyph SHALL NOT be struck
 20. WHEN a path is wider than the space its header leaves THEN the path SHALL be cut with an ellipsis and the glyph SHALL keep the position of criteria 16 and 17
+23. WHEN a path fits the space its header leaves THEN the path SHALL show whole, with no ellipsis
 21. WHERE the stack belongs to a commit tab, its headers SHALL follow criteria 16 to 20
 
-**Independent Test**: In both stacks, every header's glyph ends at the same x, the binary file's header without counts included; `docs/removed.md` is the only struck path.
+**Independent Test**: In both stacks, every header's glyph ends at the same x, the binary file's header without counts included; `docs/removed.md` is the only struck path; every path that fits its header shows whole.
 
 ---
 
@@ -140,7 +143,7 @@ right after the chevron and before the path.
 | FSTS-01 | P1: one column — AC 1 | Execute | Verified (validation.md round 2) |
 | FSTS-02 | P1: one column — AC 2 | Execute | Verified (validation.md round 2) |
 | FSTS-03 | P1: one column — AC 3 | Execute | Verified (validation.md round 2) |
-| FSTS-04 | P1: one column — AC 4 | Execute | Needs Fix: Fix 5, `text-overflow` is read without the clip that draws it (R5 survives, validation.md round 2) |
+| FSTS-04 | P1: one column — AC 4 | Execute | Implementing: Fix 5 (T15), tree check 5 requires a drawn ellipsis via `ellipsisFaults` (overflows, `text-overflow: ellipsis`, `overflow-x` hidden or clip, `white-space: nowrap`); R5 and S10 fail it |
 | FSTS-05 | P1: one column — AC 5 | Execute | Verified (validation.md round 2) |
 | FSTS-06 | P1: glyph — AC 6 | Execute | Verified (validation.md round 2) |
 | FSTS-07 | P1: glyph — AC 7 | Execute | Verified (validation.md round 2) |
@@ -156,10 +159,12 @@ right after the chevron and before the path.
 | FSTS-17 | P1: headers — AC 17 | Execute | Verified (validation.md round 2) |
 | FSTS-18 | P1: headers — AC 18 | Execute | Verified (validation.md round 2) |
 | FSTS-19 | P1: headers — AC 19 | Execute | Verified (validation.md round 2) |
-| FSTS-20 | P1: headers — AC 20 | Execute | Needs Fix: Fix 5, as FSTS-04 for the path (R5h survives, validation.md round 2) |
-| FSTS-21 | P1: headers — AC 21 | Execute | Needs Fix: Fix 6, clauses 16-19 verified by the commit tab check; clause 20 unasserted there (R7 survives, validation.md round 2) |
+| FSTS-20 | P1: headers — AC 20 | Execute | Implementing: Fix 5 (T15), header check 5 (focused 14) requires `ellipsisFaults` empty at the narrowed width; R5h and S10h fail it. The commit tab's cut path check (T16) too |
+| FSTS-21 | P1: headers — AC 21 | Execute | Implementing: Fix 6 (T16), clauses 16-19 by the commit tab check (focused 18); clause 20 by the commit tab's cut path check (focused 19), on the seeded `LONG_GUIDE` narrowed until cut; R7 fails it |
+| FSTS-22 | P1: one column — AC 22 | Execute | Implementing: T17, the tree's fitting names check (focused 9), over both lists; R6 fails it |
+| FSTS-23 | P1: headers — AC 23 | Execute | Implementing: T17, the headers' fitting paths check (focused 17), over both stacks and the narrowed stack; R6h fails it |
 
-**Coverage:** 21 total, 21 mapped to tasks, 0 unmapped.
+**Coverage:** 23 total, 23 mapped to tasks, 0 unmapped.
 
 ---
 

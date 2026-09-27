@@ -912,6 +912,40 @@ const UNPAINTED = `(glyph) => {
   return why
 }`
 
+/**
+ * The space a row or header leaves its name or path (FSTS-22/23): from the
+ * text's left edge to the end group's (or to the content edge where there is
+ * none), less the row's gap and whatever sits between them, the counts. It is
+ * read from the siblings, never from the text's own box, so a box cut short
+ * cannot be its own measure.
+ */
+const SPACE_LEFT = `(text) => {
+  const box = text.parentElement
+  const style = getComputedStyle(box)
+  const gap = parseFloat(style.columnGap) || 0
+  let bound = box.getBoundingClientRect().right - parseFloat(style.paddingRight)
+  let between = 0
+  for (let e = text.nextElementSibling; e; e = e.nextElementSibling) {
+    if (e.classList.contains('file-tree-end') || e.classList.contains('diff-section-end')) {
+      bound = e.getBoundingClientRect().left - gap
+      break
+    }
+    between += e.getBoundingClientRect().width + gap
+  }
+  return bound - between - text.getBoundingClientRect().left
+}`
+
+/**
+ * The width the text of `el` takes on one line, from a Range over it: a range's
+ * box is not clipped by its element, and unlike `scrollWidth` it is never
+ * padded out to the element's own width, so a text that fits reads as such.
+ */
+const TEXT_WIDTH = `(el) => {
+  const range = document.createRange()
+  range.selectNodeContents(el)
+  return range.getBoundingClientRect().width
+}`
+
 /** Every row of the tree, with its glyph and where that glyph ends. */
 const treeRows = `
   [...document.querySelectorAll('.file-tree-body .file-tree-row')].map((row) => {
@@ -942,6 +976,11 @@ const treeRows = `
       ellipsis: name ? getComputedStyle(name).textOverflow : null,
       overflowX: name ? getComputedStyle(name).overflowX : null,
       whiteSpace: name ? getComputedStyle(name).whiteSpace : null,
+      // FSTS-22: the name's natural and shown widths, and the space its row leaves.
+      natural: name ? (${TEXT_WIDTH})(name) : null,
+      scroll: name ? name.scrollWidth : null,
+      shown: name ? name.clientWidth : null,
+      space: name ? (${SPACE_LEFT})(name) : null,
       struck: (${STRUCK})(row).map((e) => (e === name ? 'name' : e === row ? 'row' : e.className)),
       unpainted: glyph ? (${UNPAINTED})(glyph) : []
     }
@@ -1034,6 +1073,19 @@ function ellipsisFaults(item) {
   return why
 }
 
+/** Items whose name or path, at its natural width, fits the space left for it (1 px spare). */
+const fitting = (items) =>
+  items.filter((i) => typeof i.natural === 'number' && i.natural <= i.space - 1)
+
+/** Of the items whose text fits, those not shown whole: `scrollWidth > clientWidth` (FSTS-22, FSTS-23). */
+const fitFaults = (items) =>
+  fitting(items)
+    .filter((i) => i.scroll > i.shown)
+    .map(
+      (i) =>
+        `${i.path}: ${i.natural.toFixed(1)} px of text, scroll ${i.scroll} in ${i.shown} px, ${i.space.toFixed(1)} px free`
+    )
+
 /** How a cut name or path reads, for a check's log line. */
 const cutDetail = (item) =>
   `overflows ${item?.overflows}, text-overflow ${item?.ellipsis}, overflow-x ${item?.overflowX}, white-space ${item?.whiteSpace}`
@@ -1070,7 +1122,7 @@ async function glyphSetup(ws) {
   await sleep(800)
 }
 
-/** 12. The status glyphs of the tree rows (FSTS-01..11, 13..15). */
+/** 12. The status glyphs of the tree rows (FSTS-01..11, 13..15, 22). */
 async function glyphTreeChecks(ws) {
   if ((await evaluate(ws, `document.documentElement.dataset.theme`)) !== 'dark') {
     await clickThemeToggle(ws, 'dark')
@@ -1180,6 +1232,23 @@ async function glyphTreeChecks(ws) {
     `${treeFiles.length} file rows` +
       (unpainted.length ? `; ${unpainted.slice(0, 3).join('; ')}` : '')
   )
+
+  // 9. A name that fits its row shows whole. Precondition: every seeded file
+  // but the two long ones fits, and the long untracked name does not.
+  const treeAll = [...origin, ...uncommitted]
+  const fitFiles = fitting(treeFiles).length
+  const treeUncut = fitFaults(treeAll)
+  const seededFiles = Object.keys(ORIGIN_STATUS).length + Object.keys(UNCOMMITTED_STATUS).length
+  check(
+    'A name that fits its row shows whole, with no ellipsis (FSTS-22)',
+    fitFiles >= seededFiles - 2 &&
+      longRow !== undefined &&
+      !fitting([longRow]).length &&
+      treeUncut.length === 0,
+    `${fitFiles} of ${treeFiles.length} file names fit (${fitting(treeAll).length} rows with folders); ` +
+      `long name ${longRow?.natural?.toFixed(1)} px in ${longRow?.space?.toFixed(1)} px free` +
+      (treeUncut.length ? `; ${treeUncut.slice(0, 3).join('; ')}` : '')
+  )
 }
 
 /** Every section header of the stack on screen, with its glyph and where it ends. */
@@ -1215,6 +1284,11 @@ const stackHeaders = `
       ellipsis: path ? getComputedStyle(path).textOverflow : null,
       overflowX: path ? getComputedStyle(path).overflowX : null,
       whiteSpace: path ? getComputedStyle(path).whiteSpace : null,
+      // FSTS-23: the path's natural and shown widths, and the space its header leaves.
+      natural: path ? (${TEXT_WIDTH})(path) : null,
+      scroll: path ? path.scrollWidth : null,
+      shown: path ? path.clientWidth : null,
+      space: path ? (${SPACE_LEFT})(path) : null,
       struck: (${STRUCK})(header).map((e) =>
         e === path ? 'path' : e === header ? 'header' : e.className
       ),
@@ -1273,7 +1347,7 @@ const headerFaults = (headers) => [
   ...headers.filter((h) => !h.pathSecond).map((h) => `${h.path}: something before the path`)
 ]
 
-/** 13. The status glyphs of the All changes section headers (FSTS-11, 16..21). */
+/** 13. The status glyphs of the All changes section headers (FSTS-11, 16..21, 23). */
 async function glyphHeaderChecks(ws) {
   const origin = await stackRows(ws, 'Diff to origin', ORIGIN_STATUS)
   const originTones = await evaluate(ws, probeTones('.all-changes-stack'))
@@ -1371,6 +1445,23 @@ async function glyphHeaderChecks(ws) {
       unpainted.length === 0,
     `${origin.length + uncommitted.length} headers` +
       (unpainted.length ? `; ${unpainted.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 8. A path that fits its header shows whole: both stacks at full width, and
+  // the narrowed stack of 4. Precondition: every seeded path but the two long
+  // ones fits at full width, and the long path does not fit when narrowed.
+  const fullWidth = [...origin, ...uncommitted]
+  const fitPaths = fitting(fullWidth).length
+  const headerUncut = fitFaults([...fullWidth, ...(narrowed ?? [])])
+  check(
+    'A path that fits its header shows whole, with no ellipsis (FSTS-23)',
+    fitPaths >= Object.keys(ORIGIN_STATUS).length + Object.keys(UNCOMMITTED_STATUS).length - 2 &&
+      long !== undefined &&
+      !fitting([long]).length &&
+      headerUncut.length === 0,
+    `${fitPaths} of ${fullWidth.length} paths fit; narrowed to ${atWidth} px, ` +
+      `${fitting(narrowed ?? []).length} fit and the long path is ${long?.natural?.toFixed(1)} px in ${long?.space?.toFixed(1)} px free` +
+      (headerUncut.length ? `; ${headerUncut.slice(0, 3).join('; ')}` : '')
   )
 }
 

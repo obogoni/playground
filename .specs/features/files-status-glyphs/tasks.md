@@ -657,10 +657,49 @@ The Verifier's round 2 (`validation.md`) failed on smoke evidence only; the prod
 
 **Done when**:
 
-- [ ] `python <skill-dir>/scripts/validate_spec.py files-status-glyphs` reports 0 errors
-- [ ] The Verifier's mutant R6 (`.file-tree-name { max-width: 40px }`) fails the tree check, and its header twin R6h (`.diff-section-path { max-width: 40px }`) fails the header check
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`, `npx electron-vite build`, and one full drive on a fresh seed and a fresh `--user-data-dir`, every check passing
-- [ ] `spec.md` traceability: FSTS-04, 20, 21, 22 and 23 read `Implementing`, naming their checks
+- [x] `python <skill-dir>/scripts/validate_spec.py files-status-glyphs` reports 0 errors
+- [x] The Verifier's mutant R6 (`.file-tree-name { max-width: 40px }`) fails the tree check, and its header twin R6h (`.diff-section-path { max-width: 40px }`) fails the header check
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`, `npx electron-vite build`, and one full drive on a fresh seed and a fresh `--user-data-dir`, every check passing
+- [x] `spec.md` traceability: FSTS-04, 20, 21, 22 and 23 read `Implementing`, naming their checks
+
+**Result (2026-09-27)**: `spec.md` now has AC 22 (tree story, after AC 4) and AC 23 (header story, after AC 20). Both are WHEN-shaped: a name or path that fits the space its row or header leaves SHALL show whole, with no ellipsis. They are FSTS-22 and FSTS-23 in the traceability table (23 total, 23 mapped). The Assumptions table has a new row, `y (owner confirmed 2026-09-27)`, and both Independent Tests name the new criterion. `validate_spec`: 0 errors, 0 warnings.
+
+In the smoke, `treeRows` and `stackHeaders` now also read three widths per name or path:
+- `natural`: the text's own width, from a Range over it;
+- `scroll` / `shown`: its `scrollWidth` and `clientWidth`;
+- `space`: the space the row or header leaves (`SPACE_LEFT`). That runs from the text's left edge to the end group's, less the gap and the counts, and is read from the siblings.
+
+`fitting` keeps the items whose `natural` fits `space` with 1 px spare. `fitFaults` faults those whose `scrollWidth > clientWidth`.
+
+The first measure used `scrollWidth` as the natural width. On HEAD both new checks then failed on their own preconditions: `0 of 49 file names fit`. `scrollWidth` is never below `clientWidth`, so a flexed name that fills its space never read as fitting. The Range measure replaced it before any mutant was judged.
+
+New checks:
+- Tree check 9 (focused 9): over both lists, folders included. Preconditions: at least 47 of the 49 seeded file names fit, and the long untracked name does not.
+- Header check 8 (focused 17): over both stacks at full width and the uncommitted stack narrowed by check 5. Preconditions: at least 47 of 49 paths fit at full width, and the long path does not fit when narrowed.
+
+Focused run: 19 / 19 in 35 s. Check 9 reads `47 of 49 file names fit (52 rows with folders); long name 593.4 px in 190.3 px free`. Check 17 reads `49 of 49 paths fit; narrowed to 900 px, 3 fit and the long path is 621.0 px in 465.3 px free`.
+
+Mutants, one focused run each (`fr2-t17b-<id>-drive.log`):
+- R6 (`.file-tree-name { max-width: 40px }`): fails 9 only (`docs/removed.md: 69.0 px of text, scroll 69 in 40 px, 175.0 px free`).
+- R6h (`.diff-section-path { max-width: 40px }`): fails 17 only.
+
+Final sweep on the finished code (`fr2-final-<id>-drive.log`), every mutant killed:
+- R5: fails 5.
+- R5h: fails 14 and 19.
+- R7: fails 19 only.
+- S10: fails 5.
+- S10h: fails 14 and 19.
+- T9 e: fails 3, 4 and 5. Check 3 now fails too, because the long guide is a long tree name as well.
+- T10 e: fails 14 and 19.
+- T10 c: fails 11, 12, 14, 18 and 19.
+
+`git status --porcelain` matched the baseline after each.
+
+Gate:
+- typecheck exit 0; lint exit 0, 0 errors, 18 warnings, unchanged; `npm test` 1784 / 93, all passing; `npx electron-vite build` exit 0.
+- Full drive, run once on a fresh seed and a fresh `--user-data-dir`: 48 / 48 in 102 s. The seed change moved diff to origin to 45 files (FDIF-21 reads `45 sections`, FDIF-20 `+84 −83` against git's `+84 −83`), and every check still passes. The glyph sections are checks 20–38: tree 20–28, headers 29–36, commit tab 37–38. The icon checks 39–48 follow.
+
+`spec.md` traceability: FSTS-04, 20, 21, 22 and 23 read `Implementing`, each naming its checks.
 
 **Tests**: manual
 **Gate**: full
