@@ -40,41 +40,6 @@
   transform: none;
 }
 
-/* The letters the tree already uses for a change status, at the same weight. */
-.diff-section-pill {
-  flex: none;
-  width: 16px;
-  text-align: center;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.diff-section-pill.modified {
-  background: color-mix(in oklab, var(--amber) 16%, transparent);
-  color: var(--amber);
-}
-
-.diff-section-pill.added {
-  background: color-mix(in oklab, var(--green) 16%, transparent);
-  color: var(--green);
-}
-
-.diff-section-pill.deleted {
-  background: color-mix(in oklab, var(--red) 16%, transparent);
-  color: var(--red);
-}
-
-.diff-section-pill.renamed {
-  background: color-mix(in oklab, var(--accent) 16%, transparent);
-  color: var(--accent);
-}
-
-.diff-section-pill.untracked {
-  background: color-mix(in oklab, var(--text-faint) 20%, transparent);
-  color: var(--text-muted);
-}
-
 .diff-section-path {
   flex: 1;
   min-width: 0;
@@ -100,6 +65,22 @@
 
 .diff-section-counts .removed {
   color: var(--red);
+}
+
+/* A deleted file's path, and only the path, is struck (FSTS-19). */
+.diff-section-path.struck {
+  text-decoration: line-through;
+}
+
+/* The header's last group: the status glyph, flush with the header's right
+   padding whether or not the counts render (FSTS-16/17). The discard action
+   (#132) goes before it. */
+.diff-section-end {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
 }
 
 /*

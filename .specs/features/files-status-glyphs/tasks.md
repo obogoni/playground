@@ -316,8 +316,10 @@ The new `.file-tree-end` wrapper adds no padding, height or vertical margin; its
 
 **Done when**:
 
-- [ ] `grep -rn "diff-section-pill" src scripts` finds nothing (L-053)
-- [ ] Gate check passes: `npm run lint && npx electron-vite build`
+- [x] `grep -rn "diff-section-pill" src scripts` finds nothing (L-053)
+- [x] Gate check passes: `npm run lint && npx electron-vite build`
+
+**Result (2026-09-27)**: `.diff-section-pill`, its comment and its five tone rules are gone (`StatusGlyph.css` carries them); `.diff-section-path.struck` draws `line-through` and `.diff-section-end` repeats `.file-tree-end` value for value (`flex: none; display: flex; align-items: center; gap: 4px; margin-left: auto`). The grep exits 1 with no output. Lint: exit 0, 0 errors, 18 warnings, unchanged. `npx electron-vite build`: exit 0.
 
 **Tests**: none
 **Gate**: build
