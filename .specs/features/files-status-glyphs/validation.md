@@ -1,5 +1,7 @@
 ## Validation: files-status-glyphs — FAIL
 
+> **Owner decision, 2026-09-27, after this report.** The owner accepted Fix 10 (W4 / W4h) as a recorded limit, as Fix 8 was, and chose to ship. The Verifier's verdict above stays FAIL and is not rewritten: the feature ships with two accepted smoke limits, both recorded in `spec.md`'s Assumptions table. No production code changed after round 1 (`git diff --stat 24ee061..HEAD -- src` is empty). The follow-ups below (W6h, W5h, the Requirement Coverage row) are not done in this branch. `validate_state.py` rejects this report by design, since its verdict is FAIL.
+
 **Date**: 2026-09-27 (round 4: the owner's one focused round after the round 3 escalation)
 **Spec**: `.specs/features/files-status-glyphs/spec.md` (FSTS-01..23, three edge cases)
 **Diff range**: feature `2756248..HEAD`. The fix round is `83c0f6e..HEAD` (`20d1048` T18, `17d02f2` T19). It changes `scripts/smoke-files-diff.mjs` and `.specs` only, and no production file has changed since `24ee061` (`git diff --stat 24ee061..HEAD -- src` is empty)

@@ -43,12 +43,13 @@ right after the chevron and before the path.
 | Very deep rows | Where the indent alone fills the row (about ten levels at the column's 200 px minimum), the glyph is pushed past the column like the name already is; no change | The indent grows 13 px per level (`FileTree.tsx:46-48`); fixing it means a different indent model, outside this issue | n (owner confirmed 2026-09-26) |
 | A name or path that fits | Shows whole, with no ellipsis (FSTS-22, FSTS-23); criteria 4 and 20 only say what happens when it is too long | The Verifier's round 2 spec-precision note: a mutant that caps every name at 40 px, so names that fit are cut too, broke no criterion as written | y (owner confirmed 2026-09-27) |
 | Fitting samples near their bound (the Verifier's Fix 8) | Accepted, not fixed: checks 9 and 17 keep the seed's names and paths; a cap on the name or path width that falls between the widest fitting sample and its space is not caught | Any seed leaves some slack, and the 1 px spare in the fit check already catches every cut that reaches a sample (a 0.5 px cut fails); the Verifier's round 3 V6 (a 120 px name cap) and V6h (a 700 px path cap) survive on that slack | y (owner accepted 2026-09-27; the fit samples are ≥ 78 px (tree) / ≥ 210 px (headers) short of their space, so a width cap between them passes) |
+| A glyph pulled inside its end group over its neighbour (the Verifier's Fix 10, W4 / W4h) | Accepted, not fixed: the overlap rule (T18) compares a row's or header's direct children, so it reads the end group's box, not the glyph's; a glyph shifted inside the group by less than the group's gap is not caught | The fix round's cost kept growing against smaller and smaller smoke-only gaps, with the production code correct since round 1; #132 fills the same end group and can measure its children then | owner accepted 2026-09-27 |
 | Room for the discard action (#132) | The glyph sits inside an end group (`.file-tree-end`, `.diff-section-end`) that #132 fills with its action before the glyph | Orchestrator instruction; see the hand-off note in `tasks.md` | y |
 | Smoke home | `scripts/smoke-files-diff.mjs`, a new section before the icon section (which reloads the window and must stay last) | Its seed already has M, A, D, R in diff-to-origin and M, U uncommitted, plus the All changes stack | y |
 | Seed additions | An untracked file with a long name in `src/` (12 lines) and an uncommitted change to the binary `assets/logo.bin` | The long name proves the ellipsis; the 12 lines and the binary give headers of different count widths and one with no counts, so a glyph misplaced before the counts cannot pass | y |
 | Base branch | `feature/files-status-glyphs` off `feature/file-icons` `422d68d` (PR #126); rebased once #126 lands | Owner-approved stack (issue #131: depends on #126) | y |
 
-**Open questions:** none — the two `owner confirmed 2026-09-26` defaults above are logged and reported, and the fitting-name criterion was confirmed by the owner on 2026-09-27, as was the fit checks' accepted boundary limit.
+**Open questions:** none — the two `owner confirmed 2026-09-26` defaults above are logged and reported, and the fitting-name criterion was confirmed by the owner on 2026-09-27, as were the fit checks' accepted boundary limit and the overlap rule's end-group limit.
 
 ---
 
@@ -144,7 +145,7 @@ right after the chevron and before the path.
 | FSTS-01 | P1: one column — AC 1 | Execute | Verified (validation.md round 4) |
 | FSTS-02 | P1: one column — AC 2 | Execute | Verified (validation.md round 4) |
 | FSTS-03 | P1: one column — AC 3 | Execute | Verified (validation.md round 4) |
-| FSTS-04 | P1: one column — AC 4 | Execute | Needs Fix: Fix 10 (validation.md round 4). T18 closed V1 and V4 (both fail 3, 4 and 5), but W4 (the glyph pulled 12 px out of its end group) draws the glyph 6 px over the name and passes every check |
+| FSTS-04 | P1: one column — AC 4 | Execute | Verified with Fix 10's limit accepted by the owner 2026-09-27 (validation.md round 4). T18 closed V1 and V4 (both fail 3, 4 and 5), but W4 (the glyph pulled 12 px out of its end group) draws the glyph 6 px over the name and passes every check |
 | FSTS-05 | P1: one column — AC 5 | Execute | Verified (validation.md round 4) |
 | FSTS-06 | P1: glyph — AC 6 | Execute | Verified (validation.md round 4) |
 | FSTS-07 | P1: glyph — AC 7 | Execute | Verified (validation.md round 4) |
@@ -156,12 +157,12 @@ right after the chevron and before the path.
 | FSTS-13 | P1: deleted — AC 13 | Execute | Verified (validation.md round 4) |
 | FSTS-14 | P1: deleted — AC 14 | Execute | Verified (validation.md round 4) |
 | FSTS-15 | P1: deleted — AC 15 | Execute | Verified (validation.md round 4) |
-| FSTS-16 | P1: headers — AC 16 | Execute | Needs Fix: Fix 10 (validation.md round 4). T18 closed V4h (it fails 11, 12, 14, 18 and 19), but W4h draws the glyph 4 px over the counts and passes every check |
+| FSTS-16 | P1: headers — AC 16 | Execute | Verified with Fix 10's limit accepted by the owner 2026-09-27 (validation.md round 4). T18 closed V4h (it fails 11, 12, 14, 18 and 19), but W4h draws the glyph 4 px over the counts and passes every check |
 | FSTS-17 | P1: headers — AC 17 | Execute | Verified (validation.md round 4) |
 | FSTS-18 | P1: headers — AC 18 | Execute | Verified (validation.md round 4) |
 | FSTS-19 | P1: headers — AC 19 | Execute | Verified (validation.md round 4) |
 | FSTS-20 | P1: headers — AC 20 | Execute | Verified (validation.md round 4): V1h and a 1 px overlap (W1h) fail 11, 12, 14, 18 and 19 |
-| FSTS-21 | P1: headers — AC 21 | Execute | Commit-specific clauses verified (validation.md round 4: T-b, W7 and W8 fail 18; V1h and V4h fail 18 and 19); inherits Fix 10 via FSTS-16 |
+| FSTS-21 | P1: headers — AC 21 | Execute | Commit-specific clauses verified (validation.md round 4: T-b, W7 and W8 fail 18; V1h and V4h fail 18 and 19); inherits FSTS-16's accepted Fix 10 limit (owner 2026-09-27) |
 | FSTS-22 | P1: one column — AC 22 | Execute | Verified (validation.md round 4), with Fix 8's boundary limit accepted by the owner (V6, a 120 px cap, survives) |
 | FSTS-23 | P1: headers — AC 23 | Execute | Verified (validation.md round 4), with Fix 8's boundary limit accepted by the owner (V6h, a 700 px cap, survives) |
 
