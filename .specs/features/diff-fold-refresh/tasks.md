@@ -13,7 +13,7 @@ regions from `getLineChanges()` with Monaco's own rule, snapshots their fold sta
 and applies its own plan through `restoreViewState`'s `modelState` once Monaco has recomputed; the
 per-tab Hide / Show choice lives in `use-files` and reaches every mounted `DiffViewer` as a prop.
 **Status**: Approved by the owner on 2026-09-27 ("pode seguir com a #130", executed inline at the
-owner's choice). T1-T12 Done; Verifier round 1 FAIL on evidence; fix round T13-T16 in progress.
+owner's choice). T1-T12 Done; Verifier round 1 FAIL on evidence; fix round T13-T17 in progress.
 
 **Branch**: `feature/diff-fold-refresh`, cut from `feature/files-view-polish` `70d573c` (PR #125, which
 adds Expand all / Collapse all). Rebase onto `origin/main` once #125 merges. The future PR body carries
@@ -106,7 +106,7 @@ T10 → T11 → T12
 ### Phase 6: Fix round 1 (Verifier FAIL, 2026-09-27)
 
 ```
-T12 → T13 → T14 → T15 → T16
+T12 → T13 → T14 → T15 → T16 → T17
 ```
 
 ---
@@ -677,14 +677,38 @@ The Verifier's round 1 (`validation.md`) failed on test evidence only: 16 of 20 
 
 **Done when**:
 
-- [ ] The new scroll assertion fails against a mutant that drops `setScrollTop` from the content effect, then passes
-- [ ] Focused smoke passes, then one full smoke passes
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+- [x] The new scroll assertion can fail: it **fails on the code as it stands** (a real defect, T17), so the mutant run moves to T17
+- [ ] Focused smoke passes, then one full smoke passes (moved to T17, after the fix)
+- [x] Gate check passes: `npm run lint` (0 errors / 18 warnings)
+
+**Result (2026-09-27)**: section 11 keeps its 1 s timing and drops the scroll comparison that read 0 -> 0. 14f2 wheel-scrolls long.ts's diff tab and reads the first line on screen. Line 1 is folded away, so that line is `l017` before the wheel and `l023` after it. The write changes line 170, below the screen. **After the write the first line on screen is `l101`: the tab jumped.** `setValue` reveals every region for a moment, `setScrollTop` restores the pixel offset on that tall layout, and `applyFolds` then folds the regions above back, so the same offset lands 78 lines lower. This is a defect that the vacuous check hid, fixed in T17. The precondition was corrected from "line 1 on screen" to "the wheel moved the first line".
 
 **Tests**: manual
 **Gate**: build
 
 **Commit**: `test(files): check that a diff tab keeps its scroll across a refresh`
+
+---
+
+### T17: Keep a diff tab's scroll through the folds
+
+**What**: `DiffViewer` keeps the scroll offset it captured before `setValue` with the pending reading, and restores it again right after `applyFolds` in `onDidUpdateDiff`. The folds above the screen are then the same as before the change, so the same offset shows the same line. The restore right after `setValue` stays, for the moment before the diff is back.
+**Where**: `src/renderer/src/components/DiffViewer.tsx`
+**Depends on**: T16
+**Reuses**: the scroll capture of the content effect
+**Requirement**: FOLD-09
+
+**Done when**:
+
+- [ ] 14f2 passes on the focused smoke
+- [ ] 14f2 fails against a mutant that drops the new restore after `applyFolds`
+- [ ] One full smoke passes
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+
+**Tests**: manual
+**Gate**: build
+
+**Commit**: `fix(files): keep a diff tab's scroll when its folds come back`
 
 ---
 

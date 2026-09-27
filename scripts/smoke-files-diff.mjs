@@ -863,20 +863,18 @@ async function drive() {
     `launchers: ${launcherRow.join(', ') || 'none'}`
   )
 
-  // 11. A disk change refreshes an open diff, in place (FDIF-30).
+  // 11. A disk change refreshes an open diff within 1 s (FDIF-30).
   //
   // Timed, not assumed: the requirement is "within 1 s", so the poll reports
   // how long it actually took and fails past the budget. An earlier version
   // slept 1500 ms and then asserted the content had arrived, which measures
-  // nothing about the second it names. The scroll offset is asserted too,
-  // because "in place" is the other half of the requirement.
+  // nothing about the second it names. "In place", the scroll kept, is
+  // checked in 14f2 on a file long enough to scroll: modified.ts is three
+  // lines, and `.monaco-scrollable-element.scrollTop` stays 0 under Monaco's
+  // virtual scrolling, so a check here read 0 -> 0 whatever happened.
   const renderedDiff = `[...document.querySelectorAll('.diff-viewer .view-line')]
        .map((l) => l.textContent.replace(/\\u00a0/g, ' '))
        .join('\\n')`
-  const diffScrollTop = `Math.round(
-       document.querySelector('.diff-viewer .monaco-scrollable-element')?.scrollTop ?? -1
-     )`
-  const scrollBefore = await evaluate(ws, diffScrollTop)
   const startedAt = Date.now()
   writeFileSync(
     join(REPO, 'src', 'modified.ts'),
@@ -891,13 +889,10 @@ async function drive() {
     }
     await sleep(50)
   }
-  const scrollAfter = await evaluate(ws, diffScrollTop)
   check(
-    'An open diff refreshes within 1 s of a disk change, in place (FDIF-30)',
-    arrivedAfter !== null && arrivedAfter <= 1000 && scrollAfter === scrollBefore,
-    arrivedAfter === null
-      ? 'never arrived within 2 s'
-      : `arrived in ${arrivedAfter} ms, scrollTop ${scrollBefore} -> ${scrollAfter}`
+    'An open diff refreshes within 1 s of a disk change (FDIF-30; the scroll half is 14f2)',
+    arrivedAfter !== null && arrivedAfter <= 1000,
+    arrivedAfter === null ? 'never arrived within 2 s' : `arrived in ${arrivedAfter} ms`
   )
 
   // 11. Committing drops the file from All changes (FDIF-31).
@@ -1487,6 +1482,63 @@ async function foldSection(ws) {
       tabAfter.strips === 8,
     `probe ${tabProbed ? (tabAfter.probe ?? 'GONE') : 'never set'}, ${tabBefore.strips} -> ${tabAfter.strips} strips (want 7 -> 8), arrived in ${tabArrived.after} ms`
   )
+
+  // 14f2. The diff tab keeps its scroll across a refresh (FOLD-09, FDIF-30's
+  // "in place"). Monaco scrolls virtually, so the scroll is read as the first
+  // line on screen, and driven by CDP wheel events. The write changes line 170
+  // only, below the lines on screen; then long.ts goes back to 14f's text.
+  const firstOnScreen = `(() => {
+    const editor = (${DIFF_TAB})?.querySelector('.editor.modified')
+    if (!editor) return null
+    const top = editor.getBoundingClientRect().top
+    const lines = [...editor.querySelectorAll('.view-line')]
+      .map((l) => ({ top: l.getBoundingClientRect().top, text: l.textContent.replace(/\\u00a0/g, ' ') }))
+      .filter((l) => l.top >= top - 1)
+      .sort((a, b) => a.top - b.top)
+    return lines[0]?.text ?? null
+  })()`
+  const tabBox = await evaluate(
+    ws,
+    `(() => { const r = (${DIFF_TAB})?.querySelector('.editor.modified')?.getBoundingClientRect(); return r ? { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + Math.min(r.height / 2, 200)) } : null })()`
+  )
+  const lineOneAt = await evaluate(ws, firstOnScreen)
+  if (tabBox) {
+    for (let i = 0; i < 3; i++) {
+      await send(ws, 'Input.dispatchMouseEvent', {
+        type: 'mouseWheel',
+        x: tabBox.x,
+        y: tabBox.y,
+        deltaX: 0,
+        deltaY: 240,
+        pointerType: 'mouse'
+      })
+      await sleep(150)
+    }
+  }
+  await sleep(400)
+  const scrolledTo = await evaluate(ws, firstOnScreen)
+  const beforeScrollWrite = await settled(DIFF_TAB)
+  writeFileSync(LONG, foldText('l', 200, [20, 60, 100, 140, 160, 170, 180, 195]))
+  const scrollArrived = await waitFold(DIFF_TAB, (s) => J(s.labels) !== J(beforeScrollWrite.labels))
+  await settled(DIFF_TAB)
+  const keptAt = await evaluate(ws, firstOnScreen)
+  console.log(
+    `    14f2 DOM: line one "${lineOneAt}", scrolled to "${scrolledTo}", after the write "${keptAt}", arrived in ${scrollArrived.after} ms`
+  )
+  check(
+    'A diff tab keeps its scroll across a disk change (FOLD-09, FDIF-30)',
+    // Line 1 is folded away, so the first line on screen before the wheel is
+    // whatever follows its strip: the wheel only has to move it.
+    tabBox !== null &&
+      lineOneAt !== null &&
+      scrolledTo !== null &&
+      scrolledTo !== lineOneAt &&
+      scrollArrived.after !== null &&
+      keptAt === scrolledTo,
+    `first line on screen "${lineOneAt}" -> scrolled "${scrolledTo}" -> after the write "${keptAt}"`
+  )
+  writeFileSync(LONG, foldText('l', 200, [20, 60, 100, 140, 160, 180, 195]))
+  await waitFold(DIFF_TAB, (s) => J(s.labels) === J(beforeScrollWrite.labels))
 
   // 14g. A remounted section forgets hand reveals (FOLD-23): All changes remounts
   // on every tab switch, so its sections get fresh editors.
