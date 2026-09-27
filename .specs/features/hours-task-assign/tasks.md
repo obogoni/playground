@@ -556,7 +556,7 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`. The stylesheet import lands with its file in T19, so this commit still builds
 
 **Tests**: none
 **Gate**: full
