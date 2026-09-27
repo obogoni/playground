@@ -1,124 +1,119 @@
 ## Validation: files-status-glyphs — FAIL
 
-**Date**: 2026-09-27
+**Date**: 2026-09-27 (round 2)
 **Spec**: `.specs/features/files-status-glyphs/spec.md` (FSTS-01..21, three edge cases)
-**Diff range**: `2756248..HEAD` (`c699213..db9071d`, 10 task commits). The source changes are 11 files, +705 / −156, `.specs` included
-**Verifier**: independent sub-agent (author ≠ verifier). Unit mutants and smoke mutants ran on the real tree through `.orig` + `finally`, with every anchor asserted exactly once. `git status --porcelain` was empty before and after every run
+**Diff range**: feature `2756248..HEAD`. The fix round is `24ee061..HEAD` (`6c10c01..4f1ce99`, T11–T14), and it changes `scripts/smoke-files-diff.mjs` only
+**Verifier**: independent sub-agent (author ≠ verifier). Every smoke mutant ran in focused mode (`SMOKE_ONLY=glyphs`, the repo's own script) on a fresh seed and a fresh `--user-data-dir`. Each went through an `.orig` copy restored in `finally`, with every anchor asserted exactly once. `git status --porcelain` was `''` before and after every run. The full drive was not spent (see Round 1, item 4)
 
-**Why FAIL**: the production code is correct everywhere I probed it, but four of my smoke mutants survive the repo's checks.
-- FSTS-21 has no runtime assertion at all.
-- The header tones, the ellipsis and the glyph being visible are not asserted.
+**Why FAIL**: the four round-1 survivors are all killed now, and the production code is still correct wherever I probed it. Three new mutants of mine survive, though, and two of them do visible harm:
+- **R5 / R5h**: `overflow: hidden` removed from the name or path. `text-overflow` still computes `ellipsis`, so checks 5 and 13 pass, but no ellipsis is drawn. The long name then runs on under the `U` glyph, and the long path runs over the counts and the glyph (screenshots below). The T13 check reads a property that holds whether or not an ellipsis is drawn.
+- **R7**: a commit-tab-only change that clips the path bare. FSTS-21 says commit headers follow criteria 16 to 20. Check 16 covers 16 to 19, but nothing covers 20 in a commit tab, because none of the branch commit's paths is ever cut.
 
-All four fixes are smoke-only additions (below). No production code needs to change.
+Both fixes are smoke-only. No production code needs to change.
+
+---
+
+## Round 1: how each gap was closed
+
+| Round 1 gap | Fix | Evidence now | Status |
+| ----------- | --- | ------------ | ------ |
+| FSTS-21 had no runtime assertion, and S8b survived | T11 `glyphCommitChecks` | S8b fails check 16 (`src/added.ts: glyph not last`, ×3 shown) | ✅ closed for 16–19. Clause 20 is still open (R7, Fix 6) |
+| Header tones were unasserted, and S11 survived | T12 `toneFaultsOf` plus header check 14 | S11 fails 14 (`rgb(165, 156, 142) on rgba(0, 0, 0, 0)`). My R4 (tones swapped in the headers only) fails 14 | ✅ closed |
+| The ellipsis was unasserted, and S10 survived | T13 computed `textOverflow === 'ellipsis'` | S10 fails check 5 (`text-overflow clip`) | ⚠️ S10 is closed, but the check is not sufficient: R5 and R5h survive (Fix 5) |
+| The glyph was not required to be visible, and S7 survived | T14 `UNPAINTED` plus checks 8 and 15, and inside 16 | S7 fails 8 (`visibility hidden`). My R1 (`display: none` on the `R` glyph) fails 3, 8, 10, 15 and 16 | ✅ closed |
+| T5 row height | none needed | measured in round 1: 23.33 px on HEAD and on the base sources. It is not an AC | closed by measurement |
+| Focused mode standing in for the full drive | none needed | the worker's full drive `fr-full-drive.log` is 45/45, with the glyph checks at 20–35 and 35 = the commit tab, `restored true`. The icon checks after it pass | holds. I had no concrete doubt, so I did not spend the one full drive |
+| An ancestor-level strike above the row goes unseen | accepted in round 1 | unchanged | accepted (it would strike every row) |
 
 ---
 
 ## Task Completion
 
-T1–T10 are all checked off, and no task is blocked or partial. I checked each task's claims against the tree and the logs.
+T1–T14 are all checked off, and none is blocked or partial. I checked the T11–T14 Result blocks against the diff and the logs.
 
-| Task | Claim checked | Finding |
-| ---- | ------------- | ------- |
-| T1 | 6 tests; table with literal values; strike test | `change-status.test.ts:7-15` (5 rows, `toEqual({ glyph, label, struck })`), `:18-21`. Baseline 1778 / 92 → 1784 / 93 (+6), re-run by me |
-| T2 | Tones copied value for value | `StatusGlyph.css:15-38` matches `git show 2756248:…/FileTree.css` lines 136-159 and the removed `DiffSection.css` pill rules (read in the diff) |
-| T3 | `StatusGlyph` reads the mapping | `StatusGlyph.tsx:8-12`: `changeStatusView(status)` → `className={\`status-glyph ${status}\`} title={label}` |
-| T4, T6 | Letter/label maps gone | `grep -rn "STATUS_LETTER\|file-tree-pill\|diff-section-pill" src scripts` exits 1 (re-run). The only `STATUS_LABEL` left is `RemoveWorktreeConfirm.tsx:31`, which the spec puts out of scope |
-| T5 | Row height unchanged (argued from CSS only) | **Measured by me**: 23.33 px for all 48 file rows and the folder rows, on HEAD and on the base sources (`2756248`'s `FileTree`/`DiffSection` `.tsx`/`.css` swapped in). Probe `V-H` below |
-| T8 | Seed adds long untracked name (12 lines) and binary change | `smoke-files-diff.mjs:148-157`. Check 10's log reads `logo.bin counts null; count widths 41, 34.4` |
-| T9, T10 | 12 checks; 14 smoke mutants killed | The worker logs `fsts-mut-*-drive.log` agree with each claimed failing check, one for one. Full drive `t10-full-drive.log`: `41/41 checks passed`, glyph checks 20–31 |
+| Task | Claim | Finding |
+| ---- | ----- | ------- |
+| T11 | `glyphCommitChecks` opens `work on the branch`; runs `headerFaults`, `glyphFaults`, strike; requires `showing` and `restored`; S8b fails it only | Confirmed: smoke:1347-1417. S8b fails 16 only, as claimed. One claim is weaker than it reads. `opened` (smoke:1349-1364) records only that the `.commit-open` button was clicked. Under my R2 (open is a no-op) it logs `opened true`, and the check is failed by `showing` (smoke:1367) and the header count instead. Cosmetic |
+| T12 | header tones via shared `toneFaultsOf`, guards 5/5/48 | Confirmed: smoke:982-1001, :1300-1314. The tree check 2 logic is unchanged (the diff is a pure extraction) |
+| T13 | `textOverflow === 'ellipsis'` on cut name and path | Confirmed as written: smoke:929, :1177, :1111, :1292. **Not sufficient**: R5 and R5h survive |
+| T14 | `UNPAINTED` (visibility, display, opacity walk, box ≥ 15 × 8), checks 8 and 15, and inside 16; `display` branch not falsified | Confirmed: smoke:881-901, :1004-1007, :1137, :1318, :1379. I falsified the `display` branch with R1 (below). It fires (`display none on status-glyph renamed`), but only together with `box 0.0 x 0.0`, so it adds no kill of its own. That is harmless |
+| Gate | 1784 tests; lint 0/18; typecheck and build | Re-run by me, same numbers (Gate Check) |
+| Focused 16/16, 34 s | | Re-run by me: `fv2-BASE-drive.log` 16/16, 34 s |
 
 ---
 
 ## Spec-Anchored Acceptance Criteria
 
-`smoke:N` = `scripts/smoke-files-diff.mjs:N`, which is where the `check(` call starts. The focused run numbers the checks 1–12, and the full drive numbers them 20–31. `unit` = `src/renderer/src/lib/change-status.test.ts`.
+`smoke:N` = `scripts/smoke-files-diff.mjs:N`, the line where the `check(` call starts. The focused run numbers the checks 1–16: the tree is 1–8 (smoke:1053-1137), the headers 9–15 (smoke:1219-1318) and the commit tab 16 (smoke:1403). The full drive numbers them 20–35. `unit` = `src/renderer/src/lib/change-status.test.ts`.
 
 | AC | Spec-defined outcome | `file:line` + assertion | Verdict |
 | -- | -------------------- | ----------------------- | ------- |
-| FSTS-01 | glyph is last; right edge within 1 px of `row.right − paddingRight` | smoke:1026 and smoke:1043: `columnFaults` (`smoke:928-945`) needs `glyphs === 1`, `last` (end group is `row.lastElementChild` and the glyph is its last child, `smoke:890-894`), and `Math.abs(right − edge) ≤ 1`. It runs over all 44 + 4 rows | ✅ |
-| FSTS-02 | same right edge within 1 px, any depth | the same function: `max(rights) − min(rights) ≤ 1`. The depth precondition `depthsHold` (0,0,1,1) is at smoke:1035-1039 | ✅ |
-| FSTS-03 | exactly one glyph per file row | `item.glyphs !== 1` → fault (smoke:931). My mutant S3 (glyph rendered twice) is killed | ✅ |
-| FSTS-04 | name cut **with an ellipsis**; glyph keeps the column | smoke:1060: `longRow.overflows === true` (`scrollWidth > clientWidth`) plus the column check | ❌ GAP: only the clipping is asserted. S10 (`text-overflow: ellipsis` removed) **survives**, and the name is then clipped bare |
-| FSTS-05 | no glyph on folder rows | smoke:1070: `folderGlyphs.length === 0`, with guards `≥3` / `≥2` folder rows | ✅ |
-| FSTS-06..10 | `+` green, `M` amber, `D` red, `R` accent, `U` muted | unit:7-15 `toEqual` literal glyphs. smoke:988 reads the text. smoke:1017 compares each glyph's computed `color` **and** tint with a probe per token (`smoke:845-866`), guarded by `distinct === 5` and `seen.size === 5` | ⚠️ Tree: covered. **Headers: no tone check.** S11 (header glyphs lose their tone) **survives**. S7 (glyph `visibility: hidden`) **survives**: text, title, colour and position are all read through the DOM, and none of them needs the glyph to be visible |
-| FSTS-11 | tooltip `Added`/`Modified`/`Deleted`/`Renamed`/`Untracked` | unit:14 (`label`). smoke:988, :1043 (`untracked.txt U/Untracked`), :1149, :1173 compare `getAttribute('title')` with the spec's literal (`GLYPHS`, smoke:820-826). My mutant S2 (no `title`) fails 4 worker checks | ✅ |
-| FSTS-12 | one shared mapping; no per-component map | `change-status.ts:14-24` (one `Record<ChangeStatus, …>`). `FileTree.tsx:7,12,129,134` and `DiffSection.tsx:5,9,125,136` import it. The grep for the old maps exits 1. The worker's mutant a (renamed → `N`) fails the tree and the header checks together | ✅ |
-| FSTS-13 | deleted name struck | unit:18-21 `filter(struck) → ['deleted']`. smoke:1078 needs `struck[0] === 'docs/removed.md:name'` | ✅ |
-| FSTS-14 | only the name: not the row, icon or glyph | smoke:1078 walks the row and all its descendants (`STRUCK`, smoke:868-872) and needs exactly one struck element. The worker's g (row) and my S6 (icon) are killed | ✅ |
-| FSTS-15 | no other status struck | smoke:1078 in diff to origin (M, +, R). Unit:18-21 covers U. My mutant U2 (untracked struck) is killed by the unit tests | ✅ |
-| FSTS-16 | header glyph last, after counts, within 1 px of `header.right − paddingRight` | smoke:1160: `headerFaults` (smoke:1134-1137) = `columnFaults` + `pathSecond`, over 44 headers | ✅ |
-| FSTS-17 | same edge within 1 px, headers without counts included | smoke:1173. The preconditions need `binary.counts === null`, `!widths.has(null)` and `widths.size ≥ 2`. My S5 (counts dropped for some files) is killed | ✅ |
-| FSTS-18 | one glyph, nothing before the path | smoke:1149 and :1160: `glyphs === 1` and `header.children[1] === path` (smoke:1106) | ✅ |
-| FSTS-19 | only the path struck | smoke:1189: `struck[0] === 'docs/removed.md:path'` over the header subtree. The worker's d and my S9 (glyph struck as well) are killed | ✅ |
-| FSTS-20 | path cut **with an ellipsis**; glyph keeps position | smoke:1219: `overflows === true` at 900 px, plus `headerFaults` | ❌ GAP: the same weakness as FSTS-04. `DiffSection.css:51` `text-overflow: ellipsis` is not asserted (the S10 class) |
-| FSTS-21 | commit-tab headers follow 16–20 | **no assertion**. The only evidence is the citation `CommitTab.tsx:43` → `AllChangesTab.tsx:303` | ❌ GAP: S8b (glyph moved before the path only when `request.modified.rev` is a sha, which only a commit tab has) passes all 12 worker checks. My probe `V-C` kills it |
+| FSTS-01 | glyph last, right edge within 1 px of `row.right − paddingRight` | smoke:1075, :1092 `columnFaults` (smoke:961-975): `glyphs === 1`, `last`, `Math.abs(right − edge) ≤ 1`, over 44 + 4 rows. Killed: S3, S4, R1 | ✅ |
+| FSTS-02 | same edge within 1 px, any depth | the same function, `max − min ≤ 1`, with `depthsHold` (smoke:1084-1088) | ✅ |
+| FSTS-03 | one glyph per file row | `item.glyphs !== 1` (smoke:964). Killed: S3 | ✅ |
+| FSTS-04 | name cut **with an ellipsis**; glyph keeps the column | smoke:1109: `overflows === true && ellipsis === 'ellipsis'` (computed `textOverflow`, smoke:929) plus the column check | ❌ GAP: R5 (`overflow: hidden` removed, `text-overflow` kept) **survives**. No ellipsis is drawn, and the name runs on under the glyph (`fv2shot-R5-tree-ellipsis-uncut-tree-row.png`) |
+| FSTS-05 | no glyph on folder rows | smoke:1120 `folderGlyphs.length === 0`, guards ≥3 / ≥2 | ✅ |
+| FSTS-06..10 | `+` green, `M` amber, `D` red, `R` accent, `U` muted, and the glyph is seen | unit:7-15 literal glyphs. Tree tones smoke:1066 and header tones smoke:1305 (`toneFaultsOf` against probes, `distinct === 5`, `seen.size === 5`, 48 glyphs). Painted: smoke:1137 (tree), :1318 (headers), inside :1403 (commit). Killed: S1, S11, R4, S7, S7h/o/s (worker), R1 | ✅ |
+| FSTS-11 | tooltip names the status | unit:14. smoke:1053, :1092, :1219, :1243, :1403 compare `title` with `GLYPHS` (smoke:822-828). Killed: S2 (round 1) | ✅ |
+| FSTS-12 | one shared mapping | `change-status.ts:14-24`, imported by `FileTree.tsx` and `DiffSection.tsx`. The grep for the old maps exits 1 (round 1, no production change since) | ✅ |
+| FSTS-13 | deleted name struck | unit:18-21. smoke:1128 `struck[0] === 'docs/removed.md:name'` | ✅ |
+| FSTS-14 | only the name struck | smoke:1128, over the row subtree, exactly one struck element. Killed: g, S6 | ✅ |
+| FSTS-15 | no other status struck | smoke:1128 plus unit:18-21 | ✅ |
+| FSTS-16 | header glyph last, after the counts, within 1 px | smoke:1230 `headerFaults` over 44 headers. Killed: t10 b/c | ✅ |
+| FSTS-17 | same edge, headers without counts included | smoke:1243 (`binary.counts === null`, `widths.size ≥ 2`). Killed: S5 | ✅ |
+| FSTS-18 | one glyph, nothing before the path | smoke:1219, :1230 (`glyphs === 1`, `pathSecond`) | ✅ |
+| FSTS-19 | only the path struck | smoke:1259 `struck[0] === 'docs/removed.md:path'`. Killed: d, S9 | ✅ |
+| FSTS-20 | path cut **with an ellipsis**; glyph keeps position | smoke:1289: `overflows && ellipsis === 'ellipsis'` at 900 px (smoke:1177) plus `headerFaults` | ❌ GAP: R5h **survives**. The path runs over `+12 −0` and the `U` glyph (`fv2shot-R5h-header-ellipsis-uncut-header.png`) |
+| FSTS-21 | commit-tab headers follow 16–20 | smoke:1403: `showing` (the active tab is `<sha> · work on the branch`), 44 headers, `statuses.size ≥ 4`, `headerFaults` + `glyphFaults` + `paintFaults` empty, strike exactly `docs/removed.md:path`, `restored`. Killed: S8b, R1, R2, R3 | ⚠️ PARTIAL, counted as a GAP. Clauses 16, 18 and 19 are evidenced, and so is 17's column. **Clause 20 has no evidence**: no commit path is ever cut, and nothing reads the commit headers' ellipsis, so R7 (commit tabs clip bare) **survives**. 17's no-counts header cannot happen in the commit tab either, because the branch commit holds no binary |
 
-**Status**: ❌ gaps present. FSTS-21 has no evidence, FSTS-04/20 do not assert the ellipsis, and FSTS-06..10 are unasserted in the headers and for visibility.
+**Status**: ❌ gaps present: FSTS-04, FSTS-20 and FSTS-21's clause 20. The other 18 ACs are evidenced by checks that fail on their mutants.
 
-### Verifier probes (scratch copy `fv-smoke.mjs`, not in the repo)
+**Spec-precision note (not counted in the verdict)**: FSTS-04 and FSTS-20 state only the WHEN-too-long case. My R6 (every name capped at 40 px, so names that fit are cut too) passes 16/16. It breaks no AC as written. Whether "a name that fits SHALL show whole" belongs in the spec is the owner's call.
 
-`fv_build_probe.py` builds a copy of the smoke script. The worker checks are copied byte for byte, and one extra `SMOKE_ONLY=verifier` mode adds three probes:
-- **V-H**: the height of every file and folder row in both lists.
-- **V-P**: every `.status-glyph` in both lists and both stacks is painted. That means `visibility: visible`, no ancestor with `opacity < 1`, a 10 px font and a box at least 15 × 8 px.
-- **V-C**: Commits mode opens `work on the branch` in a commit tab. The probe then runs `headerFaults` and `glyphFaults(ORIGIN_STATUS)` over its 44 headers, and needs `docs/removed.md:path` to be the only struck element.
+### Evidence for R5 / R5h (probe `fv2-smoke.mjs`, `SMOKE_ONLY=ellipsis`, scratch only)
 
-On HEAD all three probes pass (`fv-probe-base-drive.log`: 15/15). The commit tab reads 44 headers with the right glyphs, in one column, with only the path struck, so FSTS-21 **holds at runtime today**. The gap is that nothing in the repo proves it.
+The probe read the long row and its header on HEAD and under each mutant, and saved screenshots:
+
+| Run | Tree name | Header path (900 px) | Drawn |
+| --- | --------- | -------------------- | ----- |
+| HEAD | `overflowX hidden, nowrap, ellipsis`, 593 > 190 | `hidden, nowrap, ellipsis`, 621 > 465 | `a-rather-long-untracked-fi…` then the `U` glyph |
+| R5 | `overflowX visible, nowrap, ellipsis`, 593 > 190 | unchanged | no ellipsis; the name runs on under the `U` glyph |
+| R5h | unchanged | `overflowX visible, nowrap, ellipsis`, 621 > 465 | no ellipsis; the path runs on over the counts and the glyph |
+
+Every value checks 5 and 13 read (`overflows`, `textOverflow`) is the same on HEAD and under the mutants. Only `overflowX` and the pixels differ. An ellipsis is drawn only on a box whose `overflow` is not `visible` (CSS Overflow 3, `text-overflow`). The computed `text-overflow` is set whether or not that condition holds. This is the memory note's shape 2 (`smoke-checks-that-cannot-fail.md`): a property that holds for reasons of its own.
 
 ---
 
 ## Discrimination Sensor
 
-The workers' 15 mutants are the T1 unit mutant plus 14 smoke mutants. Their logs confirm each one is killed as claimed. Below are my 14 mutants: 3 unit mutants and 11 focused smoke mutants, each on a fresh seed and a fresh `--user-data-dir`.
+Every run below is a fresh seed and a fresh `--user-data-dir`, driven by the repo's `scripts/smoke-files-diff.mjs` under `SMOKE_ONLY=glyphs`. The driver is `fv2_mutants.py`, and the logs are `fv2-<id>-drive.log` in the session scratchpad. BASE (no mutation) is 16/16.
 
-| # | File:line | Mutation | Worker checks (1–12) | Verifier probes | Killed? |
-| - | --------- | -------- | -------------------- | --------------- | ------- |
-| U1 | `change-status.ts:16-17` | labels of modified/deleted swapped | unit: 2 rows fail | – | ✅ Killed |
-| U2 | `change-status.ts:19` | untracked `struck: true` | unit: U row + strike test fail | – | ✅ Killed |
-| U3 | `change-status.ts:18` | label `Renamed` → `Moved` | unit: R row fails | – | ✅ Killed |
-| S1 | `StatusGlyph.css:15-23` | modified ↔ deleted tones swapped | 2 fails | – | ✅ Killed |
-| S2 | `StatusGlyph.tsx:10` | `title` dropped | 1, 4, 8, 10 fail | V-C fails | ✅ Killed |
-| S3 | `FileTree.tsx:133-135` | glyph rendered twice | 3, 4, 5 fail (`2 glyphs`) | – | ✅ Killed |
-| S4 | `FileTree.css:134-140` | end group `margin-right: 12px` (aligned with each other, off the padding) | 3, 4, 5 fail (`ends at 236.0, edge 248.0`) | – | ✅ Killed |
-| S5 | `DiffSection.tsx:129` | counts only when `stat.added > 1` | 10 fails (precondition) | – | ✅ Killed |
-| S6 | `FileTree.css:128` | strike moved to the row's `.file-icon` | 7 fails (`docs/removed.md:file-icon`) | – | ✅ Killed |
-| S7 | `FileTree.css:134-140` | end group `visibility: hidden`, shown only on row hover (a plausible #132 hover-reveal) | **12/12 pass** | V-P fails | ❌ Survived → Fix 4 |
-| S8 | `DiffSection.tsx:124-137` | glyph before the path when `'rev' in request.modified` | 9 fails: diff to origin also uses `rev: 'HEAD'`, so this was not commit-only | V-C fails | ✅ Killed (re-scoped as S8b) |
-| S8b | `DiffSection.tsx:124-137` | glyph before the path only when `modified.rev !== 'HEAD'` (commit tabs) | **12/12 pass** | V-C fails | ❌ Survived → Fix 1 |
-| S9 | `DiffSection.css:71` | strike also on the deleted header's glyph | 11 fails | V-C fails | ✅ Killed |
-| S10 | `FileTree.css:112` | `text-overflow: ellipsis` removed | **12/12 pass** | 15/15 pass | ❌ Survived → Fix 3 |
-| S11 | `DiffSection.css:78` | `.diff-section-end .status-glyph { color: inherit; background: none }` | **12/12 pass** | 15/15 pass | ❌ Survived → Fix 2 |
+| # | File:line | Mutation | Failing checks (focused 1–16) | Killed? |
+| - | --------- | -------- | ----------------------------- | ------- |
+| S7 | `FileTree.css:134-140` | end group `visibility: hidden`, shown on row hover | 8 (`visibility hidden`) | ✅ Killed |
+| S8b | `DiffSection.tsx:124-137` | glyph before the path only when `modified.rev !== 'HEAD'` (commit tabs) | 16 (`glyph not last`) | ✅ Killed |
+| S10 | `FileTree.css:112` | `text-overflow: ellipsis` removed | 5 (`text-overflow clip`) | ✅ Killed |
+| S11 | `DiffSection.css:78` | `.diff-section-end .status-glyph { color: inherit; background: none }` | 14 | ✅ Killed |
+| R1 | `StatusGlyph.css:30-33` | `.status-glyph.renamed { display: none }` | 3, 8, 10, 15, 16 (`display none on status-glyph renamed, box 0.0 x 0.0`) | ✅ Killed |
+| R2 | `CommitList.tsx:108` | `onOpen` does nothing (the commit tab never opens) | 16 (`active none; 0 headers`, though `opened true`) | ✅ Killed |
+| R3 | `FileTabs.tsx:207` | close does nothing on a commit tab (the return fails) | 16 (`restored false`) | ✅ Killed |
+| R4 | `DiffSection.css:78` | modified ↔ deleted tones swapped in the headers only | 14 (both paths named) | ✅ Killed |
+| R5 | `FileTree.css:111` | `.file-tree-name` without `overflow: hidden`, `text-overflow` kept | **16/16 pass** | ❌ Survived → Fix 5 |
+| R5h | `DiffSection.css:50` | the same on `.diff-section-path` | **16/16 pass** | ❌ Survived → Fix 5 |
+| R7 | `DiffSection.tsx:124-126` | commit tabs only: path `style={{ textOverflow: 'clip' }}` | **16/16 pass** | ❌ Survived → Fix 6 |
+| R6 | `FileTree.css:104-106` | `.file-tree-name { max-width: 40px }`: names that fit are cut too | 16/16 pass | not a spec violation (spec-precision note) |
 
-**Sensor depth**: lightweight+ (14 verifier mutants on top of the workers' 15).
-**Sensor verdict**: 10 of my 14 mutants are killed and 4 survive, so the sensor FAILS.
+**Sensor depth**: lightweight+ (the 4 re-runs plus 8 new mutants, on top of round 1's 14 and the workers' 15 + 13).
+**Sensor verdict**: 9 of the 11 runs that violate the spec are killed (all but R5 and R5h), plus R7, a survivor on an unevidenced clause. The sensor FAILS.
 
-Logs are in the session scratchpad: `fvmut-<id>-drive.log` and `fv-heights-base-drive.log`. The drivers are `fv_mutants.py` and `fv_run.py`. `git status --porcelain` was `''` after every mutant.
+`git status --porcelain` was `''` before, after every mutant, and at the end. The worker's fix-round logs (`fr-t1{1..4}-*-drive.log`) agree with each T11–T14 Result claim.
 
----
+### Precondition judgements on the new checks
 
-## Judgements asked for
-
-1. **FSTS-21 (commit tabs).** The code-reuse evidence is sound as an argument:
-   - `AllChangesTab.tsx:303` is the only place that renders `DiffSection`.
-   - `CommitTab.tsx:43` mounts it unmodified.
-   - `FileTabs.tsx:292-321` renders only the active tab.
-   - No stylesheet outside `DiffSection.css` or `StatusGlyph.css` targets `diff-section-*` or `status-glyph` (grep).
-
-   It is still **not acceptable under evidence-or-zero**, for two reasons. A citation is not an assertion, and a cheap check exists: the diff seed's `work on the branch` commit already holds the same 44 files, and `V-C` is about 35 lines that reuse `stackHeaders`, `headerFaults` and `glyphFaults`. The risk is also concrete. The stacked #132 discard action has every reason to branch on commit tabs, because a commit cannot be discarded. S8b is that branch, and it survives.
-2. **Check preconditions** (memory rule: a check must be able to fail):
-   - **Tone (check 2)**: sound. `distinct === 5` rules out a probe and a glyph passing on the same fallback. Comparing the tint closes the untracked-inherits-`--text-muted` hole (the worker's b2 is killed), and `seen.size === 5` makes all five statuses show up. The check does cover the tree only (S11).
-   - **Column (checks 3, 4, 9, 10)**: every row or header is measured (44 / 4 / 44 / 4), with count guards and with the edge and the spread both checked. S4 shows the edge half fails on its own when the glyphs still line up with each other.
-   - **Ellipsis (5, 12)**: the precondition `scrollWidth > clientWidth` is real (the workers' e mutants are killed). But it is a precondition for "cut", and the check never asserts the ellipsis its AC names (S10).
-   - **Strike (7, 11)**: the walk covers the row or header and its whole subtree. An ancestor-level strike above `.file-tree-row` would go unseen, but it would strike every row at once, so I did not count it as a gap.
-   - **Visibility**: no check needs the glyph to be visible (S7).
-3. **T5 row height.** Nothing in the repo smoke measures it. I measured it: 23.33 px on HEAD and 23.33 px on the base sources, for all 48 file rows and the folder rows. The spec has no height AC, only the "Glyph look" assumption that only the content and place change. The claim is now closed by measurement, and it does not bear on the verdict.
-4. **Focused mode.** `glyphSetup` (smoke:960-968) selects Uncommitted → All changes → Inline, which is the layout FDIF-12 leaves. The full drive also leaves some things `glyphSetup` does not:
-   - diff tabs open;
-   - expanded sections;
-   - a scrolled stack;
-   - Ignore whitespace toggled off again;
-   - `modified.ts` committed. It stays `M` against origin, and the uncommitted list keeps its 4 files.
-
-   None of these touches a row or header's layout rules. The checks are relative (the edge minus padding, the spread within one list), and the full drive passed the same 12 checks as 20–31 on the same code (`t10-full-drive.log`, 41/41). The focused results therefore carry over, and I had no concrete reason to spend the one full drive.
+- **Check 16 (commit tab)**: real. `showing` fails when the tab never opens (R2), and `restored` fails when the return leaves the tab (R3). The header count needs all 44 sections, and `readWhen` reads the whole document, which is safe because `FileTabs` renders only the active tab (round 1). `opened` is only a click flag and proves nothing on its own; the other guards carry it. It covers FSTS-16 to 19 but not 20 (R7).
+- **Check 14 (header tones)**: real. It probes `.all-changes-stack` while each stack is showing, and it needs `distinct === 5`, `seen.size === 5` and 48 glyphs. Both a lost tone (S11) and a swapped tone (R4) fail it. A token redefined on the stack itself would move the probe along with it. The tree's check 2 has the same design and was accepted in round 1, so it is not a gap.
+- **Checks 8, 15, 16 (painted)**: real. Hidden, faded, shrunk, undisplayed and missing glyphs all fail it (S7, S7h/o/s, R1). One limit: "painted" does not mean "not overdrawn". Under R5 the glyph passes every painted rule while text runs over it. Fix 5 closes that case at its source.
+- **Checks 5, 13 (ellipsis)**: **not sufficient**. The new `textOverflow` read is necessary but can hold with no ellipsis drawn (R5, R5h).
 
 ---
 
@@ -126,61 +121,52 @@ Logs are in the session scratchpad: `fvmut-<id>-drive.log` and `fv-heights-base-
 
 | Principle | Status |
 | --------- | ------ |
-| Minimum code: one record, one 14-line component, one stylesheet | ✅ |
-| Surgical changes: only the two components, their CSS, the new lib and the smoke; folder rows untouched (`FileTree.tsx` `FolderRows`) | ✅ |
-| No scope creep: tabs, `RemoveWorktreeConfirm`, folder status untouched | ✅ |
-| Matches patterns: co-located unit test, `it.each` table like `file-icons.test.ts`; CDP smoke per `TESTING.md:42,68` | ✅ |
-| Spec-anchored outcome check | ❌ FSTS-04/20 ellipsis and FSTS-21 not asserted |
-| Per-layer coverage: pure mapping 1:1 (FSTS-06..11, 13, 15); components by smoke | ⚠️ header tones missing |
-| Every test maps to an AC, edge case or Done-when | ✅ (the checks' labels carry the FSTS ids) |
+| Minimum code: one shared `toneFaultsOf` (a pure extraction), one `UNPAINTED` / `paintFaults` pair used by three checks, one commit section | ✅ |
+| Surgical changes: `scripts/smoke-files-diff.mjs` only, plus `.specs`; no production file touched since `24ee061` | ✅ |
+| No scope creep | ✅ |
+| Matches patterns: the same `check(label, ok, detail)` shape, `readWhen`, and FSTS ids in the labels | ✅ |
+| Spec-anchored outcome check | ❌ FSTS-04/20: `text-overflow` alone does not show the ellipsis that the ACs name. FSTS-21's clause 20 is unasserted |
+| Per-layer coverage | ✅ the mapping is 1:1 in unit tests; the components are covered by the smoke, except the gaps above |
+| Every test maps to an AC, edge case or Done-when | ✅ |
 | Documented guidelines followed: `.specs/codebase/TESTING.md` | ✅ |
 
-Lint 0 errors / 18 warnings. None of the warnings is in a changed file: they are in `scripts/fixtures/implement-ticket/workflow.ts`, `smoke-agent-config.mjs`, `smoke-agents.mjs` and `src/shared/tasks.test.ts`.
+The label `opened ${opened}` in check 16's detail reads as proof that the tab opened, and it is not (R2 log). This is cosmetic.
 
 ---
 
 ## Edge Cases
 
-- [x] Mixed depths 0 and 1 in uncommitted share one column: smoke:1043 with `depthsHold` (log: `logo.bin:1, a-rather-lon:1, crlf.txt:0, untracked.tx:0`)
-- [x] A binary header with no counts keeps the column: smoke:1173 (`logo.bin counts null`)
-- [x] The same glyph, tooltip and tone in uncommitted as in diff to origin: smoke:1017 compares tones in both lists, and smoke:1043 reads `U/Untracked` there. `M` is read in both
+- [x] Mixed depths 0 and 1 share one column: smoke:1092 with `depthsHold`
+- [x] A binary header without counts keeps the column: smoke:1243 (`logo.bin counts null`). This is in the Uncommitted stack only; the commit tab has no binary
+- [x] The same glyph, tooltip and tone in both lists: smoke:1066, :1092, and now the header tones at :1305
 
 ---
 
 ## Gate Check
 
-- **Gate command**: `npm run typecheck && npm run lint && npm test`, plus `npx electron-vite build` (re-run by me)
-- **Outcome**: typecheck exit 0; lint exit 0, 0 errors / 18 warnings (baseline); vitest 1784 passed / 0 failed / 0 skipped in 93 files; build exit 0
-- **Test count before feature**: 1778 (92 files, T1 baseline)
+- **Gate command**: `npm run typecheck && npm run lint && npm test`, plus `npx electron-vite build`, re-run by me (`r2-*.log`)
+- **Outcome**: typecheck exit 0; lint exit 0, 0 errors / 18 warnings (the baseline); vitest 1784 passed / 0 failed / 0 skipped in 93 files; build exit 0
+- **Test count before feature**: 1778 (92 files)
 - **Test count after feature**: 1784 (93 files)
-- **Delta**: +6 (`change-status.test.ts`), none removed
-- **Smoke**: the worker checks, focused, 12/12 on HEAD (`fv-probe-base-drive.log`), plus the probes 3/3
+- **Delta**: +6, none removed. The fix round added no unit tests (smoke only)
+- **Smoke**: focused 16/16 on HEAD (`fv2-BASE-drive.log`, 34 s). The worker's full drive is 45/45 (`fr-full-drive.log`)
 
 ---
 
 ## Fix Plans
 
-All four fixes go in `scripts/smoke-files-diff.mjs`, in the glyph sections before `iconChecks`. Each one must be seen failing on its mutant (S8b, S11, S10, S7), then passing.
+Both fixes go in `scripts/smoke-files-diff.mjs`. Each must first be seen failing on its mutant, then passing.
 
-### Fix 1: assert the commit tab's headers (FSTS-21), Major
-- **Root cause**: the AC rests on a code citation, so a commit-only header branch goes undetected.
-- **Fix task**: at the end of `glyphHeaderChecks`, switch to Commits and open the row whose `.commit-subject` is `work on the branch` (`.commit-open`). Wait for its 44 headers, then check `headerFaults` + `glyphFaults(ORIGIN_STATUS)` and require the strike to be exactly `docs/removed.md:path`. The template is `verifierProbes` / `V-C` in `fv-smoke.mjs`.
-- **Verify**: S8b fails it.
+### Fix 5: assert the drawn ellipsis, not the property alone (FSTS-04, FSTS-20), Minor
+- **Root cause**: `text-overflow: ellipsis` computes the same whether or not the box clips, and Chromium draws the ellipsis only when `overflow` is not `visible` and the text does not wrap.
+- **Fix task**: in `treeRows` (smoke:929) and `stackHeaders` (smoke:1177), also read `overflowX` and `whiteSpace` of the name or path. In checks 5 (smoke:1109) and 13 (smoke:1289), require `overflowX` to be `hidden` or `clip` and `whiteSpace` to be `nowrap`, besides `textOverflow === 'ellipsis'` and `overflows`. The scratch probe `fv2_build_probe.py` / `cutStyle` is a template.
+- **Verify**: R5 fails 5, R5h fails 13, and S10 and its header twin still fail.
 
-### Fix 2: header tones (FSTS-06..10 in the section headers), Minor
-- **Root cause**: check 2 reads tree glyphs only.
-- **Fix task**: add `color` / `backgroundColor` to `stackHeaders`. Compare both stacks against `probeTones('.all-changes-stack')`, with the `distinct` / `seen` guards.
-- **Verify**: S11 fails it.
-
-### Fix 3: assert the ellipsis (FSTS-04, FSTS-20), Minor
-- **Root cause**: `overflows` proves clipping, not an ellipsis.
-- **Fix task**: in `treeRows` and `stackHeaders`, also read `getComputedStyle(name|path).textOverflow`. Require `'ellipsis'` in checks 5 and 12.
-- **Verify**: S10 fails 5. The header twin (the ellipsis dropped from `DiffSection.css:51`) fails 12.
-
-### Fix 4: the glyph is painted (FSTS-06..10 "reads"), Minor, relevant to #132
-- **Root cause**: every glyph read goes through the DOM, and none of it needs the glyph to be visible.
-- **Fix task**: in `columnFaults` (or a sibling), fault any glyph with `visibility !== 'visible'`, an ancestor with `opacity < 1`, or a box under 15 × 8 px. The template is `paintedFaults` in `fv-smoke.mjs`.
-- **Verify**: S7 fails it.
+### Fix 6: FSTS-21 clause 20 in the commit tab, Minor
+- **Root cause**: no path in the branch commit is ever cut, so check 16 cannot exercise "cut with an ellipsis" there.
+- **Fix task, cheaper option**: in `glyphCommitChecks`, require the Fix 5 triple (`textOverflow === 'ellipsis'`, `overflowX` hidden or clip, `nowrap`) on every commit header's path. This is the property half of clause 20, since its WHEN never fires with this seed.
+- **Fix task, stronger option**: seed a long path into the branch commit, so it is also in diff to origin, and narrow the window in check 16 as check 13 does. This changes `ORIGIN_STATUS` and the full drive's diff-to-origin counts, so it needs one full drive.
+- **Verify**: R7 fails 16.
 
 ---
 
@@ -188,29 +174,26 @@ All four fixes go in `scripts/smoke-files-diff.mjs`, in the glyph sections befor
 
 | Requirement | Previous Status | New Status |
 | ----------- | --------------- | ---------- |
-| FSTS-01, 02, 03, 05 | Implementing | ✅ Verified |
-| FSTS-04 | Implementing | ❌ Needs Fix (Fix 3) |
-| FSTS-06..10 | Implementing | ❌ Needs Fix (Fix 2, Fix 4); tree tones verified |
-| FSTS-11..19 | Implementing | ✅ Verified |
-| FSTS-20 | Implementing | ❌ Needs Fix (Fix 3) |
-| FSTS-21 | Implementing | ❌ Needs Fix (Fix 1); holds at runtime (V-C), unasserted in the repo |
+| FSTS-01..03, 05, 11..19 | Verified (round 1) | ✅ Verified (round 2 re-checked) |
+| FSTS-04 | Implementing (Fix 3) | ❌ Needs Fix (Fix 5, R5) |
+| FSTS-06..10 | Implementing (Fix 2, Fix 4) | ✅ Verified |
+| FSTS-20 | Implementing (Fix 3) | ❌ Needs Fix (Fix 5, R5h) |
+| FSTS-21 | Implementing (Fix 1) | ❌ Needs Fix (Fix 6, R7); clauses 16–19 verified |
 
 ---
 
 ## Summary
 
-**Overall**: ❌ Not Ready. The behaviour is correct, and the sensor has four survivors.
+**Overall**: ❌ Not Ready. The behaviour is correct, and two of the fix round's checks are weaker than their ACs.
 
-**Spec-anchored check**: 14 of 21 ACs are fully evidenced. FSTS-21 has no assertion, FSTS-04/20 miss the ellipsis, and FSTS-06..10 miss the header tones and visibility.
-**Sensor**: 10 of my 14 mutants are killed (plus the workers' 15, all killed); S7, S8b, S10 and S11 survive.
-**Gate**: 1784 passed, 0 failed; lint 18 warnings (baseline); typecheck and build exit 0.
+**Spec-anchored check**: 18 of 21 ACs are fully evidenced. FSTS-04 and FSTS-20 read the ellipsis property without the clip that draws it, and FSTS-21's clause 20 is unasserted.
+**Sensor**: S7, S8b, S10 and S11 are all killed now, and so are R1–R4. R5, R5h and R7 survive. R6 is a spec-precision note.
+**Gate**: 1784 passed, 0 failed; lint 0 errors / 18 warnings (the baseline); typecheck and build exit 0.
 
 **What works**:
-- One mapping serves both places.
-- The glyph is last and in one column, at every depth and with or without counts.
-- The strike is on the name or path only.
-- The tooltips are right.
-- The commit tabs match at runtime.
-- The row height is unchanged.
+- The commit tab now runs a real check that fails when the tab fails to open or the return fails.
+- The header tones are asserted.
+- Every glyph must be painted.
+- S10 is caught.
 
-**Next steps**: Fix 1–4 are smoke-only, and each is falsified on its mutant. Then re-verify: focused mode for the mutants and one full drive.
+**Next steps**: Fix 5 and Fix 6, each falsified on its mutant. Then round 3, the last before escalation: focused mode for R5, R5h and R7, plus one full drive if Fix 6 takes the seed option.

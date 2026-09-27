@@ -137,27 +137,27 @@ right after the chevron and before the path.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FSTS-01 | P1: one column — AC 1 | Execute | Verified (validation.md) |
-| FSTS-02 | P1: one column — AC 2 | Execute | Verified (validation.md) |
-| FSTS-03 | P1: one column — AC 3 | Execute | Verified (validation.md) |
-| FSTS-04 | P1: one column — AC 4 | Execute | Implementing: Fix 3 (T13), the tree ellipsis check now requires `text-overflow: ellipsis` |
-| FSTS-05 | P1: one column — AC 5 | Execute | Verified (validation.md) |
-| FSTS-06 | P1: glyph — AC 6 | Execute | Implementing: Fix 2 (T12), the header tone check; Fix 4 (T14), the tree and header painted checks |
-| FSTS-07 | P1: glyph — AC 7 | Execute | Implementing: Fix 2 (T12), the header tone check; Fix 4 (T14), the tree and header painted checks |
-| FSTS-08 | P1: glyph — AC 8 | Execute | Implementing: Fix 2 (T12), the header tone check; Fix 4 (T14), the tree and header painted checks |
-| FSTS-09 | P1: glyph — AC 9 | Execute | Implementing: Fix 2 (T12), the header tone check; Fix 4 (T14), the tree and header painted checks |
-| FSTS-10 | P1: glyph — AC 10 | Execute | Implementing: Fix 2 (T12), the header tone check; Fix 4 (T14), the tree and header painted checks |
-| FSTS-11 | P1: glyph — AC 11 | Execute | Verified (validation.md) |
-| FSTS-12 | P1: glyph — AC 12 | Execute | Verified (validation.md) |
-| FSTS-13 | P1: deleted — AC 13 | Execute | Verified (validation.md) |
-| FSTS-14 | P1: deleted — AC 14 | Execute | Verified (validation.md) |
-| FSTS-15 | P1: deleted — AC 15 | Execute | Verified (validation.md) |
-| FSTS-16 | P1: headers — AC 16 | Execute | Verified (validation.md) |
-| FSTS-17 | P1: headers — AC 17 | Execute | Verified (validation.md) |
-| FSTS-18 | P1: headers — AC 18 | Execute | Verified (validation.md) |
-| FSTS-19 | P1: headers — AC 19 | Execute | Verified (validation.md) |
-| FSTS-20 | P1: headers — AC 20 | Execute | Implementing: Fix 3 (T13), the header ellipsis check now requires `text-overflow: ellipsis` |
-| FSTS-21 | P1: headers — AC 21 | Execute | Implementing: Fix 1 (T11), the commit tab check (`glyphCommitChecks`) |
+| FSTS-01 | P1: one column — AC 1 | Execute | Verified (validation.md round 2) |
+| FSTS-02 | P1: one column — AC 2 | Execute | Verified (validation.md round 2) |
+| FSTS-03 | P1: one column — AC 3 | Execute | Verified (validation.md round 2) |
+| FSTS-04 | P1: one column — AC 4 | Execute | Needs Fix: Fix 5, `text-overflow` is read without the clip that draws it (R5 survives, validation.md round 2) |
+| FSTS-05 | P1: one column — AC 5 | Execute | Verified (validation.md round 2) |
+| FSTS-06 | P1: glyph — AC 6 | Execute | Verified (validation.md round 2) |
+| FSTS-07 | P1: glyph — AC 7 | Execute | Verified (validation.md round 2) |
+| FSTS-08 | P1: glyph — AC 8 | Execute | Verified (validation.md round 2) |
+| FSTS-09 | P1: glyph — AC 9 | Execute | Verified (validation.md round 2) |
+| FSTS-10 | P1: glyph — AC 10 | Execute | Verified (validation.md round 2) |
+| FSTS-11 | P1: glyph — AC 11 | Execute | Verified (validation.md round 2) |
+| FSTS-12 | P1: glyph — AC 12 | Execute | Verified (validation.md round 2) |
+| FSTS-13 | P1: deleted — AC 13 | Execute | Verified (validation.md round 2) |
+| FSTS-14 | P1: deleted — AC 14 | Execute | Verified (validation.md round 2) |
+| FSTS-15 | P1: deleted — AC 15 | Execute | Verified (validation.md round 2) |
+| FSTS-16 | P1: headers — AC 16 | Execute | Verified (validation.md round 2) |
+| FSTS-17 | P1: headers — AC 17 | Execute | Verified (validation.md round 2) |
+| FSTS-18 | P1: headers — AC 18 | Execute | Verified (validation.md round 2) |
+| FSTS-19 | P1: headers — AC 19 | Execute | Verified (validation.md round 2) |
+| FSTS-20 | P1: headers — AC 20 | Execute | Needs Fix: Fix 5, as FSTS-04 for the path (R5h survives, validation.md round 2) |
+| FSTS-21 | P1: headers — AC 21 | Execute | Needs Fix: Fix 6, clauses 16-19 verified by the commit tab check; clause 20 unasserted there (R7 survives, validation.md round 2) |
 
 **Coverage:** 21 total, 21 mapped to tasks, 0 unmapped.
 

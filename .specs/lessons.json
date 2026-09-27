@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 47,
+  "next_id": 50,
   "lessons": [
     {
       "id": "L-001",
@@ -748,6 +748,60 @@
       ],
       "created": "2026-09-27T15:46:21Z",
       "last_seen": "2026-09-27T15:46:21Z"
+    },
+    {
+      "id": "L-047",
+      "key": "surviving_mutant::a computed text overflow of ellipsis is set even when nothing is clipped assert overflow other than visible and nowrap with it or the drawn result never text overflow alone",
+      "text": "A computed text-overflow of ellipsis is set even when nothing is clipped; assert overflow other than visible and nowrap with it, or the drawn result, never text-overflow alone",
+      "signal": "surviving_mutant",
+      "scope": "smoke-cdp",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round 2: R5, R5h (FSTS-04, FSTS-20); smoke-files-diff.mjs:929,1177 (smoke-cdp)"
+      ],
+      "created": "2026-09-27T16:29:15Z",
+      "last_seen": "2026-09-27T16:29:15Z"
+    },
+    {
+      "id": "L-048",
+      "key": "ac_gap::when an ac applies conditional clauses to every host of a reused component seed each condition in every host or that host s check cannot exercise the clause",
+      "text": "When an AC applies conditional clauses to every host of a reused component, seed each condition in every host, or that host's check cannot exercise the clause",
+      "signal": "ac_gap",
+      "scope": "smoke-cdp",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round 2: R7 (FSTS-21 clause 20); smoke-files-diff.mjs:1403 (smoke-cdp)"
+      ],
+      "created": "2026-09-27T16:29:15Z",
+      "last_seen": "2026-09-27T16:29:15Z"
+    },
+    {
+      "id": "L-049",
+      "key": "spec_precision_gap::when an ac says an overflowing value is cut also state that a value that fits shows whole so a cap that cuts every value can fail a check",
+      "text": "When an AC says an overflowing value is cut, also state that a value that fits shows whole, so a cap that cuts every value can fail a check",
+      "signal": "spec_precision_gap",
+      "scope": "specs",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round 2: R6 (FSTS-04, FSTS-20) (specs)"
+      ],
+      "created": "2026-09-27T16:29:15Z",
+      "last_seen": "2026-09-27T16:29:15Z"
     }
   ]
 }

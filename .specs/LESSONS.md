@@ -258,6 +258,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: S7 src/renderer/src/components/FileTree.css:134 (validation.md) (scripts/smoke)
 - last seen: 2026-09-27T15:46:21Z
 
+### L-047 - A computed text-overflow of ellipsis is set even when nothing is clipped; assert overflow other than visible and nowrap with it, or the drawn result, never text-overflow alone
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke-cdp` · harmful: 0
+- features: files-status-glyphs
+- evidence: validation.md round 2: R5, R5h (FSTS-04, FSTS-20); smoke-files-diff.mjs:929,1177 (smoke-cdp)
+- last seen: 2026-09-27T16:29:15Z
+
+### L-048 - When an AC applies conditional clauses to every host of a reused component, seed each condition in every host, or that host's check cannot exercise the clause
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-cdp` · harmful: 0
+- features: files-status-glyphs
+- evidence: validation.md round 2: R7 (FSTS-21 clause 20); smoke-files-diff.mjs:1403 (smoke-cdp)
+- last seen: 2026-09-27T16:29:15Z
+
+### L-049 - When an AC says an overflowing value is cut, also state that a value that fits shows whole, so a cap that cuts every value can fail a check
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: files-status-glyphs
+- evidence: validation.md round 2: R6 (FSTS-04, FSTS-20) (specs)
+- last seen: 2026-09-27T16:29:15Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
