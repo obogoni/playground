@@ -677,8 +677,9 @@ app.whenReady().then(() => {
   })
 
   // Free the shared MCP result server's loopback port when the app quits (WF3-10).
+  // Nothing awaits a quit handler, so a failed stop is logged, not left unhandled (RSTP-07).
   app.on('will-quit', () => {
-    void resultServer.stop()
+    resultServer.stop().catch((err) => console.error('[mcp-result-server] stop failed', err))
   })
 
   // Silent auto-update. Inert under `electron-vite dev` unless PLAYGROUND_FORCE_UPDATE=1
@@ -712,7 +713,7 @@ app.on('window-all-closed', () => {
   // closes whatever is still open, at the quit instant (TIME-09).
   timeTracker?.closeAll()
   namePoller?.dispose()
-  void stopHookServer?.()
+  stopHookServer?.().catch((err) => console.error('[activity-hooks] stop failed', err))
   if (process.platform !== 'darwin') {
     app.quit()
   }

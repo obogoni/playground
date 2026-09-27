@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/result-server-stop/spec.md`
 **Design**: none - no architectural decision; the guard copies the activity hook server's.
-**Status**: In Progress - T1, T2 Done (2026-09-27)
+**Status**: T1-T3 Done (2026-09-27). Awaiting the Verifier.
 **Branch**: `feature/result-server-stop` (cut from `main` = `origin/main` `c31bb9a`)
 **Test baseline**: measured green on the branch on 2026-09-27 before any production change - 1663 tests / 90 files, `typecheck` and `lint` exit 0 (18 prettier warnings, 0 errors).
 
@@ -139,9 +139,11 @@ Check B: every assertion targets the resolved value or the rejection itself; RST
 
 **Done when**:
 
-- [ ] Both handlers attach the catch with the named prefix; no `void` stop call remains in `index.ts`
-- [ ] `npx electron-vite build && node scripts/smoke-quit.mjs` PASSES on the fixed build (exit 0, no `ERR_SERVER_NOT_RUNNING`, no `UnhandledPromiseRejection`)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` - 1668 tests (no silent deletions)
+- [x] Both handlers attach the catch with the named prefix; no `void` stop call remains in `index.ts`
+- [x] `npx electron-vite build && node scripts/smoke-quit.mjs` PASSES on the fixed build (exit 0, no `ERR_SERVER_NOT_RUNNING`, no `UnhandledPromiseRejection`)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` - 1668 tests (no silent deletions)
+
+**Result (2026-09-27)**: `src/main/index.ts:682` `resultServer.stop().catch((err) => console.error('[mcp-result-server] stop failed', err))` and `src/main/index.ts:716` `stopHookServer?.().catch((err) => console.error('[activity-hooks] stop failed', err))`; `grep -c "void .*stop()"` on the file gives 0. On the fixed build the smoke passes 5/5: output captured (`DevTools listening`), exit 0, no `ERR_SERVER_NOT_RUNNING`, no unhandled rejection. Gate: typecheck 0, lint 0 errors / 18 warnings (baseline), 1668/1668 tests. RSTP-07/08 have no automated check: a genuine close failure cannot be produced in the built app, so they rest on the two lines above (TESTING.md: `index.ts` wiring is hand-verified).
 
 **Tests**: none
 **Gate**: build
