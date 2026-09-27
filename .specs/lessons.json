@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 47,
+  "next_id": 48,
   "lessons": [
     {
       "id": "L-001",
@@ -750,6 +750,24 @@
       ],
       "created": "2026-09-27T13:52:57Z",
       "last_seen": "2026-09-27T13:52:57Z"
+    },
+    {
+      "id": "L-047",
+      "key": "surviving_mutant::when a component rule moves into a pure seam also mutate the call site s arguments the seam s tests cannot see a caller that passes the wrong state",
+      "text": "When a component rule moves into a pure seam, also mutate the call site's arguments: the seam's tests cannot see a caller that passes the wrong state",
+      "signal": "surviving_mutant",
+      "scope": "renderer components",
+      "status": "candidate",
+      "features": [
+        "diff-fold-refresh"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md V8 (DiffViewer.tsx:307 call site of readingBeforeUpdate) (renderer components)"
+      ],
+      "created": "2026-09-27T14:34:31Z",
+      "last_seen": "2026-09-27T14:34:31Z"
     }
   ]
 }

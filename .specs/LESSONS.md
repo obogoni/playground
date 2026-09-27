@@ -258,6 +258,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: FOLD-09 scripts/smoke-files-diff.mjs:876 (scripts/smoke)
 - last seen: 2026-09-27T13:52:57Z
 
+### L-047 - When a component rule moves into a pure seam, also mutate the call site's arguments: the seam's tests cannot see a caller that passes the wrong state
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer components` · harmful: 0
+- features: diff-fold-refresh
+- evidence: validation.md V8 (DiffViewer.tsx:307 call site of readingBeforeUpdate) (renderer components)
+- last seen: 2026-09-27T14:34:31Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

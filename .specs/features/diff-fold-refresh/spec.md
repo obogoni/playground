@@ -139,13 +139,13 @@ file is still whole. Close the tab and reopen the diff: it is folded.
 | -------------- | ----- | ----- | ------ |
 | FOLD-01 | P1: survive — AC 1 | T2, T6 / 14a | Verified |
 | FOLD-02 | P1: survive — AC 2 | T4, T6 / 14b, 14f | Verified |
-| FOLD-03 | P1: survive — AC 3 | T3, T4 / 14c | Needs evidence (validation Fix 1) |
-| FOLD-04 | P1: survive — AC 4 | T4 / 14b, 14d | Verified |
-| FOLD-05 | P1: survive — AC 5 | T3, T4 | Verified |
-| FOLD-06 | P1: survive — AC 6 | T4 | Needs evidence (validation Fix 3) |
+| FOLD-03 | P1: survive — AC 3 | T3, T4, T13 / 14c | Verified |
+| FOLD-04 | P1: survive — AC 4 | T4, T13 / 14b, 14d | Verified |
+| FOLD-05 | P1: survive — AC 5 | T3, T4, T14 | Verified |
+| FOLD-06 | P1: survive — AC 6 | T4, T14 | Verified |
 | FOLD-07 | P1: survive — AC 7 | T4 | Verified |
-| FOLD-08 | P1: survive — AC 8 | T6 (code; smoke gap, see T11) | Needs evidence (validation Fix 2) |
-| FOLD-09 | P1: survive — AC 9 | T6 / 14b, 14f | Verified (1 s); scroll half noted in validation |
+| FOLD-08 | P1: survive — AC 8 | T6, T15 (rule unit-tested; call site by code) | Verified |
+| FOLD-09 | P1: survive — AC 9 | T6, T16, T17 / 14b, 14f, 14f2 | Verified |
 | FOLD-10 | P1: survive — AC 10 | T2 / 14a | Verified |
 | FOLD-11 | P1: buttons — AC 11 | T9 / 14h | Verified |
 | FOLD-12 | P1: buttons — AC 12 | T4, T5, T7 / 14i | Verified |
@@ -161,7 +161,7 @@ file is still whole. Close the tab and reopen the diff: it is folded.
 | FOLD-22 | P1: diff tab — AC 22 | T8 / 14q | Verified |
 | FOLD-23 | Edge: remount | T7 / 14g | Verified |
 | FOLD-24 | Edge: files with nothing to fold | T9 / 14o | Verified |
-| FOLD-25 | Edge: unreadable fold state | T3, T6 | Verified |
+| FOLD-25 | Edge: unreadable fold state | T3, T6, T15 | Verified |
 | FOLD-26 | Edge: a write through an empty file | T4 | Verified |
 | FOLD-27 | Edge: a press with no editor mounted | T5, T9 / 14m | Verified |
 
