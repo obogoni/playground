@@ -288,6 +288,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: validation.md round 3: V6, V6h (smoke)
 - last seen: 2026-09-27T17:26:34Z
 
+### L-052 - Measure an overlap on the badge's own box, not on the wrapper that holds it; a child drawn outside its parent's box passes a check on the parent
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: files-status-glyphs
+- evidence: validation.md round 4: W4, W4h (smoke LAYOUT) (smoke)
+- last seen: 2026-09-27T18:08:55Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

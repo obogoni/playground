@@ -1,134 +1,124 @@
 ## Validation: files-status-glyphs — FAIL
 
-**Date**: 2026-09-27 (round 3, the last before escalating to the owner)
+**Date**: 2026-09-27 (round 4: the owner's one focused round after the round 3 escalation)
 **Spec**: `.specs/features/files-status-glyphs/spec.md` (FSTS-01..23, three edge cases)
-**Diff range**: feature `2756248..HEAD`. Fix round 2 is `61a90cc..HEAD` (`3768436` T15, `6018bdf` T16, `ee50d32` T17). It changes `scripts/smoke-files-diff.mjs` and `.specs` only
-**Verifier**: independent sub-agent (author ≠ verifier). Every smoke mutant ran in focused mode (`SMOKE_ONLY=glyphs`, the repo's own script), each on a fresh seed and a fresh `--user-data-dir`. Each went through an `.orig` copy restored in `finally`, with every anchor asserted exactly once. `git status --porcelain` was `''` before and after every run. I did not spend the full drive (see Round 2)
+**Diff range**: feature `2756248..HEAD`. The fix round is `83c0f6e..HEAD` (`20d1048` T18, `17d02f2` T19). It changes `scripts/smoke-files-diff.mjs` and `.specs` only, and no production file has changed since `24ee061` (`git diff --stat 24ee061..HEAD -- src` is empty)
+**Verifier**: independent sub-agent (author ≠ verifier). Scope set by the owner: check that T18 and T19 close round 3's gaps without opening new ones in what they touched. Fix 8's limit (V6, V6h) is accepted and does not fail this verdict. Every smoke mutant ran in focused mode (`SMOKE_ONLY=glyphs`), each on a fresh seed and a fresh `--user-data-dir`, through an `.orig` copy restored in `finally`, with every anchor asserted exactly once. `git status --porcelain` was `''` before and after every run. The driver is `fv4_mutants.py` and the logs are `fv4-<id>-drive.log` in the session scratchpad
 
-**Why FAIL**: all of round 2's gaps are closed. R5, R5h, R6, R6h and R7 are each killed by the check named for them. The production code is still correct wherever I probed it. But two new mutants of mine survive every check, and both do visible harm:
-- **V4**: the tree's end group is laid over the row's end (`position: absolute; right: 8px`), as an overlay hover action might be. The name then fills the row out to the content edge, so its text and its ellipsis are drawn under the `U` glyph.
-- **V4h**: the same overlay in the header. The `−0` count is drawn under the `U` glyph.
+**Why FAIL**: every round 3 gap is closed. V1, V1h, V4, V4h and T-b are each killed, and so are my 1 px overlap, zero-width, counts-over-path and two width-leak mutants. One new pair survives inside T18's own rule:
+- **W4 / W4h**: the glyph is pulled 12 px out of its end group (`.file-tree-end .status-glyph { margin-left: -12px }`, the same in the header). The end group's box shrinks to 4 px and still ends where it should. The glyph's right edge stays at the padding. The glyph's own box now runs **6.0 px into the name** in the tree and **4.0 px into the counts** in the headers (probe `fv4-P-W4-glyph-drive.log`; HEAD reads −6.0 and −8.0 px). All 19 checks pass.
 
-The margin twins V1 and V1h survive too. In V1 the name's box runs 40 px under the glyph; in V1h the path runs over the counts. See the screenshots below.
-
-Every check that reads the glyph's place reads the DOM order (`last`) and the glyph's right edge. None reads whether the name, the path or the counts end before the glyph begins. The drawn-ellipsis rule (T15) proves that an ellipsis is drawn. It does not prove where the ellipsis is drawn. The fix is smoke-only again.
+`LAYOUT` (smoke:956) compares the row's direct children, so it reads the end group's box, not the glyph's. The rule's doc comment says "nothing is drawn under the glyph", and that is what W4 and W4h break. It is the same harm class as V4h (the counts under the glyph, FSTS-16 "after the counts"), and a smaller one (4–6 px against 16 px). The fix is smoke-only and small (Fix 10).
 
 ---
 
 ## Round 1: how each gap was closed
 
-| Round 1 gap | Closed by | Status now |
-| ----------- | --------- | ---------- |
-| FSTS-21 had no runtime assertion (S8b) | T11, check 18 | ✅ S8b, R2 and R3 killed (round 2) |
-| The header tones were unasserted (S11) | T12, check 15 | ✅ S11 and R4 killed (round 2) |
-| The ellipsis was unasserted (S10) | T13, then T15 | ✅ S10, S10h, R5 and R5h killed. The place of the ellipsis is still open (V1, V4; Fix 7) |
-| A glyph hidden until hover passed (S7) | T14, checks 8, 16 and 18 | ✅ S7 and R1 killed (round 2) |
-| T5 row height; focused mode standing in for the full drive; an ancestor-level strike | measured, then accepted | unchanged. The `opened` flag in check 18's log still reads as proof that the tab opened, and it is not (cosmetic, round 2) |
+| Round 1 gap | Closed by | Status |
+| ----------- | --------- | ------ |
+| FSTS-21 had no runtime assertion (S8b) | T11, check 18 | ✅ closed (round 2) |
+| Header tones unasserted (S11) | T12, check 15 | ✅ closed (round 2) |
+| Ellipsis unasserted (S10) | T13, T15 | ✅ closed (round 3). Where it is drawn was closed by T18 (this round) |
+| A glyph hidden until hover passed (S7) | T14, checks 8, 16, 18 | ✅ closed (round 2) |
+| T5 row height; focused mode for the full drive; ancestor strike | measured, then accepted | accepted. The `opened` flag's misleading log was fixed by T19 (`clicked`, smoke:1544) |
 
 ## Round 2: how each gap was closed
 
-| Round 2 gap | Fix | My evidence (`fv3-<id>-drive.log`) | Status |
+| Round 2 gap | Closed by | Status |
+| ----------- | --------- | ------ |
+| Fix 5: R5, R5h (`text-overflow` alone read) | T15 `ellipsisFaults` | ✅ closed (round 3) |
+| Fix 6: no commit path cut; R7 | T16 `LONG_GUIDE`, `narrowUntilCut`, check 19 | ✅ closed (round 3) |
+| R6 broke no AC | T17, FSTS-22/23, checks 9 and 17 | ✅ closed (round 3), with the Fix 8 limit (see Round 3) |
+
+## Round 3: how each gap was closed
+
+| Round 3 gap | Fix | My evidence (`fv4-<id>-drive.log`) | Status |
 | ----------- | --- | ----------------------------------- | ------ |
-| Fix 5: R5 and R5h survived, because `text-overflow` alone was read | T15 `ellipsisFaults` (smoke:1064): overflows, `ellipsis`, `overflow-x` hidden or clip, `nowrap` | R5 fails 5 (`overflow-x visible`). R5h fails 14 and 19 (`overflow-x visible`) | ✅ closed |
-| Fix 6: no commit path was ever cut, and R7 survived | T16 seeds `LONG_GUIDE` (smoke:145, :821); `narrowUntilCut` (smoke:1320); check 19 (smoke:1563) | R7 fails 19 only (`text-overflow clip`). T-a (the narrowing skipped) fails 19 (`overflows false`), so the cut is really exercised | ✅ closed |
-| Spec-precision note: R6 broke no AC | T17 adds FSTS-22 and FSTS-23 and checks 9 and 17 | R6 fails 9 (`docs/removed.md: 69.0 px of text, scroll 69 in 40 px, 175.0 px free`). R6h fails 17 | ✅ closed. There is a boundary limit (V6 and V6h, Fix 8) |
-| The full drive after the seed change | the worker's `fr2-full-drive.log` | 48/48. The glyph checks are 20–38 and the icon checks 39–48 after them. FDIF-20 reads `+84 −83` and matches git | holds. The probe P-BASE shows the viewport restored after the commit tab (`1266x715` before and after), so I had no concrete doubt to spend the one full drive on |
+| Fix 7: V1, V4 (name under the glyph) | T18 `LAYOUT` (smoke:956) read in `treeRows` (smoke:997-998); `columnFaults` faults a children count other than `wantChildren` and any overlap > 0.5 px (smoke:1052) | V1 fails 3, 4, 5 (`file-tree-name over file-tree-end by 34.0 px`). V4 fails 3, 4, 5 (16.0 px) | ✅ closed |
+| Fix 7: V1h, V4h (path over the counts, counts under the glyph) | the same rule in `stackHeaders` (smoke:1332-1333) | V1h fails 11, 12, 14, 18, 19 (52.0 px). V4h fails 11, 12, 14, 18, 19 (`diff-section-counts over diff-section-end by 16.0 px`) | ✅ closed. W4h shows the rule reads the end group, not the glyph (Fix 10) |
+| Fix 8: V6, V6h (fit samples far from their bound) | not fixed; the Assumptions row at spec:45 | not re-run | ✅ accepted by the owner, 2026-09-27 |
+| Fix 9: T-b (narrowing not cleared, unasserted) | T19: `widthBefore` (smoke:1581), `widthAfter` (smoke:1601); `restored` requires `widthBefore > 900` and the two equal (smoke:1605) | T-b fails 18 (`width 1266 px before the narrowing, 900 px after`) | ✅ closed |
+| Cosmetic: T17's **What**, the Phase Execution Map, the `opened` flag | T19 | T17 now names the Range. The map counts nineteen tasks. Check 18 logs `open button clicked true; commit tab active true (…)` | ✅ closed |
 
 ---
 
 ## Task Completion
 
-T1–T17 are all checked off, and none is blocked or partial. I checked the T15–T17 Result blocks against the diff and the logs.
+T1–T19 are all checked off, and none is blocked or partial. I checked the T18 and T19 Result blocks against the diff and my own logs.
 
 | Task | Claim | Finding |
 | ---- | ----- | ------- |
-| T15 | `ellipsisFaults` holds the drawn-ellipsis rule; checks 5 and 14 require it; R5, R5h, S10 and S10h each fail | Confirmed: smoke:1064-1074, :1200, :1413. I re-ran R5 and R5h. My V2 and V2t (`white-space: normal`) fail 5, 14 and 19 (`overflows false … white-space normal`). The rule is **not sufficient**, though: V1 and V4 satisfy all four terms (Fix 7). It is also stricter than Chromium. `white-space: pre` and `overflow: auto` would also draw an ellipsis and would fail it. That is harmless for this code |
-| T16 | a long path in the branch commit; `narrowUntilCut` clears in `finally`; check 19 requires the cut; the counts are 45 | Confirmed: smoke:145, :821, :1320-1342, :1525, :1563. Check 19 reads `at 900 px, 45 headers`. The clear is real: P-BASE reads `1266x715` after the commit checks. **Limit**: no check asserts the clear. T-b (the clear skipped for the commit call) passes 19/19, and its probe reads `900x715` afterwards. The icon checks only run in the full drive, so a leaked narrowing would go unseen in focused mode (Minor, Fix 9) |
-| T17 | FSTS-22/23; natural width from a Range; checks 9 and 17 with preconditions; R6 and R6h fail | Confirmed: spec:68, :124, :44; smoke:922-947, :1077-1087, :1242, :1456. One stale line: T17's **What** still says the natural width is `scrollWidth`. The Result says why that was replaced. The Phase Execution Map still reads "Ten tasks". Both are cosmetic |
-| Gate | 1784 tests; lint 0/18; typecheck and build; `validate_spec` 0 errors | Re-run by me with the same numbers (Gate Check). `validate_spec`: 0 errors, 0 warnings. `validate_tasks`: 0 errors, 7 warnings, all pre-existing in kind |
+| T18 | `LAYOUT` in both reads; `columnFaults` faults a wrong visible-children count and an overlap > 0.5 px; checks 3, 4, 5, 11, 12, 14, 18 and 19 inherit it; V1, V1h, V4, V4h fail | Confirmed (smoke:956-968, :997-999, :1052-1056, :1332-1334). HEAD logs `children 3/3` (tree) and `4/4`, `3/3` (headers), worst overlap −6.0 and −8.0 px. **Limit**: the end group is measured as one box, so a glyph that leaves it is not seen (W4, W4h: Fix 10) |
+| T19 | `restored` requires the width back; T-b fails 18; notes fixed; Fix 8 row in `spec.md` | Confirmed. W7 (left at 1100 px) and W8 (never cleared, so 900 before and after) each fail 18. W8 is failed by the `> 900` guard alone, so the guard is necessary |
+| Gate | 1784 tests; lint 0/18; typecheck, build; `validate_spec` 0 errors | Re-run by me with the same numbers (Gate Check) |
+
+Cosmetic: the Requirement Coverage row for FSTS-20 in `tasks.md` names T18 in its evidence but not in its Tasks column.
 
 ---
 
 ## Spec-Anchored Acceptance Criteria
 
-`smoke:N` = `scripts/smoke-files-diff.mjs:N` at `ee50d32`, the line where the `check(` call starts. In the focused run the tree checks are 1–9 (smoke:1143-1242), the header checks 10–17 (smoke:1362-1456) and the commit tab checks 18–19 (smoke:1549, :1563). The full drive numbers them 20–38. `unit` = `src/renderer/src/lib/change-status.test.ts`.
+`smoke:N` = `scripts/smoke-files-diff.mjs:N` at `17d02f2`, the line where the `check(` call starts. Focused numbering: tree 1–9 (smoke:1189, :1202, :1211, :1228, :1246, :1257, :1265, :1274, :1289), headers 10–17 (smoke:1415, :1426, :1439, :1455, :1466, :1481, :1494, :1509), commit tab 18–19 (smoke:1611, :1627). The full drive numbers them 20–38. `unit` = `src/renderer/src/lib/change-status.test.ts`.
 
 | AC | Spec-defined outcome | `file:line` + assertion | Verdict |
 | -- | -------------------- | ----------------------- | ------- |
-| FSTS-01 | glyph last, right edge within 1 px of `row.right − paddingRight` | smoke:1165, :1182 `columnFaults` (smoke:1015): `glyphs === 1`, `last`, `abs(right − edge) ≤ 1`, over 45 + 4 rows. Killed: S3, S4, R1 | ✅ for the edge. "Last" is read as DOM order only: under V4 the glyph is last and at the edge, and it is drawn over the name (see FSTS-04) |
-| FSTS-02 | same edge within 1 px, any depth | the same function, `max − min ≤ 1`, with `depthsHold` | ✅ |
-| FSTS-03 | one glyph per file row | `item.glyphs !== 1` (smoke:1018). Killed: S3 | ✅ |
-| FSTS-04 | a name wider than its space is cut with an ellipsis, and the glyph keeps its place | smoke:1200 `ellipsisFaults(longRow)` plus `columnFaults` | ❌ GAP. R5, S10 and V2t are killed. **V4 survives** (the end group overlaid: the name and its ellipsis are drawn under the `U`), and so does **V1** (the name box runs 40 px under the glyph, and no ellipsis is visible). Nothing requires the name to end before the end group |
-| FSTS-05 | no glyph on folder rows | smoke:1210, `folderGlyphs.length === 0`, guards ≥3 / ≥2 | ✅ |
-| FSTS-06..10 | `+` green, `M` amber, `D` red, `R` accent, `U` muted, painted | unit:7-15; tones smoke:1156, :1428 (`toneFaultsOf`, `distinct === 5`, `seen.size === 5`, 49 glyphs); painted smoke:1227, :1441, inside :1549. Killed in rounds 1–2: S1, S11, R4, S7, R1 | ✅ |
-| FSTS-11 | tooltip names the status | unit:14; smoke:1143, :1182, :1362, :1386, :1549 against `GLYPHS` | ✅ |
-| FSTS-12 | one shared mapping | `change-status.ts:14-24`, imported by `FileTree.tsx:7`, `DiffSection.tsx:5` and `StatusGlyph.tsx:3`. No production change since round 1 | ✅ |
-| FSTS-13..15 | only the deleted name is struck | unit:18-21; smoke:1218, `struck[0] === 'docs/removed.md:name'`, exactly one | ✅ |
-| FSTS-16 | the header glyph is last, **after the counts**, within 1 px of the padding | smoke:1373 `headerFaults` over 45 headers. Killed: t10 b and c | ❌ GAP. **V4h survives**: the glyph is last in the DOM and at the edge, but it is drawn over the `−0` count, not after it. "After the counts" is only read as DOM order |
-| FSTS-17 | same edge, headers without counts included | smoke:1386 (`binary.counts === null`, `widths.size ≥ 2`). Killed: S5 | ✅ (the column itself holds under V4h) |
-| FSTS-18 | one glyph, nothing before the path | smoke:1362, :1373 (`glyphs === 1`, `pathSecond`) | ✅ |
-| FSTS-19 | only the path struck | smoke:1402. Killed: d, S9 | ✅ |
-| FSTS-20 | a path wider than its space is cut with an ellipsis, and the glyph keeps its place | smoke:1413 `ellipsisFaults(long)` at 900 px, plus `headerFaults` | ❌ GAP. R5h, S10h and V2 are killed. **V1h survives**: the path box runs 60 px past its space, its text is drawn over `+12 −0`, and its ellipsis sits just before the glyph |
-| FSTS-21 | commit-tab headers follow 16–20 | smoke:1549 (16–19) and smoke:1563 (20, on `LONG_GUIDE` narrowed to 900 px). Killed: S8b, R2, R3, R7, T-a | ✅ for everything commit-specific. It inherits the FSTS-16 and FSTS-20 gaps, because checks 18 and 19 reuse `headerFaults` and `ellipsisFaults` |
-| FSTS-22 | a name that fits shows whole | smoke:1242: `fitting` (natural ≤ space − 1) then `scroll ≤ shown`, over 52 rows; preconditions ≥ 47 fit and the long name does not. Killed: R6, V3 (−2 px), V3b (−1 px), V3s (−0.5 px), T-c | ✅. The evidence holds down to a 0.5 px cut. **Boundary limit**: the widest fitting name is 96.6 px, and the narrowest space is 175 px (min slack 78.4 px). A cap anywhere in between survives (V6, 120 px). Fix 8 |
-| FSTS-23 | a path that fits shows whole | smoke:1456, the same rule over 49 headers at full width plus the 4 narrowed ones. Killed: R6h, V3h (−1 px), T-c | ✅. Same limit: min slack 210.3 px, and V6h (a 700 px cap) survives. Fix 8 |
+| FSTS-01 | glyph last, right edge within 1 px of the padding | smoke:1211, :1228 `columnFaults` (smoke:1044): `glyphs === 1`, `last`, `abs(right − edge) ≤ 1`. Killed in earlier rounds: S3, S4, R1, t9 c | ✅ |
+| FSTS-02 | same edge within 1 px, any depth | the same function's spread `≤ 1`; check 4 reads depths 0 and 1 | ✅ |
+| FSTS-03 | one glyph per file row | `item.glyphs !== 1`. Killed: S3 | ✅ |
+| FSTS-04 | a name too wide is cut with an ellipsis; the glyph keeps its place | smoke:1246 `ellipsisFaults(longRow)` and `columnFaults([longRow, …])` with the overlap rule. Killed: R5, S10, V2t, V1, V4, W1 (a 1 px overlap) | ❌ GAP. **W4 survives**: the glyph box runs 6.0 px into the name, over the cut name's ellipsis |
+| FSTS-05 | no glyph on folder rows | smoke:1257, `folderGlyphs.length === 0` | ✅ |
+| FSTS-06..10 | `+` green, `M` amber, `D` red, `R` accent, `U` muted, painted | unit:7-15; tones smoke:1202, :1481; painted smoke:1274, :1494, inside :1611. Killed: S1, S11, R4, S7, R1 | ✅ |
+| FSTS-11 | tooltip names the status | unit:14; smoke:1189, :1228, :1415, :1439, :1611 | ✅ |
+| FSTS-12 | one shared mapping | `change-status.ts`, imported at `FileTree.tsx:7`, `DiffSection.tsx:5`, `StatusGlyph.tsx:3` | ✅ |
+| FSTS-13..15 | only the deleted name is struck | unit:18-21; smoke:1265 | ✅ |
+| FSTS-16 | the header glyph is last, **after the counts**, at the padding | smoke:1426 `headerFaults` with the overlap rule. Killed: t10 b, t10 c, V4h, W2h, W3h | ❌ GAP. **W4h survives**: the glyph box runs 4.0 px into the counts |
+| FSTS-17 | same edge, headers without counts included | smoke:1439 (`binary.counts === null`, `widths.size ≥ 2`). Killed: S5 | ✅ |
+| FSTS-18 | one glyph, nothing before the path | smoke:1415, :1426 (`glyphs === 1`, `pathSecond`) | ✅ |
+| FSTS-19 | only the path struck | smoke:1455. Killed: d, S9 | ✅ |
+| FSTS-20 | a path too wide is cut with an ellipsis; the glyph keeps its place | smoke:1466 `ellipsisFaults(long)` at 900 px plus `headerFaults`. Killed: R5h, S10h, V2, V1h, W1h | ✅. The seeded cut paths all have counts, so W4h's harm lands on the counts (FSTS-16), not on a cut path |
+| FSTS-21 | commit-tab headers follow 16–20 | smoke:1611 (with `restored`, smoke:1605) and smoke:1627. Killed: S8b, R2, R3, R7, T-a, T-b, W7, W8, V1h, V4h | ✅ for the commit-specific clauses. It inherits FSTS-16's gap (W4h passes 18 and 19) |
+| FSTS-22 | a name that fits shows whole | smoke:1289 `fitFaults` with ≥ 47 fitting. Killed: R6, V3, V3b, V3s, T-c (round 3) | ✅, with Fix 8's limit accepted (spec:45) |
+| FSTS-23 | a path that fits shows whole | smoke:1509. Killed: R6h, V3h, T-c (round 3) | ✅, with Fix 8's limit accepted (spec:45) |
 
-**Status**: ❌ gaps are present in FSTS-04, FSTS-16 and FSTS-20, and FSTS-21 inherits them. The other 19 ACs are evidenced by checks that fail on their mutants. FSTS-22 and FSTS-23 carry a Minor boundary limit.
+**Status**: ❌ FSTS-04 and FSTS-16 have a surviving mutant each (W4, W4h), and FSTS-21 inherits FSTS-16. The other 20 ACs have `file:line` evidence that is shown to fail on a mutant. FSTS-22 and FSTS-23 carry the owner-accepted limit.
 
-**T17's Range measure is a real precondition.** T-c replaces it with `clientWidth`, the box's own width. Checks 9 and 17 then fail on their own guards (`0 of 49 file names fit`, `0 of 49 paths fit`). A Range box is the text's width, unclipped: the long name reads 593.4 px in a 190 px box. The 1 px spare in `fitting` is what stops a measure that equals the box from passing. FSTS-22 and FSTS-23 are well formed: they are WHEN/THEN shaped, and each names a precise observable (shown whole, no ellipsis). `validate_spec` reports 0 errors and 0 warnings.
+### Can T18's children-count precondition pass while a child is missing?
 
-### Evidence for V1, V1h, V4 and V4h (probe `fv3_probe.py`, the round 2 `SMOKE_ONLY=ellipsis` probe, scratch only)
-
-| Run | Tree name (`clientWidth` in 190 px of space) | Header path (900 px, 465 px of space) | Drawn (`fv3shot-<id>-*.png`) |
-| --- | -------------------------------------------- | ------------------------------------- | ---------------------------- |
-| HEAD | 190 | 465 | `a-rather-long-untracked-fi…`, then `U` |
-| V1 (`.file-tree-name { margin-right: -40px }`) | 230 | 465 | `…file-nam` runs under the `U`, and no ellipsis is visible |
-| V4 (`.file-tree-end` absolute, `right: 8px`) | 212 | 465 | `…file-` then the ellipsis, drawn under the `U` |
-| V1h (`.diff-section-path { margin-right: -60px }`) | 190 | 525 | the path runs over `+12 −0`, and its ellipsis sits against the `U` |
-| V4h (`.diff-section-end` absolute, `right: 10px`) | 190 | 465 | the `−0` count is drawn under the `U` |
-
-In all four, `ellipsisFaults` is empty and `columnFaults` is empty. `last` holds and the glyph ends at the padding. The item's `space` (smoke:922) is already read, and so is its `shown` width. Under V1 and V4, `shown > space`, but no check compares the two.
+- **Zero-width or hidden: no.** A child is counted only with a box wider and taller than 0 and not `visibility: hidden`. W2h (counts `width: 0`, still in the DOM) fails 11, 12, 14, 18 and 19 with `3 of 4 children visible`, and the worker's P (chevron hidden) does the same.
+- **Tree rows: no.** `wantChildren` is a constant 3 (smoke:998), so a missing icon, name or end group fails.
+- **Header counts not rendered: yes.** `wantChildren: counts ? 4 : 3` (smoke:1333) reads the same DOM it checks. W6h drops the counts from `src/modified.ts` only, and all 19 checks pass (`children 4/4, 3/3`). The counts belong to the diff feature (FDIF), not to FSTS, so this is a follow-up, not a gap here.
+- **Painted away, box kept: yes, by construction.** `opacity: 0` or a transparent colour keeps the box, so the child counts. That is outside what the count is for. The count proves the overlap read sees the right boxes, not that they are painted.
 
 ---
 
 ## Discrimination Sensor
 
-Each run is a fresh seed and a fresh `--user-data-dir`, through the repo's smoke under `SMOKE_ONLY=glyphs`. The driver is `fv3_mutants.py` and the logs are `fv3-<id>-drive.log` in the session scratchpad. P-BASE (read-only PROBE lines, no mutation) is 19/19 in 36 s.
+Each run is a fresh seed and a fresh `--user-data-dir`, under `SMOKE_ONLY=glyphs`. BASE is 19/19 in 36 s.
 
 | # | File:line | Mutation | Failing checks (focused 1–19) | Killed? |
 | - | --------- | -------- | ----------------------------- | ------- |
-| R5 | `FileTree.css:111` | name without `overflow: hidden` | 5 (`overflow-x visible`) | ✅ |
-| R5h | `DiffSection.css:50` | path without `overflow: hidden` | 14, 19 | ✅ |
-| R6 | `FileTree.css:104` | `.file-tree-name { max-width: 40px }` | 9 | ✅ |
-| R6h | `DiffSection.css:43` | `.diff-section-path { max-width: 40px }` | 17 | ✅ |
-| R7 | `DiffSection.tsx:124` | commit tabs only: path `textOverflow: 'clip'` | 19 (`text-overflow clip`) | ✅ |
-| V2 | `DiffSection.css:49` | path `white-space: normal`, overflow still hidden | 14, 17, 19 (`overflows false … white-space normal`) | ✅ |
-| V2t | `FileTree.css:110` | name `white-space: normal` | 5, 9 | ✅ |
-| V3 | `FileTree.tsx:128` | every name `max-width: calc(<len>ch - 2px)` | 9 (`scroll 69 in 67 px`) | ✅ |
-| V3b | `FileTree.tsx:128` | the same, −1 px | 9 (`scroll 69 in 68 px`) | ✅ |
-| V3s | `FileTree.tsx:128` | the same, −0.5 px | 9 (`scroll 76 in 75 px`) | ✅ |
-| V3h | `DiffSection.tsx:124` | every path `max-width: calc(<len>ch - 1px)` | 17 (`scroll 614 in 613 px`) | ✅ |
-| **V1** | `FileTree.css:104` | `.file-tree-name { margin-right: -40px }`: the name box runs under the glyph | **19/19 pass** | ❌ Survived → Fix 7 |
-| **V1h** | `DiffSection.css:43` | `.diff-section-path { margin-right: -60px }`: the path runs over the counts | **19/19 pass** | ❌ Survived → Fix 7 |
-| **V4** | `FileTree.css:87, :134` | row `position: relative`; `.file-tree-end` absolute, `right: 8px` | **19/19 pass** | ❌ Survived → Fix 7 |
-| **V4h** | `DiffSection.css:18, :79` | header `position: relative`; `.diff-section-end` absolute, `right: 10px` | **19/19 pass** | ❌ Survived → Fix 7 |
-| V6 | `FileTree.css:104` | `.file-tree-name { max-width: 120px }` | 19/19 pass | ⚠️ Survived: boundary limit → Fix 8 |
-| V6h | `DiffSection.css:43` | `.diff-section-path { max-width: 700px }` | 19/19 pass | ⚠️ Survived: boundary limit → Fix 8 |
-| T-a | smoke:1525 (test-side) | the commit tab's narrowing skipped | 19 (`at unnarrowed px … overflows false`) | ✅ the precondition is real |
-| T-b | smoke:1338 (test-side) | the override not cleared after the commit tab | 19/19 pass; the probe reads `900x715` afterwards | ⚠️ unasserted → Fix 9 (the real code clears: P-BASE reads `1266x715`) |
-| T-c | smoke:943 (test-side) | the natural width read as `clientWidth` | 9, 17 (`0 of 49 … fit`) | ✅ the precondition is real |
+| V1 | `FileTree.css:104` | name `margin-right: -40px` | 3, 4, 5 | ✅ |
+| V1h | `DiffSection.css:43` | path `margin-right: -60px` | 11, 12, 14, 18, 19 | ✅ |
+| V4 | `FileTree.css:87, :134` | end group absolute, `right: 8px` | 3, 4, 5 | ✅ |
+| V4h | `DiffSection.css:18, :78` | end group absolute, `right: 10px` | 11, 12, 14, 18, 19 | ✅ |
+| T-b | smoke:1391 (test-side) | the commit call's override not cleared | 18 (`1266 px before, 900 px after`) | ✅ |
+| W1 | `FileTree.css:104` | name `margin-right: -7px`: exactly 1 px of overlap (the gap is 6 px) | 3, 4, 5 (`by 1.0 px`) | ✅ |
+| W1h | `DiffSection.css:43` | path `margin-right: -9px`: exactly 1 px (the gap is 8 px) | 11, 12, 14, 18, 19 (`by 1.0 px`) | ✅ |
+| W2h | `DiffSection.css:54` | counts `width: 0; overflow: hidden`: present, zero-width | 11, 12, 14, 18, 19 (`3 of 4 children visible`) | ✅ |
+| W3h | `DiffSection.css:54` | counts `position: relative; left: -20px`: drawn over the path | 11, 12, 14, 18, 19 (`diff-section-path over diff-section-counts by 12.0 px`) | ✅ |
+| **W4** | `FileTree.css:134` | `.file-tree-end .status-glyph { margin-left: -12px }` | **19/19 pass**. Probe: glyph box 6.0 px into the name | ❌ Survived → Fix 10 |
+| **W4h** | `DiffSection.css:78` | `.diff-section-end .status-glyph { margin-left: -12px }` | **19/19 pass**. Probe: glyph box 4.0 px into the counts | ❌ Survived → Fix 10 |
+| W5h | `DiffSection.css:54` | counts `width: 10px`, overflow visible: the text spills under the glyph | 12 only, by its `widths.size ≥ 2` guard (`count widths 10`), not by the overlap rule | ✅ incidentally (follow-up) |
+| W6h | `DiffSection.tsx:129` | counts not rendered for `src/modified.ts` | 19/19 pass (`children 4/4, 3/3`) | ⚠️ Survived: outside FSTS (follow-up) |
+| W7 | smoke:1391 (test-side) | the commit call leaves the window at 1100 px | 18 (`1266 px before, 1100 px after`) | ✅ |
+| W8 | smoke:1391 (test-side) | no narrowing ever cleared | 18 (`900 px before, 900 px after`: the `> 900` guard) | ✅ |
 
-**Sensor depth**: lightweight+ (5 re-runs, 13 new production mutants, 3 test-side mutants, on top of rounds 1–2).
-**Sensor verdict**: the sensor FAILS. V1, V1h, V4 and V4h are behaviour-level survivors with visible harm. V6 and V6h survive on the seed's sampling. All 11 of the other production mutants are killed.
+**Probes** (read-only lines added to `LAYOUT`): P-BASE-glyph reads the glyph box −6.0 px from the name and −8.0 px from the counts (a gap). P-W4-glyph reads +6.0 and +4.0 px (drawn over), while the rule's own overlap still reads −6.0 and −8.0.
+
+**Sensor depth**: lightweight+ (5 re-runs, 10 new mutants, 2 probes).
+**Sensor verdict**: FAIL. 12 of 15 are killed. W4 and W4h survive with visible harm inside T18's rule. W6h survives outside FSTS.
 
 `git status --porcelain` was `''` before, after every mutant and probe, and at the end.
-
-### Precondition judgements on the new checks
-
-- **Checks 5, 14 and 19 (drawn ellipsis)**: each term is necessary, and together they prove an ellipsis is drawn. They do not prove *where* it is drawn (V1, V4). They are over-strict towards `white-space: pre` and `overflow: auto`, which is harmless here.
-- **Check 19 (commit cut path)**: real. T-a shows that without the narrowing `LONG_GUIDE` is not cut, and the check fails. The check requires `showing` and 45 headers at the narrowed width, so it reads the commit stack.
-- **Checks 9 and 17 (fits shows whole)**: real, and fine-grained. A 0.5 px cut fails. Their samples all sit ≥ 78 px (tree) or ≥ 210 px (headers) below their space, so a cap between the two survives.
-- **The clear of the narrowing**: done in a `finally`, and effective on HEAD. It is not asserted, and focused mode cannot see a leak into the icon checks.
 
 ---
 
@@ -136,52 +126,49 @@ Each run is a fresh seed and a fresh `--user-data-dir`, through the repo's smoke
 
 | Principle | Status |
 | --------- | ------ |
-| Minimum code: one `ellipsisFaults`, one `narrowUntilCut` (an extraction of T10's loop), one `fitting` / `fitFaults` pair | ✅ |
-| Surgical changes: the smoke script and `.specs` only; no production file touched since `24ee061` | ✅ |
-| No scope creep: the seed gains one fictional file, which the owner decided | ✅ |
-| Matches patterns: `check(label, ok, detail)`, `readWhen`, FSTS ids in the labels | ✅ |
-| Spec-anchored outcome check | ❌ FSTS-04, 16, 20: the place of the cut and of the glyph is read from the DOM order and the glyph's edge, not from what is drawn over what |
-| Per-layer coverage | ✅ the mapping is 1:1 in unit tests; the components are covered by the smoke, except the gaps above |
+| Minimum code: one `LAYOUT` read, one `layoutDetail` log helper, two width reads | ✅ |
+| Surgical: the smoke script and `.specs` only | ✅ |
+| No scope creep | ✅ |
+| Matches patterns: `check(label, ok, detail)`, FSTS ids in labels | ✅ |
+| Spec-anchored outcome check | ❌ FSTS-04 and FSTS-16: the overlap rule reads the end group's box, not the glyph's |
+| Per-layer coverage: the mapping 1:1 in unit tests, components in the smoke | ✅ except the gap above |
 | Every test maps to an AC, edge case or Done-when | ✅ |
-| Documented guidelines followed: `.specs/codebase/TESTING.md` | ✅ |
+| Documented guidelines: `.specs/codebase/TESTING.md` | ✅ |
 
 ---
 
 ## Edge Cases
 
-- [x] Mixed depths 0 and 1 share one column: smoke:1182 with `depthsHold`
-- [x] A binary header without counts keeps the column: smoke:1386 (`logo.bin counts null`)
-- [x] The same glyph, tooltip and tone in both lists: smoke:1156, :1182, :1428
+- [x] Mixed depths 0 and 1 share one column: smoke:1228
+- [x] A binary header without counts keeps the column: smoke:1439 (`logo.bin counts null`, `children 3/3`)
+- [x] The same glyph, tooltip and tone in both lists: smoke:1202, :1228, :1481
 
 ---
 
 ## Gate Check
 
-- **Gate command**: `npm run typecheck && npm run lint && npm test`, plus `npx electron-vite build`, re-run by me (`fv3-*.log`)
+- **Gate command**: `npm run typecheck && npm run lint && npm test`, plus `npx electron-vite build`, re-run by me after the mutants (`fv4-*.log`)
 - **Outcome**: typecheck exit 0; lint exit 0 with 0 errors and 18 warnings (the baseline); vitest 1784 passed, 0 failed, 0 skipped in 93 files; build exit 0
-- **Test count before the feature**: 1778 (92 files)
-- **Test count after the feature**: 1784 (93 files)
-- **Delta**: +6, none removed. Fix round 2 added no unit tests (smoke only)
-- **Smoke**: focused 19/19 on HEAD (`fv3-P-BASE-drive.log`, 36 s). The worker's full drive is 48/48 (`fr2-full-drive.log`)
+- **Test count before the feature**: 1778 (92 files). **After**: 1784 (93 files). **Delta**: +6, none removed; this fix round added no unit tests
+- **Smoke**: focused BASE 19/19 (`fv4-BASE-drive.log`, 36 s). Per the owner I did not re-run the full drive; the worker's `fr3-full-drive.log` is 48/48, with check 37 reading `restored true (width 1266 px before the narrowing, 1266 px after)`
+- **Validators**: `validate_spec` 0 errors, 0 warnings. `validate_tasks` 0 errors, 8 warnings (T19's is new and of the existing "Where names multiple files" kind)
 
 ---
 
-## Fix Plans (for the owner: round 3 is the last before escalation)
+## Fix Plans
 
-All three fixes go in `scripts/smoke-files-diff.mjs`. Each must first be seen failing on its mutant, then passing.
+### Fix 10: measure the glyph, not only its end group (FSTS-04, FSTS-16; FSTS-21 inherits), Minor
 
-### Fix 7: nothing is drawn under the glyph (FSTS-04, FSTS-16, FSTS-20; FSTS-21 inherits), Minor
-- **Root cause**: the checks read the glyph's DOM position (`last`) and its right edge, and the ellipsis's style. None of them reads whether the element before the end group ends before it begins.
-- **Fix task**: in `treeRows` and `stackHeaders`, read each row's or header's children in order, and record the largest overlap `prev.right − next.left`. In `columnFaults` (smoke:1015), fault any item where it exceeds 0.5 px. That rule covers the name, the path and the counts against the end group, and the path against the counts, so checks 3, 4, 5, 11, 12, 14, 18 and 19 all inherit it. A narrower option is to require `shown ≤ space + 1` on the cut element in `ellipsisFaults`. It catches V1 and V4 but not V4h, whose counts overlap the glyph.
-- **Verify**: V1 and V4 fail 5 (and 3 or 4). V1h fails 14. V4h fails 11 or 12, and 18. HEAD stays 19/19.
+- **Root cause**: `LAYOUT` (smoke:956) takes the row's or header's direct children, and the end group counts as one box. A glyph can leave that box (a negative margin, a transform, an absolute offset inside it) while the box and the glyph's right edge both hold.
+- **Fix task**: in `LAYOUT`, put the end group's own visible children in its place in `kids`, so the overlap is read against the glyph box (and, later, against #132's discard action). `wantChildren` stays 3 for a tree row, and 4 or 3 for a header, while the end group holds only the glyph. The alternative is one more pair: the child before the end group against the glyph's box.
+- **Verify**: W4 fails 3, 4 and 5. W4h fails 11, 12, 14, 18 and 19. V1, V1h, V4, V4h, W1 and W1h still fail. HEAD stays 19/19. Driver: `fv4_mutants.py W4-glyph-out-of-end W4h-glyph-out-of-end`.
 
-### Fix 8: a fitting sample near its boundary (FSTS-22, FSTS-23), Minor, the owner's call
-- **Root cause**: every fitting sample sits 78 px (tree) or 210 px (headers) below its space, so a cap between them breaks the AC on real names and passes on the seed (V6, V6h).
-- **Options**: (a) Have `narrowUntilCut` run `fitFaults` at every width it steps through (900, 800, 700 and 600 px), so header paths approach their space. Then add one seeded tree name whose natural width is within about 20 px of the space its row leaves at the tree's minimum width. (b) Accept the limit. Any seed leaves some slack, and the 1 px spare already catches every cut that reaches a sample.
-- **Verify, for (a)**: V6 and V6h fail 9 and 17.
+### Follow-ups (outside this round's scope, not part of the verdict)
 
-### Fix 9: assert the viewport is restored, Cosmetic
-- In `glyphCommitChecks`, include `window.innerWidth` equal to its value before the narrowing in `restored`. **Verify**: T-b fails 18.
+- **W6h**: a header's `wantChildren` reads the counts from the same DOM it checks. Take it from the seed instead (only `assets/logo.bin` has no counts). The counts are FDIF's.
+- **W5h**: the rule reads boxes, not ink. Counts that spill out of a narrow box are caught only when every header's counts share one width. A `scrollWidth > clientWidth` check on the counts would close it.
+- **Threshold**: an overlap of 0.5 px or less passes by design. W1 and W1h show 1 px fails.
+- **Cosmetic**: the FSTS-20 row of `tasks.md`'s Requirement Coverage table should list T18 under Tasks.
 
 ---
 
@@ -189,28 +176,28 @@ All three fixes go in `scripts/smoke-files-diff.mjs`. Each must first be seen fa
 
 | Requirement | Previous Status | New Status |
 | ----------- | --------------- | ---------- |
-| FSTS-01..03, 05..15, 17..19 | Verified (round 2) | ✅ Verified (round 3 re-checked) |
-| FSTS-04 | Implementing (Fix 5, T15) | ❌ Needs Fix (Fix 7: V1, V4) |
-| FSTS-16 | Verified (round 2) | ❌ Needs Fix (Fix 7: V4h) |
-| FSTS-20 | Implementing (Fix 5, T15/T16) | ❌ Needs Fix (Fix 7: V1h) |
-| FSTS-21 | Implementing (Fix 6, T16) | ⚠️ Commit-specific clauses verified (S8b, R7, T-a); inherits Fix 7 |
-| FSTS-22 | Implementing (T17) | ✅ Verified, with the Fix 8 boundary limit (V6) |
-| FSTS-23 | Implementing (T17) | ✅ Verified, with the Fix 8 boundary limit (V6h) |
+| FSTS-01..03, 05..15, 17..19 | Verified (round 3) | ✅ Verified (round 4) |
+| FSTS-04 | Implementing (T18) | ❌ Needs Fix (Fix 10: W4). V1 and V4 are closed |
+| FSTS-16 | Implementing (T18) | ❌ Needs Fix (Fix 10: W4h). V4h is closed |
+| FSTS-20 | Implementing (T18) | ✅ Verified (V1h, W1h killed) |
+| FSTS-21 | Implementing (T18, T19) | ⚠️ Commit-specific clauses verified (T-b, W7, W8); inherits Fix 10 via FSTS-16 |
+| FSTS-22 | Verified, Fix 8 limit | ✅ Verified, with the limit accepted by the owner |
+| FSTS-23 | Verified, Fix 8 limit | ✅ Verified, with the limit accepted by the owner |
 
 ---
 
 ## Summary
 
-**Overall**: ❌ Not Ready. The behaviour is correct, and every round 2 gap is closed. What is still missing is one geometric rule: nothing may be drawn under the glyph.
+**Overall**: ❌ Not Ready. The production code is unchanged and correct. T18 and T19 close every round 3 gap, and T19 is complete. T18's rule has one blind spot: it measures the end group, not the glyph inside it.
 
-**Spec-anchored check**: 19 of 23 ACs are fully evidenced. FSTS-04, FSTS-16 and FSTS-20 read the place of the glyph and the cut from the DOM order, and FSTS-21 inherits them.
-**Sensor**: 11 of the 17 production mutants are killed (R5, R5h, R6, R6h, R7, V2, V2t, V3, V3b, V3s, V3h). V1, V1h, V4 and V4h survive with visible harm. V6 and V6h survive on the seed's sampling.
-**Gate**: 1784 passed, 0 failed; lint 0 errors / 18 warnings (the baseline); typecheck and build exit 0.
+**Spec-anchored check**: 20 of 23 ACs are fully evidenced. FSTS-04 and FSTS-16 have a survivor each, and FSTS-21 inherits FSTS-16's.
+**Sensor**: 12 of 15 killed. W4 and W4h survive (Fix 10). W6h survives outside FSTS (follow-up).
+**Gate**: 1784 passed, 0 failed; lint 0 errors / 18 warnings; typecheck and build exit 0.
 
 **What works**:
-- The drawn-ellipsis rule.
-- The commit tab's cut path, which is really exercised (T-a).
-- The fit checks, down to a 0.5 px cut, with a real Range precondition (T-c).
-- The narrowing is cleared on HEAD.
+- The overlap rule, down to 1 px, on the name, the path and the counts.
+- The children count, against zero-width and hidden children.
+- The viewport check, including its `> 900` guard.
+- The fixed notes and the recorded Fix 8 limit.
 
-**Next steps**: escalate to the owner, with Fix 7 (needed), Fix 8 (the owner's call) and Fix 9 (cosmetic).
+**Next steps**: the owner decides: either Fix 10 (a few lines in `LAYOUT`, then W4 and W4h re-run), or accept W4 and W4h as a recorded limit, as was done for Fix 8.

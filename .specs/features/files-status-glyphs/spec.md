@@ -141,29 +141,29 @@ right after the chevron and before the path.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FSTS-01 | P1: one column — AC 1 | Execute | Verified (validation.md round 3) |
-| FSTS-02 | P1: one column — AC 2 | Execute | Verified (validation.md round 3) |
-| FSTS-03 | P1: one column — AC 3 | Execute | Verified (validation.md round 3) |
-| FSTS-04 | P1: one column — AC 4 | Execute | Implementing: T18 (fix round 3, Fix 7): the tree column checks (focused 3, 4, 5; full drive 22, 23, 24) also fault a name drawn over the end group, and check 5 the drawn ellipsis (T15); V1 and V4 fail 3, 4 and 5 |
-| FSTS-05 | P1: one column — AC 5 | Execute | Verified (validation.md round 3) |
-| FSTS-06 | P1: glyph — AC 6 | Execute | Verified (validation.md round 3) |
-| FSTS-07 | P1: glyph — AC 7 | Execute | Verified (validation.md round 3) |
-| FSTS-08 | P1: glyph — AC 8 | Execute | Verified (validation.md round 3) |
-| FSTS-09 | P1: glyph — AC 9 | Execute | Verified (validation.md round 3) |
-| FSTS-10 | P1: glyph — AC 10 | Execute | Verified (validation.md round 3) |
-| FSTS-11 | P1: glyph — AC 11 | Execute | Verified (validation.md round 3) |
-| FSTS-12 | P1: glyph — AC 12 | Execute | Verified (validation.md round 3) |
-| FSTS-13 | P1: deleted — AC 13 | Execute | Verified (validation.md round 3) |
-| FSTS-14 | P1: deleted — AC 14 | Execute | Verified (validation.md round 3) |
-| FSTS-15 | P1: deleted — AC 15 | Execute | Verified (validation.md round 3) |
-| FSTS-16 | P1: headers — AC 16 | Execute | Implementing: T18 (Fix 7): the header column checks (focused 11, 12, 14; full drive 30, 31, 33) and the commit tab's (focused 18, 19; full drive 37, 38) also fault counts drawn under the glyph; V4h fails all five |
-| FSTS-17 | P1: headers — AC 17 | Execute | Verified (validation.md round 3) |
-| FSTS-18 | P1: headers — AC 18 | Execute | Verified (validation.md round 3) |
-| FSTS-19 | P1: headers — AC 19 | Execute | Verified (validation.md round 3) |
-| FSTS-20 | P1: headers — AC 20 | Execute | Implementing: T18 (Fix 7): the cut path checks (focused 14, 19; full drive 33, 38) and the header column checks also fault a path drawn over the counts or the glyph; V1h fails 11, 12, 14, 18 and 19 |
-| FSTS-21 | P1: headers — AC 21 | Execute | Implementing: T18 and T19 (Fix 7, Fix 9): the commit tab checks (focused 18, 19; full drive 37, 38) inherit the overlap rule (V1h and V4h fail them), and 18 requires the window's width restored after the narrowing (T-b fails it) |
-| FSTS-22 | P1: one column — AC 22 | Execute | Verified (validation.md round 3); Fix 8 boundary limit, V6 (a 120 px cap) survives |
-| FSTS-23 | P1: headers — AC 23 | Execute | Verified (validation.md round 3); Fix 8 boundary limit, V6h (a 700 px cap) survives |
+| FSTS-01 | P1: one column — AC 1 | Execute | Verified (validation.md round 4) |
+| FSTS-02 | P1: one column — AC 2 | Execute | Verified (validation.md round 4) |
+| FSTS-03 | P1: one column — AC 3 | Execute | Verified (validation.md round 4) |
+| FSTS-04 | P1: one column — AC 4 | Execute | Needs Fix: Fix 10 (validation.md round 4). T18 closed V1 and V4 (both fail 3, 4 and 5), but W4 (the glyph pulled 12 px out of its end group) draws the glyph 6 px over the name and passes every check |
+| FSTS-05 | P1: one column — AC 5 | Execute | Verified (validation.md round 4) |
+| FSTS-06 | P1: glyph — AC 6 | Execute | Verified (validation.md round 4) |
+| FSTS-07 | P1: glyph — AC 7 | Execute | Verified (validation.md round 4) |
+| FSTS-08 | P1: glyph — AC 8 | Execute | Verified (validation.md round 4) |
+| FSTS-09 | P1: glyph — AC 9 | Execute | Verified (validation.md round 4) |
+| FSTS-10 | P1: glyph — AC 10 | Execute | Verified (validation.md round 4) |
+| FSTS-11 | P1: glyph — AC 11 | Execute | Verified (validation.md round 4) |
+| FSTS-12 | P1: glyph — AC 12 | Execute | Verified (validation.md round 4) |
+| FSTS-13 | P1: deleted — AC 13 | Execute | Verified (validation.md round 4) |
+| FSTS-14 | P1: deleted — AC 14 | Execute | Verified (validation.md round 4) |
+| FSTS-15 | P1: deleted — AC 15 | Execute | Verified (validation.md round 4) |
+| FSTS-16 | P1: headers — AC 16 | Execute | Needs Fix: Fix 10 (validation.md round 4). T18 closed V4h (it fails 11, 12, 14, 18 and 19), but W4h draws the glyph 4 px over the counts and passes every check |
+| FSTS-17 | P1: headers — AC 17 | Execute | Verified (validation.md round 4) |
+| FSTS-18 | P1: headers — AC 18 | Execute | Verified (validation.md round 4) |
+| FSTS-19 | P1: headers — AC 19 | Execute | Verified (validation.md round 4) |
+| FSTS-20 | P1: headers — AC 20 | Execute | Verified (validation.md round 4): V1h and a 1 px overlap (W1h) fail 11, 12, 14, 18 and 19 |
+| FSTS-21 | P1: headers — AC 21 | Execute | Commit-specific clauses verified (validation.md round 4: T-b, W7 and W8 fail 18; V1h and V4h fail 18 and 19); inherits Fix 10 via FSTS-16 |
+| FSTS-22 | P1: one column — AC 22 | Execute | Verified (validation.md round 4), with Fix 8's boundary limit accepted by the owner (V6, a 120 px cap, survives) |
+| FSTS-23 | P1: headers — AC 23 | Execute | Verified (validation.md round 4), with Fix 8's boundary limit accepted by the owner (V6h, a 700 px cap, survives) |
 
 **Coverage:** 23 total, 23 mapped to tasks, 0 unmapped.
 

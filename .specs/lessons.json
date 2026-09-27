@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 52,
+  "next_id": 53,
   "lessons": [
     {
       "id": "L-001",
@@ -838,6 +838,24 @@
       ],
       "created": "2026-09-27T17:26:34Z",
       "last_seen": "2026-09-27T17:26:34Z"
+    },
+    {
+      "id": "L-052",
+      "key": "surviving_mutant::measure an overlap on the badge s own box not on the wrapper that holds it a child drawn outside its parent s box passes a check on the parent",
+      "text": "Measure an overlap on the badge's own box, not on the wrapper that holds it; a child drawn outside its parent's box passes a check on the parent",
+      "signal": "surviving_mutant",
+      "scope": "smoke",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round 4: W4, W4h (smoke LAYOUT) (smoke)"
+      ],
+      "created": "2026-09-27T18:08:55Z",
+      "last_seen": "2026-09-27T18:08:55Z"
     }
   ]
 }
