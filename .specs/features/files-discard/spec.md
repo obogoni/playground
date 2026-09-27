@@ -241,7 +241,7 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-21 | P1: nothing permanent — AC 21 | Tasks | Pending |
 | FDSC-22 | P1: nothing permanent — AC 22 | Tasks | Pending |
 | FDSC-23 | P1: nothing permanent — AC 23 | Tasks | Pending |
-| FDSC-24 | P1: rename — AC 24 | Tasks | Pending |
+| FDSC-24 | P1: rename — AC 24 | Execute | Implementing: T1 (unit) |
 | FDSC-25 | P1: rename — AC 25 | Tasks | Pending |
 | FDSC-26 | P1: rename — AC 26 | Tasks | Pending |
 | FDSC-27 | P1: rename — AC 27 | Tasks | Pending |

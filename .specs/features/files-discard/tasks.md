@@ -110,11 +110,11 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] Tests on porcelain samples: `R  old/a.txt -> new/a.txt` → `oldPath: 'old/a.txt'`; `RM` and `RD` keep it; `R  "caf\303\251 old.txt" -> "new name.txt"` decodes both sides; `C  src.txt -> copy.txt` → `added` with `oldPath: 'src.txt'`; ` M a -> b.txt` stays one path with no `oldPath`; `??` and ` M` entries carry no `oldPath` key
-- [ ] One real-git test: a temp repo with `status.renames true` and `core.autocrlf false` set locally (L-026), `git mv a.ts b.ts`, `changedFilesOf` returns `{ path: 'b.ts', status: 'renamed', oldPath: 'a.ts' }`
-- [ ] The three tests pinning the old rename shape (`worktree-manager.test.ts:269-292`) rewritten to the new one, each named in the commit body
-- [ ] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts`, then `npm run typecheck` (the type is shared)
-- [ ] Test count: baseline + the new tests (rewrites counted once)
+- [x] Tests on porcelain samples: `R  old/a.txt -> new/a.txt` → `oldPath: 'old/a.txt'`; `RM` and `RD` keep it; `R  "caf\303\251 old.txt" -> "new name.txt"` decodes both sides; `C  src.txt -> copy.txt` → `added` with `oldPath: 'src.txt'`; ` M a -> b.txt` stays one path with no `oldPath`; `??` and ` M` entries carry no `oldPath` key
+- [x] One real-git test: a temp repo with `status.renames true` and `core.autocrlf false` set locally (L-026), `git mv a.ts b.ts`, `changedFilesOf` returns `{ path: 'b.ts', status: 'renamed', oldPath: 'a.ts' }`
+- [x] The three tests pinning the old rename shape (`worktree-manager.test.ts:269-292`) rewritten to the new one, each named in the commit body
+- [x] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts`, then `npm run typecheck` (the type is shared)
+- [x] Test count: baseline + the new tests (rewrites counted once)
 
 **Tests**: unit
 **Gate**: quick
