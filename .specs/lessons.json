@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 50,
+  "next_id": 52,
   "lessons": [
     {
       "id": "L-001",
@@ -802,6 +802,42 @@
       ],
       "created": "2026-09-27T16:29:15Z",
       "last_seen": "2026-09-27T16:29:15Z"
+    },
+    {
+      "id": "L-050",
+      "key": "surviving_mutant::when a trailing badge must stay readable assert that the element before it ends before the badge begins dom order and the badge s edge do not prove nothing is drawn under it",
+      "text": "When a trailing badge must stay readable, assert that the element before it ends before the badge begins; DOM order and the badge's edge do not prove nothing is drawn under it",
+      "signal": "surviving_mutant",
+      "scope": "smoke",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round 3: V1, V1h, V4, V4h (smoke)"
+      ],
+      "created": "2026-09-27T17:26:34Z",
+      "last_seen": "2026-09-27T17:26:34Z"
+    },
+    {
+      "id": "L-051",
+      "key": "surviving_mutant::for a fits shows whole criterion sample a value that fits within a few pixels of its space or a width cap between the widest sample and the space passes",
+      "text": "For a fits-shows-whole criterion, sample a value that fits within a few pixels of its space, or a width cap between the widest sample and the space passes",
+      "signal": "surviving_mutant",
+      "scope": "smoke",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round 3: V6, V6h (smoke)"
+      ],
+      "created": "2026-09-27T17:26:34Z",
+      "last_seen": "2026-09-27T17:26:34Z"
     }
   ]
 }

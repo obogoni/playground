@@ -140,29 +140,29 @@ right after the chevron and before the path.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FSTS-01 | P1: one column — AC 1 | Execute | Verified (validation.md round 2) |
-| FSTS-02 | P1: one column — AC 2 | Execute | Verified (validation.md round 2) |
-| FSTS-03 | P1: one column — AC 3 | Execute | Verified (validation.md round 2) |
-| FSTS-04 | P1: one column — AC 4 | Execute | Implementing: Fix 5 (T15), tree check 5 requires a drawn ellipsis via `ellipsisFaults` (overflows, `text-overflow: ellipsis`, `overflow-x` hidden or clip, `white-space: nowrap`); R5 and S10 fail it |
-| FSTS-05 | P1: one column — AC 5 | Execute | Verified (validation.md round 2) |
-| FSTS-06 | P1: glyph — AC 6 | Execute | Verified (validation.md round 2) |
-| FSTS-07 | P1: glyph — AC 7 | Execute | Verified (validation.md round 2) |
-| FSTS-08 | P1: glyph — AC 8 | Execute | Verified (validation.md round 2) |
-| FSTS-09 | P1: glyph — AC 9 | Execute | Verified (validation.md round 2) |
-| FSTS-10 | P1: glyph — AC 10 | Execute | Verified (validation.md round 2) |
-| FSTS-11 | P1: glyph — AC 11 | Execute | Verified (validation.md round 2) |
-| FSTS-12 | P1: glyph — AC 12 | Execute | Verified (validation.md round 2) |
-| FSTS-13 | P1: deleted — AC 13 | Execute | Verified (validation.md round 2) |
-| FSTS-14 | P1: deleted — AC 14 | Execute | Verified (validation.md round 2) |
-| FSTS-15 | P1: deleted — AC 15 | Execute | Verified (validation.md round 2) |
-| FSTS-16 | P1: headers — AC 16 | Execute | Verified (validation.md round 2) |
-| FSTS-17 | P1: headers — AC 17 | Execute | Verified (validation.md round 2) |
-| FSTS-18 | P1: headers — AC 18 | Execute | Verified (validation.md round 2) |
-| FSTS-19 | P1: headers — AC 19 | Execute | Verified (validation.md round 2) |
-| FSTS-20 | P1: headers — AC 20 | Execute | Implementing: Fix 5 (T15), header check 5 (focused 14) requires `ellipsisFaults` empty at the narrowed width; R5h and S10h fail it. The commit tab's cut path check (T16) too |
-| FSTS-21 | P1: headers — AC 21 | Execute | Implementing: Fix 6 (T16), clauses 16-19 by the commit tab check (focused 18); clause 20 by the commit tab's cut path check (focused 19), on the seeded `LONG_GUIDE` narrowed until cut; R7 fails it |
-| FSTS-22 | P1: one column — AC 22 | Execute | Implementing: T17, the tree's fitting names check (focused 9), over both lists; R6 fails it |
-| FSTS-23 | P1: headers — AC 23 | Execute | Implementing: T17, the headers' fitting paths check (focused 17), over both stacks and the narrowed stack; R6h fails it |
+| FSTS-01 | P1: one column — AC 1 | Execute | Verified (validation.md round 3) |
+| FSTS-02 | P1: one column — AC 2 | Execute | Verified (validation.md round 3) |
+| FSTS-03 | P1: one column — AC 3 | Execute | Verified (validation.md round 3) |
+| FSTS-04 | P1: one column — AC 4 | Execute | Needs Fix: Fix 7 (validation.md round 3), V1 and V4 draw the name and its ellipsis under the glyph and pass check 5 |
+| FSTS-05 | P1: one column — AC 5 | Execute | Verified (validation.md round 3) |
+| FSTS-06 | P1: glyph — AC 6 | Execute | Verified (validation.md round 3) |
+| FSTS-07 | P1: glyph — AC 7 | Execute | Verified (validation.md round 3) |
+| FSTS-08 | P1: glyph — AC 8 | Execute | Verified (validation.md round 3) |
+| FSTS-09 | P1: glyph — AC 9 | Execute | Verified (validation.md round 3) |
+| FSTS-10 | P1: glyph — AC 10 | Execute | Verified (validation.md round 3) |
+| FSTS-11 | P1: glyph — AC 11 | Execute | Verified (validation.md round 3) |
+| FSTS-12 | P1: glyph — AC 12 | Execute | Verified (validation.md round 3) |
+| FSTS-13 | P1: deleted — AC 13 | Execute | Verified (validation.md round 3) |
+| FSTS-14 | P1: deleted — AC 14 | Execute | Verified (validation.md round 3) |
+| FSTS-15 | P1: deleted — AC 15 | Execute | Verified (validation.md round 3) |
+| FSTS-16 | P1: headers — AC 16 | Execute | Needs Fix: Fix 7 (validation.md round 3), V4h draws the glyph over the counts and passes checks 11-12 |
+| FSTS-17 | P1: headers — AC 17 | Execute | Verified (validation.md round 3) |
+| FSTS-18 | P1: headers — AC 18 | Execute | Verified (validation.md round 3) |
+| FSTS-19 | P1: headers — AC 19 | Execute | Verified (validation.md round 3) |
+| FSTS-20 | P1: headers — AC 20 | Execute | Needs Fix: Fix 7 (validation.md round 3), V1h draws the path over the counts and passes check 14 |
+| FSTS-21 | P1: headers — AC 21 | Execute | Commit-specific clauses verified (validation.md round 3: S8b, R7, T-a killed); inherits Fix 7 via FSTS-16 and FSTS-20 |
+| FSTS-22 | P1: one column — AC 22 | Execute | Verified (validation.md round 3); Fix 8 boundary limit, V6 (a 120 px cap) survives |
+| FSTS-23 | P1: headers — AC 23 | Execute | Verified (validation.md round 3); Fix 8 boundary limit, V6h (a 700 px cap) survives |
 
 **Coverage:** 23 total, 23 mapped to tasks, 0 unmapped.
 

@@ -276,6 +276,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: validation.md round 2: R6 (FSTS-04, FSTS-20) (specs)
 - last seen: 2026-09-27T16:29:15Z
 
+### L-050 - When a trailing badge must stay readable, assert that the element before it ends before the badge begins; DOM order and the badge's edge do not prove nothing is drawn under it
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: files-status-glyphs
+- evidence: validation.md round 3: V1, V1h, V4, V4h (smoke)
+- last seen: 2026-09-27T17:26:34Z
+
+### L-051 - For a fits-shows-whole criterion, sample a value that fits within a few pixels of its space, or a width cap between the widest sample and the space passes
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: files-status-glyphs
+- evidence: validation.md round 3: V6, V6h (smoke)
+- last seen: 2026-09-27T17:26:34Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
