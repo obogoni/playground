@@ -218,9 +218,9 @@ Each carries an ID and its own test or smoke check (L-025).
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FDSC-01 | P1: one file — AC 1 | Tasks | Pending |
-| FDSC-02 | P1: one file — AC 2 | Tasks | Pending |
-| FDSC-03 | P1: one file — AC 3 | Tasks | Pending |
+| FDSC-01 | P1: one file — AC 1 | Execute | Implementing: T15 (row menu) |
+| FDSC-02 | P1: one file — AC 2 | Execute | Implementing: T15 (row menu) |
+| FDSC-03 | P1: one file — AC 3 | Execute | Implementing: T15 (menu dismissal) |
 | FDSC-04 | P1: one file — AC 4 | Execute | Implementing: T5 (unit) |
 | FDSC-05 | P1: one file — AC 5 | Execute | Implementing: T5 (unit) |
 | FDSC-06 | P1: one file — AC 6 | Execute | Implementing: T6 (unit), T8 (wired) |
@@ -251,13 +251,13 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-31 | P1: after — AC 31 | Execute | Implementing: T11 (hook re-lists), T14 (onDiscarded = refreshTree) |
 | FDSC-32 | P1: after — AC 32 | Execute | Implementing: T10 (unit), T11 (hook) |
 | FDSC-33 | P1: after — AC 33 | Execute | Implementing: T10 (unit) |
-| FDSC-34 | P2: many — AC 34 | Execute | Implementing: T9 (unit) |
+| FDSC-34 | P2: many — AC 34 | Execute | Implementing: T9 (unit), T15 (folder menu) |
 | FDSC-35 | P2: many — AC 35 | Execute | Implementing: T9 (no helper: the list goes as it is) |
 | FDSC-36 | P2: many — AC 36 | Execute | Implementing: T12 (icon) |
 | FDSC-37 | P2: many — AC 37 | Tasks | Pending |
 | FDSC-38 | P2: many — AC 38 | Execute | Implementing: T12 (icon) |
 | FDSC-39 | P2: many — AC 39 | Tasks | Pending |
-| FDSC-40 | P1: read-only — AC 40 | Execute | Implementing: T3 (AD-047) |
+| FDSC-40 | P1: read-only — AC 40 | Execute | Implementing: T3 (AD-047), T15 (no menu outside uncommitted) |
 | FDSC-41 | P1: read-only — AC 41 | Tasks | Pending |
 | FDSC-42 | P1: read-only — AC 42 | Execute | Implemented: T3 (AD-047), T4 (request type), T5 (recording runner), T8 (handler) |
 | FDSC-43 | Edge: untracked folder row | Execute | Implemented: T6, T9, T10 (unit) |

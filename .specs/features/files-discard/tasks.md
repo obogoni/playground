@@ -476,10 +476,10 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] `SinceBase` renders `ChangedRows` with no discard handler, so diff-to-origin rows have no menu (FDSC-40)
-- [ ] `.file-tree-row`, `.file-tree-name`, `.file-tree-end` and `.status-glyph` kept, so #131's and the icon section's smoke selectors still match (`grep -n "file-tree-row\|file-tree-name" scripts/*.mjs` reviewed; L-053)
-- [ ] Row layout reads the same as before in the dev app (hand read; T20 checks behaviour)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `SinceBase` renders `ChangedRows` with no discard handler, so diff-to-origin rows have no menu (FDSC-40)
+- [x] `.file-tree-row`, `.file-tree-name`, `.file-tree-end` and `.status-glyph` kept, so #131's and the icon section's smoke selectors still match (`grep -n "file-tree-row\|file-tree-name" scripts/*.mjs` reviewed; L-053)
+- [x] Row layout reads the same as before in the dev app (hand read; T20 checks behaviour)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full

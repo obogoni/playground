@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react'
-import type { JSX } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { JSX, MouseEvent } from 'react'
 import type { ChangedPath, FilesMode } from '../../../shared/files'
 import type { ChangeStatus } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { CommitList } from './CommitList'
 import { changeStatusView } from '../lib/change-status'
+import { entriesUnder, entryForRow } from '../lib/discard-view'
 import { buildTree, isSolution, type TreeNode } from '../lib/files-view'
 import { absoluteIn, type UseFiles } from '../lib/use-files'
 import { FileIcon } from './FileIcon'
@@ -101,61 +102,82 @@ function FolderRows({ dir, depth, files, onFile }: FolderRowsProps): JSX.Element
   )
 }
 
+/** The discard gestures a changed row offers; absent outside uncommitted mode (FDSC-40). */
+interface RowDiscard {
+  /** Opens the row's menu at the pointer (FDSC-01/34). */
+  menu: (event: MouseEvent, node: TreeNode) => void
+}
+
 interface ChangedRowsProps {
   nodes: TreeNode[]
   depth: number
   onFile: (path: string, status: ChangeStatus) => void
   onFolder: (path: string) => void
+  discard?: RowDiscard
 }
 
 /**
  * The nesting `buildTree` derives from a diff mode's flat list (FXPL-08/12).
  * The folders are invented by the nesting rather than listed, so they are drawn
  * open: there is nothing further to fetch for them.
+ *
+ * A row is a container, so the discard control can sit beside the part that
+ * opens it: a button inside a button is invalid HTML. The container takes the
+ * click, and the name is the button that carries it from the keyboard.
+ *
+ * SPEC_DEVIATION: design.md wraps the icon and the name in one
+ * `button.file-tree-open`. Here the name itself is that button.
+ * Reason: the icon, the name and `.file-tree-end` stay the row's own children,
+ * which is the structure #131's column checks measure (three children, the
+ * name's space read from its parent's box).
  */
-function ChangedRows({ nodes, depth, onFile, onFolder }: ChangedRowsProps): JSX.Element {
+function ChangedRows({ nodes, depth, onFile, onFolder, discard }: ChangedRowsProps): JSX.Element {
   return (
     <>
       {nodes.map((node) =>
         node.kind === 'file' ? (
-          <button
+          <div
             key={node.path}
-            type="button"
             className="file-tree-row"
             style={indent(depth)}
             title={node.path}
             onClick={() => onFile(node.path, node.status)}
+            onContextMenu={discard ? (event) => discard.menu(event, node) : undefined}
           >
             <FileIcon name={node.name} kind="file" />
-            <span
-              className={`file-tree-name${changeStatusView(node.status).struck ? ' struck' : ''}`}
+            <button
+              type="button"
+              className={`file-tree-name file-tree-open${changeStatusView(node.status).struck ? ' struck' : ''}`}
             >
               {node.name}
-            </span>
+            </button>
             <span className="file-tree-end">
               <StatusGlyph status={node.status} />
             </span>
-          </button>
+          </div>
         ) : (
           <div key={node.path}>
-            <button
-              type="button"
+            <div
               className="file-tree-row"
               style={indent(depth)}
               title={node.path}
               onClick={() => onFolder(node.path)}
+              onContextMenu={discard ? (event) => discard.menu(event, node) : undefined}
             >
               <span className="file-tree-chevron open">
                 <Icon name="chevron-down" size={13} />
               </span>
               <FileIcon name={node.name} kind="folder" open />
-              <span className="file-tree-name">{node.name}</span>
-            </button>
+              <button type="button" className="file-tree-name file-tree-open">
+                {node.name}
+              </button>
+            </div>
             <ChangedRows
               nodes={node.children}
               depth={depth + 1}
               onFile={onFile}
               onFolder={onFolder}
+              discard={discard}
             />
           </div>
         )
@@ -207,7 +229,7 @@ function BasePicker({ files }: { files: UseFiles }): JSX.Element {
  * habit. Clicking a folder also records it as the launcher row's target, which
  * is the selection FXPL-26 compares against the active tab.
  */
-export function FileTree({ worktreePath, files, onToast }: FileTreeProps): JSX.Element {
+export function FileTree({ worktreePath, files, onToast, onDiscard }: FileTreeProps): JSX.Element {
   /** How long a solution's first click waits to see whether a second follows. */
   const DOUBLE_CLICK_MS = 250
   /** A second launch of the same solution inside this window is ignored. */
@@ -222,6 +244,38 @@ export function FileTree({ worktreePath, files, onToast }: FileTreeProps): JSX.E
       if (pending.current) window.clearTimeout(pending.current.timer)
     }
   }, [])
+
+  // The uncommitted row's menu, at the pointer that opened it (FDSC-01/34).
+  const [menu, setMenu] = useState<{ x: number; y: number; node: TreeNode } | null>(null)
+
+  // Any click or Escape dismisses the row menu, as in the commit list (FDSC-03).
+  useEffect(() => {
+    if (!menu) return
+    const close = (): void => setMenu(null)
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setMenu(null)
+    }
+    window.addEventListener('click', close)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('click', close)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [menu])
+
+  /** What discarding a row sends: its own entry, or everything under a folder. */
+  const entriesFor = (node: TreeNode): ChangedPath[] => {
+    if (node.kind === 'dir') return entriesUnder(files.uncommitted, node.path)
+    const entry = entryForRow(files.uncommitted, node.path)
+    return entry ? [entry] : []
+  }
+
+  const rowDiscard: RowDiscard = {
+    menu: (event, node) => {
+      event.preventDefault()
+      setMenu({ x: event.clientX, y: event.clientY, node })
+    }
+  }
 
   const launchSolution = (path: string): void => {
     const now = Date.now()
@@ -315,12 +369,28 @@ export function FileTree({ worktreePath, files, onToast }: FileTreeProps): JSX.E
               depth={0}
               onFile={openFile}
               onFolder={files.selectFolder}
+              discard={rowDiscard}
             />
           )
         ) : (
           <SinceBase files={files} onFile={openFile} />
         )}
       </div>
+
+      {menu && files.mode === 'uncommitted' && (
+        <div className="file-tree-ctx-menu" style={{ left: menu.x, top: menu.y }}>
+          <button
+            type="button"
+            className="file-tree-ctx-item"
+            onClick={() => {
+              onDiscard(entriesFor(menu.node))
+              setMenu(null)
+            }}
+          >
+            Discard changes
+          </button>
+        </div>
+      )}
     </div>
   )
 }
