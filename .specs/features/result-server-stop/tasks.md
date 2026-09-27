@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/result-server-stop/spec.md`
 **Design**: none - no architectural decision; the guard copies the activity hook server's.
-**Status**: In Progress - T1 Done (2026-09-27)
+**Status**: In Progress - T1, T2 Done (2026-09-27)
 **Branch**: `feature/result-server-stop` (cut from `main` = `origin/main` `c31bb9a`)
 **Test baseline**: measured green on the branch on 2026-09-27 before any production change - 1663 tests / 90 files, `typecheck` and `lint` exit 0 (18 prettier warnings, 0 errors).
 
@@ -96,10 +96,26 @@ T1 → T2 → T3
 
 **Done when**:
 
-- [ ] The new tests fail before the production change (RSTP-01, 02, 03 red with `ERR_SERVER_NOT_RUNNING`) and pass after it
-- [ ] RSTP-04's test restores the spy and closes the real listener, so `afterEach`'s `stop()` still resolves
-- [ ] RSTP-05's never-started case proves the guard sits after the registration loop
-- [ ] Gate check passes: `npm test` - 1668 tests (1663 + 5 new; no silent deletions)
+- [x] The new tests fail before the production change (RSTP-01, 02, 03 red with `ERR_SERVER_NOT_RUNNING`) and pass after it
+- [x] RSTP-04's test restores the spy and closes the real listener, so `afterEach`'s `stop()` still resolves
+- [x] RSTP-05's never-started case proves the guard sits after the registration loop
+- [x] Gate check passes: `npm test` - 1668 tests (1663 + 5 new; no silent deletions)
+
+**Result (2026-09-27)**: before the fix, 5 of 16 tests in the file failed with `ERR_SERVER_NOT_RUNNING`: RSTP-01, RSTP-02, RSTP-03 (the bind-failure test), and both RSTP-05 cases, the listening one through `afterEach`'s `stop()` on an already stopped server. RSTP-04 passed before the fix, as it pins behaviour that already held. After the fix 16/16, full suite 1668/1668 in 90 files. Guard placement checked by mutation: moving the guard above the registration loop times out the never-started RSTP-05 case at 30 s; the mutant ran on the real file from an `.orig` copy restored in `finally`.
+
+Test adequacy (Check A, sufficient):
+
+| Criterion | `file:line` + assertion | Spec outcome | Covered? |
+| --- | --- | --- | --- |
+| RSTP-01 never started | `src/main/mcp-result-server.test.ts:174` - `await expect(idle.stop()).resolves.toBeUndefined()` | resolves | Yes |
+| RSTP-02 second stop | `src/main/mcp-result-server.test.ts:179` - `await expect(server.stop()).resolves.toBeUndefined()` (after `:178`) | resolves | Yes |
+| RSTP-03 after failed bind | `src/main/mcp-result-server.test.ts:149` - `await expect(second.stop()).resolves.toBeUndefined()` | resolves | Yes |
+| RSTP-04 close error | `src/main/mcp-result-server.test.ts:192` - `await expect(server.stop()).rejects.toBe(failure)` | rejects with that same error | Yes |
+| RSTP-05 pending, listening | `src/main/mcp-result-server.test.ts:201` - `expect(pending).rejects.toThrow('server stopped before emit_result')` | that message | Yes |
+| RSTP-05 pending, never started | `src/main/mcp-result-server.test.ts:209` - `expect(pending).rejects.toThrow('server stopped before emit_result')` | that message | Yes |
+| Edge: second stop while closing | covered by the guard's condition; `listening` is `false` right after `close()` (measured, spec table) | resolves | Yes, via RSTP-02 |
+
+Check B: every assertion targets the resolved value or the rejection itself; RSTP-04 asserts identity (`toBe`), not a message match. Check C: all six assertions map to RSTP-01..05, none speculative. Check D: `.specs/codebase/TESTING.md` - real loopback listener, no `vi.mock`; the one spy is restored in `finally`, as in `session-manager.test.ts`. Verdict: covered, outcomes match the spec, nothing shallow or unclaimed.
 
 **Tests**: unit
 **Gate**: full

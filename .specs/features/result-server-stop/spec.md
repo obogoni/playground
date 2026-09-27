@@ -92,11 +92,11 @@ Measured on Node 24 (`http.createServer`):
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| RSTP-01 | P1: Quit without an unhandled rejection | Tasks | Pending |
-| RSTP-02 | P1: Quit without an unhandled rejection | Tasks | Pending |
-| RSTP-03 | P1: Quit without an unhandled rejection | Tasks | Pending |
-| RSTP-04 | P1: Quit without an unhandled rejection | Tasks | Pending |
-| RSTP-05 | P1: Quit without an unhandled rejection | Tasks | Pending |
+| RSTP-01 | P1: Quit without an unhandled rejection | T2 | Implementing |
+| RSTP-02 | P1: Quit without an unhandled rejection | T2 | Implementing |
+| RSTP-03 | P1: Quit without an unhandled rejection | T2 | Implementing |
+| RSTP-04 | P1: Quit without an unhandled rejection | T2 | Implementing |
+| RSTP-05 | P1: Quit without an unhandled rejection | T2 | Implementing |
 | RSTP-06 | P1: Quit without an unhandled rejection | Tasks | Pending |
 | RSTP-07 | P2: Close failures at quit reach the log | Tasks | Pending |
 | RSTP-08 | P2: Close failures at quit reach the log | Tasks | Pending |
