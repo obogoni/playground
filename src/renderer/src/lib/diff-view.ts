@@ -391,3 +391,56 @@ export function unchangedRegions(
   }
   return regions
 }
+
+/**
+ * The hidden right-side ranges in the `modelState` of a diff editor's saved
+ * view state, one per unchanged region; `null` for any other shape (FOLD-25).
+ * The shape is internal to monaco-editor 0.56.0 (`serializeState`), so it is
+ * checked whole: one entry out of shape and nothing is trusted.
+ */
+export function hiddenRangesOf(modelState: unknown): LineSpan[] | null {
+  if (typeof modelState !== 'object' || modelState === null) return null
+  const regions = (modelState as { collapsedRegions?: unknown }).collapsedRegions
+  if (!Array.isArray(regions)) return null
+  const spans: LineSpan[] = []
+  for (const entry of regions) {
+    const range = (entry as { range?: unknown } | null)?.range
+    if (
+      !Array.isArray(range) ||
+      range.length !== 2 ||
+      typeof range[0] !== 'number' ||
+      typeof range[1] !== 'number'
+    ) {
+      return null
+    }
+    spans.push({ start: range[0], end: range[1] })
+  }
+  return spans
+}
+
+/** How much of one unchanged region is revealed above and below its strip. */
+export interface RegionState {
+  region: Region
+  revealedTop: number
+  revealedBottom: number
+}
+
+/**
+ * Each region's fold state, from the hidden ranges `hiddenRangesOf` read:
+ * folded is 0 / 0, revealed whole is a top and bottom that add up to its
+ * length. A hidden range belongs to the region whose right side holds it; a
+ * region with none listed reads folded, which is how Monaco starts one.
+ */
+export function regionStates(
+  regions: readonly Region[],
+  hidden: readonly LineSpan[]
+): RegionState[] {
+  return regions.map((region) => {
+    const { start, end } = region.modified
+    const inside = hidden.filter((span) => span.start >= start && span.end <= end)
+    if (inside.length === 0) return { region, revealedTop: 0, revealedBottom: 0 }
+    const first = Math.min(...inside.map((span) => span.start))
+    const last = Math.max(...inside.map((span) => span.end))
+    return { region, revealedTop: first - start, revealedBottom: end - last }
+  })
+}

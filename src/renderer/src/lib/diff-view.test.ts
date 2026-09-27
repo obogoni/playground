@@ -4,10 +4,12 @@ import {
   ALL_CHANGES_KEY,
   diffRequestFor,
   eolStripText,
+  hiddenRangesOf,
   initialExpansion,
   isSameTab,
   mountPlan,
   nextChangeTarget,
+  regionStates,
   tabKeyOf,
   tabsWithAllChanges,
   totals,
@@ -473,5 +475,95 @@ describe('unchangedRegions', () => {
 
   it('makes one region of the whole file when nothing changed', () => {
     expect(unchangedRegions([], 50, 50)).toEqual([both(1, 51)])
+  })
+})
+
+describe('hiddenRangesOf', () => {
+  it("reads the hidden right-side ranges of Monaco's saved fold state", () => {
+    const state = { collapsedRegions: [{ range: [1, 17] }, { range: [177, 177] }] }
+
+    expect(hiddenRangesOf(state)).toEqual([
+      { start: 1, end: 17 },
+      { start: 177, end: 177 }
+    ])
+  })
+
+  it('answers null for a state that is not an object (FOLD-25)', () => {
+    expect(hiddenRangesOf(undefined)).toBeNull()
+    expect(hiddenRangesOf(null)).toBeNull()
+    expect(hiddenRangesOf('collapsedRegions')).toBeNull()
+  })
+
+  it('answers null when collapsedRegions is missing or not an array (FOLD-25)', () => {
+    expect(hiddenRangesOf({})).toBeNull()
+    expect(hiddenRangesOf({ collapsedRegions: { range: [1, 17] } })).toBeNull()
+  })
+
+  it('answers null when an entry has no range of two numbers (FOLD-25)', () => {
+    expect(hiddenRangesOf({ collapsedRegions: [null] })).toBeNull()
+    expect(hiddenRangesOf({ collapsedRegions: [{ start: 1, end: 17 }] })).toBeNull()
+    expect(hiddenRangesOf({ collapsedRegions: [{ range: [1] }] })).toBeNull()
+    expect(hiddenRangesOf({ collapsedRegions: [{ range: [1, 17, 30] }] })).toBeNull()
+    expect(hiddenRangesOf({ collapsedRegions: [{ range: ['1', 17] }] })).toBeNull()
+    // One bad entry spoils the whole state: a partial read would fold the wrong regions.
+    expect(hiddenRangesOf({ collapsedRegions: [{ range: [1, 17] }, { range: [24] }] })).toBeNull()
+  })
+})
+
+describe('regionStates', () => {
+  const middle = both(24, 177) // 153 lines
+
+  it('reads a fully hidden region as folded, 0 lines revealed above and below (FOLD-03)', () => {
+    expect(regionStates([middle], [{ start: 24, end: 177 }])).toEqual([
+      { region: middle, revealedTop: 0, revealedBottom: 0 }
+    ])
+  })
+
+  it('reads an empty hidden range as a region revealed whole (FOLD-03)', () => {
+    const [atEnd] = regionStates([middle], [{ start: 177, end: 177 }])
+    const [atStart] = regionStates([middle], [{ start: 24, end: 24 }])
+
+    expect(atEnd).toEqual({ region: middle, revealedTop: 153, revealedBottom: 0 })
+    expect(atStart).toEqual({ region: middle, revealedTop: 0, revealedBottom: 153 })
+  })
+
+  it('reads a region revealed in part as its counts above and below the strip (FOLD-05)', () => {
+    expect(regionStates([middle], [{ start: 44, end: 167 }])).toEqual([
+      { region: middle, revealedTop: 20, revealedBottom: 10 }
+    ])
+  })
+
+  it('reads hidden ranges split inside one region together', () => {
+    expect(
+      regionStates(
+        [middle],
+        [
+          { start: 30, end: 90 },
+          { start: 100, end: 170 }
+        ]
+      )
+    ).toEqual([{ region: middle, revealedTop: 6, revealedBottom: 7 }])
+  })
+
+  it('gives each region the hidden range that lies inside it, in any order (FOLD-03)', () => {
+    const regions = [both(1, 17), middle, both(184, 202)]
+
+    const states = regionStates(regions, [
+      { start: 202, end: 202 },
+      { start: 1, end: 17 },
+      { start: 44, end: 177 }
+    ])
+
+    expect(states.map((s) => [s.revealedTop, s.revealedBottom])).toEqual([
+      [0, 0],
+      [20, 0],
+      [18, 0]
+    ])
+  })
+
+  it('reads a region with no hidden range listed as folded, as Monaco starts it', () => {
+    expect(regionStates([middle], [])).toEqual([
+      { region: middle, revealedTop: 0, revealedBottom: 0 }
+    ])
   })
 })

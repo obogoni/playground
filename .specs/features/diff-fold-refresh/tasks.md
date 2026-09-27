@@ -238,9 +238,11 @@ strip).
 
 **Done when**:
 
-- [ ] Tests: a well-formed state parses; `undefined`, `null`, a missing or non-array `collapsedRegions`, a range that is not two numbers each give `null` (each fixture reaches the check it names, L-027); a fully hidden region reads folded (0 / 0); an empty hidden span reads revealed; a partial span reads its top and bottom counts; hidden spans that Monaco split inside one region are read together
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
-- [ ] Test count: T2 count + the new tests
+- [x] Tests: a well-formed state parses; `undefined`, `null`, a missing or non-array `collapsedRegions`, a range that is not two numbers each give `null` (each fixture reaches the check it names, L-027); a fully hidden region reads folded (0 / 0); an empty hidden span reads revealed; a partial span reads its top and bottom counts; hidden spans that Monaco split inside one region are read together
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
+- [x] Test count: T2 count + the new tests
+
+**Result (2026-09-27)**: 10 new tests, red before the code (`hiddenRangesOf is not a function`, `regionStates is not a function`), then 54/54 in the file. The shape was read from `diffEditorViewModel.js` `serializeState` / `restoreSerializedState` / `setHiddenModifiedRange`: one `{ range: [start, endExclusive] }` per region, the region's hidden right-side range; a region revealed whole serializes an empty range touching one of its edges (both edges tested). Every null fixture fails on the check it names: not an object, no `collapsedRegions`, not an array, a null entry, no `range`, a range of one or three items, a string in it, and one bad entry among good ones. Added a case the plan did not list: a region with no hidden range reads folded (0 / 0), the branch `regionStates` takes when Monaco's list and the app's regions disagree.
 
 **Tests**: unit
 **Gate**: quick
