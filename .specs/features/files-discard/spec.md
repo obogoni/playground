@@ -218,21 +218,21 @@ Each carries an ID and its own test or smoke check (L-025).
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FDSC-01 | P1: one file — AC 1 | Execute | Implementing: T15 (row menu) |
-| FDSC-02 | P1: one file — AC 2 | Execute | Implementing: T15 (row menu) |
-| FDSC-03 | P1: one file — AC 3 | Execute | Implementing: T15 (menu dismissal) |
+| FDSC-01 | P1: one file — AC 1 | Execute | Implemented: T15 (row menu), T20 (smoke 1) |
+| FDSC-02 | P1: one file — AC 2 | Execute | Implemented: T15 (row menu), T20 (smoke 1) |
+| FDSC-03 | P1: one file — AC 3 | Execute | Implemented: T15 (menu dismissal), T20 (smoke 2) |
 | FDSC-04 | P1: one file — AC 4 | Execute | Implementing: T5 (unit) |
 | FDSC-05 | P1: one file — AC 5 | Execute | Implementing: T5 (unit) |
 | FDSC-06 | P1: one file — AC 6 | Execute | Implementing: T6 (unit), T8 (wired) |
 | FDSC-07 | P1: one file — AC 7 | Execute | Implementing: T6 (unit) |
 | FDSC-08 | P1: one file — AC 8 | Execute | Implemented: T5 (unit) |
 | FDSC-09 | P1: one file — AC 9 | Execute | Implemented: T5 (unit) |
-| FDSC-10 | P1: confirm — AC 10 | Execute | Implementing: T9 (unit), T13 (dialog) |
-| FDSC-11 | P1: confirm — AC 11 | Execute | Implementing: T9 (unit), T13 (dialog) |
-| FDSC-12 | P1: confirm — AC 12 | Execute | Implementing: T9 (unit), T13 (dialog), T14 (sessions from App) |
-| FDSC-13 | P1: confirm — AC 13 | Execute | Implementing: T9 (unit), T13 (dialog), T14 (sessions from App) |
-| FDSC-14 | P1: confirm — AC 14 | Execute | Implementing: T9 (unit), T13 (dialog) |
-| FDSC-15 | P1: confirm — AC 15 | Execute | Implementing: T13 (dialog), T14 (view) |
+| FDSC-10 | P1: confirm — AC 10 | Execute | Implemented: T9 (unit), T13 (dialog), T20 (smoke 1, 6) |
+| FDSC-11 | P1: confirm — AC 11 | Execute | Implemented: T9 (unit), T13 (dialog), T20 (smoke 1, 5, 6) |
+| FDSC-12 | P1: confirm — AC 12 | Execute | Implemented: T9 (unit), T13 (dialog), T14 (sessions from App), T20 (smoke 7) |
+| FDSC-13 | P1: confirm — AC 13 | Execute | Implemented: T9 (unit), T13 (dialog), T14 (sessions from App), T20 (smoke 6) |
+| FDSC-14 | P1: confirm — AC 14 | Execute | Implemented: T9 (unit), T13 (dialog), T20 (smoke 1, 6) |
+| FDSC-15 | P1: confirm — AC 15 | Execute | Implemented: T13 (dialog), T14 (view), T20 (smoke 3) |
 | FDSC-16 | P1: confirm — AC 16 | Execute | Implementing: T13 (dialog), T14 (view) |
 | FDSC-17 | P1: nothing permanent — AC 17 | Execute | Implementing: T3 (AD-047), T5 (no delete call), T6, T7 (refusal tests), T8 (trashItem only) |
 | FDSC-18 | P1: nothing permanent — AC 18 | Execute | Implemented: T6 (unit) |
@@ -241,8 +241,8 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-21 | P1: nothing permanent — AC 21 | Execute | Implementing: T9 (unit), T13 (dialog) |
 | FDSC-22 | P1: nothing permanent — AC 22 | Execute | Implemented: T6 (unit, real junction) |
 | FDSC-23 | P1: nothing permanent — AC 23 | Execute | Implemented: T5, T7 (unit) |
-| FDSC-24 | P1: rename — AC 24 | Execute | Implementing: T1 (unit) |
-| FDSC-25 | P1: rename — AC 25 | Execute | Implementing: T2 (unit) |
+| FDSC-24 | P1: rename — AC 24 | Execute | Implemented: T1 (unit), T20 (smoke 10) |
+| FDSC-25 | P1: rename — AC 25 | Execute | Implemented: T2 (unit), T20 (smoke 10) |
 | FDSC-26 | P1: rename — AC 26 | Execute | Implementing: T7 (unit) |
 | FDSC-27 | P1: rename — AC 27 | Execute | Implemented: T7 (unit) |
 | FDSC-28 | P1: after — AC 28 | Execute | Implementing: T10 (unit), T11 (hook) |
@@ -251,14 +251,14 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-31 | P1: after — AC 31 | Execute | Implementing: T11 (hook re-lists), T14 (onDiscarded = refreshTree) |
 | FDSC-32 | P1: after — AC 32 | Execute | Implementing: T10 (unit), T11 (hook) |
 | FDSC-33 | P1: after — AC 33 | Execute | Implementing: T10 (unit) |
-| FDSC-34 | P2: many — AC 34 | Execute | Implementing: T9 (unit), T15 (folder menu) |
-| FDSC-35 | P2: many — AC 35 | Execute | Implementing: T9 (no helper: the list goes as it is), T17 (Discard all) |
-| FDSC-36 | P2: many — AC 36 | Execute | Implementing: T12 (icon), T16 (hover ↶) |
-| FDSC-37 | P2: many — AC 37 | Execute | Implementing: T16 (the ↶ click stays its own) |
-| FDSC-38 | P2: many — AC 38 | Execute | Implementing: T12 (icon), T18 (section ↶), T19 (uncommitted stack only) |
-| FDSC-39 | P2: many — AC 39 | Execute | Implementing: T18 (the ↶ click stays its own) |
-| FDSC-40 | P1: read-only — AC 40 | Execute | Implementing: T3 (AD-047), T15 (no menu outside uncommitted), T16 (no ↶ outside uncommitted), T17 (no Discard all outside uncommitted), T19 (no section ↶ in diff to origin) |
-| FDSC-41 | P1: read-only — AC 41 | Execute | Implementing: T18 (CommitTab passes no onDiscard), T19 (FileTabs gates by mode) |
+| FDSC-34 | P2: many — AC 34 | Execute | Implementing: T9 (unit), T15 (folder menu), T20 (smoke 4) |
+| FDSC-35 | P2: many — AC 35 | Execute | Implemented: T9 (no helper: the list goes as it is), T17 (Discard all), T20 (smoke 6) |
+| FDSC-36 | P2: many — AC 36 | Execute | Implemented: T12 (icon), T16 (hover ↶), T20 (smoke 5) |
+| FDSC-37 | P2: many — AC 37 | Execute | Implemented: T16 (the ↶ click stays its own), T20 (smoke 5) |
+| FDSC-38 | P2: many — AC 38 | Execute | Implemented: T12 (icon), T18 (section ↶), T19 (uncommitted stack only), T20 (smoke 8) |
+| FDSC-39 | P2: many — AC 39 | Execute | Implemented: T18 (the ↶ click stays its own), T20 (smoke 8) |
+| FDSC-40 | P1: read-only — AC 40 | Execute | Implemented: T3 (AD-047), T15 (no menu outside uncommitted), T16 (no ↶ outside uncommitted), T17 (no Discard all outside uncommitted), T19 (no section ↶ in diff to origin), T20 (smoke 9) |
+| FDSC-41 | P1: read-only — AC 41 | Execute | Implemented: T18 (CommitTab passes no onDiscard), T19 (FileTabs gates by mode), T20 (smoke 9) |
 | FDSC-42 | P1: read-only — AC 42 | Execute | Implemented: T3 (AD-047), T4 (request type), T5 (recording runner), T8 (handler) |
 | FDSC-43 | Edge: untracked folder row | Execute | Implemented: T6, T9, T10 (unit) |
 | FDSC-44 | Edge: already gone | Execute | Implemented: T6 (unit) |

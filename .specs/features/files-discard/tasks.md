@@ -613,10 +613,12 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] Each check seen failing on its own mutant, then passing: (a) the menu rendered in every mode fails 9; (b) the file item sending the parent folder's entries fails 1; (c) no Escape listener fails 2; (d) `Cancel` calling `onConfirm` fails 3; (e) `entriesUnder` keeping direct children only fails 4; (f) the ↶ always visible fails 5's hidden read; (g) the ↶ click reaching the open button fails 5's tab count; (h) App passing `runningSessions={[]}` fails 7; (i) the section ↶ click reaching the toggle fails 8; (j) `FileTabs` passing `onDiscard` in every mode fails 9; (k) `parseChangedFiles` dropping `oldPath` (main mutant, relaunch) fails 10
-- [ ] The header's hand checks gain: a discard of an untracked file on a network share is kept with `The Recycle Bin refused it.`; an untracked junction is kept with `Links and junctions are never moved.` (L-030)
-- [ ] The fixture is fictitious, and the file header documents it beside the seed list (`smoke-files-diff.mjs:25-41`)
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Each check seen failing on its own mutant, then passing: (a) the menu rendered in every mode fails 9; (b) the file item sending the parent folder's entries fails 1; (c) no Escape listener fails 2; (d) `Cancel` calling `onConfirm` fails 3; (e) `entriesUnder` keeping direct children only fails 4; (f) the ↶ always visible fails 5's hidden read; (g) the ↶ click reaching the open button fails 5's tab count; (h) App passing `runningSessions={[]}` fails 7; (i) the section ↶ click reaching the toggle fails 8; (j) `FileTabs` passing `onDiscard` in every mode fails 9; (k) `parseChangedFiles` dropping `oldPath` (main mutant, relaunch) fails 10
+- [x] The header's hand checks gain: a discard of an untracked file on a network share is kept with `The Recycle Bin refused it.`; an untracked junction is kept with `Links and junctions are never moved.` (L-030)
+- [x] The fixture is fictitious, and the file header documents it beside the seed list (`smoke-files-diff.mjs:25-41`)
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Execute notes**: check 4 expects the tree order, which draws folders first: `discard/deep/sub/b.md` before `discard/deep/a.md`, the reverse of the list written above; the smoke reads the expectation from the tree. Check 6 compares each group of the dialog (Recycle Bin first, then restore) with the tree’s file rows of that group in tree order, and the two together with the tree’s file rows as a set. The section closes the dialog by Escape everywhere but check 3, so mutant (d) is first met by check 3. Every mutant (a)..(k) failed its planned check once (d also failed 8 by the discarded fixture file; b also failed 5), then the focused run passed 10/10.
 
 **Tests**: manual
 **Gate**: manual
