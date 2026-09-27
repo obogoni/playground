@@ -374,10 +374,10 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Tests (new file `session-attribution.test.ts`): without a link, a worktree on `feature/12345-x` gives 12345 and `linked: false`; a detached cwd gives `detached: true`, task null; a link to #4821 on `develop` gives 4821, `linked: true` and the link's title; a link on a detached cwd gives 4821 and still `detached: true`; a link on `feature/67890-x` gives 4821 and keeps the branch `feature/67890-x`
-- [ ] Existing callers compile unchanged
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/session-attribution.test.ts` then `npm test`
-- [ ] Test count: T10 count + the new tests
+- [x] Tests (new file `session-attribution.test.ts`): without a link, a worktree on `feature/12345-x` gives 12345 and `linked: false`; a detached cwd gives `detached: true`, task null; a link to #4821 on `develop` gives 4821, `linked: true` and the link's title; a link on a detached cwd gives 4821 and still `detached: true`; a link on `feature/67890-x` gives 4821 and keeps the branch `feature/67890-x`
+- [x] Existing callers compile unchanged
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/session-attribution.test.ts` then `npm test`
+- [x] Test count: T10 count + the new tests: 1761 + 7 = 1768 (93 files)
 
 **Tests**: unit
 **Gate**: quick
