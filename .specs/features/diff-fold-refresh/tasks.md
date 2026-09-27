@@ -13,7 +13,7 @@ regions from `getLineChanges()` with Monaco's own rule, snapshots their fold sta
 and applies its own plan through `restoreViewState`'s `modelState` once Monaco has recomputed; the
 per-tab Hide / Show choice lives in `use-files` and reaches every mounted `DiffViewer` as a prop.
 **Status**: Approved by the owner on 2026-09-27 ("pode seguir com a #130", executed inline at the
-owner's choice). T1-T5 Done; cause confirmed, continuing.
+owner's choice). T1-T10 Done; cause confirmed, continuing.
 
 **Branch**: `feature/diff-fold-refresh`, cut from `feature/files-view-polish` `70d573c` (PR #125, which
 adds Expand all / Collapse all). Rebase onto `origin/main` once #125 merges. The future PR body carries
@@ -452,7 +452,9 @@ while `diffTab` is set, and `DiffBody` hands the choice to its `DiffViewer`.
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+
+**Result (2026-09-27)**: All changes takes `files.unchangedFor(ALL_CHANGES_KEY)` and presses under that key, the same key in both diff lenses (FOLD-20); a commit tab and a diff tab each use their own `tabKeyOf`; `CommitTab` passes both props through to its `AllChangesTab`; `DiffBody` hands its tab's choice to its `DiffViewer`. The diff toolbar shows Hide unchanged and Show unchanged (class `file-tabs-toggle`) before Open file, only while `diffTab` is set. Gate: typecheck 0, lint 0 errors / 18 warnings, 1721/1721 tests, `npx electron-vite build` exit 0.
 
 **Tests**: none
 **Gate**: full
