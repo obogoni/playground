@@ -223,8 +223,8 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-03 | P1: one file — AC 3 | Tasks | Pending |
 | FDSC-04 | P1: one file — AC 4 | Execute | Implementing: T5 (unit) |
 | FDSC-05 | P1: one file — AC 5 | Execute | Implementing: T5 (unit) |
-| FDSC-06 | P1: one file — AC 6 | Tasks | Pending |
-| FDSC-07 | P1: one file — AC 7 | Tasks | Pending |
+| FDSC-06 | P1: one file — AC 6 | Execute | Implementing: T6 (unit) |
+| FDSC-07 | P1: one file — AC 7 | Execute | Implementing: T6 (unit) |
 | FDSC-08 | P1: one file — AC 8 | Execute | Implemented: T5 (unit) |
 | FDSC-09 | P1: one file — AC 9 | Execute | Implemented: T5 (unit) |
 | FDSC-10 | P1: confirm — AC 10 | Tasks | Pending |
@@ -234,12 +234,12 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-14 | P1: confirm — AC 14 | Tasks | Pending |
 | FDSC-15 | P1: confirm — AC 15 | Tasks | Pending |
 | FDSC-16 | P1: confirm — AC 16 | Tasks | Pending |
-| FDSC-17 | P1: nothing permanent — AC 17 | Execute | Implementing: T3 (AD-047), T5 (no delete call) |
-| FDSC-18 | P1: nothing permanent — AC 18 | Tasks | Pending |
+| FDSC-17 | P1: nothing permanent — AC 17 | Execute | Implementing: T3 (AD-047), T5 (no delete call), T6 (refusal tests) |
+| FDSC-18 | P1: nothing permanent — AC 18 | Execute | Implemented: T6 (unit) |
 | FDSC-19 | P1: nothing permanent — AC 19 | Tasks | Pending |
 | FDSC-20 | P1: nothing permanent — AC 20 | Tasks | Pending |
 | FDSC-21 | P1: nothing permanent — AC 21 | Tasks | Pending |
-| FDSC-22 | P1: nothing permanent — AC 22 | Tasks | Pending |
+| FDSC-22 | P1: nothing permanent — AC 22 | Execute | Implemented: T6 (unit, real junction) |
 | FDSC-23 | P1: nothing permanent — AC 23 | Execute | Implemented: T5 (unit) |
 | FDSC-24 | P1: rename — AC 24 | Execute | Implementing: T1 (unit) |
 | FDSC-25 | P1: rename — AC 25 | Execute | Implementing: T2 (unit) |
@@ -260,12 +260,12 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-40 | P1: read-only — AC 40 | Execute | Implementing: T3 (AD-047) |
 | FDSC-41 | P1: read-only — AC 41 | Tasks | Pending |
 | FDSC-42 | P1: read-only — AC 42 | Execute | Implementing: T3 (AD-047), T4 (request type), T5 (recording runner) |
-| FDSC-43 | Edge: untracked folder row | Tasks | Pending |
-| FDSC-44 | Edge: already gone | Tasks | Pending |
+| FDSC-43 | Edge: untracked folder row | Execute | Implementing: T6 (unit) |
+| FDSC-44 | Edge: already gone | Execute | Implemented: T6 (unit) |
 | FDSC-45 | Edge: changed after opening | Tasks | Pending |
-| FDSC-46 | Edge: no commit yet | Tasks | Pending |
+| FDSC-46 | Edge: no commit yet | Execute | Implemented: T6 (unit) |
 | FDSC-47 | Edge: occupied restore target | Tasks | Pending |
-| FDSC-48 | Edge: git fails after the Recycle Bin | Tasks | Pending |
+| FDSC-48 | Edge: git fails after the Recycle Bin | Execute | Implemented: T6 (unit) |
 | FDSC-49 | Edge: long request | Execute | Implemented: T5 (unit) |
 | FDSC-50 | Edge: conflicted file | Execute | Implemented: T5 (unit) |
 | FDSC-51 | Edge: index.lock held | Execute | Implementing: T5 (unit) |

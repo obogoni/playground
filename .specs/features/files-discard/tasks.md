@@ -244,10 +244,10 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] The test `trash` moves the file into a per-test `bin` folder (so "in the Recycle Bin" is observable) or rejects for paths in a refuse set
-- [ ] Tests: an untracked file → in `bin`, gone from the worktree (FDSC-06); an added file with a later edit (`AM`) → in `bin`, and `git status` lists nothing for it (FDSC-07); two untracked files with one refused → the refused one on disk unchanged, the other in `bin`, the refused one kept with cause `recycle-bin` (FDSC-18); an added file refused → still `A` in the index and on disk, and the recording runner saw no `rm` for it (FDSC-18); an untracked junction made with `symlinkSync(target, link, 'junction')` → kept with cause `link`, `trash` never called, the target's files intact (FDSC-22); an untracked folder listed as `dir/` → the folder in `bin` whole (FDSC-43); an untracked entry already deleted → not kept (FDSC-44); a repo with no commit and an added file → in `bin`, index empty (FDSC-46); a runner failing `rm --cached` → kept with cause `git`, file in `bin` (FDSC-48)
-- [ ] Gate check passes: `npx vitest run src/main/file-discard.test.ts`
-- [ ] Test count: T5 count + the new tests
+- [x] The test `trash` moves the file into a per-test `bin` folder (so "in the Recycle Bin" is observable) or rejects for paths in a refuse set
+- [x] Tests: an untracked file → in `bin`, gone from the worktree (FDSC-06); an added file with a later edit (`AM`) → in `bin`, and `git status` lists nothing for it (FDSC-07); two untracked files with one refused → the refused one on disk unchanged, the other in `bin`, the refused one kept with cause `recycle-bin` (FDSC-18); an added file refused → still `A` in the index and on disk, and the recording runner saw no `rm` for it (FDSC-18); an untracked junction made with `symlinkSync(target, link, 'junction')` → kept with cause `link`, `trash` never called, the target's files intact (FDSC-22); an untracked folder listed as `dir/` → the folder in `bin` whole (FDSC-43); an untracked entry already deleted → not kept (FDSC-44); a repo with no commit and an added file → in `bin`, index empty (FDSC-46); a runner failing `rm --cached` → kept with cause `git`, file in `bin` (FDSC-48)
+- [x] Gate check passes: `npx vitest run src/main/file-discard.test.ts`
+- [x] Test count: T5 count + the new tests
 
 **Tests**: unit
 **Gate**: quick

@@ -1,7 +1,17 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join, relative, sep } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { ChangedPath } from '../shared/files'
 import { discardChanges, type DiscardDeps } from './file-discard'
@@ -286,6 +296,196 @@ describe('discardChanges', () => {
         for (const path of args.slice(dashes + 1)) expect(['a.txt', 'b.txt']).toContain(path)
       }
       expect(porcelain()).toBe('')
+    })
+  })
+
+  describe('the Recycle Bin', () => {
+    let bin: string
+
+    beforeEach(() => {
+      bin = join(root, 'bin')
+      mkdirSync(bin)
+    })
+
+    /**
+     * A Recycle Bin that moves what it takes into `bin`, so "in the Recycle Bin"
+     * is observable, and refuses the worktree-relative paths in `refuse`.
+     */
+    function recycleBin(...refuse: string[]): { trash: DiscardDeps['trash']; seen: string[] } {
+      const seen: string[] = []
+      return {
+        seen,
+        trash: async (abs) => {
+          const rel = relative(repo, abs).split(sep).join('/')
+          seen.push(rel)
+          if (refuse.includes(rel)) throw new Error(`refused ${rel}`)
+          renameSync(abs, join(bin, basename(abs)))
+        }
+      }
+    }
+    const inBin = (name: string): string => readFileSync(join(bin, name), 'utf8')
+    const onDisk = (rel: string): boolean => existsSync(join(repo, rel))
+
+    it('moves an untracked file to the Recycle Bin (FDSC-06)', async () => {
+      write('notes.txt', 'draft\n')
+
+      const result = await discardChanges(
+        repo,
+        [{ path: 'notes.txt', status: 'untracked' }],
+        recycleBin()
+      )
+
+      expect(result).toEqual({ files: [{ path: 'notes.txt' }] })
+      expect(onDisk('notes.txt')).toBe(false)
+      expect(inBin('notes.txt')).toBe('draft\n')
+    })
+
+    it('moves an added file to the Recycle Bin and removes its index entry (FDSC-07)', async () => {
+      write('keep.txt', 'keep\n')
+      commitAll('init')
+      write('added.ts', 'staged\n')
+      git(repo, 'add', 'added.ts')
+      write('added.ts', 'staged then edited\n')
+      expect(porcelain('added.ts')).toBe('AM added.ts\n') // precondition
+
+      const result = await discardChanges(
+        repo,
+        [{ path: 'added.ts', status: 'added' }],
+        recycleBin()
+      )
+
+      expect(result).toEqual({ files: [{ path: 'added.ts' }] })
+      expect(onDisk('added.ts')).toBe(false)
+      expect(inBin('added.ts')).toBe('staged then edited\n')
+      expect(porcelain()).toBe('')
+    })
+
+    it('keeps a refused untracked file and still moves the other (FDSC-18)', async () => {
+      write('one.txt', 'one\n')
+      write('two.txt', 'two\n')
+
+      const result = await discardChanges(
+        repo,
+        [
+          { path: 'one.txt', status: 'untracked' },
+          { path: 'two.txt', status: 'untracked' }
+        ],
+        recycleBin('one.txt')
+      )
+
+      expect(result.files[0].path).toBe('one.txt')
+      expect(result.files[0].kept?.cause).toBe('recycle-bin')
+      expect(result.files[1]).toEqual({ path: 'two.txt' })
+      expect(read('one.txt')).toBe('one\n')
+      expect(onDisk('two.txt')).toBe(false)
+      expect(inBin('two.txt')).toBe('two\n')
+    })
+
+    it('leaves a refused added file in the index and on disk, with no git run for it (FDSC-18)', async () => {
+      write('keep.txt', 'keep\n')
+      commitAll('init')
+      write('added.ts', 'staged\n')
+      git(repo, 'add', 'added.ts')
+      const { run, calls } = recording()
+
+      const result = await discardChanges(repo, [{ path: 'added.ts', status: 'added' }], {
+        ...recycleBin('added.ts'),
+        run
+      })
+
+      expect(result.files[0].kept?.cause).toBe('recycle-bin')
+      expect(porcelain('added.ts')).toBe('A  added.ts\n')
+      expect(read('added.ts')).toBe('staged\n')
+      expect(calls).toEqual([])
+    })
+
+    it('never moves an untracked junction, and leaves its target intact (FDSC-22)', async () => {
+      const shared = join(root, 'shared')
+      mkdirSync(shared)
+      writeFileSync(join(shared, 'skill.md'), 'shared skill\n', 'utf8')
+      symlinkSync(shared, join(repo, 'skills'), 'junction')
+      const recycle = recycleBin()
+
+      const result = await discardChanges(repo, [{ path: 'skills', status: 'untracked' }], recycle)
+
+      expect(result).toEqual({ files: [{ path: 'skills', kept: { cause: 'link' } }] })
+      expect(recycle.seen).toEqual([])
+      expect(readFileSync(join(shared, 'skill.md'), 'utf8')).toBe('shared skill\n')
+      expect(read('skills/skill.md')).toBe('shared skill\n')
+    })
+
+    it('moves an untracked folder row to the Recycle Bin whole (FDSC-43)', async () => {
+      write('keep.txt', 'keep\n')
+      commitAll('init')
+      write('dir/a.txt', 'a\n')
+      write('dir/sub/b.txt', 'b\n')
+      expect(porcelain()).toBe('?? dir/\n') // precondition
+
+      const result = await discardChanges(
+        repo,
+        [{ path: 'dir/', status: 'untracked' }],
+        recycleBin()
+      )
+
+      expect(result).toEqual({ files: [{ path: 'dir/' }] })
+      expect(onDisk('dir')).toBe(false)
+      expect(inBin('dir/a.txt')).toBe('a\n')
+      expect(inBin('dir/sub/b.txt')).toBe('b\n')
+    })
+
+    it('counts an untracked file already gone as discarded (FDSC-44)', async () => {
+      const recycle = recycleBin()
+
+      const result = await discardChanges(
+        repo,
+        [{ path: 'vanished.txt', status: 'untracked' }],
+        recycle
+      )
+
+      expect(result).toEqual({ files: [{ path: 'vanished.txt' }] })
+      expect(recycle.seen).toEqual([])
+    })
+
+    it('discards an added file in a repository with no commit yet (FDSC-46)', async () => {
+      write('first.ts', 'first\n')
+      git(repo, 'add', 'first.ts')
+
+      const result = await discardChanges(
+        repo,
+        [{ path: 'first.ts', status: 'added' }],
+        recycleBin()
+      )
+
+      expect(result).toEqual({ files: [{ path: 'first.ts' }] })
+      expect(inBin('first.ts')).toBe('first\n')
+      expect(git(repo, 'ls-files')).toBe('')
+    })
+
+    it("keeps an added file with git's error when unstaging fails, the file left in the Recycle Bin (FDSC-48)", async () => {
+      write('keep.txt', 'keep\n')
+      commitAll('init')
+      write('added.ts', 'staged\n')
+      git(repo, 'add', 'added.ts')
+      const failingRm: GitRunner = async (cwd, args) => {
+        if (args.includes('rm')) {
+          throw Object.assign(new Error('Command failed'), {
+            stderr: 'fatal: simulated unstage failure\nsecond line\n'
+          })
+        }
+        return runGit(cwd, args)
+      }
+
+      const result = await discardChanges(repo, [{ path: 'added.ts', status: 'added' }], {
+        ...recycleBin(),
+        run: failingRm
+      })
+
+      expect(result).toEqual({
+        files: [
+          { path: 'added.ts', kept: { cause: 'git', detail: 'fatal: simulated unstage failure' } }
+        ]
+      })
+      expect(inBin('added.ts')).toBe('staged\n')
     })
   })
 })
