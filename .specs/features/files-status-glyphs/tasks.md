@@ -127,6 +127,12 @@ T5 → T6 → T7
 T7 → T8 → T9 → T10
 ```
 
+### Phase 5: Fix round 1
+
+```
+T10 → T11 → T12 → T13 → T14
+```
+
 ---
 
 ## Task Breakdown
@@ -440,17 +446,114 @@ The new `.file-tree-end` wrapper adds no padding, height or vertical margin; its
 
 **Commit**: `test(files): check the status glyphs in the section headers`
 
+
+---
+
+## Fix round 1 (Verifier FAIL on evidence, 2026-09-27)
+
+The Verifier's round 1 (`validation.md`) failed on smoke evidence only; the production code is correct. Four of its smoke mutants survived the repo's checks: S7, S8b, S10 and S11. All four fixes are smoke additions in `scripts/smoke-files-diff.mjs`, before `iconChecks`, and each runs in the full drive and under `SMOKE_ONLY=glyphs`.
+
+### T11: A commit tab's section headers follow FSTS-16..20
+
+**What**: A `glyphCommitChecks(ws)` section after `glyphHeaderChecks(ws)`. It switches to Commits and opens the seed's `work on the branch` commit (`.commit-open`), waits for its 44 headers, then runs the header column check (`headerFaults`), the glyph and tooltip check (`glyphFaults(ORIGIN_STATUS)`) and the strike check (only `docs/removed.md:path` struck) over the commit tab's stack. Precondition: the active tab is the commit's (`<sha> · work on the branch`) and its headers carry at least 4 distinct statuses. Afterwards it closes the commit tab and returns to Uncommitted › All changes, the state the icon checks and a focused run expect, and requires that return.
+**Where**: `scripts/smoke-files-diff.mjs`
+**Depends on**: T10
+**Reuses**: `stackHeaders`, `headerFaults`, `glyphFaults`, `readWhen`, `STRUCK`; the Verifier's probe V-C (`fv-smoke.mjs`)
+**Requirement**: FSTS-16, FSTS-17, FSTS-18, FSTS-19, FSTS-21
+
+**Done when**:
+
+- [x] The check passes on the code, and fails on the Verifier's mutant S8b (the glyph moved before the path only when `modified.rev !== 'HEAD'`, i.e. commit tabs only), which passes every other check
+- [x] A header column mutant from T10 still fails its checks
+- [x] Gate check passes: `npm run lint` (0 errors, 18 warnings)
+
+**Result (2026-09-27)**: `glyphCommitChecks(ws)` (section 14) runs after `glyphHeaderChecks(ws)` in both the full drive and `SMOKE_ONLY=glyphs`, so the icon section is now 15. It opens `work on the branch` from Commits. It then reads the commit tab's stack once all 44 headers are there, off-screen ones included, and runs `headerFaults`, `glyphFaults(ORIGIN_STATUS)` and the strike walk over it. `stackHeaders` now also reads each glyph's status class, for the precondition. The precondition held: the active tab reads `<sha> · work on the branch`, and the headers carry 4 statuses (deleted, added, modified, renamed). The section then closes the commit tab and reselects Uncommitted › All changes. The check requires that return: no commit tab, All changes active, 4 uncommitted headers. Focused run on a fresh seed and launch: 13 / 13 in 34 s (the new check is 13). Mutants, one focused run each:
+- S8b (glyph before the path only when `modified.rev !== 'HEAD'`, commit tabs only): fails 13 only (`src/added.ts: glyph not last`). Every other check passes, as in the Verifier's run.
+- T10 c (end group before the path, every header): fails 9, 10, 12 and 13.
+
+`git status --porcelain` matched the baseline after each. Lint: exit 0, 0 errors, 18 warnings, unchanged.
+
+**Tests**: manual
+**Gate**: manual
+
+**Commit**: `test(files): check the status glyphs in a commit tab's headers`
+
+---
+
+### T12: Header glyph tones
+
+**What**: `stackHeaders` also reads each glyph's computed `color` and `backgroundColor`. A new header check compares every header glyph of both stacks with `probeTones('.all-changes-stack')`, read while that stack is showing, under the tree check's guards: 5 distinct tokens and all 5 statuses seen.
+**Where**: `scripts/smoke-files-diff.mjs`
+**Depends on**: T11
+**Reuses**: `probeTones`, `TONES`, the tree tone check (T9 check 2)
+**Requirement**: FSTS-06, FSTS-07, FSTS-08, FSTS-09, FSTS-10
+
+**Done when**:
+
+- [ ] The check passes on the code, and fails on the Verifier's mutant S11 (`.diff-section-end .status-glyph { color: inherit; background: none }`)
+- [ ] The tree tone mutant (T9 b) still fails the tree tone check
+- [ ] Gate check passes: `npm run lint` (0 errors, 18 warnings)
+
+**Tests**: manual
+**Gate**: manual
+
+**Commit**: `test(files): check the status glyph tones in the section headers`
+
+---
+
+### T13: The cut name and path end in an ellipsis
+
+**What**: `treeRows` and `stackHeaders` also read the computed `textOverflow` of the name or path. The tree's ellipsis check (T9 check 5) and the header's (T10 check 5) require `'ellipsis'` on the cut element, besides `scrollWidth > clientWidth`.
+**Where**: `scripts/smoke-files-diff.mjs`
+**Depends on**: T12
+**Reuses**: T9 check 5, T10 check 5
+**Requirement**: FSTS-04, FSTS-20
+
+**Done when**:
+
+- [ ] The Verifier's mutant S10 (`text-overflow: ellipsis` removed from `.file-tree-name`) fails the tree check, and its header twin (removed from `.diff-section-path`) fails the header check
+- [ ] The workers' clipping mutants (T9 e, T10 e) still fail their checks
+- [ ] Gate check passes: `npm run lint` (0 errors, 18 warnings)
+
+**Tests**: manual
+**Gate**: manual
+
+**Commit**: `test(files): require the ellipsis on a cut name and path`
+
+---
+
+### T14: Every glyph is painted
+
+**What**: `treeRows` and `stackHeaders` also read, per glyph, the reasons it would not be painted: `visibility` other than `visible`, `display: none`, an ancestor (itself included) with `opacity` below 1, or a box smaller than 15 × 8 px. A new tree check (both lists) and a new header check (both stacks) fault any glyph with a reason, over every seeded row or header (48 each); the commit tab check (T11) faults them too.
+**Where**: `scripts/smoke-files-diff.mjs`
+**Depends on**: T13
+**Reuses**: the Verifier's `paintedFaults` (`fv-smoke.mjs`)
+**Requirement**: FSTS-06, FSTS-07, FSTS-08, FSTS-09, FSTS-10
+
+**Done when**:
+
+- [ ] The Verifier's mutant S7 (the tree's end group `visibility: hidden` until the row is hovered) fails the tree check, and its header twin fails the header and commit tab checks
+- [ ] A tree column mutant (T9 c) and a header column mutant (T10 c) still fail their checks
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`, `npx electron-vite build`, and one full drive on a fresh seed and a fresh `--user-data-dir`, every check passing
+- [ ] `spec.md` traceability: FSTS-04, 06..10, 20 and 21 read `Implementing`, naming the fix and its checks
+
+**Tests**: manual
+**Gate**: full
+
+**Commit**: `test(files): check that every status glyph is painted`
+
 ---
 
 ## Phase Execution Map
 
 ```
-Phase 1 → Phase 2 → Phase 3 → Phase 4
+Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5
 
 Phase 1:  T1 ------→ T2 ------→ T3
 Phase 2:  T3 ------→ T4 ------→ T5
 Phase 3:  T5 ------→ T6 ------→ T7
 Phase 4:  T7 ------→ T8 ------→ T9 ------→ T10
+Phase 5:  T10 -----→ T11 -----→ T12 -----→ T13 -----→ T14
 ```
 
 Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent offer is made first. The Verifier runs after T10.
@@ -471,6 +574,10 @@ Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent of
 | T8: seed | 1 function | ✅ Granular |
 | T9: tree checks | 1 smoke section | ✅ Granular |
 | T10: header checks | 1 smoke section | ✅ Granular |
+| T11: commit tab headers | 1 smoke section | ✅ Granular |
+| T12: header tones | 1 smoke check | ✅ Granular |
+| T13: ellipsis | 2 smoke checks tightened | ✅ Granular |
+| T14: painted glyphs | 2 smoke checks | ✅ Granular |
 
 ## Diagram-Definition Cross-Check
 
@@ -486,6 +593,10 @@ Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent of
 | T8 | T7 | T7 → T8 | ✅ Match |
 | T9 | T8 | T8 → T9 | ✅ Match |
 | T10 | T9 | T9 → T10 | ✅ Match |
+| T11 | T10 | T10 → T11 | ✅ Match |
+| T12 | T11 | T11 → T12 | ✅ Match |
+| T13 | T12 | T12 → T13 | ✅ Match |
+| T14 | T13 | T13 → T14 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -501,15 +612,19 @@ Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent of
 | T8 | end to end (seed) | manual | manual | ✅ OK |
 | T9 | end to end | manual | manual | ✅ OK |
 | T10 | end to end | manual | manual | ✅ OK |
+| T11 | end to end | manual | manual | ✅ OK |
+| T12 | end to end | manual | manual | ✅ OK |
+| T13 | end to end | manual | manual | ✅ OK |
+| T14 | end to end | manual | manual | ✅ OK |
 
 ## Requirement Coverage
 
 | Requirement | Tasks | Evidence planned |
 | ----------- | ----- | ---------------- |
 | FSTS-01, 02, 03 | T4, T5, T9 | T9 checks 3 and 4 |
-| FSTS-04 | T5, T8, T9 | T9 check 5 |
+| FSTS-04 | T5, T8, T9, T13 | T9 check 5, with the ellipsis (T13) |
 | FSTS-05 | T4, T9 | T9 check 6 |
-| FSTS-06..10 | T1, T2, T9 | T1 unit table; T9 checks 1, 2, 4 |
+| FSTS-06..10 | T1, T2, T9, T12, T14 | T1 unit table; T9 checks 1, 2, 4; header tones (T12); painted glyphs (T14) |
 | FSTS-11 | T1, T3, T9, T10 | T1 unit table; T9 checks 1, 4; T10 checks 1, 3 |
 | FSTS-12 | T1, T4, T6 | T1 unit tests; the `grep` in T4 and T6 |
 | FSTS-13, 15 | T1, T4, T5, T9 | T1 `struck` test; T9 check 7 |
@@ -517,6 +632,6 @@ Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent of
 | FSTS-16, 18 | T6, T7, T10 | T10 checks 1, 2 |
 | FSTS-17 | T7, T8, T10 | T10 check 3 |
 | FSTS-19 | T6, T7, T10 | T10 check 4 |
-| FSTS-20 | T7, T8, T10 | T10 check 5 |
-| FSTS-21 | T6, T10 | T10's code citation (reuse, no separate surface) |
+| FSTS-20 | T7, T8, T10, T13 | T10 check 5, with the ellipsis (T13) |
+| FSTS-21 | T6, T10, T11 | the commit tab check (T11) |
 | Edge cases | T9, T10 | T9 check 4 (depths, U in uncommitted); T10 check 3 (no counts) |

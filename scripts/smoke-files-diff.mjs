@@ -327,6 +327,7 @@ async function drive() {
     await glyphSetup(ws)
     await glyphTreeChecks(ws)
     await glyphHeaderChecks(ws)
+    await glyphCommitChecks(ws)
     const failed = checks.filter((c) => !c.ok)
     console.log(
       `\n${checks.length - failed.length}/${checks.length} checks passed (status glyphs only)`
@@ -785,6 +786,7 @@ async function drive() {
   // FDIF-31 committed modified.ts alone. The icon checks reload and stay last.
   await glyphTreeChecks(ws)
   await glyphHeaderChecks(ws)
+  await glyphCommitChecks(ws)
 
   await iconChecks(ws)
 
@@ -1097,6 +1099,7 @@ const stackHeaders = `
       glyphs: glyphs.length,
       text: glyph?.textContent ?? null,
       title: glyph?.getAttribute('title') ?? null,
+      status: glyph ? ([...glyph.classList].find((c) => c !== 'status-glyph') ?? null) : null,
       last:
         !!glyph &&
         end.classList.contains('diff-section-end') &&
@@ -1226,6 +1229,93 @@ async function glyphHeaderChecks(ws) {
   )
 }
 
+/** The subject of the seed's branch commit, which holds diff to origin's 44 files. */
+const BRANCH_COMMIT = 'work on the branch'
+
+/** The labels of the open tabs, and which one is active. */
+const tabStates = `
+  [...document.querySelectorAll('.file-tab')].map((tab) => ({
+    label: tab.querySelector('.file-tab-label')?.textContent.trim() ?? '',
+    active: tab.classList.contains('active')
+  }))
+`
+
+/** Whether a tab label is the branch commit's, `<sha> · work on the branch`. */
+const isCommitTab = (label) => label.endsWith(` · ${BRANCH_COMMIT}`)
+
+/**
+ * 14. A commit tab's section headers read like the modes' (FSTS-16..21). The
+ * commit tab mounts the same stack (CommitTab.tsx -> AllChangesTab), so the same
+ * checks run over its headers; a commit-only branch in the header would fail here.
+ */
+async function glyphCommitChecks(ws) {
+  await evaluate(ws, clickByText('.file-tree-mode', 'Commits'))
+  let opened = false
+  for (let i = 0; i < 20 && !opened; i++) {
+    await sleep(500)
+    opened = await evaluate(
+      ws,
+      `(() => {
+        const row = [...document.querySelectorAll('.commit-row')].find(
+          (r) => r.querySelector('.commit-subject')?.textContent.trim() === ${JSON.stringify(BRANCH_COMMIT)}
+        )
+        const open = row?.querySelector('.commit-open')
+        if (!open) return false
+        open.click()
+        return true
+      })()`
+    )
+  }
+  await sleep(1200)
+  const tabs = await evaluate(ws, tabStates)
+  const showing = tabs.some((t) => t.active && isCommitTab(t.label))
+  const headers = await readWhen(
+    ws,
+    stackHeaders,
+    (read) =>
+      read.length === Object.keys(ORIGIN_STATUS).length &&
+      Object.keys(ORIGIN_STATUS).every((p) => read.some((h) => h.path === p))
+  )
+  const statuses = new Set(headers.map((h) => h.status).filter(Boolean))
+  const faults = [...headerFaults(headers), ...glyphFaults(headers, ORIGIN_STATUS)]
+  const struck = headers.flatMap((h) => h.struck.map((what) => `${h.path}:${what}`))
+
+  // Back to what the icon checks and a focused run expect: no commit tab, and
+  // Uncommitted's All changes stack on screen.
+  await evaluate(
+    ws,
+    `(() => {
+      const tab = [...document.querySelectorAll('.file-tab')].find((t) =>
+        (t.querySelector('.file-tab-label')?.textContent.trim() ?? '').endsWith(${JSON.stringify(` · ${BRANCH_COMMIT}`)})
+      )
+      tab?.querySelector('.file-tab-close')?.click()
+      return !!tab
+    })()`
+  )
+  await sleep(600)
+  const back = await stackRows(ws, 'Uncommitted', UNCOMMITTED_STATUS)
+  const tabsAfter = await evaluate(ws, tabStates)
+  const restored =
+    !tabsAfter.some((t) => isCommitTab(t.label)) &&
+    tabsAfter.some((t) => t.active && t.label === 'All changes') &&
+    back.length === Object.keys(UNCOMMITTED_STATUS).length
+
+  check(
+    "A commit tab's headers keep the glyph column, glyphs, tooltips and strike (FSTS-16..21)",
+    opened &&
+      showing &&
+      headers.length === Object.keys(ORIGIN_STATUS).length &&
+      statuses.size >= 4 &&
+      faults.length === 0 &&
+      struck.length === 1 &&
+      struck[0] === 'docs/removed.md:path' &&
+      restored,
+    `opened ${opened}; active ${tabs.find((t) => t.active)?.label ?? 'none'}; ${headers.length} headers, ` +
+      `statuses ${[...statuses].join('/')}; struck ${struck.join(', ') || 'none'}; restored ${restored}` +
+      (faults.length ? `; ${faults.slice(0, 3).join('; ')}` : '')
+  )
+}
+
 /* ----------------------------------------------------------------- icons -- */
 
 /** The body of a vscode-icons icon, as the installed set draws it; aliases take their parent's. */
@@ -1286,7 +1376,7 @@ async function clickThemeToggle(ws, to) {
   return clicked && (await evaluate(ws, `document.documentElement.dataset.theme`)) === to
 }
 
-/** 14. File and folder icons (FICN-01, 03, 07, 08, 10, 11, 13, 14, 15). */
+/** 15. File and folder icons (FICN-01, 03, 07, 08, 10, 11, 13, 14, 15). */
 async function iconChecks(ws) {
   // Guards: each check below tells two icons apart by body, so the bodies must differ.
   const pairs = [
