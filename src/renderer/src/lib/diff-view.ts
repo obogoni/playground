@@ -287,3 +287,107 @@ export function mountPlan(
     unmount: mounted.filter((path) => !keep.includes(path))
   }
 }
+
+/**
+ * The strip settings of every diff (FDIF-13). `DiffViewer` hands these to
+ * Monaco's `hideUnchangedRegions`, and `unchangedRegions` computes with them,
+ * so the app's rule and the editor's cannot drift (FOLD-10).
+ */
+export const UNCHANGED_REGIONS = {
+  contextLineCount: 3,
+  minimumLineCount: 3,
+  revealLineCount: 20
+} as const
+
+/** A run of lines, `start` included and `end` excluded, both 1-based. */
+export interface LineSpan {
+  start: number
+  end: number
+}
+
+/** One unchanged region: the same lines on the left side and on the right. */
+export interface Region {
+  original: LineSpan
+  modified: LineSpan
+}
+
+/**
+ * One entry of Monaco's `getLineChanges()`. An insertion reports its original
+ * end as 0 and a deletion its modified end as 0, each start then naming the
+ * line before the change.
+ */
+export interface LineChangeLike {
+  originalStartLineNumber: number
+  originalEndLineNumber: number
+  modifiedStartLineNumber: number
+  modifiedEndLineNumber: number
+}
+
+/** A change's range on one side, `[start, end)`; empty for the side it does not touch. */
+function changeSpan(start: number, end: number): LineSpan {
+  return end === 0 ? { start: start + 1, end: start + 1 } : { start, end: end + 1 }
+}
+
+/**
+ * The unchanged regions Monaco folds into strips, with their lines on both
+ * sides. Mirrors `UnchangedRegion.fromDiffs` in monaco-editor 0.56.0: every run
+ * between two changes keeps `contextLineCount` lines on each side and folds
+ * only when at least `minimumLineCount` remain; a run at the start or the end
+ * of the file keeps context on its changed side only. `originalLines` and
+ * `modifiedLines` are the models' line counts, one more than the file's lines
+ * when it ends in a newline.
+ */
+export function unchangedRegions(
+  changes: readonly LineChangeLike[],
+  originalLines: number,
+  modifiedLines: number
+): Region[] {
+  const { contextLineCount: context, minimumLineCount: minimum } = UNCHANGED_REGIONS
+  const runs: { original: number; modified: number; length: number }[] = []
+  const addRun = (original: LineSpan, modified: LineSpan): void => {
+    if (modified.end > modified.start) {
+      runs.push({
+        original: original.start,
+        modified: modified.start,
+        length: original.end - original.start
+      })
+    }
+  }
+
+  let original = 1
+  let modified = 1
+  for (const change of changes) {
+    const left = changeSpan(change.originalStartLineNumber, change.originalEndLineNumber)
+    const right = changeSpan(change.modifiedStartLineNumber, change.modifiedEndLineNumber)
+    addRun({ start: original, end: left.start }, { start: modified, end: right.start })
+    original = left.end
+    modified = right.end
+  }
+  addRun({ start: original, end: originalLines + 1 }, { start: modified, end: modifiedLines + 1 })
+
+  const regions: Region[] = []
+  for (const run of runs) {
+    let { original: left, modified: right, length } = run
+    const atStart = left === 1 && right === 1
+    const atEnd = left + length === originalLines + 1 && right + length === modifiedLines + 1
+    if ((atStart || atEnd) && length >= context + minimum) {
+      if (atStart && !atEnd) length -= context
+      if (atEnd && !atStart) {
+        left += context
+        right += context
+        length -= context
+      }
+    } else if (length >= context * 2 + minimum) {
+      left += context
+      right += context
+      length -= context * 2
+    } else {
+      continue
+    }
+    regions.push({
+      original: { start: left, end: left + length },
+      modified: { start: right, end: right + length }
+    })
+  }
+  return regions
+}

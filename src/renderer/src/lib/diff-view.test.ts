@@ -11,7 +11,10 @@ import {
   tabKeyOf,
   tabsWithAllChanges,
   totals,
+  UNCHANGED_REGIONS,
+  unchangedRegions,
   type ChangeSection,
+  type LineChangeLike,
   type DiffMode,
   type StackSection,
   type TabRef
@@ -352,5 +355,123 @@ describe('tabsWithAllChanges in commits mode', () => {
     const strip = tabsWithAllChanges(open, 'commits')
 
     expect(strip.map((tab) => tabKeyOf(tab))).toEqual([tabKeyOf(fileTab('src/app.ts'))])
+  })
+})
+
+/** One changed line on both sides, in `getLineChanges()` form. */
+function lineChanged(line: number): LineChangeLike {
+  return {
+    originalStartLineNumber: line,
+    originalEndLineNumber: line,
+    modifiedStartLineNumber: line,
+    modifiedEndLineNumber: line
+  }
+}
+
+/** A region the same on both sides, `[start, end)`. */
+function both(
+  start: number,
+  end: number
+): { original: { start: number; end: number }; modified: { start: number; end: number } } {
+  return { original: { start, end }, modified: { start, end } }
+}
+
+describe('UNCHANGED_REGIONS', () => {
+  it('keeps the strip settings at 3 context lines, a 3-line minimum and 20 lines per step (FOLD-10)', () => {
+    expect(UNCHANGED_REGIONS).toEqual({
+      contextLineCount: 3,
+      minimumLineCount: 3,
+      revealLineCount: 20
+    })
+  })
+})
+
+describe('unchangedRegions', () => {
+  // A 200-line file ending in a newline is a 201-line model (measured in T1).
+  it('finds the three regions of a file changed at lines 20 and 180 (FOLD-01)', () => {
+    expect(unchangedRegions([lineChanged(20), lineChanged(180)], 201, 201)).toEqual([
+      both(1, 17),
+      both(24, 177),
+      both(184, 202)
+    ])
+  })
+
+  it('splits the middle region when line 100 changes too, as the running app shows 16 / 73 / 73 / 18 (FOLD-01)', () => {
+    const regions = unchangedRegions(
+      [lineChanged(20), lineChanged(100), lineChanged(180)],
+      201,
+      201
+    )
+
+    expect(regions).toEqual([both(1, 17), both(24, 97), both(104, 177), both(184, 202)])
+    expect(regions.map((r) => r.modified.end - r.modified.start)).toEqual([16, 73, 73, 18])
+  })
+
+  it('folds a run at the start from 6 lines on, keeping 3 of context (FOLD-01)', () => {
+    expect(unchangedRegions([lineChanged(7)], 20, 20)).toEqual([both(1, 4), both(11, 21)])
+    // 5 lines before line 6: only the run after it folds.
+    expect(unchangedRegions([lineChanged(6)], 20, 20)).toEqual([both(10, 21)])
+  })
+
+  it('folds a run at the end from 6 lines on, keeping 3 of context (FOLD-01)', () => {
+    expect(unchangedRegions([lineChanged(14)], 20, 20)).toEqual([both(1, 11), both(18, 21)])
+    // 5 lines after line 15: only the run before it folds.
+    expect(unchangedRegions([lineChanged(15)], 20, 20)).toEqual([both(1, 12)])
+  })
+
+  it('folds a run between two changes from 9 lines on, keeping 3 on each side (FOLD-01)', () => {
+    expect(unchangedRegions([lineChanged(1), lineChanged(11)], 11, 11)).toEqual([both(5, 8)])
+    expect(unchangedRegions([lineChanged(1), lineChanged(10)], 10, 10)).toEqual([])
+  })
+
+  it('reads an insertion, whose original end is 0, as an empty original range', () => {
+    const inserted: LineChangeLike = {
+      originalStartLineNumber: 14,
+      originalEndLineNumber: 0,
+      modifiedStartLineNumber: 15,
+      modifiedEndLineNumber: 15
+    }
+
+    const regions = unchangedRegions([inserted], 30, 31)
+
+    expect(regions).toEqual([
+      both(1, 12),
+      { original: { start: 18, end: 31 }, modified: { start: 19, end: 32 } }
+    ])
+    // Left and right differ in position, never in length.
+    for (const r of regions) {
+      expect(r.original.end - r.original.start).toBe(r.modified.end - r.modified.start)
+    }
+  })
+
+  it('reads a deletion, whose modified end is 0, as an empty modified range', () => {
+    const deleted: LineChangeLike = {
+      originalStartLineNumber: 15,
+      originalEndLineNumber: 15,
+      modifiedStartLineNumber: 14,
+      modifiedEndLineNumber: 0
+    }
+
+    expect(unchangedRegions([deleted], 31, 30)).toEqual([
+      both(1, 12),
+      { original: { start: 19, end: 32 }, modified: { start: 18, end: 31 } }
+    ])
+  })
+
+  it('reads a deletion of line 1, reported at modified line 0', () => {
+    const deleted: LineChangeLike = {
+      originalStartLineNumber: 1,
+      originalEndLineNumber: 1,
+      modifiedStartLineNumber: 0,
+      modifiedEndLineNumber: 0
+    }
+
+    expect(unchangedRegions([deleted], 30, 29)).toEqual([
+      { original: { start: 5, end: 31 }, modified: { start: 4, end: 30 } }
+    ])
+  })
+
+  it('makes one region of the whole file when nothing changed', () => {
+    expect(unchangedRegions([], 50, 50)).toEqual([both(1, 51)])
   })
 })

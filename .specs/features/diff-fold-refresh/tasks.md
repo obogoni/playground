@@ -13,7 +13,7 @@ regions from `getLineChanges()` with Monaco's own rule, snapshots their fold sta
 and applies its own plan through `restoreViewState`'s `modelState` once Monaco has recomputed; the
 per-tab Hide / Show choice lives in `use-files` and reaches every mounted `DiffViewer` as a prop.
 **Status**: Approved by the owner on 2026-09-27 ("pode seguir com a #130", executed inline at the
-owner's choice). T1 Done; cause confirmed, continuing.
+owner's choice). T1, T2 Done; cause confirmed, continuing.
 
 **Branch**: `feature/diff-fold-refresh`, cut from `feature/files-view-polish` `70d573c` (PR #125, which
 adds Expand all / Collapse all). Rebase onto `origin/main` once #125 merges. The future PR body carries
@@ -208,9 +208,11 @@ spans, mirroring `UnchangedRegion.fromDiffs` (`diffEditorViewModel.js:347-375`) 
 
 **Done when**:
 
-- [ ] Tests: the constants are 3 / 3 / 20; T1's two layouts (changes at 20 and 180 of 200 → three regions `[1,17)`, `[24,177)`, `[184,201)`; plus line 100 → four); a region at the start or end needs 6 lines, one between changes 9; a run one line short of each bound yields none (L-028); an insertion (`originalEndLineNumber` 0) and a deletion (`modifiedEndLineNumber` 0, including at line 0) give the right spans; no changes → one region over the whole file; left and right spans differ in position but not in length
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
-- [ ] Test count: baseline + the new tests
+- [x] Tests: the constants are 3 / 3 / 20; T1's two layouts (changes at 20 and 180 of 200 → three regions `[1,17)`, `[24,177)`, `[184,201)`; plus line 100 → four); a region at the start or end needs 6 lines, one between changes 9; a run one line short of each bound yields none (L-028); an insertion (`originalEndLineNumber` 0) and a deletion (`modifiedEndLineNumber` 0, including at line 0) give the right spans; no changes → one region over the whole file; left and right spans differ in position but not in length
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
+- [x] Test count: baseline + the new tests
+
+**Result (2026-09-27)**: 10 new tests, red before the code (`unchangedRegions is not a function`), then 44/44 in the file. Fixtures take the model's line count (201 for a 200-line file ending in a newline), as T1 measured; the four-region fixture asserts the 16 / 73 / 73 / 18 the running app showed. Each bound has its one-short case with an exact region list: 6 vs 5 lines at the start and at the end, 9 vs 8 between two changes. Insertion (`originalEndLineNumber` 0), deletion (`modifiedEndLineNumber` 0) and a deletion of line 1 (modified start 0) each assert both sides; the insertion test asserts equal lengths with different positions.
 
 **Tests**: unit
 **Gate**: quick
