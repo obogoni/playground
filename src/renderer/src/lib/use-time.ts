@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { TimeEditResult, TimeSnapshot } from '../../../shared/time'
+import type { PeriodTaskChoice, TimeEditResult, TimeSnapshot } from '../../../shared/time'
 import { api } from './api'
 
 const EMPTY: TimeSnapshot = { periods: [], open: [], paused: [] }
@@ -11,6 +11,10 @@ export interface UseTime {
   /** Resolves with main's verdict; the snapshot is refetched either way (TIME-49). */
   deletePeriod: (id: string) => Promise<TimeEditResult>
   adjustPeriod: (id: string, start: string, end: string) => Promise<TimeEditResult>
+  /** Sets a closed period's task (HTSK-25..27); refetches like the edits above (HTSK-35). */
+  reassignPeriod: (id: string, choice: PeriodTaskChoice) => Promise<TimeEditResult>
+  /** Splits a closed period at a UTC ISO instant (HTSK-28); refetches (HTSK-35). */
+  splitPeriod: (id: string, at: string) => Promise<TimeEditResult>
 }
 
 /**
@@ -49,7 +53,19 @@ export function useTime(): UseTime {
     [refresh]
   )
 
-  return { snapshot, pause, resume, deletePeriod, adjustPeriod }
+  const reassignPeriod = useCallback(
+    (id: string, choice: PeriodTaskChoice): Promise<TimeEditResult> =>
+      api.invoke('time:reassign', { id, choice }).finally(refresh),
+    [refresh]
+  )
+
+  const splitPeriod = useCallback(
+    (id: string, at: string): Promise<TimeEditResult> =>
+      api.invoke('time:split', { id, at }).finally(refresh),
+    [refresh]
+  )
+
+  return { snapshot, pause, resume, deletePeriod, adjustPeriod, reassignPeriod, splitPeriod }
 }
 
 /** `Date.now()`, refreshed every `intervalMs`; a null interval stops ticking. */
