@@ -444,3 +444,63 @@ export function regionStates(
     return { region, revealedTop: first - start, revealedBottom: end - last }
   })
 }
+
+/** The Hide unchanged / Show unchanged choice a tab last made, if any. */
+export type UnchangedMode = 'hide' | 'show'
+
+const lengthOf = (span: LineSpan): number => span.end - span.start
+const overlaps = (a: LineSpan, b: LineSpan): boolean =>
+  Math.max(a.start, b.start) < Math.min(a.end, b.end)
+
+/** The span that folds a region whole. */
+const foldWhole = (region: Region): LineSpan => ({ ...region.modified })
+/** The empty span that reveals a region whole. */
+const revealWhole = (region: Region): LineSpan => ({
+  start: region.modified.start,
+  end: region.modified.start
+})
+
+/**
+ * Every region folded, or every region revealed (FOLD-12, FOLD-13, FOLD-14):
+ * one span per region, in order, for `applyFolds` to hand to Monaco.
+ */
+export function choicePlan(next: readonly Region[], choice: UnchangedMode): LineSpan[] {
+  return next.map(choice === 'show' ? revealWhole : foldWhole)
+}
+
+/**
+ * The folds of a diff after its text changed, from the region states read
+ * before the change. A region is the same region when it shares a left-side
+ * line with one from before: the left side is the committed text, which an
+ * agent's writes do not move. Then it keeps that region's fold (FOLD-02), its
+ * whole reveal (FOLD-03) or its lines revealed above and below the strip,
+ * clamped to its new size (FOLD-05); grown from several, it is revealed when
+ * any of them was revealed whole (FOLD-06). A region new after the change is
+ * folded, or revealed while Show unchanged is the tab's choice (FOLD-04,
+ * FOLD-15). With no earlier state, or a left side that changed too, every
+ * region starts as in a newly opened diff (FOLD-07, FOLD-26).
+ */
+export function foldPlan(
+  previous: readonly RegionState[] | null,
+  next: readonly Region[],
+  choice: UnchangedMode | null,
+  leftChanged: boolean
+): LineSpan[] {
+  const fresh = choice === 'show' ? revealWhole : foldWhole
+  if (previous === null || leftChanged) return next.map(fresh)
+  return next.map((region) => {
+    const sources = previous.filter((state) => overlaps(state.region.original, region.original))
+    if (sources.length === 0) return fresh(region)
+    const wholeReveal = (state: RegionState): boolean =>
+      state.revealedTop + state.revealedBottom >= lengthOf(state.region.modified)
+    if (sources.length > 1) {
+      return sources.some(wholeReveal) ? revealWhole(region) : foldWhole(region)
+    }
+    const [source] = sources
+    if (wholeReveal(source)) return revealWhole(region)
+    const length = lengthOf(region.modified)
+    const top = Math.min(source.revealedTop, length)
+    const bottom = Math.min(source.revealedBottom, length - top)
+    return { start: region.modified.start + top, end: region.modified.end - bottom }
+  })
+}

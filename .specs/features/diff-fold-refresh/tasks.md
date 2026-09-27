@@ -267,10 +267,15 @@ the spans `applyFolds` hands to Monaco (design.md, Region rules).
 
 **Done when**:
 
-- [ ] Tests, one per rule: a folded region that still exists stays folded (FOLD-02); a revealed one stays revealed, including both halves of a region a new change split (FOLD-03); a region with no left-side overlap folds with no choice or `hide` (FOLD-04) and is revealed with `show` (FOLD-15); a partial region keeps its top and bottom counts, clamped when it shrank (FOLD-05); a merged region is revealed if any source was, folded otherwise (FOLD-06); `leftChanged` and `previous === null` give the choice, or folded (FOLD-07); an empty `previous` (a write through an empty file) folds everything (FOLD-26); `choicePlan` folds all or reveals all (FOLD-12, 13)
-- [ ] Tests: every span stays inside its own region's right side, so Monaco's intersect-or-touch match (`lineRange.js:103-110`) cannot hand it to a neighbour
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
-- [ ] Test count: T3 count + the new tests
+- [x] Tests, one per rule: a folded region that still exists stays folded (FOLD-02); a revealed one stays revealed, including both halves of a region a new change split (FOLD-03); a region with no left-side overlap folds with no choice or `hide` (FOLD-04) and is revealed with `show` (FOLD-15); a partial region keeps its top and bottom counts, clamped when it shrank (FOLD-05); a merged region is revealed if any source was, folded otherwise (FOLD-06); `leftChanged` and `previous === null` give the choice, or folded (FOLD-07); an empty `previous` (a write through an empty file) folds everything (FOLD-26); `choicePlan` folds all or reveals all (FOLD-12, 13)
+- [x] Tests: every span stays inside its own region's right side, so Monaco's intersect-or-touch match (`lineRange.js:103-110`) cannot hand it to a neighbour
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
+- [x] Test count: T3 count + the new tests
+
+**Result (2026-09-27)**: 14 new tests, red before the code (`foldPlan is not a function`, `choicePlan is not a function`), then 68/68 in the file. Fixtures are T1's measured regions (long.ts 16 / 153 / 18, then 16 / 73 / 73 / 18) and the other.ts layout of 14d. Beyond the listed rules, one test moves the right side of a matched region by an insertion above it, to pin that matching is by left-side lines only. Two readings taken where the spec leaves room, both recorded here for the Verifier:
+
+- **FOLD-06, "revealed"** means revealed whole. A merged region whose sources were only revealed in part folds; "revealed in part" is FOLD-05's own case, for a single source.
+- **The new type `UnchangedMode = 'hide' | 'show'`** is declared in `diff-view.ts`, next to the plans that take it, so T5's `UnchangedChoice` in `files-view.ts` imports it rather than declaring the union twice.
 
 **Tests**: unit
 **Gate**: quick

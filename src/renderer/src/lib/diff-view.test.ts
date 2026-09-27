@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import type { ChangedPath, FileStat } from '../../../shared/files'
 import {
   ALL_CHANGES_KEY,
+  choicePlan,
   diffRequestFor,
   eolStripText,
+  foldPlan,
   hiddenRangesOf,
   initialExpansion,
   isSameTab,
@@ -17,6 +19,8 @@ import {
   unchangedRegions,
   type ChangeSection,
   type LineChangeLike,
+  type Region,
+  type RegionState,
   type DiffMode,
   type StackSection,
   type TabRef
@@ -564,6 +568,157 @@ describe('regionStates', () => {
   it('reads a region with no hidden range listed as folded, as Monaco starts it', () => {
     expect(regionStates([middle], [])).toEqual([
       { region: middle, revealedTop: 0, revealedBottom: 0 }
+    ])
+  })
+})
+
+describe('foldPlan', () => {
+  // T1's long.ts: changed at 20 and 180, then at 100 as well.
+  const A = both(1, 17)
+  const B = both(24, 177)
+  const C = both(184, 202)
+  const B1 = both(24, 97)
+  const B2 = both(104, 177)
+  const split = [A, B1, B2, C]
+
+  const folded = (region: Region): RegionState => ({ region, revealedTop: 0, revealedBottom: 0 })
+  const revealed = (region: Region): RegionState => ({
+    region,
+    revealedTop: region.modified.end - region.modified.start,
+    revealedBottom: 0
+  })
+  const partial = (region: Region, top: number, bottom: number): RegionState => ({
+    region,
+    revealedTop: top,
+    revealedBottom: bottom
+  })
+  const whole = (r: Region): { start: number; end: number } => r.modified
+  const open = (r: Region): { start: number; end: number } => ({
+    start: r.modified.start,
+    end: r.modified.start
+  })
+
+  it('keeps folded the regions that were folded and still exist (FOLD-02)', () => {
+    expect(foldPlan([folded(A), folded(B), folded(C)], split, null, false)).toEqual(
+      split.map(whole)
+    )
+  })
+
+  it('keeps revealed a region revealed by hand, both halves when a change split it (FOLD-03)', () => {
+    expect(foldPlan([folded(A), revealed(B), folded(C)], split, null, false)).toEqual([
+      whole(A),
+      open(B1),
+      open(B2),
+      whole(C)
+    ])
+  })
+
+  it('matches regions by their left-side lines, whatever the right side moved (FOLD-03)', () => {
+    // An insertion above shifts the right side of the second region by one line.
+    const shifted: Region = { original: { start: 51, end: 177 }, modified: { start: 52, end: 178 } }
+    const plan = foldPlan([revealed(B)], [both(24, 47), shifted], null, false)
+
+    expect(plan).toEqual([
+      { start: 24, end: 24 },
+      { start: 52, end: 52 }
+    ])
+  })
+
+  // other.ts: lines 50-70 changed, then only 50 and 70 differ.
+  const top = both(1, 47)
+  const bottom = both(74, 122)
+  const fresh = both(54, 67)
+
+  it('folds a region that did not exist before, with no choice or after Hide (FOLD-04)', () => {
+    const before = [revealed(top), folded(bottom)]
+
+    expect(foldPlan(before, [top, fresh, bottom], null, false)).toEqual([
+      open(top),
+      whole(fresh),
+      whole(bottom)
+    ])
+    expect(foldPlan(before, [top, fresh, bottom], 'hide', false)[1]).toEqual(whole(fresh))
+  })
+
+  it('reveals a region that did not exist before while Show unchanged is the choice (FOLD-15)', () => {
+    expect(foldPlan([folded(top), folded(bottom)], [top, fresh, bottom], 'show', false)).toEqual([
+      whole(top),
+      open(fresh),
+      whole(bottom)
+    ])
+  })
+
+  it('keeps the lines revealed above and below a strip (FOLD-05)', () => {
+    expect(foldPlan([partial(B, 20, 10)], [B1, B2], null, false)).toEqual([
+      { start: 44, end: 87 },
+      { start: 124, end: 167 }
+    ])
+  })
+
+  it('clamps the lines revealed above and below to a region that shrank (FOLD-05)', () => {
+    // 100 above and 40 below do not fit in 73 lines: the top takes them all.
+    expect(foldPlan([partial(B, 100, 40)], [B1], null, false)).toEqual([{ start: 97, end: 97 }])
+    expect(foldPlan([partial(B, 10, 70)], [B1], null, false)).toEqual([{ start: 34, end: 34 }])
+  })
+
+  it('reveals a merged region if any region it grew from was revealed, and folds it otherwise (FOLD-06)', () => {
+    expect(foldPlan([folded(B1), revealed(B2)], [B], null, false)).toEqual([open(B)])
+    expect(foldPlan([folded(B1), folded(B2)], [B], null, false)).toEqual([whole(B)])
+  })
+
+  it('starts every region as in a new diff when the left side changed (FOLD-07)', () => {
+    const before = [folded(A), revealed(B), folded(C)]
+
+    expect(foldPlan(before, split, null, true)).toEqual(split.map(whole))
+    expect(foldPlan(before, split, 'hide', true)).toEqual(split.map(whole))
+    expect(foldPlan(before, split, 'show', true)).toEqual(split.map(open))
+  })
+
+  it('starts every region as in a new diff when there is no earlier state (FOLD-07)', () => {
+    expect(foldPlan(null, split, null, false)).toEqual(split.map(whole))
+    expect(foldPlan(null, split, 'show', false)).toEqual(split.map(open))
+  })
+
+  it('folds every region after a write through an empty file (FOLD-26)', () => {
+    expect(foldPlan([], split, null, false)).toEqual(split.map(whole))
+  })
+
+  it("keeps every span inside its own region's right side", () => {
+    const next = [top, fresh, bottom]
+    const plans = [
+      foldPlan([revealed(top), partial(bottom, 5, 5)], next, 'show', false),
+      foldPlan([partial(top, 100, 100)], next, null, false),
+      choicePlan(next, 'hide'),
+      choicePlan(next, 'show')
+    ]
+
+    for (const plan of plans) {
+      expect(plan).toHaveLength(next.length)
+      plan.forEach((span, i) => {
+        expect(span.start).toBeGreaterThanOrEqual(next[i].modified.start)
+        expect(span.end).toBeLessThanOrEqual(next[i].modified.end)
+        expect(span.start).toBeLessThanOrEqual(span.end)
+      })
+    }
+  })
+})
+
+describe('choicePlan', () => {
+  const regions = [both(1, 17), both(24, 177), both(184, 202)]
+
+  it('folds every region for Hide unchanged (FOLD-12)', () => {
+    expect(choicePlan(regions, 'hide')).toEqual([
+      { start: 1, end: 17 },
+      { start: 24, end: 177 },
+      { start: 184, end: 202 }
+    ])
+  })
+
+  it('reveals every region for Show unchanged (FOLD-13)', () => {
+    expect(choicePlan(regions, 'show')).toEqual([
+      { start: 1, end: 1 },
+      { start: 24, end: 24 },
+      { start: 184, end: 184 }
     ])
   })
 })
