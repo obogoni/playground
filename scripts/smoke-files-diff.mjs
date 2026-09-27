@@ -943,6 +943,32 @@ function columnFaults(items) {
   return faults
 }
 
+/**
+ * Items whose glyph colour or tint differ from the probe's for their status, over
+ * `[items, expected status by path, probed tones]` lists; `seen` holds the
+ * statuses met, so a caller can require all five.
+ */
+function toneFaultsOf(lists) {
+  const faults = []
+  const seen = new Set()
+  for (const [items, expected, tones] of lists) {
+    for (const item of items) {
+      const status = expected[item.path]
+      if (!status) {
+        faults.push(`${item.path}: not seeded`)
+        continue
+      }
+      seen.add(status)
+      if (item.color !== tones?.[status]?.color || item.tint !== tones?.[status]?.tint) {
+        faults.push(
+          `${item.path}: ${item.color} on ${item.tint}, want ${tones?.[status]?.color} on ${tones?.[status]?.tint}`
+        )
+      }
+    }
+  }
+  return { faults, seen }
+}
+
 /** Rows whose glyph text or tooltip differ from the spec's for their status. */
 function glyphFaults(items, expected) {
   return items
@@ -995,26 +1021,10 @@ async function glyphTreeChecks(ws) {
   )
 
   // 2. Tones, against probes; the five tokens must differ or nothing is told apart.
-  const toneFaults = []
-  const seen = new Set()
-  for (const [rows, expected, tones] of [
+  const { faults: toneFaults, seen } = toneFaultsOf([
     [originFiles, ORIGIN_STATUS, originTones],
     [uncommittedFiles, UNCOMMITTED_STATUS, uncommittedTones]
-  ]) {
-    for (const r of rows) {
-      const status = expected[r.path]
-      if (!status) {
-        toneFaults.push(`${r.path}: not seeded`)
-        continue
-      }
-      seen.add(status)
-      if (r.color !== tones?.[status]?.color || r.tint !== tones?.[status]?.tint) {
-        toneFaults.push(
-          `${r.path}: ${r.color} on ${r.tint}, want ${tones?.[status]?.color} on ${tones?.[status]?.tint}`
-        )
-      }
-    }
-  }
+  ])
   const distinct = new Set(Object.values(originTones ?? {}).map((t) => t.color)).size
   check(
     'Every glyph takes its status tone, in both lists (FSTS-06..10)',
@@ -1100,6 +1110,8 @@ const stackHeaders = `
       text: glyph?.textContent ?? null,
       title: glyph?.getAttribute('title') ?? null,
       status: glyph ? ([...glyph.classList].find((c) => c !== 'status-glyph') ?? null) : null,
+      color: glyph ? getComputedStyle(glyph).color : null,
+      tint: glyph ? getComputedStyle(glyph).backgroundColor : null,
       last:
         !!glyph &&
         end.classList.contains('diff-section-end') &&
@@ -1142,7 +1154,9 @@ const headerFaults = (headers) => [
 /** 13. The status glyphs of the All changes section headers (FSTS-11, 16..21). */
 async function glyphHeaderChecks(ws) {
   const origin = await stackRows(ws, 'Diff to origin', ORIGIN_STATUS)
+  const originTones = await evaluate(ws, probeTones('.all-changes-stack'))
   const uncommitted = await stackRows(ws, 'Uncommitted', UNCOMMITTED_STATUS)
+  const uncommittedTones = await evaluate(ws, probeTones('.all-changes-stack'))
   const header = (headers, path) => headers.find((h) => h.path === path)
 
   // 1. Every header of the diff-to-origin stack reads its status.
@@ -1226,6 +1240,23 @@ async function glyphHeaderChecks(ws) {
       narrowColumn.length === 0,
     `at ${atWidth} px: overflows ${long?.overflows}` +
       (narrowColumn.length ? `; ${narrowColumn.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 6. Tones, against probes in the stack; as the tree's check 2.
+  const { faults: toneFaults, seen } = toneFaultsOf([
+    [origin, ORIGIN_STATUS, originTones],
+    [uncommitted, UNCOMMITTED_STATUS, uncommittedTones]
+  ])
+  const distinct = new Set(Object.values(originTones ?? {}).map((t) => t.color)).size
+  check(
+    'Every header glyph takes its status tone, in both stacks (FSTS-06..10)',
+    distinct === 5 &&
+      seen.size === 5 &&
+      origin.length + uncommitted.length ===
+        Object.keys(ORIGIN_STATUS).length + Object.keys(UNCOMMITTED_STATUS).length &&
+      toneFaults.length === 0,
+    `${distinct} distinct tokens, ${seen.size} statuses seen, ${origin.length + uncommitted.length} glyphs` +
+      (toneFaults.length ? `; ${toneFaults.slice(0, 3).join('; ')}` : '')
   )
 }
 

@@ -490,9 +490,15 @@ The Verifier's round 1 (`validation.md`) failed on smoke evidence only; the prod
 
 **Done when**:
 
-- [ ] The check passes on the code, and fails on the Verifier's mutant S11 (`.diff-section-end .status-glyph { color: inherit; background: none }`)
-- [ ] The tree tone mutant (T9 b) still fails the tree tone check
-- [ ] Gate check passes: `npm run lint` (0 errors, 18 warnings)
+- [x] The check passes on the code, and fails on the Verifier's mutant S11 (`.diff-section-end .status-glyph { color: inherit; background: none }`)
+- [x] The tree tone mutant (T9 b) still fails the tree tone check
+- [x] Gate check passes: `npm run lint` (0 errors, 18 warnings)
+
+**Result (2026-09-27)**: `stackHeaders` now also reads each glyph's computed `color` and `backgroundColor`. `glyphHeaderChecks` probes the tones in `.all-changes-stack` right after reading each stack. The new header check 6 (focused 13) runs the tree's comparison over both stacks. That comparison now lives in one `toneFaultsOf` helper, which check 2 calls too, with its logic unchanged. Guards: 5 distinct tokens, all 5 statuses seen, and 48 headers read (44 + 4). Focused run: 14 / 14 in 34 s. Mutants, one focused run each:
+- S11 (`.diff-section-end .status-glyph { color: inherit; background: none }`): fails 13 only. The glyphs read `rgb(165, 156, 142)` on transparent, against `rgb(224, 128, 104)` for deleted.
+- T9 b (`.status-glyph.added` rule removed): fails 2 and 13, so the tree check keeps its teeth after the extraction.
+
+`git status --porcelain` matched the baseline after each. Lint: exit 0, 0 errors, 18 warnings, unchanged.
 
 **Tests**: manual
 **Gate**: manual
