@@ -120,6 +120,7 @@ function App(): JSX.Element {
     refreshSessions,
     spawnSession,
     renameSession,
+    setSessionTask,
     duplicateSession,
     stopSession,
     respawnSession,
@@ -470,6 +471,7 @@ function App(): JSX.Element {
             onPauseTime={time.pause}
             onResumeTime={time.resume}
             onToast={setToast}
+            onSetTask={setSessionTask}
           />
         ) : ui.direction === 'workflows' ? (
           <WorkflowsView
