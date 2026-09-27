@@ -30,10 +30,14 @@
  *     docs/removed.md      committed on main, deleted on the branch
  *     src/renamed-new.ts   committed as renamed-old.ts, moved on the branch
  *     crlf.txt             committed with CRLF, rewritten as LF on disk
- *     assets/logo.bin      a NUL in the first 8000 bytes
+ *     assets/logo.bin      a NUL in the first 8000 bytes; rewritten with other
+ *                          bytes, uncommitted, so one header has no counts
  *     big.txt              2 MB, past the 1 MB view cap
  *     stack/f00..f39.ts    40 changed files, for the All changes stack
  *     untracked.txt        untracked, so the uncommitted mode has one
+ *     src/a-rather-long-untracked-file-name-that-has-to-be-cut-short-before-its-status-glyph.txt
+ *                          untracked, 12 lines, a name the tree and the
+ *                          header must cut before the status glyph
  *     Acme.Widget.slnx     committed on main, for the .slnx icon correction
  *     settings.json        committed on main, for the dark-theme icon rule
  *     vite.config.ts       committed on main, for the light-theme icon rule
@@ -59,6 +63,10 @@ const REPO = join(WS_PATH, 'app')
 const ORIGIN = join(BASE, 'fxd-smoke-origin.git')
 const CONFIG_PATH =
   process.env.SMOKE_CONFIG ?? join(process.env.APPDATA ?? '', 'playground', 'config.json')
+
+/** The seeded untracked file whose name is cut before its status glyph. */
+const LONG_NAME =
+  'a-rather-long-untracked-file-name-that-has-to-be-cut-short-before-its-status-glyph.txt'
 
 const CR = String.fromCharCode(13)
 const LF = String.fromCharCode(10)
@@ -134,6 +142,16 @@ function seed() {
   // Uncommitted: the same file rewritten with LF, and one untracked file.
   writeFileSync(join(REPO, 'crlf.txt'), ['alpha', 'beta', 'gamma'].join(LF) + LF)
   writeFileSync(join(REPO, 'untracked.txt'), 'not tracked yet\n')
+  // A name too long for its row and header, and a binary change with no
+  // counts: the status glyph has to hold its column past both (FSTS-04/17/20).
+  writeFileSync(
+    join(REPO, 'src', LONG_NAME),
+    Array.from({ length: 12 }, (_, i) => `line ${i + 1}`).join(LF) + LF
+  )
+  writeFileSync(
+    join(REPO, 'assets', 'logo.bin'),
+    Buffer.from([0x89, 0x50, 0x00, 0x4e, 0x47, 0x0d, 0x0a])
+  )
 
   const config = existsSync(CONFIG_PATH) ? JSON.parse(readFileSync(CONFIG_PATH, 'utf8')) : {}
   if (!Array.isArray(config.workspaces)) config.workspaces = []

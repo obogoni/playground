@@ -344,9 +344,11 @@ The new `.file-tree-end` wrapper adds no padding, height or vertical margin; its
 **Done when**:
 
 - [ ] T-setup done; a full drive on the new seed passes every existing check (count recorded before and after the seed change; the same numbers pass)
-- [ ] In the uncommitted stack, `assets/logo.bin`'s header renders no `.diff-section-counts` and the long file's reads `+12` (read once by hand in the dev app, recorded in the commit body)
-- [ ] The seed stays fictitious
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] In the uncommitted stack, `assets/logo.bin`'s header renders no `.diff-section-counts` and the long file's reads `+12` (read once by hand in the dev app, recorded in the commit body)
+- [x] The seed stays fictitious
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Result (2026-09-27)**: `seed()` now writes, after the two existing uncommitted files, `src/a-rather-long-untracked-file-name-that-has-to-be-cut-short-before-its-status-glyph.txt` (12 lines, `line 1` to `line 12`) and rewrites `assets/logo.bin` as `89 50 00 4e 47 0d 0a` (the NUL kept at byte 2); both are listed in the header's seed list. The name lives in one `LONG_NAME` constant for the checks to reuse. Hand read through CDP in the dev app, on a fresh seed and a fresh `--user-data-dir`, Uncommitted → All changes: `assets/logo.bin` header has no `.diff-section-counts` and glyph `M`; the long file's header reads `+12−0`, glyph `U`; `crlf.txt` reads `+3−3`, `M`; `untracked.txt` reads `+1−0`, `U`. The uncommitted tree lists `assets/` › `logo.bin` `M`, `src/` › the long name `U`, `crlf.txt` `M`, `untracked.txt` `U`, folders without a glyph. Names and content are fictitious. Lint: exit 0, 0 errors, 18 warnings, unchanged. Deviation (orchestrator's owner rule): the full drive on the new seed is not run here; the full smoke runs once, at the end of T10, and closes the open box above. Count before the seed change: 29 / 29, the last recorded full drive (file-icons T8); the drive has not changed since.
 
 **Tests**: manual
 **Gate**: manual
