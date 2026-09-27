@@ -137,27 +137,27 @@ right after the chevron and before the path.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FSTS-01 | P1: one column — AC 1 | Execute | Implementing: T4, T5; T9 checks 3, 4 (full drive 22, 23) |
-| FSTS-02 | P1: one column — AC 2 | Execute | Implementing: T5; T9 checks 3, 4 (22, 23) |
-| FSTS-03 | P1: one column — AC 3 | Execute | Implementing: T4; T9 check 3 (22) |
-| FSTS-04 | P1: one column — AC 4 | Execute | Implementing: T5, T8; T9 check 5 (24) |
-| FSTS-05 | P1: one column — AC 5 | Execute | Implementing: T4; T9 check 6 (25) |
-| FSTS-06 | P1: glyph — AC 6 | Execute | Implementing: T1, T2; `change-status.test.ts` table; T9 checks 1, 2 (20, 21) |
-| FSTS-07 | P1: glyph — AC 7 | Execute | Implementing: T1, T2; `change-status.test.ts` table; T9 checks 1, 2 (20, 21) |
-| FSTS-08 | P1: glyph — AC 8 | Execute | Implementing: T1, T2; `change-status.test.ts` table; T9 checks 1, 2 (20, 21) |
-| FSTS-09 | P1: glyph — AC 9 | Execute | Implementing: T1, T2; `change-status.test.ts` table; T9 checks 1, 2 (20, 21) |
-| FSTS-10 | P1: glyph — AC 10 | Execute | Implementing: T1, T2; `change-status.test.ts` table; T9 checks 2, 4 (21, 23) |
-| FSTS-11 | P1: glyph — AC 11 | Execute | Implementing: T1, T3; `change-status.test.ts` table; T9 checks 1, 4 (20, 23); T10 checks 1, 3 (27, 29) |
-| FSTS-12 | P1: glyph — AC 12 | Execute | Implementing: T1, T4, T6; `change-status.test.ts`; the `STATUS_LETTER`/`STATUS_LABEL` grep of T4 and T6 |
-| FSTS-13 | P1: deleted — AC 13 | Execute | Implementing: T1, T4, T5; `change-status.test.ts` strike test; T9 check 7 (26) |
-| FSTS-14 | P1: deleted — AC 14 | Execute | Implementing: T5; T9 check 7 (26) |
-| FSTS-15 | P1: deleted — AC 15 | Execute | Implementing: T1; `change-status.test.ts` strike test; T9 check 7 (26) |
-| FSTS-16 | P1: headers — AC 16 | Execute | Implementing: T6, T7; T10 check 2 (28) |
-| FSTS-17 | P1: headers — AC 17 | Execute | Implementing: T7, T8; T10 check 3 (29) |
-| FSTS-18 | P1: headers — AC 18 | Execute | Implementing: T6; T10 checks 1, 2 (27, 28) |
-| FSTS-19 | P1: headers — AC 19 | Execute | Implementing: T6, T7; T10 check 4 (30) |
-| FSTS-20 | P1: headers — AC 20 | Execute | Implementing: T7, T8; T10 check 5 (31) |
-| FSTS-21 | P1: headers — AC 21 | Execute | Implementing: T6, T10; reuse: `CommitTab.tsx:43` mounts `AllChangesTab`, which renders `DiffSection` (`AllChangesTab.tsx:303`) |
+| FSTS-01 | P1: one column — AC 1 | Execute | Verified (validation.md) |
+| FSTS-02 | P1: one column — AC 2 | Execute | Verified (validation.md) |
+| FSTS-03 | P1: one column — AC 3 | Execute | Verified (validation.md) |
+| FSTS-04 | P1: one column — AC 4 | Execute | Needs Fix: Fix 3 (ellipsis not asserted) |
+| FSTS-05 | P1: one column — AC 5 | Execute | Verified (validation.md) |
+| FSTS-06 | P1: glyph — AC 6 | Execute | Needs Fix: Fix 2, 4 (header tones, visibility); tree verified |
+| FSTS-07 | P1: glyph — AC 7 | Execute | Needs Fix: Fix 2, 4 (header tones, visibility); tree verified |
+| FSTS-08 | P1: glyph — AC 8 | Execute | Needs Fix: Fix 2, 4 (header tones, visibility); tree verified |
+| FSTS-09 | P1: glyph — AC 9 | Execute | Needs Fix: Fix 2, 4 (header tones, visibility); tree verified |
+| FSTS-10 | P1: glyph — AC 10 | Execute | Needs Fix: Fix 2, 4 (header tones, visibility); tree verified |
+| FSTS-11 | P1: glyph — AC 11 | Execute | Verified (validation.md) |
+| FSTS-12 | P1: glyph — AC 12 | Execute | Verified (validation.md) |
+| FSTS-13 | P1: deleted — AC 13 | Execute | Verified (validation.md) |
+| FSTS-14 | P1: deleted — AC 14 | Execute | Verified (validation.md) |
+| FSTS-15 | P1: deleted — AC 15 | Execute | Verified (validation.md) |
+| FSTS-16 | P1: headers — AC 16 | Execute | Verified (validation.md) |
+| FSTS-17 | P1: headers — AC 17 | Execute | Verified (validation.md) |
+| FSTS-18 | P1: headers — AC 18 | Execute | Verified (validation.md) |
+| FSTS-19 | P1: headers — AC 19 | Execute | Verified (validation.md) |
+| FSTS-20 | P1: headers — AC 20 | Execute | Needs Fix: Fix 3 (ellipsis not asserted) |
+| FSTS-21 | P1: headers — AC 21 | Execute | Needs Fix: Fix 1 (no commit-tab assertion; holds at runtime, probe V-C) |
 
 **Coverage:** 21 total, 21 mapped to tasks, 0 unmapped.
 

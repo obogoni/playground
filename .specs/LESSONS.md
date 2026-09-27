@@ -234,6 +234,30 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: FICN-13 (validation.md, FileIcon.tsx:53-62) (renderer-ui)
 - last seen: 2026-09-26T17:05:30Z
 
+### L-043 - Assert a reused component in every host the spec names at runtime; a citation that the host mounts it does not kill a host-specific branch or style override
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
+- features: files-status-glyphs
+- evidence: FSTS-21 / S8b (validation.md; src/renderer/src/components/CommitTab.tsx:43) (scripts/smoke)
+- last seen: 2026-09-27T15:46:21Z
+
+### L-044 - Assert a reused component in every host the spec names at runtime; a citation that the host mounts it does not kill a host-specific branch or style override
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
+- features: files-status-glyphs
+- evidence: S11 src/renderer/src/components/DiffSection.css:78 (validation.md) (scripts/smoke)
+- last seen: 2026-09-27T15:46:21Z
+
+### L-045 - When an AC names an ellipsis, assert the computed text-overflow as well as scrollWidth > clientWidth; overflow alone passes when the text is clipped bare
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
+- features: files-status-glyphs
+- evidence: S10 src/renderer/src/components/FileTree.css:112; FSTS-04/20 (validation.md) (scripts/smoke)
+- last seen: 2026-09-27T15:46:21Z
+
+### L-046 - Assert a smoke-checked indicator is painted (visibility, ancestor opacity, box size) as well as its text, title and position; DOM reads pass on a hidden element
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
+- features: files-status-glyphs
+- evidence: S7 src/renderer/src/components/FileTree.css:134 (validation.md) (scripts/smoke)
+- last seen: 2026-09-27T15:46:21Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

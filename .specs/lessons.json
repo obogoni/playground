@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 43,
+  "next_id": 47,
   "lessons": [
     {
       "id": "L-001",
@@ -676,6 +676,78 @@
       ],
       "created": "2026-09-26T17:05:30Z",
       "last_seen": "2026-09-26T17:05:30Z"
+    },
+    {
+      "id": "L-043",
+      "key": "ac_gap::assert a reused component in every host the spec names at runtime a citation that the host mounts it does not kill a host specific branch or style override",
+      "text": "Assert a reused component in every host the spec names at runtime; a citation that the host mounts it does not kill a host-specific branch or style override",
+      "signal": "ac_gap",
+      "scope": "scripts/smoke",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "FSTS-21 / S8b (validation.md; src/renderer/src/components/CommitTab.tsx:43) (scripts/smoke)"
+      ],
+      "created": "2026-09-27T15:46:21Z",
+      "last_seen": "2026-09-27T15:46:21Z"
+    },
+    {
+      "id": "L-044",
+      "key": "surviving_mutant::assert a reused component in every host the spec names at runtime a citation that the host mounts it does not kill a host specific branch or style override",
+      "text": "Assert a reused component in every host the spec names at runtime; a citation that the host mounts it does not kill a host-specific branch or style override",
+      "signal": "surviving_mutant",
+      "scope": "scripts/smoke",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "S11 src/renderer/src/components/DiffSection.css:78 (validation.md) (scripts/smoke)"
+      ],
+      "created": "2026-09-27T15:46:21Z",
+      "last_seen": "2026-09-27T15:46:21Z"
+    },
+    {
+      "id": "L-045",
+      "key": "surviving_mutant::when an ac names an ellipsis assert the computed text overflow as well as scrollwidth clientwidth overflow alone passes when the text is clipped bare",
+      "text": "When an AC names an ellipsis, assert the computed text-overflow as well as scrollWidth > clientWidth; overflow alone passes when the text is clipped bare",
+      "signal": "surviving_mutant",
+      "scope": "scripts/smoke",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "S10 src/renderer/src/components/FileTree.css:112; FSTS-04/20 (validation.md) (scripts/smoke)"
+      ],
+      "created": "2026-09-27T15:46:21Z",
+      "last_seen": "2026-09-27T15:46:21Z"
+    },
+    {
+      "id": "L-046",
+      "key": "surviving_mutant::assert a smoke checked indicator is painted visibility ancestor opacity box size as well as its text title and position dom reads pass on a hidden element",
+      "text": "Assert a smoke-checked indicator is painted (visibility, ancestor opacity, box size) as well as its text, title and position; DOM reads pass on a hidden element",
+      "signal": "surviving_mutant",
+      "scope": "scripts/smoke",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "S7 src/renderer/src/components/FileTree.css:134 (validation.md) (scripts/smoke)"
+      ],
+      "created": "2026-09-27T15:46:21Z",
+      "last_seen": "2026-09-27T15:46:21Z"
     }
   ]
 }
