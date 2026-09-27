@@ -66,6 +66,9 @@ export interface TaskGroup extends RailGroupBase {
   branch: string
   /** Null when the id is unpinned or details have not resolved (RAIL-08). */
   details: WorkItemDetails | null
+  /** The first linked session's link title; the header shows it in place of
+   *  the branch when details are null (HTSK-20). Null without one. */
+  title: string | null
 }
 
 export interface OrphanGroup extends RailGroupBase {
@@ -151,6 +154,8 @@ interface PendingGroup {
   taskId: number | null
   branch: string | null
   details: WorkItemDetails | null
+  /** undefined until the group's first linked session is seen. */
+  title: string | null | undefined
   reason: OrphanReason | null
   label: string
   note: string
@@ -173,7 +178,11 @@ export function buildRailGroups(
   const byKey = new Map<string, PendingGroup>()
 
   for (const session of sessions) {
-    const { branch, taskId, detached } = deriveAttribution(tree, session.cwd)
+    const { branch, taskId, detached, linked, linkTitle } = deriveAttribution(
+      tree,
+      session.cwd,
+      session.task
+    )
     const key = taskId !== null ? `task:${taskId}` : `session:${session.id}`
     let group = byKey.get(key)
     if (!group) {
@@ -185,6 +194,7 @@ export function buildRailGroups(
               taskId,
               branch: branch ?? session.cwd,
               details: linkedPinFor(tasks, taskId)?.details ?? null,
+              title: undefined,
               reason: null,
               label: '',
               note: '',
@@ -194,6 +204,7 @@ export function buildRailGroups(
       byKey.set(key, group)
       pending.push(group)
     }
+    if (linked && group.title === undefined) group.title = linkTitle
     group.entries.push({ session, branch, detached })
   }
 
@@ -222,6 +233,7 @@ function orphanGroup(
     taskId: null,
     branch,
     details: null,
+    title: undefined,
     reason,
     label,
     note,
@@ -239,7 +251,8 @@ function toRailGroup(group: PendingGroup): RailGroup {
       taskId: group.taskId,
       branch,
       details: group.details,
-      ariaLabel: `#${group.taskId} ${group.details ? group.details.title : branch}`,
+      title: group.title ?? null,
+      ariaLabel: `#${group.taskId} ${group.details?.title ?? group.title ?? branch}`,
       rows
     }
   }

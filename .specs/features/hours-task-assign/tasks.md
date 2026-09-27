@@ -401,9 +401,9 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Tests (appended `describe`): a detached session linked to #4821 is a task group `task:4821`, not an orphan; a session on `feature/67890-x` linked to #12345 is in `task:12345`; an unlinked session on the same task and a linked one share one group, in persisted order; an unpinned link's group carries its title and a null-title link's group carries `title: null`; unlinked sessions produce the same groups as before
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/rail-groups.test.ts` then `npm test`
-- [ ] Test count: T11 count + the new tests
+- [x] Tests (appended `describe`): a detached session linked to #4821 is a task group `task:4821`, not an orphan; a session on `feature/67890-x` linked to #12345 is in `task:12345`; an unlinked session on the same task and a linked one share one group, in persisted order; an unpinned link's group carries its title and a null-title link's group carries `title: null`; unlinked sessions produce the same groups as before
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/rail-groups.test.ts` then `npm test`
+- [x] Test count: T11 count + the new tests: 1768 + 7 = 1775 (93 files). The group's aria-label names the link title too when details are null, like the header (HTSK-20)
 
 **Tests**: unit
 **Gate**: quick
