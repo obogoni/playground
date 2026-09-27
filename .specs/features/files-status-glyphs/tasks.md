@@ -175,8 +175,10 @@ T7 → T8 → T9 → T10
 
 **Done when**:
 
-- [ ] The five tone rules match `FileTree.css:136-159` value for value (diffed in the commit body)
-- [ ] Gate check passes: `npm run lint && npx electron-vite build`
+- [x] The five tone rules match `FileTree.css:136-159` value for value (diffed in the commit body)
+- [x] Gate check passes: `npm run lint && npx electron-vite build`
+
+**Result (2026-09-27)**: `diff` of `FileTree.css:136-159` (with `file-tree-pill` read as `status-glyph`) against `StatusGlyph.css:15-38`: empty. The same holds for the pill geometry (`FileTree.css:128-133` against `StatusGlyph.css:7-12`). `FileTree.css:136-159` was also confirmed identical to `DiffSection.css:53-76`. Lint: exit 0, 0 errors, 18 warnings, unchanged. `npx electron-vite build`: exit 0. Nothing imports the stylesheet until T3.
 
 **Tests**: none
 **Gate**: build
