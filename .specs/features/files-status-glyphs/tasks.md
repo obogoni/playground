@@ -629,10 +629,16 @@ The Verifier's round 2 (`validation.md`) failed on smoke evidence only; the prod
 
 **Done when**:
 
-- [ ] The Verifier's mutant R7 (commit tabs only: the path `style={{ textOverflow: 'clip' }}`) fails the new check
-- [ ] A header column mutant (T10 c) still fails the commit tab checks
-- [ ] The seed stays fictitious; the full drive on the new seed runs once, at T17 (owner rule)
-- [ ] Gate check passes: `npm run lint` (0 errors, 18 warnings)
+- [x] The Verifier's mutant R7 (commit tabs only: the path `style={{ textOverflow: 'clip' }}`) fails the new check
+- [x] A header column mutant (T10 c) still fails the commit tab checks
+- [x] The seed stays fictitious; the full drive on the new seed runs once, at T17 (owner rule)
+- [x] Gate check passes: `npm run lint` (0 errors, 18 warnings)
+
+**Result (2026-09-27)**: `seed()` now adds `docs/an-unusually-long-guide-name-that-a-commit-tab-header-has-to-cut-before-its-glyph.md` (3 lines of fictional text, one `LONG_GUIDE` constant) to the branch commit. It recreates `docs/` first, because `git rm` of `docs/removed.md` takes the emptied folder with it. The file is also listed in the header's seed list. `ORIGIN_STATUS` gains it as `added`, so diff to origin and the commit tab now list 45 files. Every check that counts them reads that map: tree checks 3 and 8, header checks 9, 10, 14 and 15, and the commit tab check 16 (now 45 file rows or headers, and 49 glyphs over both lists). The full drive's `sections >= 40` still holds at 45. T10 check 5's narrowing loop is now one `narrowUntilCut(ws, path)` helper. It steps from 900 px down to 600 px and clears the override in a `finally`. The new commit tab check (focused 17) calls it before the tab closes. It requires the active tab to be the commit's, all 45 headers read at that width, the long path to pass `ellipsisFaults`, and `headerFaults` to be empty there. Focused run: 17 / 17 in 36 s. 17 reads `at 900 px, 45 headers: overflows true, text-overflow ellipsis, overflow-x hidden, white-space nowrap`. Mutants, one focused run each (`fr2-t16-<id>-drive.log`):
+- R7 (commit tabs only: the path `style={{ textOverflow: 'clip' }}`): fails 17 only (`text-overflow clip`).
+- T10 c (end group before the path, every header): fails 10, 11, 13, 16 and 17.
+
+`git status --porcelain` matched the baseline after each. Lint: exit 0, 0 errors, 18 warnings, unchanged. The full drive on the new seed runs once, at T17.
 
 **Tests**: manual
 **Gate**: manual

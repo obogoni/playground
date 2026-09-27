@@ -31,6 +31,9 @@
  *     src/modified.ts      committed, then changed on the branch
  *     src/added.ts         added on the branch
  *     docs/removed.md      committed on main, deleted on the branch
+ *     docs/an-unusually-long-guide-name-that-a-commit-tab-header-has-to-cut-before-its-glyph.md
+ *                          added on the branch, so the branch commit has a path
+ *                          its commit tab's header must cut before the glyph
  *     src/renamed-new.ts   committed as renamed-old.ts, moved on the branch
  *     crlf.txt             committed with CRLF, rewritten as LF on disk
  *     assets/logo.bin      a NUL in the first 8000 bytes; rewritten with other
@@ -70,6 +73,10 @@ const CONFIG_PATH =
 /** The seeded untracked file whose name is cut before its status glyph. */
 const LONG_NAME =
   'a-rather-long-untracked-file-name-that-has-to-be-cut-short-before-its-status-glyph.txt'
+
+/** The seeded file of the branch commit whose path a commit tab's header cuts (FSTS-21). */
+const LONG_GUIDE =
+  'docs/an-unusually-long-guide-name-that-a-commit-tab-header-has-to-cut-before-its-glyph.md'
 
 const CR = String.fromCharCode(13)
 const LF = String.fromCharCode(10)
@@ -132,6 +139,10 @@ function seed() {
   writeFileSync(join(REPO, 'src', 'added.ts'), 'export const added = true\n')
   git(['mv', 'src/renamed-old.ts', 'src/renamed-new.ts'])
   git(['rm', '-q', 'docs/removed.md'])
+  // git rm takes the emptied docs/ with it. A path the commit tab must cut
+  // before its glyph (FSTS-21 via FSTS-20).
+  mkdirSync(join(REPO, 'docs'), { recursive: true })
+  writeFileSync(join(REPO, LONG_GUIDE), '# A guide\n\nNothing in it is real.\n')
   for (let i = 0; i < 40; i++) {
     const name = `f${String(i).padStart(2, '0')}.ts`
     writeFileSync(
@@ -807,6 +818,7 @@ const ORIGIN_STATUS = {
   'src/added.ts': 'added',
   'docs/removed.md': 'deleted',
   'src/renamed-new.ts': 'renamed',
+  [LONG_GUIDE]: 'added',
   ...Object.fromEntries(
     Array.from({ length: 40 }, (_, i) => [`stack/f${String(i).padStart(2, '0')}.ts`, 'modified'])
   )
@@ -1226,6 +1238,35 @@ async function stackRows(ws, mode, expected) {
   )
 }
 
+/**
+ * Narrows the page with CDP emulation, 900 px first and down to 600 px, until
+ * `path`'s header is cut, and reads the stack on screen there. The override is
+ * cleared in a `finally`, so a failed read never leaves the window narrowed.
+ */
+async function narrowUntilCut(ws, path) {
+  const height = await evaluate(ws, `window.innerHeight`)
+  let headers = null
+  let width = null
+  try {
+    for (const w of [900, 800, 700, 600]) {
+      await send(ws, 'Emulation.setDeviceMetricsOverride', {
+        width: w,
+        height,
+        deviceScaleFactor: 1,
+        mobile: false
+      })
+      await sleep(900)
+      headers = await evaluate(ws, stackHeaders)
+      width = w
+      if (headers.find((h) => h.path === path)?.overflows) break
+    }
+  } finally {
+    await send(ws, 'Emulation.clearDeviceMetricsOverride')
+    await sleep(600)
+  }
+  return { headers, width }
+}
+
 /** The column faults of a stack, plus any header with something before its path. */
 const headerFaults = (headers) => [
   ...columnFaults(headers),
@@ -1292,26 +1333,7 @@ async function glyphHeaderChecks(ws) {
 
   // 5. A path too long for its header: narrow the page until it is cut.
   const longPath = `src/${LONG_NAME}`
-  const height = await evaluate(ws, `window.innerHeight`)
-  let narrowed = null
-  let atWidth = null
-  try {
-    for (const width of [900, 800, 700, 600]) {
-      await send(ws, 'Emulation.setDeviceMetricsOverride', {
-        width,
-        height,
-        deviceScaleFactor: 1,
-        mobile: false
-      })
-      await sleep(900)
-      narrowed = await evaluate(ws, stackHeaders)
-      atWidth = width
-      if (header(narrowed, longPath)?.overflows) break
-    }
-  } finally {
-    await send(ws, 'Emulation.clearDeviceMetricsOverride')
-    await sleep(600)
-  }
+  const { headers: narrowed, width: atWidth } = await narrowUntilCut(ws, longPath)
   const long = narrowed ? header(narrowed, longPath) : undefined
   const narrowColumn = narrowed ? headerFaults(narrowed) : ['nothing read']
   check(
@@ -1352,7 +1374,7 @@ async function glyphHeaderChecks(ws) {
   )
 }
 
-/** The subject of the seed's branch commit, which holds diff to origin's 44 files. */
+/** The subject of the seed's branch commit, which holds diff to origin's 45 files. */
 const BRANCH_COMMIT = 'work on the branch'
 
 /** The labels of the open tabs, and which one is active. */
@@ -1407,6 +1429,12 @@ async function glyphCommitChecks(ws) {
   ]
   const struck = headers.flatMap((h) => h.struck.map((what) => `${h.path}:${what}`))
 
+  // Narrowed until the branch commit's long path is cut: FSTS-21 holds the commit
+  // tab to criterion 20 too, and at full width no commit path is cut.
+  const { headers: narrowed, width: atWidth } = await narrowUntilCut(ws, LONG_GUIDE)
+  const longGuide = narrowed?.find((h) => h.path === LONG_GUIDE)
+  const narrowFaults = narrowed ? headerFaults(narrowed) : ['nothing read']
+
   // Back to what the icon checks and a focused run expect: no commit tab, and
   // Uncommitted's All changes stack on screen.
   await evaluate(
@@ -1440,6 +1468,16 @@ async function glyphCommitChecks(ws) {
     `opened ${opened}; active ${tabs.find((t) => t.active)?.label ?? 'none'}; ${headers.length} headers, ` +
       `statuses ${[...statuses].join('/')}; struck ${struck.join(', ') || 'none'}; restored ${restored}` +
       (faults.length ? `; ${faults.slice(0, 3).join('; ')}` : '')
+  )
+  check(
+    "A commit tab's header cuts a long path with an ellipsis and its glyph keeps the column (FSTS-20, FSTS-21)",
+    showing &&
+      narrowed?.length === Object.keys(ORIGIN_STATUS).length &&
+      ellipsisFaults(longGuide).length === 0 &&
+      narrowFaults.length === 0,
+    `active ${tabs.find((t) => t.active)?.label ?? 'none'}; at ${atWidth} px, ${narrowed?.length ?? 0} headers: ` +
+      cutDetail(longGuide) +
+      (narrowFaults.length ? `; ${narrowFaults.slice(0, 3).join('; ')}` : '')
   )
 }
 
