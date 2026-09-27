@@ -245,11 +245,11 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-25 | P1: rename — AC 25 | Execute | Implementing: T2 (unit) |
 | FDSC-26 | P1: rename — AC 26 | Execute | Implementing: T7 (unit) |
 | FDSC-27 | P1: rename — AC 27 | Execute | Implemented: T7 (unit) |
-| FDSC-28 | P1: after — AC 28 | Execute | Implementing: T10 (unit) |
-| FDSC-29 | P1: after — AC 29 | Execute | Implementing: T10 (unit) |
-| FDSC-30 | P1: after — AC 30 | Execute | Implementing: T10 (unit) |
-| FDSC-31 | P1: after — AC 31 | Tasks | Pending |
-| FDSC-32 | P1: after — AC 32 | Execute | Implementing: T10 (unit) |
+| FDSC-28 | P1: after — AC 28 | Execute | Implementing: T10 (unit), T11 (hook) |
+| FDSC-29 | P1: after — AC 29 | Execute | Implementing: T10 (unit), T11 (hook) |
+| FDSC-30 | P1: after — AC 30 | Execute | Implementing: T10 (unit), T11 (hook) |
+| FDSC-31 | P1: after — AC 31 | Execute | Implementing: T11 (hook re-lists) |
+| FDSC-32 | P1: after — AC 32 | Execute | Implementing: T10 (unit), T11 (hook) |
 | FDSC-33 | P1: after — AC 33 | Execute | Implementing: T10 (unit) |
 | FDSC-34 | P2: many — AC 34 | Execute | Implementing: T9 (unit) |
 | FDSC-35 | P2: many — AC 35 | Execute | Implementing: T9 (no helper: the list goes as it is) |
@@ -262,7 +262,7 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-42 | P1: read-only — AC 42 | Execute | Implemented: T3 (AD-047), T4 (request type), T5 (recording runner), T8 (handler) |
 | FDSC-43 | Edge: untracked folder row | Execute | Implemented: T6, T9, T10 (unit) |
 | FDSC-44 | Edge: already gone | Execute | Implemented: T6 (unit) |
-| FDSC-45 | Edge: changed after opening | Tasks | Pending |
+| FDSC-45 | Edge: changed after opening | Execute | Implementing: T11 (entries sent as given) |
 | FDSC-46 | Edge: no commit yet | Execute | Implemented: T6 (unit) |
 | FDSC-47 | Edge: occupied restore target | Execute | Implemented: T7 (unit) |
 | FDSC-48 | Edge: git fails after the Recycle Bin | Execute | Implemented: T6 (unit) |

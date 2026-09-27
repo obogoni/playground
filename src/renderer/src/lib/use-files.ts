@@ -9,6 +9,7 @@ import type {
   CommitRow,
   DirListing,
   DiffRequest,
+  DiscardResult,
   DiffSides,
   FileContent,
   FileStat,
@@ -18,6 +19,7 @@ import type { LaunchResult } from '../../../shared/shortcuts'
 import { api } from './api'
 import { mergePages } from './commit-view'
 import { diffRequestFor, tabKeyOf, tabsWithAllChanges, type DiffMode } from './diff-view'
+import { afterDiscard } from './discard-view'
 import { filesStateFor, launcherTarget, tabsAfterClose, tabsAffected } from './files-view'
 
 /** One open file (FXPL-18): what was read for it, and when it was last picked. */
@@ -176,6 +178,12 @@ export interface UseFiles {
   openCommitInBrowser: (sha: string) => Promise<LaunchResult>
   focusTab: (key: string) => void
   closeTab: (key: string) => void
+  /**
+   * Discards exactly these uncommitted entries, as the confirmation listed them
+   * (FDSC-45), then settles the tabs the result touched and re-lists the mode
+   * (FDSC-28..32). Never rejects: a failed request reads as every entry kept.
+   */
+  discard: (entries: ChangedPath[]) => Promise<DiscardResult>
 }
 
 /**
@@ -687,6 +695,49 @@ export function useFiles({
     [worktreePath, patchFiles, mode]
   )
 
+  const discard = useCallback(
+    async (entries: ChangedPath[]): Promise<DiscardResult> => {
+      if (!worktreePath) {
+        return { files: entries.map((entry) => keptByGit(entry, 'No worktree is selected.')) }
+      }
+      const wt = worktreePath
+      // FDSC-45: the entries go as the confirmation listed them, never re-derived
+      // from whatever the list holds by now.
+      const result = await api
+        .invoke('files:discard', { worktreePath: wt, entries })
+        .catch((err: unknown) => ({
+          files: entries.map((entry) =>
+            keptByGit(entry, err instanceof Error ? err.message : String(err))
+          )
+        }))
+      // Which tabs close and which re-read is afterDiscard's decision alone.
+      patchFiles(wt, (s) => {
+        const { close } = afterDiscard(s.tabs.map(tabKeyOf), entries, result)
+        if (close.length === 0) return {}
+        // One close at a time through the strip, so focus moves the way
+        // closing each tab by hand would move it (FXPL-19).
+        let keys = tabsWithAllChanges(s.tabs, live.current.mode).map(tabKeyOf)
+        let active = s.activeTab
+        for (const key of close) {
+          const index = keys.indexOf(key)
+          if (index === -1) continue
+          const after = tabsAfterClose(keys, index, active)
+          keys = after.tabs
+          active = after.active
+        }
+        return { tabs: s.tabs.filter((tab) => keys.includes(tabKeyOf(tab))), activeTab: active }
+      })
+      const current = live.current
+      if (current.worktreePath === wt) {
+        const { reread } = afterDiscard(current.here.tabs.map(tabKeyOf), entries, result)
+        for (const path of reread) readTab(wt, path)
+        refreshMode(wt, current.mode, current.effectiveBase, current.here.expanded)
+      }
+      return result
+    },
+    [worktreePath, patchFiles, readTab, refreshMode]
+  )
+
   // `tabsWithAllChanges` is generic over what the strip holds and widens its
   // element type to `TabRef`; nothing it returns is anything but one of the
   // open tabs or the fixed one, which is exactly `StripTab`.
@@ -738,8 +789,14 @@ export function useFiles({
     loadMoreCommits,
     openCommitInBrowser,
     focusTab,
-    closeTab
+    closeTab,
+    discard
   }
+}
+
+/** An entry the discard could not act on, reported with git's cause (design, Error Handling). */
+function keptByGit(entry: ChangedPath, detail: string): DiscardResult['files'][number] {
+  return { path: entry.path, kept: { cause: 'git', detail } }
 }
 
 /**

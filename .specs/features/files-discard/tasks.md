@@ -374,9 +374,9 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] Entries are sent as given, never re-derived from the current list (FDSC-45)
-- [ ] Decisions come from `afterDiscard` only; the hook holds no status logic of its own (L-018)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Entries are sent as given, never re-derived from the current list (FDSC-45)
+- [x] Decisions come from `afterDiscard` only; the hook holds no status logic of its own (L-018)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full
