@@ -838,8 +838,8 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Each check seen failing on its mutant, then passing: `splitDefault` returning the start (13.2); the inside check removed from `splitPeriod`, relaunched (13.3, shows the 1 s text instead); `splitPeriod` answering ok without rewriting, relaunched (13.4); `reassignPeriod` ignoring the choice, relaunched (13.5, 13.7); the mark not rendered and, separately, its tooltip reading `Set by hand` (13.6); `branch` keeping the flag in `reassignFields`, relaunched (13.8); the buttons rendered on running rows (13.9)
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Each check seen failing on its mutant, then passing: `splitDefault` returning the start (13.2); the inside check removed from `splitPeriod`, relaunched (13.3, shows the 1 s text instead); `splitPeriod` answering ok without rewriting, relaunched (13.4); `reassignPeriod` ignoring the choice, relaunched (13.5, 13.7); the mark not rendered and, separately, its tooltip reading `Set by hand` (13.6); `branch` keeping the flag in `reassignFields`, relaunched (13.8); the buttons rendered on running rows (13.9)
+- [x] Gate check passes: `npm run lint` (warning count unchanged: 0 errors / 18 warnings)
 
 **Tests**: manual
 **Gate**: manual

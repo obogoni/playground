@@ -90,6 +90,10 @@
  *        refuses with `not running on the seeded data` unless every seeded
  *        period is in the app; on a pass it closes the app and deletes the
  *        directory, on a failure it leaves both and prints the directory
+ *
+ * SMOKE_ONLY=assign on step 3 runs sections 13 to 15 alone, from a fresh seed
+ * and launch like any drive, for iterating on them; the full drive still runs
+ * before a PR.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -98,6 +102,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const PORT = Number(process.env.SMOKE_PORT) || 9222
+const ONLY = process.env.SMOKE_ONLY ?? null
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 const FOLDERS = ['C:\\Windows', 'C:\\Windows\\System32']
 
@@ -372,20 +377,8 @@ const knownPeriods = new Set(before.periods.map((p) => p.id))
 const sessionIds = []
 const todayHeader = dayHeader(todayMidnight)
 
-try {
-  for (const cwd of FOLDERS) {
-    const view = await invoke('sessions:spawn', {
-      agentName: 'Ad-hoc',
-      cwd,
-      adhocCommand: 'pwsh -NoLogo -NoProfile'
-    })
-    sessionIds.push(view.id)
-  }
-  await sleep(1500)
-  await reloadInto('hours')
-  await waitFor(`document.querySelector('.hcal') !== null`, 'the calendar')
-  await sleep(500)
-
+/** Sections 1 to 12, on the calendar the setup opened. */
+async function calendarSections() {
   // 1. Columns.
   const snap = await invoke('time:snapshot')
   const labels = await headLabels()
@@ -1063,6 +1056,241 @@ try {
     ) && palette.size === 14,
     `${palette.size} bars`
   )
+}
+
+// Probes for sections 13 to 15, evaluated in the page.
+/** Sets a React-controlled input's value the way typing does. */
+const setInput = (selector, value) =>
+  evaluate(
+    `(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return false; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, ${JSON.stringify(value)}); el.dispatchEvent(new Event('input', { bubbles: true })); return true })()`
+  )
+/** Polls `expression` like `waitFor`, but answers false instead of throwing. */
+async function until(expression, tries = 16) {
+  for (let i = 0; i < tries; i++) {
+    if (await evaluate(expression)) return true
+    await sleep(250)
+  }
+  return false
+}
+/** A local instant as a `datetime-local` value, to the second. */
+const toLocal = (d) =>
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+const drawerGroups = () =>
+  evaluate(
+    `[...document.querySelectorAll('.hours-drawer .hours-group')].map(g => ({ label: g.querySelector('.hours-group-label').textContent, total: g.querySelector('.hours-group-total').textContent, blocks: [...g.querySelectorAll('.hours-block')].map(b => ({ range: b.querySelector('.hours-block-range').textContent, count: b.querySelector('.hours-block-count').textContent })), rows: [...g.querySelectorAll('.period-row')].map(r => { const hand = r.querySelector('.period-row-hand'); return { range: r.querySelector('.period-row-range').textContent, open: r.classList.contains('open'), hand: hand ? { title: hand.getAttribute('title'), aria: hand.getAttribute('aria-label') } : null, change: r.querySelector('.period-row-change-task') !== null, split: r.querySelector('.period-row-split') !== null } }) }))`
+  )
+const expandBlocks = async () => {
+  await evaluate(
+    `[...document.querySelectorAll('.hours-drawer .hours-block-line[aria-expanded="false"]')].forEach(b => b.click()), true`
+  )
+  await sleep(250)
+}
+const legendLabels = () =>
+  evaluate(`[...document.querySelectorAll('.hleg-label')].map(l => l.textContent)`)
+/** The drawer's period row in `group` whose range starts with `rangeStart`. */
+const periodRow = (group, rangeStart) =>
+  `[...([...document.querySelectorAll('.hours-drawer .hours-group')].find(g => g.querySelector('.hours-group-label').textContent === ${JSON.stringify(group)})?.querySelectorAll('.period-row') ?? [])].find(r => r.querySelector('.period-row-range').textContent.startsWith(${JSON.stringify(rangeStart)}))`
+/** Clicks the picker entry labelled `label` inside `host`. */
+const choose = (host, label) =>
+  evaluate(
+    `(() => { const e = [...(${host}?.querySelectorAll('.task-picker-entry') ?? [])].find(x => x.querySelector('.task-picker-label')?.textContent === ${JSON.stringify(label)}); if (!e) return false; e.click(); return true })()`
+  )
+/** Change task on a drawer row, then the picker entry `label`. */
+async function reassignRow(group, rangeStart, label) {
+  await expandBlocks()
+  const row = periodRow(group, rangeStart)
+  const opened = await evaluate(
+    `(() => { const b = ${row}?.querySelector('.period-row-change-task'); if (!b) return false; b.click(); return true })()`
+  )
+  await sleep(250)
+  const chosen = opened && (await choose(`${row}?.querySelector('.period-row-picker')`, label))
+  await sleep(1200)
+  await expandBlocks()
+  return chosen
+}
+
+/** 13. Split and reassign the seeded `develop` period (HTSK-23, 25..29, 33..40). */
+async function periodSection() {
+  const seeded = before.periods.find((p) => p.id === DEVELOP_ID)
+  const seededStart = new Date(seeded.start)
+  const at = (h, m = 0) =>
+    new Date(seededStart.getFullYear(), seededStart.getMonth(), seededStart.getDate(), h, m)
+  const dayStart = at(0).getTime()
+  const dayEnd = dayStart + 24 * 3600_000
+  const onDay = (snapshot) =>
+    snapshot.periods.filter((p) => Date.parse(p.start) < dayEnd && Date.parse(p.end) > dayStart)
+  const devHeader = dayHeader(at(0))
+  const NO_TASK = 'No task · acme-widgets'
+  const HAND = 'Assigned by hand (branch: develop)'
+
+  await nav('This week')
+  await sleep(300)
+  for (let i = 0; i < 2; i++) {
+    await nav('Previous week')
+    await sleep(300)
+  }
+  await clickHead(devHeader)
+  await sleep(400)
+  await expandBlocks()
+  const pre = await drawerGroups()
+  check(
+    'precondition: the develop day holds one No-task block of one 09:00–12:00 period, unmarked',
+    pre.length === 1 &&
+      pre[0].label === NO_TASK &&
+      pre[0].blocks.length === 1 &&
+      pre[0].blocks[0].range === '09:00–12:00' &&
+      pre[0].blocks[0].count === '1 period' &&
+      pre[0].rows.length === 1 &&
+      pre[0].rows[0].hand === null,
+    JSON.stringify(pre)
+  )
+
+  const first = periodRow(NO_TASK, '09:00:00')
+  await evaluate(`${first}?.querySelector('.period-row-split')?.click(), true`)
+  await sleep(300)
+  const splitField = '.hours-drawer .period-row-split-input'
+  const field = await evaluate(
+    `document.querySelector(${JSON.stringify(splitField)})?.value ?? null`
+  )
+  // The field drops `:00` seconds, so the instant is compared, not the text.
+  check(
+    "`Split at` opens on the period's midpoint, 10:30:00",
+    field !== null && new Date(field).getTime() === at(10, 30).getTime(),
+    `${field}`
+  )
+
+  const splitButton = `document.querySelector('.hours-drawer .period-row-split-form .period-row-btn.primary')`
+  await setInput(splitField, toLocal(at(9)))
+  await evaluate(`${splitButton}?.click(), true`)
+  await sleep(900)
+  const refusedError = await evaluate(
+    `document.querySelector('.hours-drawer .period-row-error')?.textContent ?? null`
+  )
+  const refused = await drawerGroups()
+  const refusedLog = onDay(await invoke('time:snapshot'))
+  check(
+    "splitting at the period's start is refused and leaves one period",
+    refusedError === 'Split time must be inside the period.' &&
+      refused[0]?.blocks[0]?.count === '1 period' &&
+      refusedLog.length === 1,
+    `${refusedError}; ${refused[0]?.blocks[0]?.count}; ${refusedLog.length} in the log`
+  )
+
+  await setInput(splitField, toLocal(at(10)))
+  await evaluate(`${splitButton}?.click(), true`)
+  await until(
+    `document.querySelector('.hours-drawer .hours-block-count')?.textContent === '2 periods'`
+  )
+  await expandBlocks()
+  const split = await drawerGroups()
+  const parts = onDay(await invoke('time:snapshot'))
+  check(
+    'splitting at 10:00:00 gives two periods on develop, the seed keeping its id and 09:00–10:00',
+    split[0]?.blocks[0]?.count === '2 periods' &&
+      JSON.stringify(split[0].rows.map((r) => r.range)) ===
+        JSON.stringify(['09:00:00–10:00:00', '10:00:00–12:00:00']) &&
+      parts.length === 2 &&
+      parts.some((p) => p.id === DEVELOP_ID && p.end === at(10).toISOString()) &&
+      parts.some((p) => p.id !== DEVELOP_ID && p.start === at(10).toISOString()) &&
+      parts.every((p) => p.branch === 'develop'),
+    `${JSON.stringify(split[0]?.rows.map((r) => r.range))}; ${JSON.stringify(parts.map((p) => [p.id, p.branch]))}`
+  )
+
+  const toFirst = await reassignRow(NO_TASK, '09:00:00', '#9201')
+  const moved = await drawerGroups()
+  const movedChips = await legendLabels()
+  const groupOf = (list, label) => list.find((g) => g.label === label)
+  check(
+    'the first part moved to #9201 makes a 1h00 task group beside a 2h00 No-task one, with its chip',
+    toFirst &&
+      moved.length === 2 &&
+      groupOf(moved, 'Task #9201')?.total === '1h00' &&
+      groupOf(moved, NO_TASK)?.total === '2h00' &&
+      movedChips.includes('Task #9201'),
+    `${JSON.stringify(moved.map((g) => [g.label, g.total]))}; chips ${movedChips.join(' | ')}`
+  )
+  const markedRow = groupOf(moved, 'Task #9201')?.rows[0]
+  const plainRows = groupOf(moved, NO_TASK)?.rows ?? []
+  check(
+    'the moved part wears the hand mark naming its branch, the No-task part none',
+    markedRow?.hand?.title === HAND &&
+      markedRow.hand.aria === HAND &&
+      plainRows.length === 1 &&
+      plainRows[0].hand === null,
+    `${JSON.stringify(markedRow?.hand)}; ${JSON.stringify(plainRows.map((r) => r.hand))}`
+  )
+
+  const toSecond = await reassignRow(NO_TASK, '10:00:00', '#9202')
+  const both = await drawerGroups()
+  const bothChips = await legendLabels()
+  check(
+    'the second part moved to #9202 leaves two task groups, no No-task group or chip, both marked',
+    toSecond &&
+      JSON.stringify(both.map((g) => g.label).sort()) ===
+        JSON.stringify(['Task #9201', 'Task #9202']) &&
+      !bothChips.includes(NO_TASK) &&
+      bothChips.includes('Task #9202') &&
+      both.every((g) => g.rows.length === 1 && g.rows[0].hand?.title === HAND),
+    `${JSON.stringify(both.map((g) => [g.label, g.rows.map((r) => r.hand?.title ?? null)]))}; chips ${bothChips.join(' | ')}`
+  )
+
+  const back = await reassignRow('Task #9201', '09:00:00', 'From branch')
+  const returned = await drawerGroups()
+  const seedAfter = (await invoke('time:snapshot')).periods.find((p) => p.id === DEVELOP_ID)
+  const returnedRow = groupOf(returned, NO_TASK)?.rows.find((r) => r.range.startsWith('09:00:00'))
+  check(
+    'From branch moves the first part back to No task, unmarked, with no flag and its branch kept',
+    back &&
+      returnedRow !== undefined &&
+      returnedRow.hand === null &&
+      seedAfter?.taskId === null &&
+      seedAfter.taskTitle === null &&
+      !('taskByHand' in seedAfter) &&
+      seedAfter.branch === 'develop',
+    `${JSON.stringify(returned.map((g) => g.label))}; ${JSON.stringify(seedAfter)}`
+  )
+
+  // A closed and a running row today: pausing and resuming the C:/Windows
+  // session closes its period and opens the next one in the same block.
+  await invoke('time:pause', { sessionId: sessionIds[0] })
+  await sleep(300)
+  await invoke('time:resume', { sessionId: sessionIds[0] })
+  await sleep(800)
+  await nav('This week')
+  await sleep(300)
+  await clickHead(todayHeader)
+  await sleep(400)
+  await expandBlocks()
+  const todayRows = (await drawerGroups()).flatMap((g) => g.rows)
+  const running = todayRows.filter((r) => r.open)
+  const closed = todayRows.filter((r) => !r.open)
+  check(
+    'a running row offers neither Change task nor Split at, a closed row both',
+    running.length >= 1 &&
+      closed.length >= 1 &&
+      running.every((r) => !r.change && !r.split) &&
+      closed.every((r) => r.change && r.split),
+    `${running.length} running, ${closed.length} closed: ${JSON.stringify(todayRows.map((r) => [r.open, r.change, r.split]))}`
+  )
+}
+
+try {
+  for (const cwd of FOLDERS) {
+    const view = await invoke('sessions:spawn', {
+      agentName: 'Ad-hoc',
+      cwd,
+      adhocCommand: 'pwsh -NoLogo -NoProfile'
+    })
+    sessionIds.push(view.id)
+  }
+  await sleep(1500)
+  await reloadInto('hours')
+  await waitFor(`document.querySelector('.hcal') !== null`, 'the calendar')
+  await sleep(500)
+
+  // SMOKE_ONLY=assign skips sections 1 to 12: nothing in 13 to 15 reads them.
+  if (ONLY !== 'assign') await calendarSections()
+  await periodSection()
 } finally {
   for (const id of sessionIds) {
     await invoke('sessions:stop', { id }).catch(() => {})
@@ -1082,7 +1310,9 @@ try {
 }
 
 const failed = checks.filter((c) => !c.ok)
-console.log(`\n${checks.length - failed.length}/${checks.length} checks passed`)
+console.log(
+  `\n${checks.length - failed.length}/${checks.length} checks passed${ONLY === 'assign' ? ' (sections 13 to 15 only)' : ''}`
+)
 if (failed.length > 0) {
   console.log(`Seeded data left in place for inspection: ${seededDir}`)
   process.exit(1)
