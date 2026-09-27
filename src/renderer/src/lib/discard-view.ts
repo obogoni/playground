@@ -1,4 +1,5 @@
-import type { ChangedPath, DiscardKept } from '../../../shared/files'
+import type { ChangedPath, DiscardKept, DiscardResult } from '../../../shared/files'
+import { tabKeyOf } from './diff-view'
 import { buildTree, type TreeNode } from './files-view'
 
 /**
@@ -66,6 +67,54 @@ export function keptReason(kept: DiscardKept): string {
     case 'git':
       return kept.detail ?? ''
   }
+}
+
+/**
+ * What a finished discard does to the open tabs (FDSC-28..33, 43), given their
+ * keys (`tabKeyOf`): the keys to close and the file paths to re-read, each in
+ * the strip's order and only among the tabs that are open. For every entry the
+ * result reports discarded, its uncommitted diff closes; its file tab closes
+ * when the path is gone afterwards (the file went to the Recycle Bin) and is
+ * re-read when git put the last commit's version back; a rename's old path is
+ * re-read. A binned folder row (`dir/`) closes the file tabs inside it. A kept
+ * entry touches nothing, and a diff-to-origin or commit tab is never named.
+ */
+export function afterDiscard(
+  openTabs: string[],
+  entries: ChangedPath[],
+  result: DiscardResult
+): { close: string[]; reread: string[] } {
+  const discarded = new Set(result.files.filter((file) => !file.kept).map((file) => file.path))
+  const close = new Set<string>()
+  const reread = new Set<string>()
+  const folders: string[] = []
+  for (const entry of entries) {
+    if (!discarded.has(entry.path)) continue
+    const row = entry.path.replace(/\/+$/, '')
+    close.add(tabKeyOf({ kind: 'diff', mode: 'uncommitted', path: entry.path }))
+    close.add(tabKeyOf({ kind: 'diff', mode: 'uncommitted', path: row }))
+    if (row !== entry.path) folders.push(tabKeyOf({ kind: 'file', path: `${row}/` }))
+    if (goneAfterDiscard(entry)) close.add(tabKeyOf({ kind: 'file', path: row }))
+    else reread.add(row)
+    if (entry.oldPath) reread.add(entry.oldPath)
+  }
+  return {
+    close: openTabs.filter(
+      (key) => close.has(key) || folders.some((folder) => key.startsWith(folder))
+    ),
+    reread: openTabs
+      .filter((key) => key.startsWith(FILE_TAB) && reread.has(key.slice(FILE_TAB.length)))
+      .map((key) => key.slice(FILE_TAB.length))
+  }
+}
+
+/** The key prefix `tabKeyOf` gives a file tab. */
+const FILE_TAB = tabKeyOf({ kind: 'file', path: '' })
+
+/** Whether the entry's path holds no file once it is discarded. */
+function goneAfterDiscard(entry: ChangedPath): boolean {
+  if (RECYCLED.has(entry.status)) return true
+  return entry.status === 'deleted' && entry.oldPath !== undefined
 }
 
 /** The statuses whose file goes to the Recycle Bin (FDSC-06/07/26). */

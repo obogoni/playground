@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { ChangedPath } from '../../../shared/files'
+import type { ChangedPath, DiscardResult } from '../../../shared/files'
 import {
+  afterDiscard,
   confirmLabel,
   discardGroups,
   entriesUnder,
@@ -131,5 +132,88 @@ describe('keptReason', () => {
     const detail = "fatal: Unable to create 'C:/wt/.git/index.lock': File exists."
 
     expect(keptReason({ cause: 'git', detail })).toBe(detail)
+  })
+})
+
+describe('afterDiscard', () => {
+  const discarded = (path: string): DiscardResult['files'][number] => ({ path })
+
+  it.each(['modified', 'deleted'] as const)(
+    'closes a restored %s file’s uncommitted diff and re-reads its file tab (FDSC-28, FDSC-29)',
+    (status) => {
+      const tabs = ['file:other.ts', 'diff:uncommitted:src/p.ts', 'file:src/p.ts']
+
+      const effect = afterDiscard(tabs, [changed('src/p.ts', status)], {
+        files: [discarded('src/p.ts')]
+      })
+
+      expect(effect).toEqual({ close: ['diff:uncommitted:src/p.ts'], reread: ['src/p.ts'] })
+    }
+  )
+
+  it.each(['untracked', 'added'] as const)(
+    'closes a binned %s file’s uncommitted diff and its file tab (FDSC-28, FDSC-30)',
+    (status) => {
+      const tabs = ['diff:uncommitted:src/p.ts', 'file:src/p.ts', 'file:other.ts']
+
+      const effect = afterDiscard(tabs, [changed('src/p.ts', status)], {
+        files: [discarded('src/p.ts')]
+      })
+
+      expect(effect).toEqual({
+        close: ['diff:uncommitted:src/p.ts', 'file:src/p.ts'],
+        reread: []
+      })
+    }
+  )
+
+  it('closes a rename’s new file tab and re-reads its old one (FDSC-29, FDSC-30)', () => {
+    const tabs = ['file:src/new.ts', 'file:src/old.ts']
+
+    const effect = afterDiscard(tabs, [changed('src/new.ts', 'renamed', 'src/old.ts')], {
+      files: [discarded('src/new.ts')]
+    })
+
+    expect(effect).toEqual({ close: ['file:src/new.ts'], reread: ['src/old.ts'] })
+  })
+
+  it('leaves the tabs of a kept file as they were (FDSC-32)', () => {
+    const tabs = ['diff:uncommitted:src/p.ts', 'file:src/p.ts', 'file:src/q.ts']
+
+    const effect = afterDiscard(
+      tabs,
+      [changed('src/p.ts', 'modified'), changed('src/q.ts', 'untracked')],
+      {
+        files: [
+          { path: 'src/p.ts', kept: { cause: 'git', detail: 'fatal: index.lock' } },
+          { path: 'src/q.ts', kept: { cause: 'recycle-bin' } }
+        ]
+      }
+    )
+
+    expect(effect).toEqual({ close: [], reread: [] })
+  })
+
+  it('never closes a diff-to-origin tab or a commit tab (FDSC-33)', () => {
+    const tabs = ['diff:since-base:src/p.ts', 'commit:abc1234', 'diff:uncommitted:src/p.ts']
+
+    const effect = afterDiscard(tabs, [changed('src/p.ts', 'untracked')], {
+      files: [discarded('src/p.ts')]
+    })
+
+    expect(effect.close).toEqual(['diff:uncommitted:src/p.ts'])
+  })
+
+  it('closes the file tabs inside a binned untracked folder, and none beside it (FDSC-43)', () => {
+    const tabs = ['file:dir/a.txt', 'file:dirx/c.txt', 'file:dir/sub/b.txt', 'diff:uncommitted:dir']
+
+    const effect = afterDiscard(tabs, [changed('dir/', 'untracked')], {
+      files: [discarded('dir/')]
+    })
+
+    expect(effect).toEqual({
+      close: ['file:dir/a.txt', 'file:dir/sub/b.txt', 'diff:uncommitted:dir'],
+      reread: []
+    })
   })
 })

@@ -348,9 +348,9 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] Tests, one status deciding each (L-054): a discarded `modified` closes `diff:uncommitted:p` and re-reads `p` (FDSC-28, 29); `untracked` and `added` close `diff:uncommitted:p` and `file:p` (FDSC-30); `renamed` closes `file:new`, re-reads `file:old` (FDSC-29, 30); a kept entry closes and re-reads nothing (FDSC-32); `diff:since-base:p` and a `commit:` tab of the same path are never closed (FDSC-33); a discarded `dir/` closes `file:dir/a.txt` and `file:dir/sub/b.txt` but not `file:dirx/c.txt` (FDSC-43)
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/discard-view.test.ts`
-- [ ] Test count: T9 count + the new tests
+- [x] Tests, one status deciding each (L-054): a discarded `modified` closes `diff:uncommitted:p` and re-reads `p` (FDSC-28, 29); `untracked` and `added` close `diff:uncommitted:p` and `file:p` (FDSC-30); `renamed` closes `file:new`, re-reads `file:old` (FDSC-29, 30); a kept entry closes and re-reads nothing (FDSC-32); `diff:since-base:p` and a `commit:` tab of the same path are never closed (FDSC-33); a discarded `dir/` closes `file:dir/a.txt` and `file:dir/sub/b.txt` but not `file:dirx/c.txt` (FDSC-43)
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/discard-view.test.ts`
+- [x] Test count: T9 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
