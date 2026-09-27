@@ -624,6 +624,25 @@ describe('foldPlan', () => {
     ])
   })
 
+  it("keeps a region's own fold when its right side lands where another region was (FOLD-03)", () => {
+    // 100 lines inserted above move the folded region's right side onto the
+    // right side the revealed one had. Only the left side names the region.
+    const folded100: Region = both(100, 150)
+    const revealed200: Region = both(200, 260)
+    const moved: Region = { original: { start: 100, end: 150 }, modified: { start: 200, end: 250 } }
+
+    expect(foldPlan([folded(folded100), revealed(revealed200)], [moved], null, false)).toEqual([
+      { start: 200, end: 250 }
+    ])
+  })
+
+  it('treats a region whose left side only touches an earlier one as new (FOLD-04)', () => {
+    const earlier: Region = both(24, 57)
+    const touching: Region = both(57, 80)
+
+    expect(foldPlan([revealed(earlier)], [touching], null, false)).toEqual([whole(touching)])
+  })
+
   // other.ts: lines 50-70 changed, then only 50 and 70 differ.
   const top = both(1, 47)
   const bottom = both(74, 122)

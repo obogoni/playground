@@ -13,7 +13,7 @@ regions from `getLineChanges()` with Monaco's own rule, snapshots their fold sta
 and applies its own plan through `restoreViewState`'s `modelState` once Monaco has recomputed; the
 per-tab Hide / Show choice lives in `use-files` and reaches every mounted `DiffViewer` as a prop.
 **Status**: Approved by the owner on 2026-09-27 ("pode seguir com a #130", executed inline at the
-owner's choice). T1-T12 Done; awaiting the Verifier.
+owner's choice). T1-T12 Done; Verifier round 1 FAIL on evidence; fix round T13-T16 in progress.
 
 **Branch**: `feature/diff-fold-refresh`, cut from `feature/files-view-polish` `70d573c` (PR #125, which
 adds Expand all / Collapse all). Rebase onto `origin/main` once #125 merges. The future PR body carries
@@ -101,6 +101,12 @@ T7 → T8 → T9 → T10
 
 ```
 T10 → T11 → T12
+```
+
+### Phase 6: Fix round 1 (Verifier FAIL, 2026-09-27)
+
+```
+T12 → T13 → T14 → T15 → T16
 ```
 
 ---
@@ -576,6 +582,105 @@ Full gate before the Verifier: typecheck 0, lint 0 errors / 18 warnings, **1721/
 **Gate**: build
 
 **Commit**: `test(files): check Hide unchanged and Show unchanged`
+
+---
+
+## Fix round 1 (Verifier FAIL on evidence, 2026-09-27)
+
+The Verifier's round 1 (`validation.md`) failed on test evidence only: 16 of 20 mutants killed. The four survivors are U07, U10, U15 and S3. The owner decided two open points on 2026-09-27:
+
+- a merged region whose sources were only revealed in part **folds**. This is T4's reading, now confirmed;
+- the vacuous scroll check is **fixed in this PR**.
+
+### T13: Pin region matching to left-side overlap
+
+**What**: two `foldPlan` tests.
+- A large insertion moves a folded region's right side onto a revealed region's old right side, and the folded region stays folded (U10).
+- A new region whose left side only touches an earlier revealed one is new, so it folds (U15).
+**Where**: `src/renderer/src/lib/diff-view.test.ts`
+**Depends on**: T12
+**Reuses**: the `foldPlan` fixtures
+**Requirement**: FOLD-03, FOLD-04
+
+**Done when**:
+
+- [x] Both tests pass on the code, and each fails against its mutant: right-side matching (U10), `<=` in `overlaps` (U15)
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
+
+**Result (2026-09-27)**: 2 new tests, 70/70 in the file. U10 (regions matched by right-side overlap) and U15 (`<=` in `overlaps`) each fail exactly the test named for it (1 failed | 69 passed), through `unit_mut.py` with the file restored from `.orig`.
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `test(files): pin region matching to left-side lines`
+
+---
+
+### T14: Pin a merge of partly revealed regions
+
+**What**: a `foldPlan` test for a merged region whose only revealed source was revealed in part: it folds (U07, owner decision). In `spec.md`, the FOLD-06 row records the owner's confirmation, and FOLD-05 records the split case: each half keeps the top and bottom counts, clamped.
+**Where**: `src/renderer/src/lib/diff-view.test.ts`
+**Depends on**: T13
+**Reuses**: the `foldPlan` fixtures
+**Requirement**: FOLD-05, FOLD-06
+
+**Done when**:
+
+- [ ] The test passes, and fails against U07 (a partly revealed source counts as revealed)
+- [ ] `spec.md` records both readings
+- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `test(files): pin how a merge of partly revealed regions folds`
+
+---
+
+### T15: The reading an update keeps, as a pure rule
+
+**What**: `readingBeforeUpdate(pending, regions, modelState, left)` in `diff-view.ts`.
+- It returns the pending reading unchanged while one exists (FOLD-08).
+- It returns null when the regions are unknown or the `modelState` is unreadable (FOLD-25).
+- Otherwise it returns a new reading.
+
+`DiffViewer`'s content effect calls it in place of its inline guard.
+**Where**: `src/renderer/src/lib/diff-view.ts` (and the one call in `DiffViewer.tsx`)
+**Depends on**: T14
+**Reuses**: `hiddenRangesOf`, `regionStates`
+**Requirement**: FOLD-08, FOLD-25
+
+**Done when**:
+
+- [ ] Tests: a pending reading is kept when a new state arrives, including one with `states: null` (T7's press); null regions give null; an unreadable state gives null; a readable one gives the region states and the left text
+- [ ] The S3 mutant (always take a new reading) fails a unit test
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Tests**: unit
+**Gate**: full
+
+**Commit**: `refactor(files): keep the first fold reading through a pure rule`
+
+---
+
+### T16: A scroll check that can fail
+
+**What**: section 11's FDIF-30 check keeps its timing and stops claiming the scroll. `modified.ts` is three lines long and cannot scroll, and `.monaco-scrollable-element.scrollTop` stays 0 under Monaco's virtual scrolling. The scroll half moves to 14f: wheel-scroll long.ts's diff tab through CDP, require the first visible line to have moved off line 1, write, and assert the same first visible line.
+**Where**: `scripts/smoke-files-diff.mjs`
+**Depends on**: T15
+**Reuses**: 14f, the wheel dispatch of section 8
+**Requirement**: FOLD-09
+
+**Done when**:
+
+- [ ] The new scroll assertion fails against a mutant that drops `setScrollTop` from the content effect, then passes
+- [ ] Focused smoke passes, then one full smoke passes
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+
+**Tests**: manual
+**Gate**: build
+
+**Commit**: `test(files): check that a diff tab keeps its scroll across a refresh`
 
 ---
 
