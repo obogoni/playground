@@ -231,19 +231,19 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | HTSK-20 | P1: session — AC 20 | Execute | Implementing: T12, T23 |
 | HTSK-21 | P1: session — AC 21 | Execute | Implementing: T7 |
 | HTSK-22 | P1: session — AC 22 | Execute | Implemented: T6 |
-| HTSK-23 | P1: drawer — AC 23 | Execute | Implementing: T20, T25 |
-| HTSK-24 | P1: drawer — AC 24 | Execute | Implementing: T13 |
-| HTSK-25 | P1: drawer — AC 25 | Execute | Implementing: T2, T4, T9, T10 |
-| HTSK-26 | P1: drawer — AC 26 | Execute | Implementing: T2, T4 |
-| HTSK-27 | P1: drawer — AC 27 | Execute | Implementing: T2, T4 |
+| HTSK-23 | P1: drawer — AC 23 | Execute | Implementing: T20, T25, T26 |
+| HTSK-24 | P1: drawer — AC 24 | Execute | Implemented: T13, T26 |
+| HTSK-25 | P1: drawer — AC 25 | Execute | Implementing: T2, T4, T9, T10, T26 |
+| HTSK-26 | P1: drawer — AC 26 | Execute | Implementing: T2, T4, T26 |
+| HTSK-27 | P1: drawer — AC 27 | Execute | Implementing: T2, T4, T26 |
 | HTSK-28 | P1: drawer — AC 28 | Execute | Implementing: T5, T9, T10, T25 |
 | HTSK-29 | P1: drawer — AC 29 | Execute | Implementing: T5, T25 |
 | HTSK-30 | P1: drawer — AC 30 | Execute | Implemented: T5, T25 |
 | HTSK-31 | P1: drawer — AC 31 | Execute | Implemented: T5, T25 |
 | HTSK-32 | P1: drawer — AC 32 | Execute | Implemented: T4, T5 |
 | HTSK-33 | P1: drawer — AC 33 | Execute | Implementing: T14, T25 |
-| HTSK-34 | P1: drawer — AC 34 | Execute | Implementing: T25 |
-| HTSK-35 | P1: drawer — AC 35 | Execute | Implementing: T4, T5, T16, T25 |
+| HTSK-34 | P1: drawer — AC 34 | Execute | Implementing: T25, T26 |
+| HTSK-35 | P1: drawer — AC 35 | Execute | Implementing: T4, T5, T16, T25, T26 |
 | HTSK-36 | P1: mark — AC 36 | Execute | Implementing: T2, T3, T4 |
 | HTSK-37 | P1: mark — AC 37 | Execute | Implementing: T2, T3, T4 |
 | HTSK-38 | P1: mark — AC 38 | Execute | Implementing: T14, T20, T24 |

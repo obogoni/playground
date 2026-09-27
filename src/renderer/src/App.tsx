@@ -494,6 +494,8 @@ function App(): JSX.Element {
             onDelete={time.deletePeriod}
             onAdjust={time.adjustPeriod}
             onSplit={time.splitPeriod}
+            tasks={tasks.tasks}
+            onReassign={time.reassignPeriod}
           />
         ) : ui.direction === 'files' ? (
           <FilesView

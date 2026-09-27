@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import type { JSX } from 'react'
-import type { TimeEditResult } from '../../../shared/time'
+import type { PinnedTaskView } from '../../../shared/tasks'
+import type { PeriodTaskChoice, TimeEditResult } from '../../../shared/time'
 import type { RawPeriodRow } from '../lib/hours-report'
 import { fromLocalInput, handMarkTitle, splitDefault, toLocalInput } from '../lib/period-edit'
 import { formatHmCompact } from '../lib/time-format'
 import { Icon } from './Icon'
+import { TaskPicker } from './TaskPicker'
 import './PeriodRow.css'
 
 interface PeriodRowProps {
@@ -13,6 +15,10 @@ interface PeriodRowProps {
   onAdjust: (id: string, start: string, end: string) => Promise<TimeEditResult>
   /** Splits a closed period at a UTC ISO instant inside it (HTSK-28). */
   onSplit: (id: string, at: string) => Promise<TimeEditResult>
+  /** The pinned tasks, for the Change task picker. */
+  tasks: PinnedTaskView[]
+  /** Moves a closed period to another task, No task or its branch's (HTSK-25..27). */
+  onReassign: (id: string, choice: PeriodTaskChoice) => Promise<TimeEditResult>
 }
 
 const pad = (n: number): string => String(n).padStart(2, '0')
@@ -22,7 +28,7 @@ const clock = (ms: number): string => {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
-type Mode = 'view' | 'edit' | 'confirm-delete' | 'split'
+type Mode = 'view' | 'edit' | 'confirm-delete' | 'split' | 'task'
 
 /**
  * One raw period under a merged block (TIME-38): start, end, duration and agent.
@@ -31,9 +37,18 @@ type Mode = 'view' | 'edit' | 'confirm-delete' | 'split'
  * with an inline error (TIME-46, TIME-49). A period whose task was set by hand
  * wears a hand mark naming its branch (HTSK-38). A closed period can also be
  * split in two at a time inside it, the field starting on its midpoint
- * (HTSK-28, HTSK-33); main's verdict shows inline (HTSK-29..32).
+ * (HTSK-28, HTSK-33); main's verdict shows inline (HTSK-29..32). Change task
+ * opens the picker with No task, From branch, the pins and the lookup
+ * (HTSK-24). A running period offers none of these (HTSK-34).
  */
-export function PeriodRow({ row, onDelete, onAdjust, onSplit }: PeriodRowProps): JSX.Element {
+export function PeriodRow({
+  row,
+  onDelete,
+  onAdjust,
+  onSplit,
+  tasks,
+  onReassign
+}: PeriodRowProps): JSX.Element {
   const { period } = row
   const [mode, setMode] = useState<Mode>('view')
   const [start, setStart] = useState('')
@@ -92,6 +107,12 @@ export function PeriodRow({ row, onDelete, onAdjust, onSplit }: PeriodRowProps):
     settle(onSplit(period.id, at))
   }
 
+  // The picker closes at once; a rejection shows inline under the row.
+  const reassign = (choice: PeriodTaskChoice): void => {
+    setMode('view')
+    settle(onReassign(period.id, choice))
+  }
+
   const cancel = (): void => {
     setMode('view')
     setError(null)
@@ -121,6 +142,18 @@ export function PeriodRow({ row, onDelete, onAdjust, onSplit }: PeriodRowProps):
         ) : (
           mode === 'view' && (
             <>
+              <button
+                type="button"
+                className="period-row-icon period-row-change-task"
+                title="Change task"
+                aria-label="Change task"
+                onClick={() => {
+                  setError(null)
+                  setMode('task')
+                }}
+              >
+                <Icon name="tag" size={12} />
+              </button>
               <button
                 type="button"
                 className="period-row-icon period-row-split"
@@ -182,6 +215,12 @@ export function PeriodRow({ row, onDelete, onAdjust, onSplit }: PeriodRowProps):
           <button type="button" className="period-row-btn" disabled={busy} onClick={cancel}>
             Cancel
           </button>
+        </div>
+      )}
+
+      {mode === 'task' && (
+        <div className="period-row-picker">
+          <TaskPicker tasks={tasks} noTask onChoose={reassign} onClose={cancel} />
         </div>
       )}
 
