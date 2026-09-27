@@ -12,7 +12,8 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 regions from `getLineChanges()` with Monaco's own rule, snapshots their fold states before `setValue`,
 and applies its own plan through `restoreViewState`'s `modelState` once Monaco has recomputed; the
 per-tab Hide / Show choice lives in `use-files` and reaches every mounted `DiffViewer` as a prop.
-**Status**: Draft, planned 2026-09-26. Not approved; nothing executed.
+**Status**: Approved by the owner on 2026-09-27 ("pode seguir com a #130", executed inline at the
+owner's choice). T1 Done; cause confirmed, continuing.
 
 **Branch**: `feature/diff-fold-refresh`, cut from `feature/files-view-polish` `70d573c` (PR #125, which
 adds Expand all / Collapse all). Rebase onto `origin/main` once #125 merges. The future PR body carries
@@ -151,11 +152,36 @@ strips back (decorations are not the carrier).
 
 **Done when**:
 
-- [ ] Baseline test count and lint warning count recorded here
-- [ ] 14a and 14b written; their measured result on the unchanged code recorded here (strip counts, probe, arrival time)
-- [ ] Step 5's result recorded; `git status --porcelain` clean afterwards
-- [ ] The stop rule evaluated in writing: "cause confirmed, continue" or "stopped, owner asked"
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Baseline test count and lint warning count recorded here
+- [x] 14a and 14b written; their measured result on the unchanged code recorded here (strip counts, probe, arrival time)
+- [x] Step 5's result recorded; `git status --porcelain` clean afterwards
+- [x] The stop rule evaluated in writing: "cause confirmed, continue" or "stopped, owner asked"
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Result (2026-09-27)**:
+
+- **Setup**: executed in the main checkout, not a separate worktree. `npm ci` was skipped: the
+  installed `node_modules` came from `develop`, whose `package.json` differs from this branch's only by
+  two extra icon packages (`@iconify-json/vscode-icons`, `vscode-icons-js`) that nothing here imports.
+  Baseline on the branch: **1680 tests / 90 files**; `npm run lint` exit 0 with **18 warnings, 0 errors**.
+- **Harness**: every drive ran through a scratchpad runner that seeds into a scratchpad base, launches
+  `npx electron-vite dev -- --user-data-dir=<fresh temp dir> --remote-debugging-port=9222` plus the three
+  anti-occlusion flags, runs the drive, kills the app tree and runs `--clean`. No electron process was left
+  after any run.
+- **Selector**: a strip is `.diff-hidden-lines` inside `.editor.modified`; the original editor carries a
+  mirrored copy (`.editor.original .diff-hidden-lines`, same count), so only the modified side is counted.
+  The label reads "N hidden lines" in `.center`.
+- **14a on the unchanged code: PASS.** long.ts 3 strips (16 / 153 / 18 hidden lines), other.ts 2 (46 / 48).
+  The last region of long.ts is **18** lines, not 17: the file ends in `\n`, so Monaco's model has 201
+  lines and the region is `[184, 202)`. T2's fixtures take the model's line count (lines + 1 for a
+  trailing newline), not the file's.
+- **14b on the unchanged code: FAIL.** The new text arrived in 641 ms; the probe was still on the same
+  `.monaco-diff-editor` node (the editor was fed, not rebuilt); **0 strips**.
+- **Step 5, cause check**: with the modified side's `setValue` replaced by one `applyEdits` over the
+  common prefix / suffix span, 14b **PASSES**: 4 strips (16 / 73 / 73 / 18), arrived in 837 ms, probe kept;
+  47/47. Restored from `.orig`; `git status --porcelain` afterwards lists only this task's smoke edit.
+- **Stop rule: cause confirmed, continue.** 14a passed, the probe survived, 14b failed on the unchanged
+  code, and the mutant brought the strips back, so `setValue` wiping the decorations is the carrier.
 
 **Tests**: manual
 **Gate**: manual

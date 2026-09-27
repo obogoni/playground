@@ -34,6 +34,8 @@
  *     assets/logo.bin      a NUL in the first 8000 bytes
  *     big.txt              2 MB, past the 1 MB view cap
  *     stack/f00..f39.ts    40 changed files, for the All changes stack
+ *     fold/long.ts         200 lines, committed on main and never changed on
+ *     fold/other.ts        120 lines, the branch; section 14 writes to them
  *     untracked.txt        untracked, so the uncommitted mode has one
  */
 
@@ -68,6 +70,19 @@ const rmTree = (path) =>
 const git = (args, cwd = REPO) =>
   execFileSync('git', args, { cwd, encoding: 'utf8', windowsHide: true }).trim()
 
+/**
+ * A fold file: line n reads `export const <prefix>NNN = n`, and each line in
+ * `changed` reads `= -n` instead.
+ */
+const foldText = (prefix, lines, changed = []) =>
+  Array.from({ length: lines }, (_, i) => {
+    const n = i + 1
+    return `export const ${prefix}${String(n).padStart(3, '0')} = ${changed.includes(n) ? -n : n}`
+  }).join('\n') + '\n'
+
+/** Every line number from `from` to `to`, both included. */
+const span = (from, to) => Array.from({ length: to - from + 1 }, (_, i) => from + i)
+
 /* ------------------------------------------------------------------ seed -- */
 
 function seed() {
@@ -75,7 +90,7 @@ function seed() {
   rmTree(ORIGIN)
   // The second worktree an earlier drive added (FXPL-18): git refuses to add it again.
   rmTree(OTHER)
-  for (const dir of ['src', 'docs', 'assets', 'stack']) {
+  for (const dir of ['src', 'docs', 'assets', 'stack', 'fold']) {
     mkdirSync(join(REPO, dir), { recursive: true })
   }
 
@@ -100,6 +115,9 @@ function seed() {
     const name = `f${String(i).padStart(2, '0')}.ts`
     writeFileSync(join(REPO, 'stack', name), `export const n${i} = ${i}\nexport const tail = 0\n`)
   }
+  // Long enough to fold; section 14 is the only one that changes them.
+  writeFileSync(join(REPO, 'fold', 'long.ts'), foldText('l', 200))
+  writeFileSync(join(REPO, 'fold', 'other.ts'), foldText('o', 120))
 
   git(['add', '-A'])
   git(['commit', '-m', 'base commit'])
@@ -1226,6 +1244,94 @@ async function drive() {
     'With nothing listed, Expand all and Collapse all are not shown (FPOL-17)',
     emptyMode.empty !== null && emptyMode.toggles.length === 0,
     J(emptyMode)
+  )
+
+  // 14. Unchanged lines stay folded across refreshes (FOLD, issue #130).
+  //
+  // Section 13 committed everything, so Uncommitted starts empty and every
+  // change below is this section's own. The layout is inline (section 6).
+  const LONG = join(REPO, 'fold', 'long.ts')
+  const OTHER_FOLD = join(REPO, 'fold', 'other.ts')
+  const sectionOf = (file) =>
+    `[...document.querySelectorAll('.diff-section')].find((s) => (s.getAttribute('data-path') ?? '').endsWith(${J(file)}))`
+  // Strips are Monaco's `.diff-hidden-lines` overlay in the modified editor; the
+  // original editor carries its own copy, so count one side only.
+  const foldState = (file) => `(() => {
+    const s = ${sectionOf(file)}
+    const editor = s?.querySelector('.monaco-diff-editor') ?? null
+    const lines = [...(s?.querySelectorAll('.editor.modified .view-line') ?? [])]
+      .map((l) => l.textContent.replace(/\\u00a0/g, ' '))
+    return {
+      section: !!s,
+      editor: !!editor,
+      probe: editor?.getAttribute('data-smoke-probe') ?? null,
+      strips: s ? s.querySelectorAll('.editor.modified .diff-hidden-lines').length : -1,
+      originalStrips: s ? s.querySelectorAll('.editor.original .diff-hidden-lines').length : -1,
+      labels: [...(s?.querySelectorAll('.editor.modified .diff-hidden-lines .center') ?? [])]
+        .map((e) => e.textContent.replace(/\\u00a0/g, ' ').trim()),
+      text: lines.join('\\n')
+    }
+  })()`
+  const probe = (file) =>
+    `(() => { const e = ${sectionOf(file)}?.querySelector('.monaco-diff-editor'); if (!e) return false; e.setAttribute('data-smoke-probe', ${J(file)}); return true })()`
+
+  /** Poll until `ok(state)`, reporting how long it took; the last state either way. */
+  const waitFold = async (file, ok, timeoutMs = 4000) => {
+    const startedAt = Date.now()
+    let state
+    do {
+      state = await evaluate(ws, foldState(file))
+      if (ok(state)) return { state, after: Date.now() - startedAt }
+      await sleep(50)
+    } while (Date.now() - startedAt < timeoutMs)
+    return { state, after: null }
+  }
+  /** The strip count once it has held still for 600 ms (Monaco recomputes asynchronously). */
+  const settledStrips = async (file) => {
+    let last = -2
+    let since = Date.now()
+    const startedAt = Date.now()
+    while (Date.now() - startedAt < 5000) {
+      const { strips } = await evaluate(ws, foldState(file))
+      if (strips !== last) {
+        last = strips
+        since = Date.now()
+      } else if (Date.now() - since >= 600) break
+      await sleep(100)
+    }
+    return evaluate(ws, foldState(file))
+  }
+
+  writeFileSync(LONG, foldText('l', 200, [20, 180]))
+  writeFileSync(OTHER_FOLD, foldText('o', 120, span(50, 70)))
+  await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
+  await waitFold('fold/other.ts', (s) => s.editor && s.strips > 0, 8000)
+  const openedLong = await settledStrips('fold/long.ts')
+  const openedOther = await settledStrips('fold/other.ts')
+  console.log(`    14a DOM: long ${J({ ...openedLong, text: undefined })}`)
+  console.log(`    14a DOM: other ${J({ ...openedOther, text: undefined })}`)
+  check(
+    "A long file's section opens folded (FOLD-01)",
+    openedLong.editor && openedOther.editor && openedLong.strips === 3 && openedOther.strips === 2,
+    `long.ts ${openedLong.strips} strips, other.ts ${openedOther.strips}`
+  )
+
+  const probed = await evaluate(ws, probe('fold/long.ts'))
+  const writtenAt = Date.now()
+  writeFileSync(LONG, foldText('l', 200, [20, 100, 180]))
+  const arrived = await waitFold('fold/long.ts', (s) => s.text.includes('export const l100 = -100'))
+  const refreshed = await settledStrips('fold/long.ts')
+  console.log(
+    `    14b DOM: long ${J({ ...refreshed, text: undefined })}, arrived ${arrived.after} ms after the write at ${writtenAt}`
+  )
+  check(
+    'A disk change keeps the section folded, in the same editor (FOLD-02, FOLD-04)',
+    probed &&
+      arrived.after !== null &&
+      arrived.after <= 1000 &&
+      refreshed.probe === 'fold/long.ts' &&
+      refreshed.strips === 4,
+    `probe ${probed ? (refreshed.probe ?? 'GONE') : 'never set'}, arrived in ${arrived.after} ms, ${refreshed.strips} strips (want 4)`
   )
 
   const failed = checks.filter((c) => !c.ok)
