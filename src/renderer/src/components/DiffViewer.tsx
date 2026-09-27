@@ -149,6 +149,8 @@ export function DiffViewer({
   // The fold states read just before new text went in, until Monaco has
   // recomputed the diff for it (FOLD-02..08, `FoldReading`).
   const pendingRef = useRef<FoldReading | null>(null)
+  // The modified side's scroll offset when that reading was taken (FOLD-09).
+  const pendingScrollRef = useRef<number | null>(null)
   const [identical, setIdentical] = useState(false)
   const [height, setHeight] = useState<number | null>(null)
 
@@ -227,6 +229,13 @@ export function DiffViewer({
           const regions = currentRegions(editor) ?? []
           const leftChanged = pending.left !== original.getValue()
           applyFolds(editor, foldPlan(pending.states, regions, choice, leftChanged))
+          // The offset restored after `setValue` was measured on a diff with every
+          // region revealed; with the folds above the screen back as they were,
+          // the offset from before the change shows the same line again (FOLD-09).
+          if (pendingScrollRef.current !== null) {
+            editor.getModifiedEditor().setScrollTop(pendingScrollRef.current)
+          }
+          pendingScrollRef.current = null
         } else if (!announced && choice) {
           // An editor mounted after a press opens in that choice: a section
           // scrolled into view, expanded, or remounted (FOLD-14, FOLD-23).
@@ -264,6 +273,7 @@ export function DiffViewer({
       editorRef.current = null
       markersRef.current = null
       pendingRef.current = null
+      pendingScrollRef.current = null
       for (const disposable of disposables) disposable.dispose()
       editor.dispose()
       // Disposing the editor leaves its models behind, and a stack remounts
@@ -292,12 +302,15 @@ export function DiffViewer({
     // region would come back revealed. The fold states are read first and
     // re-applied once the new diff exists (FOLD-02..08, `readingBeforeUpdate`).
     if ((originalMoves || modifiedMoves) && editor) {
+      const before = pendingRef.current
       pendingRef.current = readingBeforeUpdate(
-        pendingRef.current,
+        before,
         currentRegions(editor),
         editor.saveViewState()?.modelState,
         models.original.getValue()
       )
+      // Only a new reading records the offset: a second change keeps the first.
+      if (before === null && pendingRef.current !== null) pendingScrollRef.current = scrollTop
     }
     if (originalMoves) models.original.setValue(nextOriginal)
     if (modifiedMoves) models.modified.setValue(nextModified)

@@ -13,7 +13,7 @@ regions from `getLineChanges()` with Monaco's own rule, snapshots their fold sta
 and applies its own plan through `restoreViewState`'s `modelState` once Monaco has recomputed; the
 per-tab Hide / Show choice lives in `use-files` and reaches every mounted `DiffViewer` as a prop.
 **Status**: Approved by the owner on 2026-09-27 ("pode seguir com a #130", executed inline at the
-owner's choice). T1-T12 Done; Verifier round 1 FAIL on evidence; fix round T13-T17 in progress.
+owner's choice). T1-T17 Done (fix round 1 closed); awaiting the Verifier, round 2.
 
 **Branch**: `feature/diff-fold-refresh`, cut from `feature/files-view-polish` `70d573c` (PR #125, which
 adds Expand all / Collapse all). Rebase onto `origin/main` once #125 merges. The future PR body carries
@@ -678,7 +678,7 @@ The Verifier's round 1 (`validation.md`) failed on test evidence only: 16 of 20 
 **Done when**:
 
 - [x] The new scroll assertion can fail: it **fails on the code as it stands** (a real defect, T17), so the mutant run moves to T17
-- [ ] Focused smoke passes, then one full smoke passes (moved to T17, after the fix)
+- [x] Focused smoke passes, then one full smoke passes (moved to T17, after the fix; done there)
 - [x] Gate check passes: `npm run lint` (0 errors / 18 warnings)
 
 **Result (2026-09-27)**: section 11 keeps its 1 s timing and drops the scroll comparison that read 0 -> 0. 14f2 wheel-scrolls long.ts's diff tab and reads the first line on screen. Line 1 is folded away, so that line is `l017` before the wheel and `l023` after it. The write changes line 170, below the screen. **After the write the first line on screen is `l101`: the tab jumped.** `setValue` reveals every region for a moment, `setScrollTop` restores the pixel offset on that tall layout, and `applyFolds` then folds the regions above back, so the same offset lands 78 lines lower. This is a defect that the vacuous check hid, fixed in T17. The precondition was corrected from "line 1 on screen" to "the wheel moved the first line".
@@ -700,10 +700,12 @@ The Verifier's round 1 (`validation.md`) failed on test evidence only: 16 of 20 
 
 **Done when**:
 
-- [ ] 14f2 passes on the focused smoke
-- [ ] 14f2 fails against a mutant that drops the new restore after `applyFolds`
-- [ ] One full smoke passes
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+- [x] 14f2 passes on the focused smoke
+- [x] 14f2 fails against a mutant that drops the new restore after `applyFolds`
+- [x] One full smoke passes
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+
+**Result (2026-09-27)**: `pendingScrollRef` holds the offset taken with a new reading; `onDidUpdateDiff` restores it right after `applyFolds`. 14f2 now keeps `l023` on screen across the write; focused smoke 19/19. The mutant that drops the new restore fails 14f2 (back to `l101`). Gate: typecheck 0, lint 0 errors / 18 warnings, 1729/1729 tests, `npx electron-vite build` 0. **Full smoke, run once: 64/64 in 177 s.** T16's open item, the focused and full runs, is closed here.
 
 **Tests**: manual
 **Gate**: build
