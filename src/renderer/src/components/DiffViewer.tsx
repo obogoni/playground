@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { DiffSide, DiffSides } from '../../../shared/files'
 import {
+  choicePlan,
   eolStripText,
   foldPlan,
   hiddenRangesOf,
@@ -12,6 +13,7 @@ import {
   type Region,
   type RegionState
 } from '../lib/diff-view'
+import type { UnchangedChoice } from '../lib/files-view'
 import { languageForPath, monaco } from '../lib/monaco-setup'
 import { FilePlaceholder, type PlaceholderKind } from './FilePlaceholder'
 import './DiffViewer.css'
@@ -52,6 +54,12 @@ interface DiffViewerProps {
    * would have twelve of them arguing over one key press.
    */
   onHandle?: (handle: DiffHandle | null) => void
+  /**
+   * The tab's last Hide unchanged / Show unchanged press, or null for none.
+   * Applied on every new press, when a newly mounted editor first shows its
+   * diff, and to the regions a refresh creates (FOLD-12..15, FOLD-23).
+   */
+  unchanged?: UnchangedChoice | null
 }
 
 /** Why a side cannot be rendered, or null when it is text the editor can hold. */
@@ -133,14 +141,16 @@ export function DiffViewer({
   ignoreWhitespace,
   fitContent,
   onHeight,
-  onHandle
+  onHandle,
+  unchanged = null
 }: DiffViewerProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<monaco.editor.IStandaloneDiffEditor | null>(null)
   const markersRef = useRef<monaco.editor.IEditorDecorationsCollection | null>(null)
   // The fold states read just before new text went in, until Monaco has
-  // recomputed the diff for it (FOLD-02..08).
-  const pendingRef = useRef<{ states: RegionState[]; left: string } | null>(null)
+  // recomputed the diff for it (FOLD-02..08). `states` null means a button was
+  // pressed meanwhile: the new diff takes the choice, not the old reading.
+  const pendingRef = useRef<{ states: RegionState[] | null; left: string } | null>(null)
   const [identical, setIdentical] = useState(false)
   const [height, setHeight] = useState<number | null>(null)
 
@@ -155,9 +165,9 @@ export function DiffViewer({
 
   // Read through a ref by the mount effect, which runs once: the editor must
   // survive a preference change rather than be rebuilt by it.
-  const live = useRef({ layout, ignoreWhitespace, fitContent, onHeight, onHandle })
+  const live = useRef({ layout, ignoreWhitespace, fitContent, onHeight, onHandle, unchanged })
   useEffect(() => {
-    live.current = { layout, ignoreWhitespace, fitContent, onHeight, onHandle }
+    live.current = { layout, ignoreWhitespace, fitContent, onHeight, onHandle, unchanged }
   })
 
   useEffect(() => {
@@ -212,12 +222,17 @@ export function DiffViewer({
         // answers null until the worker has computed, which is not "identical".
         const changes = editor.getLineChanges()
         if (!changes) return
+        const choice = live.current.unchanged?.mode ?? null
         const pending = pendingRef.current
+        pendingRef.current = null
         if (pending) {
-          pendingRef.current = null
           const regions = currentRegions(editor) ?? []
           const leftChanged = pending.left !== original.getValue()
-          applyFolds(editor, foldPlan(pending.states, regions, null, leftChanged))
+          applyFolds(editor, foldPlan(pending.states, regions, choice, leftChanged))
+        } else if (!announced && choice) {
+          // An editor mounted after a press opens in that choice: a section
+          // scrolled into view, expanded, or remounted (FOLD-14, FOLD-23).
+          applyFolds(editor, choicePlan(currentRegions(editor) ?? [], choice))
         }
         setIdentical(changes.length === 0)
         // The handle is announced once the worker has answered, never before:
@@ -294,6 +309,22 @@ export function DiffViewer({
     if (modifiedMoves) models.modified.setValue(nextModified)
     inner?.setScrollTop(scrollTop)
   }, [sides])
+
+  // A press of Hide unchanged or Show unchanged folds or reveals every region,
+  // hand-revealed ones included (FOLD-12, FOLD-13). Before the first diff there
+  // is nothing to fold: the diff listener applies the choice when it arrives.
+  const press = unchanged?.press
+  useEffect(() => {
+    const editor = editorRef.current
+    const mode = live.current.unchanged?.mode
+    if (!editor || !mode || press === undefined) return
+    if (pendingRef.current) {
+      pendingRef.current = { ...pendingRef.current, states: null }
+      return
+    }
+    const regions = currentRegions(editor)
+    if (regions) applyFolds(editor, choicePlan(regions, mode))
+  }, [press])
 
   useEffect(() => {
     editorRef.current?.updateOptions({

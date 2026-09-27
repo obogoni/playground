@@ -363,8 +363,10 @@ regions (skipped while `getLineChanges()` is still `null`); the refresh plan of 
 
 **Done when**:
 
-- [ ] The editor is still created once per mount (no new dependency on the mount effect)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] The editor is still created once per mount (no new dependency on the mount effect)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Result (2026-09-27)**: the mount effect still depends on `[renderable]` alone. The choice reaches the editor three ways: the `press` effect folds or reveals every region of the current diff; the first computed diff of a mount applies `choicePlan` when a choice exists; a refresh passes the choice to `foldPlan`. One case the plan did not name, decided here: a press while a refresh is pending sets the pending reading to `states: null`, so the recomputed diff takes the choice instead of the reading from before the press, which would undo it. Gate: typecheck 0, lint 0 errors / 18 warnings, 1721/1721 tests. The behaviour is proven by T11 and T12's smoke checks.
 
 **Tests**: none
 **Gate**: full
