@@ -60,7 +60,7 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | Split time field | A date-and-time field to the second, like Edit, pre-filled with the period's midpoint rounded down to the second | Reuses the Edit form's local-time conversion (`PeriodRow.tsx:22-33`); a midpoint is always inside when a split is possible | y |
 | Report label for a hand-set work item | Unchanged TIME-40: `Task #{id} {title}`, live pinned title first, then the stored title, whatever the item's type | The report label and the Clockify format stay exactly as shipped | y |
 | Log format | Lines keep `v: 1`; `taskByHand` is an optional boolean written only when true; a line whose `taskByHand` is present but not a boolean is skipped as invalid | A version bump would make the previous build skip, then drop on its next rewrite, every new line; an optional field it does not know is carried through its spread (`time-log-store.ts:71,144`) | y |
-| Time-tracking spec | The Out of Scope row "Editing the snapshot fields (task, worktree) of a period" is superseded for the task field, and TIME-03 is amended (a session link comes before the branch); recorded as AD-TBD at Execute | AD-018 pattern: a merged spec must not describe behaviour that no longer ships | y |
+| Time-tracking spec | The Out of Scope row "Editing the snapshot fields (task, worktree) of a period" is superseded for the task field, and TIME-03 is amended (a session link comes before the branch); recorded as AD-048 at Execute (T27) | AD-018 pattern: a merged spec must not describe behaviour that no longer ships | y |
 | Rail spec | RAIL-08 is amended: a linked task with no pinned details shows the link's title in place of the branch; RAIL-09/10 apply only to sessions with no task after the link | A linked session on `develop` would otherwise show `develop` as its task title | y |
 | Base branch | `feature/hours-task-assign` cut from `feature/hours-task-focus` (PR #129), itself on `feature/hours-calendar` (PR #99); the PR carries `Closes #133` and "depends on #129" | Owner-approved stacking; the drawer and its colours exist only there | y |
 | PR #98 (`feature/session-strip-polish`, not in this base) | Rebase conflict hotspots: `AgentsView.tsx` (#98 rewrites the detail header's clock and removes the Pause/Resume buttons; this feature edits the strip below it and adds props at the end of `SessionDetail`'s list), `Icon.tsx` (#98 edits one comment; new icons are appended), `rail-groups.test.ts` and `activity-notification.test.ts` (#98 inserts tests mid-file; this feature appends new `describe` blocks) | Placing every change away from #98's hunks keeps the expected conflict to context lines | y |
@@ -218,7 +218,7 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | HTSK-07 | P1: session — AC 7 | Execute | Implementing: T21 |
 | HTSK-08 | P1: session — AC 8 | Execute | Implementing: T21 |
 | HTSK-09 | P1: session — AC 9 | Execute | Implementing: T3, T6, T9, T10, T17, T21 |
-| HTSK-10 | P1: session — AC 10 | Execute | Implementing: T2, T3 |
+| HTSK-10 | P1: session — AC 10 | Execute | Implementing: T2, T3, T27 |
 | HTSK-11 | P1: session — AC 11 | Execute | Implementing: T2, T3, T11, T12, T22 |
 | HTSK-12 | P1: session — AC 12 | Execute | Implementing: T3, T6, T9, T10, T17 |
 | HTSK-13 | P1: session — AC 13 | Execute | Implementing: T3, T6, T22 |
@@ -228,12 +228,12 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | HTSK-17 | P1: session — AC 17 | Execute | Implementing: T6 |
 | HTSK-18 | P1: session — AC 18 | Execute | Implementing: T11, T13, T22 |
 | HTSK-19 | P1: session — AC 19 | Execute | Implementing: T23 |
-| HTSK-20 | P1: session — AC 20 | Execute | Implementing: T12, T23 |
+| HTSK-20 | P1: session — AC 20 | Execute | Implemented: T12, T23, T27 |
 | HTSK-21 | P1: session — AC 21 | Execute | Implementing: T7 |
 | HTSK-22 | P1: session — AC 22 | Execute | Implemented: T6 |
 | HTSK-23 | P1: drawer — AC 23 | Execute | Implementing: T20, T25, T26 |
 | HTSK-24 | P1: drawer — AC 24 | Execute | Implemented: T13, T26 |
-| HTSK-25 | P1: drawer — AC 25 | Execute | Implementing: T2, T4, T9, T10, T26 |
+| HTSK-25 | P1: drawer — AC 25 | Execute | Implementing: T2, T4, T9, T10, T26, T27 |
 | HTSK-26 | P1: drawer — AC 26 | Execute | Implementing: T2, T4, T26 |
 | HTSK-27 | P1: drawer — AC 27 | Execute | Implementing: T2, T4, T26 |
 | HTSK-28 | P1: drawer — AC 28 | Execute | Implementing: T5, T9, T10, T25 |

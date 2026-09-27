@@ -229,6 +229,6 @@ A session link is `SessionTask | null` in every API; `From branch` in a session 
 | Picker lookup channel | `tasks:lookup` on `TaskBoard` | Reuses the pin fetch and its error texts; keeps Azure DevOps calls in one module |
 | Rail row gesture | Context menu | RAIL-12 forbids new controls on the row (owner confirmed 2026-09-26) |
 
-### AD-TBD (number chosen at Execute)
+### AD-048
 
 **A period's task can be set by hand, live through its session or afterwards in the Hours drawer; a hand-set task overwrites the period's `taskId` and `taskTitle` and records `taskByHand: true` only when it differs from the task its branch names.** `PersistedSession.task` holds the session's link (id and title); `TimeTracker` applies it over the branch snapshot at every period open, and `SessionLifecycle.taskChanged` closes the open period and opens a new one at the same instant. `reassignPeriod` and `splitPeriod` join `adjustPeriod` and `deletePeriod`. Log lines keep `v: 1`; the branch field is never rewritten. **Supersedes** the time-tracking Out of Scope row "Editing the snapshot fields (task, worktree) of a period" for the task field; **amends** TIME-03 (a session link comes before the branch) and RAIL-08 (a linked task without pinned details shows the link's title). Spec / design / tasks: `.specs/features/hours-task-assign/` (HTSK-01..43).

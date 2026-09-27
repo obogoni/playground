@@ -764,7 +764,7 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 ### T27: Record the decision and amend the sibling specs
 
-**What**: The AD from design.md's "AD-TBD" with the next free number (checked across `develop`, `origin/main` and every planned branch's `STATE.md`); in `time-tracking/spec.md`, the Out of Scope row and TIME-03 annotated as superseded / amended by it; in `agents-rail-v2/spec.md`, RAIL-08 annotated.
+**What**: The AD from design.md's "AD-TBD" (now AD-048) with the next free number (checked across `develop`, `origin/main` and every planned branch's `STATE.md`); in `time-tracking/spec.md`, the Out of Scope row and TIME-03 annotated as superseded / amended by it; in `agents-rail-v2/spec.md`, RAIL-08 annotated.
 **Where**: `.specs/STATE.md` (annotations in `.specs/features/time-tracking/spec.md` and `.specs/features/agents-rail-v2/spec.md`)
 **Depends on**: T26
 **Reuses**: AD-018 / AD-029's supersession wording
@@ -777,7 +777,7 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] The AD number is checked free and named in the commit body
+- [x] The AD number is checked free and named in the commit body (AD-048)
 
 **Tests**: none
 **Gate**: quick
