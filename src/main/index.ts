@@ -375,6 +375,7 @@ app.whenReady().then(() => {
   handle('tasks:unpin', (ref) => taskBoard.unpin(ref))
   handle('tasks:refresh', () => taskBoard.refresh())
   handle('tasks:parent', ({ id, org, project }) => adoGateway.parentOf({ id, org, project }))
+  handle('tasks:lookup', ({ input }) => taskBoard.lookup(input))
 
   // Agent sessions (AM2). SessionManager owns every session's lifecycle,
   // persistence, and stream routing; emit is lazily bound to the live window.
@@ -471,6 +472,8 @@ app.whenReady().then(() => {
   handle('time:resume', ({ sessionId }) => tracker.resume(sessionId))
   handle('time:delete', ({ id }) => tracker.deletePeriod(id))
   handle('time:adjust', ({ id, start, end }) => tracker.adjustPeriod(id, start, end))
+  handle('time:reassign', ({ id, choice }) => tracker.reassignPeriod(id, choice))
+  handle('time:split', ({ id, at }) => tracker.splitPeriod(id, at))
   // The sidecar heartbeat bounds what a crash can lose to 60 s (TIME-04); unref'd
   // so it never keeps the process alive.
   setInterval(() => tracker.heartbeat(), 60_000).unref()
@@ -567,8 +570,8 @@ app.whenReady().then(() => {
   hookServer.onEvent((sessionId, payload) => sessions.handleHookEvent(sessionId, payload))
   namePoller.onListing((names) => sessions.applyNames(names))
   handle('sessions:list', () => sessions.list())
-  handle('sessions:spawn', ({ agentName, cwd, adhocCommand }) =>
-    sessions.spawn(agentName, cwd, adhocCommand)
+  handle('sessions:spawn', ({ agentName, cwd, adhocCommand, task }) =>
+    sessions.spawn(agentName, cwd, adhocCommand, task)
   )
   // Returning the promise is load-bearing: ipcMain.handle awaits it, so the
   // renderer's `sessions:stop` only resolves once the PTY has really exited
@@ -577,6 +580,8 @@ app.whenReady().then(() => {
   handle('sessions:stop', ({ id }) => sessions.stop(id))
   handle('sessions:respawn', ({ id }) => sessions.respawn(id))
   handle('sessions:rename', ({ id, title }) => sessions.rename(id, title))
+  // Persist first, then the tracker closes and opens through the lifecycle (HTSK-12).
+  handle('sessions:set-task', ({ id, task }) => sessions.setTask(id, task))
   handle('sessions:duplicate', ({ id }) => sessions.duplicate(id))
   handle('sessions:remove', ({ id }) => sessions.remove(id))
   handle('sessions:attach', ({ id }) => sessions.attach(id))

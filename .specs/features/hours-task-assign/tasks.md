@@ -350,7 +350,7 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`. The first clause of **What** (the local pinned-title helper) was already done in T3: `pinnedTitles()` feeds both `resolveSnapshot` and the tracker's `pinnedTitle` dep; T10 adds the four handlers and forwards `task` on `sessions:spawn`
 
 **Tests**: none
 **Gate**: full

@@ -210,17 +210,17 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | HTSK-01 | P1: picker — AC 1 | Tasks | In Tasks |
-| HTSK-02 | P1: picker — AC 2 | Execute | Implementing: T8, T9 |
+| HTSK-02 | P1: picker — AC 2 | Execute | Implementing: T8, T9, T10 |
 | HTSK-03 | P1: picker — AC 3 | Tasks | In Tasks |
 | HTSK-04 | P1: picker — AC 4 | Execute | Implementing: T8 |
 | HTSK-05 | P1: picker — AC 5 | Execute | Implementing: T8 |
 | HTSK-06 | P1: picker — AC 6 | Execute | Implementing: T2 |
 | HTSK-07 | P1: session — AC 7 | Tasks | In Tasks |
 | HTSK-08 | P1: session — AC 8 | Tasks | In Tasks |
-| HTSK-09 | P1: session — AC 9 | Execute | Implementing: T3, T6, T9 |
+| HTSK-09 | P1: session — AC 9 | Execute | Implementing: T3, T6, T9, T10 |
 | HTSK-10 | P1: session — AC 10 | Execute | Implementing: T2, T3 |
 | HTSK-11 | P1: session — AC 11 | Execute | Implementing: T2, T3 |
-| HTSK-12 | P1: session — AC 12 | Execute | Implementing: T3, T6, T9 |
+| HTSK-12 | P1: session — AC 12 | Execute | Implementing: T3, T6, T9, T10 |
 | HTSK-13 | P1: session — AC 13 | Execute | Implementing: T3, T6 |
 | HTSK-14 | P1: session — AC 14 | Execute | Implementing: T3 |
 | HTSK-15 | P1: session — AC 15 | Execute | Implemented: T3, T6 |
@@ -233,10 +233,10 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | HTSK-22 | P1: session — AC 22 | Execute | Implemented: T6 |
 | HTSK-23 | P1: drawer — AC 23 | Tasks | In Tasks |
 | HTSK-24 | P1: drawer — AC 24 | Tasks | In Tasks |
-| HTSK-25 | P1: drawer — AC 25 | Execute | Implementing: T2, T4, T9 |
+| HTSK-25 | P1: drawer — AC 25 | Execute | Implementing: T2, T4, T9, T10 |
 | HTSK-26 | P1: drawer — AC 26 | Execute | Implementing: T2, T4 |
 | HTSK-27 | P1: drawer — AC 27 | Execute | Implementing: T2, T4 |
-| HTSK-28 | P1: drawer — AC 28 | Execute | Implementing: T5, T9 |
+| HTSK-28 | P1: drawer — AC 28 | Execute | Implementing: T5, T9, T10 |
 | HTSK-29 | P1: drawer — AC 29 | Execute | Implementing: T5 |
 | HTSK-30 | P1: drawer — AC 30 | Execute | Implemented: T5 |
 | HTSK-31 | P1: drawer — AC 31 | Execute | Implemented: T5 |
