@@ -221,6 +221,36 @@ export class TimeTracker {
     return this.#rewritten()
   }
 
+  /**
+   * Splits a closed period at an instant strictly inside it, both parts at least
+   * 1 s long (HTSK-28..31). The first part keeps the id; the second gets a new id
+   * and follows it in the log; every other field is copied.
+   */
+  splitPeriod(id: string, at: string): TimeEditResult {
+    const rejected = this.#editTarget(id)
+    if (rejected) return rejected
+    const atMs = Date.parse(at)
+    if (Number.isNaN(atMs)) return { ok: false, error: 'Split time must be a valid date.' }
+    const index = this.#periods.findIndex((p) => p.id === id)
+    const period = this.#periods[index]
+    const startMs = Date.parse(period.start)
+    const endMs = Date.parse(period.end)
+    if (atMs <= startMs || atMs >= endMs) {
+      return { ok: false, error: 'Split time must be inside the period.' }
+    }
+    if (atMs - startMs < MIN_PERIOD_MS || endMs - atMs < MIN_PERIOD_MS) {
+      return { ok: false, error: 'Each part must last at least 1 second.' }
+    }
+    const cut = new Date(atMs).toISOString()
+    this.#periods = [
+      ...this.#periods.slice(0, index),
+      { ...period, end: cut },
+      { ...period, id: this.deps.newId(), start: cut },
+      ...this.#periods.slice(index + 1)
+    ]
+    return this.#rewritten()
+  }
+
   snapshot(): TimeSnapshot {
     const runs = [...this.#runs.entries()]
     return {

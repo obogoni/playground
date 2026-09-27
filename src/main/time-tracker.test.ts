@@ -822,3 +822,120 @@ describe('TimeTracker reassign a closed period', () => {
     expect(t.emits()).toBe(emits)
   })
 })
+
+describe('TimeTracker split a closed period', () => {
+  const at = (hh: number, mm = 0, ss = 0): string =>
+    `2026-09-15T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}.000Z`
+
+  /** 09:00–12:00 on develop, moved by hand to #12345. */
+  const morning: TimePeriod = {
+    id: 'morning',
+    sessionId: 'gone',
+    agent: 'Claude',
+    cwd: 'D:\\acme\\app',
+    workspacePath: 'D:\\acme',
+    repoName: 'app',
+    branch: 'develop',
+    taskId: 12345,
+    taskTitle: 'Fix login redirect',
+    taskByHand: true,
+    start: at(9),
+    end: at(12)
+  }
+  const before: TimePeriod = { ...morning, id: 'before', start: at(7), end: at(8) }
+  const after: TimePeriod = { ...morning, id: 'after', start: at(13), end: at(14) }
+
+  it('replaces the period by [start, at] with its id and [at, end] with a new id, in place (HTSK-28, HTSK-35)', () => {
+    const t = setup({ periods: [before, morning, after] })
+    const emits = t.emits()
+
+    expect(t.tracker.splitPeriod('morning', at(10))).toEqual({ ok: true })
+
+    const expected = [
+      before,
+      { ...morning, end: at(10) },
+      { ...morning, id: 'p1', start: at(10) },
+      after
+    ]
+    expect(t.store.rewrites).toEqual([expected])
+    expect(t.tracker.snapshot().periods).toEqual(expected)
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it('splits at exactly start + 1 s and at exactly end - 1 s (HTSK-28, HTSK-30)', () => {
+    const t = setup({ periods: [morning] })
+
+    expect(t.tracker.splitPeriod('morning', at(9, 0, 1))).toEqual({ ok: true })
+    expect(t.tracker.splitPeriod('p1', at(11, 59, 59))).toEqual({ ok: true })
+
+    expect(t.tracker.snapshot().periods.map((p) => [p.id, p.start, p.end])).toEqual([
+      ['morning', at(9), at(9, 0, 1)],
+      ['p1', at(9, 0, 1), at(11, 59, 59)],
+      ['p2', at(11, 59, 59), at(12)]
+    ])
+  })
+
+  const shortPeriod: TimePeriod = {
+    ...morning,
+    id: 'short',
+    start: at(9),
+    end: '2026-09-15T09:00:01.500Z'
+  }
+
+  it.each([
+    ['at the start', 'morning', at(9), 'Split time must be inside the period.'],
+    ['at the end', 'morning', at(12), 'Split time must be inside the period.'],
+    ['before the start', 'morning', at(8), 'Split time must be inside the period.'],
+    ['after the end', 'morning', at(13), 'Split time must be inside the period.'],
+    [
+      'a 1.5 s period in its middle',
+      'short',
+      '2026-09-15T09:00:00.750Z',
+      'Each part must last at least 1 second.'
+    ],
+    ['an invalid date', 'morning', 'not-a-date', 'Split time must be a valid date.']
+  ])(
+    'rejects a split %s and leaves the log unrewritten (HTSK-29..31)',
+    (_name, id, time, error) => {
+      const t = setup({ periods: [morning, shortPeriod] })
+      const snapshotBefore = t.tracker.snapshot()
+      const emits = t.emits()
+
+      expect(t.tracker.splitPeriod(id, time)).toEqual({ ok: false, error })
+
+      expect(t.store.rewrites).toEqual([])
+      expect(t.tracker.snapshot()).toEqual(snapshotBefore)
+      expect(t.emits()).toBe(emits)
+    }
+  )
+
+  it('rejects the open period and a deleted id (HTSK-32)', () => {
+    const t = setup({ periods: [morning] })
+    t.tracker.started(meta())
+    const openId = t.tracker.snapshot().open[0].id
+
+    expect(t.tracker.splitPeriod(openId, iso(T0))).toEqual({
+      ok: false,
+      error: 'This period is still open.'
+    })
+    expect(t.tracker.splitPeriod('deleted', at(10))).toEqual({
+      ok: false,
+      error: 'This period no longer exists.'
+    })
+    expect(t.store.rewrites).toEqual([])
+  })
+
+  it('splits a period crossing local midnight at its exact instants', () => {
+    const start = new Date(2026, 8, 14, 23, 0, 0).toISOString()
+    const midnight = new Date(2026, 8, 15, 0, 0, 0).toISOString()
+    const end = new Date(2026, 8, 15, 1, 30, 0).toISOString()
+    const t = setup({ periods: [{ ...morning, start, end }] })
+
+    expect(t.tracker.splitPeriod('morning', midnight)).toEqual({ ok: true })
+
+    expect(t.store.rewrites[0].map((p) => [p.id, p.start, p.end])).toEqual([
+      ['morning', start, midnight],
+      ['p1', midnight, end]
+    ])
+  })
+})

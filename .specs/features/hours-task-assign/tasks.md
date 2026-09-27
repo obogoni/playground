@@ -218,9 +218,9 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Tests: 09:00–12:00 split at 10:00 rewrites the log as `[09:00, 10:00]` with the original id and `[10:00, 12:00]` with a new id, next to each other, both carrying the task, flag and every other field; splits at start + 1 s and at end − 1 s succeed (L-042); at the start, at the end and outside give `Split time must be inside the period.`; a 1.5 s period split in its middle gives `Each part must last at least 1 second.`; `not-a-date` gives `Split time must be a valid date.`; each rejection leaves the log unrewritten; open and deleted ids are rejected; a period crossing local midnight splits at its exact instants
-- [ ] Gate check passes: `npx vitest run src/main/time-tracker.test.ts` then `npm test`
-- [ ] Test count: T4 count + the new tests
+- [x] Tests: 09:00–12:00 split at 10:00 rewrites the log as `[09:00, 10:00]` with the original id and `[10:00, 12:00]` with a new id, next to each other, both carrying the task, flag and every other field; splits at start + 1 s and at end − 1 s succeed (L-042); at the start, at the end and outside give `Split time must be inside the period.`; a 1.5 s period split in its middle gives `Each part must last at least 1 second.`; `not-a-date` gives `Split time must be a valid date.`; each rejection leaves the log unrewritten; open and deleted ids are rejected; a period crossing local midnight splits at its exact instants
+- [x] Gate check passes: `npx vitest run src/main/time-tracker.test.ts` then `npm test`
+- [x] Test count: T4 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
