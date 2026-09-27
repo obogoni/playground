@@ -300,9 +300,9 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Tests: a bare number with defaults returns `{ ok: true, item: { id, type, title } }` from the stub; a work item URL does the same; `config.pinnedTasks` and `list()` are unchanged afterwards; a pinned id is returned like any other; a failed fetch returns `Could not reach Azure DevOps — run az login and try again.` and `list().auth` is `failed`; a missing item returns `Work item #{id} not found in {org}/{project}.`; an empty input returns `Paste a work item ID or ADO URL.`
-- [ ] Gate check passes: `npx vitest run src/main/task-board.test.ts` then `npm test`
-- [ ] Test count: T7 count + the new tests
+- [x] Tests: a bare number with defaults returns `{ ok: true, item: { id, type, title } }` from the stub; a work item URL does the same; `config.pinnedTasks` and `list()` are unchanged afterwards; a pinned id is returned like any other; a failed fetch returns `Could not reach Azure DevOps — run az login and try again.` and `list().auth` is `failed`; a missing item returns `Work item #{id} not found in {org}/{project}.`; an empty input returns `Paste a work item ID or ADO URL.` (`list()` differs only in `auth`, which the lookup updates as `pin` does per design.md)
+- [x] Gate check passes: `npx vitest run src/main/task-board.test.ts` then `npm test`
+- [x] Test count: T7 count + the new tests
 
 **Tests**: unit
 **Gate**: quick

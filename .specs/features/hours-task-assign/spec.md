@@ -210,10 +210,10 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | HTSK-01 | P1: picker — AC 1 | Tasks | In Tasks |
-| HTSK-02 | P1: picker — AC 2 | Tasks | In Tasks |
+| HTSK-02 | P1: picker — AC 2 | Execute | Implementing: T8 |
 | HTSK-03 | P1: picker — AC 3 | Tasks | In Tasks |
-| HTSK-04 | P1: picker — AC 4 | Tasks | In Tasks |
-| HTSK-05 | P1: picker — AC 5 | Tasks | In Tasks |
+| HTSK-04 | P1: picker — AC 4 | Execute | Implementing: T8 |
+| HTSK-05 | P1: picker — AC 5 | Execute | Implementing: T8 |
 | HTSK-06 | P1: picker — AC 6 | Execute | Implementing: T2 |
 | HTSK-07 | P1: session — AC 7 | Tasks | In Tasks |
 | HTSK-08 | P1: session — AC 8 | Tasks | In Tasks |

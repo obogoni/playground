@@ -127,3 +127,8 @@ export interface SessionTask {
   id: number
   title: string | null
 }
+
+/** Result of tasks:lookup — failures are returned, never thrown (HTSK-05). */
+export type LookupTaskResult =
+  | { ok: true; item: { id: number; type: string; title: string } }
+  | { ok: false; error: string }

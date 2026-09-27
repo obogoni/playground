@@ -401,3 +401,101 @@ describe('TaskBoard', () => {
     expect(board.list().tasks[0].details).toEqual({ ...task, parentType: 'Fault' })
   })
 })
+
+describe('TaskBoard.lookup', () => {
+  let dir: string
+  let store: ConfigStore
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'wtm-lookup-'))
+    store = new ConfigStore(dir)
+    store.patch({ ado: acme })
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  const URL_4821 = 'https://dev.azure.com/acme/platform/_workitems/edit/4821'
+  const KEY_4821 = 'acme/platform/#4821'
+  const PIN_7 = {
+    id: 7,
+    org: 'acme',
+    project: 'platform',
+    url: 'https://dev.azure.com/acme/platform/_workitems/edit/7'
+  }
+
+  it('returns a bare number resolved against the defaults (HTSK-02)', async () => {
+    const board = new TaskBoard(store, stubSource({ [KEY_4821]: FIX_LOGIN }))
+
+    const result = await board.lookup('4821')
+
+    expect(result).toEqual({
+      ok: true,
+      item: { id: 4821, type: 'Bug', title: 'Fix login redirect' }
+    })
+  })
+
+  it('returns a work item URL the same way (HTSK-02)', async () => {
+    const board = new TaskBoard(store, stubSource({ [KEY_4821]: FIX_LOGIN }))
+
+    const result = await board.lookup(URL_4821)
+
+    expect(result).toEqual({
+      ok: true,
+      item: { id: 4821, type: 'Bug', title: 'Fix login redirect' }
+    })
+  })
+
+  it('leaves the pinned list and the snapshot as they were, but for the auth state (HTSK-04)', async () => {
+    store.patch({ pinnedTasks: [PIN_7] })
+    const board = new TaskBoard(store, stubSource({ [KEY_4821]: FIX_LOGIN }))
+    const before = board.list()
+
+    await board.lookup('4821')
+
+    expect(new ConfigStore(dir).get().pinnedTasks).toEqual([PIN_7])
+    expect(board.list()).toEqual({ ...before, auth: 'ok' })
+  })
+
+  it('returns a pinned id like any other and caches none of its details (HTSK-02, HTSK-04)', async () => {
+    store.patch({ pinnedTasks: [PIN_7] })
+    const cleanup: WorkItemDetails = { title: 'Clean up logs', type: 'Task', state: 'New' }
+    const board = new TaskBoard(store, stubSource({ [refKey(PIN_7)]: cleanup }))
+
+    const result = await board.lookup('7')
+
+    expect(result).toEqual({ ok: true, item: { id: 7, type: 'Task', title: 'Clean up logs' } })
+    expect(board.list().tasks).toEqual([{ ...PIN_7, details: null }])
+  })
+
+  it('returns the pin path text and marks auth failed when Azure DevOps is unreachable (HTSK-05)', async () => {
+    const board = new TaskBoard(store, stubSource({}, { failAuth: true }))
+
+    const result = await board.lookup('4821')
+
+    expect(result).toEqual({
+      ok: false,
+      error: 'Could not reach Azure DevOps — run az login and try again.'
+    })
+    expect(board.list().auth).toBe('failed')
+  })
+
+  it('returns the pin path text for a missing item (HTSK-05)', async () => {
+    const board = new TaskBoard(store, stubSource({}))
+
+    const result = await board.lookup('4821')
+
+    expect(result).toEqual({ ok: false, error: 'Work item #4821 not found in acme/platform.' })
+  })
+
+  it('returns the parse error for an empty input without fetching (HTSK-05)', async () => {
+    const source = stubSource({ [KEY_4821]: FIX_LOGIN })
+    const board = new TaskBoard(store, source)
+
+    const result = await board.lookup('   ')
+
+    expect(result).toEqual({ ok: false, error: 'Paste a work item ID or ADO URL.' })
+    expect(source.calls).toHaveLength(0)
+  })
+})
