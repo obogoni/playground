@@ -322,9 +322,9 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] Tests with literal expected values: `entryForRow(list, 'dir')` finds a listed `dir/` (FDSC-43) and `'src/a.ts'` its entry; `entriesUnder(list, 'src')` returns entries at depths 1 and 3 and not `srcx/a.ts` nor `src` siblings outside the folder (FDSC-34); Discard all needs no helper: it sends the uncommitted list as it is (FDSC-35, T17); `discardGroups` puts each of the five statuses in its group, one `it.each` row per status (L-054), in tree order (FDSC-10, 11); `confirmLabel(1)` is `Discard 1 file`, `confirmLabel(2)` `Discard 2 files` (FDSC-14); `sessionWarning(0)` is null, `(1)` `1 session is running in this worktree and may be using these files.`, `(2)` `2 sessions are running in this worktree and may be using these files.` (FDSC-12, 13); `keptReason` returns `The Recycle Bin refused it.`, `Links and junctions are never moved.`, `It is outside the worktree.`, and a `git` detail verbatim (FDSC-21)
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/discard-view.test.ts`
-- [ ] Test count: T7 count + the new tests
+- [x] Tests with literal expected values: `entryForRow(list, 'dir')` finds a listed `dir/` (FDSC-43) and `'src/a.ts'` its entry; `entriesUnder(list, 'src')` returns entries at depths 1 and 3 and not `srcx/a.ts` nor `src` siblings outside the folder (FDSC-34); Discard all needs no helper: it sends the uncommitted list as it is (FDSC-35, T17); `discardGroups` puts each of the five statuses in its group, one `it.each` row per status (L-054), in tree order (FDSC-10, 11); `confirmLabel(1)` is `Discard 1 file`, `confirmLabel(2)` `Discard 2 files` (FDSC-14); `sessionWarning(0)` is null, `(1)` `1 session is running in this worktree and may be using these files.`, `(2)` `2 sessions are running in this worktree and may be using these files.` (FDSC-12, 13); `keptReason` returns `The Recycle Bin refused it.`, `Links and junctions are never moved.`, `It is outside the worktree.`, and a `git` detail verbatim (FDSC-21)
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/discard-view.test.ts`
+- [x] Test count: T7 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
