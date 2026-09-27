@@ -212,3 +212,51 @@ describe('buildWeekReport', () => {
     ])
   })
 })
+
+describe('buildWeekReport with a hand-set task (HTSK-40)', () => {
+  it('groups a period by its recorded task, labelled with its stored title, not by its branch', () => {
+    const r = report({
+      periods: [
+        {
+          ...closed({
+            cwd: 'D:\\acme\\app',
+            taskId: 4821,
+            taskTitle: 'Diagnose login loop',
+            start: at(16, 9),
+            end: at(16, 10)
+          }),
+          branch: 'develop',
+          taskByHand: true
+        },
+        {
+          ...closed({ cwd: 'D:\\acme\\app', taskId: null, start: at(16, 11), end: at(16, 12) }),
+          branch: 'develop'
+        }
+      ]
+    })
+
+    expect(r.days[0].groups.map((g) => [g.key, g.label, g.totalMs])).toEqual([
+      ['task:4821', 'Task #4821 Diagnose login loop', HOUR],
+      ['cwd:d:\\acme\\app', 'No task · app', HOUR]
+    ])
+  })
+
+  it('groups a period under the task it records, not the one its branch names', () => {
+    const r = report({
+      periods: [
+        {
+          ...closed({
+            cwd: 'D:\\acme\\app-67890',
+            taskId: 12345,
+            start: at(16, 9),
+            end: at(16, 10)
+          }),
+          branch: 'feature/67890-x',
+          taskByHand: true
+        }
+      ]
+    })
+
+    expect(r.days[0].groups.map((g) => g.key)).toEqual(['task:12345'])
+  })
+})

@@ -481,10 +481,10 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Tests: two periods on `develop`, one with `taskId: 4821, taskByHand: true`, one without a task, give groups `task:4821` labelled `Task #4821 Diagnose login loop` and `cwd:…`; a period on `feature/67890-x` recording 12345 is in `task:12345`, not `task:67890`
-- [ ] The test is seen failing against a `groupKey` mutated to read the branch's id, then passing
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/hours-report.test.ts` then `npm test`
-- [ ] Test count: T14 count + the new tests
+- [x] Tests: two periods on `develop`, one with `taskId: 4821, taskByHand: true`, one without a task, give groups `task:4821` labelled `Task #4821 Diagnose login loop` and `cwd:…`; a period on `feature/67890-x` recording 12345 is in `task:12345`, not `task:67890`
+- [x] The test is seen failing against a `groupKey` mutated to read the branch's id, then passing: seen with a scripted mutant (groupKey takes the id from the branch's last digits, .orig restored): 2 of the 16 report tests fail, 14 pass
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/hours-report.test.ts` then `npm test`
+- [x] Test count: T14 count + the new tests: 1792 + 2 = 1794 (95 files)
 
 **Tests**: unit
 **Gate**: quick
