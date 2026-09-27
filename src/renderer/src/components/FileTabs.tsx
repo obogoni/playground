@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
+import type { ChangedPath } from '../../../shared/files'
 import type { ShortcutTool } from '../../../shared/shortcuts'
 import { api } from '../lib/api'
 import { commitTabTitle } from '../lib/commit-view'
@@ -20,6 +21,8 @@ interface FileTabsProps {
   files: UseFiles
   /** The launcher's existing failure toast (FXPL-30). */
   onToast: (message: string) => void
+  /** Opens the discard confirmation for these uncommitted entries (FDSC-38). */
+  onDiscard: (entries: ChangedPath[]) => void
 }
 
 /** The launcher row of FXPL-25, in the order the requirement lists it. */

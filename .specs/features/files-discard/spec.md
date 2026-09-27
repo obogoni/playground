@@ -229,15 +229,15 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-09 | P1: one file — AC 9 | Execute | Implemented: T5 (unit) |
 | FDSC-10 | P1: confirm — AC 10 | Execute | Implementing: T9 (unit), T13 (dialog) |
 | FDSC-11 | P1: confirm — AC 11 | Execute | Implementing: T9 (unit), T13 (dialog) |
-| FDSC-12 | P1: confirm — AC 12 | Execute | Implementing: T9 (unit), T13 (dialog) |
-| FDSC-13 | P1: confirm — AC 13 | Execute | Implementing: T9 (unit), T13 (dialog) |
+| FDSC-12 | P1: confirm — AC 12 | Execute | Implementing: T9 (unit), T13 (dialog), T14 (sessions from App) |
+| FDSC-13 | P1: confirm — AC 13 | Execute | Implementing: T9 (unit), T13 (dialog), T14 (sessions from App) |
 | FDSC-14 | P1: confirm — AC 14 | Execute | Implementing: T9 (unit), T13 (dialog) |
-| FDSC-15 | P1: confirm — AC 15 | Execute | Implementing: T13 (dialog) |
-| FDSC-16 | P1: confirm — AC 16 | Execute | Implementing: T13 (dialog) |
+| FDSC-15 | P1: confirm — AC 15 | Execute | Implementing: T13 (dialog), T14 (view) |
+| FDSC-16 | P1: confirm — AC 16 | Execute | Implementing: T13 (dialog), T14 (view) |
 | FDSC-17 | P1: nothing permanent — AC 17 | Execute | Implementing: T3 (AD-047), T5 (no delete call), T6, T7 (refusal tests), T8 (trashItem only) |
 | FDSC-18 | P1: nothing permanent — AC 18 | Execute | Implemented: T6 (unit) |
-| FDSC-19 | P1: nothing permanent — AC 19 | Tasks | Pending |
-| FDSC-20 | P1: nothing permanent — AC 20 | Execute | Implementing: T13 (dialog) |
+| FDSC-19 | P1: nothing permanent — AC 19 | Execute | Implementing: T14 (view) |
+| FDSC-20 | P1: nothing permanent — AC 20 | Execute | Implementing: T13 (dialog), T14 (view) |
 | FDSC-21 | P1: nothing permanent — AC 21 | Execute | Implementing: T9 (unit), T13 (dialog) |
 | FDSC-22 | P1: nothing permanent — AC 22 | Execute | Implemented: T6 (unit, real junction) |
 | FDSC-23 | P1: nothing permanent — AC 23 | Execute | Implemented: T5, T7 (unit) |
@@ -248,7 +248,7 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-28 | P1: after — AC 28 | Execute | Implementing: T10 (unit), T11 (hook) |
 | FDSC-29 | P1: after — AC 29 | Execute | Implementing: T10 (unit), T11 (hook) |
 | FDSC-30 | P1: after — AC 30 | Execute | Implementing: T10 (unit), T11 (hook) |
-| FDSC-31 | P1: after — AC 31 | Execute | Implementing: T11 (hook re-lists) |
+| FDSC-31 | P1: after — AC 31 | Execute | Implementing: T11 (hook re-lists), T14 (onDiscarded = refreshTree) |
 | FDSC-32 | P1: after — AC 32 | Execute | Implementing: T10 (unit), T11 (hook) |
 | FDSC-33 | P1: after — AC 33 | Execute | Implementing: T10 (unit) |
 | FDSC-34 | P2: many — AC 34 | Execute | Implementing: T9 (unit) |
@@ -262,7 +262,7 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-42 | P1: read-only — AC 42 | Execute | Implemented: T3 (AD-047), T4 (request type), T5 (recording runner), T8 (handler) |
 | FDSC-43 | Edge: untracked folder row | Execute | Implemented: T6, T9, T10 (unit) |
 | FDSC-44 | Edge: already gone | Execute | Implemented: T6 (unit) |
-| FDSC-45 | Edge: changed after opening | Execute | Implementing: T11 (entries sent as given) |
+| FDSC-45 | Edge: changed after opening | Execute | Implementing: T11 (entries sent as given), T14 (pending captured at open) |
 | FDSC-46 | Edge: no commit yet | Execute | Implemented: T6 (unit) |
 | FDSC-47 | Edge: occupied restore target | Execute | Implemented: T7 (unit) |
 | FDSC-48 | Edge: git fails after the Recycle Bin | Execute | Implemented: T6 (unit) |

@@ -450,9 +450,9 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] Producer and consumer props land in this one task, so the typecheck stays green without optional props (L-001)
-- [ ] The confirmed request is exactly `pending`, captured when the dialog opened (FDSC-45)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Producer and consumer props land in this one task, so the typecheck stays green without optional props (L-001)
+- [x] The confirmed request is exactly `pending`, captured when the dialog opened (FDSC-45)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full

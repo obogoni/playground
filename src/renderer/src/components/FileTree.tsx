@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { JSX } from 'react'
-import type { FilesMode } from '../../../shared/files'
+import type { ChangedPath, FilesMode } from '../../../shared/files'
 import type { ChangeStatus } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { CommitList } from './CommitList'
@@ -18,6 +18,8 @@ interface FileTreeProps {
   files: UseFiles
   /** The launcher's existing failure toast (FXPL-30). */
   onToast: (message: string) => void
+  /** Opens the discard confirmation for these uncommitted entries (FDSC-01/34/35/36). */
+  onDiscard: (entries: ChangedPath[]) => void
 }
 
 /** The three lenses of FXPL-07, in the order the spec lists them. */
