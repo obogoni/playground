@@ -487,5 +487,107 @@ describe('discardChanges', () => {
       })
       expect(inBin('added.ts')).toBe('staged\n')
     })
+
+    describe('renames and occupied restore targets', () => {
+      const rename: ChangedPath = { path: 'b.ts', status: 'renamed', oldPath: 'a.ts' }
+
+      beforeEach(() => {
+        write('a.ts', 'committed\n')
+        commitAll('init')
+      })
+
+      it('restores the old path and moves the new file to the Recycle Bin (FDSC-26)', async () => {
+        git(repo, 'mv', 'a.ts', 'b.ts')
+        write('b.ts', 'renamed and edited\n')
+        expect(porcelain()).toBe('RM a.ts -> b.ts\n') // precondition
+
+        const result = await discardChanges(repo, [rename], recycleBin())
+
+        expect(result).toEqual({ files: [{ path: 'b.ts' }] })
+        expect(read('a.ts')).toBe('committed\n')
+        expect(onDisk('b.ts')).toBe(false)
+        expect(inBin('b.ts')).toBe('renamed and edited\n')
+        expect(porcelain()).toBe('')
+      })
+
+      it('keeps a rename whole when the Recycle Bin refuses its new file (FDSC-27)', async () => {
+        git(repo, 'mv', 'a.ts', 'b.ts')
+        write('b.ts', 'renamed and edited\n')
+        const { run, calls } = recording()
+
+        const result = await discardChanges(repo, [rename], { ...recycleBin('b.ts'), run })
+
+        expect(result.files[0].kept?.cause).toBe('recycle-bin')
+        expect(porcelain()).toBe('RM a.ts -> b.ts\n')
+        expect(onDisk('a.ts')).toBe(false)
+        expect(read('b.ts')).toBe('renamed and edited\n')
+        expect(calls).toEqual([])
+      })
+
+      it('moves a file recreated at a deleted path to the Recycle Bin before restoring (FDSC-47)', async () => {
+        git(repo, 'rm', '-q', 'a.ts')
+        write('a.ts', 'new and untracked\n')
+        expect(porcelain()).toBe('D  a.ts\n?? a.ts\n') // precondition
+
+        const result = await discardChanges(
+          repo,
+          [{ path: 'a.ts', status: 'deleted' }],
+          recycleBin()
+        )
+
+        expect(result).toEqual({ files: [{ path: 'a.ts' }] })
+        expect(inBin('a.ts')).toBe('new and untracked\n')
+        expect(read('a.ts')).toBe('committed\n')
+        expect(porcelain()).toBe('')
+      })
+
+      it('keeps the deletion and restores nothing when the Recycle Bin refuses the file in the way (FDSC-47)', async () => {
+        git(repo, 'rm', '-q', 'a.ts')
+        write('a.ts', 'new and untracked\n')
+        const { run, calls } = recording()
+
+        const result = await discardChanges(repo, [{ path: 'a.ts', status: 'deleted' }], {
+          ...recycleBin('a.ts'),
+          run
+        })
+
+        expect(result.files[0].kept?.cause).toBe('recycle-bin')
+        expect(read('a.ts')).toBe('new and untracked\n')
+        expect(porcelain()).toBe('D  a.ts\n?? a.ts\n')
+        expect(calls).toEqual([])
+      })
+
+      it('does nothing to a rename whose old path is outside the worktree (FDSC-23)', async () => {
+        git(repo, 'mv', 'a.ts', 'b.ts')
+        writeFileSync(join(root, 'outside.ts'), 'outside\n', 'utf8')
+        const recycle = recycleBin()
+        const { run, calls } = recording()
+
+        const result = await discardChanges(
+          repo,
+          [{ path: 'b.ts', status: 'renamed', oldPath: '../outside.ts' }],
+          { ...recycle, run }
+        )
+
+        expect(result).toEqual({ files: [{ path: 'b.ts', kept: { cause: 'outside' } }] })
+        expect(recycle.seen).toEqual([])
+        expect(calls).toEqual([])
+        expect(porcelain()).toBe('R  a.ts -> b.ts\n')
+        expect(readFileSync(join(root, 'outside.ts'), 'utf8')).toBe('outside\n')
+      })
+
+      it("moves a file sitting at a rename's old path to the Recycle Bin before restoring (FDSC-47)", async () => {
+        git(repo, 'mv', 'a.ts', 'b.ts')
+        write('a.ts', 'squatter\n')
+
+        const result = await discardChanges(repo, [rename], recycleBin())
+
+        expect(result).toEqual({ files: [{ path: 'b.ts' }] })
+        expect(inBin('a.ts')).toBe('squatter\n')
+        expect(inBin('b.ts')).toBe('committed\n')
+        expect(read('a.ts')).toBe('committed\n')
+        expect(porcelain()).toBe('')
+      })
+    })
   })
 })

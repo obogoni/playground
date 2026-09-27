@@ -234,17 +234,17 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-14 | P1: confirm — AC 14 | Tasks | Pending |
 | FDSC-15 | P1: confirm — AC 15 | Tasks | Pending |
 | FDSC-16 | P1: confirm — AC 16 | Tasks | Pending |
-| FDSC-17 | P1: nothing permanent — AC 17 | Execute | Implementing: T3 (AD-047), T5 (no delete call), T6 (refusal tests) |
+| FDSC-17 | P1: nothing permanent — AC 17 | Execute | Implementing: T3 (AD-047), T5 (no delete call), T6, T7 (refusal tests) |
 | FDSC-18 | P1: nothing permanent — AC 18 | Execute | Implemented: T6 (unit) |
 | FDSC-19 | P1: nothing permanent — AC 19 | Tasks | Pending |
 | FDSC-20 | P1: nothing permanent — AC 20 | Tasks | Pending |
 | FDSC-21 | P1: nothing permanent — AC 21 | Tasks | Pending |
 | FDSC-22 | P1: nothing permanent — AC 22 | Execute | Implemented: T6 (unit, real junction) |
-| FDSC-23 | P1: nothing permanent — AC 23 | Execute | Implemented: T5 (unit) |
+| FDSC-23 | P1: nothing permanent — AC 23 | Execute | Implemented: T5, T7 (unit) |
 | FDSC-24 | P1: rename — AC 24 | Execute | Implementing: T1 (unit) |
 | FDSC-25 | P1: rename — AC 25 | Execute | Implementing: T2 (unit) |
-| FDSC-26 | P1: rename — AC 26 | Tasks | Pending |
-| FDSC-27 | P1: rename — AC 27 | Tasks | Pending |
+| FDSC-26 | P1: rename — AC 26 | Execute | Implementing: T7 (unit) |
+| FDSC-27 | P1: rename — AC 27 | Execute | Implemented: T7 (unit) |
 | FDSC-28 | P1: after — AC 28 | Tasks | Pending |
 | FDSC-29 | P1: after — AC 29 | Tasks | Pending |
 | FDSC-30 | P1: after — AC 30 | Tasks | Pending |
@@ -264,7 +264,7 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-44 | Edge: already gone | Execute | Implemented: T6 (unit) |
 | FDSC-45 | Edge: changed after opening | Tasks | Pending |
 | FDSC-46 | Edge: no commit yet | Execute | Implemented: T6 (unit) |
-| FDSC-47 | Edge: occupied restore target | Tasks | Pending |
+| FDSC-47 | Edge: occupied restore target | Execute | Implemented: T7 (unit) |
 | FDSC-48 | Edge: git fails after the Recycle Bin | Execute | Implemented: T6 (unit) |
 | FDSC-49 | Edge: long request | Execute | Implemented: T5 (unit) |
 | FDSC-50 | Edge: conflicted file | Execute | Implemented: T5 (unit) |

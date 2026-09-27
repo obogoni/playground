@@ -271,9 +271,9 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] Tests: `git mv a.ts b.ts` plus an edit to `b.ts` → `a.ts` back with committed content, `b.ts` in `bin` with the edit, `git status` clean (FDSC-26); the same with `b.ts` refused → `git status` still `RM a.ts -> b.ts`, `a.ts` absent, `b.ts` unchanged, no git call recorded for the entry (FDSC-27); `git rm x.txt` then a new untracked `x.txt`, discarding the deletion alone → the new `x.txt` in `bin`, the committed `x.txt` restored (FDSC-47); the same with the new `x.txt` refused → entry kept, nothing restored (FDSC-47); a file placed at a rename's old path → in `bin` before the restore (FDSC-47)
-- [ ] Gate check passes: `npx vitest run src/main/file-discard.test.ts`
-- [ ] Test count: T6 count + the new tests
+- [x] Tests: `git mv a.ts b.ts` plus an edit to `b.ts` → `a.ts` back with committed content, `b.ts` in `bin` with the edit, `git status` clean (FDSC-26); the same with `b.ts` refused → `git status` still `RM a.ts -> b.ts`, `a.ts` absent, `b.ts` unchanged, no git call recorded for the entry (FDSC-27); `git rm x.txt` then a new untracked `x.txt`, discarding the deletion alone → the new `x.txt` in `bin`, the committed `x.txt` restored (FDSC-47); the same with the new `x.txt` refused → entry kept, nothing restored (FDSC-47); a file placed at a rename's old path → in `bin` before the restore (FDSC-47)
+- [x] Gate check passes: `npx vitest run src/main/file-discard.test.ts`
+- [x] Test count: T6 count + the new tests
 
 **Tests**: unit
 **Gate**: quick

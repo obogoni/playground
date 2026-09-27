@@ -44,6 +44,8 @@ interface Plan {
   /** Absolute paths to move to the Recycle Bin, when something is there. */
   bin: string[]
   after: 'restore' | 'unstage' | 'none'
+  /** Worktree-relative paths `restore` brings back from HEAD. */
+  restore: string[]
 }
 
 /**
@@ -66,15 +68,10 @@ export async function discardChanges(
   const plans: Plan[] = []
 
   entries.forEach((entry, index) => {
+    const plan = planOf(worktreePath, entry, index)
     // A path that escapes the worktree is kept and never touched (FDSC-23).
-    const abs = resolveInside(worktreePath, entry.path)
-    if (abs === null) {
-      kept.set(index, { cause: 'outside' })
-      return
-    }
-    if (entry.status === 'untracked') plans.push({ index, entry, bin: [abs], after: 'none' })
-    else if (entry.status === 'added') plans.push({ index, entry, bin: [abs], after: 'unstage' })
-    else plans.push({ index, entry, bin: [], after: 'restore' })
+    if (plan === null) kept.set(index, { cause: 'outside' })
+    else plans.push(plan)
   })
 
   // Phase A: the Recycle Bin, one entry at a time.
@@ -95,7 +92,7 @@ export async function discardChanges(
   }
   const restores = live
     .filter((p) => p.after === 'restore')
-    .map((p): Restore => ({ index: p.index, paths: [p.entry.path] }))
+    .map((p): Restore => ({ index: p.index, paths: p.restore }))
   for (const chunk of chunksOf(restores)) {
     try {
       await run(worktreePath, [...RESTORE, ...chunk.flatMap((r) => r.paths)])
@@ -121,6 +118,34 @@ export async function discardChanges(
       const why = kept.get(index)
       return why ? { path: entry.path, kept: why } : { path: entry.path }
     })
+  }
+}
+
+/**
+ * The design's status table, or null when any path of the entry resolves
+ * outside the worktree. A deleted path, and a rename's old path, go to the
+ * Recycle Bin first when something sits there, since the restore would
+ * overwrite it (FDSC-47); `toRecycleBin` skips them when nothing does. A
+ * rename's new file goes first, so a refusal of it leaves the whole rename
+ * untouched (FDSC-27).
+ */
+function planOf(worktreePath: string, entry: ChangedPath, index: number): Plan | null {
+  const { path, oldPath } = entry
+  const abs = resolveInside(worktreePath, path)
+  const oldAbs = oldPath === undefined ? undefined : resolveInside(worktreePath, oldPath)
+  if (abs === null || oldAbs === null) return null
+  switch (entry.status) {
+    case 'untracked':
+      return { index, entry, bin: [abs], after: 'none', restore: [] }
+    case 'added':
+      return { index, entry, bin: [abs], after: 'unstage', restore: [] }
+    case 'modified':
+      return { index, entry, bin: [], after: 'restore', restore: [path] }
+    case 'deleted':
+    case 'renamed':
+      return oldPath === undefined || oldAbs === undefined
+        ? { index, entry, bin: [abs], after: 'restore', restore: [path] }
+        : { index, entry, bin: [abs, oldAbs], after: 'restore', restore: [oldPath, path] }
   }
 }
 
