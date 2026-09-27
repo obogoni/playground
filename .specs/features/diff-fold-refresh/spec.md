@@ -137,33 +137,33 @@ file is still whole. Close the tab and reopen the diff: it is folded.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FOLD-01 | P1: survive — AC 1 | Tasks | Pending |
-| FOLD-02 | P1: survive — AC 2 | Tasks | Pending |
-| FOLD-03 | P1: survive — AC 3 | Tasks | Pending |
-| FOLD-04 | P1: survive — AC 4 | Tasks | Pending |
-| FOLD-05 | P1: survive — AC 5 | Tasks | Pending |
-| FOLD-06 | P1: survive — AC 6 | Tasks | Pending |
-| FOLD-07 | P1: survive — AC 7 | Tasks | Pending |
-| FOLD-08 | P1: survive — AC 8 | Tasks | Pending |
-| FOLD-09 | P1: survive — AC 9 | Tasks | Pending |
-| FOLD-10 | P1: survive — AC 10 | Tasks | Pending |
-| FOLD-11 | P1: buttons — AC 11 | Tasks | Pending |
-| FOLD-12 | P1: buttons — AC 12 | Tasks | Pending |
-| FOLD-13 | P1: buttons — AC 13 | Tasks | Pending |
-| FOLD-14 | P1: buttons — AC 14 | Tasks | Pending |
-| FOLD-15 | P1: buttons — AC 15 | Tasks | Pending |
-| FOLD-16 | P1: buttons — AC 16 | Tasks | Pending |
-| FOLD-17 | P1: buttons — AC 17 | Tasks | Pending |
-| FOLD-18 | P1: diff tab — AC 18 | Tasks | Pending |
-| FOLD-19 | P1: diff tab — AC 19 | Tasks | Pending |
-| FOLD-20 | P1: diff tab — AC 20 | Tasks | Pending |
-| FOLD-21 | P1: diff tab — AC 21 | Tasks | Pending |
-| FOLD-22 | P1: diff tab — AC 22 | Tasks | Pending |
-| FOLD-23 | Edge: remount | Tasks | Pending |
-| FOLD-24 | Edge: files with nothing to fold | Tasks | Pending |
-| FOLD-25 | Edge: unreadable fold state | Tasks | Pending |
-| FOLD-26 | Edge: a write through an empty file | Tasks | Pending |
-| FOLD-27 | Edge: a press with no editor mounted | Tasks | Pending |
+| FOLD-01 | P1: survive — AC 1 | T2, T6 / 14a | Implementing |
+| FOLD-02 | P1: survive — AC 2 | T4, T6 / 14b, 14f | Implementing |
+| FOLD-03 | P1: survive — AC 3 | T3, T4 / 14c | Implementing |
+| FOLD-04 | P1: survive — AC 4 | T4 / 14b, 14d | Implementing |
+| FOLD-05 | P1: survive — AC 5 | T3, T4 | Implementing |
+| FOLD-06 | P1: survive — AC 6 | T4 | Implementing |
+| FOLD-07 | P1: survive — AC 7 | T4 | Implementing |
+| FOLD-08 | P1: survive — AC 8 | T6 (code; smoke gap, see T11) | Implementing |
+| FOLD-09 | P1: survive — AC 9 | T6 / 14b, 14f | Implementing |
+| FOLD-10 | P1: survive — AC 10 | T2 / 14a | Implementing |
+| FOLD-11 | P1: buttons — AC 11 | T9 / 14h | Implementing |
+| FOLD-12 | P1: buttons — AC 12 | T4, T5, T7 / 14i | Implementing |
+| FOLD-13 | P1: buttons — AC 13 | T4, T7 / 14k | Implementing |
+| FOLD-14 | P1: buttons — AC 14 | T5, T7 / 14l | Implementing |
+| FOLD-15 | P1: buttons — AC 15 | T4, T7 / 14l | Implementing |
+| FOLD-16 | P1: buttons — AC 16 | T7 / 14j | Implementing |
+| FOLD-17 | P1: buttons — AC 17 | T10 / 14r | Implementing |
+| FOLD-18 | P1: diff tab — AC 18 | T10 / 14p | Implementing |
+| FOLD-19 | P1: diff tab — AC 19 | T8 / 14p | Implementing |
+| FOLD-20 | P1: diff tab — AC 20 | T10 / 14n | Implementing |
+| FOLD-21 | P1: diff tab — AC 21 | T5, T8 / 14p | Implementing |
+| FOLD-22 | P1: diff tab — AC 22 | T8 / 14q | Implementing |
+| FOLD-23 | Edge: remount | T7 / 14g | Implementing |
+| FOLD-24 | Edge: files with nothing to fold | T9 / 14o | Implementing |
+| FOLD-25 | Edge: unreadable fold state | T3, T6 | Implementing |
+| FOLD-26 | Edge: a write through an empty file | T4 | Implementing |
+| FOLD-27 | Edge: a press with no editor mounted | T5, T9 / 14m | Implementing |
 
 **Coverage:** 27 total, 27 mapped to tasks, 0 unmapped.
 

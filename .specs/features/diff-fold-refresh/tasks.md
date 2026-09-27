@@ -13,7 +13,7 @@ regions from `getLineChanges()` with Monaco's own rule, snapshots their fold sta
 and applies its own plan through `restoreViewState`'s `modelState` once Monaco has recomputed; the
 per-tab Hide / Show choice lives in `use-files` and reaches every mounted `DiffViewer` as a prop.
 **Status**: Approved by the owner on 2026-09-27 ("pode seguir com a #130", executed inline at the
-owner's choice). T1-T11 Done; T12 next.
+owner's choice). T1-T12 Done; awaiting the Verifier.
 
 **Branch**: `feature/diff-fold-refresh`, cut from `feature/files-view-polish` `70d573c` (PR #125, which
 adds Expand all / Collapse all). Rebase onto `origin/main` once #125 merges. The future PR body carries
@@ -551,10 +551,26 @@ Gate: `npm run lint` exit 0, 0 errors / 18 warnings (unchanged).
 
 **Done when**:
 
-- [ ] Each check seen **failing** on a fresh launch against its mutant, then passing: the choice kept in `AllChangesTab` state (14l, 14n, 14p); a press ignored while no editor exists (14m); `keepUnchanged` not called on close (14p); the choice written through `onPersist` (14q); `CommitTab` not passing the choice (14r); Hide only folding regions that were folded (14i); the buttons on every diff surface (14p)
-- [ ] Mutants restored through `.orig`; `git status --porcelain` matches the baseline
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build` (warning count unchanged)
-- [ ] Traceability in `spec.md` updated for every FOLD ID
+- [x] Each check seen **failing** on a fresh launch against its mutant, then passing: the choice kept in `AllChangesTab` state (14l, 14n, 14p); a press ignored while no editor exists (14m); `keepUnchanged` not called on close (14p); the choice written through `onPersist` (14q); `CommitTab` not passing the choice (14r); Hide only folding regions that were folded (14i); the buttons on every diff surface (14p)
+- [x] Mutants restored through `.orig`; `git status --porcelain` matches the baseline
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build` (warning count unchanged)
+- [x] Traceability in `spec.md` updated for every FOLD ID
+
+**Result (2026-09-27)**: 14h-14r added to `foldSection`; focused run 18/18 in 71 s. A section showing its whole file pushes the one below out of the mount margin. So T12 starts from a short stack (long.ts back to two changes), makes hand reveals in other.ts (the lower section), and reads other.ts with long.ts collapsed.
+
+Falsification, each mutant through the focused smoke, restored from `.orig`, `git status --porcelain` clean but for this task's edit:
+
+| Mutant | Planned check | Result |
+| --- | --- | --- |
+| the choice kept in `AllChangesTab` state | 14l, 14n, 14p | **killed by 14n** (5 strips after the lens switch). 14l and 14p pass under it: Collapse / Expand all do not remount `AllChangesTab`, and 14p's choice lives in `DiffBody`'s tab, so the plan over-predicted |
+| a press ignored while no section holds an editor | 14m | **killed**: 5 strips (want 0); 14n fails after it, on the state it leaves |
+| `closeTab` keeps the closed tab's choice | 14p | **killed**: the reopened diff has 0 strips |
+| the choice written through `onPersist` | 14q | **killed**: `"unchanged"` found in `config.json` |
+| `CommitTab` does not pass the choice | 14r | **killed**: 5 → Show 5 |
+| Hide keeps hand-revealed regions revealed | 14i | **killed**: other.ts stays at 2; 14j, 14m, 14o, 14r fail after it |
+| the buttons on every diff surface | 14p | **killed**: All changes' toolbar lists them |
+
+Full gate before the Verifier: typecheck 0, lint 0 errors / 18 warnings, **1721/1721** tests, `npx electron-vite build` 0. **Full smoke, the one full run agreed with the owner: 63/63 in 174 s** (sections 1-13's 45 checks plus section 14's 18). Traceability in `spec.md` is updated for all 27 FOLD IDs; FOLD-08 is marked as resting on code, per T11.
 
 **Tests**: manual
 **Gate**: build

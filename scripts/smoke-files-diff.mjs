@@ -1321,6 +1321,8 @@ async function foldSection(ws) {
     return true
   })()`
   const shows = (state, line) => state.text.includes(line)
+  const treeHas = (name) =>
+    `[...document.querySelectorAll('.file-tree-name')].some((e) => e.textContent.trim() === ${J(name)})`
   const brief = (state) =>
     J({ editor: state.editor, strips: state.strips, labels: state.labels, probe: state.probe })
 
@@ -1458,8 +1460,6 @@ async function foldSection(ws) {
 
   // 14f. The single file's diff tab keeps its folds too, in the same editor,
   // within the second FDIF-30 gives (FOLD-02, FOLD-09).
-  const treeHas = (name) =>
-    `[...document.querySelectorAll('.file-tree-name')].some((e) => e.textContent.trim() === ${J(name)})`
   if (!(await evaluate(ws, treeHas('long.ts')))) {
     await evaluate(ws, clickByText('.file-tree-name', 'fold'))
     await sleep(800)
@@ -1513,6 +1513,255 @@ async function foldSection(ws) {
       stackGone &&
       remountAfter.strips === 8,
     `${remountBefore.strips} -> ${remountRevealed.strips} by hand -> ${remountAfter.strips} after a tab switch (want 8 -> 7 -> 8); diff tab shown ${leftFor.state.editor}, stack unmounted ${stackGone}`
+  )
+
+  // 14h-14r: Hide unchanged and Show unchanged. A section whose file shows whole
+  // is tall enough to push the one below it out of the mount margin, so the
+  // stack starts short (long.ts back to two changes), hand reveals are made in
+  // other.ts, the lower section, and other.ts is read with long.ts collapsed.
+  const header = (label) => clickByText('.all-changes-toggle', label)
+  const bothFolded = async () => [await settled(LONG_SECTION), await settled(OTHER_SECTION)]
+  const readOtherAlone = async () => {
+    await evaluate(ws, toggleSection(LONG_SECTION))
+    await waitFold(OTHER_SECTION, (s) => s.editor, 8000)
+    const other = await settled(OTHER_SECTION)
+    await evaluate(ws, toggleSection(LONG_SECTION))
+    await waitFold(LONG_SECTION, (s) => s.editor, 8000)
+    return other
+  }
+
+  writeFileSync(LONG, foldText('l', 200, [20, 180]))
+  await waitFold(LONG_SECTION, (s) => !shows(s, 'export const l060 = -60'))
+  await waitFold(OTHER_SECTION, (s) => s.editor && s.strips > 0, 8000)
+  const [shortLong, shortOther] = await bothFolded()
+  console.log(`    14h start: long ${brief(shortLong)}, other ${brief(shortOther)}`)
+
+  // 14h. The header's buttons, in order (FOLD-11).
+  const toggles = await evaluate(
+    ws,
+    `[...document.querySelectorAll('.all-changes-toggle')].map((e) => e.textContent.trim())`
+  )
+  check(
+    "All changes' header offers Hide unchanged and Show unchanged after Collapse all (FOLD-11)",
+    J(toggles) === J(['Expand all', 'Collapse all', 'Hide unchanged', 'Show unchanged']),
+    J(toggles)
+  )
+
+  // 14i. Hide unchanged folds every region of every section with an editor,
+  // hand-revealed ones included (FOLD-12).
+  const revealedOther = await evaluate(ws, revealStrip(OTHER_SECTION, 0))
+  const [beforeHideLong, beforeHideOther] = await bothFolded()
+  await evaluate(ws, header('Hide unchanged'))
+  const [hiddenLong, hiddenOther] = await bothFolded()
+  console.log(
+    `    14i DOM: before long ${brief(beforeHideLong)} other ${brief(beforeHideOther)}; after long ${brief(hiddenLong)} other ${brief(hiddenOther)}`
+  )
+  check(
+    'Hide unchanged folds every region of every open section, hand-revealed ones too (FOLD-12)',
+    shortLong.strips === 3 &&
+      shortOther.strips === 3 &&
+      revealedOther &&
+      beforeHideOther.strips === 2 &&
+      hiddenLong.editor &&
+      hiddenOther.editor &&
+      hiddenLong.strips === 3 &&
+      hiddenOther.strips === 3,
+    `other ${shortOther.strips} -> ${beforeHideOther.strips} by hand -> ${hiddenOther.strips}; long ${hiddenLong.strips} (want 3 and 3)`
+  )
+
+  // 14j. After a press, one strip revealed by hand changes only that strip (FOLD-16).
+  const revealedAfterHide = await evaluate(ws, revealStrip(OTHER_SECTION, 1))
+  const [oneLong, oneOther] = await bothFolded()
+  check(
+    'After Hide unchanged, revealing one strip by hand changes only that strip (FOLD-16)',
+    revealedAfterHide && oneOther.strips === 2 && oneLong.strips === 3,
+    `other ${hiddenOther.strips} -> ${oneOther.strips}, long ${hiddenLong.strips} -> ${oneLong.strips} (want 2 and 3)`
+  )
+
+  // 14k. Show unchanged reveals every region (FOLD-13).
+  await evaluate(ws, header('Show unchanged'))
+  const shownLong = await settled(LONG_SECTION)
+  const shownOther = await readOtherAlone()
+  console.log(`    14k DOM: long ${brief(shownLong)}, other ${brief(shownOther)}`)
+  check(
+    'Show unchanged leaves no strip in either section and shows their unchanged lines (FOLD-13)',
+    shownLong.editor &&
+      shownLong.strips === 0 &&
+      shows(shownLong, 'export const l050 = 50') &&
+      shows(shownLong, 'export const l150 = 150') &&
+      shownOther.editor &&
+      shownOther.strips === 0 &&
+      shows(shownOther, 'export const o030 = 30'),
+    `long ${shownLong.strips} strips, other ${shownOther.strips} (want 0 and 0)`
+  )
+
+  // 14l. With Show chosen, sections that get an editor later open revealed
+  // (FOLD-14), and a region a change creates is revealed (FOLD-15).
+  await evaluate(ws, header('Collapse all'))
+  await sleep(800)
+  await evaluate(ws, header('Expand all'))
+  await waitFold(LONG_SECTION, (s) => s.editor, 8000)
+  const reopenedLong = await settled(LONG_SECTION)
+  const reopenedOther = await readOtherAlone()
+  writeFileSync(LONG, foldText('l', 200, [20, ...span(60, 100), 180]))
+  await waitFold(LONG_SECTION, (s) => shows(s, 'export const l080 = -80'))
+  const blockLong = await settled(LONG_SECTION)
+  writeFileSync(LONG, foldText('l', 200, [20, 60, 100, 180]))
+  await waitFold(LONG_SECTION, (s) => !shows(s, 'export const l080 = -80'))
+  const splitLong = await settled(LONG_SECTION)
+  console.log(
+    `    14l DOM: reopened long ${brief(reopenedLong)} other ${brief(reopenedOther)}; block ${brief(blockLong)}; split ${brief(splitLong)}`
+  )
+  check(
+    'With Show chosen, reopened sections and a region a change creates show whole (FOLD-14, FOLD-15)',
+    reopenedLong.editor &&
+      reopenedLong.strips === 0 &&
+      reopenedOther.editor &&
+      reopenedOther.strips === 0 &&
+      blockLong.strips === 0 &&
+      splitLong.editor &&
+      splitLong.strips === 0 &&
+      shows(splitLong, 'export const l080 = 80'),
+    `reopened ${reopenedLong.strips} / ${reopenedOther.strips}, after the new region ${splitLong.strips} strips (want 0)`
+  )
+
+  // 14m. A press with no section holding an editor is still remembered (FOLD-27).
+  await evaluate(ws, header('Hide unchanged'))
+  const hidAgain = await settled(LONG_SECTION)
+  await evaluate(ws, header('Collapse all'))
+  await sleep(800)
+  const noEditors = await evaluate(ws, liveDiffEditors)
+  await evaluate(ws, header('Show unchanged'))
+  await sleep(300)
+  await evaluate(ws, header('Expand all'))
+  await waitFold(LONG_SECTION, (s) => s.editor, 8000)
+  const pressedBlind = await settled(LONG_SECTION)
+  check(
+    'A press made with every section collapsed applies when they open (FOLD-27)',
+    hidAgain.strips > 0 && noEditors === 0 && pressedBlind.editor && pressedBlind.strips === 0,
+    `hidden ${hidAgain.strips} strips, ${noEditors} editors at the press, then ${pressedBlind.strips} strips (want 0)`
+  )
+
+  // 14n. The choice outlives a lens switch (FOLD-20).
+  await evaluate(ws, clickByText('.file-tree-mode', 'Diff to origin'))
+  await sleep(1600)
+  await evaluate(ws, clickByText('.file-tree-mode', 'Uncommitted'))
+  await sleep(1600)
+  await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
+  await waitFold(LONG_SECTION, (s) => s.editor, 8000)
+  const afterLens = await settled(LONG_SECTION)
+  check(
+    "Switching the lens and back keeps All changes' choice (FOLD-20)",
+    afterLens.editor && afterLens.strips === 0,
+    `${afterLens.strips} strips after Diff to origin and back (want 0)`
+  )
+
+  // 14o. A file with nothing to fold reads whole, and Hide leaves it so (FOLD-24).
+  const NEW_FOLD = join(REPO, 'fold', 'new.ts')
+  const NEW_SECTION = sectionOf('fold/new.ts')
+  await evaluate(ws, header('Hide unchanged'))
+  writeFileSync(NEW_FOLD, foldText('n', 20))
+  await waitFold(NEW_SECTION, (s) => s.editor, 8000)
+  const newBefore = await settled(NEW_SECTION)
+  await evaluate(ws, header('Hide unchanged'))
+  const newAfter = await settled(NEW_SECTION)
+  check(
+    'An added file has nothing to fold, and Hide unchanged leaves it whole (FOLD-24)',
+    newBefore.editor &&
+      newBefore.strips === 0 &&
+      shows(newBefore, 'export const n001 = 1') &&
+      shows(newBefore, 'export const n020 = 20') &&
+      newAfter.strips === 0 &&
+      shows(newAfter, 'export const n020 = 20'),
+    `${newBefore.strips} -> ${newAfter.strips} strips, first and last lines ${shows(newAfter, 'export const n001 = 1') && shows(newAfter, 'export const n020 = 20')}`
+  )
+
+  // 14p. A single file's diff tab: its own buttons, its own choice, kept across a
+  // tab switch and dropped on close (FOLD-18, FOLD-19, FOLD-21).
+  const diffToggles = `[...document.querySelectorAll('.file-tabs-toggle')].map((e) => e.textContent.trim())`
+  const inAllChanges = await evaluate(ws, diffToggles)
+  if (!(await evaluate(ws, `!!(${tabElement('long.ts')})`))) {
+    if (!(await evaluate(ws, treeHas('long.ts')))) {
+      await evaluate(ws, clickByText('.file-tree-name', 'fold'))
+      await sleep(800)
+    }
+    await evaluate(ws, clickByText('.file-tree-name', 'long.ts'))
+  } else {
+    await focusTabNamed(ws, 'long.ts')
+  }
+  await waitFold(DIFF_TAB, (s) => s.editor && s.strips > 0, 8000)
+  const tabFolded = await settled(DIFF_TAB)
+  const inDiffTab = await evaluate(ws, diffToggles)
+  await evaluate(ws, clickByText('.file-tabs-toggle', 'Show unchanged'))
+  const tabShown = await settled(DIFF_TAB)
+  await focusTabNamed(ws, 'All changes')
+  await sleep(1200)
+  await focusTabNamed(ws, 'long.ts')
+  await waitFold(DIFF_TAB, (s) => s.editor, 8000)
+  const tabBack = await settled(DIFF_TAB)
+  await evaluate(ws, clickCloseOf('long.ts'))
+  await sleep(600)
+  if (!(await evaluate(ws, treeHas('long.ts')))) {
+    await evaluate(ws, clickByText('.file-tree-name', 'fold'))
+    await sleep(800)
+  }
+  await evaluate(ws, clickByText('.file-tree-name', 'long.ts'))
+  await waitFold(DIFF_TAB, (s) => s.editor && s.strips > 0, 8000)
+  const tabReopened = await settled(DIFF_TAB)
+  console.log(
+    `    14p DOM: toggles all-changes ${J(inAllChanges)} diff ${J(inDiffTab)}; folded ${tabFolded.strips}, shown ${tabShown.strips}, back ${tabBack.strips}, reopened ${tabReopened.strips}`
+  )
+  check(
+    "A file's diff tab has its own Hide / Show, kept across a tab switch and dropped on close (FOLD-18, FOLD-19, FOLD-21)",
+    !inAllChanges.includes('Hide unchanged') &&
+      !inAllChanges.includes('Show unchanged') &&
+      inDiffTab.includes('Hide unchanged') &&
+      inDiffTab.includes('Show unchanged') &&
+      tabFolded.strips > 0 &&
+      tabShown.strips === 0 &&
+      tabBack.editor &&
+      tabBack.strips === 0 &&
+      tabReopened.strips === tabFolded.strips,
+    `folded ${tabFolded.strips} -> Show ${tabShown.strips} -> back ${tabBack.strips} -> reopened ${tabReopened.strips} (want n -> 0 -> 0 -> n)`
+  )
+
+  // 14q. Nothing of the choice reaches the config (FOLD-22).
+  await sleep(600)
+  const configText = readFileSync(CONFIG_PATH, 'utf8')
+  check(
+    'The Hide / Show choice is never written to the config (FOLD-22)',
+    configText.length > 0 && !configText.includes('"unchanged"'),
+    `config.json ${configText.length} bytes, "unchanged" ${configText.includes('"unchanged"') ? 'FOUND' : 'absent'}`
+  )
+
+  // 14r. A commit tab's stack folds and reveals as All changes does (FOLD-17).
+  git(['add', 'fold'])
+  git(['commit', '-m', 'fold changes'])
+  await evaluate(ws, clickByText('.file-tree-mode', 'Commits'))
+  await sleep(2200)
+  const openedFoldCommit = await evaluate(
+    ws,
+    `(() => {
+       const row = [...document.querySelectorAll('.commit-row')].find(
+         (r) => r.querySelector('.commit-subject')?.textContent.trim() === 'fold changes')
+       if (!row) return false
+       row.querySelector('.commit-open').click()
+       return true
+     })()`
+  )
+  await waitFold(LONG_SECTION, (s) => s.editor && s.strips > 0, 8000)
+  const commitFolded = await settled(LONG_SECTION)
+  await evaluate(ws, header('Show unchanged'))
+  const commitShown = await settled(LONG_SECTION)
+  await evaluate(ws, header('Hide unchanged'))
+  const commitHidden = await settled(LONG_SECTION)
+  check(
+    "A commit tab's Hide unchanged and Show unchanged fold and reveal its files (FOLD-17)",
+    openedFoldCommit &&
+      commitFolded.strips > 0 &&
+      commitShown.strips === 0 &&
+      commitHidden.strips === commitFolded.strips,
+    `opened ${openedFoldCommit}: ${commitFolded.strips} -> Show ${commitShown.strips} -> Hide ${commitHidden.strips}`
   )
 }
 
