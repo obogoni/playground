@@ -217,20 +217,20 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | HTSK-06 | P1: picker — AC 6 | Execute | Implementing: T2 |
 | HTSK-07 | P1: session — AC 7 | Tasks | In Tasks |
 | HTSK-08 | P1: session — AC 8 | Tasks | In Tasks |
-| HTSK-09 | P1: session — AC 9 | Execute | Implementing: T3 |
+| HTSK-09 | P1: session — AC 9 | Execute | Implementing: T3, T6 |
 | HTSK-10 | P1: session — AC 10 | Execute | Implementing: T2, T3 |
 | HTSK-11 | P1: session — AC 11 | Execute | Implementing: T2, T3 |
-| HTSK-12 | P1: session — AC 12 | Execute | Implementing: T3 |
-| HTSK-13 | P1: session — AC 13 | Execute | Implementing: T3 |
+| HTSK-12 | P1: session — AC 12 | Execute | Implementing: T3, T6 |
+| HTSK-13 | P1: session — AC 13 | Execute | Implementing: T3, T6 |
 | HTSK-14 | P1: session — AC 14 | Execute | Implementing: T3 |
-| HTSK-15 | P1: session — AC 15 | Execute | Implementing: T3 |
-| HTSK-16 | P1: session — AC 16 | Execute | Implementing: T3 |
-| HTSK-17 | P1: session — AC 17 | Tasks | In Tasks |
+| HTSK-15 | P1: session — AC 15 | Execute | Implemented: T3, T6 |
+| HTSK-16 | P1: session — AC 16 | Execute | Implemented: T3, T6 |
+| HTSK-17 | P1: session — AC 17 | Execute | Implementing: T6 |
 | HTSK-18 | P1: session — AC 18 | Tasks | In Tasks |
 | HTSK-19 | P1: session — AC 19 | Tasks | In Tasks |
 | HTSK-20 | P1: session — AC 20 | Tasks | In Tasks |
 | HTSK-21 | P1: session — AC 21 | Tasks | In Tasks |
-| HTSK-22 | P1: session — AC 22 | Tasks | In Tasks |
+| HTSK-22 | P1: session — AC 22 | Execute | Implemented: T6 |
 | HTSK-23 | P1: drawer — AC 23 | Tasks | In Tasks |
 | HTSK-24 | P1: drawer — AC 24 | Tasks | In Tasks |
 | HTSK-25 | P1: drawer — AC 25 | Execute | Implementing: T2, T4 |

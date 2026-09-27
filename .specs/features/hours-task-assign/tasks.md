@@ -244,10 +244,10 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Tests: `spawn` with a task persists it in `config.sessions` and hands it to `lifecycle.started`; `setTask` persists the link, returns a view carrying it and calls `taskChanged(id, task)`; `setTask(id, null)` removes the `task` key; `setTask` on a stopped session persists without starting anything; an unknown id throws `Unknown session: {id}`; a new `SessionManager` over the same config directory lists the session with its link, and `respawn` hands the link to `lifecycle.started`; `duplicate` of a linked session persists the copy with the same link
-- [ ] The lifecycle fake at `session-manager.test.ts:506` gains `taskChanged`
-- [ ] Gate check passes: `npx vitest run src/main/session-manager.test.ts` then `npm test`
-- [ ] Test count: T5 count + the new tests
+- [x] Tests: `spawn` with a task persists it in `config.sessions` and hands it to `lifecycle.started`; `setTask` persists the link, returns a view carrying it and calls `taskChanged(id, task)`; `setTask(id, null)` removes the `task` key; `setTask` on a stopped session persists without starting anything; an unknown id throws `Unknown session: {id}`; a new `SessionManager` over the same config directory lists the session with its link, and `respawn` hands the link to `lifecycle.started`; `duplicate` of a linked session persists the copy with the same link
+- [x] The lifecycle fake at `session-manager.test.ts:506` gains `taskChanged`
+- [x] Gate check passes: `npx vitest run src/main/session-manager.test.ts` then `npm test`
+- [x] Test count: T5 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
