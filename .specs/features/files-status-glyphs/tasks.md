@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: inline, below. No architecture decision (no AD needed).
-**Status**: Draft (planned 2026-09-26, awaiting owner approval)
+**Status**: Approved by the owner on 2026-09-27; executed by batch workers (Phases 1–2, then Phases 3–4)
 
 **Branch**: `feature/files-status-glyphs`, cut from `feature/file-icons` `422d68d` (PR #126, which puts `FileIcon` in the tree rows this feature rearranges). Rebase onto `origin/main` once #126 lands. The discard feature (issue #132) stacks on this branch.
 
@@ -146,10 +146,12 @@ T7 → T8 → T9 → T10
 
 **Done when**:
 
-- [ ] Table test (`it.each`) over the five statuses with literal expected glyph, label and `struck`, one row per status, so each status alone decides its row (added reads `+`, never `A`)
-- [ ] A test that `struck` is true for `deleted` and false for each of the other four
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: baseline + the new tests
+- [x] Table test (`it.each`) over the five statuses with literal expected glyph, label and `struck`, one row per status, so each status alone decides its row (added reads `+`, never `A`)
+- [x] A test that `struck` is true for `deleted` and false for each of the other four
+- [x] Gate check passes: `npm test`
+- [x] Test count: baseline + the new tests
+
+**Result (2026-09-27)**: T-setup skipped: the main checkout's `node_modules` already holds every dependency, the vscode-icons packages included. Baseline `npx vitest run`: 1778 tests / 92 files, all passing; `npm run lint`: exit 0, 0 errors, 18 warnings. `change-status.test.ts` adds 6 tests (5 table rows, 1 strike test): `npm test` 1784 / 93, all passing. Falsified on a throwaway mutant (added `A`, renamed struck): the added row, the renamed row and the strike test failed, then passed once restored.
 
 **Tests**: unit
 **Gate**: quick
