@@ -650,9 +650,11 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] Each check seen failing on its own mutant, then passing: (a) `afterDiscard` closing nothing fails 1 and 4; (b) `afterDiscard` closing the Diff-to-origin tab too fails 1; (c) `busy` never set fails 1's observer; (d) `restore` without `--staged` (main, relaunch) fails 2; (e) `trash` replaced by `fs.rm` (main, relaunch) fails 4's Recycle Bin read; (f) no `rm --cached` for added files (main, relaunch) fails 5; (g) the rename restoring `oldPath` only (main, relaunch) fails 6; (h) the dialog closing whatever the result fails 7; (i) `onDiscarded` not called fails 1's count; (j) `FilesView` re-deriving the folder's entries at confirm time fails 8
-- [ ] `iconChecks(ws)` still passes after the section, and a clean run of the whole drive passes, count recorded
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` (warning count unchanged)
+- [x] Each check seen failing on its own mutant, then passing: (a) `afterDiscard` closing nothing fails 1 and 4; (b) `afterDiscard` closing the Diff-to-origin tab too fails 1; (c) `busy` never set fails 1's observer; (d) `restore` without `--staged` (main, relaunch) fails 2; (e) `trash` replaced by `fs.rm` (main, relaunch) fails 4's Recycle Bin read; (f) no `rm --cached` for added files (main, relaunch) fails 5; (g) the rename restoring `oldPath` only (main, relaunch) fails 6; (h) the dialog closing whatever the result fails 7; (i) `onDiscarded` not called fails 1's count; (j) `FilesView` re-deriving the folder's entries at confirm time fails 8
+- [x] `iconChecks(ws)` still passes after the section, and a clean run of the whole drive passes, count recorded
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (warning count unchanged)
+
+**Execute notes**: every mutant (a)..(j) failed its planned check once, then the focused run passed 18/18 and the whole drive 66/66 on a new profile. Both diff tabs of a path carry the same label and title, so check 1 tells them apart by count (two before, one after). Mutant (j) re-derives only a multi-entry request: re-deriving every request wipes the fixture at check 1, and check 8 would then fail for the wrong reason. The section confirms only a dialog that lists exactly the files it meant; a first run confirmed a dialog opened on a row the settling list had moved under the pointer, so row points are now checked against `elementFromPoint` too.
 
 **Tests**: manual
 **Gate**: full
