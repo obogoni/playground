@@ -503,8 +503,8 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] The ↶ takes its space even while hidden, so the glyph column never moves on hover (#131's column check)
-- [ ] Gate check passes: `npm run lint && npx electron-vite build`, then `npm run typecheck && npm test`
+- [x] The ↶ takes its space even while hidden, so the glyph column never moves on hover (#131's column check)
+- [x] Gate check passes: `npm run lint && npx electron-vite build`, then `npm run typecheck && npm test`
 
 **Tests**: none
 **Gate**: full

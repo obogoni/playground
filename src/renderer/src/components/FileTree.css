@@ -179,6 +179,27 @@ div.file-tree-row {
   margin-left: auto;
 }
 
+/* The hover ↶ (FDSC-36): hidden but still taking its space, so the glyph after
+   it never moves when the pointer or the focus reaches the row. */
+.file-tree-discard {
+  display: flex;
+  align-items: center;
+  padding: 1px;
+  border-radius: 5px;
+  color: var(--text-faint);
+  visibility: hidden;
+}
+
+.file-tree-row:hover .file-tree-discard,
+.file-tree-row:focus-within .file-tree-discard {
+  visibility: visible;
+}
+
+.file-tree-discard:hover {
+  background: var(--panel);
+  color: var(--text);
+}
+
 .file-tree-note {
   padding: 10px 8px;
   font-size: 12px;

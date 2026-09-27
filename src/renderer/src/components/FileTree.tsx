@@ -106,6 +106,29 @@ function FolderRows({ dir, depth, files, onFile }: FolderRowsProps): JSX.Element
 interface RowDiscard {
   /** Opens the row's menu at the pointer (FDSC-01/34). */
   menu: (event: MouseEvent, node: TreeNode) => void
+  /** The row's hover ↶: opens the confirmation for the row's files (FDSC-36/37). */
+  now: (node: TreeNode) => void
+}
+
+/**
+ * The ↶ at a row's end, before its glyph (FDSC-36). It keeps its space while
+ * hidden, so the glyph column never moves on hover, and its click stays its
+ * own: the row behind it opens no tab (FDSC-37).
+ */
+function DiscardButton({ onClick }: { onClick: () => void }): JSX.Element {
+  return (
+    <button
+      type="button"
+      className="file-tree-discard"
+      title="Discard changes"
+      onClick={(event) => {
+        event.stopPropagation()
+        onClick()
+      }}
+    >
+      <Icon name="undo" size={13} />
+    </button>
+  )
 }
 
 interface ChangedRowsProps {
@@ -152,6 +175,7 @@ function ChangedRows({ nodes, depth, onFile, onFolder, discard }: ChangedRowsPro
               {node.name}
             </button>
             <span className="file-tree-end">
+              {discard && <DiscardButton onClick={() => discard.now(node)} />}
               <StatusGlyph status={node.status} />
             </span>
           </div>
@@ -171,6 +195,11 @@ function ChangedRows({ nodes, depth, onFile, onFolder, discard }: ChangedRowsPro
               <button type="button" className="file-tree-name file-tree-open">
                 {node.name}
               </button>
+              {discard && (
+                <span className="file-tree-end">
+                  <DiscardButton onClick={() => discard.now(node)} />
+                </span>
+              )}
             </div>
             <ChangedRows
               nodes={node.children}
@@ -274,7 +303,8 @@ export function FileTree({ worktreePath, files, onToast, onDiscard }: FileTreePr
     menu: (event, node) => {
       event.preventDefault()
       setMenu({ x: event.clientX, y: event.clientY, node })
-    }
+    },
+    now: (node) => onDiscard(entriesFor(node))
   }
 
   const launchSolution = (path: string): void => {
