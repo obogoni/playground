@@ -133,6 +133,26 @@ export interface FileStat {
   uncountable?: 'binary' | 'too-large'
 }
 
+/** Why a discard left an entry as it was (FDSC-18, 21..23, 48). */
+export type DiscardCause = 'recycle-bin' | 'link' | 'outside' | 'git'
+
+export interface DiscardKept {
+  cause: DiscardCause
+  /** Git's first error line for `git`; the rejection's message for `recycle-bin`. */
+  detail?: string
+}
+
+/** One entry's outcome; `kept` absent means discarded. */
+export interface DiscardFileResult {
+  path: string
+  kept?: DiscardKept
+}
+
+/** One result per entry of a `files:discard` request, in the request's order. */
+export interface DiscardResult {
+  files: DiscardFileResult[]
+}
+
 /**
  * One row of the Commits list (FCMT-03/05/12). A row carries everything the
  * list draws, so drawing it needs no second call: the subject for the line,

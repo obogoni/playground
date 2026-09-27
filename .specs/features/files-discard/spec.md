@@ -259,7 +259,7 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-39 | P2: many — AC 39 | Tasks | Pending |
 | FDSC-40 | P1: read-only — AC 40 | Execute | Implementing: T3 (AD-047) |
 | FDSC-41 | P1: read-only — AC 41 | Tasks | Pending |
-| FDSC-42 | P1: read-only — AC 42 | Execute | Implementing: T3 (AD-047) |
+| FDSC-42 | P1: read-only — AC 42 | Execute | Implementing: T3 (AD-047), T4 (request type) |
 | FDSC-43 | Edge: untracked folder row | Tasks | Pending |
 | FDSC-44 | Edge: already gone | Tasks | Pending |
 | FDSC-45 | Edge: changed after opening | Tasks | Pending |

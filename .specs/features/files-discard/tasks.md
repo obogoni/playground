@@ -189,8 +189,8 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] The request type has exactly the two fields (no revision field exists to send)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] The request type has exactly the two fields (no revision field exists to send)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full
