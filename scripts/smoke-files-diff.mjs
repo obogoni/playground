@@ -12,6 +12,9 @@
  *      layout and whitespace choices the drive made survived (FDIF-12/16).
  *   4. node scripts/smoke-files-diff.mjs --clean
  *
+ * SMOKE_ONLY=glyphs on step 2 runs the status glyph sections alone (FSTS,
+ * issue #131), from a fresh seed and launch like any drive.
+ *
  * Point SMOKE_CONFIG at the config.json of the userData dir in use, and
  * SMOKE_BASE at the folder to seed into. Run the app with --user-data-dir so
  * the owner's real workspaces, sessions and pinned tasks are never in scope.
@@ -317,6 +320,19 @@ const clickToggle = (label) => clickByText('.file-tabs-toggle', label)
 async function drive() {
   const ws = await connect()
   await selectWorktree(ws)
+
+  // SMOKE_ONLY=glyphs runs the status glyph sections alone, for iterating on
+  // them; the full drive still runs before a PR.
+  if (process.env.SMOKE_ONLY === 'glyphs') {
+    await glyphSetup(ws)
+    await glyphTreeChecks(ws)
+    const failed = checks.filter((c) => !c.ok)
+    console.log(
+      `\n${checks.length - failed.length}/${checks.length} checks passed (status glyphs only)`
+    )
+    ws.close()
+    return failed.length
+  }
 
   // The lens persists per worktree, so start from a known one.
   await evaluate(ws, clickByText('.file-tree-mode', 'Folder'))
@@ -763,6 +779,11 @@ async function drive() {
     `${beforeCommit.length} sections -> ${afterCommit.length}`
   )
 
+  // Here, and not later: the uncommitted files the glyph checks read (crlf.txt,
+  // untracked.txt, the long name, assets/logo.bin) are still uncommitted, since
+  // FDIF-31 committed modified.ts alone. The icon checks reload and stay last.
+  await glyphTreeChecks(ws)
+
   await iconChecks(ws)
 
   const failed = checks.filter((c) => !c.ok)
@@ -772,6 +793,291 @@ async function drive() {
   console.log('  B. Judge side-by-side against inline as the daily default.')
   ws.close()
   return failed.length
+}
+
+/* ---------------------------------------------------------------- glyphs -- */
+
+/** The status of every changed file the seed lists, by list (FSTS-06..11). */
+const ORIGIN_STATUS = {
+  'src/modified.ts': 'modified',
+  'src/added.ts': 'added',
+  'docs/removed.md': 'deleted',
+  'src/renamed-new.ts': 'renamed',
+  ...Object.fromEntries(
+    Array.from({ length: 40 }, (_, i) => [`stack/f${String(i).padStart(2, '0')}.ts`, 'modified'])
+  )
+}
+const UNCOMMITTED_STATUS = {
+  'crlf.txt': 'modified',
+  'untracked.txt': 'untracked',
+  [`src/${LONG_NAME}`]: 'untracked',
+  'assets/logo.bin': 'modified'
+}
+
+/** What each status reads, as the spec states it (FSTS-06..11). */
+const GLYPHS = {
+  added: { text: '+', title: 'Added' },
+  modified: { text: 'M', title: 'Modified' },
+  deleted: { text: 'D', title: 'Deleted' },
+  renamed: { text: 'R', title: 'Renamed' },
+  untracked: { text: 'U', title: 'Untracked' }
+}
+
+/**
+ * Each status's tone token and the tint behind it. The tint is compared too:
+ * the row's own colour is --text-muted, so an untracked glyph that lost its
+ * rule would still inherit the right colour and pass on colour alone.
+ */
+const TONES = {
+  added: { color: 'var(--green)', tint: 'color-mix(in oklab, var(--green) 16%, transparent)' },
+  modified: { color: 'var(--amber)', tint: 'color-mix(in oklab, var(--amber) 16%, transparent)' },
+  deleted: { color: 'var(--red)', tint: 'color-mix(in oklab, var(--red) 16%, transparent)' },
+  renamed: { color: 'var(--accent)', tint: 'color-mix(in oklab, var(--accent) 16%, transparent)' },
+  untracked: {
+    color: 'var(--text-muted)',
+    tint: 'color-mix(in oklab, var(--text-faint) 20%, transparent)'
+  }
+}
+
+/** Each tone as the page computes it, from one probe per token appended to `host` and removed. */
+const probeTones = (host) => `
+  (() => {
+    const host = document.querySelector(${JSON.stringify(host)})
+    if (!host) return null
+    const tones = ${JSON.stringify(TONES)}
+    const read = (css, prop) => {
+      const probe = document.createElement('span')
+      probe.style.cssText = css
+      host.appendChild(probe)
+      const value = getComputedStyle(probe)[prop]
+      probe.remove()
+      return value
+    }
+    return Object.fromEntries(
+      Object.entries(tones).map(([status, t]) => [
+        status,
+        { color: read('color: ' + t.color, 'color'), tint: read('background: ' + t.tint, 'backgroundColor') }
+      ])
+    )
+  })()
+`
+
+/** Every element under `root` (itself included) whose text is drawn struck through. */
+const STRUCK = `(root) =>
+  [root, ...root.querySelectorAll('*')].filter((e) =>
+    getComputedStyle(e).textDecorationLine.includes('line-through')
+  )`
+
+/** Every row of the tree, with its glyph and where that glyph ends. */
+const treeRows = `
+  [...document.querySelectorAll('.file-tree-body .file-tree-row')].map((row) => {
+    const box = row.getBoundingClientRect()
+    const glyphs = [...row.querySelectorAll('.status-glyph')]
+    const glyph = glyphs[0]
+    const end = glyph?.parentElement
+    const name = row.querySelector('.file-tree-name')
+    return {
+      path: row.getAttribute('title'),
+      folder: row.querySelector('.file-tree-chevron') !== null,
+      depth: Math.round((parseFloat(row.style.paddingLeft) - 8) / 13),
+      glyphs: glyphs.length,
+      text: glyph?.textContent ?? null,
+      title: glyph?.getAttribute('title') ?? null,
+      color: glyph ? getComputedStyle(glyph).color : null,
+      tint: glyph ? getComputedStyle(glyph).backgroundColor : null,
+      last:
+        !!glyph &&
+        end.classList.contains('file-tree-end') &&
+        end === row.lastElementChild &&
+        glyph === end.lastElementChild,
+      right: glyph ? glyph.getBoundingClientRect().right : null,
+      edge: box.right - parseFloat(getComputedStyle(row).paddingRight),
+      overflows: name ? name.scrollWidth > name.clientWidth : null,
+      struck: (${STRUCK})(row).map((e) => (e === name ? 'name' : e === row ? 'row' : e.className))
+    }
+  })
+`
+
+/** Polls `read` until `ready(value)` holds, for up to ~6 s; returns the last value either way. */
+async function readWhen(ws, read, ready) {
+  let value = null
+  for (let i = 0; i < 20; i++) {
+    value = await evaluate(ws, read)
+    if (ready(value)) return value
+    await sleep(300)
+  }
+  return value
+}
+
+/** The rows of one changed list, once every expected file row is there. */
+async function listRows(ws, mode, expected) {
+  await evaluate(ws, clickByText('.file-tree-mode', mode))
+  await sleep(1200)
+  return readWhen(ws, treeRows, (rows) =>
+    Object.keys(expected).every((path) => rows.some((r) => !r.folder && r.path === path))
+  )
+}
+
+/**
+ * The column FSTS-01/02/16/17 name: every item holds exactly one glyph, last in
+ * its row or header, ending within 1 px of the right padding, and all of them
+ * within 1 px of each other. Returns the reasons it fails, empty when it holds.
+ */
+function columnFaults(items) {
+  const faults = []
+  for (const item of items) {
+    if (item.glyphs !== 1) faults.push(`${item.path}: ${item.glyphs} glyphs`)
+    else if (!item.last) faults.push(`${item.path}: glyph not last`)
+    else if (Math.abs(item.right - item.edge) > 1) {
+      faults.push(`${item.path}: ends at ${item.right.toFixed(1)}, edge ${item.edge.toFixed(1)}`)
+    }
+  }
+  const rights = items.map((i) => i.right).filter((r) => typeof r === 'number')
+  if (rights.length && Math.max(...rights) - Math.min(...rights) > 1) {
+    faults.push(`rights spread ${(Math.max(...rights) - Math.min(...rights)).toFixed(1)} px`)
+  }
+  return faults
+}
+
+/** Rows whose glyph text or tooltip differ from the spec's for their status. */
+function glyphFaults(items, expected) {
+  return items
+    .filter((i) => expected[i.path])
+    .filter((i) => {
+      const want = GLYPHS[expected[i.path]]
+      return i.text !== want.text || i.title !== want.title
+    })
+    .map((i) => `${i.path}: ${i.text}/${i.title}`)
+}
+
+/**
+ * The state the full drive leaves before these sections, for `SMOKE_ONLY=glyphs`:
+ * the inline layout FDIF-12 chose. Nothing is committed: FDIF-31 commits
+ * modified.ts alone, and it is not an uncommitted file on a fresh seed.
+ */
+async function glyphSetup(ws) {
+  await evaluate(ws, clickByText('.file-tree-mode', 'Uncommitted'))
+  await sleep(1600)
+  await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
+  await sleep(1200)
+  const inline = (await evaluate(ws, activeToggles)).find((t) => t.label === 'Inline')
+  if (inline?.pressed !== 'true') await evaluate(ws, clickToggle('Inline'))
+  await sleep(800)
+}
+
+/** 12. The status glyphs of the tree rows (FSTS-01..11, 13..15). */
+async function glyphTreeChecks(ws) {
+  if ((await evaluate(ws, `document.documentElement.dataset.theme`)) !== 'dark') {
+    await clickThemeToggle(ws, 'dark')
+  }
+  const theme = await evaluate(ws, `document.documentElement.dataset.theme`)
+  const origin = await listRows(ws, 'Diff to origin', ORIGIN_STATUS)
+  const originTones = await evaluate(ws, probeTones('.file-tree'))
+  const uncommitted = await listRows(ws, 'Uncommitted', UNCOMMITTED_STATUS)
+  const uncommittedTones = await evaluate(ws, probeTones('.file-tree'))
+  const originFiles = origin.filter((r) => !r.folder)
+  const uncommittedFiles = uncommitted.filter((r) => !r.folder)
+  const row = (rows, path) => rows.find((r) => !r.folder && r.path === path)
+
+  // 1. The four statuses of diff to origin, each by its own row.
+  const named = ['src/modified.ts', 'src/added.ts', 'docs/removed.md', 'src/renamed-new.ts']
+  const namedRows = named.map((p) => row(origin, p)).filter(Boolean)
+  const namedFaults = glyphFaults(namedRows, ORIGIN_STATUS)
+  check(
+    'Diff to origin shows M, +, D and R with their tooltips (FSTS-06..09, FSTS-11)',
+    theme === 'dark' && namedRows.length === 4 && namedFaults.length === 0,
+    `theme ${theme}; ${namedRows.map((r) => `${r.path.split('/').pop()} ${r.text}/${r.title}`).join(', ')}` +
+      (namedFaults.length ? `; wrong: ${namedFaults.join(', ')}` : '')
+  )
+
+  // 2. Tones, against probes; the five tokens must differ or nothing is told apart.
+  const toneFaults = []
+  const seen = new Set()
+  for (const [rows, expected, tones] of [
+    [originFiles, ORIGIN_STATUS, originTones],
+    [uncommittedFiles, UNCOMMITTED_STATUS, uncommittedTones]
+  ]) {
+    for (const r of rows) {
+      const status = expected[r.path]
+      if (!status) {
+        toneFaults.push(`${r.path}: not seeded`)
+        continue
+      }
+      seen.add(status)
+      if (r.color !== tones?.[status]?.color || r.tint !== tones?.[status]?.tint) {
+        toneFaults.push(
+          `${r.path}: ${r.color} on ${r.tint}, want ${tones?.[status]?.color} on ${tones?.[status]?.tint}`
+        )
+      }
+    }
+  }
+  const distinct = new Set(Object.values(originTones ?? {}).map((t) => t.color)).size
+  check(
+    'Every glyph takes its status tone, in both lists (FSTS-06..10)',
+    distinct === 5 && seen.size === 5 && toneFaults.length === 0,
+    `${distinct} distinct tokens, ${seen.size} statuses seen, ${originFiles.length + uncommittedFiles.length} glyphs` +
+      (toneFaults.length ? `; ${toneFaults.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 3. One column in diff to origin.
+  const originColumn = columnFaults(originFiles)
+  check(
+    'Diff to origin: one glyph per file row, last, in one column at the right padding (FSTS-01..03)',
+    originFiles.length === Object.keys(ORIGIN_STATUS).length && originColumn.length === 0,
+    `${originFiles.length} file rows` +
+      (originColumn.length ? `; ${originColumn.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 4. Uncommitted: depths 0 and 1 in the same column, and U read there.
+  const depthOf = (path) => row(uncommitted, path)?.depth
+  const depthsHold =
+    depthOf('crlf.txt') === 0 &&
+    depthOf('untracked.txt') === 0 &&
+    depthOf(`src/${LONG_NAME}`) === 1 &&
+    depthOf('assets/logo.bin') === 1
+  const uncommittedGlyphs = glyphFaults(uncommittedFiles, UNCOMMITTED_STATUS)
+  const untrackedRow = row(uncommitted, 'untracked.txt')
+  const uncommittedColumn = columnFaults(uncommittedFiles)
+  check(
+    'Uncommitted: M and U at depths 0 and 1 share one column (FSTS-01, 02, 10, 11)',
+    depthsHold &&
+      uncommittedFiles.length === 4 &&
+      untrackedRow?.text === 'U' &&
+      untrackedRow?.title === 'Untracked' &&
+      uncommittedGlyphs.length === 0 &&
+      uncommittedColumn.length === 0,
+    `depths ${uncommittedFiles.map((r) => `${r.path.split('/').pop().slice(0, 12)}:${r.depth}`).join(', ')}; ` +
+      `untracked.txt ${untrackedRow?.text}/${untrackedRow?.title}` +
+      (uncommittedGlyphs.length ? `; wrong: ${uncommittedGlyphs.join(', ')}` : '') +
+      (uncommittedColumn.length ? `; ${uncommittedColumn.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 5. The long name is cut, and its glyph keeps the column.
+  const longRow = row(uncommitted, `src/${LONG_NAME}`)
+  const longColumn = longRow ? columnFaults([longRow, ...uncommittedFiles]) : ['no row']
+  check(
+    'A name too long for its row is cut and its glyph keeps the column (FSTS-04)',
+    longRow?.overflows === true && longColumn.length === 0,
+    `overflows ${longRow?.overflows}` + (longColumn.length ? `; ${longColumn.join('; ')}` : '')
+  )
+
+  // 6. No folder row carries a glyph.
+  const originFolders = origin.filter((r) => r.folder)
+  const uncommittedFolders = uncommitted.filter((r) => r.folder)
+  const folderGlyphs = [...originFolders, ...uncommittedFolders].filter((r) => r.glyphs > 0)
+  check(
+    'No folder row of either list shows a status glyph (FSTS-05)',
+    originFolders.length >= 3 && uncommittedFolders.length >= 2 && folderGlyphs.length === 0,
+    `${originFolders.length} + ${uncommittedFolders.length} folder rows, ${folderGlyphs.length} with a glyph`
+  )
+
+  // 7. Only removed.md's name is struck, in the whole list.
+  const struck = origin.flatMap((r) => r.struck.map((what) => `${r.path}:${what}`))
+  check(
+    "Only the deleted file's name is struck through (FSTS-13..15)",
+    struck.length === 1 && struck[0] === 'docs/removed.md:name',
+    `struck: ${struck.join(', ') || 'none'}`
+  )
 }
 
 /* ----------------------------------------------------------------- icons -- */
@@ -834,7 +1140,7 @@ async function clickThemeToggle(ws, to) {
   return clicked && (await evaluate(ws, `document.documentElement.dataset.theme`)) === to
 }
 
-/** 12. File and folder icons (FICN-01, 03, 07, 08, 10, 11, 13, 14, 15). */
+/** 14. File and folder icons (FICN-01, 03, 07, 08, 10, 11, 13, 14, 15). */
 async function iconChecks(ws) {
   // Guards: each check below tells two icons apart by body, so the bodies must differ.
   const pairs = [

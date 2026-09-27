@@ -379,8 +379,20 @@ The new `.file-tree-end` wrapper adds no padding, height or vertical margin; its
 
 **Done when**:
 
-- [ ] Each check seen failing on its own mutant, then passing: (a) `changeStatusView('added')` answering `A` fails 1; (b) the `.status-glyph.added` tone rule removed fails 2; (c) the end group moved before `FileIcon` fails 3 and 4; (d) `.file-tree-name` given `flex: none` and `.file-tree-end` stripped of `margin-left: auto` (the glyph follows the name) fails 3 and 4; (e) `.file-tree-name` without `min-width: 0` / `overflow: hidden` fails 5; (f) `StatusGlyph` rendered on folder rows fails 6; (g) `line-through` put on `.file-tree-row` for deleted rows instead of the name fails 7; (h) `struck` true for every status fails 7
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Each check seen failing on its own mutant, then passing: (a) `changeStatusView('added')` answering `A` fails 1; (b) the `.status-glyph.added` tone rule removed fails 2; (c) the end group moved before `FileIcon` fails 3 and 4; (d) `.file-tree-name` given `flex: none` and `.file-tree-end` stripped of `margin-left: auto` (the glyph follows the name) fails 3 and 4; (e) `.file-tree-name` without `min-width: 0` / `overflow: hidden` fails 5; (f) `StatusGlyph` rendered on folder rows fails 6; (g) `line-through` put on `.file-tree-row` for deleted rows instead of the name fails 7; (h) `struck` true for every status fails 7
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Result (2026-09-27)**: `glyphTreeChecks(ws)` (section 12) adds the seven checks, and `SMOKE_ONLY=glyphs` runs them alone after `glyphSetup(ws)`, which sets the inline layout FDIF-12 leaves and commits nothing. In the full drive the section runs right after the FDIF-31 check and before `iconChecks(ws)`: FDIF-31 commits `modified.ts` alone, so `crlf.txt`, `untracked.txt`, the long name and `assets/logo.bin` are still uncommitted there, and the icon checks reload the window and stay last. (This branch has no section 13 that commits everything; that is the fold branch.) Changed-list folders are always drawn open, so every row is read without clicking. A folder row is told apart by its `.file-tree-chevron`, a depth by the row's `padding-left` (`8 + 13 × depth`). Check 2 compares the tint as well as the colour: the row's own colour is `--text-muted`, so an untracked glyph without its rule inherits the right colour, and colour alone cannot fail for it. Focused run on a fresh seed and launch: 7 / 7 in 22 s. Mutants, one focused run each, all killed:
+- (a) added answering `A`: fails 1 only.
+- (b) `.status-glyph.added` removed: fails 2 only. The extra (b2) `.status-glyph.untracked` removed: fails 2 only.
+- (c) end group before `FileIcon`: fails 3, 4 and 5. Check 5 re-runs the column check on the long row.
+- (d) name `flex: none` and end group without `margin-left: auto`: fails 3, 4 and 5. The name no longer shrinks, so it does not overflow either.
+- (e) name without `min-width: 0` / `overflow: hidden`: fails 4 and 5. The long row's glyph is pushed past the edge, 666 px against 263 px.
+- (f) `StatusGlyph` on folder rows: fails 6 only (5 folders with a glyph).
+- (g) `line-through` on the deleted row instead of its name: fails 7 only (`docs/removed.md:row`).
+- (h) `struck` true for every status: fails 7 only.
+
+`git status --porcelain` matched the baseline after every mutant. Lint: exit 0, 0 errors, 18 warnings, unchanged.
 
 **Tests**: manual
 **Gate**: manual
