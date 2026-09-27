@@ -81,6 +81,7 @@ export function AgentsView({
         onRespawn={onRespawn}
         onRemove={onRemove}
         onNew={onNew}
+        onSetTask={onSetTask}
       />
       {active ? (
         <SessionDetail

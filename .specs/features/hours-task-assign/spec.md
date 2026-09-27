@@ -227,8 +227,8 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | HTSK-16 | P1: session — AC 16 | Execute | Implemented: T3, T6 |
 | HTSK-17 | P1: session — AC 17 | Execute | Implementing: T6 |
 | HTSK-18 | P1: session — AC 18 | Execute | Implementing: T11, T13, T22 |
-| HTSK-19 | P1: session — AC 19 | Tasks | In Tasks |
-| HTSK-20 | P1: session — AC 20 | Execute | Implementing: T12 |
+| HTSK-19 | P1: session — AC 19 | Execute | Implementing: T23 |
+| HTSK-20 | P1: session — AC 20 | Execute | Implementing: T12, T23 |
 | HTSK-21 | P1: session — AC 21 | Execute | Implementing: T7 |
 | HTSK-22 | P1: session — AC 22 | Execute | Implemented: T6 |
 | HTSK-23 | P1: drawer — AC 23 | Execute | Implementing: T20 |
