@@ -528,8 +528,8 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] Absent with `No uncommitted changes.` and in every other mode
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Absent with `No uncommitted changes.` and in every other mode
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full

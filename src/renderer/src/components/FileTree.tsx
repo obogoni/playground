@@ -385,6 +385,19 @@ export function FileTree({ worktreePath, files, onToast, onDiscard }: FileTreePr
           picker — two pickers would disagree silently. */}
       {(files.mode === 'since-base' || files.mode === 'commits') && <BasePicker files={files} />}
 
+      {/* FDSC-35: the whole list, as it is, only while it holds a change. */}
+      {files.mode === 'uncommitted' && files.uncommitted.length > 0 && (
+        <div className="file-tree-uncommitted-header">
+          <button
+            type="button"
+            className="file-tree-discard-all"
+            onClick={() => onDiscard(files.uncommitted)}
+          >
+            Discard all
+          </button>
+        </div>
+      )}
+
       <div className="file-tree-body">
         {files.mode === 'full' ? (
           <FolderRows dir="" depth={0} files={files} onFile={openFile} />

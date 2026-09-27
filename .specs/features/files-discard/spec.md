@@ -252,12 +252,12 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-32 | P1: after — AC 32 | Execute | Implementing: T10 (unit), T11 (hook) |
 | FDSC-33 | P1: after — AC 33 | Execute | Implementing: T10 (unit) |
 | FDSC-34 | P2: many — AC 34 | Execute | Implementing: T9 (unit), T15 (folder menu) |
-| FDSC-35 | P2: many — AC 35 | Execute | Implementing: T9 (no helper: the list goes as it is) |
+| FDSC-35 | P2: many — AC 35 | Execute | Implementing: T9 (no helper: the list goes as it is), T17 (Discard all) |
 | FDSC-36 | P2: many — AC 36 | Execute | Implementing: T12 (icon), T16 (hover ↶) |
 | FDSC-37 | P2: many — AC 37 | Execute | Implementing: T16 (the ↶ click stays its own) |
 | FDSC-38 | P2: many — AC 38 | Execute | Implementing: T12 (icon) |
 | FDSC-39 | P2: many — AC 39 | Tasks | Pending |
-| FDSC-40 | P1: read-only — AC 40 | Execute | Implementing: T3 (AD-047), T15 (no menu outside uncommitted), T16 (no ↶ outside uncommitted) |
+| FDSC-40 | P1: read-only — AC 40 | Execute | Implementing: T3 (AD-047), T15 (no menu outside uncommitted), T16 (no ↶ outside uncommitted), T17 (no Discard all outside uncommitted) |
 | FDSC-41 | P1: read-only — AC 41 | Tasks | Pending |
 | FDSC-42 | P1: read-only — AC 42 | Execute | Implemented: T3 (AD-047), T4 (request type), T5 (recording runner), T8 (handler) |
 | FDSC-43 | Edge: untracked folder row | Execute | Implemented: T6, T9, T10 (unit) |

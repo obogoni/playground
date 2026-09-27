@@ -77,6 +77,29 @@
   cursor: not-allowed;
 }
 
+/* The uncommitted list's header, in the base picker's slot (FDSC-35). */
+.file-tree-uncommitted-header {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 8px 0;
+}
+
+.file-tree-discard-all {
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: background 0.12s;
+}
+
+.file-tree-discard-all:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
 .file-tree-body {
   flex: 1;
   min-height: 0;
