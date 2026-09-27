@@ -214,13 +214,13 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] Temp repos set `core.autocrlf false` and `status.renames true` locally (L-026); state is read with `git status --porcelain`, `git diff --cached --name-only` and `git diff --name-only`
-- [ ] Tests, one behaviour each: an unstaged edit → clean; staged and unstaged edits on one file → both gone (FDSC-04); an unstaged and a staged deletion → back on disk and in the index (FDSC-05); `a[b].txt` and `ab.txt` both modified, discard `a[b].txt` only → `ab.txt` still modified (FDSC-09); a batch of a valid entry and one git does not know (`ghost.txt` listed as modified) → the valid one clean, `ghost.txt` kept with cause `git` and a detail naming it (FDSC-08); a `UU` conflict from a real merge → back to `HEAD` (FDSC-50); a held `.git/index.lock` → kept with cause `git` and a detail containing `index.lock` (FDSC-51); `../outside.txt` and an absolute path → kept with cause `outside`, and a recording runner saw no git call for them (FDSC-23); 300 entries of 120-character paths → all clean (FDSC-49)
-- [ ] A recording `GitRunner` test: every call carries `--literal-pathspecs` and `--source=HEAD`, and no argument comes from anything but the entry paths (FDSC-42; L-020)
-- [ ] `grep -nE "unlink|rm\(|rmdir|rmSync" src/main/file-discard.ts` finds nothing (FDSC-17)
-- [ ] Full-suite wall time compared with the baseline and noted (L-005)
-- [ ] Gate check passes: `npx vitest run src/main/file-discard.test.ts`
-- [ ] Test count: T2 count + the new tests
+- [x] Temp repos set `core.autocrlf false` and `status.renames true` locally (L-026); state is read with `git status --porcelain`, `git diff --cached --name-only` and `git diff --name-only`
+- [x] Tests, one behaviour each: an unstaged edit → clean; staged and unstaged edits on one file → both gone (FDSC-04); an unstaged and a staged deletion → back on disk and in the index (FDSC-05); `a[b].txt` and `ab.txt` both modified, discard `a[b].txt` only → `ab.txt` still modified (FDSC-09); a batch of a valid entry and one git does not know (`ghost.txt` listed as modified) → the valid one clean, `ghost.txt` kept with cause `git` and a detail naming it (FDSC-08); a `UU` conflict from a real merge → back to `HEAD` (FDSC-50); a held `.git/index.lock` → kept with cause `git` and a detail containing `index.lock` (FDSC-51); `../outside.txt` and an absolute path → kept with cause `outside`, and a recording runner saw no git call for them (FDSC-23); 300 entries of 120-character paths → all clean (FDSC-49)
+- [x] A recording `GitRunner` test: every call carries `--literal-pathspecs` and `--source=HEAD`, and no argument comes from anything but the entry paths (FDSC-42; L-020)
+- [x] `grep -nE "unlink|rm\(|rmdir|rmSync" src/main/file-discard.ts` finds nothing (FDSC-17)
+- [x] Full-suite wall time compared with the baseline and noted (L-005)
+- [x] Gate check passes: `npx vitest run src/main/file-discard.test.ts`
+- [x] Test count: T2 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
