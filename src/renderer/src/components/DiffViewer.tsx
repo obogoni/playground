@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { DiffSide, DiffSides } from '../../../shared/files'
-import { eolStripText } from '../lib/diff-view'
+import {
+  eolStripText,
+  foldPlan,
+  hiddenRangesOf,
+  regionStates,
+  UNCHANGED_REGIONS,
+  unchangedRegions,
+  type LineSpan,
+  type Region,
+  type RegionState
+} from '../lib/diff-view'
 import { languageForPath, monaco } from '../lib/monaco-setup'
 import { FilePlaceholder, type PlaceholderKind } from './FilePlaceholder'
 import './DiffViewer.css'
@@ -75,6 +85,29 @@ function changedLines(editor: monaco.editor.IStandaloneDiffEditor): number[] {
   return changes.map((change) => Math.max(1, change.modifiedStartLineNumber))
 }
 
+/** The unchanged regions of the diff on screen; null until the worker has answered. */
+function currentRegions(editor: monaco.editor.IStandaloneDiffEditor): Region[] | null {
+  const changes = editor.getLineChanges()
+  const models = editor.getModel()
+  if (!changes || !models) return null
+  return unchangedRegions(changes, models.original.getLineCount(), models.modified.getLineCount())
+}
+
+/**
+ * Folds each unchanged region as `spans` says, one span per region. The only
+ * code that writes a `modelState`: its shape is internal to monaco-editor
+ * 0.56.0 (`restoreSerializedState`), which is pinned. The inner states are
+ * empty objects, truthy so the call goes through, and with no `cursorState`
+ * in them neither editor restores a cursor, which would reveal its line.
+ */
+function applyFolds(editor: monaco.editor.IStandaloneDiffEditor, spans: LineSpan[]): void {
+  editor.restoreViewState({
+    original: {},
+    modified: {},
+    modelState: { collapsedRegions: spans.map((span) => ({ range: [span.start, span.end] })) }
+  } as unknown as monaco.editor.IDiffEditorViewState)
+}
+
 /**
  * One diff, as Monaco's `DiffEditor` renders it (FDIF-07, 11–16, 25, 30).
  *
@@ -105,6 +138,9 @@ export function DiffViewer({
   const containerRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<monaco.editor.IStandaloneDiffEditor | null>(null)
   const markersRef = useRef<monaco.editor.IEditorDecorationsCollection | null>(null)
+  // The fold states read just before new text went in, until Monaco has
+  // recomputed the diff for it (FOLD-02..08).
+  const pendingRef = useRef<{ states: RegionState[]; left: string } | null>(null)
   const [identical, setIdentical] = useState(false)
   const [height, setHeight] = useState<number | null>(null)
 
@@ -144,13 +180,9 @@ export function DiffViewer({
       renderSideBySide: live.current.layout === 'side-by-side',
       ignoreTrimWhitespace: live.current.ignoreWhitespace,
       // FDIF-13: a run of unchanged lines folds into one strip, with a little
-      // context left around every change. Option names confirmed by the spike.
-      hideUnchangedRegions: {
-        enabled: true,
-        revealLineCount: 20,
-        minimumLineCount: 3,
-        contextLineCount: 3
-      },
+      // context left around every change. Option names confirmed by the spike;
+      // the values are the ones the app's region rule computes with (FOLD-10).
+      hideUnchangedRegions: { enabled: true, ...UNCHANGED_REGIONS },
       // A section sizes itself to its content, so its editor must not reserve a
       // screen of empty space under the last line.
       scrollBeyondLastLine: !live.current.fitContent
@@ -180,6 +212,13 @@ export function DiffViewer({
         // answers null until the worker has computed, which is not "identical".
         const changes = editor.getLineChanges()
         if (!changes) return
+        const pending = pendingRef.current
+        if (pending) {
+          pendingRef.current = null
+          const regions = currentRegions(editor) ?? []
+          const leftChanged = pending.left !== original.getValue()
+          applyFolds(editor, foldPlan(pending.states, regions, null, leftChanged))
+        }
         setIdentical(changes.length === 0)
         // The handle is announced once the worker has answered, never before:
         // `changes()` on an uncomputed diff is an empty list that reads like a
@@ -211,6 +250,7 @@ export function DiffViewer({
       if (announced) live.current.onHandle?.(null)
       editorRef.current = null
       markersRef.current = null
+      pendingRef.current = null
       for (const disposable of disposables) disposable.dispose()
       editor.dispose()
       // Disposing the editor leaves its models behind, and a stack remounts
@@ -232,8 +272,26 @@ export function DiffViewer({
     const scrollTop = inner?.getScrollTop() ?? 0
     const nextOriginal = sideText(sides.original)
     const nextModified = sideText(sides.modified)
-    if (models.original.getValue() !== nextOriginal) models.original.setValue(nextOriginal)
-    if (models.modified.getValue() !== nextModified) models.modified.setValue(nextModified)
+    const originalMoves = models.original.getValue() !== nextOriginal
+    const modifiedMoves = models.modified.getValue() !== nextModified
+    const editor = editorRef.current
+    // `setValue` wipes the decorations Monaco carries its folds in, so every
+    // region would come back revealed. The fold states are read first and
+    // re-applied once the new diff exists (FOLD-02..08). A second change before
+    // that keeps the first reading (FOLD-08); a state Monaco no longer saves in
+    // the expected shape takes no reading, and the update runs as before (FOLD-25).
+    if ((originalMoves || modifiedMoves) && editor && pendingRef.current === null) {
+      const regions = currentRegions(editor)
+      const hidden = hiddenRangesOf(editor.saveViewState()?.modelState)
+      if (regions && hidden) {
+        pendingRef.current = {
+          states: regionStates(regions, hidden),
+          left: models.original.getValue()
+        }
+      }
+    }
+    if (originalMoves) models.original.setValue(nextOriginal)
+    if (modifiedMoves) models.modified.setValue(nextModified)
     inner?.setScrollTop(scrollTop)
   }, [sides])
 

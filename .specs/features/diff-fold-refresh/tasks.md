@@ -332,9 +332,11 @@ the snapshot. Scroll restoration and the EOL markers stay as they are.
 
 **Done when**:
 
-- [ ] `applyFolds` is the only code that builds a `modelState`
-- [ ] T1's 14a and 14b pass on a fresh seed and a fresh launch; the existing FDIF-30 check still passes
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `applyFolds` is the only code that builds a `modelState`
+- [x] T1's 14a and 14b pass on a fresh seed and a fresh launch; the existing FDIF-30 check still passes
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Result (2026-09-27)**: on a fresh seed and a fresh launch the smoke passes 47/47: 14a 3 / 2 strips; 14b 4 strips (16 / 73 / 73 / 18), probe kept, arrived in 651 ms; FDIF-30 arrived in 639 ms with `scrollTop 0 -> 0`. The only `modelState` built in `src` is `applyFolds` (`DiffViewer.tsx:107`); `hiddenRangesOf` only reads one. Confirmed in `diffEditorViewModel.js:222-231` before wiring: Monaco sets the new unchanged regions and the diff in one transaction, so `onDidUpdateDiff` sees the new regions and nothing of Monaco's runs after the plan. Gate: typecheck 0, lint 0 errors / 18 warnings, 1721/1721 tests (1680 + 41 from T2-T5).
 
 **Tests**: none
 **Gate**: full
