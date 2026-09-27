@@ -5,6 +5,8 @@ import type {
   TimePeriod,
   TimeSnapshot
 } from '../shared/time'
+import type { SessionTask } from '../shared/tasks'
+import { withSessionTask } from './period-task'
 import type { TimeLogStore } from './time-log-store'
 
 /** A period shorter than this is noise (spawn failure, instant exit) and is discarded (TIME-11). */
@@ -22,6 +24,8 @@ export interface TimeTrackerDeps {
   newId: () => string
   /** Attribution at open time (TIME-03); never throws, nulls when unresolvable (TIME-12). */
   resolveSnapshot: (cwd: string) => PeriodSnapshotFields
+  /** Pinned title for a task id from the TaskBoard cache; null when unknown (HTSK-06). */
+  pinnedTitle: (id: number) => string | null
   /** Pushes `time:changed`; bound to the window by index.ts. */
   emit: () => void
 }
@@ -30,6 +34,8 @@ export interface TimeTrackerDeps {
 interface Run {
   agent: string
   cwd: string
+  /** The session's hand-set task; null = From branch (HTSK-10, HTSK-11). */
+  task: SessionTask | null
   open: OpenPeriod | null
   paused: boolean
 }
@@ -64,15 +70,35 @@ export class TimeTracker {
   }
 
   /** `SessionLifecycle`: the session's PTY started (spawn, duplicate, respawn) (TIME-01, TIME-19). */
-  started(meta: { id: string; agent: string; cwd: string }): void {
+  started(meta: { id: string; agent: string; cwd: string; task?: SessionTask }): void {
     const previous = this.#runs.get(meta.id)
     if (previous?.open) this.#close(previous.open, this.#nowIso())
-    this.#runs.set(meta.id, {
+    const run: Run = {
       agent: meta.agent,
       cwd: meta.cwd,
+      task: meta.task ?? null,
       paused: false,
-      open: this.#open(meta.id, meta.agent, meta.cwd)
-    })
+      open: null
+    }
+    run.open = this.#open(meta.id, run)
+    this.#runs.set(meta.id, run)
+    this.#changed()
+  }
+
+  /**
+   * `SessionLifecycle`: the session's task link changed (HTSK-12..16). A running,
+   * counting session closes its open period now and opens one on the new task at
+   * the same instant; a paused or suspended one only keeps the link for its next
+   * open. The same link, or a session with no run, changes nothing.
+   */
+  taskChanged(sessionId: string, task: SessionTask | null): void {
+    const run = this.#runs.get(sessionId)
+    if (!run || (run.task?.id ?? null) === (task?.id ?? null)) return
+    run.task = task
+    if (run.open) {
+      this.#close(run.open, this.#nowIso())
+      run.open = this.#open(sessionId, run)
+    }
     this.#changed()
   }
 
@@ -100,7 +126,7 @@ export class TimeTracker {
     const run = this.#runs.get(sessionId)
     if (!run || !run.paused) return
     run.paused = false
-    if (!this.#suspended) run.open = this.#open(sessionId, run.agent, run.cwd)
+    if (!this.#suspended) run.open = this.#open(sessionId, run)
     this.#changed()
   }
 
@@ -119,7 +145,7 @@ export class TimeTracker {
   resumeFromSuspend(): void {
     this.#suspended = false
     for (const [id, run] of this.#runs) {
-      if (!run.paused && !run.open) run.open = this.#open(id, run.agent, run.cwd)
+      if (!run.paused && !run.open) run.open = this.#open(id, run)
     }
     this.#changed()
   }
@@ -186,14 +212,14 @@ export class TimeTracker {
     }
   }
 
-  #open(sessionId: string, agent: string, cwd: string): OpenPeriod {
+  #open(sessionId: string, run: Pick<Run, 'agent' | 'cwd' | 'task'>): OpenPeriod {
     const at = this.#nowIso()
     return {
       id: this.deps.newId(),
       sessionId,
-      agent,
-      cwd,
-      ...this.deps.resolveSnapshot(cwd),
+      agent: run.agent,
+      cwd: run.cwd,
+      ...withSessionTask(this.deps.resolveSnapshot(run.cwd), run.task, this.deps.pinnedTitle),
       start: at,
       lastSeen: at
     }

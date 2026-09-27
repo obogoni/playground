@@ -49,7 +49,14 @@ interface Harness {
   emits: () => number
 }
 
-function setup(init: { periods?: TimePeriod[]; open?: OpenPeriod[] } = {}): Harness {
+const PINNED = new Map<number, string>([
+  [12345, 'Fix login redirect'],
+  [67890, 'Widget export']
+])
+
+function setup(
+  init: { periods?: TimePeriod[]; open?: OpenPeriod[]; snapshot?: PeriodSnapshotFields } = {}
+): Harness {
   const clock = { now: T0 }
   const store = fakeStore(init)
   const resolved: string[] = []
@@ -61,8 +68,9 @@ function setup(init: { periods?: TimePeriod[]; open?: OpenPeriod[] } = {}): Harn
     newId: () => `p${++ids}`,
     resolveSnapshot: (cwd) => {
       resolved.push(cwd)
-      return SNAPSHOT
+      return init.snapshot ?? SNAPSHOT
     },
+    pinnedTitle: (id) => PINNED.get(id) ?? null,
     emit: () => {
       emits++
     }
@@ -490,5 +498,212 @@ describe('TimeTracker edits', () => {
     expect(t.tracker.adjustPeriod('unknown', iso(T0), iso(T0 + MIN))).toEqual(rejected)
     expect(t.store.rewrites).toHaveLength(rewrites)
     expect(t.emits()).toBe(emits)
+  })
+})
+
+describe('TimeTracker session task link', () => {
+  const LINK = { id: 67890, title: 'Widget export' }
+  /** SNAPSHOT (branch names #12345) with a link to #67890 applied over it. */
+  const LINKED: PeriodSnapshotFields = {
+    ...SNAPSHOT,
+    taskId: 67890,
+    taskTitle: 'Widget export',
+    taskByHand: true
+  }
+
+  const openOf = (t: Harness): OpenPeriod[] => t.tracker.snapshot().open
+
+  it('opens the period of a session started with a task on that task (HTSK-09, HTSK-36)', () => {
+    const t = setup()
+    t.tracker.started({ ...meta('s1'), task: LINK })
+    t.tracker.started({ ...meta('s2'), task: { id: 67890, title: null } })
+
+    expect(openOf(t)).toEqual([
+      {
+        id: 'p1',
+        sessionId: 's1',
+        agent: 'Claude',
+        cwd: 'D:\\acme\\app-12345',
+        ...LINKED,
+        start: iso(T0),
+        lastSeen: iso(T0)
+      },
+      {
+        id: 'p2',
+        sessionId: 's2',
+        agent: 'Claude',
+        cwd: 'D:\\acme\\app-12345',
+        ...LINKED,
+        start: iso(T0),
+        lastSeen: iso(T0)
+      }
+    ])
+  })
+
+  it('records the branch snapshot unchanged, with no flag key, for a session without a task (HTSK-10)', () => {
+    const t = setup()
+    t.tracker.started(meta())
+
+    const [open] = openOf(t)
+    expect(open).toMatchObject(SNAPSHOT)
+    expect('taskByHand' in open).toBe(false)
+  })
+
+  it('closes the open period at the change instant and opens one on the new task at the same instant (HTSK-12)', () => {
+    const t = setup()
+    t.tracker.started(meta())
+    t.advance(10 * MIN)
+    const emits = t.emits()
+
+    t.tracker.taskChanged('s1', LINK)
+
+    expect(t.store.appended).toEqual([
+      {
+        id: 'p1',
+        sessionId: 's1',
+        agent: 'Claude',
+        cwd: 'D:\\acme\\app-12345',
+        ...SNAPSHOT,
+        start: iso(T0),
+        end: iso(T0 + 10 * MIN)
+      }
+    ])
+    const expectedOpen: OpenPeriod = {
+      id: 'p2',
+      sessionId: 's1',
+      agent: 'Claude',
+      cwd: 'D:\\acme\\app-12345',
+      ...LINKED,
+      start: iso(T0 + 10 * MIN),
+      lastSeen: iso(T0 + 10 * MIN)
+    }
+    expect(openOf(t)).toEqual([expectedOpen])
+    expect(t.store.openWrites.at(-1)).toEqual([expectedOpen])
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it('changes nothing when the link is the one the session already has (HTSK-14)', () => {
+    const t = setup()
+    t.tracker.started({ ...meta('s1'), task: LINK })
+    t.tracker.started(meta('s2'))
+    t.advance(10 * MIN)
+    const before = t.tracker.snapshot()
+    const emits = t.emits()
+    const writes = t.store.openWrites.length
+
+    t.tracker.taskChanged('s1', { id: 67890, title: 'Another title' })
+    t.tracker.taskChanged('s2', null)
+
+    expect(t.store.appended).toEqual([])
+    expect(t.tracker.snapshot()).toEqual(before)
+    expect(openOf(t).map((p) => p.id)).toEqual(['p1', 'p2'])
+    expect(t.emits()).toBe(emits)
+    expect(t.store.openWrites).toHaveLength(writes)
+  })
+
+  it("opens the next period on the branch's task when the link is removed (HTSK-13)", () => {
+    const t = setup()
+    t.tracker.started({ ...meta(), task: LINK })
+    t.advance(10 * MIN)
+
+    t.tracker.taskChanged('s1', null)
+
+    expect(t.store.appended.map((p) => [p.id, p.taskId, p.end])).toEqual([
+      ['p1', 67890, iso(T0 + 10 * MIN)]
+    ])
+    const [open] = openOf(t)
+    expect(open).toMatchObject({ id: 'p2', ...SNAPSHOT, start: iso(T0 + 10 * MIN) })
+    expect('taskByHand' in open).toBe(false)
+  })
+
+  it('opens nothing while paused, and the resume opens on the new task (HTSK-15)', () => {
+    const t = setup()
+    t.tracker.started(meta())
+    t.advance(MIN)
+    t.tracker.pause('s1')
+    const appended = t.store.appended.length
+
+    t.tracker.taskChanged('s1', LINK)
+
+    expect(openOf(t)).toEqual([])
+    expect(t.store.appended).toHaveLength(appended)
+
+    t.advance(MIN)
+    t.tracker.resume('s1')
+    expect(openOf(t)).toEqual([
+      expect.objectContaining({ id: 'p2', ...LINKED, start: iso(T0 + 2 * MIN) })
+    ])
+  })
+
+  it('opens nothing while suspended, and the wake opens on the new task (HTSK-15)', () => {
+    const t = setup()
+    t.tracker.started(meta())
+    t.advance(MIN)
+    t.tracker.suspend()
+    const appended = t.store.appended.length
+
+    t.tracker.taskChanged('s1', LINK)
+
+    expect(openOf(t)).toEqual([])
+    expect(t.store.appended).toHaveLength(appended)
+
+    t.advance(MIN)
+    t.tracker.resumeFromSuspend()
+    expect(openOf(t)).toEqual([
+      expect.objectContaining({ id: 'p2', ...LINKED, start: iso(T0 + 2 * MIN) })
+    ])
+  })
+
+  it('changes nothing for a session with no run (HTSK-16)', () => {
+    const t = setup()
+    t.tracker.started(meta('s1'))
+    t.advance(MIN)
+    t.tracker.ended('s1')
+    const before = t.tracker.snapshot()
+    const emits = t.emits()
+    const writes = t.store.openWrites.length
+
+    t.tracker.taskChanged('s1', LINK)
+    t.tracker.taskChanged('never-started', LINK)
+
+    expect(t.tracker.snapshot()).toEqual(before)
+    expect(t.emits()).toBe(emits)
+    expect(t.store.openWrites).toHaveLength(writes)
+  })
+
+  it('discards a part under 1 s and opens the new period (HTSK-12, TIME-11)', () => {
+    const t = setup()
+    t.tracker.started(meta())
+    t.advance(500)
+
+    t.tracker.taskChanged('s1', LINK)
+
+    expect(t.store.appended).toEqual([])
+    expect(t.tracker.snapshot().periods).toEqual([])
+    expect(openOf(t)).toEqual([
+      expect.objectContaining({ id: 'p2', ...LINKED, start: iso(T0 + 500) })
+    ])
+  })
+
+  it('records #12345 with the flag for a link to #12345 in a worktree naming #67890 (HTSK-11, HTSK-36)', () => {
+    const worktree: PeriodSnapshotFields = {
+      workspacePath: 'D:\\acme',
+      repoName: 'app',
+      branch: 'feature/67890-widget-export',
+      taskId: 67890,
+      taskTitle: 'Widget export'
+    }
+    const t = setup({ snapshot: worktree })
+
+    t.tracker.started({ ...meta('s1', 'D:\\acme\\app-67890'), task: { id: 12345, title: null } })
+
+    expect(openOf(t)).toEqual([
+      expect.objectContaining({
+        branch: 'feature/67890-widget-export',
+        taskId: 12345,
+        taskTitle: 'Fix login redirect',
+        taskByHand: true
+      })
+    ])
   })
 })

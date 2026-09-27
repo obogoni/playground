@@ -165,10 +165,10 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Tests: a session started with a task opens a period recording it; one started without a task records the branch snapshot unchanged; `taskChanged` on a running session appends the previous period ending at T and opens a new one starting at T with the new task; the same link changes nothing (no append, no new open id, no emit); `null` opens the next period with the branch's task; while paused and while suspended it opens nothing and the resume opens with the new task; for a session with no run it changes nothing; a change 0.5 s after the open appends nothing and opens the new period (TIME-11); a link to #12345 in a worktree naming #67890 records 12345 with the flag; the sidecar written after the change holds the new open period (L-036)
-- [ ] The existing `setup()` harness gains the `pinnedTitle` dep; no existing test is edited otherwise
-- [ ] Gate check passes: `npx vitest run src/main/time-tracker.test.ts` then `npm test`
-- [ ] Test count: T2 count + the new tests
+- [x] Tests: a session started with a task opens a period recording it; one started without a task records the branch snapshot unchanged; `taskChanged` on a running session appends the previous period ending at T and opens a new one starting at T with the new task; the same link changes nothing (no append, no new open id, no emit); `null` opens the next period with the branch's task; while paused and while suspended it opens nothing and the resume opens with the new task; for a session with no run it changes nothing; a change 0.5 s after the open appends nothing and opens the new period (TIME-11); a link to #12345 in a worktree naming #67890 records 12345 with the flag; the sidecar written after the change holds the new open period (L-036)
+- [x] The existing `setup()` harness gains the `pinnedTitle` dep; no existing test is edited otherwise
+- [x] Gate check passes: `npx vitest run src/main/time-tracker.test.ts` then `npm test`
+- [x] Test count: T2 count + the new tests
 
 **Tests**: unit
 **Gate**: quick

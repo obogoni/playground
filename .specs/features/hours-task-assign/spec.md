@@ -217,14 +217,14 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | HTSK-06 | P1: picker — AC 6 | Execute | Implementing: T2 |
 | HTSK-07 | P1: session — AC 7 | Tasks | In Tasks |
 | HTSK-08 | P1: session — AC 8 | Tasks | In Tasks |
-| HTSK-09 | P1: session — AC 9 | Tasks | In Tasks |
-| HTSK-10 | P1: session — AC 10 | Execute | Implementing: T2 |
-| HTSK-11 | P1: session — AC 11 | Execute | Implementing: T2 |
-| HTSK-12 | P1: session — AC 12 | Tasks | In Tasks |
-| HTSK-13 | P1: session — AC 13 | Tasks | In Tasks |
-| HTSK-14 | P1: session — AC 14 | Tasks | In Tasks |
-| HTSK-15 | P1: session — AC 15 | Tasks | In Tasks |
-| HTSK-16 | P1: session — AC 16 | Tasks | In Tasks |
+| HTSK-09 | P1: session — AC 9 | Execute | Implementing: T3 |
+| HTSK-10 | P1: session — AC 10 | Execute | Implementing: T2, T3 |
+| HTSK-11 | P1: session — AC 11 | Execute | Implementing: T2, T3 |
+| HTSK-12 | P1: session — AC 12 | Execute | Implementing: T3 |
+| HTSK-13 | P1: session — AC 13 | Execute | Implementing: T3 |
+| HTSK-14 | P1: session — AC 14 | Execute | Implementing: T3 |
+| HTSK-15 | P1: session — AC 15 | Execute | Implementing: T3 |
+| HTSK-16 | P1: session — AC 16 | Execute | Implementing: T3 |
 | HTSK-17 | P1: session — AC 17 | Tasks | In Tasks |
 | HTSK-18 | P1: session — AC 18 | Tasks | In Tasks |
 | HTSK-19 | P1: session — AC 19 | Tasks | In Tasks |
@@ -244,8 +244,8 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | HTSK-33 | P1: drawer — AC 33 | Tasks | In Tasks |
 | HTSK-34 | P1: drawer — AC 34 | Tasks | In Tasks |
 | HTSK-35 | P1: drawer — AC 35 | Tasks | In Tasks |
-| HTSK-36 | P1: mark — AC 36 | Execute | Implementing: T2 |
-| HTSK-37 | P1: mark — AC 37 | Execute | Implementing: T2 |
+| HTSK-36 | P1: mark — AC 36 | Execute | Implementing: T2, T3 |
+| HTSK-37 | P1: mark — AC 37 | Execute | Implementing: T2, T3 |
 | HTSK-38 | P1: mark — AC 38 | Tasks | In Tasks |
 | HTSK-39 | P1: mark — AC 39 | Tasks | In Tasks |
 | HTSK-40 | P1: reports — AC 40 | Tasks | In Tasks |

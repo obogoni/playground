@@ -442,23 +442,26 @@ app.whenReady().then(() => {
 
   // Time tracking (AD-021). The tracker must recover the periods a crash left
   // open before SessionManager exists, so no new run can mix with them.
+  // Pinned task id → cached title, first pin with details of an id (TIME-03, HTSK-06).
+  const pinnedTitles = (): Map<number, string> => {
+    const titles = new Map<number, string>()
+    for (const task of taskBoard.list().tasks) {
+      if (task.details && !titles.has(task.id)) titles.set(task.id, task.details.title)
+    }
+    return titles
+  }
   const tracker = new TimeTracker({
     store: new TimeLogStore(app.getPath('userData')),
     now: Date.now,
     newId: randomUUID,
-    resolveSnapshot: (cwd) => {
-      const pinnedTitles = new Map<number, string>()
-      for (const task of taskBoard.list().tasks) {
-        if (task.details && !pinnedTitles.has(task.id))
-          pinnedTitles.set(task.id, task.details.title)
-      }
-      return buildSnapshot({
+    resolveSnapshot: (cwd) =>
+      buildSnapshot({
         cwd,
         ...readGit(cwd),
         workspacePaths: registry.list().map((ws) => ws.path),
-        pinnedTitles
-      })
-    },
+        pinnedTitles: pinnedTitles()
+      }),
+    pinnedTitle: (id) => pinnedTitles().get(id) ?? null,
     emit: () => emitToWindow('time:changed', { at: new Date().toISOString() })
   })
   tracker.recover()
