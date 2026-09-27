@@ -5,6 +5,7 @@ import type { PeriodTaskChoice } from '../../../shared/time'
 import { api } from '../lib/api'
 import { lookupEntry, pickerEntries, type LookupEntry } from '../lib/task-picker'
 import { typeClass } from '../lib/task-pills'
+import './TaskPicker.css'
 
 interface TaskPickerProps {
   /** The pinned tasks, as the Tasks pane holds them. */

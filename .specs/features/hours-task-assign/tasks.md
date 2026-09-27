@@ -580,7 +580,7 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run lint && npx electron-vite build`
+- [x] Gate check passes: `npm run lint && npx electron-vite build`. Batch-end Full gate also run: typecheck clean, lint 0 errors / 18 warnings, 1794 tests / 95 files, electron-vite build OK
 
 **Tests**: none
 **Gate**: build

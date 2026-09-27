@@ -209,7 +209,7 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| HTSK-01 | P1: picker — AC 1 | Execute | Implementing: T13, T18 |
+| HTSK-01 | P1: picker — AC 1 | Execute | Implementing: T13, T18, T19 |
 | HTSK-02 | P1: picker — AC 2 | Execute | Implementing: T8, T9, T10, T13, T18 |
 | HTSK-03 | P1: picker — AC 3 | Execute | Implemented: T18 |
 | HTSK-04 | P1: picker — AC 4 | Execute | Implemented: T8, T18 |
