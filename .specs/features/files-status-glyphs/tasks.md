@@ -255,9 +255,17 @@ T7 → T8 → T9 → T10
 
 **Done when**:
 
-- [ ] `grep -rn "file-tree-pill" src scripts` finds nothing (L-053)
-- [ ] Row height unchanged (file-icons measured 23.3 px; a hand read in the dev app is enough here, T9 reads the glyph geometry)
-- [ ] Gate check passes: `npm run lint && npx electron-vite build`
+- [x] `grep -rn "file-tree-pill" src scripts` finds nothing (L-053)
+- [x] Row height unchanged (file-icons measured 23.3 px; a hand read in the dev app is enough here, T9 reads the glyph geometry)
+- [x] Gate check passes: `npm run lint && npx electron-vite build`
+
+**Result (2026-09-27)**: The grep exits 1 with no output. Deviation: the orchestrator replaced the hand read of row height with a note measured from code; batch 2's smoke measures the geometry. The rules that set a file row's height are unchanged:
+- the row's `padding: 4px 8px` and `align-items: center` (`FileTree.css:87-98`, untouched);
+- the name's 11.5 px font (`FileTree.css:104-113`, untouched);
+- the icon's 16 px box with `margin: -1px 0` (`FileIcon.css`, untouched);
+- the glyph's 10 px font, which moved from `.file-tree-pill` to `.status-glyph` (`StatusGlyph.css:11`) with the same value.
+
+The new `.file-tree-end` wrapper adds no padding, height or vertical margin; its `gap` and `margin-left` are horizontal. Lint: exit 0, 0 errors, 18 warnings, unchanged. `npx electron-vite build`: exit 0.
 
 **Tests**: none
 **Gate**: build

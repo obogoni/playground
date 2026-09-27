@@ -124,38 +124,19 @@
   transform: none;
 }
 
-.file-tree-pill {
+/* A deleted file's name, and only the name, is struck (FSTS-13/14). */
+.file-tree-name.struck {
+  text-decoration: line-through;
+}
+
+/* The row's last group: the status glyph, flush with the row's right padding
+   whatever the depth (FSTS-01/02). The discard action (#132) goes before it. */
+.file-tree-end {
   flex: none;
-  width: 16px;
-  text-align: center;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.file-tree-pill.modified {
-  background: color-mix(in oklab, var(--amber) 16%, transparent);
-  color: var(--amber);
-}
-
-.file-tree-pill.added {
-  background: color-mix(in oklab, var(--green) 16%, transparent);
-  color: var(--green);
-}
-
-.file-tree-pill.deleted {
-  background: color-mix(in oklab, var(--red) 16%, transparent);
-  color: var(--red);
-}
-
-.file-tree-pill.renamed {
-  background: color-mix(in oklab, var(--accent) 16%, transparent);
-  color: var(--accent);
-}
-
-.file-tree-pill.untracked {
-  background: color-mix(in oklab, var(--text-faint) 20%, transparent);
-  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
 }
 
 .file-tree-note {
