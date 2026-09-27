@@ -801,10 +801,10 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Setup step done in this worktree (see top)
-- [ ] The existing 52 checks still pass on the new seed
-- [ ] A seed missing the `develop` period is refused with `not running on the seeded data`
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Setup step done in this worktree (see top)
+- [x] The existing 52 checks still pass on the new seed (52/52)
+- [x] A seed missing the `develop` period is refused with `not running on the seeded data`
+- [x] Gate check passes: `npm run lint` (warning count unchanged: 0 errors / 18 warnings)
 
 **Tests**: manual
 **Gate**: manual

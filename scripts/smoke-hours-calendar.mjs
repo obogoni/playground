@@ -40,10 +40,36 @@
  *      week says it has no time for it, keeping the chip at 0h00 with the
  *      neutral swatch and its ×; the × and a second click clear it; no
  *      bar changes colour throughout (HTF-07..15)
+ *  13. on the seeded `develop` Wednesday two weeks back: `Split at` starts on
+ *      the period's midpoint; splitting at its start is refused and splitting
+ *      at 10:00 gives two periods on `develop`; the parts moved to #9201 and
+ *      #9202 regroup the day and the legend and wear the hand mark naming
+ *      `develop`; From branch moves a part back to No task with no mark and no
+ *      flag; a running row offers neither Change task nor Split at, a closed
+ *      one both (HTSK-23, 25..29, 33..40)
+ *  14. the C:/Windows session, detached, is linked to #9201 from its rail
+ *      row's `Change task…` menu (no `No task` offered): its row moves under
+ *      #9201, its open period is closed and reopened on 9201 with the flag, the
+ *      link is saved in the config, choosing it again changes nothing, and the
+ *      strip's From branch puts everything back (HTSK-11..14, 17..19)
+ *  15. the new-session dialog starts on `From branch` from Agents and on #9202
+ *      from #9202's Agent button; an ad-hoc spawn in the #9202 worktree with
+ *      #9201 chosen records 9201 with the flag on `feature/9202-seed` and sits
+ *      under #9201; its strip's From branch records 9202 with no flag and moves
+ *      it under #9202 (HTSK-07..11, 13, 36)
  *
  * NOT automatable here: keyboard focus showing the tooltip, and the two-theme
  * look. The ad-hoc sessions carry no task, so every task colour is read on the
  * seeded Sunday.
+ *
+ * Verify by hand (sections 13 to 15 cannot reach these):
+ *   - the picker's typed lookup: a work item number shows one `{type} #{id}
+ *     {title}` row, a bad one shows main's error text, and choosing the row
+ *     pins nothing (HTSK-02..05); the smoke never types there, since it would
+ *     reach Azure DevOps
+ *   - a linked session's notification names the linked task (HTSK-21)
+ *   - a session's link survives a real app restart (HTSK-17)
+ *   - the hand mark's look, in the light and the dark theme (HTSK-38)
  *
  * The sessions are ad-hoc `pwsh` in C:/Windows and C:/Windows/System32 — never a
  * registry agent, which on a machine with the CLI installed starts a real agent.
@@ -52,15 +78,21 @@
  *
  * It runs only on its own throwaway data, never on the owner's hours:
  *   1. node scripts/smoke-hours-calendar.mjs --seed
- *        writes a tall past Sunday into a new directory under %TEMP% and
- *        prints the next command
+ *        writes a tall past Sunday into a new directory under %TEMP%, plus a
+ *        git repo `ws/acme-widgets` on `develop` with a worktree
+ *        `wt/acme-widgets-9202` on `feature/9202-seed`, a config registering
+ *        `ws` and pinning acme/platform #9201 and #9202, and a closed 09:00 to
+ *        12:00 period on `develop` two Wednesdays back; prints the next command
  *   2. npm run dev -- -- "--user-data-dir=<that directory>" --remote-debugging-port=9222
+ *        --disable-renderer-backgrounding --disable-backgrounding-occluded-windows
+ *        --disable-background-timer-throttling
  *   3. node scripts/smoke-hours-calendar.mjs
  *        refuses with `not running on the seeded data` unless every seeded
  *        period is in the app; on a pass it closes the app and deletes the
  *        directory, on a failure it leaves both and prints the directory
  */
 
+import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -220,6 +252,9 @@ const SEED_TITLES = [
   'Fix the timezone offset'
 ]
 const seedId = (i) => `hours-smoke-seed-${String(i + 1).padStart(2, '0')}`
+// The `develop` period sections 13 and 14 split and reassign, and the two pins they choose.
+const DEVELOP_ID = 'hours-smoke-develop'
+const PINS = [9201, 9202]
 
 if (process.argv.includes('--seed')) {
   const dir = join(TEMP, `playground-smoke-hours-${Date.now()}`)
@@ -246,11 +281,64 @@ if (process.argv.includes('--seed')) {
       taskTitle: title
     })
   })
-  mkdirSync(dir)
+  // A repo on `develop` with a worktree for #9202, in a workspace the config
+  // registers. Fictitious author and ids only.
+  const ws = join(dir, 'ws')
+  const repo = join(ws, 'acme-widgets')
+  const worktree = join(dir, 'wt', 'acme-widgets-9202')
+  mkdirSync(repo, { recursive: true })
+  mkdirSync(join(dir, 'wt'))
+  const git = (...args) => execFileSync('git', args, { cwd: repo, stdio: 'pipe' })
+  git('init', '-b', 'develop')
+  git(
+    '-c',
+    'user.name=Acme Seed',
+    '-c',
+    'user.email=seed@example.com',
+    'commit',
+    '--allow-empty',
+    '-m',
+    'Seed'
+  )
+  git('worktree', 'add', '-b', 'feature/9202-seed', worktree)
+  writeFileSync(
+    join(dir, 'config.json'),
+    JSON.stringify({
+      workspaces: [{ id: ws.toLowerCase(), path: ws, displayName: 'ws' }],
+      pinnedTasks: PINS.map((id) => ({
+        id,
+        org: 'acme',
+        project: 'platform',
+        url: `https://dev.azure.com/acme/platform/_workitems/edit/${id}`
+      }))
+    })
+  )
+  const wednesday = weekDay(-2, 2)
+  const at = (h) => new Date(wednesday.getFullYear(), wednesday.getMonth(), wednesday.getDate(), h)
+  lines.push(
+    JSON.stringify({
+      v: 1,
+      id: DEVELOP_ID,
+      sessionId: 'hours-smoke-develop',
+      agent: 'Ad-hoc',
+      cwd: repo,
+      start: at(9).toISOString(),
+      end: at(12).toISOString(),
+      workspacePath: ws,
+      repoName: 'acme-widgets',
+      branch: 'develop',
+      taskId: null,
+      taskTitle: null
+    })
+  )
   writeFileSync(join(dir, 'time-log.jsonl'), lines.join('\n') + '\n')
   writeFileSync(POINTER, dir)
-  console.log(`Seeded ${lines.length} periods on ${dayHeader(sunday)} in ${dir}`)
-  console.log(`Launch: npm run dev -- -- "--user-data-dir=${dir}" --remote-debugging-port=${PORT}`)
+  console.log(
+    `Seeded ${lines.length} periods (${dayHeader(sunday)}, ${dayHeader(wednesday)}) in ${dir}`
+  )
+  console.log(
+    `Launch: npm run dev -- -- "--user-data-dir=${dir}" --remote-debugging-port=${PORT} --disable-renderer-backgrounding --disable-backgrounding-occluded-windows --disable-background-timer-throttling`
+  )
   process.exit(0)
 }
 
@@ -267,7 +355,9 @@ await waitFor(`typeof window.api !== 'undefined'`, 'the preload bridge')
 // Refuse anything but the seeded directory, before a session or a write.
 const seededDir = existsSync(POINTER) ? readFileSync(POINTER, 'utf8').trim() : null
 const snapshotIds = new Set((await invoke('time:snapshot')).periods.map((p) => p.id))
-const missingSeed = SEED_TITLES.map((_, i) => seedId(i)).filter((id) => !snapshotIds.has(id))
+const missingSeed = [...SEED_TITLES.map((_, i) => seedId(i)), DEVELOP_ID].filter(
+  (id) => !snapshotIds.has(id)
+)
 if (!seededDir || missingSeed.length > 0) {
   console.error(
     `not running on the seeded data — ${!seededDir ? `no ${POINTER}` : `${missingSeed.length} seeded periods missing`}; run with --seed first`
