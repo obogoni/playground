@@ -27,6 +27,11 @@ interface AllChangesTabProps {
   refreshToken: number
   /** The stack's own navigation, for the tab strip's buttons and keys (FDIF-26). */
   onHandle?: (handle: DiffHandle | null) => void
+  /**
+   * Offers each section header's ↶ for its file (FDSC-38). Only the uncommitted
+   * stack passes it; a commit tab never does (FDSC-41).
+   */
+  onDiscard?: (changed: ChangedPath) => void
 }
 
 /** The mode's list in the tree's order — the order the user just read on the left. */
@@ -66,7 +71,8 @@ export function AllChangesTab({
   layout,
   ignoreWhitespace,
   refreshToken,
-  onHandle
+  onHandle,
+  onDiscard
 }: AllChangesTabProps): JSX.Element {
   const ordered = useMemo(() => inTreeOrder(files), [files])
   const shown = useMemo(() => {
@@ -314,6 +320,7 @@ export function AllChangesTab({
             onToggle={onToggle}
             onElement={onElement}
             onHandle={onSectionHandle}
+            onDiscard={onDiscard}
           />
         ))}
       </div>

@@ -565,7 +565,7 @@ async function drive() {
     ws,
     `({
        sections: document.querySelectorAll('.diff-section').length,
-       expanded: [...document.querySelectorAll('.diff-section-header')]
+       expanded: [...document.querySelectorAll('.diff-section-toggle')]
          .filter((e) => e.getAttribute('aria-expanded') === 'true').length,
        files: document.querySelector('.all-changes-files')?.textContent?.trim() ?? null,
        added: document.querySelector('.all-changes-added')?.textContent?.trim() ?? null,
@@ -584,7 +584,7 @@ async function drive() {
   const expandedForCap = await evaluate(
     ws,
     `(() => {
-       const heads = [...document.querySelectorAll('.diff-section-header')]
+       const heads = [...document.querySelectorAll('.diff-section-toggle')]
          .filter((h) => h.getAttribute('aria-expanded') === 'false')
        heads.slice(0, 20).forEach((h) => h.click())
        return heads.slice(0, 20).length
@@ -594,7 +594,7 @@ async function drive() {
   const afterExpand = await evaluate(
     ws,
     `({
-       expanded: [...document.querySelectorAll('.diff-section-header')]
+       expanded: [...document.querySelectorAll('.diff-section-toggle')]
          .filter((e) => e.getAttribute('aria-expanded') === 'true').length,
        editors: ${liveDiffEditors}
      })`
@@ -660,7 +660,7 @@ async function drive() {
   await evaluate(
     ws,
     `(() => {
-       const heads = [...document.querySelectorAll('.diff-section-header')]
+       const heads = [...document.querySelectorAll('.diff-section-toggle')]
          .filter((h) => h.getAttribute('aria-expanded') === 'true')
        heads.slice(2).forEach((h) => h.click())
        const el = document.querySelector('.all-changes-stack')
@@ -672,7 +672,7 @@ async function drive() {
   const navBefore = await evaluate(
     ws,
     `({
-       expanded: [...document.querySelectorAll('.diff-section-header')]
+       expanded: [...document.querySelectorAll('.diff-section-toggle')]
          .filter((e) => e.getAttribute('aria-expanded') === 'true').length,
        scrollTop: Math.round(document.querySelector('.all-changes-stack')?.scrollTop ?? -1)
      })`
@@ -700,7 +700,7 @@ async function drive() {
   const navAfter = await evaluate(
     ws,
     `({
-       expanded: [...document.querySelectorAll('.diff-section-header')]
+       expanded: [...document.querySelectorAll('.diff-section-toggle')]
          .filter((e) => e.getAttribute('aria-expanded') === 'true').length,
        scrollTop: Math.round(document.querySelector('.all-changes-stack')?.scrollTop ?? -1)
      })`

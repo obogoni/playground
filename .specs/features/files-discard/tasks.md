@@ -553,9 +553,9 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] `grep -n "diff-section-header" scripts/*.mjs` shows no read of `aria-expanded` or `.click()` left on the container (L-053); #131's header checks still find the glyph inside `.diff-section-header`, last
-- [ ] `CommitTab.tsx:43` unchanged: it passes no `onDiscard` (FDSC-41)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `grep -n "diff-section-header" scripts/*.mjs` shows no read of `aria-expanded` or `.click()` left on the container (L-053); #131's header checks still find the glyph inside `.diff-section-header`, last
+- [x] `CommitTab.tsx:43` unchanged: it passes no `onDiscard` (FDSC-41)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full
