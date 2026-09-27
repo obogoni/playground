@@ -133,6 +133,12 @@ T7 → T8 → T9 → T10
 T10 → T11 → T12 → T13 → T14
 ```
 
+### Phase 6: Fix round 2
+
+```
+T14 → T15 → T16 → T17
+```
+
 ---
 
 ## Task Breakdown
@@ -578,16 +584,96 @@ The `display: none` branch was not falsified on its own. `git status --porcelain
 
 ---
 
+## Fix round 2 (Verifier FAIL on evidence, 2026-09-27)
+
+The Verifier's round 2 (`validation.md`) failed on smoke evidence only; the production code is correct. Its mutants R5 and R5h (the name or path without `overflow: hidden`, `text-overflow` kept) survive the ellipsis checks, because the computed `text-overflow` holds whether or not an ellipsis is drawn. R7 (commit tabs only: the path clips bare) survives because no path of the branch commit is ever cut. The owner decided on 2026-09-27: seed a long path into the branch commit, so the commit tab's ellipsis is really checked, and add a criterion that a name or path that fits shows whole. All three fixes are in `scripts/smoke-files-diff.mjs`, plus `spec.md` for T17, and each runs in the full drive and under `SMOKE_ONLY=glyphs`.
+
+### T15: The cut name and path draw their ellipsis
+
+**What**: `treeRows` and `stackHeaders` also read the computed `overflowX` and `whiteSpace` of the name or path. One `ellipsisFaults(item)` helper holds the rule for a drawn ellipsis: `scrollWidth > clientWidth` (the precondition), computed `textOverflow === 'ellipsis'`, `overflowX` `hidden` or `clip`, and `whiteSpace === 'nowrap'`. The tree's ellipsis check (T9 check 5) and the header's (T10 check 5) require it empty on the cut element.
+**Where**: `scripts/smoke-files-diff.mjs`
+**Depends on**: T14
+**Reuses**: T13's reads; the Verifier's `cutStyle` probe (`fv2_build_probe.py`)
+**Requirement**: FSTS-04, FSTS-20
+
+**Done when**:
+
+- [x] The Verifier's mutant R5 (`.file-tree-name` without `overflow: hidden`, `text-overflow` kept) fails the tree check, and R5h (the same on `.diff-section-path`) fails the header check
+- [x] S10 (`text-overflow: ellipsis` removed from `.file-tree-name`) still fails the tree check, and the workers' clipping mutants (T9 e, T10 e) still fail theirs
+- [x] Gate check passes: `npm run lint` (0 errors, 18 warnings)
+
+**Result (2026-09-27)**: `treeRows` and `stackHeaders` now also read the computed `overflowX` and `whiteSpace` of the name or path. `ellipsisFaults(item)` holds the rule for a drawn ellipsis: the item overflows, computes `text-overflow: ellipsis`, clips (`overflow-x` hidden or clip) and does not wrap (`white-space: nowrap`). The tree's ellipsis check (focused 5) and the header's (focused 13) require it empty, and their logs show all four values. Focused run on HEAD: 16 / 16 in 33 s, where 5 reads `overflows true, text-overflow ellipsis, overflow-x hidden, white-space nowrap` and 13 reads the same at 900 px. Mutants, one focused run each (`fr2_mutants.py`, logs `fr2-t15-<id>-drive.log`):
+- R5 (`.file-tree-name` without `overflow: hidden`): fails 5 only, `overflow-x visible`.
+- R5h (the same on `.diff-section-path`): fails 13 only, `overflow-x visible`.
+- S10 (`text-overflow: ellipsis` removed from the name): fails 5 only, `text-overflow clip`.
+- S10h (the same on the path): fails 13 only, `text-overflow clip`.
+- T9 e (the name without `min-width: 0` / `overflow: hidden`): fails 4 and 5, as before.
+- T10 e (the path `flex: none`): fails 13 only, as before (`overflows false` down to 600 px).
+
+`git status --porcelain` matched the baseline after each. Lint: exit 0, 0 errors, 18 warnings, unchanged.
+
+**Tests**: manual
+**Gate**: manual
+
+**Commit**: `test(files): require a drawn ellipsis on a cut name and path`
+
+---
+
+### T16: A cut path in a commit tab
+
+**What**: `seed()` adds `docs/an-unusually-long-guide-name-that-a-commit-tab-header-has-to-cut-before-its-glyph.md` (fictional, 3 lines) to the branch commit (`work on the branch`), so diff to origin and the commit tab list 45 files. `ORIGIN_STATUS` gains it as `added`, and every check that counts diff-to-origin files or statuses reads that map. A new commit tab check narrows the window with CDP `Emulation.setDeviceMetricsOverride`, as T10 check 5 does (900 px, stepping down to 600 px until the path is cut), clears it in a `finally`, and requires the long path's `.diff-section-path` to pass T15's `ellipsisFaults` and the commit stack's `headerFaults` to be empty at that width.
+**Where**: `scripts/smoke-files-diff.mjs`
+**Depends on**: T15
+**Reuses**: T10 check 5's narrowing, T15's `ellipsisFaults`, T11's commit tab section
+**Requirement**: FSTS-20, FSTS-21
+
+**Done when**:
+
+- [ ] The Verifier's mutant R7 (commit tabs only: the path `style={{ textOverflow: 'clip' }}`) fails the new check
+- [ ] A header column mutant (T10 c) still fails the commit tab checks
+- [ ] The seed stays fictitious; the full drive on the new seed runs once, at T17 (owner rule)
+- [ ] Gate check passes: `npm run lint` (0 errors, 18 warnings)
+
+**Tests**: manual
+**Gate**: manual
+
+**Commit**: `test(files): cut a long path in a commit tab's header`
+
+---
+
+### T17: A name or path that fits shows whole
+
+**What**: In `spec.md`, FSTS-22 (tree story, after AC 4) and FSTS-23 (header story, after AC 20): WHEN a name or path fits the space its row or header leaves THEN it SHALL show whole, with no ellipsis; both in the traceability table, and an Assumptions row `owner confirmed 2026-09-27`. In the smoke, `treeRows` and `stackHeaders` also read, per name or path, its natural width (`scrollWidth`), its shown width (`clientWidth`) and the space its row or header leaves: from the text's left edge to the end group's left edge, less the row's gap and any element between them (the counts). The space is read from the siblings, not from the text's own box. A new tree check (both lists) and a new header check (both stacks) take every name or path whose natural width fits that space and require `scrollWidth <= clientWidth`. Preconditions: at least 47 file rows and 47 headers fit (every seeded file but the two long ones), and the long untracked name does not fit its row.
+**Where**: `.specs/features/files-status-glyphs/spec.md`, `scripts/smoke-files-diff.mjs`
+**Depends on**: T16
+**Reuses**: `treeRows`, `stackHeaders`; the Verifier's mutant R6
+**Requirement**: FSTS-22, FSTS-23
+
+**Done when**:
+
+- [ ] `python <skill-dir>/scripts/validate_spec.py files-status-glyphs` reports 0 errors
+- [ ] The Verifier's mutant R6 (`.file-tree-name { max-width: 40px }`) fails the tree check, and its header twin R6h (`.diff-section-path { max-width: 40px }`) fails the header check
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`, `npx electron-vite build`, and one full drive on a fresh seed and a fresh `--user-data-dir`, every check passing
+- [ ] `spec.md` traceability: FSTS-04, 20, 21, 22 and 23 read `Implementing`, naming their checks
+
+**Tests**: manual
+**Gate**: full
+
+**Commit**: `test(files): check that a name or path that fits shows whole`
+
+---
+
 ## Phase Execution Map
 
 ```
-Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5
+Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6
 
 Phase 1:  T1 ------→ T2 ------→ T3
 Phase 2:  T3 ------→ T4 ------→ T5
 Phase 3:  T5 ------→ T6 ------→ T7
 Phase 4:  T7 ------→ T8 ------→ T9 ------→ T10
 Phase 5:  T10 -----→ T11 -----→ T12 -----→ T13 -----→ T14
+Phase 6:  T14 -----→ T15 -----→ T16 -----→ T17
 ```
 
 Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent offer is made first. The Verifier runs after T10.
@@ -612,6 +698,9 @@ Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent of
 | T12: header tones | 1 smoke check | ✅ Granular |
 | T13: ellipsis | 2 smoke checks tightened | ✅ Granular |
 | T14: painted glyphs | 2 smoke checks | ✅ Granular |
+| T15: drawn ellipsis | 2 smoke checks tightened | ✅ Granular |
+| T16: commit tab cut path | 1 seed file + 1 smoke check | ✅ Granular |
+| T17: fitting text whole | 2 ACs + 2 smoke checks | ✅ Granular |
 
 ## Diagram-Definition Cross-Check
 
@@ -631,6 +720,9 @@ Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent of
 | T12 | T11 | T11 → T12 | ✅ Match |
 | T13 | T12 | T12 → T13 | ✅ Match |
 | T14 | T13 | T13 → T14 | ✅ Match |
+| T15 | T14 | T14 → T15 | ✅ Match |
+| T16 | T15 | T15 → T16 | ✅ Match |
+| T17 | T16 | T16 → T17 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -650,13 +742,16 @@ Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent of
 | T12 | end to end | manual | manual | ✅ OK |
 | T13 | end to end | manual | manual | ✅ OK |
 | T14 | end to end | manual | manual | ✅ OK |
+| T15 | end to end | manual | manual | ✅ OK |
+| T16 | end to end (seed) | manual | manual | ✅ OK |
+| T17 | end to end | manual | manual | ✅ OK |
 
 ## Requirement Coverage
 
 | Requirement | Tasks | Evidence planned |
 | ----------- | ----- | ---------------- |
 | FSTS-01, 02, 03 | T4, T5, T9 | T9 checks 3 and 4 |
-| FSTS-04 | T5, T8, T9, T13 | T9 check 5, with the ellipsis (T13) |
+| FSTS-04 | T5, T8, T9, T13, T15 | T9 check 5, with the drawn ellipsis (T13, T15) |
 | FSTS-05 | T4, T9 | T9 check 6 |
 | FSTS-06..10 | T1, T2, T9, T12, T14 | T1 unit table; T9 checks 1, 2, 4; header tones (T12); painted glyphs (T14) |
 | FSTS-11 | T1, T3, T9, T10 | T1 unit table; T9 checks 1, 4; T10 checks 1, 3 |
@@ -666,6 +761,8 @@ Ten tasks: two batches (Phases 1–2, Phases 3–4). At Execute the sub-agent of
 | FSTS-16, 18 | T6, T7, T10 | T10 checks 1, 2 |
 | FSTS-17 | T7, T8, T10 | T10 check 3 |
 | FSTS-19 | T6, T7, T10 | T10 check 4 |
-| FSTS-20 | T7, T8, T10, T13 | T10 check 5, with the ellipsis (T13) |
-| FSTS-21 | T6, T10, T11 | the commit tab check (T11) |
+| FSTS-20 | T7, T8, T10, T13, T15, T16 | T10 check 5, with the drawn ellipsis (T13, T15); the commit tab's cut path (T16) |
+| FSTS-21 | T6, T10, T11, T16 | the commit tab check (T11) and its cut path (T16) |
+| FSTS-22 | T17 | the tree's fitting names check (T17) |
+| FSTS-23 | T17 | the headers' fitting paths check (T17) |
 | Edge cases | T9, T10 | T9 check 4 (depths, U in uncommitted); T10 check 3 (no counts) |

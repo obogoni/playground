@@ -925,8 +925,11 @@ const treeRows = `
       right: glyph ? glyph.getBoundingClientRect().right : null,
       edge: box.right - parseFloat(getComputedStyle(row).paddingRight),
       overflows: name ? name.scrollWidth > name.clientWidth : null,
-      // FSTS-04: a cut name ends in an ellipsis, not a bare clip.
+      // FSTS-04: a cut name ends in an ellipsis, not a bare clip. The ellipsis is
+      // drawn only on a box that clips and does not wrap (see ellipsisFaults).
       ellipsis: name ? getComputedStyle(name).textOverflow : null,
+      overflowX: name ? getComputedStyle(name).overflowX : null,
+      whiteSpace: name ? getComputedStyle(name).whiteSpace : null,
       struck: (${STRUCK})(row).map((e) => (e === name ? 'name' : e === row ? 'row' : e.className)),
       unpainted: glyph ? (${UNPAINTED})(glyph) : []
     }
@@ -999,6 +1002,29 @@ function toneFaultsOf(lists) {
   }
   return { faults, seen }
 }
+
+/**
+ * Why a name or path is not cut with a drawn ellipsis, empty when it is (FSTS-04,
+ * FSTS-20). It must overflow (the precondition) and compute `text-overflow:
+ * ellipsis`; but that value holds whether or not an ellipsis is drawn, and
+ * Chromium draws one only on a box that clips (`overflow` hidden or clip) and
+ * keeps its text on one line (`white-space: nowrap`).
+ */
+function ellipsisFaults(item) {
+  if (!item) return ['not read']
+  const why = []
+  if (item.overflows !== true) why.push(`overflows ${item.overflows}`)
+  if (item.ellipsis !== 'ellipsis') why.push(`text-overflow ${item.ellipsis}`)
+  if (item.overflowX !== 'hidden' && item.overflowX !== 'clip') {
+    why.push(`overflow-x ${item.overflowX}`)
+  }
+  if (item.whiteSpace !== 'nowrap') why.push(`white-space ${item.whiteSpace}`)
+  return why
+}
+
+/** How a cut name or path reads, for a check's log line. */
+const cutDetail = (item) =>
+  `overflows ${item?.overflows}, text-overflow ${item?.ellipsis}, overflow-x ${item?.overflowX}, white-space ${item?.whiteSpace}`
 
 /** Items without a glyph, or whose glyph is not painted (FSTS-06..10: the glyph reads). */
 const paintFaults = (items) =>
@@ -1106,11 +1132,11 @@ async function glyphTreeChecks(ws) {
   // 5. The long name is cut with an ellipsis, and its glyph keeps the column.
   const longRow = row(uncommitted, `src/${LONG_NAME}`)
   const longColumn = longRow ? columnFaults([longRow, ...uncommittedFiles]) : ['no row']
+  const longCut = ellipsisFaults(longRow)
   check(
     'A name too long for its row is cut with an ellipsis and its glyph keeps the column (FSTS-04)',
-    longRow?.overflows === true && longRow?.ellipsis === 'ellipsis' && longColumn.length === 0,
-    `overflows ${longRow?.overflows}, text-overflow ${longRow?.ellipsis}` +
-      (longColumn.length ? `; ${longColumn.join('; ')}` : '')
+    longCut.length === 0 && longColumn.length === 0,
+    cutDetail(longRow) + (longColumn.length ? `; ${longColumn.join('; ')}` : '')
   )
 
   // 6. No folder row carries a glyph.
@@ -1173,8 +1199,10 @@ const stackHeaders = `
       edge: box.right - parseFloat(getComputedStyle(header).paddingRight),
       counts: counts ? Math.round(counts.getBoundingClientRect().width * 10) / 10 : null,
       overflows: path ? path.scrollWidth > path.clientWidth : null,
-      // FSTS-20: a cut path ends in an ellipsis, not a bare clip.
+      // FSTS-20: a cut path ends in an ellipsis, not a bare clip (see ellipsisFaults).
       ellipsis: path ? getComputedStyle(path).textOverflow : null,
+      overflowX: path ? getComputedStyle(path).overflowX : null,
+      whiteSpace: path ? getComputedStyle(path).whiteSpace : null,
       struck: (${STRUCK})(header).map((e) =>
         e === path ? 'path' : e === header ? 'header' : e.className
       ),
@@ -1288,11 +1316,10 @@ async function glyphHeaderChecks(ws) {
   const narrowColumn = narrowed ? headerFaults(narrowed) : ['nothing read']
   check(
     'A path too long for its header is cut with an ellipsis and its glyph keeps the column (FSTS-20)',
-    long?.overflows === true &&
-      long?.ellipsis === 'ellipsis' &&
+    ellipsisFaults(long).length === 0 &&
       narrowed.length === Object.keys(UNCOMMITTED_STATUS).length &&
       narrowColumn.length === 0,
-    `at ${atWidth} px: overflows ${long?.overflows}, text-overflow ${long?.ellipsis}` +
+    `at ${atWidth} px: ${cutDetail(long)}` +
       (narrowColumn.length ? `; ${narrowColumn.slice(0, 3).join('; ')}` : '')
   )
 
