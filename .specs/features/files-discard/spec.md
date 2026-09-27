@@ -279,3 +279,19 @@ Each carries an ID and its own test or smoke check (L-025).
 - [ ] Undoing an agent's edit to one file takes a right-click, a click and a confirm, without leaving the app
 - [ ] Across the unit suite and the smoke, no path of the discard deletes a file outside the Recycle Bin or git's restore
 - [ ] An uncommitted rename's diff shows the old file on the left
+
+---
+
+## Follow-ups
+
+Recorded by the Verifier (PASS, round 1, 2026-09-27) under the owner's budget rules: none is a
+production defect, and every AC has evidence. Details in `validation.md`, § Follow-ups.
+
+- **F1** A non-`ENOENT` `lstat` failure keeps the entry with cause `recycle-bin`, untested, and its
+  reason text claims a Recycle Bin refusal that never happened
+- **F2** `afterDiscard` closing the new path's file tab for an `RD` rename has no test
+- **F3** The smoke fixture's git calls race the app's own git reads (`index.lock`, 2 of 8 runs)
+- **F4** Smoke check 7 (FDSC-12): both ad-hoc sessions share a title; only the count tells them apart
+- **F5** Smoke check 11 (FDSC-33): the two diff tabs are told apart by count; the unit test pins which survives
+- **F6** Smoke check 11 (FDSC-31): the status bar baseline needs a Refresh click first
+- **F7** A pending discard is not bound to the worktree it was listed from (unreachable today: the modal covers the window)
