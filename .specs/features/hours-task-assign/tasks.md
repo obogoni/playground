@@ -138,10 +138,10 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Tests, `withSessionTask`: no link returns the snapshot unchanged; a link to #12345 on `feature/67890-x` gives id 12345, the link's title and `taskByHand: true`; a link with a null title takes the pinned title; a link equal to the branch's id returns the snapshot unchanged with no flag key; a link on a null branch is flagged
-- [ ] Tests, `reassignFields`: a task differing from the branch is flagged; the branch's own task has no flag key; `none` on `feature/67890-x` is flagged and on `develop` is not; `branch` gives the branch's id and pinned title with no flag key; `branch` on a null branch gives null / null
-- [ ] Gate check passes: `npx vitest run src/main/period-task.test.ts` then `npm test`
-- [ ] Test count: T1 count + the new tests
+- [x] Tests, `withSessionTask`: no link returns the snapshot unchanged; a link to #12345 on `feature/67890-x` gives id 12345, the link's title and `taskByHand: true`; a link with a null title takes the pinned title; a link equal to the branch's id returns the snapshot unchanged with no flag key; a link on a null branch is flagged
+- [x] Tests, `reassignFields`: a task differing from the branch is flagged; the branch's own task has no flag key; `none` on `feature/67890-x` is flagged and on `develop` is not; `branch` gives the branch's id and pinned title with no flag key; `branch` on a null branch gives null / null
+- [x] Gate check passes: `npx vitest run src/main/period-task.test.ts` then `npm test`
+- [x] Test count: T1 count + the new tests
 
 **Tests**: unit
 **Gate**: quick

@@ -121,3 +121,9 @@ export interface ParentWorkItem {
 export type ParentOfResult =
   | { ok: true; parent: ParentWorkItem | null }
   | { ok: false; reason: 'auth'; error: string }
+
+/** A task chosen by hand: its id and, when known, its title (HTSK-06). */
+export interface SessionTask {
+  id: number
+  title: string | null
+}
