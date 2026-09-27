@@ -289,8 +289,10 @@ The new `.file-tree-end` wrapper adds no padding, height or vertical margin; its
 
 **Done when**:
 
-- [ ] `grep -rn "STATUS_LETTER\|STATUS_LABEL" src/renderer/src/components/DiffSection.tsx src/renderer/src/components/FileTree.tsx` finds nothing (FSTS-12)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `grep -rn "STATUS_LETTER\|STATUS_LABEL" src/renderer/src/components/DiffSection.tsx src/renderer/src/components/FileTree.tsx` finds nothing (FSTS-12)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Result (2026-09-27)**: The header now reads chevron, then `.diff-section-path` (with `struck` when `changeStatusView(changed.status).struck`), then the counts when the file has them, then `.diff-section-end > StatusGlyph`, which renders with or without the counts. `DiffSection.tsx` no longer imports `ChangeStatus`, which only the two maps used. The grep over both components exits 1 with no output. Full gate: typecheck exit 0; lint exit 0, 0 errors, 18 warnings, unchanged; `npm test` 1784 / 93, all passing. `.diff-section-pill` is left orphaned in the CSS until T7.
 
 **Tests**: none
 **Gate**: full
