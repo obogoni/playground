@@ -110,7 +110,7 @@ graph TD
 
 | Concern | Location (file:line) | Impact | Mitigation |
 | ------- | -------------------- | ------ | ---------- |
-| Monaco's serialized fold state is internal (`modelState: unknown` in `editor.api.d.ts:2652-2656`) | `diffEditorViewModel.js:263-285` | An upgrade can change the shape silently | `monaco-editor` is pinned exactly (`"0.56.0"` in `package.json`); `hiddenRangesOf` validates the shape and degrades to today's behaviour; one adapter (`applyFolds`) writes it; the smoke's FOLD checks fail on a changed shape. Proposed as AD-TBD below |
+| Monaco's serialized fold state is internal (`modelState: unknown` in `editor.api.d.ts:2652-2656`) | `diffEditorViewModel.js:263-285` | An upgrade can change the shape silently | `monaco-editor` is pinned exactly (`"0.56.0"` in `package.json`); `hiddenRangesOf` validates the shape and degrades to today's behaviour; one adapter (`applyFolds`) writes it; the smoke's FOLD checks fail on a changed shape. Recorded as AD-046 below |
 | The mirrored region rule can drift from Monaco's | `diffEditorViewModel.js:347-375` | Plans would target the wrong lines | One constant object feeds both the editor options and the rule; unit fixtures follow Monaco's rule line by line; T1 and T11 assert exact strip counts in the running app, which only match if the rule matches |
 | `restoreSerializedState` matches by intersect-or-touch (`lineRange.js:103-110` returns an empty range when two ranges touch) | `diffEditorViewModel.js:277-281` | A span could land on a neighbouring region | Regions are separated by at least one change and its context, so a span inside one region never touches another; a unit test pins that the plan's spans stay inside their region |
 | Restoring cursor state would reveal the cursor's line (`hideUnchangedRegionsFeature.js:65-88`) | `codeEditorWidget.js:742-762` | Line 1's region would open on every refresh | `applyFolds` passes `{}` for both inner states, so no cursor is restored |
@@ -126,7 +126,7 @@ graph TD
 | Where the choice lives | `use-files`, per worktree, keyed by tab key | The issue puts it in the Files view state; `AllChangesTab` and `DiffBody` unmount on every tab switch (`FileTabs.tsx:128-130`), so component state would forget it |
 | Region identity | Left-side line overlap | The left side is the committed version, which the agent's writes do not move; right-side numbers shift with every insertion above |
 
-> **AD-TBD (number chosen at Execute): the diff viewer owns its fold state across a refresh.** It
+> **AD-046: the diff viewer owns its fold state across a refresh.** It
 > computes the unchanged regions from `getLineChanges()` with Monaco's own rule and the shared
 > `UNCHANGED_REGIONS` constants, and writes folds only through `restoreViewState`'s `modelState`,
 > an internal shape of the pinned `monaco-editor` 0.56.0, validated on read. Any Monaco upgrade re-runs
