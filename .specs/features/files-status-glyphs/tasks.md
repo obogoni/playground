@@ -228,8 +228,10 @@ T7 → T8 → T9 → T10
 
 **Done when**:
 
-- [ ] `grep -n "STATUS_LETTER\|STATUS_LABEL" src/renderer/src/components/FileTree.tsx` finds nothing
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `grep -n "STATUS_LETTER\|STATUS_LABEL" src/renderer/src/components/FileTree.tsx` finds nothing
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Result (2026-09-27)**: The `ChangedRows` file rows now read `FileIcon`, then `.file-tree-name` (with `struck` when `changeStatusView(node.status).struck`), then `.file-tree-end > StatusGlyph`. Folder rows and `FolderRows` are unchanged. The grep exits 1 with no output. Full gate: typecheck exit 0; lint exit 0, 0 errors, 18 warnings, unchanged; `npm test` 1784 / 93, all passing. `.file-tree-pill` is left orphaned in the CSS until T5.
 
 **Tests**: none
 **Gate**: full
