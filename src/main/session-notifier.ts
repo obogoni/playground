@@ -12,7 +12,8 @@ export interface SessionNotifierDeps {
   prefs(): NotificationPrefs
   /** False when the window is missing, unfocused or minimized (NOTF-24). */
   windowFocused(): boolean
-  /** The task the session's branch names; looked up only for a notifying transition. */
+  /** The task the session's branch names; looked up only for a notifying transition
+   *  of a session with no hand-set task. */
   linkedTask(cwd: string): Promise<LinkedTask | null>
   /** Show a native notification; `onClick` runs when the user clicks it. */
   showOs(title: string, body: string, onClick: () => void): void
@@ -38,8 +39,9 @@ export class SessionNotifier {
       prefs: this.deps.prefs()
     })
     if (surface === null || change.after === null) return
-    // A failed lookup costs the task, never the notification (NOTF-34).
-    const task = await this.deps.linkedTask(change.cwd).catch(() => null)
+    // A linked session names its link, not its branch (HTSK-21). A failed
+    // lookup costs the task, never the notification (NOTF-34).
+    const task = change.task ?? (await this.deps.linkedTask(change.cwd).catch(() => null))
     const { title, body } = describeNotification(change, change.after, task)
     const { id } = change
     if (surface === 'in-app') {

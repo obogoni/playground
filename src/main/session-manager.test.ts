@@ -904,7 +904,8 @@ describe('SessionManager activity transitions', () => {
         cwd: CWD,
         before: null,
         after: { state: 'working', subagents: 0 },
-        attached: false
+        attached: false,
+        task: null
       }
     ])
   })
@@ -1194,5 +1195,19 @@ describe('SessionManager — session names (AD-040)', () => {
 
     expect(manager.list()[0].name).toBe('alpha')
     expect(nameEvents(emit)).toEqual([{ id: view.id, name: 'alpha' }])
+  })
+})
+
+describe('SessionManager activity transitions of a linked session', () => {
+  it('reports the task set by setTask on the next transition (HTSK-21)', () => {
+    const changes: ActivityChange[] = []
+    const { manager } = makeManager({ onActivityChange: (change) => changes.push(change) })
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+
+    manager.setTask(view.id, { id: 4821, title: 'Diagnose login loop' })
+    manager.handleHookEvent(view.id, hookEvent('Stop'))
+
+    expect(changes.map((c) => c.task)).toEqual([null, { id: 4821, title: 'Diagnose login loop' }])
   })
 })

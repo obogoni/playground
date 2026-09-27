@@ -78,6 +78,7 @@ function change(overrides: Partial<ActivityChange> = {}): ActivityChange {
     before: activity('working'),
     after: activity('needs-approval', { tool: 'Bash' }),
     attached: false,
+    task: null,
     ...overrides
   }
 }
@@ -195,6 +196,23 @@ describe('SessionNotifier', () => {
     await notifier.handle(change())
     expect(shown.map(({ title, body }) => ({ title, body }))).toEqual([
       { title: 'Claude · feature-login', body: 'Needs approval to run Bash' }
+    ])
+  })
+})
+
+describe('SessionNotifier for a linked session', () => {
+  it('titles the notification with the linked task and never looks the branch up (HTSK-21)', async () => {
+    const { notifier, shown, state, lookups } = harness({ focused: false })
+    state.task = { id: 12345, title: 'Fix login redirect' }
+
+    await notifier.handle(change({ task: { id: 4821, title: 'Diagnose login loop' } }))
+
+    expect(lookups).toEqual([])
+    expect(shown.map(({ title, body }) => ({ title, body }))).toEqual([
+      {
+        title: '#4821 · Diagnose login loop',
+        body: 'Needs approval to run Bash\nClaude · feature-login'
+      }
     ])
   })
 })

@@ -453,7 +453,8 @@ export class SessionManager {
         cwd,
         before,
         after,
-        attached: this.#activeId === id
+        attached: this.#activeId === id,
+        task: session.meta.task ?? null
       })
     } catch (err) {
       console.error('[notifications] activity listener failed', err)

@@ -273,10 +273,10 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Tests: a notifying change with `task: { id: 4821, title: 'Diagnose login loop' }` titles the notification `#4821 · Diagnose login loop` and never calls `linkedTask`; with `task: null` it calls `linkedTask(cwd)` as before; after `setTask` on a running session, the next activity transition reaches `onActivityChange` with that task
-- [ ] New tests are appended as new `describe` blocks (PR #98 inserts tests mid-file in `activity-notification.test.ts`)
-- [ ] Gate check passes: `npx vitest run src/main/session-notifier.test.ts src/main/session-manager.test.ts` then `npm test`
-- [ ] Test count: T6 count + the new tests
+- [x] Tests: a notifying change with `task: { id: 4821, title: 'Diagnose login loop' }` titles the notification `#4821 · Diagnose login loop` and never calls `linkedTask`; with `task: null` it calls `linkedTask(cwd)` as before; after `setTask` on a running session, the next activity transition reaches `onActivityChange` with that task
+- [x] New tests are appended as new `describe` blocks (PR #98 inserts tests mid-file in `activity-notification.test.ts`)
+- [x] Gate check passes: `npx vitest run src/main/session-notifier.test.ts src/main/session-manager.test.ts` then `npm test`
+- [x] Test count: T6 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
