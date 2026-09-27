@@ -231,7 +231,7 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | HTSK-20 | P1: session — AC 20 | Execute | Implementing: T12 |
 | HTSK-21 | P1: session — AC 21 | Execute | Implementing: T7 |
 | HTSK-22 | P1: session — AC 22 | Execute | Implemented: T6 |
-| HTSK-23 | P1: drawer — AC 23 | Tasks | In Tasks |
+| HTSK-23 | P1: drawer — AC 23 | Execute | Implementing: T20 |
 | HTSK-24 | P1: drawer — AC 24 | Execute | Implementing: T13 |
 | HTSK-25 | P1: drawer — AC 25 | Execute | Implementing: T2, T4, T9, T10 |
 | HTSK-26 | P1: drawer — AC 26 | Execute | Implementing: T2, T4 |
@@ -246,7 +246,7 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | HTSK-35 | P1: drawer — AC 35 | Execute | Implementing: T4, T5, T16 |
 | HTSK-36 | P1: mark — AC 36 | Execute | Implementing: T2, T3, T4 |
 | HTSK-37 | P1: mark — AC 37 | Execute | Implementing: T2, T3, T4 |
-| HTSK-38 | P1: mark — AC 38 | Execute | Implementing: T14 |
+| HTSK-38 | P1: mark — AC 38 | Execute | Implementing: T14, T20 |
 | HTSK-39 | P1: mark — AC 39 | Execute | Implementing: T4 |
 | HTSK-40 | P1: reports — AC 40 | Execute | Implementing: T15 |
 | HTSK-41 | P1: reports — AC 41 | Execute | Implemented: T1 |

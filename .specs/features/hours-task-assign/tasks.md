@@ -604,7 +604,7 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run lint && npx electron-vite build`
+- [x] Gate check passes: `npm run lint && npx electron-vite build` (lint 0 errors / 18 warnings)
 
 **Tests**: none
 **Gate**: build
