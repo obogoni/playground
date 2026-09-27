@@ -1,7 +1,7 @@
 import type { AppConfig, FilesState } from '../../../shared/config'
 import type { ChangedPath } from '../../../shared/files'
 import type { ChangeStatus } from '../../../shared/worktrees'
-import { ALL_CHANGES_KEY, tabKeyOf, type TabRef } from './diff-view'
+import { ALL_CHANGES_KEY, tabKeyOf, type TabRef, type UnchangedMode } from './diff-view'
 
 /** A changed file as the tree renders it, carrying the status it was listed with. */
 export interface FileNode {
@@ -233,6 +233,41 @@ export function formatSize(bytes: number): string {
 export function fileType(name: string): string {
   const dot = name.lastIndexOf('.')
   return dot > 0 ? `${name.slice(dot + 1).toUpperCase()} file` : 'No extension'
+}
+
+/**
+ * The last Hide unchanged / Show unchanged press of one tab. `press` counts
+ * every press, so the same button pressed again still reaches the diffs:
+ * after a strip revealed by hand, Hide unchanged has to fold it (FOLD-12).
+ */
+export interface UnchangedChoice {
+  mode: UnchangedMode
+  press: number
+}
+
+/** Each tab's choice, by tab key. Kept in memory only (FOLD-22). */
+export type UnchangedChoices = Record<string, UnchangedChoice>
+
+/** The choices after a press of Hide unchanged or Show unchanged in tab `key`. */
+export function pressUnchanged(
+  choices: UnchangedChoices,
+  key: string,
+  mode: UnchangedMode
+): UnchangedChoices {
+  return { ...choices, [key]: { mode, press: (choices[key]?.press ?? 0) + 1 } }
+}
+
+/**
+ * The choices of the tabs still open (FOLD-21): a closed tab's choice goes, and
+ * the same diff opened again starts folded. All changes is never closed, so its
+ * choice always stays.
+ */
+export function keepUnchanged(
+  choices: UnchangedChoices,
+  liveKeys: readonly string[]
+): UnchangedChoices {
+  const live = new Set([...liveKeys, ALL_CHANGES_KEY])
+  return Object.fromEntries(Object.entries(choices).filter(([key]) => live.has(key)))
 }
 
 function comparablePath(path: string): string {

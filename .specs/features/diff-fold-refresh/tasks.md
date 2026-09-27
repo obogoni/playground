@@ -13,7 +13,7 @@ regions from `getLineChanges()` with Monaco's own rule, snapshots their fold sta
 and applies its own plan through `restoreViewState`'s `modelState` once Monaco has recomputed; the
 per-tab Hide / Show choice lives in `use-files` and reaches every mounted `DiffViewer` as a prop.
 **Status**: Approved by the owner on 2026-09-27 ("pode seguir com a #130", executed inline at the
-owner's choice). T1, T2 Done; cause confirmed, continuing.
+owner's choice). T1-T5 Done; cause confirmed, continuing.
 
 **Branch**: `feature/diff-fold-refresh`, cut from `feature/files-view-polish` `70d573c` (PR #125, which
 adds Expand all / Collapse all). Rebase onto `origin/main` once #125 merges. The future PR body carries
@@ -300,9 +300,11 @@ the spans `applyFolds` hands to Monaco (design.md, Region rules).
 
 **Done when**:
 
-- [ ] Tests: a first press records the mode with press 1; the same button again increments the press (so it re-applies after a hand reveal); the other button switches the mode; choices of other keys are untouched; `keepUnchanged` drops a closed tab's choice and never drops All changes'; a press recorded with no editor anywhere is kept as is (the rule has no notion of editors)
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/files-view.test.ts`
-- [ ] Test count: T4 count + the new tests
+- [x] Tests: a first press records the mode with press 1; the same button again increments the press (so it re-applies after a hand reveal); the other button switches the mode; choices of other keys are untouched; `keepUnchanged` drops a closed tab's choice and never drops All changes'; a press recorded with no editor anywhere is kept as is (the rule has no notion of editors)
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/files-view.test.ts`
+- [x] Test count: T4 count + the new tests
+
+**Result (2026-09-27)**: 7 new tests, red before the code (the file failed to load: `pressUnchanged is not a function`, called by the `keepUnchanged` fixtures at collection), then 50/50 in the file; typecheck 0. `UnchangedChoice.mode` takes T4's `UnchangedMode` from `diff-view.ts`.
 
 **Tests**: unit
 **Gate**: quick

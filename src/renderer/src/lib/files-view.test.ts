@@ -8,8 +8,10 @@ import {
   filesStateFor,
   formatSize,
   isSolution,
+  keepUnchanged,
   launcherTarget,
   pinTab,
+  pressUnchanged,
   tabsAffected,
   tabsAfterBulkClose,
   tabsAfterClose,
@@ -365,5 +367,67 @@ describe('tabsAfterBulkClose (FPOL-06..11)', () => {
       keys: [],
       active: null
     })
+  })
+})
+
+describe('pressUnchanged', () => {
+  it('records a first press with its mode and press 1 (FOLD-14)', () => {
+    expect(pressUnchanged({}, ALL_CHANGES_KEY, 'show')).toEqual({
+      [ALL_CHANGES_KEY]: { mode: 'show', press: 1 }
+    })
+  })
+
+  it('counts a second press of the same button, so it applies again (FOLD-12)', () => {
+    const once = pressUnchanged({}, ALL_CHANGES_KEY, 'hide')
+
+    expect(pressUnchanged(once, ALL_CHANGES_KEY, 'hide')).toEqual({
+      [ALL_CHANGES_KEY]: { mode: 'hide', press: 2 }
+    })
+  })
+
+  it('switches the mode when the other button is pressed (FOLD-14)', () => {
+    const hidden = pressUnchanged({}, ALL_CHANGES_KEY, 'hide')
+
+    expect(pressUnchanged(hidden, ALL_CHANGES_KEY, 'show')[ALL_CHANGES_KEY]).toEqual({
+      mode: 'show',
+      press: 2
+    })
+  })
+
+  it("leaves every other tab's choice as it was", () => {
+    const diff = tabKeyOf({ kind: 'diff', mode: 'uncommitted', path: 'fold/long.ts' })
+    const before = pressUnchanged({}, diff, 'show')
+
+    const after = pressUnchanged(before, ALL_CHANGES_KEY, 'hide')
+
+    expect(after[diff]).toBe(before[diff])
+    expect(before).toEqual({ [diff]: { mode: 'show', press: 1 } })
+  })
+
+  it('records a press whatever is mounted, since the rule knows nothing of editors (FOLD-27)', () => {
+    const pressed = pressUnchanged({}, ALL_CHANGES_KEY, 'show')
+
+    expect(keepUnchanged(pressed, [ALL_CHANGES_KEY])).toEqual(pressed)
+  })
+})
+
+describe('keepUnchanged', () => {
+  const diff = tabKeyOf({ kind: 'diff', mode: 'uncommitted', path: 'fold/long.ts' })
+  const other = tabKeyOf({ kind: 'diff', mode: 'uncommitted', path: 'fold/other.ts' })
+  const choices = pressUnchanged(
+    pressUnchanged(pressUnchanged({}, ALL_CHANGES_KEY, 'show'), diff, 'show'),
+    other,
+    'hide'
+  )
+
+  it("drops the choice of a tab that closed and keeps the open ones' (FOLD-21)", () => {
+    expect(keepUnchanged(choices, [ALL_CHANGES_KEY, other])).toEqual({
+      [ALL_CHANGES_KEY]: { mode: 'show', press: 1 },
+      [other]: { mode: 'hide', press: 1 }
+    })
+  })
+
+  it("never drops All changes' choice, which has no tab to close (FOLD-21)", () => {
+    expect(keepUnchanged(choices, [])).toEqual({ [ALL_CHANGES_KEY]: { mode: 'show', press: 1 } })
   })
 })
