@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { JSX } from 'react'
 import type { TimeEditResult } from '../../../shared/time'
 import type { RawPeriodRow } from '../lib/hours-report'
+import { fromLocalInput, toLocalInput } from '../lib/period-edit'
 import { formatHmCompact } from '../lib/time-format'
 import { Icon } from './Icon'
 import './PeriodRow.css'
@@ -17,19 +18,6 @@ const pad = (n: number): string => String(n).padStart(2, '0')
 const clock = (ms: number): string => {
   const d = new Date(ms)
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
-}
-
-/** An ISO instant as a `datetime-local` value in local time, to the second. */
-function toLocalInput(iso: string): string {
-  const d = new Date(iso)
-  const day = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-  return `${day}T${clock(d.getTime())}`
-}
-
-/** A `datetime-local` value (local time) as a UTC ISO instant; null when empty or invalid. */
-function fromLocalInput(value: string): string | null {
-  const ms = new Date(value).getTime()
-  return Number.isNaN(ms) ? null : new Date(ms).toISOString()
 }
 
 type Mode = 'view' | 'edit' | 'confirm-delete'

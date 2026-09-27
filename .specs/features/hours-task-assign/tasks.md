@@ -455,9 +455,9 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Tests: `handMarkTitle('develop')` is `Assigned by hand (branch: develop)`; `handMarkTitle(null)` is `Assigned by hand (no branch)`; `splitDefault` of 09:00:00–12:00:00 is `…T10:30:00`; of 09:00:00–09:00:03 is `…T09:00:01` (1.5 s floored, not rounded up, L-043); of 09:00:00–09:00:05 is `…T09:00:02`; `fromLocalInput(toLocalInput(iso))` returns `iso` for a whole-second instant
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/period-edit.test.ts` then `npm test`
-- [ ] Test count: T13 count + the new tests
+- [x] Tests: `handMarkTitle('develop')` is `Assigned by hand (branch: develop)`; `handMarkTitle(null)` is `Assigned by hand (no branch)`; `splitDefault` of 09:00:00–12:00:00 is `…T10:30:00`; of 09:00:00–09:00:03 is `…T09:00:01` (1.5 s floored, not rounded up, L-043); of 09:00:00–09:00:05 is `…T09:00:02`; `fromLocalInput(toLocalInput(iso))` returns `iso` for a whole-second instant
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/period-edit.test.ts` then `npm test`
+- [x] Test count: T13 count + the new tests: 1783 + 9 = 1792 (95 files); also passes under TZ=UTC, Asia/Kolkata, America/Sao_Paulo, Pacific/Chatham
 
 **Tests**: unit
 **Gate**: quick
