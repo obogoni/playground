@@ -13,6 +13,9 @@
  *      layout and whitespace choices the drive made survived (FDIF-12/16).
  *   4. node scripts/smoke-files-diff.mjs --clean
  *
+ * SMOKE_ONLY=fold on step 2 runs section 14 alone (FOLD, issue #130), from a
+ * fresh seed and launch like any drive.
+ *
  * Point SMOKE_CONFIG at the config.json of the userData dir in use, and
  * SMOKE_BASE at the folder to seed into. Run the app with --user-data-dir so
  * the owner's real workspaces, sessions and pinned tasks are never in scope.
@@ -459,6 +462,19 @@ async function openStackFile(ws, name) {
 async function drive() {
   const ws = await connect()
   await selectWorktree(ws)
+
+  // SMOKE_ONLY=fold runs section 14 alone, for iterating on it; the full drive
+  // still runs before a PR.
+  if (process.env.SMOKE_ONLY === 'fold') {
+    await foldSetup(ws)
+    await foldSection(ws)
+    const failed = checks.filter((c) => !c.ok)
+    console.log(
+      `\n${checks.length - failed.length}/${checks.length} checks passed (section 14 only)`
+    )
+    ws.close()
+    return failed.length
+  }
 
   // The lens persists per worktree, so start from a known one.
   await evaluate(ws, clickByText('.file-tree-mode', 'Folder'))
@@ -1246,6 +1262,23 @@ async function drive() {
     J(emptyMode)
   )
 
+  await foldSection(ws)
+
+  const failed = checks.filter((c) => !c.ok)
+  console.log(`\n${checks.length - failed.length}/${checks.length} checks passed`)
+  console.log('\nHand checks this smoke does NOT script:')
+  console.log('  A. Read the line-ending strip on a MIXED file and judge its wording.')
+  console.log('  B. Judge side-by-side against inline as the daily default.')
+  ws.close()
+  return failed.length
+}
+
+/**
+ * Section 14: unchanged lines stay folded across refreshes (FOLD, issue #130).
+ * Starts from the state section 13 leaves, or `foldSetup` builds: nothing
+ * uncommitted, the inline layout, the Files direction on the seeded worktree.
+ */
+async function foldSection(ws) {
   // 14. Unchanged lines stay folded across refreshes (FOLD, issue #130).
   //
   // Section 13 committed everything, so Uncommitted starts empty and every
@@ -1254,10 +1287,15 @@ async function drive() {
   const OTHER_FOLD = join(REPO, 'fold', 'other.ts')
   const sectionOf = (file) =>
     `[...document.querySelectorAll('.diff-section')].find((s) => (s.getAttribute('data-path') ?? '').endsWith(${J(file)}))`
+  // A single file's diff tab: its viewer sits straight in the tab body.
+  const DIFF_TAB = `document.querySelector('.file-tabs-body > .diff-viewer')`
+  const LONG_SECTION = sectionOf('fold/long.ts')
+  const OTHER_SECTION = sectionOf('fold/other.ts')
   // Strips are Monaco's `.diff-hidden-lines` overlay in the modified editor; the
-  // original editor carries its own copy, so count one side only.
-  const foldState = (file) => `(() => {
-    const s = ${sectionOf(file)}
+  // original editor carries its own copy, so count one side only. `where` is an
+  // expression for the element holding one diff: a stack section or the diff tab.
+  const foldState = (where) => `(() => {
+    const s = ${where}
     const editor = s?.querySelector('.monaco-diff-editor') ?? null
     const lines = [...(s?.querySelectorAll('.editor.modified .view-line') ?? [])]
       .map((l) => l.textContent.replace(/\\u00a0/g, ' '))
@@ -1272,42 +1310,53 @@ async function drive() {
       text: lines.join('\\n')
     }
   })()`
-  const probe = (file) =>
-    `(() => { const e = ${sectionOf(file)}?.querySelector('.monaco-diff-editor'); if (!e) return false; e.setAttribute('data-smoke-probe', ${J(file)}); return true })()`
+  const probe = (where, name) =>
+    `(() => { const e = (${where})?.querySelector('.monaco-diff-editor'); if (!e) return false; e.setAttribute('data-smoke-probe', ${J(name)}); return true })()`
+  /** Clicks the unfold control of the `index`-th strip, which reveals that region whole. */
+  const revealStrip = (where, index) => `(() => {
+    const strips = [...((${where})?.querySelectorAll('.editor.modified .diff-hidden-lines') ?? [])]
+    const unfold = strips[${index}]?.querySelector('a[title="Show Unchanged Region"]')
+    if (!unfold) return false
+    unfold.click()
+    return true
+  })()`
+  const shows = (state, line) => state.text.includes(line)
+  const brief = (state) =>
+    J({ editor: state.editor, strips: state.strips, labels: state.labels, probe: state.probe })
 
   /** Poll until `ok(state)`, reporting how long it took; the last state either way. */
-  const waitFold = async (file, ok, timeoutMs = 4000) => {
+  const waitFold = async (where, ok, timeoutMs = 4000) => {
     const startedAt = Date.now()
     let state
     do {
-      state = await evaluate(ws, foldState(file))
+      state = await evaluate(ws, foldState(where))
       if (ok(state)) return { state, after: Date.now() - startedAt }
       await sleep(50)
     } while (Date.now() - startedAt < timeoutMs)
     return { state, after: null }
   }
-  /** The strip count once it has held still for 600 ms (Monaco recomputes asynchronously). */
-  const settledStrips = async (file) => {
+  /** The fold state once the strip count has held still for 600 ms (Monaco recomputes asynchronously). */
+  const settled = async (where) => {
     let last = -2
     let since = Date.now()
     const startedAt = Date.now()
     while (Date.now() - startedAt < 5000) {
-      const { strips } = await evaluate(ws, foldState(file))
+      const { strips } = await evaluate(ws, foldState(where))
       if (strips !== last) {
         last = strips
         since = Date.now()
       } else if (Date.now() - since >= 600) break
       await sleep(100)
     }
-    return evaluate(ws, foldState(file))
+    return evaluate(ws, foldState(where))
   }
 
   writeFileSync(LONG, foldText('l', 200, [20, 180]))
   writeFileSync(OTHER_FOLD, foldText('o', 120, span(50, 70)))
   await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
-  await waitFold('fold/other.ts', (s) => s.editor && s.strips > 0, 8000)
-  const openedLong = await settledStrips('fold/long.ts')
-  const openedOther = await settledStrips('fold/other.ts')
+  await waitFold(OTHER_SECTION, (s) => s.editor && s.strips > 0, 8000)
+  const openedLong = await settled(LONG_SECTION)
+  const openedOther = await settled(OTHER_SECTION)
   console.log(`    14a DOM: long ${J({ ...openedLong, text: undefined })}`)
   console.log(`    14a DOM: other ${J({ ...openedOther, text: undefined })}`)
   check(
@@ -1316,11 +1365,11 @@ async function drive() {
     `long.ts ${openedLong.strips} strips, other.ts ${openedOther.strips}`
   )
 
-  const probed = await evaluate(ws, probe('fold/long.ts'))
+  const probed = await evaluate(ws, probe(LONG_SECTION, 'fold/long.ts'))
   const writtenAt = Date.now()
   writeFileSync(LONG, foldText('l', 200, [20, 100, 180]))
-  const arrived = await waitFold('fold/long.ts', (s) => s.text.includes('export const l100 = -100'))
-  const refreshed = await settledStrips('fold/long.ts')
+  const arrived = await waitFold(LONG_SECTION, (s) => shows(s, 'export const l100 = -100'))
+  const refreshed = await settled(LONG_SECTION)
   console.log(
     `    14b DOM: long ${J({ ...refreshed, text: undefined })}, arrived ${arrived.after} ms after the write at ${writtenAt}`
   )
@@ -1334,13 +1383,154 @@ async function drive() {
     `probe ${probed ? (refreshed.probe ?? 'GONE') : 'never set'}, arrived in ${arrived.after} ms, ${refreshed.strips} strips (want 4)`
   )
 
-  const failed = checks.filter((c) => !c.ok)
-  console.log(`\n${checks.length - failed.length}/${checks.length} checks passed`)
-  console.log('\nHand checks this smoke does NOT script:')
-  console.log('  A. Read the line-ending strip on a MIXED file and judge its wording.')
-  console.log('  B. Judge side-by-side against inline as the daily default.')
-  ws.close()
-  return failed.length
+  // 14d. A region that did not exist before starts folded (FOLD-04): with only
+  // lines 50 and 70 changed, lines 54-66, all change or context before, fold.
+  // long.ts's section above can push other.ts's out of the mount margin, how
+  // far depending on the window's height (measured: after 14b it had no
+  // editor). Collapsing long.ts puts other.ts at the top, where it stays
+  // mounted; long.ts is expanded again after, folded as a fresh mount.
+  const toggleSection = (where) =>
+    `(() => { const h = (${where})?.querySelector('.diff-section-header'); if (!h) return false; h.click(); return true })()`
+  await evaluate(ws, toggleSection(LONG_SECTION))
+  await waitFold(OTHER_SECTION, (s) => s.editor && s.strips > 0, 8000)
+  const otherBefore = await settled(OTHER_SECTION)
+  const otherWrittenAt = Date.now()
+  writeFileSync(OTHER_FOLD, foldText('o', 120, [50, 70]))
+  // Inline, the modified editor also renders the original's removed lines, so
+  // the old line 51 (`= 51`) is on screen already. Its changed text (`= -51`)
+  // exists only in the old modified side: its going is the new diff arriving.
+  const otherArrived = await waitFold(OTHER_SECTION, (s) => !shows(s, 'export const o051 = -51'))
+  const otherAfter = await settled(OTHER_SECTION)
+  console.log(
+    `    14d DOM: before ${brief(otherBefore)}, after ${brief(otherAfter)}, written at ${otherWrittenAt}, read at ${Date.now()}`
+  )
+  check(
+    'A region the change creates starts folded (FOLD-04)',
+    otherBefore.strips === 2 &&
+      shows(otherBefore, 'export const o051 = -51') &&
+      otherArrived.after !== null &&
+      otherAfter.strips === 3,
+    `${otherBefore.strips} -> ${otherAfter.strips} strips (want 2 -> 3), arrived in ${otherArrived.after} ms`
+  )
+
+  await evaluate(ws, toggleSection(LONG_SECTION))
+  await waitFold(LONG_SECTION, (s) => s.editor && s.strips > 0, 8000)
+
+  // 14c. A region revealed by hand stays revealed (FOLD-03). The second strip is
+  // lines 24-96, which hold line 50.
+  const revealedByHand = await evaluate(ws, revealStrip(LONG_SECTION, 1))
+  const afterReveal = await settled(LONG_SECTION)
+  writeFileSync(LONG, foldText('l', 200, [20, 100, 180, 195]))
+  await waitFold(LONG_SECTION, (s) => shows(s, 'export const l195 = -195'))
+  const keptRevealed = await settled(LONG_SECTION)
+  console.log(`    14c DOM: before ${brief(afterReveal)}, after ${brief(keptRevealed)}`)
+  check(
+    'A region revealed by hand stays revealed across a disk change (FOLD-03)',
+    // Precondition: the reveal happened. Then the plan: 24-96 revealed, and
+    // 1-16, 104-176, 184-191 and 199-201 folded.
+    revealedByHand &&
+      afterReveal.strips === 3 &&
+      shows(afterReveal, 'export const l050 = 50') &&
+      keptRevealed.strips === 4 &&
+      shows(keptRevealed, 'export const l050 = 50') &&
+      shows(keptRevealed, 'export const l195 = -195'),
+    `reveal ${revealedByHand}: ${afterReveal.strips} strips, l050 ${shows(afterReveal, 'export const l050 = 50')}; after the write ${keptRevealed.strips} strips (want 4), l050 ${shows(keptRevealed, 'export const l050 = 50')}`
+  )
+
+  // 14e. Two writes 60 ms apart: the folds after the diff settles are
+  // the plan's for the final text. Line 60 splits the revealed 24-96 in two
+  // revealed halves; line 140 splits the folded 104-176 in two folded ones.
+  writeFileSync(LONG, foldText('l', 200, [20, 60, 100, 180, 195]))
+  await sleep(60)
+  writeFileSync(LONG, foldText('l', 200, [20, 60, 100, 140, 180, 195]))
+  await waitFold(LONG_SECTION, (s) => shows(s, 'export const l140 = -140'))
+  const twoWrites = await settled(LONG_SECTION)
+  console.log(`    14e DOM: ${brief(twoWrites)}`)
+  check(
+    // The watcher batches events for a fixed 250 ms and the diff recomputes in
+    // about 230 ms, so the two writes reach the viewer as ONE refresh: this
+    // proves the coalesced path, not FOLD-08's second change before the
+    // recompute, which no disk write reaches at this size (measured, T11).
+    'Two quick writes, read as one refresh, leave the folds the final text plans',
+    twoWrites.strips === 5 && shows(twoWrites, 'export const l050 = 50'),
+    `${twoWrites.strips} strips (want 5), l050 ${shows(twoWrites, 'export const l050 = 50')}`
+  )
+
+  // 14f. The single file's diff tab keeps its folds too, in the same editor,
+  // within the second FDIF-30 gives (FOLD-02, FOLD-09).
+  const treeHas = (name) =>
+    `[...document.querySelectorAll('.file-tree-name')].some((e) => e.textContent.trim() === ${J(name)})`
+  if (!(await evaluate(ws, treeHas('long.ts')))) {
+    await evaluate(ws, clickByText('.file-tree-name', 'fold'))
+    await sleep(800)
+  }
+  await evaluate(ws, clickByText('.file-tree-name', 'long.ts'))
+  await waitFold(DIFF_TAB, (s) => s.editor && s.strips > 0, 8000)
+  const tabBefore = await settled(DIFF_TAB)
+  const tabProbed = await evaluate(ws, probe(DIFF_TAB, 'diff-tab'))
+  const tabWrittenAt = Date.now()
+  writeFileSync(LONG, foldText('l', 200, [20, 60, 100, 140, 160, 180, 195]))
+  // Line 160 sits outside the tab's viewport, so it is never rendered: the new
+  // diff shows as the strips' labels changing instead.
+  const tabArrived = await waitFold(DIFF_TAB, (s) => J(s.labels) !== J(tabBefore.labels))
+  const tabAfter = await settled(DIFF_TAB)
+  console.log(
+    `    14f DOM: before ${brief(tabBefore)}, after ${brief(tabAfter)}, arrived ${tabArrived.after} ms after ${tabWrittenAt}`
+  )
+  check(
+    "A file's diff tab stays folded across a disk change, in the same editor, within 1 s (FOLD-02, FOLD-09)",
+    tabProbed &&
+      tabBefore.strips === 7 &&
+      tabArrived.after !== null &&
+      tabArrived.after <= 1000 &&
+      tabAfter.probe === 'diff-tab' &&
+      tabAfter.strips === 8,
+    `probe ${tabProbed ? (tabAfter.probe ?? 'GONE') : 'never set'}, ${tabBefore.strips} -> ${tabAfter.strips} strips (want 7 -> 8), arrived in ${tabArrived.after} ms`
+  )
+
+  // 14g. A remounted section forgets hand reveals (FOLD-23): All changes remounts
+  // on every tab switch, so its sections get fresh editors.
+  await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
+  await waitFold(LONG_SECTION, (s) => s.editor && s.strips > 0, 8000)
+  const remountBefore = await settled(LONG_SECTION)
+  const handRevealed = await evaluate(ws, revealStrip(LONG_SECTION, 1))
+  const remountRevealed = await settled(LONG_SECTION)
+  await focusTabNamed(ws, 'long.ts')
+  const leftFor = await waitFold(DIFF_TAB, (s) => s.editor, 8000)
+  const stackGone = !(await evaluate(ws, `!!(${LONG_SECTION})`))
+  await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
+  await waitFold(LONG_SECTION, (s) => s.editor && s.strips > 0, 8000)
+  const remountAfter = await settled(LONG_SECTION)
+  console.log(
+    `    14g DOM: ${brief(remountBefore)} -> revealed ${brief(remountRevealed)} -> back ${brief(remountAfter)}`
+  )
+  check(
+    'A section that remounts opens folded, without the reveals it had (FOLD-23)',
+    remountBefore.strips === 8 &&
+      handRevealed &&
+      remountRevealed.strips === 7 &&
+      leftFor.state.editor &&
+      stackGone &&
+      remountAfter.strips === 8,
+    `${remountBefore.strips} -> ${remountRevealed.strips} by hand -> ${remountAfter.strips} after a tab switch (want 8 -> 7 -> 8); diff tab shown ${leftFor.state.editor}, stack unmounted ${stackGone}`
+  )
+}
+
+/**
+ * The state section 13 leaves, for `SMOKE_ONLY=fold`: inline layout, then
+ * everything committed, so Uncommitted starts empty.
+ */
+async function foldSetup(ws) {
+  await evaluate(ws, clickByText('.file-tree-mode', 'Uncommitted'))
+  await sleep(1600)
+  await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
+  await sleep(1200)
+  const inline = (await evaluate(ws, activeToggles)).find((t) => t.label === 'Inline')
+  if (inline?.pressed !== 'true') await evaluate(ws, clickToggle('Inline'))
+  await sleep(800)
+  git(['add', '-A'])
+  git(['commit', '-m', 'commit everything left'])
+  await sleep(2500)
 }
 
 /* --------------------------------------------------------- after restart -- */

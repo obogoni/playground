@@ -13,7 +13,7 @@ regions from `getLineChanges()` with Monaco's own rule, snapshots their fold sta
 and applies its own plan through `restoreViewState`'s `modelState` once Monaco has recomputed; the
 per-tab Hide / Show choice lives in `use-files` and reaches every mounted `DiffViewer` as a prop.
 **Status**: Approved by the owner on 2026-09-27 ("pode seguir com a #130", executed inline at the
-owner's choice). T1-T10 Done; cause confirmed, continuing.
+owner's choice). T1-T11 Done; T12 next.
 
 **Branch**: `feature/diff-fold-refresh`, cut from `feature/files-view-polish` `70d573c` (PR #125, which
 adds Expand all / Collapse all). Rebase onto `origin/main` once #125 merges. The future PR body carries
@@ -486,9 +486,34 @@ while `diffTab` is set, and `DiffBody` hands the choice to its `DiffViewer`.
 
 **Done when**:
 
-- [ ] Each check seen **failing** on a fresh launch against its mutant, then passing: `foldPlan` reveals unmatched regions (14d); `foldPlan` forgets revealed ones (14c); a change while an update is pending drops the plan (14e); `DiffBody` bypasses the fold plan by keying on the sides (14f); hand reveals carried across a remount (14g)
-- [ ] Mutants restored through `.orig`; `git status --porcelain` matches the baseline
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Each check seen **failing** on a fresh launch against its mutant, then passing: `foldPlan` reveals unmatched regions (14d); `foldPlan` forgets revealed ones (14c); a change while an update is pending drops the plan (14e); `DiffBody` bypasses the fold plan by keying on the sides (14f); hand reveals carried across a remount (14g)
+- [x] Mutants restored through `.orig`; `git status --porcelain` matches the baseline
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Result (2026-09-27)**: section 14 gained 14c-14g and became `foldSection(ws)`. At the owner's request, the smoke also gained **`SMOKE_ONLY=fold`**: `foldSetup` builds the state section 13 leaves (inline layout, everything committed) and only section 14 runs, in **37 s** against about 4 minutes for the full drive. Every drive below still used a fresh seed and a fresh launch. The full drive runs once at T12, before the Verifier. Focused run on the fixed code: **7/7**.
+
+What the checks had to learn, each measured in the running app:
+
+- Inline, the modified editor also renders the original's removed lines, so an arrival signal must be text that exists only on the new modified side. 14d waits for `o051 = -51` to go.
+- A line outside a diff tab's viewport is never rendered. 14f times the arrival by the strips' labels changing.
+- Tab labels carry the diff glyph. 14g switches tabs with `focusTabNamed` and requires the diff tab to be shown and the stack unmounted before it counts.
+- A section pushed past the mount margin loses its editor. After 14b, other.ts had none, depending on the window's height. 14d collapses long.ts first and expands it after. 14d also runs before 14c, whose reveal grows long.ts.
+
+Falsification: each mutant ran through the focused smoke, restored from `.orig`; `git status --porcelain` afterwards listed only this task's smoke edit.
+
+| Mutant | Check it names | Result |
+| --- | --- | --- |
+| `foldPlan` folds a region revealed whole | 14c | **killed**: 5 strips, `l050` hidden. 14e fails too, since it builds on 14c's reveal |
+| `foldPlan` reveals a region with no source | 14d | **killed**: 2 strips (want 3) |
+| a change while an update is pending drops the reading | 14e | **survived** (see below) |
+| `DiffBody` keyed on the modified text's length | 14f | **killed**: probe gone |
+| a module cache carries each surface's fold state across a remount | 14g | **killed**: 5 strips after the switch (want 8) |
+
+**FOLD-08 is not reachable from the disk at this file size.** `FileWatcher` batches events in a fixed 250 ms window (`file-watcher.ts:5`, `startBatch`), and the diff recomputes about 230 ms after `setValue` (measured: 7916 → 8144 ms in an instrumented run). A second write therefore lands either in the same batch, as one refresh, or after the first diff is done. 14e is kept, relabelled, as proof of the coalesced path: two writes 60 ms apart leave the final text's plan. FOLD-08's own rule, keeping the first reading while an update is pending, rests on code review of the `pendingRef.current === null` guard in `DiffViewer`'s content effect. This is recorded as an evidence gap for the Verifier and the owner, not as covered.
+
+The first 14g mutant, a cache keyed by path alone, survived for a reason inside the mutant: the diff tab's editor, unmounted before its first diff, stored `{}` over the section's state. The mutant was keyed per surface and skips empty states; that version is the one killed above.
+
+Gate: `npm run lint` exit 0, 0 errors / 18 warnings (unchanged).
 
 **Tests**: manual
 **Gate**: manual
