@@ -517,9 +517,17 @@ The Verifier's round 1 (`validation.md`) failed on smoke evidence only; the prod
 
 **Done when**:
 
-- [ ] The Verifier's mutant S10 (`text-overflow: ellipsis` removed from `.file-tree-name`) fails the tree check, and its header twin (removed from `.diff-section-path`) fails the header check
-- [ ] The workers' clipping mutants (T9 e, T10 e) still fail their checks
-- [ ] Gate check passes: `npm run lint` (0 errors, 18 warnings)
+- [x] The Verifier's mutant S10 (`text-overflow: ellipsis` removed from `.file-tree-name`) fails the tree check, and its header twin (removed from `.diff-section-path`) fails the header check
+- [x] The workers' clipping mutants (T9 e, T10 e) still fail their checks
+- [x] Gate check passes: `npm run lint` (0 errors, 18 warnings)
+
+**Result (2026-09-27)**: `treeRows` and `stackHeaders` now also read the computed `textOverflow` of the name or path. The tree's ellipsis check (focused 5) and the header's (focused 12) now require `'ellipsis'` on the cut element, besides `scrollWidth > clientWidth`, and their logs show both values. Focused run: 14 / 14 in 34 s, where 5 reads `overflows true, text-overflow ellipsis` and 12 reads the same at 900 px. Mutants, one focused run each:
+- S10 (`text-overflow: ellipsis` removed from `.file-tree-name`): fails 5 only, `text-overflow clip`.
+- Its header twin (the same removed from `.diff-section-path`): fails 12 only, `text-overflow clip`.
+- T9 e (the name without `min-width: 0` / `overflow: hidden`): fails 4 and 5, as at T9.
+- T10 e (the path `flex: none`): fails 12 only, as at T10 (`overflows false` down to 600 px).
+
+`git status --porcelain` matched the baseline after each. Lint: exit 0, 0 errors, 18 warnings, unchanged.
 
 **Tests**: manual
 **Gate**: manual

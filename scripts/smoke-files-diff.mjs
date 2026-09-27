@@ -897,6 +897,8 @@ const treeRows = `
       right: glyph ? glyph.getBoundingClientRect().right : null,
       edge: box.right - parseFloat(getComputedStyle(row).paddingRight),
       overflows: name ? name.scrollWidth > name.clientWidth : null,
+      // FSTS-04: a cut name ends in an ellipsis, not a bare clip.
+      ellipsis: name ? getComputedStyle(name).textOverflow : null,
       struck: (${STRUCK})(row).map((e) => (e === name ? 'name' : e === row ? 'row' : e.className))
     }
   })
@@ -1066,13 +1068,14 @@ async function glyphTreeChecks(ws) {
       (uncommittedColumn.length ? `; ${uncommittedColumn.slice(0, 3).join('; ')}` : '')
   )
 
-  // 5. The long name is cut, and its glyph keeps the column.
+  // 5. The long name is cut with an ellipsis, and its glyph keeps the column.
   const longRow = row(uncommitted, `src/${LONG_NAME}`)
   const longColumn = longRow ? columnFaults([longRow, ...uncommittedFiles]) : ['no row']
   check(
-    'A name too long for its row is cut and its glyph keeps the column (FSTS-04)',
-    longRow?.overflows === true && longColumn.length === 0,
-    `overflows ${longRow?.overflows}` + (longColumn.length ? `; ${longColumn.join('; ')}` : '')
+    'A name too long for its row is cut with an ellipsis and its glyph keeps the column (FSTS-04)',
+    longRow?.overflows === true && longRow?.ellipsis === 'ellipsis' && longColumn.length === 0,
+    `overflows ${longRow?.overflows}, text-overflow ${longRow?.ellipsis}` +
+      (longColumn.length ? `; ${longColumn.join('; ')}` : '')
   )
 
   // 6. No folder row carries a glyph.
@@ -1123,6 +1126,8 @@ const stackHeaders = `
       edge: box.right - parseFloat(getComputedStyle(header).paddingRight),
       counts: counts ? Math.round(counts.getBoundingClientRect().width * 10) / 10 : null,
       overflows: path ? path.scrollWidth > path.clientWidth : null,
+      // FSTS-20: a cut path ends in an ellipsis, not a bare clip.
+      ellipsis: path ? getComputedStyle(path).textOverflow : null,
       struck: (${STRUCK})(header).map((e) =>
         e === path ? 'path' : e === header ? 'header' : e.className
       )
@@ -1234,11 +1239,12 @@ async function glyphHeaderChecks(ws) {
   const long = narrowed ? header(narrowed, longPath) : undefined
   const narrowColumn = narrowed ? headerFaults(narrowed) : ['nothing read']
   check(
-    'A path too long for its header is cut and its glyph keeps the column (FSTS-20)',
+    'A path too long for its header is cut with an ellipsis and its glyph keeps the column (FSTS-20)',
     long?.overflows === true &&
+      long?.ellipsis === 'ellipsis' &&
       narrowed.length === Object.keys(UNCOMMITTED_STATUS).length &&
       narrowColumn.length === 0,
-    `at ${atWidth} px: overflows ${long?.overflows}` +
+    `at ${atWidth} px: overflows ${long?.overflows}, text-overflow ${long?.ellipsis}` +
       (narrowColumn.length ? `; ${narrowColumn.slice(0, 3).join('; ')}` : '')
   )
 
