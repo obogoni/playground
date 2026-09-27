@@ -215,9 +215,9 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | HTSK-04 | P1: picker — AC 4 | Execute | Implemented: T8, T18 |
 | HTSK-05 | P1: picker — AC 5 | Execute | Implemented: T8, T18 |
 | HTSK-06 | P1: picker — AC 6 | Execute | Implemented: T2, T13, T18 |
-| HTSK-07 | P1: session — AC 7 | Tasks | In Tasks |
-| HTSK-08 | P1: session — AC 8 | Tasks | In Tasks |
-| HTSK-09 | P1: session — AC 9 | Execute | Implementing: T3, T6, T9, T10, T17 |
+| HTSK-07 | P1: session — AC 7 | Execute | Implementing: T21 |
+| HTSK-08 | P1: session — AC 8 | Execute | Implementing: T21 |
+| HTSK-09 | P1: session — AC 9 | Execute | Implementing: T3, T6, T9, T10, T17, T21 |
 | HTSK-10 | P1: session — AC 10 | Execute | Implementing: T2, T3 |
 | HTSK-11 | P1: session — AC 11 | Execute | Implementing: T2, T3, T11, T12 |
 | HTSK-12 | P1: session — AC 12 | Execute | Implementing: T3, T6, T9, T10, T17 |

@@ -561,9 +561,10 @@ function App(): JSX.Element {
           tree={tree}
           agents={agents}
           source={nsSource}
-          onSpawn={(agentName, cwd, adhocCommand) => {
+          tasks={tasks.tasks}
+          onSpawn={(agentName, cwd, adhocCommand, task) => {
             setNsSource(null)
-            spawnSession(agentName, cwd, adhocCommand)
+            spawnSession(agentName, cwd, adhocCommand, task)
           }}
           onClose={() => setNsSource(null)}
         />

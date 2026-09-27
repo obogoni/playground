@@ -2,9 +2,12 @@ import { useState } from 'react'
 import type { JSX } from 'react'
 import type { AgentDef } from '../../../shared/agents'
 import { taskIdFromBranch } from '../../../shared/tasks'
+import type { PinnedTaskView, SessionTask } from '../../../shared/tasks'
+import type { PeriodTaskChoice } from '../../../shared/time'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { api } from '../lib/api'
 import { Icon } from './Icon'
+import { TaskPicker } from './TaskPicker'
 import './NewWorktreeDialog.css'
 import './StartWorkDialog.css'
 import './NewSessionDialog.css'
@@ -27,7 +30,10 @@ interface NewSessionDialogProps {
   /** Registry agents from config (AGCF-01); no longer the hard-coded constant. */
   agents: AgentDef[]
   source: NewSessionSource
-  onSpawn: (agentName: string, cwd: string, adhocCommand?: string) => void
+  /** The pinned tasks, for the Task field's picker. */
+  tasks: PinnedTaskView[]
+  /** `task` is the chosen link; absent = From branch (HTSK-09, HTSK-10). */
+  onSpawn: (agentName: string, cwd: string, adhocCommand?: string, task?: SessionTask) => void
   onClose: () => void
 }
 
@@ -59,11 +65,14 @@ function worktreeOptions(tree: WorkspaceNode[]): CwdOption[] {
  * StartWorkDialog. cwd comes from the worktree grid (optionally task-highlighted)
  * or a browsed folder (AGSN-09). Agents come from config, not a constant (AGCF-01);
  * Ad-hoc runs a one-shot raw command, never saved to the registry (AGCF-03).
+ * The Task field starts on `From branch`, or on the task card that opened the
+ * dialog (HTSK-07, HTSK-08), and the spawn carries the chosen link (HTSK-09).
  */
 export function NewSessionDialog({
   tree,
   agents,
   source,
+  tasks,
   onSpawn,
   onClose
 }: NewSessionDialogProps): JSX.Element {
@@ -71,6 +80,16 @@ export function NewSessionDialog({
   const [agentName, setAgentName] = useState(agents[0]?.name ?? ADHOC)
   const [cwd, setCwd] = useState<string | null>(source.cwd ?? null)
   const [adhocCommand, setAdhocCommand] = useState('')
+  // A task card opens the dialog on its task, with the pin's title when cached.
+  const [task, setTask] = useState<SessionTask | null>(() =>
+    source.taskId === undefined
+      ? null
+      : {
+          id: source.taskId,
+          title: tasks.find((t) => t.id === source.taskId)?.details?.title ?? null
+        }
+  )
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   const isAdhoc = agentName === ADHOC
   const agent = agents.find((a) => a.name === agentName)
@@ -94,10 +113,18 @@ export function NewSessionDialog({
       .catch(console.error)
   }
 
+  // A session picker never offers No task; From branch means no link.
+  const chooseTask = (choice: PeriodTaskChoice): void => {
+    setPickerOpen(false)
+    if (choice.kind === 'task') setTask({ id: choice.id, title: choice.title })
+    else setTask(null)
+  }
+
   const spawn = (): void => {
     if (cwd === null || !commandReady) return
-    if (isAdhoc) onSpawn(ADHOC, cwd, adhocCommand.trim())
-    else if (agent) onSpawn(agent.name, cwd)
+    const link = task ?? undefined
+    if (isAdhoc) onSpawn(ADHOC, cwd, adhocCommand.trim(), link)
+    else if (agent) onSpawn(agent.name, cwd, undefined, link)
   }
 
   return (
@@ -190,6 +217,29 @@ export function NewSessionDialog({
                 <span className="ns-detached-path">{detachedCwd}</span>
               </div>
             )}
+          </div>
+
+          <div>
+            <div className="dialog-field-label">Task</div>
+            <div className="ns-task">
+              <span className="ns-task-value">
+                {task === null
+                  ? 'From branch'
+                  : task.title
+                    ? `#${task.id} ${task.title}`
+                    : `#${task.id}`}
+              </span>
+              <button type="button" className="ns-task-change" onClick={() => setPickerOpen(true)}>
+                Change
+              </button>
+              {pickerOpen && (
+                <TaskPicker
+                  tasks={tasks}
+                  onChoose={chooseTask}
+                  onClose={() => setPickerOpen(false)}
+                />
+              )}
+            </div>
           </div>
 
           {willRun && (
