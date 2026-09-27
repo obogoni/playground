@@ -400,8 +400,8 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] Hand-drawn (no copied third-party path data)
-- [ ] Gate check passes: `npm run lint && npx electron-vite build`
+- [x] Hand-drawn (no copied third-party path data)
+- [x] Gate check passes: `npm run lint && npx electron-vite build`
 
 **Tests**: none
 **Gate**: build

@@ -253,9 +253,9 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-33 | P1: after — AC 33 | Execute | Implementing: T10 (unit) |
 | FDSC-34 | P2: many — AC 34 | Execute | Implementing: T9 (unit) |
 | FDSC-35 | P2: many — AC 35 | Execute | Implementing: T9 (no helper: the list goes as it is) |
-| FDSC-36 | P2: many — AC 36 | Tasks | Pending |
+| FDSC-36 | P2: many — AC 36 | Execute | Implementing: T12 (icon) |
 | FDSC-37 | P2: many — AC 37 | Tasks | Pending |
-| FDSC-38 | P2: many — AC 38 | Tasks | Pending |
+| FDSC-38 | P2: many — AC 38 | Execute | Implementing: T12 (icon) |
 | FDSC-39 | P2: many — AC 39 | Tasks | Pending |
 | FDSC-40 | P1: read-only — AC 40 | Execute | Implementing: T3 (AD-047) |
 | FDSC-41 | P1: read-only — AC 41 | Tasks | Pending |
