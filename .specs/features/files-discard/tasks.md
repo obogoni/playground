@@ -164,8 +164,8 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] The number checked free across `develop`, `origin/main` and every local and fork feature branch, listed in the commit body
-- [ ] Gate check passes: `npm test` (docs only; the count is unchanged)
+- [x] The number checked free across `develop`, `origin/main` and every local and fork feature branch, listed in the commit body
+- [x] Gate check passes: `npm test` (docs only; the count is unchanged)
 
 **Tests**: none
 **Gate**: quick

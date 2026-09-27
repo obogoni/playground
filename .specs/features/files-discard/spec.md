@@ -234,7 +234,7 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-14 | P1: confirm — AC 14 | Tasks | Pending |
 | FDSC-15 | P1: confirm — AC 15 | Tasks | Pending |
 | FDSC-16 | P1: confirm — AC 16 | Tasks | Pending |
-| FDSC-17 | P1: nothing permanent — AC 17 | Tasks | Pending |
+| FDSC-17 | P1: nothing permanent — AC 17 | Execute | Implementing: T3 (AD-047) |
 | FDSC-18 | P1: nothing permanent — AC 18 | Tasks | Pending |
 | FDSC-19 | P1: nothing permanent — AC 19 | Tasks | Pending |
 | FDSC-20 | P1: nothing permanent — AC 20 | Tasks | Pending |
@@ -257,9 +257,9 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-37 | P2: many — AC 37 | Tasks | Pending |
 | FDSC-38 | P2: many — AC 38 | Tasks | Pending |
 | FDSC-39 | P2: many — AC 39 | Tasks | Pending |
-| FDSC-40 | P1: read-only — AC 40 | Tasks | Pending |
+| FDSC-40 | P1: read-only — AC 40 | Execute | Implementing: T3 (AD-047) |
 | FDSC-41 | P1: read-only — AC 41 | Tasks | Pending |
-| FDSC-42 | P1: read-only — AC 42 | Tasks | Pending |
+| FDSC-42 | P1: read-only — AC 42 | Execute | Implementing: T3 (AD-047) |
 | FDSC-43 | Edge: untracked folder row | Tasks | Pending |
 | FDSC-44 | Edge: already gone | Tasks | Pending |
 | FDSC-45 | Edge: changed after opening | Tasks | Pending |
