@@ -202,7 +202,9 @@ T7 → T8 → T9 → T10
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Result (2026-09-27)**: `StatusGlyph` reads glyph and label from `changeStatusView` and imports `StatusGlyph.css`. Full gate: typecheck exit 0; lint exit 0, 0 errors, 18 warnings, unchanged; `npm test` 1784 / 93, all passing, unchanged. Nothing renders it until T4.
 
 **Tests**: none
 **Gate**: full
