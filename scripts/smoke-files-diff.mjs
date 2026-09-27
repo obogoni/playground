@@ -872,6 +872,34 @@ const STRUCK = `(root) =>
     getComputedStyle(e).textDecorationLine.includes('line-through')
   )`
 
+/**
+ * Why a glyph would not be painted, empty when it is: hidden, not displayed, under
+ * an element (itself included) with opacity below 1, or a box under 15 x 8 px.
+ * The DOM reads its text, title, colour and place either way, so none of those
+ * checks can tell a hidden glyph from a shown one.
+ */
+const UNPAINTED = `(glyph) => {
+  const why = []
+  const style = getComputedStyle(glyph)
+  if (style.visibility !== 'visible') why.push('visibility ' + style.visibility)
+  let hidden = null
+  let faded = null
+  for (let e = glyph; e && e.nodeType === 1; e = e.parentElement) {
+    const own = getComputedStyle(e)
+    if (!hidden && own.display === 'none') hidden = e
+    if (!faded && parseFloat(own.opacity) < 1) faded = e
+  }
+  if (hidden) why.push('display none on ' + (hidden.className || hidden.tagName))
+  if (faded) {
+    why.push('opacity ' + getComputedStyle(faded).opacity + ' on ' + (faded.className || faded.tagName))
+  }
+  const box = glyph.getBoundingClientRect()
+  if (box.width < 15 || box.height < 8) {
+    why.push('box ' + box.width.toFixed(1) + ' x ' + box.height.toFixed(1))
+  }
+  return why
+}`
+
 /** Every row of the tree, with its glyph and where that glyph ends. */
 const treeRows = `
   [...document.querySelectorAll('.file-tree-body .file-tree-row')].map((row) => {
@@ -899,7 +927,8 @@ const treeRows = `
       overflows: name ? name.scrollWidth > name.clientWidth : null,
       // FSTS-04: a cut name ends in an ellipsis, not a bare clip.
       ellipsis: name ? getComputedStyle(name).textOverflow : null,
-      struck: (${STRUCK})(row).map((e) => (e === name ? 'name' : e === row ? 'row' : e.className))
+      struck: (${STRUCK})(row).map((e) => (e === name ? 'name' : e === row ? 'row' : e.className)),
+      unpainted: glyph ? (${UNPAINTED})(glyph) : []
     }
   })
 `
@@ -970,6 +999,12 @@ function toneFaultsOf(lists) {
   }
   return { faults, seen }
 }
+
+/** Items without a glyph, or whose glyph is not painted (FSTS-06..10: the glyph reads). */
+const paintFaults = (items) =>
+  items
+    .filter((i) => i.glyphs < 1 || i.unpainted.length > 0)
+    .map((i) => `${i.path}: ${i.glyphs < 1 ? 'no glyph' : i.unpainted.join(', ')}`)
 
 /** Rows whose glyph text or tooltip differ from the spec's for their status. */
 function glyphFaults(items, expected) {
@@ -1095,6 +1130,18 @@ async function glyphTreeChecks(ws) {
     struck.length === 1 && struck[0] === 'docs/removed.md:name',
     `struck: ${struck.join(', ') || 'none'}`
   )
+
+  // 8. Every glyph of both lists is painted, not only present in the DOM.
+  const treeFiles = [...originFiles, ...uncommittedFiles]
+  const unpainted = paintFaults(treeFiles)
+  check(
+    'Every tree glyph is painted: visible, opaque, full size (FSTS-06..10)',
+    originFiles.length === Object.keys(ORIGIN_STATUS).length &&
+      uncommittedFiles.length === Object.keys(UNCOMMITTED_STATUS).length &&
+      unpainted.length === 0,
+    `${treeFiles.length} file rows` +
+      (unpainted.length ? `; ${unpainted.slice(0, 3).join('; ')}` : '')
+  )
 }
 
 /** Every section header of the stack on screen, with its glyph and where it ends. */
@@ -1130,7 +1177,8 @@ const stackHeaders = `
       ellipsis: path ? getComputedStyle(path).textOverflow : null,
       struck: (${STRUCK})(header).map((e) =>
         e === path ? 'path' : e === header ? 'header' : e.className
-      )
+      ),
+      unpainted: glyph ? (${UNPAINTED})(glyph) : []
     }
   })
 `
@@ -1264,6 +1312,17 @@ async function glyphHeaderChecks(ws) {
     `${distinct} distinct tokens, ${seen.size} statuses seen, ${origin.length + uncommitted.length} glyphs` +
       (toneFaults.length ? `; ${toneFaults.slice(0, 3).join('; ')}` : '')
   )
+
+  // 7. Every header glyph of both stacks is painted, off-screen headers included.
+  const unpainted = paintFaults([...origin, ...uncommitted])
+  check(
+    'Every header glyph is painted: visible, opaque, full size (FSTS-06..10)',
+    origin.length === Object.keys(ORIGIN_STATUS).length &&
+      uncommitted.length === Object.keys(UNCOMMITTED_STATUS).length &&
+      unpainted.length === 0,
+    `${origin.length + uncommitted.length} headers` +
+      (unpainted.length ? `; ${unpainted.slice(0, 3).join('; ')}` : '')
+  )
 }
 
 /** The subject of the seed's branch commit, which holds diff to origin's 44 files. */
@@ -1314,7 +1373,11 @@ async function glyphCommitChecks(ws) {
       Object.keys(ORIGIN_STATUS).every((p) => read.some((h) => h.path === p))
   )
   const statuses = new Set(headers.map((h) => h.status).filter(Boolean))
-  const faults = [...headerFaults(headers), ...glyphFaults(headers, ORIGIN_STATUS)]
+  const faults = [
+    ...headerFaults(headers),
+    ...glyphFaults(headers, ORIGIN_STATUS),
+    ...paintFaults(headers)
+  ]
   const struck = headers.flatMap((h) => h.struck.map((what) => `${h.path}:${what}`))
 
   // Back to what the icon checks and a focused run expect: no commit tab, and

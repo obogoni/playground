@@ -546,10 +546,30 @@ The Verifier's round 1 (`validation.md`) failed on smoke evidence only; the prod
 
 **Done when**:
 
-- [ ] The Verifier's mutant S7 (the tree's end group `visibility: hidden` until the row is hovered) fails the tree check, and its header twin fails the header and commit tab checks
-- [ ] A tree column mutant (T9 c) and a header column mutant (T10 c) still fail their checks
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`, `npx electron-vite build`, and one full drive on a fresh seed and a fresh `--user-data-dir`, every check passing
-- [ ] `spec.md` traceability: FSTS-04, 06..10, 20 and 21 read `Implementing`, naming the fix and its checks
+- [x] The Verifier's mutant S7 (the tree's end group `visibility: hidden` until the row is hovered) fails the tree check, and its header twin fails the header and commit tab checks
+- [x] A tree column mutant (T9 c) and a header column mutant (T10 c) still fail their checks
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`, `npx electron-vite build`, and one full drive on a fresh seed and a fresh `--user-data-dir`, every check passing
+- [x] `spec.md` traceability: FSTS-04, 06..10, 20 and 21 read `Implementing`, naming the fix and its checks
+
+**Result (2026-09-27)**: `treeRows` and `stackHeaders` now also read, per glyph, the reasons it would not be painted (`UNPAINTED`). A reason is any of:
+- `visibility` other than `visible`;
+- `display: none` on the glyph or an ancestor;
+- `opacity` below 1 on the glyph or an ancestor;
+- a box under 15 × 8 px.
+
+`paintFaults` faults any item with a reason, and any item with no glyph, so a missing glyph cannot pass as painted. The new checks are tree check 8 (focused 8) and header check 7 (focused 15), each over all 48 seeded rows or headers (44 + 4). The commit tab check (focused 16) now adds `paintFaults` to its faults. Focused run: 16 / 16 in 34 s. Mutants, one focused run each:
+- S7 (the tree end group `visibility: hidden` until the row is hovered): fails 8 only (`visibility hidden`).
+- Its header twin (the same on `.diff-section-end`): fails 15 and 16.
+- Opacity (the tree end group `opacity: 0`): fails 8 only (`opacity 0 on file-tree-end`).
+- Box (`.status-glyph` `transform: scale(0.1)`): fails 8 and 15 (`box 1.6 x 1.3`), and the column checks 3, 4, 5, 10, 11, 13 and 16, since the shrunk glyph ends 7 px short of the edge.
+- T9 c (end group before `FileIcon`): fails 3, 4 and 5, as at T9.
+- T10 c (end group before the path): fails 10, 11, 13 and 16.
+
+The `display: none` branch was not falsified on its own. `git status --porcelain` matched the baseline after each. Gate:
+- typecheck exit 0; lint exit 0, 0 errors, 18 warnings, unchanged; `npm test` 1784 / 93, all passing; `npx electron-vite build` exit 0.
+- Full drive, run once on a fresh seed and a fresh `--user-data-dir`: 45 / 45 in 100 s. The glyph sections are checks 20–35: tree 20–27, headers 28–34, commit tab 35. The 29 other checks all pass.
+
+`spec.md` traceability: FSTS-04, 06..10, 20 and 21 read `Implementing`, each naming its fix and checks.
 
 **Tests**: manual
 **Gate**: full
