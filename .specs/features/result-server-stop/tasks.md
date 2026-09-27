@@ -10,9 +10,9 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/result-server-stop/spec.md`
 **Design**: none - no architectural decision; the guard copies the activity hook server's.
-**Status**: Draft
+**Status**: In Progress - T1 Done (2026-09-27)
 **Branch**: `feature/result-server-stop` (cut from `main` = `origin/main` `c31bb9a`)
-**Test baseline**: measured green on `main` content on 2026-09-27 - 1663 tests / 90 files, `typecheck` and `lint` exit 0 (18 prettier warnings, 0 errors). Re-measure on the branch before T1.
+**Test baseline**: measured green on the branch on 2026-09-27 before any production change - 1663 tests / 90 files, `typecheck` and `lint` exit 0 (18 prettier warnings, 0 errors).
 
 ---
 
@@ -67,10 +67,12 @@ T1 → T2 → T3
 
 **Done when**:
 
-- [ ] Run against the **unfixed** build, the script FAILS and its output shows `ERR_SERVER_NOT_RUNNING` (falsification recorded in this task with the exit code and the matched line)
-- [ ] **Stop rule:** if the unfixed build quits clean, stop and report to the owner - the check cannot discriminate and RSTP-06 needs another proof
-- [ ] The script never touches `%APPDATA%\playground` (the user data dir is the temp dir) and leaves no electron process behind
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` - 1663 tests (no silent deletions)
+- [x] Run against the **unfixed** build, the script FAILS and its output shows `ERR_SERVER_NOT_RUNNING` (falsification recorded in this task with the exit code and the matched line)
+- [x] **Stop rule:** if the unfixed build quits clean, stop and report to the owner - the check cannot discriminate and RSTP-06 needs another proof (not triggered)
+- [x] The script never touches `%APPDATA%\playground` (the user data dir is the temp dir) and leaves no electron process behind
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` - 1663 tests (no silent deletions)
+
+**Result (2026-09-27)**: on the unfixed build (`c31bb9a` code) the smoke exits 1, 3/5 checks. The app exits 0 after the window closes, and the output carries `(node:6912) UnhandledPromiseRejectionWarning: Error [ERR_SERVER_NOT_RUNNING]: Server is not running.` at `Server.close (node:net:2359:12)`, so checks 4 and 5 fail. Added a fifth check the plan did not name: the output must contain Chromium's `DevTools listening` line, so an empty capture cannot read as a clean quit. No `electron.exe` with `quit-smoke` in its command line and no `quit-smoke-*` dir under `%TEMP%` after the run.
 
 **Tests**: none
 **Gate**: build
