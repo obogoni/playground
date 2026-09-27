@@ -425,8 +425,8 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [ ] Every user-facing string comes from T9's helpers or is one of the spec's literals (L-064)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Every user-facing string comes from T9's helpers or is one of the spec's literals (L-064)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full

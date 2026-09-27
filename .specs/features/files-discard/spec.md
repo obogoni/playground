@@ -227,18 +227,18 @@ Each carries an ID and its own test or smoke check (L-025).
 | FDSC-07 | P1: one file — AC 7 | Execute | Implementing: T6 (unit) |
 | FDSC-08 | P1: one file — AC 8 | Execute | Implemented: T5 (unit) |
 | FDSC-09 | P1: one file — AC 9 | Execute | Implemented: T5 (unit) |
-| FDSC-10 | P1: confirm — AC 10 | Execute | Implementing: T9 (unit) |
-| FDSC-11 | P1: confirm — AC 11 | Execute | Implementing: T9 (unit) |
-| FDSC-12 | P1: confirm — AC 12 | Execute | Implementing: T9 (unit) |
-| FDSC-13 | P1: confirm — AC 13 | Execute | Implementing: T9 (unit) |
-| FDSC-14 | P1: confirm — AC 14 | Execute | Implementing: T9 (unit) |
-| FDSC-15 | P1: confirm — AC 15 | Tasks | Pending |
-| FDSC-16 | P1: confirm — AC 16 | Tasks | Pending |
+| FDSC-10 | P1: confirm — AC 10 | Execute | Implementing: T9 (unit), T13 (dialog) |
+| FDSC-11 | P1: confirm — AC 11 | Execute | Implementing: T9 (unit), T13 (dialog) |
+| FDSC-12 | P1: confirm — AC 12 | Execute | Implementing: T9 (unit), T13 (dialog) |
+| FDSC-13 | P1: confirm — AC 13 | Execute | Implementing: T9 (unit), T13 (dialog) |
+| FDSC-14 | P1: confirm — AC 14 | Execute | Implementing: T9 (unit), T13 (dialog) |
+| FDSC-15 | P1: confirm — AC 15 | Execute | Implementing: T13 (dialog) |
+| FDSC-16 | P1: confirm — AC 16 | Execute | Implementing: T13 (dialog) |
 | FDSC-17 | P1: nothing permanent — AC 17 | Execute | Implementing: T3 (AD-047), T5 (no delete call), T6, T7 (refusal tests), T8 (trashItem only) |
 | FDSC-18 | P1: nothing permanent — AC 18 | Execute | Implemented: T6 (unit) |
 | FDSC-19 | P1: nothing permanent — AC 19 | Tasks | Pending |
-| FDSC-20 | P1: nothing permanent — AC 20 | Tasks | Pending |
-| FDSC-21 | P1: nothing permanent — AC 21 | Execute | Implementing: T9 (unit) |
+| FDSC-20 | P1: nothing permanent — AC 20 | Execute | Implementing: T13 (dialog) |
+| FDSC-21 | P1: nothing permanent — AC 21 | Execute | Implementing: T9 (unit), T13 (dialog) |
 | FDSC-22 | P1: nothing permanent — AC 22 | Execute | Implemented: T6 (unit, real junction) |
 | FDSC-23 | P1: nothing permanent — AC 23 | Execute | Implemented: T5, T7 (unit) |
 | FDSC-24 | P1: rename — AC 24 | Execute | Implementing: T1 (unit) |
