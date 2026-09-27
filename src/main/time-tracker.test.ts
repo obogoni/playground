@@ -707,3 +707,118 @@ describe('TimeTracker session task link', () => {
     ])
   })
 })
+
+describe('TimeTracker reassign a closed period', () => {
+  /** A closed period on a branch naming #67890, recorded on #67890. */
+  const onBranch: TimePeriod = {
+    id: 'old',
+    sessionId: 'gone',
+    agent: 'Claude',
+    cwd: 'D:\\acme\\app-67890',
+    workspacePath: 'D:\\acme',
+    repoName: 'app',
+    branch: 'feature/67890-widget-export',
+    taskId: 67890,
+    taskTitle: 'Widget export',
+    start: iso(T0 - 3 * 60 * MIN),
+    end: iso(T0 - 2 * 60 * MIN)
+  }
+  /** The same period after a hand-set move to #12345. */
+  const moved: TimePeriod = {
+    ...onBranch,
+    taskId: 12345,
+    taskTitle: 'Fix login redirect',
+    taskByHand: true
+  }
+  const other: TimePeriod = {
+    ...onBranch,
+    id: 'other',
+    start: iso(T0 - MIN * 90),
+    end: iso(T0 - MIN * 80)
+  }
+
+  const rewrittenOld = (t: Harness): TimePeriod | undefined =>
+    t.store.rewrites[0]?.find((p) => p.id === 'old')
+
+  it('records the chosen task and keeps every other field (HTSK-25, HTSK-35, HTSK-36, HTSK-39)', () => {
+    const t = setup({ periods: [onBranch, other] })
+    const emits = t.emits()
+
+    expect(
+      t.tracker.reassignPeriod('old', { kind: 'task', id: 12345, title: 'Chosen title' })
+    ).toEqual({ ok: true })
+
+    const expected: TimePeriod = {
+      ...onBranch,
+      taskId: 12345,
+      taskTitle: 'Chosen title',
+      taskByHand: true
+    }
+    expect(t.store.rewrites).toEqual([[expected, other]])
+    expect(t.tracker.snapshot().periods).toEqual([expected, other])
+    expect(rewrittenOld(t)).toMatchObject({
+      branch: onBranch.branch,
+      cwd: onBranch.cwd,
+      start: onBranch.start,
+      end: onBranch.end,
+      sessionId: onBranch.sessionId,
+      agent: onBranch.agent,
+      workspacePath: onBranch.workspacePath,
+      repoName: onBranch.repoName
+    })
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it('records a null task id and title for No task (HTSK-26)', () => {
+    const t = setup({ periods: [onBranch] })
+    const emits = t.emits()
+
+    expect(t.tracker.reassignPeriod('old', { kind: 'none' })).toEqual({ ok: true })
+
+    expect(t.store.rewrites).toEqual([
+      [{ ...onBranch, taskId: null, taskTitle: null, taskByHand: true }]
+    ])
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it("restores the branch's task and pinned title and removes the flag key for From branch (HTSK-27, HTSK-37)", () => {
+    const t = setup({ periods: [moved] })
+    const emits = t.emits()
+
+    expect(t.tracker.reassignPeriod('old', { kind: 'branch' })).toEqual({ ok: true })
+
+    expect(t.store.rewrites).toEqual([[onBranch]])
+    expect('taskByHand' in (rewrittenOld(t) ?? {})).toBe(false)
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it("removes the flag key when the branch's own task is chosen (HTSK-37)", () => {
+    const t = setup({ periods: [moved] })
+
+    t.tracker.reassignPeriod('old', { kind: 'task', id: 67890, title: 'Widget export' })
+
+    expect(t.store.rewrites).toEqual([[onBranch]])
+    expect('taskByHand' in (rewrittenOld(t) ?? {})).toBe(false)
+  })
+
+  it('rejects the open period and a deleted id, rewriting nothing (HTSK-32)', () => {
+    const t = setup({ periods: [onBranch] })
+    t.tracker.started(meta())
+    const openId = t.tracker.snapshot().open[0].id
+    const before = t.tracker.snapshot()
+    const emits = t.emits()
+
+    expect(t.tracker.reassignPeriod(openId, { kind: 'none' })).toEqual({
+      ok: false,
+      error: 'This period is still open.'
+    })
+    expect(t.tracker.reassignPeriod('deleted', { kind: 'none' })).toEqual({
+      ok: false,
+      error: 'This period no longer exists.'
+    })
+
+    expect(t.store.rewrites).toEqual([])
+    expect(t.tracker.snapshot()).toEqual(before)
+    expect(t.emits()).toBe(emits)
+  })
+})

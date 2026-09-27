@@ -1,12 +1,13 @@
 import type {
   OpenPeriod,
   PeriodSnapshotFields,
+  PeriodTaskChoice,
   TimeEditResult,
   TimePeriod,
   TimeSnapshot
 } from '../shared/time'
 import type { SessionTask } from '../shared/tasks'
-import { withSessionTask } from './period-task'
+import { reassignFields, withSessionTask } from './period-task'
 import type { TimeLogStore } from './time-log-store'
 
 /** A period shorter than this is noise (spawn failure, instant exit) and is discarded (TIME-11). */
@@ -200,6 +201,23 @@ export class TimeTracker {
         ? { ...p, start: new Date(startMs).toISOString(), end: new Date(endMs).toISOString() }
         : p
     )
+    return this.#rewritten()
+  }
+
+  /**
+   * Moves a closed period to another task, to No task or back to its branch's
+   * task (HTSK-25..27). Only the task fields change; the flag is replaced, never
+   * merged, so a choice without it removes the key (HTSK-37, HTSK-39).
+   */
+  reassignPeriod(id: string, choice: PeriodTaskChoice): TimeEditResult {
+    const rejected = this.#editTarget(id)
+    if (rejected) return rejected
+    this.#periods = this.#periods.map((p) => {
+      if (p.id !== id) return p
+      const { taskByHand: _taskByHand, ...rest } = p
+      void _taskByHand
+      return { ...rest, ...reassignFields(p, choice, this.deps.pinnedTitle) }
+    })
     return this.#rewritten()
   }
 

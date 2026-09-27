@@ -192,9 +192,9 @@ T26 → T27 → T28 → T29 → T30 → T31
 
 **Done when**:
 
-- [ ] Tests: a task choice rewrites the log with that id and title and leaves `branch`, `cwd`, `start`, `end`, `sessionId`, `agent`, `workspacePath` and `repoName` equal to before; `none` records null / null; `branch` restores the branch's id and pinned title and removes the flag key; the open period and a deleted id are rejected with the TIME-47 / TIME-49 texts and nothing is rewritten; one emit per success
-- [ ] Gate check passes: `npx vitest run src/main/time-tracker.test.ts` then `npm test`
-- [ ] Test count: T3 count + the new tests
+- [x] Tests: a task choice rewrites the log with that id and title and leaves `branch`, `cwd`, `start`, `end`, `sessionId`, `agent`, `workspacePath` and `repoName` equal to before; `none` records null / null; `branch` restores the branch's id and pinned title and removes the flag key; the open period and a deleted id are rejected with the TIME-47 / TIME-49 texts and nothing is rewritten; one emit per success
+- [x] Gate check passes: `npx vitest run src/main/time-tracker.test.ts` then `npm test`
+- [x] Test count: T3 count + the new tests
 
 **Tests**: unit
 **Gate**: quick

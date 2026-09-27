@@ -233,21 +233,21 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 | HTSK-22 | P1: session — AC 22 | Tasks | In Tasks |
 | HTSK-23 | P1: drawer — AC 23 | Tasks | In Tasks |
 | HTSK-24 | P1: drawer — AC 24 | Tasks | In Tasks |
-| HTSK-25 | P1: drawer — AC 25 | Execute | Implementing: T2 |
-| HTSK-26 | P1: drawer — AC 26 | Execute | Implementing: T2 |
-| HTSK-27 | P1: drawer — AC 27 | Execute | Implementing: T2 |
+| HTSK-25 | P1: drawer — AC 25 | Execute | Implementing: T2, T4 |
+| HTSK-26 | P1: drawer — AC 26 | Execute | Implementing: T2, T4 |
+| HTSK-27 | P1: drawer — AC 27 | Execute | Implementing: T2, T4 |
 | HTSK-28 | P1: drawer — AC 28 | Tasks | In Tasks |
 | HTSK-29 | P1: drawer — AC 29 | Tasks | In Tasks |
 | HTSK-30 | P1: drawer — AC 30 | Tasks | In Tasks |
 | HTSK-31 | P1: drawer — AC 31 | Tasks | In Tasks |
-| HTSK-32 | P1: drawer — AC 32 | Tasks | In Tasks |
+| HTSK-32 | P1: drawer — AC 32 | Execute | Implementing: T4 |
 | HTSK-33 | P1: drawer — AC 33 | Tasks | In Tasks |
 | HTSK-34 | P1: drawer — AC 34 | Tasks | In Tasks |
-| HTSK-35 | P1: drawer — AC 35 | Tasks | In Tasks |
-| HTSK-36 | P1: mark — AC 36 | Execute | Implementing: T2, T3 |
-| HTSK-37 | P1: mark — AC 37 | Execute | Implementing: T2, T3 |
+| HTSK-35 | P1: drawer — AC 35 | Execute | Implementing: T4 |
+| HTSK-36 | P1: mark — AC 36 | Execute | Implementing: T2, T3, T4 |
+| HTSK-37 | P1: mark — AC 37 | Execute | Implementing: T2, T3, T4 |
 | HTSK-38 | P1: mark — AC 38 | Tasks | In Tasks |
-| HTSK-39 | P1: mark — AC 39 | Tasks | In Tasks |
+| HTSK-39 | P1: mark — AC 39 | Execute | Implementing: T4 |
 | HTSK-40 | P1: reports — AC 40 | Tasks | In Tasks |
 | HTSK-41 | P1: reports — AC 41 | Execute | Implemented: T1 |
 | HTSK-42 | P1: reports — AC 42 | Execute | Implemented: T1 |
