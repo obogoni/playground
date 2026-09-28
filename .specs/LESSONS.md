@@ -20,6 +20,12 @@ Corroborated across multiple features. Safe to apply as guidance.
 - evidence: validation.md round-2 gate section; tree.test.ts / worktree-manager.test.ts timeouts (testing) (+1 more)
 - last seen: 2026-07-31T12:27:40Z
 
+### L-009 - A default-constant test that asserts resolvePaneWidth(undefined, bounds, DEFAULT) against DEFAULT itself cannot detect a change to that constant — pin every spec-derived default with a literal assertion, not a self-referential one.
+- signal: `surviving_mutant` · recurrence: 2 feature(s) · scope: `renderer/lib` · harmful: 0
+- features: sidebar-resize-collapse, agent-task-link
+- evidence: src/renderer/src/lib/pane-layout.test.ts:41 (renderer/lib) (+1 more)
+- last seen: 2026-09-28T22:09:36Z
+
 ## Candidates (under observation - do NOT load as guidance yet)
 
 Seen once or not yet corroborated. Tracked, not trusted.
@@ -29,12 +35,6 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: vs2026-admin-shortcut
 - evidence: M4/M5: launch() -> VS_EDITIONS[tool]; openVisualStudio(edition) (src/main/**)
 - last seen: 2026-08-28T19:48:01Z
-
-### L-009 - A default-constant test that asserts resolvePaneWidth(undefined, bounds, DEFAULT) against DEFAULT itself cannot detect a change to that constant — pin every spec-derived default with a literal assertion, not a self-referential one.
-- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer/lib` · harmful: 0
-- features: sidebar-resize-collapse
-- evidence: src/renderer/src/lib/pane-layout.test.ts:41 (renderer/lib)
-- last seen: 2026-08-31T22:35:36Z
 
 ### L-010 - When a spec edge case says 'empty/whitespace', guard with trim().length > 0, not length > 0, or whitespace-only selections slip past the empty check.
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `src/renderer/src/components` · harmful: 0
@@ -521,6 +521,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: hours-task-assign
 - evidence: HTSK-14
 - last seen: 2026-09-28T00:27:37Z
+
+### L-091 - A PowerShell snippet published for scripts or agents must call Invoke-WebRequest -UseBasicParsing: Windows PowerShell 5.1 otherwise prompts after the response, so a non-interactive caller errors although the request succeeded.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `docs` · harmful: 0
+- features: agent-task-link
+- evidence: validation.md round 1 gap 2; README.md:49 (ATSK-12) (docs)
+- last seen: 2026-09-28T22:09:36Z
 
 ## Quarantined (failed when applied - ignore)
 

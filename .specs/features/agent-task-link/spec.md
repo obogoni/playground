@@ -135,20 +135,20 @@ manual step that is easy to forget, and every minute before it lands under No ta
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| ATSK-01 | P1: The agent links its own session (AC 1) | Execute | Implementing |
-| ATSK-02 | P1: The agent links its own session (AC 2) | Execute | Implementing |
-| ATSK-03 | P1: The agent links its own session (AC 3) | Execute | Implementing |
-| ATSK-04 | P1: The agent links its own session (AC 4) | Execute | Implementing |
-| ATSK-05 | P1: The agent links its own session (AC 5) | Execute | Implementing |
-| ATSK-06 | P1: The agent links its own session (AC 6) | Execute | Implementing |
-| ATSK-07 | P1: Only the session itself (AC 7) | Execute | Implementing |
-| ATSK-08 | P1: Only the session itself (AC 8) | Execute | Implementing |
-| ATSK-09 | P1: Only the session itself (AC 9) | Execute | Implementing |
-| ATSK-10 | P1: Only the session itself (AC 10) | Execute | Implementing |
-| ATSK-11 | P1: Only the session itself (AC 11) | Execute | Implementing |
-| ATSK-12 | P2: The contract is documented (AC 12) | Execute | Implementing |
+| ATSK-01 | P1: The agent links its own session (AC 1) | Execute | Verified |
+| ATSK-02 | P1: The agent links its own session (AC 2) | Execute | Verified |
+| ATSK-03 | P1: The agent links its own session (AC 3) | Execute | Verified |
+| ATSK-04 | P1: The agent links its own session (AC 4) | Execute | Verified |
+| ATSK-05 | P1: The agent links its own session (AC 5) | Execute | Verified |
+| ATSK-06 | P1: The agent links its own session (AC 6) | Execute | Verified |
+| ATSK-07 | P1: Only the session itself (AC 7) | Execute | Verified |
+| ATSK-08 | P1: Only the session itself (AC 8) | Execute | Verified |
+| ATSK-09 | P1: Only the session itself (AC 9) | Execute | Verified |
+| ATSK-10 | P1: Only the session itself (AC 10) | Execute | Verified |
+| ATSK-11 | P1: Only the session itself (AC 11) | Execute | Verified |
+| ATSK-12 | P2: The contract is documented (AC 12) | Execute | Verified |
 
-**Coverage:** 12 total, 0 mapped to tasks (Medium: tasks implicit in Execute), 12 pending.
+**Coverage:** 12 total, all verified (Medium: tasks implicit in Execute; `validation.md` round 2 PASS).
 
 ---
 
