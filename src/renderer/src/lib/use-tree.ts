@@ -1,8 +1,9 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { api } from './api'
 import { selectionAfterRefresh, selectionAfterRemove } from './tree-selection'
+import { patchWorktreeStatus } from './tree-status'
 
 export interface UseTree {
   tree: WorkspaceNode[]
@@ -14,6 +15,8 @@ export interface UseTree {
   refreshAndSelect: (path: string) => void
   /** Refresh and land on the repo's default checkout (after a remove). */
   refreshAndSelectDefault: (repoPath: string) => void
+  /** Recount one worktree's changes and patch them in; a failed recount keeps the last count (SCRF-06/07). */
+  recount: (worktreePath: string) => void
 }
 
 /**
@@ -56,5 +59,33 @@ export function useTree(): UseTree {
       .catch(console.error)
   }, [])
 
-  return { tree, selectedId, setSelectedId, refreshTree, refreshAndSelect, refreshAndSelectDefault }
+  const recount = useCallback((worktreePath: string): void => {
+    api
+      .invoke('worktrees:status', { worktreePath })
+      .then((status) => {
+        if (status) setTree((prev) => patchWorktreeStatus(prev, worktreePath, status))
+      })
+      .catch(console.error)
+  }, [])
+
+  // Main recounts a worktree whenever its git state moves (SCRF-01); the push
+  // patches only a worktree the tree still holds, so a full rebuild that
+  // dropped it wins.
+  useEffect(
+    () =>
+      api.on('worktree:status', ({ worktreePath, dirty, changes }) =>
+        setTree((prev) => patchWorktreeStatus(prev, worktreePath, { dirty, changes }))
+      ),
+    []
+  )
+
+  return {
+    tree,
+    selectedId,
+    setSelectedId,
+    refreshTree,
+    refreshAndSelect,
+    refreshAndSelectDefault,
+    recount
+  }
 }
