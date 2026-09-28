@@ -531,6 +531,13 @@ function App(): JSX.Element {
             pathMissing={selectedId !== null && selected === null}
             files={files}
             onToast={setToast}
+            // The remove-worktree confirmation's rule for "a session runs in
+            // this worktree" (WorktreeDetail), so the two dialogs agree (FDSC-12).
+            runningSessions={sessions.filter(
+              (s) => s.cwd === selected?.worktree.path && s.status === 'running'
+            )}
+            // The status bar's own refresh after a git operation (FDSC-31).
+            onDiscarded={refreshTree}
           />
         ) : (
           <BoardView

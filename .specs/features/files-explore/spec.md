@@ -41,7 +41,7 @@ them in tabs without leaving the app, and hand one off to the right external too
 | Any diff rendering | F2, shipped. Until then the two diff modes opened the file's current content (FXPL-14, now superseded by FDIF-10) |
 | Commit list | F3 |
 | Pull requests and comments | F4 (Azure DevOps), F5 (GitHub) |
-| Editing, saving, or any write to a file | Owner decision (grill Q2): read-only. The worktrees are where agents write; the app does not compete with them. Editing is handed off by the launchers |
+| Editing, saving, or any write to a file | Owner decision (grill Q2): read-only. The worktrees are where agents write; the app does not compete with them. Editing is handed off by the launchers. **Superseded for uncommitted discard by AD-047 (files-discard)** |
 | Search or filter within the tree | Not requested; the modes are the filter |
 | VS Code-style preview (transient) tabs | Every open is a real tab; a preview model can come later |
 | Tabs persisting across app restarts | Owner decision (grill Q16): a restored tab for a file an agent has since deleted is the failure being avoided |

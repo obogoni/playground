@@ -35,7 +35,7 @@ already is.
 | The diff of a single commit | F3 — it reuses this viewer with `commit^` → `commit` |
 | A PR's diff and its comments | F4 (Azure DevOps), F5 (GitHub) |
 | Separate staged and unstaged diffs | Owner decision (grill F2-Q1): one diff, `HEAD` → disk, matching F1's single uncommitted list |
-| Staging, unstaging, discarding or reverting a hunk | The Files direction is read-only (epic grill Q2) |
+| Staging, unstaging, discarding or reverting a hunk | The Files direction is read-only (epic grill Q2). The reason is superseded for uncommitted discard by AD-047 (files-discard); the hunk row itself stays out of scope |
 | Image diff (side-by-side pixels, swipe, onion skin) | Binary files stay placeholders (epic grill Q18) |
 | Three-way or conflict view | No merge operation exists in the app to produce one |
 | A per-file override of layout or whitespace | Owner decision (grill F2-Q5): one global preference |

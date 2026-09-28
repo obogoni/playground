@@ -456,6 +456,48 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: validation.md round 4: W4, W4h (smoke LAYOUT) (smoke)
 - last seen: 2026-09-27T18:08:55Z
 
+### L-080 - Give a defensive branch that keeps an item on an unexpected filesystem error its own test with an injected failure, and a reason text that names what actually happened
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `main-process` · harmful: 0
+- features: files-discard
+- evidence: validation.md U15 (file-discard.ts:169) (main-process)
+- last seen: 2026-09-27T21:04:56Z
+
+### L-081 - When a helper branches on a status together with an optional field, add a test row for every combination the parser can produce, not only one row per status
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer-lib` · harmful: 0
+- features: files-discard
+- evidence: validation.md V2 (discard-view.ts:117) (renderer-lib)
+- last seen: 2026-09-27T21:04:56Z
+
+### L-082 - When one item touches several paths in sequence, state in the spec whether a refusal on a later path undoes the earlier moves or only reports the item kept
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: files-discard
+- evidence: validation.md gap 2 (FDSC-47 vs FDSC-27) (spec)
+- last seen: 2026-09-27T21:04:56Z
+
+### L-083 - When a safety rule exempts links from a move, state what happens to links nested inside a folder that is moved whole
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: files-discard
+- evidence: validation.md gap 3 (FDSC-22 vs FDSC-43) (spec)
+- last seen: 2026-09-27T21:04:56Z
+
+### L-084 - When a confirmation captures the items a request will send, capture and send the target they were listed from with them, and state that pairing in the spec
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: files-discard
+- evidence: validation.md gap 4 (FDSC-42, FDSC-45) (spec)
+- last seen: 2026-09-27T21:04:56Z
+
+### L-085 - When one AC orders a list and another splits it under headings, state whether the order holds within each group or across the whole list
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: files-discard
+- evidence: validation.md gap 1 (FDSC-10 vs FDSC-11) (spec)
+- last seen: 2026-09-27T21:04:56Z
+
+### L-086 - When a design restructures an element that an earlier feature's smoke checks measure, name those checks in the design so the structure is chosen once
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `design` · harmful: 0
+- features: files-discard
+- evidence: SPEC_DEVIATION FileTree.tsx ChangedRows, DiffSection.tsx header (design)
+- last seen: 2026-09-27T21:04:56Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

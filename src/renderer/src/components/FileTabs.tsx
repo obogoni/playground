@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
+import type { ChangedPath } from '../../../shared/files'
 import type { ShortcutTool } from '../../../shared/shortcuts'
 import { api } from '../lib/api'
 import { commitTabTitle } from '../lib/commit-view'
@@ -21,6 +22,8 @@ interface FileTabsProps {
   files: UseFiles
   /** The launcher's existing failure toast (FXPL-30). */
   onToast: (message: string) => void
+  /** Opens the discard confirmation for these uncommitted entries (FDSC-38). */
+  onDiscard: (entries: ChangedPath[]) => void
 }
 
 /** The launcher row of FXPL-25, in the order the requirement lists it. */
@@ -130,7 +133,7 @@ function DiffBody({
  * Only the active tab is mounted, keyed by its tab key, so Monaco creates one
  * editor per tab and disposes it when the tab loses focus or closes.
  */
-export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.Element {
+export function FileTabs({ worktreePath, files, onToast, onDiscard }: FileTabsProps): JSX.Element {
   const active: StripTab | null =
     files.strip.find((tab) => tabKeyOf(tab) === files.activeTab) ?? null
 
@@ -464,6 +467,9 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
             ignoreWhitespace={files.diffIgnoreWhitespace}
             refreshToken={files.refreshToken}
             onHandle={onHandle}
+            // FDSC-38/40: the section ↶ belongs to the uncommitted stack only;
+            // diff to origin gets none.
+            onDiscard={files.mode === 'uncommitted' ? (changed) => onDiscard([changed]) : undefined}
             // One tab across both diff lenses, so one choice (FOLD-20).
             unchanged={files.unchangedFor(ALL_CHANGES_KEY)}
             onUnchanged={(mode) => files.pressUnchanged(ALL_CHANGES_KEY, mode)}

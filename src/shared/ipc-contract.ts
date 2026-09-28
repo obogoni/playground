@@ -9,11 +9,13 @@ import type {
 import type {
   BaseOptions,
   ChangedListing,
+  ChangedPath,
   CommitDetail,
   CommitPage,
   DiffRequest,
   DiffSides,
   DirListing,
+  DiscardResult,
   FileContent,
   FileStat,
   FilesChanged,
@@ -191,6 +193,14 @@ export interface IpcContract {
   'files:diff-stats': {
     req: { worktreePath: string; mode: FilesMode; base?: string }
     res: FileStat[]
+  }
+  /**
+   * Discard the listed uncommitted entries: tracked files back to HEAD, the rest
+   * to the Recycle Bin. No revision field: main restores to HEAD only (FDSC-42).
+   */
+  'files:discard': {
+    req: { worktreePath: string; entries: ChangedPath[] }
+    res: DiscardResult
   }
   /** One page of the branch's own commits since its base (FCMT-02/08/09/12/23). */
   'commits:list': {

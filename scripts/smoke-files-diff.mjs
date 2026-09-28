@@ -14,7 +14,8 @@
  *   4. node scripts/smoke-files-diff.mjs --clean
  *
  * SMOKE_ONLY=glyphs on step 2 runs the status glyph sections alone (FSTS,
- * issue #131), from a fresh seed and launch like any drive.
+ * issue #131), from a fresh seed and launch like any drive. SMOKE_ONLY=discard
+ * runs the discard section alone (FDSC, issue #132), the same way.
  *
  * SMOKE_ONLY=fold on step 2 runs section 14 alone (FOLD, issue #130), from a
  * fresh seed and launch like any drive.
@@ -53,6 +54,16 @@
  *     Acme.Widget.slnx     committed on main, for the .slnx icon correction
  *     settings.json        committed on main, for the dark-theme icon rule
  *     vite.config.ts       committed on main, for the light-theme icon rule
+ *
+ * The discard section (FDSC) adds its own fixture when it starts, so no earlier
+ * section sees it: one commit on the branch holding discard/mod.ts,
+ * discard/stage.ts, discard/gone.ts, discard/old-name.ts, discard/deep/a.md and
+ * discard/deep/sub/b.md, all fictitious one-liners; then, uncommitted, mod.ts
+ * edited, stage.ts staged and edited again, gone.ts deleted, old-name.ts moved
+ * with `git mv` to new-name-<stamp>.ts and edited, both .md files edited, an
+ * untracked notes-<stamp>.txt and a staged added-<stamp>.ts (<stamp> is the
+ * run's timestamp). Confirmed discards send two or three of these small files
+ * to the real Recycle Bin per run.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -518,6 +529,16 @@ async function drive() {
     return failed.length
   }
 
+  // SMOKE_ONLY=discard runs the discard section alone; it builds its own fixture.
+  if (process.env.SMOKE_ONLY === 'discard') {
+    await discardChecks(ws)
+    const failed = checks.filter((c) => !c.ok)
+    console.log(`\n${checks.length - failed.length}/${checks.length} checks passed (discard only)`)
+    printDiscardHandChecks()
+    ws.close()
+    return failed.length
+  }
+
   // SMOKE_ONLY=fold runs section 14 alone, for iterating on it; the full drive
   // still runs before a PR.
   if (process.env.SMOKE_ONLY === 'fold') {
@@ -749,7 +770,7 @@ async function drive() {
     ws,
     `({
        sections: document.querySelectorAll('.diff-section').length,
-       expanded: [...document.querySelectorAll('.diff-section-header')]
+       expanded: [...document.querySelectorAll('.diff-section-toggle')]
          .filter((e) => e.getAttribute('aria-expanded') === 'true').length,
        files: document.querySelector('.all-changes-files')?.textContent?.trim() ?? null,
        added: document.querySelector('.all-changes-added')?.textContent?.trim() ?? null,
@@ -768,7 +789,7 @@ async function drive() {
   const expandedForCap = await evaluate(
     ws,
     `(() => {
-       const heads = [...document.querySelectorAll('.diff-section-header')]
+       const heads = [...document.querySelectorAll('.diff-section-toggle')]
          .filter((h) => h.getAttribute('aria-expanded') === 'false')
        heads.slice(0, 20).forEach((h) => h.click())
        return heads.slice(0, 20).length
@@ -778,7 +799,7 @@ async function drive() {
   const afterExpand = await evaluate(
     ws,
     `({
-       expanded: [...document.querySelectorAll('.diff-section-header')]
+       expanded: [...document.querySelectorAll('.diff-section-toggle')]
          .filter((e) => e.getAttribute('aria-expanded') === 'true').length,
        editors: ${liveDiffEditors}
      })`
@@ -844,7 +865,7 @@ async function drive() {
   await evaluate(
     ws,
     `(() => {
-       const heads = [...document.querySelectorAll('.diff-section-header')]
+       const heads = [...document.querySelectorAll('.diff-section-toggle')]
          .filter((h) => h.getAttribute('aria-expanded') === 'true')
        heads.slice(2).forEach((h) => h.click())
        const el = document.querySelector('.all-changes-stack')
@@ -856,7 +877,7 @@ async function drive() {
   const navBefore = await evaluate(
     ws,
     `({
-       expanded: [...document.querySelectorAll('.diff-section-header')]
+       expanded: [...document.querySelectorAll('.diff-section-toggle')]
          .filter((e) => e.getAttribute('aria-expanded') === 'true').length,
        scrollTop: Math.round(document.querySelector('.all-changes-stack')?.scrollTop ?? -1)
      })`
@@ -884,7 +905,7 @@ async function drive() {
   const navAfter = await evaluate(
     ws,
     `({
-       expanded: [...document.querySelectorAll('.diff-section-header')]
+       expanded: [...document.querySelectorAll('.diff-section-toggle')]
          .filter((e) => e.getAttribute('aria-expanded') === 'true').length,
        scrollTop: Math.round(document.querySelector('.all-changes-stack')?.scrollTop ?? -1)
      })`
@@ -977,6 +998,10 @@ async function drive() {
   await glyphTreeChecks(ws)
   await glyphHeaderChecks(ws)
   await glyphCommitChecks(ws)
+
+  // After the glyph sections, whose lists it would change, and before the
+  // icon checks, which reload the window and stay last.
+  await discardChecks(ws)
 
   await iconChecks(ws)
 
@@ -1328,6 +1353,7 @@ async function drive() {
   console.log('\nHand checks this smoke does NOT script:')
   console.log('  A. Read the line-ending strip on a MIXED file and judge its wording.')
   console.log('  B. Judge side-by-side against inline as the daily default.')
+  printDiscardHandChecks()
   ws.close()
   return failed.length
 }
@@ -2156,6 +2182,1022 @@ async function glyphCommitChecks(ws) {
       `${cutDetail(longGuide)}; ${layoutDetail(narrowed ?? [])}` +
       (narrowFaults.length ? `; ${narrowFaults.slice(0, 3).join('; ')}` : '')
   )
+}
+
+/* --------------------------------------------------------------- discard -- */
+
+/** The subject of the commit the discard fixture is built on. */
+const DISCARD_COMMIT = 'discard fixture'
+
+/**
+ * What each fixture file holds in that commit. Each carries a marker line, so a
+ * file put back to the last commit can be read back by it.
+ */
+const DISCARD_COMMITTED = {
+  'discard/mod.ts': 'export const mod = "committed mod marker"\n',
+  'discard/stage.ts': 'export const stage = "committed stage marker"\n',
+  'discard/gone.ts': 'export const gone = "committed gone marker"\n',
+  'discard/old-name.ts': 'export const oldName = "committed old-name marker"\n',
+  'discard/deep/a.md': '# A\n\ncommitted a marker\n',
+  'discard/deep/sub/b.md': '# B\n\ncommitted b marker\n'
+}
+
+/** The confirmation's two headings, as the spec words them (FDSC-11). */
+const RECYCLE_HEADING = 'These go to the Recycle Bin.'
+const RESTORE_HEADING = 'These go back to the last commit. This can’t be undone.'
+
+const repoFile = (path) => join(REPO, ...path.split('/'))
+
+/**
+ * Commits the fixture on the branch, then leaves every kind of uncommitted
+ * change the discard handles, under `discard/` only: a modified file, one staged
+ * and edited again, a deleted one, a rename with an edit, two edits two folders
+ * deep, an untracked file and an added one. `stamp` makes the untracked, added
+ * and renamed names unique to the run, so the Recycle Bin can be searched for
+ * them.
+ */
+function writeDiscardFixture(stamp) {
+  mkdirSync(repoFile('discard/deep/sub'), { recursive: true })
+  for (const [path, text] of Object.entries(DISCARD_COMMITTED)) {
+    writeFileSync(repoFile(path), text)
+  }
+  git(['add', 'discard'])
+  git(['commit', '-q', '-m', DISCARD_COMMIT])
+
+  const fx = {
+    renamed: `discard/new-name-${stamp}.ts`,
+    notes: `discard/notes-${stamp}.txt`,
+    added: `discard/added-${stamp}.ts`
+  }
+  writeFileSync(repoFile('discard/mod.ts'), 'export const mod = "edited by the smoke"\n')
+  writeFileSync(repoFile('discard/stage.ts'), 'export const stage = "staged edit"\n')
+  git(['add', 'discard/stage.ts'])
+  writeFileSync(repoFile('discard/stage.ts'), 'export const stage = "unstaged edit"\n')
+  rmSync(repoFile('discard/gone.ts'))
+  git(['mv', 'discard/old-name.ts', fx.renamed])
+  writeFileSync(repoFile(fx.renamed), 'export const newName = "edited after the move"\n')
+  writeFileSync(repoFile('discard/deep/a.md'), '# A\n\nedited a\n')
+  writeFileSync(repoFile('discard/deep/sub/b.md'), '# B\n\nedited b\n')
+  writeFileSync(repoFile(fx.notes), 'fictitious notes, not tracked\n')
+  writeFileSync(repoFile(fx.added), 'export const added = "staged, never committed"\n')
+  git(['add', fx.added])
+  return fx
+}
+
+/** Every row of the tree, in the order drawn: path, folder or not, and its glyph's title. */
+const discardTreeRows = `
+  [...document.querySelectorAll('.file-tree-body .file-tree-row')].map((row) => ({
+    path: row.getAttribute('title'),
+    folder: row.querySelector('.file-tree-chevron') !== null,
+    glyph: row.querySelector('.status-glyph')?.getAttribute('title') ?? null
+  }))
+`
+
+/** What the discard confirmation shows, or null while it is closed. */
+const discardDialog = `
+  (() => {
+    const panel = document.querySelector('.discard-confirm')
+    if (!panel) return null
+    const sessions = panel.querySelector('.discard-sessions')
+    const confirm = panel.querySelector('.discard-confirm-btn')
+    return {
+      title: panel.querySelector('.discard-title')?.textContent.trim() ?? null,
+      groups: [...panel.querySelectorAll('.discard-group')].map((g) => ({
+        group: g.getAttribute('data-group'),
+        heading: g.querySelector('.discard-heading')?.textContent.trim() ?? null,
+        rows: [...g.querySelectorAll('.discard-row')].map((r) => r.getAttribute('data-path')),
+        glyphs: [...g.querySelectorAll('.discard-row')].map((r) => r.querySelectorAll('.status-glyph').length)
+      })),
+      rows: [...panel.querySelectorAll('.discard-row')].map((r) => r.getAttribute('data-path')),
+      sessions: sessions
+        ? {
+            first: sessions.firstElementChild?.classList.contains('discard-sessions-warning')
+              ? sessions.firstElementChild.textContent.trim()
+              : null,
+            titles: [...sessions.querySelectorAll('.rwc-session-title')].map((e) => e.textContent.trim())
+          }
+        : null,
+      confirm: confirm ? { text: confirm.textContent.trim(), disabled: confirm.disabled } : null,
+      kept: [...panel.querySelectorAll('.discard-kept-row')].map((r) => ({
+        path: r.getAttribute('data-path'),
+        reason: r.querySelector('.discard-kept-reason')?.textContent.trim() ?? null
+      })),
+      buttons: [...panel.querySelectorAll('.dialog-footer button')].map((b) => b.textContent.trim())
+    }
+  })()
+`
+
+const ctxMenuItems = `
+  document.querySelector('.file-tree-ctx-menu')
+    ? [...document.querySelectorAll('.file-tree-ctx-menu .file-tree-ctx-item')].map((e) => e.textContent.trim())
+    : null
+`
+
+/** The centre of the tree row titled `path`, or of `inner` inside it; null when absent. */
+const rowPoint = (path, inner = null) => `
+  (() => {
+    const row = [...document.querySelectorAll('.file-tree-body .file-tree-row')]
+      .find((r) => r.getAttribute('title') === ${JSON.stringify(path)})
+    const el = row && ${inner ? `row.querySelector(${JSON.stringify(inner)})` : 'row'}
+    if (!el) return null
+    const r = el.getBoundingClientRect()
+    const p = { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }
+    // Only a point that lands on the row itself: a list still settling can move
+    // another row under a point read a moment earlier.
+    return row.contains(document.elementFromPoint(p.x, p.y)) ? p : null
+  })()
+`
+
+/** The `visibility` the ↶ of the row titled `path` computes to, or `none` without one. */
+const rowDiscardVisibility = (path) => `
+  (() => {
+    const row = [...document.querySelectorAll('.file-tree-body .file-tree-row')]
+      .find((r) => r.getAttribute('title') === ${JSON.stringify(path)})
+    const button = row?.querySelector('.file-tree-discard')
+    return button ? getComputedStyle(button).visibility : 'none'
+  })()
+`
+
+/** A point of the tree column below its last row, where a click lands on nothing. */
+const treeBlank = `
+  (() => {
+    const r = document.querySelector('.file-tree-body').getBoundingClientRect()
+    return { x: Math.round(r.x + r.width / 2), y: Math.round(r.bottom - 12) }
+  })()
+`
+
+async function pointerTo(ws, point) {
+  await send(ws, 'Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y })
+}
+
+async function mouseClick(ws, point, button = 'left') {
+  await pointerTo(ws, point)
+  const buttons = button === 'right' ? 2 : 1
+  await send(ws, 'Input.dispatchMouseEvent', {
+    type: 'mousePressed',
+    x: point.x,
+    y: point.y,
+    button,
+    buttons,
+    clickCount: 1
+  })
+  await send(ws, 'Input.dispatchMouseEvent', {
+    type: 'mouseReleased',
+    x: point.x,
+    y: point.y,
+    button,
+    buttons: 0,
+    clickCount: 1
+  })
+}
+
+async function pressEscape(ws) {
+  for (const type of ['keyDown', 'keyUp']) {
+    await send(ws, 'Input.dispatchKeyEvent', {
+      type,
+      key: 'Escape',
+      code: 'Escape',
+      windowsVirtualKeyCode: 27,
+      nativeVirtualKeyCode: 27
+    })
+  }
+}
+
+/** Right-clicks the tree row titled `path`; returns whether it was there. */
+async function rightClickRow(ws, path) {
+  let point = null
+  for (let i = 0; i < 10 && !point; i++) {
+    point = await evaluate(ws, rowPoint(path))
+    if (!point) await sleep(200)
+  }
+  if (!point) return false
+  await mouseClick(ws, point, 'right')
+  await sleep(300)
+  return true
+}
+
+/** Opens the confirmation from the row menu of `path`; returns what it shows. */
+async function discardFromMenu(ws, path) {
+  if (!(await rightClickRow(ws, path))) return null
+  await evaluate(ws, clickByText('.file-tree-ctx-item', 'Discard changes'))
+  return readWhen(ws, discardDialog, (d) => d !== null)
+}
+
+/**
+ * Leaves the confirmation by Escape, and waits for it to close. Not by Cancel:
+ * check 3 must be the first to press that button, or a Cancel that confirms
+ * would discard a fixture file in check 1 and be blamed on the checks after it.
+ */
+async function cancelDiscard(ws) {
+  await pressEscape(ws)
+  return readWhen(ws, discardDialog, (d) => d === null)
+}
+
+/** Whether a tree row's glyph puts it in the Recycle Bin group (FDSC-11). */
+const RECYCLED_GLYPHS = new Set(['Untracked', 'Added', 'Renamed'])
+
+const sameList = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+
+/**
+ * 16. Discarding uncommitted changes (FDSC, issue #132). Builds its own fixture
+ * first, so no earlier section ever sees it, and leaves the uncommitted list as
+ * it found it.
+ */
+async function discardChecks(ws) {
+  await evaluate(ws, clickByText('.file-tree-mode', 'Uncommitted'))
+  await sleep(1200)
+  const stamp = Date.now()
+  // The uncommitted list before the fixture: the section leaves it as it was.
+  const before = (await evaluate(ws, discardTreeRows)).filter((r) => !r.folder).map((r) => r.path)
+  const fx = writeDiscardFixture(stamp)
+  const listed = [
+    'discard/mod.ts',
+    'discard/stage.ts',
+    'discard/gone.ts',
+    fx.renamed,
+    'discard/deep/a.md',
+    'discard/deep/sub/b.md',
+    fx.notes,
+    fx.added
+  ]
+  const shows = (read) =>
+    [...before, ...listed].every((p) => read.some((r) => !r.folder && r.path === p))
+  const rows = await readWhen(ws, discardTreeRows, shows)
+  if (!shows(rows)) {
+    check('The discard fixture shows in the uncommitted list', false, JSON.stringify(rows))
+    return
+  }
+  await discardGestureChecks(ws, fx)
+  await discardConfirmChecks(ws, fx, before)
+}
+
+/** Checks 1..10 of T20: every gesture opens the right list, and nothing else offers one. */
+async function discardGestureChecks(ws, fx) {
+  // 1. The file row's menu, and the list it opens (FDSC-01, 02, 10, 11, 14).
+  await rightClickRow(ws, 'discard/mod.ts')
+  const items = await evaluate(ws, ctxMenuItems)
+  await evaluate(ws, clickByText('.file-tree-ctx-item', 'Discard changes'))
+  const one = await readWhen(ws, discardDialog, (d) => d !== null)
+  check(
+    'A file row menu offers Discard changes, which lists that file alone (FDSC-01, 02, 10, 11, 14)',
+    sameList(items, ['Discard changes']) &&
+      one?.title === 'Discard changes?' &&
+      sameList(one?.rows, ['discard/mod.ts']) &&
+      one?.groups.length === 1 &&
+      one.groups[0].group === 'restore' &&
+      one.groups[0].heading === RESTORE_HEADING &&
+      one?.confirm?.text === 'Discard 1 file',
+    `menu ${JSON.stringify(items)}; ${JSON.stringify(one && { title: one.title, groups: one.groups, confirm: one.confirm })}`
+  )
+  await cancelDiscard(ws)
+
+  // 2. The menu goes away with Escape and with a click elsewhere, and nothing
+  // is discarded (FDSC-03).
+  const porcelain = git(['status', '--porcelain'])
+  await rightClickRow(ws, 'discard/mod.ts')
+  const openedA = await evaluate(ws, ctxMenuItems)
+  await pressEscape(ws)
+  await sleep(300)
+  const afterEscape = await evaluate(ws, ctxMenuItems)
+  await rightClickRow(ws, 'discard/mod.ts')
+  const openedB = await evaluate(ws, ctxMenuItems)
+  await mouseClick(ws, await evaluate(ws, treeBlank))
+  await sleep(300)
+  const afterClick = await evaluate(ws, ctxMenuItems)
+  check(
+    'The row menu closes on Escape and on a click elsewhere, discarding nothing (FDSC-03)',
+    openedA !== null &&
+      afterEscape === null &&
+      openedB !== null &&
+      afterClick === null &&
+      (await evaluate(ws, discardDialog)) === null &&
+      git(['status', '--porcelain']) === porcelain,
+    `open ${!!openedA} -> Escape ${afterEscape === null ? 'closed' : 'open'}; ` +
+      `open ${!!openedB} -> click ${afterClick === null ? 'closed' : 'open'}; ` +
+      `status ${git(['status', '--porcelain']) === porcelain ? 'unchanged' : 'CHANGED'}`
+  )
+
+  // 3. Cancel, Escape and a backdrop click each leave disk and index alone (FDSC-15).
+  const ways = {
+    Cancel: async () => {
+      await evaluate(ws, clickByText('.dialog-btn-ghost', 'Cancel'))
+    },
+    Escape: async () => {
+      await pressEscape(ws)
+    },
+    backdrop: async () => {
+      const point = await evaluate(
+        ws,
+        `(() => {
+          const backdrop = document.querySelector('.dialog-backdrop')
+          if (!backdrop) return null
+          const r = backdrop.getBoundingClientRect()
+          const p = { x: Math.round(r.left + 12), y: Math.round(r.bottom - 12) }
+          return document.elementFromPoint(p.x, p.y)?.classList.contains('dialog-backdrop') ? p : null
+        })()`
+      )
+      if (point) await mouseClick(ws, point)
+    }
+  }
+  const left = []
+  for (const [way, leave] of Object.entries(ways)) {
+    const opened = await discardFromMenu(ws, 'discard/mod.ts')
+    await leave()
+    const closed = await readWhen(ws, discardDialog, (d) => d === null)
+    left.push({
+      way,
+      opened: opened !== null,
+      closed: closed === null,
+      same: git(['status', '--porcelain']) === porcelain
+    })
+    if (closed !== null) await cancelDiscard(ws)
+  }
+  check(
+    'Leaving by Cancel, Escape or the backdrop changes nothing on disk or in the index (FDSC-15)',
+    left.every((l) => l.opened && l.closed && l.same),
+    left
+      .map(
+        (l) =>
+          `${l.way}: ${l.opened ? 'opened' : 'NOT opened'}, ${l.closed ? 'closed' : 'still open'}, status ${l.same ? 'same' : 'CHANGED'}`
+      )
+      .join('; ')
+  )
+
+  // 4. A folder's menu lists every change under it, at any depth, in the tree's
+  // order. The tree draws folders first, so sub/b.md comes before a.md; the
+  // expectation is read from the tree itself rather than written out.
+  const treeNow = await evaluate(ws, discardTreeRows)
+  const underDeep = treeNow
+    .filter((r) => !r.folder && r.path.startsWith('discard/deep/'))
+    .map((r) => r.path)
+  const folder = await discardFromMenu(ws, 'discard/deep')
+  check(
+    'A folder row menu lists every change under it, at any depth, in tree order (FDSC-34)',
+    underDeep.length === 2 &&
+      underDeep.includes('discard/deep/a.md') &&
+      underDeep.includes('discard/deep/sub/b.md') &&
+      sameList(folder?.rows, underDeep),
+    `tree ${JSON.stringify(underDeep)}; dialog ${JSON.stringify(folder?.rows ?? null)}`
+  )
+  if (folder) await cancelDiscard(ws)
+
+  // 5. The hover ↶: hidden, shown on hover and on focus, and its click opens
+  // the confirmation without opening a tab (FDSC-36, 37, 11).
+  await pointerTo(ws, await evaluate(ws, treeBlank))
+  await sleep(200)
+  const notesHidden = await evaluate(ws, rowDiscardVisibility(fx.notes))
+  const folderHidden = await evaluate(ws, rowDiscardVisibility('discard'))
+  await pointerTo(ws, await evaluate(ws, rowPoint(fx.notes)))
+  await sleep(250)
+  const notesHover = await evaluate(ws, rowDiscardVisibility(fx.notes))
+  await pointerTo(ws, await evaluate(ws, rowPoint('discard')))
+  await sleep(250)
+  const folderHover = await evaluate(ws, rowDiscardVisibility('discard'))
+  await pointerTo(ws, await evaluate(ws, treeBlank))
+  await sleep(250)
+  const notesOff = await evaluate(ws, rowDiscardVisibility(fx.notes))
+  await evaluate(
+    ws,
+    `[...document.querySelectorAll('.file-tree-body .file-tree-row')]
+       .find((r) => r.getAttribute('title') === ${JSON.stringify(fx.notes)})
+       ?.querySelector('.file-tree-open')?.focus()`
+  )
+  await sleep(200)
+  const notesFocus = await evaluate(ws, rowDiscardVisibility(fx.notes))
+  await evaluate(ws, `document.activeElement?.blur()`)
+  const tabsBefore = await evaluate(ws, `document.querySelectorAll('.file-tab').length`)
+  await pointerTo(ws, await evaluate(ws, rowPoint(fx.notes)))
+  await sleep(250)
+  const undoPoint = await evaluate(ws, rowPoint(fx.notes, '.file-tree-discard'))
+  if (undoPoint) await mouseClick(ws, undoPoint)
+  const hovered = await readWhen(ws, discardDialog, (d) => d !== null)
+  // Past the tree's 250 ms double-click window, so a tab the click opened is there.
+  await sleep(500)
+  const tabsAfter = await evaluate(ws, `document.querySelectorAll('.file-tab').length`)
+  check(
+    'A row ↶ shows on hover and focus only, and opens that row’s files without a tab (FDSC-36, 37, 11)',
+    notesHidden === 'hidden' &&
+      folderHidden === 'hidden' &&
+      notesHover === 'visible' &&
+      folderHover === 'visible' &&
+      notesOff === 'hidden' &&
+      notesFocus === 'visible' &&
+      sameList(hovered?.rows, [fx.notes]) &&
+      hovered?.groups.length === 1 &&
+      hovered.groups[0].group === 'recycle' &&
+      hovered.groups[0].heading === RECYCLE_HEADING &&
+      tabsAfter === tabsBefore,
+    `file ${notesHidden} -> hover ${notesHover} -> off ${notesOff} -> focus ${notesFocus}; ` +
+      `folder ${folderHidden} -> hover ${folderHover}; dialog ${JSON.stringify(hovered?.groups ?? null)}; ` +
+      `tabs ${tabsBefore} -> ${tabsAfter}`
+  )
+  if (hovered) await cancelDiscard(ws)
+  await pointerTo(ws, await evaluate(ws, treeBlank))
+
+  // 6. Discard all lists the whole uncommitted list (FDSC-10, 11, 13, 14, 35).
+  // The dialog shows the Recycle Bin group first, then the restore group, each
+  // in tree order; so each group is held against the tree's file rows of that
+  // group, in tree order, and the two together against the tree's file rows as
+  // a set.
+  const allLabel = await evaluate(
+    ws,
+    `document.querySelector('.file-tree-discard-all')?.textContent.trim() ?? null`
+  )
+  const treeAll = (await evaluate(ws, discardTreeRows)).filter((r) => !r.folder)
+  await evaluate(ws, `document.querySelector('.file-tree-discard-all')?.click()`)
+  const all = await readWhen(ws, discardDialog, (d) => d !== null)
+  const wantRecycle = treeAll.filter((r) => RECYCLED_GLYPHS.has(r.glyph)).map((r) => r.path)
+  const wantRestore = treeAll.filter((r) => !RECYCLED_GLYPHS.has(r.glyph)).map((r) => r.path)
+  const group = (name) => all?.groups.find((g) => g.group === name)
+  const everyRow = all?.rows ?? []
+  const n = everyRow.length
+  check(
+    'Discard all lists every uncommitted file by group, in tree order, with glyphs and headings (FDSC-10, 11, 13, 14, 35)',
+    allLabel === 'Discard all' &&
+      wantRecycle.length > 0 &&
+      wantRestore.length > 0 &&
+      sameList(group('recycle')?.rows, wantRecycle) &&
+      sameList(group('restore')?.rows, wantRestore) &&
+      sameList([...everyRow].sort(), treeAll.map((r) => r.path).sort()) &&
+      all.groups.every((g) => g.glyphs.every((count) => count === 1)) &&
+      group('recycle')?.heading === RECYCLE_HEADING &&
+      group('restore')?.heading === RESTORE_HEADING &&
+      all.confirm?.text === `Discard ${n} files` &&
+      all.sessions === null,
+    `label ${allLabel}; recycle ${group('recycle')?.rows.length ?? 0}/${wantRecycle.length}, ` +
+      `restore ${group('restore')?.rows.length ?? 0}/${wantRestore.length}; button ${all?.confirm?.text}; ` +
+      `sessions ${all?.sessions ? 'shown' : 'none'}`
+  )
+  if (all) await cancelDiscard(ws)
+
+  // 7. A session running in the worktree is named (FDSC-12). An ad-hoc shell,
+  // never a registry agent, and never sent any input.
+  const spawned = []
+  try {
+    const worktree = await evaluate(
+      ws,
+      `(async () => {
+        for (const node of await window.api.invoke('tree:get')) {
+          for (const repo of node.repos ?? []) {
+            for (const w of repo.worktrees ?? []) if (w.branch === 'feature/diff') return w.path
+          }
+        }
+        return null
+      })()`
+    )
+    const session = await evaluate(
+      ws,
+      `(async () => {
+        const s = await window.api.invoke('sessions:spawn', { agentName: 'Ad-hoc', cwd: ${JSON.stringify(worktree)}, adhocCommand: 'pwsh -NoLogo' })
+        return { id: s.id, title: s.title }
+      })()`
+    )
+    spawned.push(session.id)
+    // A direct-IPC spawn pushes no event; stopping a second one does, and makes
+    // the renderer re-read its sessions (as smoke-activity does). Stopped, it is
+    // not running, so it is not one the warning may name.
+    const nudge = await evaluate(
+      ws,
+      `(async () => (await window.api.invoke('sessions:spawn', { agentName: 'Ad-hoc', cwd: ${JSON.stringify(worktree)}, adhocCommand: 'cmd /c exit' })).id)()`
+    )
+    spawned.push(nudge)
+    await evaluate(
+      ws,
+      `(async () => { try { await window.api.invoke('sessions:stop', { id: ${JSON.stringify(nudge)} }) } catch {} return true })()`
+    )
+    await sleep(1500)
+    await evaluate(ws, `document.querySelector('.file-tree-discard-all')?.click()`)
+    const warned = await readWhen(ws, discardDialog, (d) => d?.sessions?.titles?.length > 0)
+    check(
+      'A running session in the worktree is warned about, by title (FDSC-12)',
+      warned?.sessions?.first ===
+        '1 session is running in this worktree and may be using these files.' &&
+        sameList(warned.sessions.titles, [session.title]),
+      `worktree ${worktree ? 'found' : 'MISSING'}; ${JSON.stringify(warned?.sessions ?? null)}; session "${session.title}"`
+    )
+    if (warned) await cancelDiscard(ws)
+  } finally {
+    await evaluate(
+      ws,
+      `(async () => {
+        for (const id of ${JSON.stringify(spawned)}) {
+          try { await window.api.invoke('sessions:stop', { id }) } catch {}
+          try { await window.api.invoke('sessions:remove', { id }) } catch {}
+        }
+        return true
+      })()`
+    )
+  }
+
+  // 8. The All changes section ↶, which neither folds nor unfolds (FDSC-38, 39).
+  await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
+  const headers = await readWhen(
+    ws,
+    `[...document.querySelectorAll('.diff-section')].map((s) => ({
+       path: s.getAttribute('data-path'),
+       discards: [...s.querySelectorAll('.diff-section-header .diff-section-discard')].map((b) => b.getAttribute('title'))
+     }))`,
+    (read) => read.some((h) => h.path === 'discard/mod.ts')
+  )
+  const sectionAt = `[...document.querySelectorAll('.diff-section')].find((s) => s.getAttribute('data-path') === 'discard/mod.ts')`
+  const expandedBefore = await evaluate(
+    ws,
+    `${sectionAt}?.querySelector('.diff-section-toggle')?.getAttribute('aria-expanded') ?? null`
+  )
+  await evaluate(ws, `${sectionAt}?.querySelector('.diff-section-discard')?.click()`)
+  const fromSection = await readWhen(ws, discardDialog, (d) => d !== null)
+  await sleep(400)
+  const expandedAfter = await evaluate(
+    ws,
+    `${sectionAt}?.querySelector('.diff-section-toggle')?.getAttribute('aria-expanded') ?? null`
+  )
+  check(
+    'Each uncommitted section header has a ↶ that lists its file and leaves the fold alone (FDSC-38, 39)',
+    headers.length > 0 &&
+      headers.every((h) => sameList(h.discards, ['Discard changes'])) &&
+      sameList(fromSection?.rows, ['discard/mod.ts']) &&
+      expandedBefore !== null &&
+      expandedAfter === expandedBefore,
+    `${headers.filter((h) => sameList(h.discards, ['Discard changes'])).length} of ${headers.length} headers with one ↶; ` +
+      `dialog ${JSON.stringify(fromSection?.rows ?? null)}; expanded ${expandedBefore} -> ${expandedAfter}`
+  )
+  if (fromSection) await cancelDiscard(ws)
+
+  // 9. Read-only elsewhere (FDSC-40, 41). Checks 1, 5, 6 and 8 proved each
+  // control exists; here none of them may.
+  await evaluate(ws, clickByText('.file-tree-mode', 'Diff to origin'))
+  await readWhen(ws, discardTreeRows, (read) => read.some((r) => r.path === 'discard/mod.ts'))
+  const originMenuOpened = await rightClickRow(ws, 'discard/mod.ts')
+  const originMenu = await evaluate(ws, ctxMenuItems)
+  await pressEscape(ws)
+  const originControls = await evaluate(
+    ws,
+    `({ undo: document.querySelectorAll('.file-tree-discard').length,
+        all: document.querySelectorAll('.file-tree-discard-all').length })`
+  )
+  await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
+  const originSections = await readWhen(
+    ws,
+    `({ sections: document.querySelectorAll('.diff-section').length,
+        undo: document.querySelectorAll('.diff-section-discard').length })`,
+    (read) => read.sections > 0
+  )
+  await evaluate(ws, clickByText('.file-tree-mode', 'Commits'))
+  let commitOpened = false
+  for (let i = 0; i < 20 && !commitOpened; i++) {
+    await sleep(500)
+    commitOpened = await evaluate(
+      ws,
+      `(() => {
+        const row = [...document.querySelectorAll('.commit-row')].find(
+          (r) => r.querySelector('.commit-subject')?.textContent.trim() === ${JSON.stringify(DISCARD_COMMIT)}
+        )
+        const open = row?.querySelector('.commit-open')
+        if (!open) return false
+        open.click()
+        return true
+      })()`
+    )
+  }
+  const commitSections = await readWhen(
+    ws,
+    `({ active: [...document.querySelectorAll('.file-tab.active .file-tab-label')].map((e) => e.textContent.trim())[0] ?? null,
+        sections: document.querySelectorAll('.diff-section').length,
+        undo: document.querySelectorAll('.diff-section-discard').length })`,
+    (read) => (read.active ?? '').endsWith(` · ${DISCARD_COMMIT}`) && read.sections > 0
+  )
+  await evaluate(
+    ws,
+    `(() => {
+      const tab = [...document.querySelectorAll('.file-tab')].find((t) =>
+        (t.querySelector('.file-tab-label')?.textContent.trim() ?? '').endsWith(${JSON.stringify(` · ${DISCARD_COMMIT}`)})
+      )
+      tab?.querySelector('.file-tab-close')?.click()
+      return !!tab
+    })()`
+  )
+  check(
+    'Diff to origin and commit tabs offer no discard at all (FDSC-40, 41)',
+    originMenuOpened &&
+      originMenu === null &&
+      originControls.undo === 0 &&
+      originControls.all === 0 &&
+      originSections.sections > 0 &&
+      originSections.undo === 0 &&
+      commitOpened &&
+      (commitSections.active ?? '').endsWith(` · ${DISCARD_COMMIT}`) &&
+      commitSections.sections > 0 &&
+      commitSections.undo === 0,
+    `origin: menu ${originMenu ? 'OPEN' : 'none'}, ${originControls.undo} row ↶, ${originControls.all} Discard all, ` +
+      `${originSections.undo} of ${originSections.sections} sections with ↶; ` +
+      `commit tab ${commitSections.active}: ${commitSections.undo} of ${commitSections.sections} sections with ↶`
+  )
+
+  // 10. An uncommitted rename compares against the old file (FDSC-24, 25). Read
+  // side by side, where the original pane is drawn; the layout is put back after.
+  await evaluate(ws, clickByText('.file-tree-mode', 'Uncommitted'))
+  await readWhen(ws, discardTreeRows, (read) => read.some((r) => r.path === fx.renamed))
+  await evaluate(ws, clickByText('.file-tree-name', fx.renamed.split('/').pop()))
+  await sleep(1500)
+  const wasInline =
+    (await evaluate(ws, activeToggles)).find((t) => t.label === 'Inline')?.pressed === 'true'
+  if (wasInline) await evaluate(ws, clickToggle('Inline'))
+  const sides = await readWhen(
+    ws,
+    `({
+       active: [...document.querySelectorAll('.file-tab.active .file-tab-label')].map((e) => e.textContent.trim())[0] ?? null,
+       panes: [...document.querySelectorAll('.diff-viewer .monaco-diff-editor .editor')].map((p) =>
+         [...p.querySelectorAll('.view-line')].map((l) => l.textContent.replace(/\\u00a0/g, ' ')).join('\\n')),
+       error: document.querySelector('.diff-viewer-error')?.textContent ?? null,
+       placeholder: document.querySelectorAll('.file-tabs-body .file-placeholder').length
+     })`,
+    (read) => read.error !== null || (read.panes[0] ?? '').includes('marker')
+  )
+  if (wasInline) await evaluate(ws, clickToggle('Inline'))
+  check(
+    'An uncommitted rename diff reads its old file on the original side (FDSC-24, 25)',
+    (sides.panes[0] ?? '').includes('committed old-name marker') &&
+      (sides.panes[1] ?? '').includes('edited after the move') &&
+      sides.error === null &&
+      sides.placeholder === 0,
+    `tab ${sides.active}; original ${JSON.stringify((sides.panes[0] ?? '').slice(0, 60))}; ` +
+      `modified ${JSON.stringify((sides.panes[1] ?? '').slice(0, 60))}; error ${sides.error}; placeholders ${sides.placeholder}`
+  )
+}
+
+/** The open tabs, in strip order: path (the label's title), diff or file, active. */
+const discardTabs = `
+  [...document.querySelectorAll('.file-tab')].map((t) => ({
+    title: t.querySelector('.file-tab-label')?.getAttribute('title') ?? null,
+    diff: t.querySelector('.file-tab-glyph') !== null,
+    active: t.classList.contains('active')
+  }))
+`
+
+/** The status bar's change count, or null without one. */
+const changesCount = `
+  (() => {
+    const text = document.querySelector('.status-bar-changes')?.textContent.trim()
+    return text ? Number(text) : null
+  })()
+`
+
+/** Focuses the file tab (not a diff tab) of `path`; returns whether it was open. */
+const focusFileTab = (path) => `
+  (() => {
+    const tab = [...document.querySelectorAll('.file-tab')].find(
+      (t) => t.querySelector('.file-tab-label')?.getAttribute('title') === ${JSON.stringify(path)} &&
+        !t.querySelector('.file-tab-glyph')
+    )
+    tab?.querySelector('.file-tab-label')?.click()
+    return !!tab
+  })()
+`
+
+const fileTabText = `
+  [...document.querySelectorAll('.code-viewer-editor .view-line')]
+    .map((l) => l.textContent.replace(/\\u00a0/g, ' '))
+    .join('\\n')
+`
+
+/**
+ * Records, on every change of the page, the confirm button's text and whether
+ * it is disabled, and whether a kept row ever shows (FDSC-16, 19).
+ */
+const watchConfirm = `
+  (() => {
+    window.__discardObserver?.disconnect()
+    window.__discardSeen = []
+    const record = () => {
+      const button = document.querySelector('.discard-confirm-btn')
+      if (button) window.__discardSeen.push({ text: button.textContent.trim(), disabled: button.disabled })
+      if (document.querySelector('.discard-kept-row')) window.__discardSeen.push({ kept: true })
+    }
+    window.__discardObserver = new MutationObserver(record)
+    window.__discardObserver.observe(document.body, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true
+    })
+    return true
+  })()
+`
+const confirmSeen = `(() => { window.__discardObserver?.disconnect(); return window.__discardSeen ?? [] })()`
+
+/**
+ * Presses the confirm button, but only when the open dialog lists exactly
+ * `paths`; otherwise leaves it and says what it listed, so the smoke never
+ * discards a file it did not mean to. Waits for the dialog to close or to list
+ * what it kept.
+ */
+async function confirmDiscard(ws, dialog, paths) {
+  if (!dialog) return 'not opened'
+  if (!sameList(dialog.rows, paths)) {
+    await cancelDiscard(ws)
+    return `listed ${JSON.stringify(dialog.rows)}`
+  }
+  await evaluate(ws, `document.querySelector('.discard-confirm-btn')?.click()`)
+  return readWhen(ws, discardDialog, (d) => d === null || d.kept.length > 0)
+}
+
+/** Hovers the row of `path` and clicks its ↶; returns what the confirmation shows. */
+async function discardFromUndo(ws, path) {
+  const row = await evaluate(ws, rowPoint(path))
+  if (!row) return null
+  await pointerTo(ws, row)
+  await sleep(250)
+  const undo = await evaluate(ws, rowPoint(path, '.file-tree-discard'))
+  if (!undo) return null
+  await mouseClick(ws, undo)
+  const dialog = await readWhen(ws, discardDialog, (d) => d !== null)
+  await pointerTo(ws, await evaluate(ws, treeBlank))
+  return dialog
+}
+
+/** The names the Windows Recycle Bin lists, read through the shell (never printed whole). */
+function recycleBinNames() {
+  const out = execFileSync(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      '(New-Object -ComObject Shell.Application).NameSpace(10).Items() | ForEach-Object { $_.Name }'
+    ],
+    { encoding: 'utf8', windowsHide: true }
+  )
+  return out.split(/\r?\n/).filter(Boolean)
+}
+
+/** Whether the Recycle Bin holds an item named after `path` (its name may hide the extension). */
+const inRecycleBin = (names, path) => {
+  const stem = path
+    .split('/')
+    .pop()
+    .replace(/\.[^.]+$/, '')
+  return names.some((name) => name.includes(stem))
+}
+
+const porcelainOf = (...paths) => git(['status', '--porcelain', '--', ...paths])
+const porcelainCount = () => git(['status', '--porcelain']).split('\n').filter(Boolean).length
+const inIndex = (path) => git(['ls-files', '--', path]) !== ''
+const readRepoFile = (path) =>
+  existsSync(repoFile(path)) ? readFileSync(repoFile(path), 'utf8') : null
+
+/** Checks 1..8 of T21: what confirming a discard changes, on disk, in git and on screen. */
+async function discardConfirmChecks(ws, fx, before) {
+  const stamp = fx.notes.match(/notes-(\d+)/)[1]
+
+  // 1. A modified file: the observer sees the running state, git is clean, the
+  // uncommitted diff tab closes, the diff-to-origin one stays, the file tab
+  // shows the committed text, and the list and the status bar move
+  // (FDSC-04, 16, 19, 28, 29, 31, 33). Both diff tabs carry the same label and
+  // title, so they are told apart by count: two before, one after.
+  await evaluate(ws, clickByText('.file-tree-mode', 'Diff to origin'))
+  await readWhen(ws, discardTreeRows, (read) => read.some((r) => r.path === 'discard/mod.ts'))
+  await evaluate(ws, clickByText('.file-tree-name', 'mod.ts'))
+  await sleep(1200)
+  await evaluate(ws, clickByText('.file-tree-mode', 'Uncommitted'))
+  await readWhen(ws, discardTreeRows, (read) => read.some((r) => r.path === 'discard/mod.ts'))
+  await evaluate(ws, clickByText('.file-tree-name', 'mod.ts'))
+  await sleep(1200)
+  await evaluate(ws, clickByText('.file-tabs-toggle', 'Open file'))
+  await sleep(1200)
+  const modTabsBefore = (await evaluate(ws, discardTabs)).filter(
+    (t) => t.title === 'discard/mod.ts'
+  )
+  // The fixture reached the status bar only through this refresh: the counter
+  // has no watcher of its own, which is why a discard must refresh it.
+  await evaluate(ws, `document.querySelector('.topbar-icon-btn[title="Refresh"]')?.click()`)
+  const wantBefore = porcelainCount()
+  const countBefore = await readWhen(ws, changesCount, (n) => n === wantBefore)
+  await evaluate(ws, watchConfirm)
+  const modOpened = await discardFromMenu(ws, 'discard/mod.ts')
+  const modDone = await confirmDiscard(ws, modOpened, ['discard/mod.ts'])
+  const seen = await evaluate(ws, confirmSeen)
+  let countAfter = null
+  for (let i = 0; i < 10; i++) {
+    countAfter = await evaluate(ws, changesCount)
+    if (countAfter === countBefore - 1) break
+    await sleep(300)
+  }
+  const modTabsAfter = (await evaluate(ws, discardTabs)).filter((t) => t.title === 'discard/mod.ts')
+  await evaluate(ws, focusFileTab('discard/mod.ts'))
+  const modText = await readWhen(ws, fileTabText, (t) => t.includes('committed mod marker'))
+  const modListed = (await evaluate(ws, discardTreeRows)).some((r) => r.path === 'discard/mod.ts')
+  const running = seen.some((s) => s.text === 'Discarding…' && s.disabled === true)
+  const keptShown = seen.some((s) => s.kept)
+  check(
+    'Discarding a modified file cleans it in git, closes its uncommitted diff only, reloads its file tab and moves the counts (FDSC-04, 16, 19, 28, 29, 31, 33)',
+    modOpened !== null &&
+      running &&
+      modDone === null &&
+      !keptShown &&
+      porcelainOf('discard/mod.ts') === '' &&
+      modTabsBefore.filter((t) => t.diff).length === 2 &&
+      modTabsBefore.filter((t) => !t.diff).length === 1 &&
+      modTabsAfter.filter((t) => t.diff).length === 1 &&
+      modTabsAfter.filter((t) => !t.diff).length === 1 &&
+      modText.includes('committed mod marker') &&
+      !modListed &&
+      countBefore === wantBefore &&
+      countAfter === countBefore - 1,
+    `observer saw Discarding… disabled: ${running}; closed ${modDone === null}, kept shown ${keptShown}; ` +
+      `git "${porcelainOf('discard/mod.ts')}"; mod.ts diff tabs ${modTabsBefore.filter((t) => t.diff).length} -> ` +
+      `${modTabsAfter.filter((t) => t.diff).length}, file tabs ${modTabsBefore.filter((t) => !t.diff).length} -> ` +
+      `${modTabsAfter.filter((t) => !t.diff).length}; file tab committed ${modText.includes('committed mod marker')}; ` +
+      `listed ${modListed}; status bar ${countBefore} (git ${wantBefore}) -> ${countAfter}`
+  )
+
+  // 2. Staged and unstaged edits both go (FDSC-04).
+  await evaluate(ws, clickByText('.file-tree-mode', 'Uncommitted'))
+  const stageOpened = await discardFromUndo(ws, 'discard/stage.ts')
+  const stageDone = await confirmDiscard(ws, stageOpened, ['discard/stage.ts'])
+  const cached = git(['diff', '--cached', '--name-only'])
+  const worktreeDiff = git(['diff', '--name-only'])
+  check(
+    'Discarding a staged and edited file clears both its index and its working copy (FDSC-04)',
+    stageOpened !== null &&
+      stageDone === null &&
+      !cached.split('\n').includes('discard/stage.ts') &&
+      !worktreeDiff.split('\n').includes('discard/stage.ts'),
+    `opened ${stageOpened !== null}, closed ${stageDone === null}; ` +
+      `cached ${cached.includes('discard/stage.ts') ? 'LISTS it' : 'clean'}, ` +
+      `working copy ${worktreeDiff.includes('discard/stage.ts') ? 'LISTS it' : 'clean'}`
+  )
+
+  // 3. A deleted file comes back as committed (FDSC-05).
+  const goneOpened = await discardFromMenu(ws, 'discard/gone.ts')
+  const goneDone = await confirmDiscard(ws, goneOpened, ['discard/gone.ts'])
+  const goneText = readRepoFile('discard/gone.ts')
+  check(
+    'Discarding a deleted file brings it back as committed (FDSC-05)',
+    goneOpened !== null &&
+      goneDone === null &&
+      goneText === DISCARD_COMMITTED['discard/gone.ts'] &&
+      porcelainOf('discard/gone.ts') === '',
+    `opened ${goneOpened !== null}, closed ${goneDone === null}; on disk ${JSON.stringify(goneText)}; ` +
+      `git "${porcelainOf('discard/gone.ts')}"`
+  )
+
+  // 4. An untracked file goes to the Recycle Bin and its file tab closes
+  // (FDSC-06, 17, 30).
+  await evaluate(ws, clickByText('.file-tree-name', fx.notes.split('/').pop()))
+  await sleep(1200)
+  await evaluate(ws, clickByText('.file-tabs-toggle', 'Open file'))
+  await sleep(1200)
+  const notesTabsBefore = (await evaluate(ws, discardTabs)).filter((t) => t.title === fx.notes)
+  const notesOpened = await discardFromMenu(ws, fx.notes)
+  const notesDone = await confirmDiscard(ws, notesOpened, [fx.notes])
+  await sleep(300)
+  const notesTabsAfter = (await evaluate(ws, discardTabs)).filter((t) => t.title === fx.notes)
+  const binAfterNotes = recycleBinNames()
+  check(
+    'Discarding an untracked file moves it to the Recycle Bin and closes its file tab (FDSC-06, 17, 30)',
+    notesOpened !== null &&
+      notesDone === null &&
+      !existsSync(repoFile(fx.notes)) &&
+      notesTabsBefore.some((t) => !t.diff) &&
+      notesTabsAfter.length === 0 &&
+      inRecycleBin(binAfterNotes, fx.notes),
+    `opened ${notesOpened !== null}, closed ${notesDone === null}; on disk ${existsSync(repoFile(fx.notes))}; ` +
+      `tabs ${notesTabsBefore.length} -> ${notesTabsAfter.length}; in the Recycle Bin ${inRecycleBin(binAfterNotes, fx.notes)}`
+  )
+
+  // 5. An added file goes to the Recycle Bin and leaves the index (FDSC-07).
+  const addedOpened = await discardFromMenu(ws, fx.added)
+  const addedDone = await confirmDiscard(ws, addedOpened, [fx.added])
+  const binAfterAdded = recycleBinNames()
+  check(
+    'Discarding an added file moves it to the Recycle Bin and drops its index entry (FDSC-07)',
+    addedOpened !== null &&
+      addedDone === null &&
+      !existsSync(repoFile(fx.added)) &&
+      !inIndex(fx.added) &&
+      inRecycleBin(binAfterAdded, fx.added),
+    `opened ${addedOpened !== null}, closed ${addedDone === null}; on disk ${existsSync(repoFile(fx.added))}; ` +
+      `in the index ${inIndex(fx.added)}; in the Recycle Bin ${inRecycleBin(binAfterAdded, fx.added)}`
+  )
+
+  // 6. A rename: the old path back as committed, the new file to the Recycle
+  // Bin and out of the index (FDSC-26).
+  const renameOpened = await discardFromMenu(ws, fx.renamed)
+  const renameDone = await confirmDiscard(ws, renameOpened, [fx.renamed])
+  const oldText = readRepoFile('discard/old-name.ts')
+  const binAfterRename = recycleBinNames()
+  const renameStatus = git(['status', '--porcelain', '--', 'discard/'])
+  check(
+    'Discarding a rename restores the old path and bins the new file (FDSC-26)',
+    renameOpened !== null &&
+      renameDone === null &&
+      oldText === DISCARD_COMMITTED['discard/old-name.ts'] &&
+      !existsSync(repoFile(fx.renamed)) &&
+      !inIndex(fx.renamed) &&
+      inRecycleBin(binAfterRename, fx.renamed) &&
+      !renameStatus.includes('old-name') &&
+      !renameStatus.includes('new-name'),
+    `opened ${renameOpened !== null}, closed ${renameDone === null}; old path ${JSON.stringify(oldText)}; ` +
+      `new file on disk ${existsSync(repoFile(fx.renamed))}, in the index ${inIndex(fx.renamed)}, ` +
+      `in the Recycle Bin ${inRecycleBin(binAfterRename, fx.renamed)}; status ${JSON.stringify(renameStatus)}`
+  )
+
+  // 7. A file git cannot restore is kept, with git's line, and its tabs stay
+  // (FDSC-20, 21, 32, 51).
+  await evaluate(ws, clickByText('.file-tree-name', 'a.md'))
+  await sleep(1200)
+  const aTabsBefore = (await evaluate(ws, discardTabs)).filter(
+    (t) => t.title === 'discard/deep/a.md'
+  )
+  const lock = join(REPO, '.git', 'index.lock')
+  let kept = null
+  let closedByClose = null
+  try {
+    writeFileSync(lock, '')
+    const aOpened = await discardFromMenu(ws, 'discard/deep/a.md')
+    const done = await confirmDiscard(ws, aOpened, ['discard/deep/a.md'])
+    kept = typeof done === 'string' ? null : done
+    await evaluate(ws, clickByText('.dialog-btn-primary', 'Close'))
+    closedByClose = (await readWhen(ws, discardDialog, (d) => d === null)) === null
+  } finally {
+    rmSync(lock, { force: true })
+  }
+  const aTabsAfter = (await evaluate(ws, discardTabs)).filter(
+    (t) => t.title === 'discard/deep/a.md'
+  )
+  const aStatus = porcelainOf('discard/deep/a.md')
+  check(
+    'A file git cannot restore is listed as kept with git’s line, and stays as it was (FDSC-20, 21, 32, 51)',
+    kept?.title === 'Some changes were kept' &&
+      kept.kept.length === 1 &&
+      kept.kept[0].path === 'discard/deep/a.md' &&
+      (kept.kept[0].reason ?? '').includes('index.lock') &&
+      sameList(kept.buttons, ['Close']) &&
+      closedByClose === true &&
+      aStatus === 'M discard/deep/a.md' &&
+      aTabsBefore.length > 0 &&
+      sameList(aTabsAfter, aTabsBefore),
+    `${JSON.stringify(kept && { title: kept.title, kept: kept.kept, buttons: kept.buttons })}; ` +
+      `Close closed it ${closedByClose}; git "${aStatus}"; tabs ${JSON.stringify(aTabsBefore)} -> ${JSON.stringify(aTabsAfter)}`
+  )
+
+  // 8. The discard acts on what the dialog listed, not on what the folder
+  // holds by the time it is confirmed (FDSC-34, 45).
+  const late = `discard/late-${stamp}.txt`
+  const folderOpened = await discardFromMenu(ws, 'discard')
+  writeFileSync(repoFile(late), 'written while the dialog was open\n')
+  await sleep(600)
+  const folderDone = await confirmDiscard(ws, folderOpened, [
+    'discard/deep/sub/b.md',
+    'discard/deep/a.md'
+  ])
+  const lateListed = await readWhen(ws, discardTreeRows, (read) =>
+    read.some((r) => r.path === late)
+  )
+  const lateKept = existsSync(repoFile(late)) && lateListed.some((r) => r.path === late)
+  const restLeft = git(['status', '--porcelain', '--', 'discard/'])
+    .split('\n')
+    .filter((line) => line !== '' && !line.includes(`late-${stamp}`))
+  // The list settles first: the folder's rows leave it, so rows move up.
+  await readWhen(ws, discardTreeRows, (read) =>
+    sameList(
+      read
+        .filter((r) => !r.folder)
+        .map((r) => r.path)
+        .sort(),
+      [...before, late].sort()
+    )
+  )
+  const lateOpened = await discardFromMenu(ws, late)
+  const lateDone = await confirmDiscard(ws, lateOpened, [late])
+  const finalRows = await readWhen(ws, discardTreeRows, (read) =>
+    sameList(
+      read.filter((r) => !r.folder).map((r) => r.path),
+      before
+    )
+  )
+  const finalFiles = finalRows.filter((r) => !r.folder).map((r) => r.path)
+  check(
+    'A discard acts on the files its dialog listed; a file written after it opened stays (FDSC-34, 45)',
+    sameList(folderOpened?.rows, ['discard/deep/sub/b.md', 'discard/deep/a.md']) &&
+      folderDone === null &&
+      lateKept &&
+      restLeft.length === 0 &&
+      lateOpened !== null &&
+      lateDone === null &&
+      sameList(finalFiles, before),
+    `dialog ${JSON.stringify(folderOpened?.rows ?? null)}, closed ${folderDone === null}; ` +
+      `late file kept and listed ${lateKept}; other fixture entries left ${JSON.stringify(restLeft)}; ` +
+      `list after the late file ${JSON.stringify(finalFiles)} (before ${JSON.stringify(before)})`
+  )
+}
+
+/** What the discard section cannot script: it needs a share or a junction (L-030). */
+function printDiscardHandChecks() {
+  console.log('  C. Discard an untracked file on a network share: it is kept, with')
+  console.log('     "The Recycle Bin refused it."')
+  console.log('  D. Discard an untracked junction: it is kept, with')
+  console.log('     "Links and junctions are never moved."')
 }
 
 /**

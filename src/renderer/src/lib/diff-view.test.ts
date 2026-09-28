@@ -86,6 +86,19 @@ describe('diffRequestFor', () => {
     })
   })
 
+  it('reads an uncommitted rename original from its old path at HEAD (FDSC-25)', () => {
+    const request = diffRequestFor(
+      'uncommitted',
+      changed('src/widget.ts', 'renamed', 'src/gadget.ts'),
+      'abc1234'
+    )
+
+    expect(request).toEqual({
+      original: { rev: 'HEAD', path: 'src/gadget.ts' },
+      modified: { disk: true, path: 'src/widget.ts' }
+    })
+  })
+
   it('has no diff to build when the base no longer resolves (edge case, FXPL-11)', () => {
     // The base prompt takes the place of a stale diff, so there is no request.
     expect(diffRequestFor('since-base', changed('src/app.ts', 'modified'), null)).toBeNull()

@@ -19,6 +19,7 @@ import { readClipboardPaste } from './clipboard-reader'
 import { ConfigStore } from './config-store'
 import { commitFiles, listCommits, openCommit } from './commit-log'
 import { diffStats, readDiffSides } from './file-diff'
+import { discardChanges } from './file-discard'
 import { readForView } from './file-reader'
 import { changedSince, listBases, listDir } from './file-tree'
 import { FileWatcher, type Scheduler } from './file-watcher'
@@ -362,6 +363,11 @@ app.whenReady().then(() => {
   handle('files:watch', ({ worktreePath }) => fileWatcher.select(worktreePath))
   handle('files:diff-sides', ({ worktreePath, request }) => readDiffSides(worktreePath, request))
   handle('files:diff-stats', ({ worktreePath, mode, base }) => diffStats(worktreePath, mode, base))
+  // `resolveInside` hands `trashItem` the absolute, backslashed path its
+  // typings ask for; the module never deletes a file itself (FDSC-17).
+  handle('files:discard', ({ worktreePath, entries }) =>
+    discardChanges(worktreePath, entries, { trash: (p) => shell.trashItem(p) })
+  )
   handle('commits:list', ({ worktreePath, base, cursor }) =>
     listCommits(worktreePath, base, cursor)
   )

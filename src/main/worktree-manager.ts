@@ -461,7 +461,8 @@ export async function changedFilesOf(worktreePath: string): Promise<ChangedFile[
  * Pure porcelain → `ChangedFile[]` (one row per non-empty line, so the count
  * matches `statusOf`'s `changes`). The two-char `XY` code maps to a single label
  * by destructive precedence — deleted > added/copied > renamed > modified — with
- * `??` untracked; renames/copies surface the post-`-> ` destination path. Git's
+ * `??` untracked; renames/copies surface the post-`-> ` destination path, with
+ * the pre-`-> ` source as `oldPath`. Git's
  * C-style quoting on special-char/non-ASCII paths is stripped back to the raw path.
  */
 export function parseChangedFiles(stdout: string): ChangedFile[] {
@@ -475,12 +476,17 @@ export function parseChangedFiles(stdout: string): ChangedFile[] {
       continue
     }
     // Only rename (R) and copy (C) entries carry the "orig -> dest" arrow; the
-    // surviving file is the destination. Restrict the split to those codes —
-    // splitting unconditionally would corrupt a plain path that legitimately
-    // contains " -> ".
+    // surviving file is the destination, and the source is kept as `oldPath`
+    // (FDSC-24). Restrict the split to those codes — splitting unconditionally
+    // would corrupt a plain path that legitimately contains " -> ".
     if (code.includes('R') || code.includes('C')) {
       const arrow = rest.indexOf(' -> ')
-      if (arrow >= 0) rest = rest.slice(arrow + ' -> '.length)
+      if (arrow >= 0) {
+        const oldPath = unquotePath(rest.slice(0, arrow))
+        rest = rest.slice(arrow + ' -> '.length)
+        files.push({ path: unquotePath(rest), status: statusFromCode(code), oldPath })
+        continue
+      }
     }
     files.push({ path: unquotePath(rest), status: statusFromCode(code) })
   }

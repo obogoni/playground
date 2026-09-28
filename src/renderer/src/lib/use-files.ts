@@ -9,6 +9,7 @@ import type {
   CommitRow,
   DirListing,
   DiffRequest,
+  DiscardResult,
   DiffSides,
   FileContent,
   FileStat,
@@ -24,6 +25,7 @@ import {
   type DiffMode,
   type UnchangedMode
 } from './diff-view'
+import { afterDiscard } from './discard-view'
 import {
   filesStateFor,
   keepUnchanged,
@@ -205,6 +207,12 @@ export interface UseFiles {
   openCommitInBrowser: (sha: string) => Promise<LaunchResult>
   focusTab: (key: string) => void
   closeTab: (key: string) => void
+  /**
+   * Discards exactly these uncommitted entries, as the confirmation listed them
+   * (FDSC-45), then settles the tabs the result touched and re-lists the mode
+   * (FDSC-28..32). Never rejects: a failed request reads as every entry kept.
+   */
+  discard: (entries: ChangedPath[]) => Promise<DiscardResult>
   /** Pins an unpinned tab or unpins a pinned one; the focus stays where it is (FPOL-01/03/04). */
   togglePin: (key: string) => void
   /** One of the strip's bulk closes, on the selected worktree's tabs (FPOL-06..11). */
@@ -726,6 +734,54 @@ export function useFiles({
     [worktreePath, patchFiles, mode]
   )
 
+  const discard = useCallback(
+    async (entries: ChangedPath[]): Promise<DiscardResult> => {
+      if (!worktreePath) {
+        return { files: entries.map((entry) => keptByGit(entry, 'No worktree is selected.')) }
+      }
+      const wt = worktreePath
+      // FDSC-45: the entries go as the confirmation listed them, never re-derived
+      // from whatever the list holds by now.
+      const result = await api
+        .invoke('files:discard', { worktreePath: wt, entries })
+        .catch((err: unknown) => ({
+          files: entries.map((entry) =>
+            keptByGit(entry, err instanceof Error ? err.message : String(err))
+          )
+        }))
+      // Which tabs close and which re-read is afterDiscard's decision alone.
+      patchFiles(wt, (s) => {
+        const { close } = afterDiscard(s.tabs.map(tabKeyOf), entries, result)
+        if (close.length === 0) return {}
+        // One close at a time through the strip, so focus moves the way
+        // closing each tab by hand would move it (FXPL-19).
+        let keys = tabsWithAllChanges(s.tabs, live.current.mode).map(tabKeyOf)
+        let active = s.activeTab
+        for (const key of close) {
+          const index = keys.indexOf(key)
+          if (index === -1) continue
+          const after = tabsAfterClose(keys, index, active)
+          keys = after.tabs
+          active = after.active
+        }
+        return {
+          tabs: s.tabs.filter((tab) => keys.includes(tabKeyOf(tab))),
+          activeTab: active,
+          // A closed tab forgets its choice (FOLD-21).
+          unchanged: keepUnchanged(s.unchanged, keys)
+        }
+      })
+      const current = live.current
+      if (current.worktreePath === wt) {
+        const { reread } = afterDiscard(current.here.tabs.map(tabKeyOf), entries, result)
+        for (const path of reread) readTab(wt, path)
+        refreshMode(wt, current.mode, current.effectiveBase, current.here.expanded)
+      }
+      return result
+    },
+    [worktreePath, patchFiles, readTab, refreshMode]
+  )
+
   // Pins live on the worktree's tabs, so each worktree keeps its own (FXPL-18).
   const togglePin = useCallback(
     (key: string): void => {
@@ -820,11 +876,17 @@ export function useFiles({
     openCommitInBrowser,
     focusTab,
     closeTab,
+    discard,
     togglePin,
     closeTabs,
     unchangedFor: (key) => here.unchanged[key] ?? null,
     pressUnchanged
   }
+}
+
+/** An entry the discard could not act on, reported with git's cause (design, Error Handling). */
+function keptByGit(entry: ChangedPath, detail: string): DiscardResult['files'][number] {
+  return { path: entry.path, kept: { cause: 'git', detail } }
 }
 
 /**

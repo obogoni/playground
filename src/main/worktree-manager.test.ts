@@ -326,31 +326,59 @@ describe('parseChangedFiles', () => {
     ])
   })
 
-  it('surfaces the destination path for a rename', () => {
-    expect(parseChangedFiles('R  old/name.txt -> new/name.txt')).toEqual([
-      { path: 'new/name.txt', status: 'renamed' }
+  it('surfaces the destination path for a rename and keeps its old path', () => {
+    // FDSC-24: the old path travels with the new one (supersedes the
+    // destination-only shape).
+    expect(parseChangedFiles('R  old/a.txt -> new/a.txt')).toStrictEqual([
+      { path: 'new/a.txt', status: 'renamed', oldPath: 'old/a.txt' }
     ])
   })
 
-  it('surfaces the destination path for a copy and labels it added', () => {
-    expect(parseChangedFiles('C  src.txt -> copy.txt')).toEqual([
-      { path: 'copy.txt', status: 'added' }
+  it('surfaces the destination path for a copy, labels it added and keeps its source', () => {
+    expect(parseChangedFiles('C  src.txt -> copy.txt')).toStrictEqual([
+      { path: 'copy.txt', status: 'added', oldPath: 'src.txt' }
+    ])
+  })
+
+  it('keeps the old path of a rename edited or deleted after staging', () => {
+    expect(parseChangedFiles('RM old.txt -> new.txt')).toStrictEqual([
+      { path: 'new.txt', status: 'renamed', oldPath: 'old.txt' }
+    ])
+    expect(parseChangedFiles('RD old.txt -> new.txt')).toStrictEqual([
+      { path: 'new.txt', status: 'deleted', oldPath: 'old.txt' }
+    ])
+  })
+
+  it('unquotes each side of a rename on its own', () => {
+    // \303\251 == "é"; the new side is quoted for its space alone.
+    expect(parseChangedFiles('R  "caf\\303\\251 old.txt" -> "new name.txt"')).toStrictEqual([
+      { path: 'new name.txt', status: 'renamed', oldPath: 'café old.txt' }
     ])
   })
 
   it('keeps a literal " -> " inside a non-rename path intact', () => {
     // Only rename/copy codes carry the arrow; a modified path that happens to
-    // contain " -> " must pass through unsplit.
-    expect(parseChangedFiles(' M a -> b.txt')).toEqual([{ path: 'a -> b.txt', status: 'modified' }])
+    // contain " -> " must pass through unsplit, with no old path.
+    expect(parseChangedFiles(' M a -> b.txt')).toStrictEqual([
+      { path: 'a -> b.txt', status: 'modified' }
+    ])
+  })
+
+  it('gives untracked and modified entries no oldPath key', () => {
+    const [untracked, modified] = parseChangedFiles('?? new.txt\n M edited.txt')
+
+    expect('oldPath' in untracked).toBe(false)
+    expect('oldPath' in modified).toBe(false)
   })
 
   it('picks the most-destructive label when index and worktree disagree', () => {
     // Precedence: deleted > added > renamed > modified.
     expect(parseChangedFiles('AD gone.txt')[0].status).toBe('deleted')
     expect(parseChangedFiles('MM both.txt')[0].status).toBe('modified')
-    expect(parseChangedFiles('RM moved.txt -> there.txt')[0]).toEqual({
+    expect(parseChangedFiles('RM moved.txt -> there.txt')[0]).toStrictEqual({
       path: 'there.txt',
-      status: 'renamed'
+      status: 'renamed',
+      oldPath: 'moved.txt'
     })
   })
 
@@ -364,6 +392,35 @@ describe('parseChangedFiles', () => {
   it('ignores blank lines and returns [] for empty input', () => {
     expect(parseChangedFiles('')).toEqual([])
     expect(parseChangedFiles('\n\n')).toEqual([])
+  })
+})
+
+describe('changedFilesOf', () => {
+  let repo: string
+
+  beforeEach(() => {
+    repo = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-cf-')))
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    // L-026: this machine's system gitconfig may set these differently.
+    git(repo, 'config', 'core.autocrlf', 'false')
+    git(repo, 'config', 'status.renames', 'true')
+    writeFileSync(join(repo, 'a.ts'), 'export const a = 1\n', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+  })
+
+  afterEach(() => {
+    rmSync(repo, { recursive: true, force: true })
+  })
+
+  it('reports a staged rename with its old path', async () => {
+    git(repo, 'mv', 'a.ts', 'b.ts')
+
+    expect(await changedFilesOf(repo)).toStrictEqual([
+      { path: 'b.ts', status: 'renamed', oldPath: 'a.ts' }
+    ])
   })
 })
 

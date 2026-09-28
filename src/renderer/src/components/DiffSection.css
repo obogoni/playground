@@ -23,10 +23,19 @@
   padding: 7px 10px;
   color: var(--text-muted);
   text-align: left;
+  cursor: pointer;
 }
 
 .diff-section-header:hover {
   background: color-mix(in oklab, var(--text-faint) 8%, transparent);
+}
+
+/* The toggle carries the header's click from the keyboard; it draws only the
+   chevron. */
+.diff-section-toggle {
+  flex: none;
+  display: flex;
+  padding: 0;
 }
 
 .diff-section-chevron {
@@ -81,6 +90,20 @@
   align-items: center;
   gap: 4px;
   margin-left: auto;
+}
+
+/* The uncommitted stack's ↶ (FDSC-38), always shown, before the glyph. */
+.diff-section-discard {
+  display: flex;
+  align-items: center;
+  padding: 1px;
+  border-radius: 5px;
+  color: var(--text-faint);
+}
+
+.diff-section-discard:hover {
+  background: var(--panel-2);
+  color: var(--text);
 }
 
 /*

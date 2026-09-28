@@ -50,6 +50,8 @@ interface DiffSectionProps {
   onElement: (path: string, element: HTMLElement | null) => void
   /** This section's editor navigation, or null while it holds none. */
   onHandle: (path: string, handle: DiffHandle | null) => void
+  /** Offers the header's ↶ for this file; absent where nothing may be discarded (FDSC-38/41). */
+  onDiscard?: (changed: ChangedPath) => void
 }
 
 /**
@@ -80,7 +82,8 @@ export function DiffSection({
   unchanged,
   onToggle,
   onElement,
-  onHandle
+  onHandle,
+  onDiscard
 }: DiffSectionProps): JSX.Element {
   const [sides, setSides] = useState<DiffSides | null>(null)
   const [height, setHeight] = useState<number | null>(null)
@@ -115,16 +118,18 @@ export function DiffSection({
 
   return (
     <div className="diff-section" data-path={path} ref={boxRef}>
-      <button
-        type="button"
-        className="diff-section-header"
-        aria-expanded={expanded}
-        title={path}
-        onClick={() => onToggle(path)}
-      >
-        <span className={`diff-section-chevron${expanded ? ' open' : ''}`}>
-          <Icon name="chevron-down" size={13} />
-        </span>
+      {/* The header is a container that takes the click, so the ↶ can sit in it
+          beside the toggle: a button inside a button is invalid HTML.
+          SPEC_DEVIATION: design.md puts the chevron, the path and the counts in
+          `button.diff-section-toggle`; here the toggle holds the chevron only.
+          Reason: the chevron, the path, the counts and the end group stay the
+          header's own children, the structure #131's header checks measure. */}
+      <div className="diff-section-header" title={path} onClick={() => onToggle(path)}>
+        <button type="button" className="diff-section-toggle" aria-expanded={expanded}>
+          <span className={`diff-section-chevron${expanded ? ' open' : ''}`}>
+            <Icon name="chevron-down" size={13} />
+          </span>
+        </button>
         <span
           className={`diff-section-path${changeStatusView(changed.status).struck ? ' struck' : ''}`}
         >
@@ -137,9 +142,23 @@ export function DiffSection({
           </span>
         )}
         <span className="diff-section-end">
+          {onDiscard && (
+            <button
+              type="button"
+              className="diff-section-discard"
+              title="Discard changes"
+              onClick={(event) => {
+                // FDSC-39: the ↶ opens the confirmation; the section stays as it is.
+                event.stopPropagation()
+                onDiscard(changed)
+              }}
+            >
+              <Icon name="undo" size={13} />
+            </button>
+          )}
           <StatusGlyph status={changed.status} />
         </span>
-      </button>
+      </div>
 
       {expanded &&
         (stat.uncountable ? (

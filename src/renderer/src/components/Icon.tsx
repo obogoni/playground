@@ -35,6 +35,7 @@ export type IconName =
   | 'git-pull'
   | 'git-push'
   | 'git-fetch'
+  | 'undo'
   | 'pin'
   | 'ellipsis'
 
@@ -259,6 +260,13 @@ const PATHS: Record<IconName, JSX.Element> = {
       <path d="M12 3v14" strokeDasharray="2 3" />
       <path d="m6 11 6 6 6-6" />
       <path d="M5 21h14" />
+    </>
+  ),
+  // A hook pointing back left over a return arc: put it back as it was.
+  undo: (
+    <>
+      <path d="M9 5 4 10l5 5" />
+      <path d="M4 10h11a5 5 0 0 1 0 10h-4" />
     </>
   )
 }

@@ -33,6 +33,11 @@ interface AllChangesTabProps {
   refreshToken: number
   /** The stack's own navigation, for the tab strip's buttons and keys (FDIF-26). */
   onHandle?: (handle: DiffHandle | null) => void
+  /**
+   * Offers each section header's ↶ for its file (FDSC-38). Only the uncommitted
+   * stack passes it; a commit tab never does (FDSC-41).
+   */
+  onDiscard?: (changed: ChangedPath) => void
   /** This tab's last Hide unchanged / Show unchanged press, handed to every section. */
   unchanged?: UnchangedChoice | null
   /** A press of Hide unchanged or Show unchanged (FOLD-11..13). */
@@ -77,6 +82,7 @@ export function AllChangesTab({
   ignoreWhitespace,
   refreshToken,
   onHandle,
+  onDiscard,
   unchanged = null,
   onUnchanged
 }: AllChangesTabProps): JSX.Element {
@@ -367,6 +373,7 @@ export function AllChangesTab({
             onToggle={onToggle}
             onElement={onElement}
             onHandle={onSectionHandle}
+            onDiscard={onDiscard}
           />
         ))}
       </div>

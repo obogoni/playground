@@ -130,4 +130,6 @@ export interface ChangedFile {
   /** Worktree-relative path; for a rename, the destination (post-`-> `) path. */
   path: string
   status: ChangeStatus
+  /** The source path of a rename or a copy (FDSC-24). */
+  oldPath?: string
 }
