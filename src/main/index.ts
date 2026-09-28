@@ -21,8 +21,9 @@ import { commitFiles, listCommits, openCommit } from './commit-log'
 import { diffStats, readDiffSides } from './file-diff'
 import { readForView } from './file-reader'
 import { changedSince, listBases, listDir } from './file-tree'
-import { FileWatcher, type WatchPort } from './file-watcher'
+import { FileWatcher, type Scheduler, type WatchPort } from './file-watcher'
 import { git } from './git'
+import { GitStateWatcher } from './git-state-watcher'
 import { readCommits, readSyncState, runGitOp } from './git-sync'
 import { runHookShell } from './hook-shell'
 import { emit, handle, onSend } from './ipc'
@@ -53,7 +54,7 @@ import {
 import { WorkflowManager } from './workflow-manager'
 import { WorkflowRunStore } from './workflow-run-store'
 import { scaffoldWorkflow } from './workflow-scaffold'
-import { changedFilesOf, createWorktree, removeWorktree } from './worktree-manager'
+import { changedFilesOf, createWorktree, removeWorktree, worktreeStatus } from './worktree-manager'
 import { workspaceTemplates } from './workspace-config'
 import { WorkspaceRegistry } from './workspace-registry'
 
@@ -150,6 +151,36 @@ const watchPort: WatchPort = (path, opts, listener) => {
   } catch {
     return { close: () => {} }
   }
+}
+
+/**
+ * The git dir both watchers watch. `--git-dir` answers relatively for a
+ * primary checkout and absolutely for a linked worktree, whose git dir lives
+ * outside its own root.
+ */
+async function resolveGitDir(worktreePath: string): Promise<string> {
+  const { stdout } = await git(worktreePath, ['rev-parse', '--git-dir'])
+  return resolve(worktreePath, stdout.trim())
+}
+
+/** The real batching delay behind both watchers' `Scheduler`. */
+const timerScheduler: Scheduler = {
+  after: (ms, fn) => {
+    const timer = setTimeout(fn, ms)
+    return () => clearTimeout(timer)
+  }
+}
+
+/**
+ * One worktree's changes, recounted for the git-state watcher or on request
+ * (SCRF-06). A failure is logged and answered `null`, so the last count stays.
+ */
+async function recountWorktree(
+  worktreePath: string
+): Promise<{ dirty: boolean; changes: number } | null> {
+  const status = await worktreeStatus(worktreePath)
+  if (status === null) console.warn('[git-state] could not recount', worktreePath)
+  return status
 }
 
 /**
@@ -281,7 +312,27 @@ app.whenReady().then(() => {
   })
   handle('workspaces:remove', ({ id }) => registry.remove(id))
   handle('workspaces:templates', ({ workspacePath }) => workspaceTemplates(workspacePath))
-  handle('tree:get', () => buildTree(registry))
+  // A commit made in any terminal recounts that worktree alone (SCRF-01); the
+  // watched set follows every tree snapshot (SCRF-04).
+  const gitStateWatcher = new GitStateWatcher({
+    watch: watchPort,
+    resolveGitDir,
+    schedule: timerScheduler,
+    onSettled: (worktreePath) => {
+      void recountWorktree(worktreePath).then((status) => {
+        if (status && mainWindow) {
+          emit(mainWindow.webContents, 'worktree:status', { worktreePath, ...status })
+        }
+      })
+    }
+  })
+  handle('tree:get', async () => {
+    const tree = await buildTree(registry)
+    void gitStateWatcher.sync(
+      tree.flatMap((ws) => ws.repos.flatMap((repo) => repo.worktrees.map((wt) => wt.path)))
+    )
+    return tree
+  })
   // WPC-10: ONE hook-wrapped create, shared by the IPC handler below and the
   // workflow ctx further down. Because both consumers get this same wrapper —
   // never bare `createWorktree` — no call path can skip a repo's init command.
@@ -300,6 +351,7 @@ app.whenReady().then(() => {
     removeWorktree(repoPath, worktreePath, { force })
   )
   handle('worktrees:changes', ({ worktreePath }) => changedFilesOf(worktreePath))
+  handle('worktrees:status', ({ worktreePath }) => recountWorktree(worktreePath))
   handle('git:sync-state', ({ worktreePath }) => readSyncState(worktreePath))
   handle('git:commits', ({ worktreePath }) => readCommits(worktreePath))
   handle('git:run', ({ worktreePath, op, remote }) => runGitOp(worktreePath, op, remote))
@@ -308,18 +360,8 @@ app.whenReady().then(() => {
   // modules behind them are unit-tested, this is only the wiring.
   const fileWatcher = new FileWatcher({
     watch: watchPort,
-    // `--git-dir` answers relatively for a primary checkout and absolutely for
-    // a linked worktree, whose git dir lives outside its own root.
-    resolveGitDir: async (worktreePath) => {
-      const { stdout } = await git(worktreePath, ['rev-parse', '--git-dir'])
-      return resolve(worktreePath, stdout.trim())
-    },
-    schedule: {
-      after: (ms, fn) => {
-        const timer = setTimeout(fn, ms)
-        return () => clearTimeout(timer)
-      }
-    },
+    resolveGitDir,
+    schedule: timerScheduler,
     emit: (event) => {
       if (mainWindow) emit(mainWindow.webContents, 'files:changed', event)
     }
@@ -341,9 +383,10 @@ app.whenReady().then(() => {
   handle('commits:open', ({ worktreePath, sha }) =>
     openCommit(worktreePath, sha, (url) => shell.openExternal(url))
   )
-  // Close every watch handle before the process goes away (FXPL-23).
+  // Close every watch handle before the process goes away (FXPL-23, SCRF quit edge case).
   app.on('will-quit', () => {
     void fileWatcher.select(null)
+    gitStateWatcher.closeAll()
   })
 
   const launcher = new ShortcutLauncher()
