@@ -12,6 +12,10 @@
  * user's behalf. Every path here answers with an empty body, so no response can
  * ever carry one (ACTV-10). It also answers before dispatching, because the
  * agent is blocked until the hook returns.
+ *
+ * A second path takes the session's task link from its agent (ATSK-02). It is
+ * no hook, so it answers after applying the link: a 204 means linked, and every
+ * refusal is a status code with no body.
  */
 
 import {
@@ -22,20 +26,35 @@ import {
 } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import type { Socket } from 'node:net'
+import type { SessionTask } from '../shared/tasks'
 
 /** `PostToolUse` carries the whole tool response; past this we stop reading. */
 const MAX_BODY_BYTES = 8 * 1024 * 1024
 
+const HOOKS_PATH = '/hooks'
+const TASK_PATH = '/task'
+
+/** A link body is a few hundred bytes; past this it is refused (ATSK-10). */
+const MAX_TASK_BODY_BYTES = 4 * 1024
+
+/** Azure DevOps' `System.Title` limit (ATSK-09). */
+const MAX_TITLE_LENGTH = 255
+
 export type HookEventListener = (sessionId: string, payload: Record<string, unknown>) => void
 
+export type TaskLinkListener = (sessionId: string, task: SessionTask) => void
+
 export interface ActivityHookServer {
-  /** Bind an ephemeral loopback port; the url is what the settings file points at. */
-  start(): Promise<{ url: string; port: number }>
+  /** Bind an ephemeral loopback port; `url` is what the settings file points at,
+   *  `taskUrl` is where an agent links its session to a task (ATSK-01). */
+  start(): Promise<{ url: string; taskUrl: string; port: number }>
   /** A live session's token. Registered before the agent is spawned. */
   register(token: string, sessionId: string): void
   /** Drop a token — later requests with it are rejected. */
   revoke(token: string): void
   onEvent(listener: HookEventListener): void
+  /** Called with a valid link before its 204 is sent (ATSK-02). */
+  onTaskLink(listener: TaskLinkListener): void
   stop(): Promise<void>
 }
 
@@ -63,11 +82,25 @@ function asEventObject(body: string): Record<string, unknown> | null {
   }
 }
 
+/** The link a body asks for, or null when it breaks any rule of ATSK-09. */
+function asTaskLink(body: string): SessionTask | null {
+  const parsed = asEventObject(body)
+  if (parsed === null) return null
+  const { id, title } = parsed
+  if (typeof id !== 'number' || !Number.isSafeInteger(id) || id < 1) return null
+  if (title === undefined || title === null) return { id, title: null }
+  if (typeof title !== 'string') return null
+  const trimmed = title.trim()
+  if (trimmed.length > MAX_TITLE_LENGTH) return null
+  return { id, title: trimmed === '' ? null : trimmed }
+}
+
 export function createActivityHookServer(): ActivityHookServer {
   const sessionByToken = new Map<string, string>()
   const warned = new Set<string>()
   const sockets = new Set<Socket>()
   let listener: HookEventListener | null = null
+  let taskListener: TaskLinkListener | null = null
 
   const warnOnce = (token: string, message: string): void => {
     if (warned.has(token)) return
@@ -81,6 +114,12 @@ export function createActivityHookServer(): ActivityHookServer {
       answer(res, 405)
       return
     }
+    const path = new URL(req.url ?? '/', 'http://127.0.0.1').pathname
+    if (path !== HOOKS_PATH && path !== TASK_PATH) {
+      req.resume()
+      answer(res, 404)
+      return
+    }
     const token = bearerToken(req)
     const sessionId = token ? sessionByToken.get(token) : undefined
     if (token === undefined || sessionId === undefined) {
@@ -89,13 +128,14 @@ export function createActivityHookServer(): ActivityHookServer {
       return
     }
 
+    const cap = path === TASK_PATH ? MAX_TASK_BODY_BYTES : MAX_BODY_BYTES
     let size = 0
     let oversized = false
     let body = ''
     req.setEncoding('utf8')
     req.on('data', (chunk: string) => {
       size += Buffer.byteLength(chunk, 'utf8')
-      if (size > MAX_BODY_BYTES) {
+      if (size > cap) {
         oversized = true
         body = ''
         return
@@ -103,6 +143,23 @@ export function createActivityHookServer(): ActivityHookServer {
       body += chunk
     })
     req.on('end', () => {
+      if (path === TASK_PATH) {
+        if (oversized) {
+          warnOnce(token, `task link body over ${MAX_TASK_BODY_BYTES} bytes refused`)
+          answer(res, 413)
+          return
+        }
+        const task = asTaskLink(body)
+        if (task === null) {
+          warnOnce(token, 'task link body was not a valid link')
+          answer(res, 400)
+          return
+        }
+        taskListener?.(sessionId, task)
+        answer(res, 204)
+        return
+      }
+
       answer(res, 204)
       if (oversized) {
         warnOnce(token, `hook body over ${MAX_BODY_BYTES} bytes ignored`)
@@ -128,7 +185,8 @@ export function createActivityHookServer(): ActivityHookServer {
         httpServer.once('error', reject)
         httpServer.listen(0, '127.0.0.1', () => {
           const { port } = httpServer.address() as AddressInfo
-          resolve({ url: `http://127.0.0.1:${port}/hooks`, port })
+          const base = `http://127.0.0.1:${port}`
+          resolve({ url: `${base}${HOOKS_PATH}`, taskUrl: `${base}${TASK_PATH}`, port })
         })
       })
     },
@@ -141,6 +199,9 @@ export function createActivityHookServer(): ActivityHookServer {
     },
     onEvent(next) {
       listener = next
+    },
+    onTaskLink(next) {
+      taskListener = next
     },
     stop() {
       return new Promise((resolve, reject) => {
