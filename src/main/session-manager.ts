@@ -186,6 +186,7 @@ export class SessionManager {
     const live = this.#running.get(id)
     if (live) live.meta = withTask(live.meta, task)
     this.deps.lifecycle?.taskChanged(id, task)
+    this.deps.emit('session:task', { id, task })
     return this.#toView(next)
   }
 

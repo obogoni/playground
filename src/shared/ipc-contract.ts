@@ -259,6 +259,8 @@ export interface IpcEvents {
   /** The agent's own session name changed; `null` clears it back to the agent
    *  display name (SNAME-02, SNAME-04). */
   'session:name': { id: string; name: string | null }
+  /** A session's task link changed in main, e.g. set by its agent; `null` = From branch (ATSK-06). */
+  'session:task': { id: string; task: SessionTask | null }
   /** A run's folded lifecycle status changed (WF2-12). */
   'workflow:status': { runId: string; status: RunStatus }
   /** A `step-started` event — an executed `ctx.*` primitive / `ctx.step` group (WF2-10). */
