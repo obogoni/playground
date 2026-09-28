@@ -1,0 +1,38 @@
+/*
+ * A change status as the tree rows and the section headers show it
+ * (FSTS-06..10): a 16 px tinted pill, 10 px bold, the tone set by the status.
+ */
+
+.status-glyph {
+  flex: none;
+  width: 16px;
+  text-align: center;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.status-glyph.modified {
+  background: color-mix(in oklab, var(--amber) 16%, transparent);
+  color: var(--amber);
+}
+
+.status-glyph.added {
+  background: color-mix(in oklab, var(--green) 16%, transparent);
+  color: var(--green);
+}
+
+.status-glyph.deleted {
+  background: color-mix(in oklab, var(--red) 16%, transparent);
+  color: var(--red);
+}
+
+.status-glyph.renamed {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.status-glyph.untracked {
+  background: color-mix(in oklab, var(--text-faint) 20%, transparent);
+  color: var(--text-muted);
+}

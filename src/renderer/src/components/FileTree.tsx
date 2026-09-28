@@ -4,10 +4,12 @@ import type { FilesMode } from '../../../shared/files'
 import type { ChangeStatus } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { CommitList } from './CommitList'
+import { changeStatusView } from '../lib/change-status'
 import { buildTree, isSolution, type TreeNode } from '../lib/files-view'
 import { absoluteIn, type UseFiles } from '../lib/use-files'
 import { FileIcon } from './FileIcon'
 import { Icon } from './Icon'
+import { StatusGlyph } from './StatusGlyph'
 import './FileTree.css'
 
 interface FileTreeProps {
@@ -25,22 +27,6 @@ const MODES: { mode: FilesMode; label: string }[] = [
   { mode: 'uncommitted', label: 'Uncommitted' },
   { mode: 'commits', label: 'Commits' }
 ]
-
-const STATUS_LETTER: Record<ChangeStatus, string> = {
-  modified: 'M',
-  added: 'A',
-  deleted: 'D',
-  renamed: 'R',
-  untracked: 'U'
-}
-
-const STATUS_LABEL: Record<ChangeStatus, string> = {
-  modified: 'Modified',
-  added: 'Added',
-  deleted: 'Deleted',
-  renamed: 'Renamed',
-  untracked: 'Untracked'
-}
 
 /** Rows nest by padding, not by nested boxes: a deep tree stays one flat list. */
 function indent(depth: number): { paddingLeft: number } {
@@ -138,11 +124,15 @@ function ChangedRows({ nodes, depth, onFile, onFolder }: ChangedRowsProps): JSX.
             title={node.path}
             onClick={() => onFile(node.path, node.status)}
           >
-            <span className={`file-tree-pill ${node.status}`} title={STATUS_LABEL[node.status]}>
-              {STATUS_LETTER[node.status]}
-            </span>
             <FileIcon name={node.name} kind="file" />
-            <span className="file-tree-name">{node.name}</span>
+            <span
+              className={`file-tree-name${changeStatusView(node.status).struck ? ' struck' : ''}`}
+            >
+              {node.name}
+            </span>
+            <span className="file-tree-end">
+              <StatusGlyph status={node.status} />
+            </span>
           </button>
         ) : (
           <div key={node.path}>

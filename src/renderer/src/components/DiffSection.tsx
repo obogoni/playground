@@ -1,29 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { ChangedPath, DiffRequest, DiffSides, FileStat } from '../../../shared/files'
-import type { ChangeStatus } from '../../../shared/worktrees'
 import { api } from '../lib/api'
+import { changeStatusView } from '../lib/change-status'
 import type { UnchangedChoice } from '../lib/files-view'
 import { DiffViewer, type DiffHandle } from './DiffViewer'
 import { FilePlaceholder } from './FilePlaceholder'
 import { Icon } from './Icon'
+import { StatusGlyph } from './StatusGlyph'
 import './DiffSection.css'
-
-const STATUS_LETTER: Record<ChangeStatus, string> = {
-  modified: 'M',
-  added: 'A',
-  deleted: 'D',
-  renamed: 'R',
-  untracked: 'U'
-}
-
-const STATUS_LABEL: Record<ChangeStatus, string> = {
-  modified: 'Modified',
-  added: 'Added',
-  deleted: 'Deleted',
-  renamed: 'Renamed',
-  untracked: 'Untracked'
-}
 
 /** Monaco's default line height at the app's font size, near enough to estimate with. */
 const LINE_HEIGHT = 19
@@ -141,18 +126,19 @@ export function DiffSection({
           <Icon name="chevron-down" size={13} />
         </span>
         <span
-          className={`diff-section-pill ${changed.status}`}
-          title={STATUS_LABEL[changed.status]}
+          className={`diff-section-path${changeStatusView(changed.status).struck ? ' struck' : ''}`}
         >
-          {STATUS_LETTER[changed.status]}
+          {path}
         </span>
-        <span className="diff-section-path">{path}</span>
         {!stat.uncountable && (
           <span className="diff-section-counts">
             <span className="added">+{stat.added}</span>
             <span className="removed">&minus;{stat.removed}</span>
           </span>
         )}
+        <span className="diff-section-end">
+          <StatusGlyph status={changed.status} />
+        </span>
       </button>
 
       {expanded &&

@@ -13,6 +13,9 @@
  *      layout and whitespace choices the drive made survived (FDIF-12/16).
  *   4. node scripts/smoke-files-diff.mjs --clean
  *
+ * SMOKE_ONLY=glyphs on step 2 runs the status glyph sections alone (FSTS,
+ * issue #131), from a fresh seed and launch like any drive.
+ *
  * SMOKE_ONLY=fold on step 2 runs section 14 alone (FOLD, issue #130), from a
  * fresh seed and launch like any drive.
  *
@@ -32,14 +35,21 @@
  *     src/modified.ts      committed, then changed on the branch
  *     src/added.ts         added on the branch
  *     docs/removed.md      committed on main, deleted on the branch
+ *     docs/an-unusually-long-guide-name-that-a-commit-tab-header-has-to-cut-before-its-glyph.md
+ *                          added on the branch, so the branch commit has a path
+ *                          its commit tab's header must cut before the glyph
  *     src/renamed-new.ts   committed as renamed-old.ts, moved on the branch
  *     crlf.txt             committed with CRLF, rewritten as LF on disk
- *     assets/logo.bin      a NUL in the first 8000 bytes
+ *     assets/logo.bin      a NUL in the first 8000 bytes; rewritten with other
+ *                          bytes, uncommitted, so one header has no counts
  *     big.txt              2 MB, past the 1 MB view cap
  *     stack/f00..f39.ts    40 changed files, for the All changes stack
  *     fold/long.ts         200 lines, committed on main and never changed on
  *     fold/other.ts        120 lines, the branch; section 14 writes to them
  *     untracked.txt        untracked, so the uncommitted mode has one
+ *     src/a-rather-long-untracked-file-name-that-has-to-be-cut-short-before-its-status-glyph.txt
+ *                          untracked, 12 lines, a name the tree and the
+ *                          header must cut before the status glyph
  *     Acme.Widget.slnx     committed on main, for the .slnx icon correction
  *     settings.json        committed on main, for the dark-theme icon rule
  *     vite.config.ts       committed on main, for the light-theme icon rule
@@ -66,6 +76,14 @@ const ORIGIN = join(BASE, 'fxd-smoke-origin.git')
 const OTHER = join(BASE, 'fxd-smoke-other')
 const CONFIG_PATH =
   process.env.SMOKE_CONFIG ?? join(process.env.APPDATA ?? '', 'playground', 'config.json')
+
+/** The seeded untracked file whose name is cut before its status glyph. */
+const LONG_NAME =
+  'a-rather-long-untracked-file-name-that-has-to-be-cut-short-before-its-status-glyph.txt'
+
+/** The seeded file of the branch commit whose path a commit tab's header cuts (FSTS-21). */
+const LONG_GUIDE =
+  'docs/an-unusually-long-guide-name-that-a-commit-tab-header-has-to-cut-before-its-glyph.md'
 
 const CR = String.fromCharCode(13)
 const LF = String.fromCharCode(10)
@@ -146,6 +164,10 @@ function seed() {
   writeFileSync(join(REPO, 'src', 'added.ts'), 'export const added = true\n')
   git(['mv', 'src/renamed-old.ts', 'src/renamed-new.ts'])
   git(['rm', '-q', 'docs/removed.md'])
+  // git rm takes the emptied docs/ with it. A path the commit tab must cut
+  // before its glyph (FSTS-21 via FSTS-20).
+  mkdirSync(join(REPO, 'docs'), { recursive: true })
+  writeFileSync(join(REPO, LONG_GUIDE), '# A guide\n\nNothing in it is real.\n')
   for (let i = 0; i < 40; i++) {
     const name = `f${String(i).padStart(2, '0')}.ts`
     writeFileSync(
@@ -159,6 +181,16 @@ function seed() {
   // Uncommitted: the same file rewritten with LF, and one untracked file.
   writeFileSync(join(REPO, 'crlf.txt'), ['alpha', 'beta', 'gamma'].join(LF) + LF)
   writeFileSync(join(REPO, 'untracked.txt'), 'not tracked yet\n')
+  // A name too long for its row and header, and a binary change with no
+  // counts: the status glyph has to hold its column past both (FSTS-04/17/20).
+  writeFileSync(
+    join(REPO, 'src', LONG_NAME),
+    Array.from({ length: 12 }, (_, i) => `line ${i + 1}`).join(LF) + LF
+  )
+  writeFileSync(
+    join(REPO, 'assets', 'logo.bin'),
+    Buffer.from([0x89, 0x50, 0x00, 0x4e, 0x47, 0x0d, 0x0a])
+  )
 
   const config = existsSync(CONFIG_PATH) ? JSON.parse(readFileSync(CONFIG_PATH, 'utf8')) : {}
   if (!Array.isArray(config.workspaces)) config.workspaces = []
@@ -470,6 +502,21 @@ async function openStackFile(ws, name) {
 async function drive() {
   const ws = await connect()
   await selectWorktree(ws)
+
+  // SMOKE_ONLY=glyphs runs the status glyph sections alone, for iterating on
+  // them; the full drive still runs before a PR.
+  if (process.env.SMOKE_ONLY === 'glyphs') {
+    await glyphSetup(ws)
+    await glyphTreeChecks(ws)
+    await glyphHeaderChecks(ws)
+    await glyphCommitChecks(ws)
+    const failed = checks.filter((c) => !c.ok)
+    console.log(
+      `\n${checks.length - failed.length}/${checks.length} checks passed (status glyphs only)`
+    )
+    ws.close()
+    return failed.length
+  }
 
   // SMOKE_ONLY=fold runs section 14 alone, for iterating on it; the full drive
   // still runs before a PR.
@@ -924,6 +971,13 @@ async function drive() {
     `${beforeCommit.length} sections -> ${afterCommit.length}`
   )
 
+  // Here, and not later: the uncommitted files the glyph checks read (crlf.txt,
+  // untracked.txt, the long name, assets/logo.bin) are still uncommitted, since
+  // FDIF-31 committed modified.ts alone. The icon checks reload and stay last.
+  await glyphTreeChecks(ws)
+  await glyphHeaderChecks(ws)
+  await glyphCommitChecks(ws)
+
   await iconChecks(ws)
 
   // 12. Pinned tabs and the strip's bulk closes (FPOL-01..13).
@@ -1276,6 +1330,832 @@ async function drive() {
   console.log('  B. Judge side-by-side against inline as the daily default.')
   ws.close()
   return failed.length
+}
+
+/* ---------------------------------------------------------------- glyphs -- */
+
+/** The status of every changed file the seed lists, by list (FSTS-06..11). */
+const ORIGIN_STATUS = {
+  'src/modified.ts': 'modified',
+  'src/added.ts': 'added',
+  'docs/removed.md': 'deleted',
+  'src/renamed-new.ts': 'renamed',
+  [LONG_GUIDE]: 'added',
+  ...Object.fromEntries(
+    Array.from({ length: 40 }, (_, i) => [`stack/f${String(i).padStart(2, '0')}.ts`, 'modified'])
+  )
+}
+const UNCOMMITTED_STATUS = {
+  'crlf.txt': 'modified',
+  'untracked.txt': 'untracked',
+  [`src/${LONG_NAME}`]: 'untracked',
+  'assets/logo.bin': 'modified'
+}
+
+/** What each status reads, as the spec states it (FSTS-06..11). */
+const GLYPHS = {
+  added: { text: '+', title: 'Added' },
+  modified: { text: 'M', title: 'Modified' },
+  deleted: { text: 'D', title: 'Deleted' },
+  renamed: { text: 'R', title: 'Renamed' },
+  untracked: { text: 'U', title: 'Untracked' }
+}
+
+/**
+ * Each status's tone token and the tint behind it. The tint is compared too:
+ * the row's own colour is --text-muted, so an untracked glyph that lost its
+ * rule would still inherit the right colour and pass on colour alone.
+ */
+const TONES = {
+  added: { color: 'var(--green)', tint: 'color-mix(in oklab, var(--green) 16%, transparent)' },
+  modified: { color: 'var(--amber)', tint: 'color-mix(in oklab, var(--amber) 16%, transparent)' },
+  deleted: { color: 'var(--red)', tint: 'color-mix(in oklab, var(--red) 16%, transparent)' },
+  renamed: { color: 'var(--accent)', tint: 'color-mix(in oklab, var(--accent) 16%, transparent)' },
+  untracked: {
+    color: 'var(--text-muted)',
+    tint: 'color-mix(in oklab, var(--text-faint) 20%, transparent)'
+  }
+}
+
+/** Each tone as the page computes it, from one probe per token appended to `host` and removed. */
+const probeTones = (host) => `
+  (() => {
+    const host = document.querySelector(${JSON.stringify(host)})
+    if (!host) return null
+    const tones = ${JSON.stringify(TONES)}
+    const read = (css, prop) => {
+      const probe = document.createElement('span')
+      probe.style.cssText = css
+      host.appendChild(probe)
+      const value = getComputedStyle(probe)[prop]
+      probe.remove()
+      return value
+    }
+    return Object.fromEntries(
+      Object.entries(tones).map(([status, t]) => [
+        status,
+        { color: read('color: ' + t.color, 'color'), tint: read('background: ' + t.tint, 'backgroundColor') }
+      ])
+    )
+  })()
+`
+
+/** Every element under `root` (itself included) whose text is drawn struck through. */
+const STRUCK = `(root) =>
+  [root, ...root.querySelectorAll('*')].filter((e) =>
+    getComputedStyle(e).textDecorationLine.includes('line-through')
+  )`
+
+/**
+ * Why a glyph would not be painted, empty when it is: hidden, not displayed, under
+ * an element (itself included) with opacity below 1, or a box under 15 x 8 px.
+ * The DOM reads its text, title, colour and place either way, so none of those
+ * checks can tell a hidden glyph from a shown one.
+ */
+const UNPAINTED = `(glyph) => {
+  const why = []
+  const style = getComputedStyle(glyph)
+  if (style.visibility !== 'visible') why.push('visibility ' + style.visibility)
+  let hidden = null
+  let faded = null
+  for (let e = glyph; e && e.nodeType === 1; e = e.parentElement) {
+    const own = getComputedStyle(e)
+    if (!hidden && own.display === 'none') hidden = e
+    if (!faded && parseFloat(own.opacity) < 1) faded = e
+  }
+  if (hidden) why.push('display none on ' + (hidden.className || hidden.tagName))
+  if (faded) {
+    why.push('opacity ' + getComputedStyle(faded).opacity + ' on ' + (faded.className || faded.tagName))
+  }
+  const box = glyph.getBoundingClientRect()
+  if (box.width < 15 || box.height < 8) {
+    why.push('box ' + box.width.toFixed(1) + ' x ' + box.height.toFixed(1))
+  }
+  return why
+}`
+
+/**
+ * The space a row or header leaves its name or path (FSTS-22/23): from the
+ * text's left edge to the end group's (or to the content edge where there is
+ * none), less the row's gap and whatever sits between them, the counts. It is
+ * read from the siblings, never from the text's own box, so a box cut short
+ * cannot be its own measure.
+ */
+const SPACE_LEFT = `(text) => {
+  const box = text.parentElement
+  const style = getComputedStyle(box)
+  const gap = parseFloat(style.columnGap) || 0
+  let bound = box.getBoundingClientRect().right - parseFloat(style.paddingRight)
+  let between = 0
+  for (let e = text.nextElementSibling; e; e = e.nextElementSibling) {
+    if (e.classList.contains('file-tree-end') || e.classList.contains('diff-section-end')) {
+      bound = e.getBoundingClientRect().left - gap
+      break
+    }
+    between += e.getBoundingClientRect().width + gap
+  }
+  return bound - between - text.getBoundingClientRect().left
+}`
+
+/**
+ * The width the text of `el` takes on one line, from a Range over it: a range's
+ * box is not clipped by its element, and unlike `scrollWidth` it is never
+ * padded out to the element's own width, so a text that fits reads as such.
+ */
+const TEXT_WIDTH = `(el) => {
+  const range = document.createRange()
+  range.selectNodeContents(el)
+  return range.getBoundingClientRect().width
+}`
+
+/**
+ * The visible children of a row or header, in order (a box wider and taller than
+ * 0, not `visibility: hidden`), and the most any of them runs into the next:
+ * `prev.right − next.left`, negative for a gap (FSTS-04, 16, 20). A box that
+ * runs past its space, or an end group laid over the row's end, reads positive
+ * here while the DOM order and the glyph's edge still hold.
+ */
+const LAYOUT = `(box) => {
+  const kids = [...box.children].filter((e) => {
+    const r = e.getBoundingClientRect()
+    return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'
+  })
+  const name = (e) => (e.getAttribute('class') || e.tagName).split(' ')[0]
+  let overlap = null
+  for (let i = 0; i + 1 < kids.length; i++) {
+    const px = kids[i].getBoundingClientRect().right - kids[i + 1].getBoundingClientRect().left
+    if (!overlap || px > overlap.px) overlap = { px, pair: name(kids[i]) + ' over ' + name(kids[i + 1]) }
+  }
+  return { children: kids.length, overlap }
+}`
+
+/** Every row of the tree, with its glyph and where that glyph ends. */
+const treeRows = `
+  [...document.querySelectorAll('.file-tree-body .file-tree-row')].map((row) => {
+    const box = row.getBoundingClientRect()
+    const glyphs = [...row.querySelectorAll('.status-glyph')]
+    const glyph = glyphs[0]
+    const end = glyph?.parentElement
+    const name = row.querySelector('.file-tree-name')
+    const layout = (${LAYOUT})(row)
+    return {
+      path: row.getAttribute('title'),
+      folder: row.querySelector('.file-tree-chevron') !== null,
+      depth: Math.round((parseFloat(row.style.paddingLeft) - 8) / 13),
+      glyphs: glyphs.length,
+      text: glyph?.textContent ?? null,
+      title: glyph?.getAttribute('title') ?? null,
+      color: glyph ? getComputedStyle(glyph).color : null,
+      tint: glyph ? getComputedStyle(glyph).backgroundColor : null,
+      last:
+        !!glyph &&
+        end.classList.contains('file-tree-end') &&
+        end === row.lastElementChild &&
+        glyph === end.lastElementChild,
+      right: glyph ? glyph.getBoundingClientRect().right : null,
+      edge: box.right - parseFloat(getComputedStyle(row).paddingRight),
+      // FSTS-04: the icon (or chevron and icon), the name and the end group, none
+      // drawn over the next.
+      children: layout.children,
+      wantChildren: 3,
+      overlap: layout.overlap,
+      overflows: name ? name.scrollWidth > name.clientWidth : null,
+      // FSTS-04: a cut name ends in an ellipsis, not a bare clip. The ellipsis is
+      // drawn only on a box that clips and does not wrap (see ellipsisFaults).
+      ellipsis: name ? getComputedStyle(name).textOverflow : null,
+      overflowX: name ? getComputedStyle(name).overflowX : null,
+      whiteSpace: name ? getComputedStyle(name).whiteSpace : null,
+      // FSTS-22: the name's natural and shown widths, and the space its row leaves.
+      natural: name ? (${TEXT_WIDTH})(name) : null,
+      scroll: name ? name.scrollWidth : null,
+      shown: name ? name.clientWidth : null,
+      space: name ? (${SPACE_LEFT})(name) : null,
+      struck: (${STRUCK})(row).map((e) => (e === name ? 'name' : e === row ? 'row' : e.className)),
+      unpainted: glyph ? (${UNPAINTED})(glyph) : []
+    }
+  })
+`
+
+/** Polls `read` until `ready(value)` holds, for up to ~6 s; returns the last value either way. */
+async function readWhen(ws, read, ready) {
+  let value = null
+  for (let i = 0; i < 20; i++) {
+    value = await evaluate(ws, read)
+    if (ready(value)) return value
+    await sleep(300)
+  }
+  return value
+}
+
+/** The rows of one changed list, once every expected file row is there. */
+async function listRows(ws, mode, expected) {
+  await evaluate(ws, clickByText('.file-tree-mode', mode))
+  await sleep(1200)
+  return readWhen(ws, treeRows, (rows) =>
+    Object.keys(expected).every((path) => rows.some((r) => !r.folder && r.path === path))
+  )
+}
+
+/**
+ * The column FSTS-01/02/16/17 name: every item holds exactly one glyph, last in
+ * its row or header, ending within 1 px of the right padding, and all of them
+ * within 1 px of each other. Nothing is drawn under the glyph either (FSTS-04,
+ * 16, 20): the item shows all its children, and none runs more than 0.5 px into
+ * the next. Returns the reasons it fails, empty when it holds.
+ */
+function columnFaults(items) {
+  const faults = []
+  for (const item of items) {
+    if (item.glyphs !== 1) faults.push(`${item.path}: ${item.glyphs} glyphs`)
+    else if (!item.last) faults.push(`${item.path}: glyph not last`)
+    else if (Math.abs(item.right - item.edge) > 1) {
+      faults.push(`${item.path}: ends at ${item.right.toFixed(1)}, edge ${item.edge.toFixed(1)}`)
+    }
+    if (item.children !== item.wantChildren) {
+      faults.push(`${item.path}: ${item.children} of ${item.wantChildren} children visible`)
+    } else if (item.overlap && item.overlap.px > 0.5) {
+      faults.push(`${item.path}: ${item.overlap.pair} by ${item.overlap.px.toFixed(1)} px`)
+    }
+  }
+  const rights = items.map((i) => i.right).filter((r) => typeof r === 'number')
+  if (rights.length && Math.max(...rights) - Math.min(...rights) > 1) {
+    faults.push(`rights spread ${(Math.max(...rights) - Math.min(...rights)).toFixed(1)} px`)
+  }
+  return faults
+}
+
+/** The children counts of a list and its worst overlap, for a check's log line. */
+function layoutDetail(items) {
+  const counts = [...new Set(items.map((i) => `${i.children}/${i.wantChildren}`))].join(', ')
+  const worst = items
+    .filter((i) => i.overlap)
+    .reduce((w, i) => (!w || i.overlap.px > w.overlap.px ? i : w), null)
+  return (
+    `children ${counts || 'none'}; worst overlap ` +
+    (worst ? `${worst.overlap.px.toFixed(1)} px (${worst.overlap.pair}, ${worst.path})` : 'none')
+  )
+}
+
+/**
+ * Items whose glyph colour or tint differ from the probe's for their status, over
+ * `[items, expected status by path, probed tones]` lists; `seen` holds the
+ * statuses met, so a caller can require all five.
+ */
+function toneFaultsOf(lists) {
+  const faults = []
+  const seen = new Set()
+  for (const [items, expected, tones] of lists) {
+    for (const item of items) {
+      const status = expected[item.path]
+      if (!status) {
+        faults.push(`${item.path}: not seeded`)
+        continue
+      }
+      seen.add(status)
+      if (item.color !== tones?.[status]?.color || item.tint !== tones?.[status]?.tint) {
+        faults.push(
+          `${item.path}: ${item.color} on ${item.tint}, want ${tones?.[status]?.color} on ${tones?.[status]?.tint}`
+        )
+      }
+    }
+  }
+  return { faults, seen }
+}
+
+/**
+ * Why a name or path is not cut with a drawn ellipsis, empty when it is (FSTS-04,
+ * FSTS-20). It must overflow (the precondition) and compute `text-overflow:
+ * ellipsis`; but that value holds whether or not an ellipsis is drawn, and
+ * Chromium draws one only on a box that clips (`overflow` hidden or clip) and
+ * keeps its text on one line (`white-space: nowrap`).
+ */
+function ellipsisFaults(item) {
+  if (!item) return ['not read']
+  const why = []
+  if (item.overflows !== true) why.push(`overflows ${item.overflows}`)
+  if (item.ellipsis !== 'ellipsis') why.push(`text-overflow ${item.ellipsis}`)
+  if (item.overflowX !== 'hidden' && item.overflowX !== 'clip') {
+    why.push(`overflow-x ${item.overflowX}`)
+  }
+  if (item.whiteSpace !== 'nowrap') why.push(`white-space ${item.whiteSpace}`)
+  return why
+}
+
+/** Items whose name or path, at its natural width, fits the space left for it (1 px spare). */
+const fitting = (items) =>
+  items.filter((i) => typeof i.natural === 'number' && i.natural <= i.space - 1)
+
+/** Of the items whose text fits, those not shown whole: `scrollWidth > clientWidth` (FSTS-22, FSTS-23). */
+const fitFaults = (items) =>
+  fitting(items)
+    .filter((i) => i.scroll > i.shown)
+    .map(
+      (i) =>
+        `${i.path}: ${i.natural.toFixed(1)} px of text, scroll ${i.scroll} in ${i.shown} px, ${i.space.toFixed(1)} px free`
+    )
+
+/** How a cut name or path reads, for a check's log line. */
+const cutDetail = (item) =>
+  `overflows ${item?.overflows}, text-overflow ${item?.ellipsis}, overflow-x ${item?.overflowX}, white-space ${item?.whiteSpace}`
+
+/** Items without a glyph, or whose glyph is not painted (FSTS-06..10: the glyph reads). */
+const paintFaults = (items) =>
+  items
+    .filter((i) => i.glyphs < 1 || i.unpainted.length > 0)
+    .map((i) => `${i.path}: ${i.glyphs < 1 ? 'no glyph' : i.unpainted.join(', ')}`)
+
+/** Rows whose glyph text or tooltip differ from the spec's for their status. */
+function glyphFaults(items, expected) {
+  return items
+    .filter((i) => expected[i.path])
+    .filter((i) => {
+      const want = GLYPHS[expected[i.path]]
+      return i.text !== want.text || i.title !== want.title
+    })
+    .map((i) => `${i.path}: ${i.text}/${i.title}`)
+}
+
+/**
+ * The state the full drive leaves before these sections, for `SMOKE_ONLY=glyphs`:
+ * the inline layout FDIF-12 chose. Nothing is committed: FDIF-31 commits
+ * modified.ts alone, and it is not an uncommitted file on a fresh seed.
+ */
+async function glyphSetup(ws) {
+  await evaluate(ws, clickByText('.file-tree-mode', 'Uncommitted'))
+  await sleep(1600)
+  await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
+  await sleep(1200)
+  const inline = (await evaluate(ws, activeToggles)).find((t) => t.label === 'Inline')
+  if (inline?.pressed !== 'true') await evaluate(ws, clickToggle('Inline'))
+  await sleep(800)
+}
+
+/** 12. The status glyphs of the tree rows (FSTS-01..11, 13..15, 22). */
+async function glyphTreeChecks(ws) {
+  if ((await evaluate(ws, `document.documentElement.dataset.theme`)) !== 'dark') {
+    await clickThemeToggle(ws, 'dark')
+  }
+  const theme = await evaluate(ws, `document.documentElement.dataset.theme`)
+  const origin = await listRows(ws, 'Diff to origin', ORIGIN_STATUS)
+  const originTones = await evaluate(ws, probeTones('.file-tree'))
+  const uncommitted = await listRows(ws, 'Uncommitted', UNCOMMITTED_STATUS)
+  const uncommittedTones = await evaluate(ws, probeTones('.file-tree'))
+  const originFiles = origin.filter((r) => !r.folder)
+  const uncommittedFiles = uncommitted.filter((r) => !r.folder)
+  const row = (rows, path) => rows.find((r) => !r.folder && r.path === path)
+
+  // 1. The four statuses of diff to origin, each by its own row.
+  const named = ['src/modified.ts', 'src/added.ts', 'docs/removed.md', 'src/renamed-new.ts']
+  const namedRows = named.map((p) => row(origin, p)).filter(Boolean)
+  const namedFaults = glyphFaults(namedRows, ORIGIN_STATUS)
+  check(
+    'Diff to origin shows M, +, D and R with their tooltips (FSTS-06..09, FSTS-11)',
+    theme === 'dark' && namedRows.length === 4 && namedFaults.length === 0,
+    `theme ${theme}; ${namedRows.map((r) => `${r.path.split('/').pop()} ${r.text}/${r.title}`).join(', ')}` +
+      (namedFaults.length ? `; wrong: ${namedFaults.join(', ')}` : '')
+  )
+
+  // 2. Tones, against probes; the five tokens must differ or nothing is told apart.
+  const { faults: toneFaults, seen } = toneFaultsOf([
+    [originFiles, ORIGIN_STATUS, originTones],
+    [uncommittedFiles, UNCOMMITTED_STATUS, uncommittedTones]
+  ])
+  const distinct = new Set(Object.values(originTones ?? {}).map((t) => t.color)).size
+  check(
+    'Every glyph takes its status tone, in both lists (FSTS-06..10)',
+    distinct === 5 && seen.size === 5 && toneFaults.length === 0,
+    `${distinct} distinct tokens, ${seen.size} statuses seen, ${originFiles.length + uncommittedFiles.length} glyphs` +
+      (toneFaults.length ? `; ${toneFaults.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 3. One column in diff to origin.
+  const originColumn = columnFaults(originFiles)
+  check(
+    'Diff to origin: one glyph per file row, last, in one column at the right padding (FSTS-01..03)',
+    originFiles.length === Object.keys(ORIGIN_STATUS).length && originColumn.length === 0,
+    `${originFiles.length} file rows; ${layoutDetail(originFiles)}` +
+      (originColumn.length ? `; ${originColumn.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 4. Uncommitted: depths 0 and 1 in the same column, and U read there.
+  const depthOf = (path) => row(uncommitted, path)?.depth
+  const depthsHold =
+    depthOf('crlf.txt') === 0 &&
+    depthOf('untracked.txt') === 0 &&
+    depthOf(`src/${LONG_NAME}`) === 1 &&
+    depthOf('assets/logo.bin') === 1
+  const uncommittedGlyphs = glyphFaults(uncommittedFiles, UNCOMMITTED_STATUS)
+  const untrackedRow = row(uncommitted, 'untracked.txt')
+  const uncommittedColumn = columnFaults(uncommittedFiles)
+  check(
+    'Uncommitted: M and U at depths 0 and 1 share one column (FSTS-01, 02, 10, 11)',
+    depthsHold &&
+      uncommittedFiles.length === 4 &&
+      untrackedRow?.text === 'U' &&
+      untrackedRow?.title === 'Untracked' &&
+      uncommittedGlyphs.length === 0 &&
+      uncommittedColumn.length === 0,
+    `depths ${uncommittedFiles.map((r) => `${r.path.split('/').pop().slice(0, 12)}:${r.depth}`).join(', ')}; ` +
+      `untracked.txt ${untrackedRow?.text}/${untrackedRow?.title}; ${layoutDetail(uncommittedFiles)}` +
+      (uncommittedGlyphs.length ? `; wrong: ${uncommittedGlyphs.join(', ')}` : '') +
+      (uncommittedColumn.length ? `; ${uncommittedColumn.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 5. The long name is cut with an ellipsis, and its glyph keeps the column.
+  const longRow = row(uncommitted, `src/${LONG_NAME}`)
+  const longColumn = longRow ? columnFaults([longRow, ...uncommittedFiles]) : ['no row']
+  const longCut = ellipsisFaults(longRow)
+  check(
+    'A name too long for its row is cut with an ellipsis and its glyph keeps the column (FSTS-04)',
+    longCut.length === 0 && longColumn.length === 0,
+    `${cutDetail(longRow)}; ${longRow ? layoutDetail([longRow]) : 'no row'}` +
+      (longColumn.length ? `; ${longColumn.join('; ')}` : '')
+  )
+
+  // 6. No folder row carries a glyph.
+  const originFolders = origin.filter((r) => r.folder)
+  const uncommittedFolders = uncommitted.filter((r) => r.folder)
+  const folderGlyphs = [...originFolders, ...uncommittedFolders].filter((r) => r.glyphs > 0)
+  check(
+    'No folder row of either list shows a status glyph (FSTS-05)',
+    originFolders.length >= 3 && uncommittedFolders.length >= 2 && folderGlyphs.length === 0,
+    `${originFolders.length} + ${uncommittedFolders.length} folder rows, ${folderGlyphs.length} with a glyph`
+  )
+
+  // 7. Only removed.md's name is struck, in the whole list.
+  const struck = origin.flatMap((r) => r.struck.map((what) => `${r.path}:${what}`))
+  check(
+    "Only the deleted file's name is struck through (FSTS-13..15)",
+    struck.length === 1 && struck[0] === 'docs/removed.md:name',
+    `struck: ${struck.join(', ') || 'none'}`
+  )
+
+  // 8. Every glyph of both lists is painted, not only present in the DOM.
+  const treeFiles = [...originFiles, ...uncommittedFiles]
+  const unpainted = paintFaults(treeFiles)
+  check(
+    'Every tree glyph is painted: visible, opaque, full size (FSTS-06..10)',
+    originFiles.length === Object.keys(ORIGIN_STATUS).length &&
+      uncommittedFiles.length === Object.keys(UNCOMMITTED_STATUS).length &&
+      unpainted.length === 0,
+    `${treeFiles.length} file rows` +
+      (unpainted.length ? `; ${unpainted.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 9. A name that fits its row shows whole. Precondition: every seeded file
+  // but the two long ones fits, and the long untracked name does not.
+  const treeAll = [...origin, ...uncommitted]
+  const fitFiles = fitting(treeFiles).length
+  const treeUncut = fitFaults(treeAll)
+  const seededFiles = Object.keys(ORIGIN_STATUS).length + Object.keys(UNCOMMITTED_STATUS).length
+  check(
+    'A name that fits its row shows whole, with no ellipsis (FSTS-22)',
+    fitFiles >= seededFiles - 2 &&
+      longRow !== undefined &&
+      !fitting([longRow]).length &&
+      treeUncut.length === 0,
+    `${fitFiles} of ${treeFiles.length} file names fit (${fitting(treeAll).length} rows with folders); ` +
+      `long name ${longRow?.natural?.toFixed(1)} px in ${longRow?.space?.toFixed(1)} px free` +
+      (treeUncut.length ? `; ${treeUncut.slice(0, 3).join('; ')}` : '')
+  )
+}
+
+/** Every section header of the stack on screen, with its glyph and where it ends. */
+const stackHeaders = `
+  [...document.querySelectorAll('.diff-section')].map((section) => {
+    const header = section.querySelector('.diff-section-header')
+    const box = header.getBoundingClientRect()
+    const glyphs = [...header.querySelectorAll('.status-glyph')]
+    const glyph = glyphs[0]
+    const end = glyph?.parentElement
+    const path = header.querySelector('.diff-section-path')
+    const counts = header.querySelector('.diff-section-counts')
+    const layout = (${LAYOUT})(header)
+    return {
+      path: section.getAttribute('data-path'),
+      glyphs: glyphs.length,
+      text: glyph?.textContent ?? null,
+      title: glyph?.getAttribute('title') ?? null,
+      status: glyph ? ([...glyph.classList].find((c) => c !== 'status-glyph') ?? null) : null,
+      color: glyph ? getComputedStyle(glyph).color : null,
+      tint: glyph ? getComputedStyle(glyph).backgroundColor : null,
+      last:
+        !!glyph &&
+        end.classList.contains('diff-section-end') &&
+        end === header.lastElementChild &&
+        glyph === end.lastElementChild,
+      // FSTS-18: nothing between the chevron and the path.
+      pathSecond: header.children[1] === path,
+      right: glyph ? glyph.getBoundingClientRect().right : null,
+      edge: box.right - parseFloat(getComputedStyle(header).paddingRight),
+      counts: counts ? Math.round(counts.getBoundingClientRect().width * 10) / 10 : null,
+      // FSTS-16, 20: the chevron, the path, the counts (when there are any) and
+      // the end group, none drawn over the next.
+      children: layout.children,
+      wantChildren: counts ? 4 : 3,
+      overlap: layout.overlap,
+      overflows: path ? path.scrollWidth > path.clientWidth : null,
+      // FSTS-20: a cut path ends in an ellipsis, not a bare clip (see ellipsisFaults).
+      ellipsis: path ? getComputedStyle(path).textOverflow : null,
+      overflowX: path ? getComputedStyle(path).overflowX : null,
+      whiteSpace: path ? getComputedStyle(path).whiteSpace : null,
+      // FSTS-23: the path's natural and shown widths, and the space its header leaves.
+      natural: path ? (${TEXT_WIDTH})(path) : null,
+      scroll: path ? path.scrollWidth : null,
+      shown: path ? path.clientWidth : null,
+      space: path ? (${SPACE_LEFT})(path) : null,
+      struck: (${STRUCK})(header).map((e) =>
+        e === path ? 'path' : e === header ? 'header' : e.className
+      ),
+      unpainted: glyph ? (${UNPAINTED})(glyph) : []
+    }
+  })
+`
+
+/** The headers of one mode's All changes stack, once every expected section is there. */
+async function stackRows(ws, mode, expected) {
+  await evaluate(ws, clickByText('.file-tree-mode', mode))
+  await sleep(1200)
+  await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
+  await sleep(1200)
+  return readWhen(
+    ws,
+    stackHeaders,
+    (headers) =>
+      headers.length === Object.keys(expected).length &&
+      Object.keys(expected).every((path) => headers.some((h) => h.path === path))
+  )
+}
+
+/**
+ * Narrows the page with CDP emulation, 900 px first and down to 600 px, until
+ * `path`'s header is cut, and reads the stack on screen there. The override is
+ * cleared in a `finally`, so a failed read never leaves the window narrowed.
+ */
+async function narrowUntilCut(ws, path) {
+  const height = await evaluate(ws, `window.innerHeight`)
+  let headers = null
+  let width = null
+  try {
+    for (const w of [900, 800, 700, 600]) {
+      await send(ws, 'Emulation.setDeviceMetricsOverride', {
+        width: w,
+        height,
+        deviceScaleFactor: 1,
+        mobile: false
+      })
+      await sleep(900)
+      headers = await evaluate(ws, stackHeaders)
+      width = w
+      if (headers.find((h) => h.path === path)?.overflows) break
+    }
+  } finally {
+    await send(ws, 'Emulation.clearDeviceMetricsOverride')
+    await sleep(600)
+  }
+  return { headers, width }
+}
+
+/** The column faults of a stack, plus any header with something before its path. */
+const headerFaults = (headers) => [
+  ...columnFaults(headers),
+  ...headers.filter((h) => !h.pathSecond).map((h) => `${h.path}: something before the path`)
+]
+
+/** 13. The status glyphs of the All changes section headers (FSTS-11, 16..21, 23). */
+async function glyphHeaderChecks(ws) {
+  const origin = await stackRows(ws, 'Diff to origin', ORIGIN_STATUS)
+  const originTones = await evaluate(ws, probeTones('.all-changes-stack'))
+  const uncommitted = await stackRows(ws, 'Uncommitted', UNCOMMITTED_STATUS)
+  const uncommittedTones = await evaluate(ws, probeTones('.all-changes-stack'))
+  const header = (headers, path) => headers.find((h) => h.path === path)
+
+  // 1. Every header of the diff-to-origin stack reads its status.
+  const named = ['src/modified.ts', 'src/added.ts', 'docs/removed.md', 'src/renamed-new.ts']
+  const namedHeaders = named.map((p) => header(origin, p)).filter(Boolean)
+  const originGlyphs = glyphFaults(origin, ORIGIN_STATUS)
+  check(
+    'The diff-to-origin stack shows M, +, D and R with their tooltips (FSTS-11, FSTS-18)',
+    origin.length === Object.keys(ORIGIN_STATUS).length &&
+      namedHeaders.length === 4 &&
+      originGlyphs.length === 0,
+    `${origin.length} headers; ${namedHeaders.map((h) => `${h.path.split('/').pop()} ${h.text}/${h.title}`).join(', ')}` +
+      (originGlyphs.length ? `; wrong: ${originGlyphs.slice(0, 3).join(', ')}` : '')
+  )
+
+  // 2. One column across every header in the DOM, off-screen ones included.
+  const originColumn = headerFaults(origin)
+  check(
+    'Diff to origin: one glyph per header, last, in one column at the right padding (FSTS-16, FSTS-18)',
+    origin.length === Object.keys(ORIGIN_STATUS).length && originColumn.length === 0,
+    `${origin.length} headers; ${layoutDetail(origin)}` +
+      (originColumn.length ? `; ${originColumn.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 3. Uncommitted: a header without counts, and counts of different widths,
+  // so a glyph placed before the counts cannot line up.
+  const binary = header(uncommitted, 'assets/logo.bin')
+  const widths = new Set(uncommitted.filter((h) => h !== binary).map((h) => h.counts))
+  const untracked = header(uncommitted, 'untracked.txt')
+  const uncommittedColumn = headerFaults(uncommitted)
+  check(
+    'Uncommitted: the glyphs keep one column with and without counts (FSTS-11, FSTS-17)',
+    binary !== undefined &&
+      binary.counts === null &&
+      !widths.has(null) &&
+      widths.size >= 2 &&
+      untracked?.text === 'U' &&
+      untracked?.title === 'Untracked' &&
+      uncommittedColumn.length === 0,
+    `logo.bin counts ${binary ? binary.counts : 'no header'}; count widths ${[...widths].join(', ')}; ` +
+      `untracked.txt ${untracked?.text}/${untracked?.title}; ${layoutDetail(uncommitted)}` +
+      (uncommittedColumn.length ? `; ${uncommittedColumn.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 4. Only docs/removed.md's path is struck, in the whole diff-to-origin stack.
+  const struck = origin.flatMap((h) => h.struck.map((what) => `${h.path}:${what}`))
+  check(
+    "Only the deleted file's path is struck through in the headers (FSTS-19)",
+    struck.length === 1 && struck[0] === 'docs/removed.md:path',
+    `struck: ${struck.join(', ') || 'none'}`
+  )
+
+  // 5. A path too long for its header: narrow the page until it is cut.
+  const longPath = `src/${LONG_NAME}`
+  const { headers: narrowed, width: atWidth } = await narrowUntilCut(ws, longPath)
+  const long = narrowed ? header(narrowed, longPath) : undefined
+  const narrowColumn = narrowed ? headerFaults(narrowed) : ['nothing read']
+  check(
+    'A path too long for its header is cut with an ellipsis and its glyph keeps the column (FSTS-20)',
+    ellipsisFaults(long).length === 0 &&
+      narrowed.length === Object.keys(UNCOMMITTED_STATUS).length &&
+      narrowColumn.length === 0,
+    `at ${atWidth} px: ${cutDetail(long)}; ${layoutDetail(narrowed ?? [])}` +
+      (narrowColumn.length ? `; ${narrowColumn.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 6. Tones, against probes in the stack; as the tree's check 2.
+  const { faults: toneFaults, seen } = toneFaultsOf([
+    [origin, ORIGIN_STATUS, originTones],
+    [uncommitted, UNCOMMITTED_STATUS, uncommittedTones]
+  ])
+  const distinct = new Set(Object.values(originTones ?? {}).map((t) => t.color)).size
+  check(
+    'Every header glyph takes its status tone, in both stacks (FSTS-06..10)',
+    distinct === 5 &&
+      seen.size === 5 &&
+      origin.length + uncommitted.length ===
+        Object.keys(ORIGIN_STATUS).length + Object.keys(UNCOMMITTED_STATUS).length &&
+      toneFaults.length === 0,
+    `${distinct} distinct tokens, ${seen.size} statuses seen, ${origin.length + uncommitted.length} glyphs` +
+      (toneFaults.length ? `; ${toneFaults.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 7. Every header glyph of both stacks is painted, off-screen headers included.
+  const unpainted = paintFaults([...origin, ...uncommitted])
+  check(
+    'Every header glyph is painted: visible, opaque, full size (FSTS-06..10)',
+    origin.length === Object.keys(ORIGIN_STATUS).length &&
+      uncommitted.length === Object.keys(UNCOMMITTED_STATUS).length &&
+      unpainted.length === 0,
+    `${origin.length + uncommitted.length} headers` +
+      (unpainted.length ? `; ${unpainted.slice(0, 3).join('; ')}` : '')
+  )
+
+  // 8. A path that fits its header shows whole: both stacks at full width, and
+  // the narrowed stack of 4. Precondition: every seeded path but the two long
+  // ones fits at full width, and the long path does not fit when narrowed.
+  const fullWidth = [...origin, ...uncommitted]
+  const fitPaths = fitting(fullWidth).length
+  const headerUncut = fitFaults([...fullWidth, ...(narrowed ?? [])])
+  check(
+    'A path that fits its header shows whole, with no ellipsis (FSTS-23)',
+    fitPaths >= Object.keys(ORIGIN_STATUS).length + Object.keys(UNCOMMITTED_STATUS).length - 2 &&
+      long !== undefined &&
+      !fitting([long]).length &&
+      headerUncut.length === 0,
+    `${fitPaths} of ${fullWidth.length} paths fit; narrowed to ${atWidth} px, ` +
+      `${fitting(narrowed ?? []).length} fit and the long path is ${long?.natural?.toFixed(1)} px in ${long?.space?.toFixed(1)} px free` +
+      (headerUncut.length ? `; ${headerUncut.slice(0, 3).join('; ')}` : '')
+  )
+}
+
+/** The subject of the seed's branch commit, which holds diff to origin's 45 files. */
+const BRANCH_COMMIT = 'work on the branch'
+
+/** The labels of the open tabs, and which one is active. */
+const tabStates = `
+  [...document.querySelectorAll('.file-tab')].map((tab) => ({
+    label: tab.querySelector('.file-tab-label')?.textContent.trim() ?? '',
+    active: tab.classList.contains('active')
+  }))
+`
+
+/** Whether a tab label is the branch commit's, `<sha> · work on the branch`. */
+const isCommitTab = (label) => label.endsWith(` · ${BRANCH_COMMIT}`)
+
+/**
+ * 14. A commit tab's section headers read like the modes' (FSTS-16..21). The
+ * commit tab mounts the same stack (CommitTab.tsx -> AllChangesTab), so the same
+ * checks run over its headers; a commit-only branch in the header would fail here.
+ */
+async function glyphCommitChecks(ws) {
+  await evaluate(ws, clickByText('.file-tree-mode', 'Commits'))
+  // Whether the open button was found and clicked; `showing` is what says the
+  // commit tab opened.
+  let clicked = false
+  for (let i = 0; i < 20 && !clicked; i++) {
+    await sleep(500)
+    clicked = await evaluate(
+      ws,
+      `(() => {
+        const row = [...document.querySelectorAll('.commit-row')].find(
+          (r) => r.querySelector('.commit-subject')?.textContent.trim() === ${JSON.stringify(BRANCH_COMMIT)}
+        )
+        const open = row?.querySelector('.commit-open')
+        if (!open) return false
+        open.click()
+        return true
+      })()`
+    )
+  }
+  await sleep(1200)
+  const tabs = await evaluate(ws, tabStates)
+  const showing = tabs.some((t) => t.active && isCommitTab(t.label))
+  const headers = await readWhen(
+    ws,
+    stackHeaders,
+    (read) =>
+      read.length === Object.keys(ORIGIN_STATUS).length &&
+      Object.keys(ORIGIN_STATUS).every((p) => read.some((h) => h.path === p))
+  )
+  const statuses = new Set(headers.map((h) => h.status).filter(Boolean))
+  const faults = [
+    ...headerFaults(headers),
+    ...glyphFaults(headers, ORIGIN_STATUS),
+    ...paintFaults(headers)
+  ]
+  const struck = headers.flatMap((h) => h.struck.map((what) => `${h.path}:${what}`))
+
+  // Narrowed until the branch commit's long path is cut: FSTS-21 holds the commit
+  // tab to criterion 20 too, and at full width no commit path is cut. The width
+  // before is read so the return can require the narrowing cleared.
+  const widthBefore = await evaluate(ws, `window.innerWidth`)
+  const { headers: narrowed, width: atWidth } = await narrowUntilCut(ws, LONG_GUIDE)
+  const longGuide = narrowed?.find((h) => h.path === LONG_GUIDE)
+  const narrowFaults = narrowed ? headerFaults(narrowed) : ['nothing read']
+
+  // Back to what the icon checks and a focused run expect: no commit tab, and
+  // Uncommitted's All changes stack on screen.
+  await evaluate(
+    ws,
+    `(() => {
+      const tab = [...document.querySelectorAll('.file-tab')].find((t) =>
+        (t.querySelector('.file-tab-label')?.textContent.trim() ?? '').endsWith(${JSON.stringify(` · ${BRANCH_COMMIT}`)})
+      )
+      tab?.querySelector('.file-tab-close')?.click()
+      return !!tab
+    })()`
+  )
+  await sleep(600)
+  const back = await stackRows(ws, 'Uncommitted', UNCOMMITTED_STATUS)
+  const tabsAfter = await evaluate(ws, tabStates)
+  const widthAfter = await evaluate(ws, `window.innerWidth`)
+  // The window is back at its width, which must exceed the 900 px narrowUntilCut
+  // starts at, or a narrowing left in place could read as restored.
+  const restored =
+    widthBefore > 900 &&
+    widthAfter === widthBefore &&
+    !tabsAfter.some((t) => isCommitTab(t.label)) &&
+    tabsAfter.some((t) => t.active && t.label === 'All changes') &&
+    back.length === Object.keys(UNCOMMITTED_STATUS).length
+
+  check(
+    "A commit tab's headers keep the glyph column, glyphs, tooltips and strike (FSTS-16..21)",
+    clicked &&
+      showing &&
+      headers.length === Object.keys(ORIGIN_STATUS).length &&
+      statuses.size >= 4 &&
+      faults.length === 0 &&
+      struck.length === 1 &&
+      struck[0] === 'docs/removed.md:path' &&
+      restored,
+    `open button clicked ${clicked}; commit tab active ${showing} (${tabs.find((t) => t.active)?.label ?? 'none'}); ` +
+      `${headers.length} headers, statuses ${[...statuses].join('/')}; struck ${struck.join(', ') || 'none'}; ` +
+      `restored ${restored} (width ${widthBefore} px before the narrowing, ${widthAfter} px after); ` +
+      layoutDetail(headers) +
+      (faults.length ? `; ${faults.slice(0, 3).join('; ')}` : '')
+  )
+  check(
+    "A commit tab's header cuts a long path with an ellipsis and its glyph keeps the column (FSTS-20, FSTS-21)",
+    showing &&
+      narrowed?.length === Object.keys(ORIGIN_STATUS).length &&
+      ellipsisFaults(longGuide).length === 0 &&
+      narrowFaults.length === 0,
+    `active ${tabs.find((t) => t.active)?.label ?? 'none'}; at ${atWidth} px, ${narrowed?.length ?? 0} headers: ` +
+      `${cutDetail(longGuide)}; ${layoutDetail(narrowed ?? [])}` +
+      (narrowFaults.length ? `; ${narrowFaults.slice(0, 3).join('; ')}` : '')
+  )
 }
 
 /**
@@ -1904,7 +2784,7 @@ async function clickThemeToggle(ws, to) {
   return clicked && (await evaluate(ws, `document.documentElement.dataset.theme`)) === to
 }
 
-/** 12. File and folder icons (FICN-01, 03, 07, 08, 10, 11, 13, 14, 15). */
+/** 15. File and folder icons (FICN-01, 03, 07, 08, 10, 11, 13, 14, 15). */
 async function iconChecks(ws) {
   // Guards: each check below tells two icons apart by body, so the bodies must differ.
   const pairs = [

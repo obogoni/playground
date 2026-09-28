@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 70,
+  "next_id": 80,
   "lessons": [
     {
       "id": "L-001",
@@ -1163,6 +1163,186 @@
       ],
       "created": "2026-09-27T14:34:31Z",
       "last_seen": "2026-09-27T14:34:31Z"
+    },
+    {
+      "id": "L-070",
+      "key": "ac_gap::assert a reused component in every host the spec names at runtime a citation that the host mounts it does not kill a host specific branch or style override",
+      "text": "Assert a reused component in every host the spec names at runtime; a citation that the host mounts it does not kill a host-specific branch or style override",
+      "signal": "ac_gap",
+      "scope": "scripts/smoke",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "FSTS-21 / S8b (validation.md; src/renderer/src/components/CommitTab.tsx:43) (scripts/smoke)"
+      ],
+      "created": "2026-09-27T15:46:21Z",
+      "last_seen": "2026-09-27T15:46:21Z"
+    },
+    {
+      "id": "L-071",
+      "key": "surviving_mutant::assert a reused component in every host the spec names at runtime a citation that the host mounts it does not kill a host specific branch or style override",
+      "text": "Assert a reused component in every host the spec names at runtime; a citation that the host mounts it does not kill a host-specific branch or style override",
+      "signal": "surviving_mutant",
+      "scope": "scripts/smoke",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "S11 src/renderer/src/components/DiffSection.css:78 (validation.md) (scripts/smoke)"
+      ],
+      "created": "2026-09-27T15:46:21Z",
+      "last_seen": "2026-09-27T15:46:21Z"
+    },
+    {
+      "id": "L-072",
+      "key": "surviving_mutant::when an ac names an ellipsis assert the computed text overflow as well as scrollwidth clientwidth overflow alone passes when the text is clipped bare",
+      "text": "When an AC names an ellipsis, assert the computed text-overflow as well as scrollWidth > clientWidth; overflow alone passes when the text is clipped bare",
+      "signal": "surviving_mutant",
+      "scope": "scripts/smoke",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "S10 src/renderer/src/components/FileTree.css:112; FSTS-04/20 (validation.md) (scripts/smoke)"
+      ],
+      "created": "2026-09-27T15:46:21Z",
+      "last_seen": "2026-09-27T15:46:21Z"
+    },
+    {
+      "id": "L-073",
+      "key": "surviving_mutant::assert a smoke checked indicator is painted visibility ancestor opacity box size as well as its text title and position dom reads pass on a hidden element",
+      "text": "Assert a smoke-checked indicator is painted (visibility, ancestor opacity, box size) as well as its text, title and position; DOM reads pass on a hidden element",
+      "signal": "surviving_mutant",
+      "scope": "scripts/smoke",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "S7 src/renderer/src/components/FileTree.css:134 (validation.md) (scripts/smoke)"
+      ],
+      "created": "2026-09-27T15:46:21Z",
+      "last_seen": "2026-09-27T15:46:21Z"
+    },
+    {
+      "id": "L-074",
+      "key": "surviving_mutant::a computed text overflow of ellipsis is set even when nothing is clipped assert overflow other than visible and nowrap with it or the drawn result never text overflow alone",
+      "text": "A computed text-overflow of ellipsis is set even when nothing is clipped; assert overflow other than visible and nowrap with it, or the drawn result, never text-overflow alone",
+      "signal": "surviving_mutant",
+      "scope": "smoke-cdp",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round 2: R5, R5h (FSTS-04, FSTS-20); smoke-files-diff.mjs:929,1177 (smoke-cdp)"
+      ],
+      "created": "2026-09-27T16:29:15Z",
+      "last_seen": "2026-09-27T16:29:15Z"
+    },
+    {
+      "id": "L-075",
+      "key": "ac_gap::when an ac applies conditional clauses to every host of a reused component seed each condition in every host or that host s check cannot exercise the clause",
+      "text": "When an AC applies conditional clauses to every host of a reused component, seed each condition in every host, or that host's check cannot exercise the clause",
+      "signal": "ac_gap",
+      "scope": "smoke-cdp",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round 2: R7 (FSTS-21 clause 20); smoke-files-diff.mjs:1403 (smoke-cdp)"
+      ],
+      "created": "2026-09-27T16:29:15Z",
+      "last_seen": "2026-09-27T16:29:15Z"
+    },
+    {
+      "id": "L-076",
+      "key": "spec_precision_gap::when an ac says an overflowing value is cut also state that a value that fits shows whole so a cap that cuts every value can fail a check",
+      "text": "When an AC says an overflowing value is cut, also state that a value that fits shows whole, so a cap that cuts every value can fail a check",
+      "signal": "spec_precision_gap",
+      "scope": "specs",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round 2: R6 (FSTS-04, FSTS-20) (specs)"
+      ],
+      "created": "2026-09-27T16:29:15Z",
+      "last_seen": "2026-09-27T16:29:15Z"
+    },
+    {
+      "id": "L-077",
+      "key": "surviving_mutant::when a trailing badge must stay readable assert that the element before it ends before the badge begins dom order and the badge s edge do not prove nothing is drawn under it",
+      "text": "When a trailing badge must stay readable, assert that the element before it ends before the badge begins; DOM order and the badge's edge do not prove nothing is drawn under it",
+      "signal": "surviving_mutant",
+      "scope": "smoke",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round 3: V1, V1h, V4, V4h (smoke)"
+      ],
+      "created": "2026-09-27T17:26:34Z",
+      "last_seen": "2026-09-27T17:26:34Z"
+    },
+    {
+      "id": "L-078",
+      "key": "surviving_mutant::for a fits shows whole criterion sample a value that fits within a few pixels of its space or a width cap between the widest sample and the space passes",
+      "text": "For a fits-shows-whole criterion, sample a value that fits within a few pixels of its space, or a width cap between the widest sample and the space passes",
+      "signal": "surviving_mutant",
+      "scope": "smoke",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round 3: V6, V6h (smoke)"
+      ],
+      "created": "2026-09-27T17:26:34Z",
+      "last_seen": "2026-09-27T17:26:34Z"
+    },
+    {
+      "id": "L-079",
+      "key": "surviving_mutant::measure an overlap on the badge s own box not on the wrapper that holds it a child drawn outside its parent s box passes a check on the parent",
+      "text": "Measure an overlap on the badge's own box, not on the wrapper that holds it; a child drawn outside its parent's box passes a check on the parent",
+      "signal": "surviving_mutant",
+      "scope": "smoke",
+      "status": "candidate",
+      "features": [
+        "files-status-glyphs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round 4: W4, W4h (smoke LAYOUT) (smoke)"
+      ],
+      "created": "2026-09-27T18:08:55Z",
+      "last_seen": "2026-09-27T18:08:55Z"
     }
   ]
 }

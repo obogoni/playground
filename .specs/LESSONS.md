@@ -396,6 +396,66 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: validation.md V8 (DiffViewer.tsx:307 call site of readingBeforeUpdate) (renderer components)
 - last seen: 2026-09-27T14:34:31Z
 
+### L-070 - Assert a reused component in every host the spec names at runtime; a citation that the host mounts it does not kill a host-specific branch or style override
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
+- features: files-status-glyphs
+- evidence: FSTS-21 / S8b (validation.md; src/renderer/src/components/CommitTab.tsx:43) (scripts/smoke)
+- last seen: 2026-09-27T15:46:21Z
+
+### L-071 - Assert a reused component in every host the spec names at runtime; a citation that the host mounts it does not kill a host-specific branch or style override
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
+- features: files-status-glyphs
+- evidence: S11 src/renderer/src/components/DiffSection.css:78 (validation.md) (scripts/smoke)
+- last seen: 2026-09-27T15:46:21Z
+
+### L-072 - When an AC names an ellipsis, assert the computed text-overflow as well as scrollWidth > clientWidth; overflow alone passes when the text is clipped bare
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
+- features: files-status-glyphs
+- evidence: S10 src/renderer/src/components/FileTree.css:112; FSTS-04/20 (validation.md) (scripts/smoke)
+- last seen: 2026-09-27T15:46:21Z
+
+### L-073 - Assert a smoke-checked indicator is painted (visibility, ancestor opacity, box size) as well as its text, title and position; DOM reads pass on a hidden element
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
+- features: files-status-glyphs
+- evidence: S7 src/renderer/src/components/FileTree.css:134 (validation.md) (scripts/smoke)
+- last seen: 2026-09-27T15:46:21Z
+
+### L-074 - A computed text-overflow of ellipsis is set even when nothing is clipped; assert overflow other than visible and nowrap with it, or the drawn result, never text-overflow alone
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke-cdp` · harmful: 0
+- features: files-status-glyphs
+- evidence: validation.md round 2: R5, R5h (FSTS-04, FSTS-20); smoke-files-diff.mjs:929,1177 (smoke-cdp)
+- last seen: 2026-09-27T16:29:15Z
+
+### L-075 - When an AC applies conditional clauses to every host of a reused component, seed each condition in every host, or that host's check cannot exercise the clause
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-cdp` · harmful: 0
+- features: files-status-glyphs
+- evidence: validation.md round 2: R7 (FSTS-21 clause 20); smoke-files-diff.mjs:1403 (smoke-cdp)
+- last seen: 2026-09-27T16:29:15Z
+
+### L-076 - When an AC says an overflowing value is cut, also state that a value that fits shows whole, so a cap that cuts every value can fail a check
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: files-status-glyphs
+- evidence: validation.md round 2: R6 (FSTS-04, FSTS-20) (specs)
+- last seen: 2026-09-27T16:29:15Z
+
+### L-077 - When a trailing badge must stay readable, assert that the element before it ends before the badge begins; DOM order and the badge's edge do not prove nothing is drawn under it
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: files-status-glyphs
+- evidence: validation.md round 3: V1, V1h, V4, V4h (smoke)
+- last seen: 2026-09-27T17:26:34Z
+
+### L-078 - For a fits-shows-whole criterion, sample a value that fits within a few pixels of its space, or a width cap between the widest sample and the space passes
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: files-status-glyphs
+- evidence: validation.md round 3: V6, V6h (smoke)
+- last seen: 2026-09-27T17:26:34Z
+
+### L-079 - Measure an overlap on the badge's own box, not on the wrapper that holds it; a child drawn outside its parent's box passes a check on the parent
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: files-status-glyphs
+- evidence: validation.md round 4: W4, W4h (smoke LAYOUT) (smoke)
+- last seen: 2026-09-27T18:08:55Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
