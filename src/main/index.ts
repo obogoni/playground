@@ -550,17 +550,19 @@ app.whenReady().then(() => {
   stopHookServer = () => hookServer.stop()
   const activityHooks: ActivityHooks = {
     settingsPath: null,
+    taskUrl: null,
     register: (token, sessionId) => hookServer.register(token, sessionId),
     revoke: (token) => hookServer.revoke(token)
   }
   hookServer
     .start()
-    .then(({ url }) => {
+    .then(({ url, taskUrl }) => {
       // Rewritten every launch: the port is ephemeral.
       const settingsPath = join(app.getPath('userData'), 'agent-hooks', 'claude-settings.json')
       mkdirSync(join(app.getPath('userData'), 'agent-hooks'), { recursive: true })
       writeFileSync(settingsPath, JSON.stringify(buildClaudeHookSettings(url), null, 2), 'utf8')
       activityHooks.settingsPath = settingsPath
+      activityHooks.taskUrl = taskUrl
     })
     .catch((err) => console.error('[activity-hooks] server did not start', err))
 

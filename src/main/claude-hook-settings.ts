@@ -15,6 +15,9 @@
 /** Environment variable the app sets on the PTY; the hook reads it for its header. */
 export const ACTIVITY_TOKEN_ENV = 'PLAYGROUND_ACTIVITY_TOKEN'
 
+/** Environment variable the app sets beside the token: where the agent links its session to a task (ATSK-01). */
+export const TASK_URL_ENV = 'PLAYGROUND_TASK_URL'
+
 /**
  * Claude Code blocks on an http hook until it answers, so the bound must be
  * short: the app is a local process that either answers in milliseconds or is

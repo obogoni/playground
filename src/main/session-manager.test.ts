@@ -9,7 +9,7 @@ import type { ActivityChange } from './activity-notification'
 import { ConfigStore } from './config-store'
 import type { PtyHandle, PtyPort } from './pty-port'
 import type { SpawnPlan } from './spawn-plan'
-import { ACTIVITY_TOKEN_ENV } from './claude-hook-settings'
+import { ACTIVITY_TOKEN_ENV, TASK_URL_ENV } from './claude-hook-settings'
 import {
   SessionManager,
   SESSION_EXIT_WAIT_MS,
@@ -76,9 +76,13 @@ interface FakeHooks extends ActivityHooks {
   revoked: string[]
 }
 
+const TASK_URL = 'http://127.0.0.1:4000/task'
+
 function fakeHooks(settingsPath: string | null = 'C:\\app\\hooks.json'): FakeHooks {
   const hooks: FakeHooks = {
     settingsPath,
+    // The server publishes both at the same instant, so one never exists without the other.
+    taskUrl: settingsPath === null ? null : TASK_URL,
     registered: [],
     revoked: [],
     register: (token, sessionId) => {
@@ -831,6 +835,24 @@ describe('SessionManager activity hooks', () => {
     expect(tokens[0]).not.toBe(tokens[1])
     expect(port.envs[1]?.[ACTIVITY_TOKEN_ENV]).toBe(tokens[1])
     expect(manager.list()[0].activity).toBeUndefined()
+  })
+
+  it('hands the task link url to a session that gets a token (ATSK-01)', () => {
+    const { manager, port } = makeManager()
+
+    manager.spawn('Claude', CWD)
+
+    expect(port.envs[0]?.[TASK_URL_ENV]).toBe(TASK_URL)
+  })
+
+  it('hands the task link url again to a respawned run (ATSK-01)', async () => {
+    const { manager, port } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    await manager.stop(view.id)
+
+    manager.respawn(view.id)
+
+    expect(port.envs[1]?.[TASK_URL_ENV]).toBe(TASK_URL)
   })
 
   it('keeps a running session on the launch it started with when the registry changes (ACTV-30)', () => {
