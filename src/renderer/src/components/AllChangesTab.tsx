@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { ChangedPath, DiffRequest, FileStat } from '../../../shared/files'
-import { buildTree, type TreeNode } from '../lib/files-view'
-import { initialExpansion, mountPlan, nextChangeTarget, totals } from '../lib/diff-view'
+import { buildTree, type TreeNode, type UnchangedChoice } from '../lib/files-view'
+import {
+  initialExpansion,
+  mountPlan,
+  nextChangeTarget,
+  totals,
+  type UnchangedMode
+} from '../lib/diff-view'
 import { DiffSection } from './DiffSection'
 import type { DiffHandle } from './DiffViewer'
 import './AllChangesTab.css'
@@ -27,6 +33,10 @@ interface AllChangesTabProps {
   refreshToken: number
   /** The stack's own navigation, for the tab strip's buttons and keys (FDIF-26). */
   onHandle?: (handle: DiffHandle | null) => void
+  /** This tab's last Hide unchanged / Show unchanged press, handed to every section. */
+  unchanged?: UnchangedChoice | null
+  /** A press of Hide unchanged or Show unchanged (FOLD-11..13). */
+  onUnchanged?: (mode: UnchangedMode) => void
 }
 
 /** The mode's list in the tree's order — the order the user just read on the left. */
@@ -66,7 +76,9 @@ export function AllChangesTab({
   layout,
   ignoreWhitespace,
   refreshToken,
-  onHandle
+  onHandle,
+  unchanged = null,
+  onUnchanged
 }: AllChangesTabProps): JSX.Element {
   const ordered = useMemo(() => inTreeOrder(files), [files])
   const shown = useMemo(() => {
@@ -318,6 +330,25 @@ export function AllChangesTab({
         >
           Collapse all
         </button>
+        {/* FOLD-11..13: the unchanged lines inside every section, where Expand
+            all / Collapse all act on whole sections. Sections that get an
+            editor later open in the last choice (FOLD-14). */}
+        <button
+          type="button"
+          className="all-changes-toggle"
+          title="Fold the unchanged lines of every file"
+          onClick={() => onUnchanged?.('hide')}
+        >
+          Hide unchanged
+        </button>
+        <button
+          type="button"
+          className="all-changes-toggle"
+          title="Show the unchanged lines of every file"
+          onClick={() => onUnchanged?.('show')}
+        >
+          Show unchanged
+        </button>
       </div>
       <div className="all-changes-stack" ref={scrollRef}>
         {ordered.map((file, index) => (
@@ -332,6 +363,7 @@ export function AllChangesTab({
             layout={layout}
             ignoreWhitespace={ignoreWhitespace}
             refreshToken={refreshToken}
+            unchanged={unchanged}
             onToggle={onToggle}
             onElement={onElement}
             onHandle={onSectionHandle}

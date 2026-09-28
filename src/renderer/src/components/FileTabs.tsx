@@ -3,7 +3,7 @@ import type { JSX } from 'react'
 import type { ShortcutTool } from '../../../shared/shortcuts'
 import { api } from '../lib/api'
 import { commitTabTitle } from '../lib/commit-view'
-import { tabKeyOf } from '../lib/diff-view'
+import { ALL_CHANGES_KEY, tabKeyOf } from '../lib/diff-view'
 import type { BulkClose } from '../lib/files-view'
 import type { DiffTab, FileTab, StripTab, UseFiles } from '../lib/use-files'
 import { AllChangesTab } from './AllChangesTab'
@@ -99,6 +99,7 @@ function DiffBody({
       sides={tab.sides}
       layout={files.diffLayout}
       ignoreWhitespace={files.diffIgnoreWhitespace}
+      unchanged={files.unchangedFor(tabKeyOf(tab))}
       onHandle={onHandle}
     />
   )
@@ -396,6 +397,28 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
           >
             <Icon name="chevron-down" size={14} />
           </button>
+          {/* FOLD-18: one file's diff folds or reveals like All changes, whose
+              own buttons sit in its header. */}
+          {diffTab && (
+            <>
+              <button
+                type="button"
+                className="file-tabs-toggle"
+                title="Fold the unchanged lines of this file"
+                onClick={() => files.pressUnchanged(tabKeyOf(diffTab), 'hide')}
+              >
+                Hide unchanged
+              </button>
+              <button
+                type="button"
+                className="file-tabs-toggle"
+                title="Show the unchanged lines of this file"
+                onClick={() => files.pressUnchanged(tabKeyOf(diffTab), 'show')}
+              >
+                Show unchanged
+              </button>
+            </>
+          )}
           {/* FDIF-27/28: the whole file, unless the change is its deletion. */}
           {diffTab && diffTab.changed.status !== 'deleted' && (
             <button
@@ -441,6 +464,9 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
             ignoreWhitespace={files.diffIgnoreWhitespace}
             refreshToken={files.refreshToken}
             onHandle={onHandle}
+            // One tab across both diff lenses, so one choice (FOLD-20).
+            unchanged={files.unchangedFor(ALL_CHANGES_KEY)}
+            onUnchanged={(mode) => files.pressUnchanged(ALL_CHANGES_KEY, mode)}
           />
         ) : active.kind === 'diff' ? (
           <DiffBody key={tabKeyOf(active)} files={files} tab={active} onHandle={onHandle} />
@@ -452,6 +478,8 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
             layout={files.diffLayout}
             ignoreWhitespace={files.diffIgnoreWhitespace}
             onHandle={onHandle}
+            unchanged={files.unchangedFor(tabKeyOf(active))}
+            onUnchanged={(mode) => files.pressUnchanged(tabKeyOf(active), mode)}
           />
         ) : (
           <FileBody key={tabKeyOf(active)} tab={active} />

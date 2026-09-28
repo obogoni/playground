@@ -2,6 +2,8 @@ import { useCallback } from 'react'
 import type { JSX } from 'react'
 import type { ChangedPath, DiffRequest } from '../../../shared/files'
 import { commitDiffRequest } from '../lib/commit-view'
+import type { UnchangedMode } from '../lib/diff-view'
+import type { UnchangedChoice } from '../lib/files-view'
 import type { CommitTab as CommitTabState } from '../lib/use-files'
 import { AllChangesTab } from './AllChangesTab'
 import type { DiffHandle } from './DiffViewer'
@@ -20,13 +22,18 @@ export function CommitTab({
   tab,
   layout,
   ignoreWhitespace,
-  onHandle
+  onHandle,
+  unchanged,
+  onUnchanged
 }: {
   worktreePath: string
   tab: CommitTabState
   layout: 'side-by-side' | 'inline'
   ignoreWhitespace: boolean
   onHandle?: (handle: DiffHandle | null) => void
+  /** This commit tab's Hide unchanged / Show unchanged choice (FOLD-17). */
+  unchanged: UnchangedChoice | null
+  onUnchanged: (mode: UnchangedMode) => void
 }): JSX.Element {
   const { detail } = tab
   const parent = detail?.parent ?? null
@@ -52,6 +59,8 @@ export function CommitTab({
       // only make this one fetch the same two revisions again (FCMT-31).
       refreshToken={0}
       onHandle={onHandle}
+      unchanged={unchanged}
+      onUnchanged={onUnchanged}
     />
   )
 }

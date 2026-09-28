@@ -366,6 +366,36 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: spec.md edge case 4; src/renderer/src/components/HoursLegend.tsx:54 (0m vs 0h00) (specs)
 - last seen: 2026-09-26T21:48:16Z
 
+### L-065 - When a rule matches items by one of two coordinates, give the test a fixture where the two coordinates disagree, or matching by the wrong one still passes
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: diff-fold-refresh
+- evidence: U10 src/renderer/src/lib/diff-view.test.ts:616 (testing)
+- last seen: 2026-09-27T13:52:57Z
+
+### L-066 - Test a range-overlap rule with two ranges that only touch, or a strict and a non-strict comparison cannot be told apart
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: diff-fold-refresh
+- evidence: U15 src/renderer/src/lib/diff-view.ts overlaps (testing)
+- last seen: 2026-09-27T13:52:57Z
+
+### L-067 - When a spec defines a partial form of a state, every rule that names the state must say whether the partial form counts, and a test must pin that reading
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: diff-fold-refresh
+- evidence: FOLD-06 / U07 src/renderer/src/lib/diff-view.ts foldPlan (spec)
+- last seen: 2026-09-27T13:52:57Z
+
+### L-068 - Assert a Monaco editor's scroll position by its first rendered line number, never by a scrollable element's scrollTop, which stays 0 under virtual scrolling
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
+- features: diff-fold-refresh
+- evidence: FOLD-09 scripts/smoke-files-diff.mjs:876 (scripts/smoke)
+- last seen: 2026-09-27T13:52:57Z
+
+### L-069 - When a component rule moves into a pure seam, also mutate the call site's arguments: the seam's tests cannot see a caller that passes the wrong state
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer components` · harmful: 0
+- features: diff-fold-refresh
+- evidence: validation.md V8 (DiffViewer.tsx:307 call site of readingBeforeUpdate) (renderer components)
+- last seen: 2026-09-27T14:34:31Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

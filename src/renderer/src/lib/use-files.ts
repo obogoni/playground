@@ -17,16 +17,26 @@ import type {
 import type { LaunchResult } from '../../../shared/shortcuts'
 import { api } from './api'
 import { mergePages } from './commit-view'
-import { diffRequestFor, tabKeyOf, tabsWithAllChanges, type DiffMode } from './diff-view'
+import {
+  diffRequestFor,
+  tabKeyOf,
+  tabsWithAllChanges,
+  type DiffMode,
+  type UnchangedMode
+} from './diff-view'
 import {
   filesStateFor,
+  keepUnchanged,
   launcherTarget,
   pinTab,
+  pressUnchanged as recordPress,
   tabsAfterBulkClose,
   tabsAfterClose,
   tabsAffected,
   unpinTab,
-  type BulkClose
+  type BulkClose,
+  type UnchangedChoice,
+  type UnchangedChoices
 } from './files-view'
 
 /** One open file (FXPL-18): what was read for it, and when it was last picked. */
@@ -99,6 +109,12 @@ interface WorktreeFiles {
   stats: FileStat[]
   /** The Commits list as far as it has been paged in (FCMT-02/09); null before it loads. */
   commits: CommitPage | null
+  /**
+   * Each tab's last Hide unchanged / Show unchanged press, by tab key. Here
+   * and not in the tabs' components, which unmount on every tab switch; in
+   * memory only, never written to the config (FOLD-19, FOLD-22).
+   */
+  unchanged: UnchangedChoices
 }
 
 /** A worktree the user has not opened yet. Constant, so it stays referentially stable. */
@@ -112,7 +128,8 @@ const EMPTY: WorktreeFiles = {
   uncommitted: [],
   bases: null,
   stats: [],
-  commits: null
+  commits: null,
+  unchanged: {}
 }
 
 export interface UseFilesOptions {
@@ -192,6 +209,10 @@ export interface UseFiles {
   togglePin: (key: string) => void
   /** One of the strip's bulk closes, on the selected worktree's tabs (FPOL-06..11). */
   closeTabs: (action: BulkClose) => void
+  /** The last Hide unchanged / Show unchanged press of one tab, or null (FOLD-14). */
+  unchangedFor: (key: string) => UnchangedChoice | null
+  /** Records a press of Hide unchanged or Show unchanged in one tab (FOLD-12, FOLD-13). */
+  pressUnchanged: (key: string, mode: UnchangedMode) => void
 }
 
 /**
@@ -696,7 +717,9 @@ export function useFiles({
         const after = tabsAfterClose(keys, index, s.activeTab)
         return {
           tabs: s.tabs.filter((tab) => after.tabs.includes(tabKeyOf(tab))),
-          activeTab: after.active
+          activeTab: after.active,
+          // A closed tab forgets its choice (FOLD-21).
+          unchanged: keepUnchanged(s.unchanged, after.tabs)
         }
       })
     },
@@ -729,11 +752,20 @@ export function useFiles({
         const after = tabsAfterBulkClose(strip, s.activeTab, action)
         return {
           tabs: s.tabs.filter((tab) => after.keys.includes(tabKeyOf(tab))),
-          activeTab: after.active
+          activeTab: after.active,
+          unchanged: keepUnchanged(s.unchanged, after.keys)
         }
       })
     },
     [worktreePath, patchFiles, mode]
+  )
+
+  const pressUnchanged = useCallback(
+    (key: string, mode: UnchangedMode): void => {
+      if (!worktreePath) return
+      patchFiles(worktreePath, (s) => ({ unchanged: recordPress(s.unchanged, key, mode) }))
+    },
+    [worktreePath, patchFiles]
   )
 
   // `tabsWithAllChanges` is generic over what the strip holds and widens its
@@ -789,7 +821,9 @@ export function useFiles({
     focusTab,
     closeTab,
     togglePin,
-    closeTabs
+    closeTabs,
+    unchangedFor: (key) => here.unchanged[key] ?? null,
+    pressUnchanged
   }
 }
 

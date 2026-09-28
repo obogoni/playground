@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 65,
+  "next_id": 70,
   "lessons": [
     {
       "id": "L-001",
@@ -1073,6 +1073,96 @@
       ],
       "created": "2026-09-26T21:48:16Z",
       "last_seen": "2026-09-26T21:48:16Z"
+    },
+    {
+      "id": "L-065",
+      "key": "surviving_mutant::when a rule matches items by one of two coordinates give the test a fixture where the two coordinates disagree or matching by the wrong one still passes",
+      "text": "When a rule matches items by one of two coordinates, give the test a fixture where the two coordinates disagree, or matching by the wrong one still passes",
+      "signal": "surviving_mutant",
+      "scope": "testing",
+      "status": "candidate",
+      "features": [
+        "diff-fold-refresh"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "U10 src/renderer/src/lib/diff-view.test.ts:616 (testing)"
+      ],
+      "created": "2026-09-27T13:52:57Z",
+      "last_seen": "2026-09-27T13:52:57Z"
+    },
+    {
+      "id": "L-066",
+      "key": "surviving_mutant::test a range overlap rule with two ranges that only touch or a strict and a non strict comparison cannot be told apart",
+      "text": "Test a range-overlap rule with two ranges that only touch, or a strict and a non-strict comparison cannot be told apart",
+      "signal": "surviving_mutant",
+      "scope": "testing",
+      "status": "candidate",
+      "features": [
+        "diff-fold-refresh"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "U15 src/renderer/src/lib/diff-view.ts overlaps (testing)"
+      ],
+      "created": "2026-09-27T13:52:57Z",
+      "last_seen": "2026-09-27T13:52:57Z"
+    },
+    {
+      "id": "L-067",
+      "key": "spec_precision_gap::when a spec defines a partial form of a state every rule that names the state must say whether the partial form counts and a test must pin that reading",
+      "text": "When a spec defines a partial form of a state, every rule that names the state must say whether the partial form counts, and a test must pin that reading",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "diff-fold-refresh"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "FOLD-06 / U07 src/renderer/src/lib/diff-view.ts foldPlan (spec)"
+      ],
+      "created": "2026-09-27T13:52:57Z",
+      "last_seen": "2026-09-27T13:52:57Z"
+    },
+    {
+      "id": "L-068",
+      "key": "ac_gap::assert a monaco editor s scroll position by its first rendered line number never by a scrollable element s scrolltop which stays 0 under virtual scrolling",
+      "text": "Assert a Monaco editor's scroll position by its first rendered line number, never by a scrollable element's scrollTop, which stays 0 under virtual scrolling",
+      "signal": "ac_gap",
+      "scope": "scripts/smoke",
+      "status": "candidate",
+      "features": [
+        "diff-fold-refresh"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "FOLD-09 scripts/smoke-files-diff.mjs:876 (scripts/smoke)"
+      ],
+      "created": "2026-09-27T13:52:57Z",
+      "last_seen": "2026-09-27T13:52:57Z"
+    },
+    {
+      "id": "L-069",
+      "key": "surviving_mutant::when a component rule moves into a pure seam also mutate the call site s arguments the seam s tests cannot see a caller that passes the wrong state",
+      "text": "When a component rule moves into a pure seam, also mutate the call site's arguments: the seam's tests cannot see a caller that passes the wrong state",
+      "signal": "surviving_mutant",
+      "scope": "renderer components",
+      "status": "candidate",
+      "features": [
+        "diff-fold-refresh"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md V8 (DiffViewer.tsx:307 call site of readingBeforeUpdate) (renderer components)"
+      ],
+      "created": "2026-09-27T14:34:31Z",
+      "last_seen": "2026-09-27T14:34:31Z"
     }
   ]
 }
