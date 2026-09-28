@@ -8,6 +8,9 @@ export interface PeriodSnapshotFields {
   taskId: number | null
   /** Pinned task title from the TaskBoard cache at open time; null when unknown. */
   taskTitle: string | null
+  /** Present and true only when the task was set by hand and differs from the
+   *  branch's (HTSK-36, HTSK-37); absent on every line written before the feature. */
+  taskByHand?: boolean
 }
 
 /** A closed span of time a session's terminal was alive and not paused. One JSON
@@ -42,3 +45,9 @@ export interface TimeSnapshot {
 
 /** Outcome of a delete or adjust; rejections are returned, never thrown (TIME-46, TIME-49). */
 export type TimeEditResult = { ok: true } | { ok: false; error: string }
+
+/** What the drawer or a session picker chose (HTSK-24..27). */
+export type PeriodTaskChoice =
+  | { kind: 'task'; id: number; title: string | null }
+  | { kind: 'none' }
+  | { kind: 'branch' }

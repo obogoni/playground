@@ -49,7 +49,14 @@ interface Harness {
   emits: () => number
 }
 
-function setup(init: { periods?: TimePeriod[]; open?: OpenPeriod[] } = {}): Harness {
+const PINNED = new Map<number, string>([
+  [12345, 'Fix login redirect'],
+  [67890, 'Widget export']
+])
+
+function setup(
+  init: { periods?: TimePeriod[]; open?: OpenPeriod[]; snapshot?: PeriodSnapshotFields } = {}
+): Harness {
   const clock = { now: T0 }
   const store = fakeStore(init)
   const resolved: string[] = []
@@ -61,8 +68,9 @@ function setup(init: { periods?: TimePeriod[]; open?: OpenPeriod[] } = {}): Harn
     newId: () => `p${++ids}`,
     resolveSnapshot: (cwd) => {
       resolved.push(cwd)
-      return SNAPSHOT
+      return init.snapshot ?? SNAPSHOT
     },
+    pinnedTitle: (id) => PINNED.get(id) ?? null,
     emit: () => {
       emits++
     }
@@ -490,5 +498,479 @@ describe('TimeTracker edits', () => {
     expect(t.tracker.adjustPeriod('unknown', iso(T0), iso(T0 + MIN))).toEqual(rejected)
     expect(t.store.rewrites).toHaveLength(rewrites)
     expect(t.emits()).toBe(emits)
+  })
+})
+
+describe('TimeTracker session task link', () => {
+  const LINK = { id: 67890, title: 'Widget export' }
+  /** SNAPSHOT (branch names #12345) with a link to #67890 applied over it. */
+  const LINKED: PeriodSnapshotFields = {
+    ...SNAPSHOT,
+    taskId: 67890,
+    taskTitle: 'Widget export',
+    taskByHand: true
+  }
+
+  const openOf = (t: Harness): OpenPeriod[] => t.tracker.snapshot().open
+
+  it('opens the period of a session started with a task on that task (HTSK-09, HTSK-36)', () => {
+    const t = setup()
+    t.tracker.started({ ...meta('s1'), task: LINK })
+    t.tracker.started({ ...meta('s2'), task: { id: 67890, title: null } })
+
+    expect(openOf(t)).toEqual([
+      {
+        id: 'p1',
+        sessionId: 's1',
+        agent: 'Claude',
+        cwd: 'D:\\acme\\app-12345',
+        ...LINKED,
+        start: iso(T0),
+        lastSeen: iso(T0)
+      },
+      {
+        id: 'p2',
+        sessionId: 's2',
+        agent: 'Claude',
+        cwd: 'D:\\acme\\app-12345',
+        ...LINKED,
+        start: iso(T0),
+        lastSeen: iso(T0)
+      }
+    ])
+  })
+
+  it('records the branch snapshot unchanged, with no flag key, for a session without a task (HTSK-10)', () => {
+    const t = setup()
+    t.tracker.started(meta())
+
+    const [open] = openOf(t)
+    expect(open).toMatchObject(SNAPSHOT)
+    expect('taskByHand' in open).toBe(false)
+  })
+
+  it('closes the open period at the change instant and opens one on the new task at the same instant (HTSK-12)', () => {
+    const t = setup()
+    t.tracker.started(meta())
+    t.advance(10 * MIN)
+    const emits = t.emits()
+
+    t.tracker.taskChanged('s1', LINK)
+
+    expect(t.store.appended).toEqual([
+      {
+        id: 'p1',
+        sessionId: 's1',
+        agent: 'Claude',
+        cwd: 'D:\\acme\\app-12345',
+        ...SNAPSHOT,
+        start: iso(T0),
+        end: iso(T0 + 10 * MIN)
+      }
+    ])
+    const expectedOpen: OpenPeriod = {
+      id: 'p2',
+      sessionId: 's1',
+      agent: 'Claude',
+      cwd: 'D:\\acme\\app-12345',
+      ...LINKED,
+      start: iso(T0 + 10 * MIN),
+      lastSeen: iso(T0 + 10 * MIN)
+    }
+    expect(openOf(t)).toEqual([expectedOpen])
+    expect(t.store.openWrites.at(-1)).toEqual([expectedOpen])
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it('ends the old period and starts the new one at one instant while the clock moves (HTSK-12)', () => {
+    // A real clock moves between two reads; every read here is 1 ms later.
+    let now = T0
+    const store = fakeStore()
+    let ids = 0
+    const tracker = new TimeTracker({
+      store,
+      now: () => (now += 1),
+      newId: () => `p${++ids}`,
+      resolveSnapshot: () => SNAPSHOT,
+      pinnedTitle: (id) => PINNED.get(id) ?? null,
+      emit: () => {}
+    })
+    tracker.started(meta())
+    now += 10 * MIN
+
+    tracker.taskChanged('s1', LINK)
+
+    const [open] = tracker.snapshot().open
+    expect(store.appended).toHaveLength(1)
+    expect(open.start).toBe(store.appended[0].end)
+  })
+
+  it('changes nothing when the link is the one the session already has (HTSK-14)', () => {
+    const t = setup()
+    t.tracker.started({ ...meta('s1'), task: LINK })
+    t.tracker.started(meta('s2'))
+    t.advance(10 * MIN)
+    const before = t.tracker.snapshot()
+    const emits = t.emits()
+    const writes = t.store.openWrites.length
+
+    t.tracker.taskChanged('s1', { id: 67890, title: 'Another title' })
+    t.tracker.taskChanged('s2', null)
+
+    expect(t.store.appended).toEqual([])
+    expect(t.tracker.snapshot()).toEqual(before)
+    expect(openOf(t).map((p) => p.id)).toEqual(['p1', 'p2'])
+    expect(t.emits()).toBe(emits)
+    expect(t.store.openWrites).toHaveLength(writes)
+  })
+
+  it("opens the next period on the branch's task when the link is removed (HTSK-13)", () => {
+    const t = setup()
+    t.tracker.started({ ...meta(), task: LINK })
+    t.advance(10 * MIN)
+
+    t.tracker.taskChanged('s1', null)
+
+    expect(t.store.appended.map((p) => [p.id, p.taskId, p.end])).toEqual([
+      ['p1', 67890, iso(T0 + 10 * MIN)]
+    ])
+    const [open] = openOf(t)
+    expect(open).toMatchObject({ id: 'p2', ...SNAPSHOT, start: iso(T0 + 10 * MIN) })
+    expect('taskByHand' in open).toBe(false)
+  })
+
+  it('opens nothing while paused, and the resume opens on the new task (HTSK-15)', () => {
+    const t = setup()
+    t.tracker.started(meta())
+    t.advance(MIN)
+    t.tracker.pause('s1')
+    const appended = t.store.appended.length
+
+    t.tracker.taskChanged('s1', LINK)
+
+    expect(openOf(t)).toEqual([])
+    expect(t.store.appended).toHaveLength(appended)
+
+    t.advance(MIN)
+    t.tracker.resume('s1')
+    expect(openOf(t)).toEqual([
+      expect.objectContaining({ id: 'p2', ...LINKED, start: iso(T0 + 2 * MIN) })
+    ])
+  })
+
+  it('opens nothing while suspended, and the wake opens on the new task (HTSK-15)', () => {
+    const t = setup()
+    t.tracker.started(meta())
+    t.advance(MIN)
+    t.tracker.suspend()
+    const appended = t.store.appended.length
+
+    t.tracker.taskChanged('s1', LINK)
+
+    expect(openOf(t)).toEqual([])
+    expect(t.store.appended).toHaveLength(appended)
+
+    t.advance(MIN)
+    t.tracker.resumeFromSuspend()
+    expect(openOf(t)).toEqual([
+      expect.objectContaining({ id: 'p2', ...LINKED, start: iso(T0 + 2 * MIN) })
+    ])
+  })
+
+  it('changes nothing for a session with no run (HTSK-16)', () => {
+    const t = setup()
+    t.tracker.started(meta('s1'))
+    t.advance(MIN)
+    t.tracker.ended('s1')
+    const before = t.tracker.snapshot()
+    const emits = t.emits()
+    const writes = t.store.openWrites.length
+
+    t.tracker.taskChanged('s1', LINK)
+    t.tracker.taskChanged('never-started', LINK)
+
+    expect(t.tracker.snapshot()).toEqual(before)
+    expect(t.emits()).toBe(emits)
+    expect(t.store.openWrites).toHaveLength(writes)
+  })
+
+  it('discards a part under 1 s and opens the new period (HTSK-12, TIME-11)', () => {
+    const t = setup()
+    t.tracker.started(meta())
+    t.advance(500)
+
+    t.tracker.taskChanged('s1', LINK)
+
+    expect(t.store.appended).toEqual([])
+    expect(t.tracker.snapshot().periods).toEqual([])
+    expect(openOf(t)).toEqual([
+      expect.objectContaining({ id: 'p2', ...LINKED, start: iso(T0 + 500) })
+    ])
+  })
+
+  it('records #12345 with the flag for a link to #12345 in a worktree naming #67890 (HTSK-11, HTSK-36)', () => {
+    const worktree: PeriodSnapshotFields = {
+      workspacePath: 'D:\\acme',
+      repoName: 'app',
+      branch: 'feature/67890-widget-export',
+      taskId: 67890,
+      taskTitle: 'Widget export'
+    }
+    const t = setup({ snapshot: worktree })
+
+    t.tracker.started({ ...meta('s1', 'D:\\acme\\app-67890'), task: { id: 12345, title: null } })
+
+    expect(openOf(t)).toEqual([
+      expect.objectContaining({
+        branch: 'feature/67890-widget-export',
+        taskId: 12345,
+        taskTitle: 'Fix login redirect',
+        taskByHand: true
+      })
+    ])
+  })
+})
+
+describe('TimeTracker reassign a closed period', () => {
+  /** A closed period on a branch naming #67890, recorded on #67890. */
+  const onBranch: TimePeriod = {
+    id: 'old',
+    sessionId: 'gone',
+    agent: 'Claude',
+    cwd: 'D:\\acme\\app-67890',
+    workspacePath: 'D:\\acme',
+    repoName: 'app',
+    branch: 'feature/67890-widget-export',
+    taskId: 67890,
+    taskTitle: 'Widget export',
+    start: iso(T0 - 3 * 60 * MIN),
+    end: iso(T0 - 2 * 60 * MIN)
+  }
+  /** The same period after a hand-set move to #12345. */
+  const moved: TimePeriod = {
+    ...onBranch,
+    taskId: 12345,
+    taskTitle: 'Fix login redirect',
+    taskByHand: true
+  }
+  const other: TimePeriod = {
+    ...onBranch,
+    id: 'other',
+    start: iso(T0 - MIN * 90),
+    end: iso(T0 - MIN * 80)
+  }
+
+  const rewrittenOld = (t: Harness): TimePeriod | undefined =>
+    t.store.rewrites[0]?.find((p) => p.id === 'old')
+
+  it('records the chosen task and keeps every other field (HTSK-25, HTSK-35, HTSK-36, HTSK-39)', () => {
+    const t = setup({ periods: [onBranch, other] })
+    const emits = t.emits()
+
+    expect(
+      t.tracker.reassignPeriod('old', { kind: 'task', id: 12345, title: 'Chosen title' })
+    ).toEqual({ ok: true })
+
+    const expected: TimePeriod = {
+      ...onBranch,
+      taskId: 12345,
+      taskTitle: 'Chosen title',
+      taskByHand: true
+    }
+    expect(t.store.rewrites).toEqual([[expected, other]])
+    expect(t.tracker.snapshot().periods).toEqual([expected, other])
+    expect(rewrittenOld(t)).toMatchObject({
+      branch: onBranch.branch,
+      cwd: onBranch.cwd,
+      start: onBranch.start,
+      end: onBranch.end,
+      sessionId: onBranch.sessionId,
+      agent: onBranch.agent,
+      workspacePath: onBranch.workspacePath,
+      repoName: onBranch.repoName
+    })
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it('records a null task id and title for No task (HTSK-26)', () => {
+    const t = setup({ periods: [onBranch] })
+    const emits = t.emits()
+
+    expect(t.tracker.reassignPeriod('old', { kind: 'none' })).toEqual({ ok: true })
+
+    expect(t.store.rewrites).toEqual([
+      [{ ...onBranch, taskId: null, taskTitle: null, taskByHand: true }]
+    ])
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it("restores the branch's task and pinned title and removes the flag key for From branch (HTSK-27, HTSK-37)", () => {
+    const t = setup({ periods: [moved] })
+    const emits = t.emits()
+
+    expect(t.tracker.reassignPeriod('old', { kind: 'branch' })).toEqual({ ok: true })
+
+    expect(t.store.rewrites).toEqual([[onBranch]])
+    expect('taskByHand' in (rewrittenOld(t) ?? {})).toBe(false)
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it("removes the flag key when the branch's own task is chosen (HTSK-37)", () => {
+    const t = setup({ periods: [moved] })
+
+    t.tracker.reassignPeriod('old', { kind: 'task', id: 67890, title: 'Widget export' })
+
+    expect(t.store.rewrites).toEqual([[onBranch]])
+    expect('taskByHand' in (rewrittenOld(t) ?? {})).toBe(false)
+  })
+
+  it('rejects the open period and a deleted id, rewriting nothing (HTSK-32)', () => {
+    const t = setup({ periods: [onBranch] })
+    t.tracker.started(meta())
+    const openId = t.tracker.snapshot().open[0].id
+    const before = t.tracker.snapshot()
+    const emits = t.emits()
+
+    expect(t.tracker.reassignPeriod(openId, { kind: 'none' })).toEqual({
+      ok: false,
+      error: 'This period is still open.'
+    })
+    expect(t.tracker.reassignPeriod('deleted', { kind: 'none' })).toEqual({
+      ok: false,
+      error: 'This period no longer exists.'
+    })
+
+    expect(t.store.rewrites).toEqual([])
+    expect(t.tracker.snapshot()).toEqual(before)
+    expect(t.emits()).toBe(emits)
+  })
+})
+
+describe('TimeTracker split a closed period', () => {
+  const at = (hh: number, mm = 0, ss = 0): string =>
+    `2026-09-15T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}.000Z`
+
+  /** 09:00–12:00 on develop, moved by hand to #12345. */
+  const morning: TimePeriod = {
+    id: 'morning',
+    sessionId: 'gone',
+    agent: 'Claude',
+    cwd: 'D:\\acme\\app',
+    workspacePath: 'D:\\acme',
+    repoName: 'app',
+    branch: 'develop',
+    taskId: 12345,
+    taskTitle: 'Fix login redirect',
+    taskByHand: true,
+    start: at(9),
+    end: at(12)
+  }
+  const before: TimePeriod = { ...morning, id: 'before', start: at(7), end: at(8) }
+  const after: TimePeriod = { ...morning, id: 'after', start: at(13), end: at(14) }
+
+  it('replaces the period by [start, at] with its id and [at, end] with a new id, in place (HTSK-28, HTSK-35)', () => {
+    const t = setup({ periods: [before, morning, after] })
+    const emits = t.emits()
+
+    expect(t.tracker.splitPeriod('morning', at(10))).toEqual({ ok: true })
+
+    const expected = [
+      before,
+      { ...morning, end: at(10) },
+      { ...morning, id: 'p1', start: at(10) },
+      after
+    ]
+    expect(t.store.rewrites).toEqual([expected])
+    expect(t.tracker.snapshot().periods).toEqual(expected)
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it('splits at exactly start + 1 s and at exactly end - 1 s (HTSK-28, HTSK-30)', () => {
+    const t = setup({ periods: [morning] })
+
+    expect(t.tracker.splitPeriod('morning', at(9, 0, 1))).toEqual({ ok: true })
+    expect(t.tracker.splitPeriod('p1', at(11, 59, 59))).toEqual({ ok: true })
+
+    expect(t.tracker.snapshot().periods.map((p) => [p.id, p.start, p.end])).toEqual([
+      ['morning', at(9), at(9, 0, 1)],
+      ['p1', at(9, 0, 1), at(11, 59, 59)],
+      ['p2', at(11, 59, 59), at(12)]
+    ])
+  })
+
+  const shortPeriod: TimePeriod = {
+    ...morning,
+    id: 'short',
+    start: at(9),
+    end: '2026-09-15T09:00:01.500Z'
+  }
+
+  it.each([
+    ['at the start', 'morning', at(9), 'Split time must be inside the period.'],
+    ['at the end', 'morning', at(12), 'Split time must be inside the period.'],
+    ['before the start', 'morning', at(8), 'Split time must be inside the period.'],
+    ['after the end', 'morning', at(13), 'Split time must be inside the period.'],
+    [
+      'a 1.5 s period in its middle',
+      'short',
+      '2026-09-15T09:00:00.750Z',
+      'Each part must last at least 1 second.'
+    ],
+    [
+      'leaving only the first part under 1 s',
+      'morning',
+      '2026-09-15T09:00:00.500Z',
+      'Each part must last at least 1 second.'
+    ],
+    [
+      'leaving only the second part under 1 s',
+      'morning',
+      '2026-09-15T11:59:59.500Z',
+      'Each part must last at least 1 second.'
+    ],
+    ['an invalid date', 'morning', 'not-a-date', 'Split time must be a valid date.']
+  ])(
+    'rejects a split %s and leaves the log unrewritten (HTSK-29..31)',
+    (_name, id, time, error) => {
+      const t = setup({ periods: [morning, shortPeriod] })
+      const snapshotBefore = t.tracker.snapshot()
+      const emits = t.emits()
+
+      expect(t.tracker.splitPeriod(id, time)).toEqual({ ok: false, error })
+
+      expect(t.store.rewrites).toEqual([])
+      expect(t.tracker.snapshot()).toEqual(snapshotBefore)
+      expect(t.emits()).toBe(emits)
+    }
+  )
+
+  it('rejects the open period and a deleted id (HTSK-32)', () => {
+    const t = setup({ periods: [morning] })
+    t.tracker.started(meta())
+    const openId = t.tracker.snapshot().open[0].id
+
+    expect(t.tracker.splitPeriod(openId, iso(T0))).toEqual({
+      ok: false,
+      error: 'This period is still open.'
+    })
+    expect(t.tracker.splitPeriod('deleted', at(10))).toEqual({
+      ok: false,
+      error: 'This period no longer exists.'
+    })
+    expect(t.store.rewrites).toEqual([])
+  })
+
+  it('splits a period crossing local midnight at its exact instants', () => {
+    const start = new Date(2026, 8, 14, 23, 0, 0).toISOString()
+    const midnight = new Date(2026, 8, 15, 0, 0, 0).toISOString()
+    const end = new Date(2026, 8, 15, 1, 30, 0).toISOString()
+    const t = setup({ periods: [{ ...morning, start, end }] })
+
+    expect(t.tracker.splitPeriod('morning', midnight)).toEqual({ ok: true })
+
+    expect(t.store.rewrites[0].map((p) => [p.id, p.start, p.end])).toEqual([
+      ['morning', start, midnight],
+      ['p1', midnight, end]
+    ])
   })
 })

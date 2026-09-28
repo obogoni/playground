@@ -3,6 +3,7 @@ import { basename } from 'node:path'
 import { commandKey } from '../shared/command-key'
 import type { PersistedSession, SessionStatus, SessionView } from '../shared/config'
 import type { IpcEvent, IpcEvents } from '../shared/ipc-contract'
+import type { SessionTask } from '../shared/tasks'
 import { applyHookEvent, applyKeystroke, sameView, type MachineState } from './activity-machine'
 import type { ActivityChange } from './activity-notification'
 import { ACTIVITY_TOKEN_ENV } from './claude-hook-settings'
@@ -59,6 +60,16 @@ export interface SessionManagerDeps {
 export interface SessionLifecycle {
   started(meta: PersistedSession): void
   ended(id: string): void
+  /** The session's hand-set task changed, `null` = From branch (HTSK-12, HTSK-13). */
+  taskChanged(id: string, task: SessionTask | null): void
+}
+
+/** A copy of `meta` carrying `task`, or without the `task` key for `null`. */
+function withTask<T extends PersistedSession>(meta: T, task: SessionTask | null): T {
+  const next = { ...meta }
+  if (task) next.task = task
+  else delete next.task
+  return next
 }
 
 /** Stored on ad-hoc sessions in place of a registry agent name. */
@@ -122,7 +133,7 @@ export class SessionManager {
     return this.deps.config.get().sessions.map((s) => this.#toView(s))
   }
 
-  spawn(agentName: string, cwd: string, adhocCommand?: string): SessionView {
+  spawn(agentName: string, cwd: string, adhocCommand?: string, task?: SessionTask): SessionView {
     const leaf = basename(cwd) || cwd
     const meta: PersistedSession = adhocCommand
       ? {
@@ -131,14 +142,16 @@ export class SessionManager {
           cwd,
           title: `${ADHOC_AGENT} · ${leaf}`,
           status: 'running',
-          command: adhocCommand
+          command: adhocCommand,
+          ...(task ? { task } : {})
         }
       : {
           id: randomUUID(),
           agent: this.#resolve(agentName).name,
           cwd,
           title: `${this.#resolve(agentName).name} · ${leaf}`,
-          status: 'running'
+          status: 'running',
+          ...(task ? { task } : {})
         }
     this.#start(meta) // throws on a bad cwd/shell/agent before anything is persisted
     this.#persistUpsert(meta)
@@ -158,7 +171,23 @@ export class SessionManager {
     return this.#toView(renamed)
   }
 
-  /** Clone a session's agent + cwd (+ ad-hoc command) into a new running one. */
+  /**
+   * Link a session to a task by hand, or back to its branch with `null`. Saved
+   * whatever the session's state; the tracker decides what a running, paused or
+   * stopped session does with it (HTSK-12, HTSK-13, HTSK-15, HTSK-16, HTSK-17).
+   */
+  setTask(id: string, task: SessionTask | null): SessionView {
+    const meta = this.deps.config.get().sessions.find((s) => s.id === id)
+    if (!meta) throw new Error(`Unknown session: ${id}`)
+    const next = withTask(meta, task)
+    this.#persistUpsert(next)
+    const live = this.#running.get(id)
+    if (live) live.meta = withTask(live.meta, task)
+    this.deps.lifecycle?.taskChanged(id, task)
+    return this.#toView(next)
+  }
+
+  /** Clone a session's agent + cwd (+ ad-hoc command, + task link) into a new running one. */
   duplicate(id: string): SessionView {
     const src = this.deps.config.get().sessions.find((s) => s.id === id)
     if (!src) throw new Error(`Unknown session: ${id}`)
@@ -169,7 +198,8 @@ export class SessionManager {
       cwd: src.cwd,
       title: `${src.agent} · ${leaf}`,
       status: 'running',
-      ...(src.command ? { command: src.command } : {})
+      ...(src.command ? { command: src.command } : {}),
+      ...(src.task ? { task: src.task } : {})
     }
     this.#start(meta)
     this.#persistUpsert(meta)
@@ -423,7 +453,8 @@ export class SessionManager {
         cwd,
         before,
         after,
-        attached: this.#activeId === id
+        attached: this.#activeId === id,
+        task: session.meta.task ?? null
       })
     } catch (err) {
       console.error('[notifications] activity listener failed', err)

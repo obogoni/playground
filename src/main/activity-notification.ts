@@ -10,7 +10,7 @@ import {
   type NotifiableState,
   type NotificationPrefs
 } from '../shared/notifications'
-import { taskIdFromBranch, type PinnedTaskView } from '../shared/tasks'
+import { taskIdFromBranch, type PinnedTaskView, type SessionTask } from '../shared/tasks'
 
 /** One activity transition, as `SessionManager` reports it. */
 export interface ActivityChange {
@@ -23,6 +23,8 @@ export interface ActivityChange {
   after: SessionActivity | null
   /** Whether this session's terminal is the one on screen. */
   attached: boolean
+  /** The session's hand-set task; `null` = the branch names it (HTSK-21). */
+  task: SessionTask | null
 }
 
 export type NotificationSurface = 'os' | 'in-app'

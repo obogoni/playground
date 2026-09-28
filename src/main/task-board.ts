@@ -1,6 +1,7 @@
 import type { AppConfig } from '../shared/config'
 import type {
   AdoAuthState,
+  LookupTaskResult,
   PinnedTask,
   PinTaskResult,
   TasksSnapshot,
@@ -184,6 +185,28 @@ export class TaskBoard {
     this.lastSyncAt = Date.now()
     this.config.patch({ pinnedTasks: [...pinnedTasks, ref] })
     return { ok: true, snapshot: this.list() }
+  }
+
+  /**
+   * Fetches one work item for the task picker without pinning it: the pin's
+   * parse and fetch, with its error texts and auth update, but no duplicate
+   * check, no details cache and no persist (HTSK-02, HTSK-04, HTSK-05).
+   */
+  async lookup(input: string): Promise<LookupTaskResult> {
+    const parsed = parseTaskInput(input, this.config.get().ado)
+    if (!parsed.ok) return { ok: false, error: parsed.error }
+    const ref = parsed.ref
+    const fetched = await this.source.getWorkItems([ref])
+    if (!fetched.ok) {
+      this.auth = 'failed'
+      return { ok: false, error: 'Could not reach Azure DevOps — run az login and try again.' }
+    }
+    this.auth = 'ok'
+    const detail = fetched.details.get(refKey(ref))
+    if (!detail) {
+      return { ok: false, error: `Work item #${ref.id} not found in ${ref.org}/${ref.project}.` }
+    }
+    return { ok: true, item: { id: ref.id, type: detail.type, title: detail.title } }
   }
 
   unpin(ref: WorkItemRef): TasksSnapshot {

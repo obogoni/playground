@@ -1,10 +1,13 @@
 import type {
   OpenPeriod,
   PeriodSnapshotFields,
+  PeriodTaskChoice,
   TimeEditResult,
   TimePeriod,
   TimeSnapshot
 } from '../shared/time'
+import type { SessionTask } from '../shared/tasks'
+import { reassignFields, withSessionTask } from './period-task'
 import type { TimeLogStore } from './time-log-store'
 
 /** A period shorter than this is noise (spawn failure, instant exit) and is discarded (TIME-11). */
@@ -22,6 +25,8 @@ export interface TimeTrackerDeps {
   newId: () => string
   /** Attribution at open time (TIME-03); never throws, nulls when unresolvable (TIME-12). */
   resolveSnapshot: (cwd: string) => PeriodSnapshotFields
+  /** Pinned title for a task id from the TaskBoard cache; null when unknown (HTSK-06). */
+  pinnedTitle: (id: number) => string | null
   /** Pushes `time:changed`; bound to the window by index.ts. */
   emit: () => void
 }
@@ -30,6 +35,8 @@ export interface TimeTrackerDeps {
 interface Run {
   agent: string
   cwd: string
+  /** The session's hand-set task; null = From branch (HTSK-10, HTSK-11). */
+  task: SessionTask | null
   open: OpenPeriod | null
   paused: boolean
 }
@@ -64,15 +71,36 @@ export class TimeTracker {
   }
 
   /** `SessionLifecycle`: the session's PTY started (spawn, duplicate, respawn) (TIME-01, TIME-19). */
-  started(meta: { id: string; agent: string; cwd: string }): void {
+  started(meta: { id: string; agent: string; cwd: string; task?: SessionTask }): void {
     const previous = this.#runs.get(meta.id)
     if (previous?.open) this.#close(previous.open, this.#nowIso())
-    this.#runs.set(meta.id, {
+    const run: Run = {
       agent: meta.agent,
       cwd: meta.cwd,
+      task: meta.task ?? null,
       paused: false,
-      open: this.#open(meta.id, meta.agent, meta.cwd)
-    })
+      open: null
+    }
+    run.open = this.#open(meta.id, run)
+    this.#runs.set(meta.id, run)
+    this.#changed()
+  }
+
+  /**
+   * `SessionLifecycle`: the session's task link changed (HTSK-12..16). A running,
+   * counting session closes its open period now and opens one on the new task at
+   * the same instant; a paused or suspended one only keeps the link for its next
+   * open. The same link, or a session with no run, changes nothing.
+   */
+  taskChanged(sessionId: string, task: SessionTask | null): void {
+    const run = this.#runs.get(sessionId)
+    if (!run || (run.task?.id ?? null) === (task?.id ?? null)) return
+    run.task = task
+    if (run.open) {
+      const at = this.#nowIso()
+      this.#close(run.open, at)
+      run.open = this.#open(sessionId, run, at)
+    }
     this.#changed()
   }
 
@@ -100,7 +128,7 @@ export class TimeTracker {
     const run = this.#runs.get(sessionId)
     if (!run || !run.paused) return
     run.paused = false
-    if (!this.#suspended) run.open = this.#open(sessionId, run.agent, run.cwd)
+    if (!this.#suspended) run.open = this.#open(sessionId, run)
     this.#changed()
   }
 
@@ -119,7 +147,7 @@ export class TimeTracker {
   resumeFromSuspend(): void {
     this.#suspended = false
     for (const [id, run] of this.#runs) {
-      if (!run.paused && !run.open) run.open = this.#open(id, run.agent, run.cwd)
+      if (!run.paused && !run.open) run.open = this.#open(id, run)
     }
     this.#changed()
   }
@@ -177,6 +205,53 @@ export class TimeTracker {
     return this.#rewritten()
   }
 
+  /**
+   * Moves a closed period to another task, to No task or back to its branch's
+   * task (HTSK-25..27). Only the task fields change; the flag is replaced, never
+   * merged, so a choice without it removes the key (HTSK-37, HTSK-39).
+   */
+  reassignPeriod(id: string, choice: PeriodTaskChoice): TimeEditResult {
+    const rejected = this.#editTarget(id)
+    if (rejected) return rejected
+    this.#periods = this.#periods.map((p) => {
+      if (p.id !== id) return p
+      const { taskByHand: _taskByHand, ...rest } = p
+      void _taskByHand
+      return { ...rest, ...reassignFields(p, choice, this.deps.pinnedTitle) }
+    })
+    return this.#rewritten()
+  }
+
+  /**
+   * Splits a closed period at an instant strictly inside it, both parts at least
+   * 1 s long (HTSK-28..31). The first part keeps the id; the second gets a new id
+   * and follows it in the log; every other field is copied.
+   */
+  splitPeriod(id: string, at: string): TimeEditResult {
+    const rejected = this.#editTarget(id)
+    if (rejected) return rejected
+    const atMs = Date.parse(at)
+    if (Number.isNaN(atMs)) return { ok: false, error: 'Split time must be a valid date.' }
+    const index = this.#periods.findIndex((p) => p.id === id)
+    const period = this.#periods[index]
+    const startMs = Date.parse(period.start)
+    const endMs = Date.parse(period.end)
+    if (atMs <= startMs || atMs >= endMs) {
+      return { ok: false, error: 'Split time must be inside the period.' }
+    }
+    if (atMs - startMs < MIN_PERIOD_MS || endMs - atMs < MIN_PERIOD_MS) {
+      return { ok: false, error: 'Each part must last at least 1 second.' }
+    }
+    const cut = new Date(atMs).toISOString()
+    this.#periods = [
+      ...this.#periods.slice(0, index),
+      { ...period, end: cut },
+      { ...period, id: this.deps.newId(), start: cut },
+      ...this.#periods.slice(index + 1)
+    ]
+    return this.#rewritten()
+  }
+
   snapshot(): TimeSnapshot {
     const runs = [...this.#runs.entries()]
     return {
@@ -186,14 +261,17 @@ export class TimeTracker {
     }
   }
 
-  #open(sessionId: string, agent: string, cwd: string): OpenPeriod {
-    const at = this.#nowIso()
+  #open(
+    sessionId: string,
+    run: Pick<Run, 'agent' | 'cwd' | 'task'>,
+    at: string = this.#nowIso()
+  ): OpenPeriod {
     return {
       id: this.deps.newId(),
       sessionId,
-      agent,
-      cwd,
-      ...this.deps.resolveSnapshot(cwd),
+      agent: run.agent,
+      cwd: run.cwd,
+      ...withSessionTask(this.deps.resolveSnapshot(run.cwd), run.task, this.deps.pinnedTitle),
       start: at,
       lastSeen: at
     }

@@ -196,3 +196,83 @@ describe('TimeLogStore', () => {
     expect(new TimeLogStore(dir, log).readPeriods().periods).toEqual([period('b'), period('c')])
   })
 })
+
+describe('TimeLogStore hand-set task flag', () => {
+  let dir: string
+  let logged: unknown[][]
+  const log = (...args: unknown[]): void => {
+    logged.push(args)
+  }
+  const logFile = (): string => join(dir, 'time-log.jsonl')
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'wtm-time-'))
+    logged = []
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('round-trips a period carrying taskByHand: true through append and read (HTSK-42)', () => {
+    const flagged: TimePeriod = { ...period('a'), taskId: 67890, taskByHand: true }
+    new TimeLogStore(dir, log).append(flagged)
+
+    const [line] = readFileSync(logFile(), 'utf8').trim().split('\n')
+    expect(JSON.parse(line)).toEqual({ v: 1, ...flagged })
+    expect(new TimeLogStore(dir, log).readPeriods()).toEqual({ periods: [flagged], skipped: 0 })
+  })
+
+  it('reads a line without taskByHand as a period with no taskByHand key (HTSK-41)', () => {
+    writeFileSync(logFile(), JSON.stringify({ v: 1, ...period('a') }) + '\n', 'utf8')
+
+    const { periods, skipped } = new TimeLogStore(dir, log).readPeriods()
+
+    expect(skipped).toBe(0)
+    expect(periods).toEqual([period('a')])
+    expect('taskByHand' in periods[0]).toBe(false)
+  })
+
+  it('skips and counts a line whose taskByHand is not a boolean (HTSK-43)', () => {
+    writeFileSync(
+      logFile(),
+      [
+        JSON.stringify({ v: 1, ...period('a') }),
+        JSON.stringify({ v: 1, ...period('bad'), taskByHand: 'yes' }),
+        JSON.stringify({ v: 1, ...period('b'), taskByHand: true })
+      ].join('\n') + '\n',
+      'utf8'
+    )
+
+    const store = new TimeLogStore(dir, log)
+
+    expect(store.readPeriods()).toEqual({
+      periods: [period('a'), { ...period('b'), taskByHand: true }],
+      skipped: 1
+    })
+    expect(logged).toHaveLength(1)
+  })
+
+  it('reads a taskByHand: false line, a boolean, and skips a taskByHand: null one (HTSK-43)', () => {
+    writeFileSync(
+      logFile(),
+      [
+        JSON.stringify({ v: 1, ...period('off'), taskByHand: false }),
+        JSON.stringify({ v: 1, ...period('nil'), taskByHand: null })
+      ].join('\n') + '\n',
+      'utf8'
+    )
+
+    expect(new TimeLogStore(dir, log).readPeriods()).toEqual({
+      periods: [{ ...period('off'), taskByHand: false }],
+      skipped: 1
+    })
+  })
+
+  it('writes a period without the flag as a v:1 line with no taskByHand key (HTSK-42)', () => {
+    new TimeLogStore(dir, log).append(period('a'))
+
+    expect(readFileSync(logFile(), 'utf8')).toBe(JSON.stringify({ v: 1, ...period('a') }) + '\n')
+    expect(readFileSync(logFile(), 'utf8')).not.toContain('taskByHand')
+  })
+})

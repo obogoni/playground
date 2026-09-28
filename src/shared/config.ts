@@ -1,7 +1,7 @@
 import type { AgentDef, Shell } from '../main/spawn-plan'
 import { SEEDED_AGENTS } from './agents'
 import type { FilesMode } from './files'
-import type { PinnedTask } from './tasks'
+import type { PinnedTask, SessionTask } from './tasks'
 import { DEFAULT_BRANCH_TEMPLATE } from './tasks'
 import type { WorkspaceEntry } from './tree'
 import { DEFAULT_WORKTREE_TEMPLATE } from './worktrees'
@@ -47,6 +47,8 @@ export interface PersistedSession {
   status: SessionStatus
   /** Raw ad-hoc command (absent for registry agents); drives respawn (AGCF-03). */
   command?: string
+  /** Task chosen by hand; absent = From branch (HTSK-10, HTSK-17). */
+  task?: SessionTask
 }
 
 /** Returned to the renderer: persisted fields plus the one fact only main can

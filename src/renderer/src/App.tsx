@@ -122,6 +122,7 @@ function App(): JSX.Element {
     refreshSessions,
     spawnSession,
     renameSession,
+    setSessionTask,
     duplicateSession,
     stopSession,
     respawnSession,
@@ -501,6 +502,7 @@ function App(): JSX.Element {
             onPauseTime={time.pause}
             onResumeTime={time.resume}
             onToast={setToast}
+            onSetTask={setSessionTask}
           />
         ) : ui.direction === 'workflows' ? (
           <WorkflowsView
@@ -522,6 +524,9 @@ function App(): JSX.Element {
             liveTitles={liveTitles}
             onDelete={time.deletePeriod}
             onAdjust={time.adjustPeriod}
+            onSplit={time.splitPeriod}
+            tasks={tasks.tasks}
+            onReassign={time.reassignPeriod}
           />
         ) : ui.direction === 'files' ? (
           <FilesView
@@ -599,9 +604,10 @@ function App(): JSX.Element {
           tree={tree}
           agents={agents}
           source={nsSource}
-          onSpawn={(agentName, cwd, adhocCommand) => {
+          tasks={tasks.tasks}
+          onSpawn={(agentName, cwd, adhocCommand, task) => {
             setNsSource(null)
-            spawnSession(agentName, cwd, adhocCommand)
+            spawnSession(agentName, cwd, adhocCommand, task)
           }}
           onClose={() => setNsSource(null)}
         />

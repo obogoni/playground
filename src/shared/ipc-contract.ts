@@ -25,8 +25,14 @@ import type { CommitLists, GitOp, GitOpResult, SyncState } from './git'
 import type { ProbeResult } from './links'
 import type { ClipboardPaste } from './paste'
 import type { LaunchResult, ShortcutTool } from './shortcuts'
-import type { ParentOfResult, PinTaskResult, TasksSnapshot } from './tasks'
-import type { TimeEditResult, TimeSnapshot } from './time'
+import type {
+  LookupTaskResult,
+  ParentOfResult,
+  PinTaskResult,
+  SessionTask,
+  TasksSnapshot
+} from './tasks'
+import type { PeriodTaskChoice, TimeEditResult, TimeSnapshot } from './time'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'
 import type {
   BlockerQuestion,
@@ -119,13 +125,15 @@ export interface IpcContract {
   'tasks:refresh': { req: void; res: TasksSnapshot }
   /** Resolves the first Hierarchy-Reverse parent (the US) of a pinned task; null when absent (PARENT-02). */
   'tasks:parent': { req: { id: number; org: string; project: string }; res: ParentOfResult }
+  /** Fetches one work item for the task picker without pinning it; failures are returned (HTSK-02, HTSK-04, HTSK-05). */
+  'tasks:lookup': { req: { input: string }; res: LookupTaskResult }
   /** Opens a pinned task's stored work item URL in the browser; main refuses anything not https on dev.azure.com (PTOP-01..07). */
   'tasks:open': { req: { id: number; org: string; project: string }; res: LaunchResult }
   /** Persisted ∪ running sessions, reconciled with pathMissing (no network/spawn). */
   'sessions:list': { req: void; res: SessionView[] }
-  /** Resolve agent (or run `adhocCommand` raw) + cwd, shell-host the PTY, persist, return the view. */
+  /** Resolve agent (or run `adhocCommand` raw) + cwd, shell-host the PTY, persist, return the view; `task` links it by hand (HTSK-09). */
   'sessions:spawn': {
-    req: { agentName: string; cwd: string; adhocCommand?: string }
+    req: { agentName: string; cwd: string; adhocCommand?: string; task?: SessionTask }
     res: SessionView
   }
   /** Kill the hosting PTY → status stopped; no orphaned process survives. */
@@ -134,6 +142,8 @@ export interface IpcContract {
   'sessions:respawn': { req: { id: string }; res: SessionView }
   /** Rename a session's title; empty/whitespace keeps the prior title. */
   'sessions:rename': { req: { id: string; title: string }; res: SessionView }
+  /** Link a session to a task by hand, or back to its branch with null (HTSK-12, HTSK-13, HTSK-16). */
+  'sessions:set-task': { req: { id: string; task: SessionTask | null }; res: SessionView }
   /** Clone a session (agent + cwd + ad-hoc command) into a new running session. */
   'sessions:duplicate': { req: { id: string }; res: SessionView }
   /** Drop a stopped/path-missing session from config; rejected while running. */
@@ -152,6 +162,10 @@ export interface IpcContract {
   'time:delete': { req: { id: string }; res: TimeEditResult }
   /** Replace a closed period's UTC ISO bounds; invalid bounds are rejected (TIME-45, TIME-46). */
   'time:adjust': { req: { id: string; start: string; end: string }; res: TimeEditResult }
+  /** Set a closed period's task: a task, No task or From branch (HTSK-25, HTSK-26, HTSK-27). */
+  'time:reassign': { req: { id: string; choice: PeriodTaskChoice }; res: TimeEditResult }
+  /** Split a closed period in two at a UTC ISO instant inside it (HTSK-28..HTSK-31). */
+  'time:split': { req: { id: string; at: string }; res: TimeEditResult }
   /** Native folder picker for a detached (ad-hoc) cwd; null when cancelled. */
   'dialog:pickFolder': { req: void; res: { path: string | null } }
   /**

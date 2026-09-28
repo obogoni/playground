@@ -707,3 +707,112 @@ describe("rail rows with the agent's session name (AD-040)", () => {
     expect(row.session.agent).toBe('Claude')
   })
 })
+
+describe('buildRailGroups with a linked task (HTSK-11, HTSK-20)', () => {
+  const WT_DEVELOP = { path: 'C:/code/playground', branch: 'develop' }
+  const WT_12345 = { path: 'C:/code/Code-12345', branch: 'feature/12345-x' }
+  const WT_67890 = { path: 'C:/code/Code-67890', branch: 'feature/67890-x' }
+  const linked = { id: 4821, title: 'Diagnose login loop' }
+
+  it('puts a detached session linked to a task in that task group, not an orphan', () => {
+    const groups = buildRailGroups(
+      [session({ id: 's1', cwd: 'C:/scratch/notes', task: linked })],
+      tree(WT_A),
+      pinned
+    )
+
+    expect(groups.map((g) => g.key)).toEqual(['task:4821'])
+    expect(taskGroup(groups[0]).taskId).toBe(4821)
+  })
+
+  it("puts a session linked to another task than its branch's in the linked task's group", () => {
+    const groups = buildRailGroups(
+      [session({ id: 's1', cwd: WT_67890.path, task: { id: 12345, title: null } })],
+      tree(WT_67890),
+      pinned
+    )
+
+    expect(groups.map((g) => g.key)).toEqual(['task:12345'])
+  })
+
+  it('shares one group between an unlinked and a linked session of one task, in persisted order', () => {
+    const groups = buildRailGroups(
+      [
+        session({ id: 'branch-one', cwd: WT_12345.path }),
+        session({ id: 'orphan', cwd: 'C:/scratch/other' }),
+        session({
+          id: 'linked-one',
+          cwd: WT_DEVELOP.path,
+          task: { id: 12345, title: 'Fix login redirect' }
+        })
+      ],
+      tree(WT_12345, WT_DEVELOP),
+      []
+    )
+
+    expect(groups.map((g) => g.key)).toEqual(['task:12345', 'session:orphan'])
+    expect(groups[0].rows.map((r) => r.id)).toEqual(['branch-one', 'linked-one'])
+    expect(taskGroup(groups[0]).title).toBe('Fix login redirect')
+  })
+
+  it("carries an unpinned link's title, and names the group by it", () => {
+    const groups = buildRailGroups(
+      [session({ id: 's1', cwd: WT_DEVELOP.path, task: linked })],
+      tree(WT_DEVELOP),
+      []
+    )
+    const group = taskGroup(groups[0])
+
+    expect(group.title).toBe('Diagnose login loop')
+    expect(group.details).toBeNull()
+    expect(group.branch).toBe('develop')
+    expect(group.ariaLabel).toBe('#4821 Diagnose login loop')
+  })
+
+  it('carries a null title for a link without one, and keeps the branch', () => {
+    const groups = buildRailGroups(
+      [session({ id: 's1', cwd: WT_DEVELOP.path, task: { id: 4821, title: null } })],
+      tree(WT_DEVELOP),
+      []
+    )
+    const group = taskGroup(groups[0])
+
+    expect(group.title).toBeNull()
+    expect(group.branch).toBe('develop')
+    expect(group.ariaLabel).toBe('#4821 develop')
+  })
+
+  it("takes the title from the group's first linked session, even when it has none", () => {
+    const groups = buildRailGroups(
+      [
+        session({ id: 's1', cwd: WT_DEVELOP.path, task: { id: 4821, title: null } }),
+        session({ id: 's2', cwd: 'C:/scratch/notes', task: linked })
+      ],
+      tree(WT_DEVELOP),
+      []
+    )
+
+    expect(groups).toHaveLength(1)
+    expect(taskGroup(groups[0]).title).toBeNull()
+  })
+
+  it('builds the same groups as before for unlinked sessions, with a null title', () => {
+    const groups = buildRailGroups(
+      [
+        session({ id: 's1', cwd: WT_A.path }),
+        session({ id: 's2', cwd: WT_DEVELOP.path }),
+        session({ id: 's3', cwd: 'C:/scratch/notes' })
+      ],
+      tree(WT_A, WT_DEVELOP),
+      pinned
+    )
+
+    expect(groups.map((g) => g.key)).toEqual(['task:24173', 'session:s2', 'session:s3'])
+    const task = taskGroup(groups[0])
+    expect(task.title).toBeNull()
+    expect(task.branch).toBe(WT_A.branch)
+    expect(task.ariaLabel).toBe('#24173 Fix the login redirect')
+    expect(orphanGroup(groups[1]).reason).toBe('untagged')
+    expect(orphanGroup(groups[2]).reason).toBe('detached')
+  })
+})

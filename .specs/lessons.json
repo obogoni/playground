@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 87,
+  "next_id": 91,
   "lessons": [
     {
       "id": "L-001",
@@ -1469,6 +1469,78 @@
       ],
       "created": "2026-09-27T21:04:56Z",
       "last_seen": "2026-09-27T21:04:56Z"
+    },
+    {
+      "id": "L-087",
+      "key": "surviving_mutant::for a rule that rejects when either of two parts fails test each arm alone a case where both fail cannot tell from",
+      "text": "For a rule that rejects when either of two parts fails, test each arm alone: a case where both fail cannot tell || from &&.",
+      "signal": "surviving_mutant",
+      "scope": "src/main",
+      "status": "candidate",
+      "features": [
+        "hours-task-assign"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/main/time-tracker.ts:242 (U12) (src/main)"
+      ],
+      "created": "2026-09-28T00:27:37Z",
+      "last_seen": "2026-09-28T00:27:37Z"
+    },
+    {
+      "id": "L-088",
+      "key": "surviving_mutant::when a mark on screen shows a stored flag the smoke needs a row where the flag and the value it usually follows disagree or a mark derived from that value passes",
+      "text": "When a mark on screen shows a stored flag, the smoke needs a row where the flag and the value it usually follows disagree, or a mark derived from that value passes.",
+      "signal": "surviving_mutant",
+      "scope": "smoke",
+      "status": "candidate",
+      "features": [
+        "hours-task-assign"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/renderer/src/components/PeriodRow.tsx hand mark (S2) (smoke)"
+      ],
+      "created": "2026-09-28T00:27:37Z",
+      "last_seen": "2026-09-28T00:27:37Z"
+    },
+    {
+      "id": "L-089",
+      "key": "surviving_mutant::test an optional field validator with every value class it must accept or reject absent true false null wrong type not one wrong type sample",
+      "text": "Test an optional-field validator with every value class it must accept or reject (absent, true, false, null, wrong type), not one wrong-type sample.",
+      "signal": "surviving_mutant",
+      "scope": "src/main",
+      "status": "candidate",
+      "features": [
+        "hours-task-assign"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/main/time-log-store.ts:28 (U19, U20) (src/main)"
+      ],
+      "created": "2026-09-28T00:27:37Z",
+      "last_seen": "2026-09-28T00:27:37Z"
+    },
+    {
+      "id": "L-090",
+      "key": "spec_precision_gap::a no change when already x criterion must say whether x is the explicit setting or the effective value e g a session link versus the task its branch names",
+      "text": "A 'no change when already X' criterion must say whether X is the explicit setting or the effective value, e.g. a session link versus the task its branch names.",
+      "signal": "spec_precision_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "hours-task-assign"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "HTSK-14"
+      ],
+      "created": "2026-09-28T00:27:37Z",
+      "last_seen": "2026-09-28T00:27:37Z"
     }
   ]
 }

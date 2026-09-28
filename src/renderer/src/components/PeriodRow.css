@@ -37,6 +37,14 @@
   text-overflow: ellipsis;
 }
 
+/* The hand mark: the task was set by hand (HTSK-38). */
+.period-row-hand {
+  flex: none;
+  display: flex;
+  align-items: center;
+  color: var(--amber);
+}
+
 .period-row-spacer {
   flex: 1;
 }
@@ -64,9 +72,27 @@
   border-color: var(--border);
 }
 
+/* Four closed-row buttons share the narrow drawer: keep them close. */
+.period-row-icon + .period-row-icon {
+  margin-left: -6px;
+}
+
 .period-row-icon.red:hover {
   color: var(--red);
   border-color: color-mix(in oklab, var(--red) 45%, transparent);
+}
+
+/* Anchor of the Change task picker, just below the row's main line. */
+.period-row-picker {
+  position: relative;
+  margin-top: -6px;
+}
+
+/* The drawer is narrow: the picker takes the row's width instead of its own,
+   so it never spills out of the drawer. */
+.period-row-picker .task-picker {
+  right: 0;
+  width: auto;
 }
 
 .period-row-form {

@@ -35,6 +35,9 @@ export type IconName =
   | 'git-pull'
   | 'git-push'
   | 'git-fetch'
+  | 'tag'
+  | 'scissors'
+  | 'hand'
   | 'undo'
   | 'pin'
   | 'ellipsis'
@@ -260,6 +263,29 @@ const PATHS: Record<IconName, JSX.Element> = {
       <path d="M12 3v14" strokeDasharray="2 3" />
       <path d="m6 11 6 6 6-6" />
       <path d="M5 21h14" />
+    </>
+  ),
+  tag: (
+    <>
+      <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
+      <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
+    </>
+  ),
+  scissors: (
+    <>
+      <circle cx="6" cy="6" r="3" />
+      <path d="M8.12 8.12 12 12" />
+      <path d="M20 4 8.12 15.88" />
+      <circle cx="6" cy="18" r="3" />
+      <path d="M14.8 14.8 20 20" />
+    </>
+  ),
+  hand: (
+    <>
+      <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
+      <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" />
+      <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" />
+      <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
     </>
   ),
   // A hook pointing back left over a return arc: put it back as it was.

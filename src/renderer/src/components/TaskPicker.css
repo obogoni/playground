@@ -1,0 +1,156 @@
+/* Task picker (HTSK-01): a popover on the sidebar-ctx-menu surface, with the
+   app-wide .task-pill colour map for the type badges. Theme-neutral: every
+   colour comes from the global tokens. */
+
+.task-picker {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 80;
+  box-sizing: border-box;
+  width: 340px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 12px 36px var(--shadow);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  white-space: normal;
+  text-align: left;
+  cursor: default;
+  animation: popIn 0.16s ease;
+}
+
+/* Opened at the pointer (the rail row's menu). */
+.task-picker-at {
+  position: fixed;
+}
+
+.task-picker-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.task-picker-entry {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-picker-entry:hover,
+.task-picker-entry:focus-visible {
+  background: var(--panel-2);
+}
+
+.task-picker-special {
+  color: var(--text-muted);
+}
+
+.task-picker-label {
+  flex: none;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.task-picker-special .task-picker-label {
+  font-family: var(--font-ui);
+  font-weight: 500;
+}
+
+.task-picker-entry .task-pill {
+  flex: none;
+  padding: 2px 7px;
+  font-size: 10px;
+}
+
+.task-picker-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.task-picker-lookup {
+  display: flex;
+  gap: 6px;
+  padding: 6px 4px 2px;
+  border-top: 1px solid var(--border);
+}
+
+.task-picker-input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+}
+
+.task-picker-input::placeholder {
+  color: var(--text-faint);
+}
+
+.task-picker-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.task-picker-go {
+  flex: none;
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.task-picker-go:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.task-picker-go:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The looked-up work item: one row to choose (HTSK-02). */
+.task-picker-found {
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--border));
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+/* The lookup's failure text (HTSK-05). */
+.task-picker-error {
+  padding: 2px 6px 4px;
+  color: var(--red);
+  font-size: 12px;
+  line-height: 1.4;
+}

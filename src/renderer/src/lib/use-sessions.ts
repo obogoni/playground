@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { SessionView } from '../../../shared/config'
+import type { SessionTask } from '../../../shared/tasks'
 import { api } from './api'
 import { failureToast } from './failure-toast'
 import { applyActivity } from './session-activity'
 import { applyName } from './session-name'
 
 export interface UseSessionsOptions {
-  /** Show a transient error toast (spawn / duplicate failures). */
+  /** Show a transient error toast (spawn / duplicate / task change failures). */
   onToast: (message: string) => void
   /** Switch the app to the Agents view (after a successful spawn). */
   onSwitchToAgents: () => void
@@ -18,8 +19,11 @@ export interface UseSessions {
   selectedSessionId: string | null
   setSelectedSessionId: Dispatch<SetStateAction<string | null>>
   refreshSessions: () => void
-  spawnSession: (agentName: string, cwd: string, adhocCommand?: string) => void
+  /** `task` links the new session by hand (HTSK-09); absent = From branch. */
+  spawnSession: (agentName: string, cwd: string, adhocCommand?: string, task?: SessionTask) => void
   renameSession: (id: string, title: string) => void
+  /** Links a session to a task, or back to its branch with null (HTSK-12, HTSK-13). */
+  setSessionTask: (id: string, task: SessionTask | null) => void
   duplicateSession: (id: string) => void
   stopSession: (id: string) => void
   respawnSession: (id: string) => void
@@ -65,9 +69,14 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
     }
   }, [refreshSessions])
 
-  const spawnSession = (agentName: string, cwd: string, adhocCommand?: string): void => {
+  const spawnSession = (
+    agentName: string,
+    cwd: string,
+    adhocCommand?: string,
+    task?: SessionTask
+  ): void => {
     api
-      .invoke('sessions:spawn', { agentName, cwd, adhocCommand })
+      .invoke('sessions:spawn', { agentName, cwd, adhocCommand, task })
       .then((view) => {
         setSelectedSessionId(view.id)
         onSwitchToAgents()
@@ -84,6 +93,16 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
       .invoke('sessions:rename', { id, title })
       .then(() => refreshSessions())
       .catch(console.error)
+  }
+
+  const setSessionTask = (id: string, task: SessionTask | null): void => {
+    api
+      .invoke('sessions:set-task', { id, task })
+      .then(() => refreshSessions())
+      .catch((err) => {
+        console.error(err)
+        onToast(failureToast("Couldn't change the session's task", err))
+      })
   }
 
   const duplicateSession = (id: string): void => {
@@ -125,6 +144,7 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
     refreshSessions,
     spawnSession,
     renameSession,
+    setSessionTask,
     duplicateSession,
     stopSession,
     respawnSession,

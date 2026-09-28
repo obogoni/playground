@@ -110,6 +110,11 @@ are one visual change — half of it is not demo-able.
 8. WHERE a group's task ID resolves but no pinned details are available THEN the
    group header SHALL render `#<taskId>` with no pills, and the branch name in
    place of the task title. <!-- RAIL-08, optional-feature -->
+
+   > Amended 2026-09-27 for `hours-task-assign` (AD-048, the AD-018 precedent):
+   > a session linked to a task is grouped under the link's id, and when that
+   > task has no pinned details the header shows the link's title in place of
+   > the branch, falling back to the branch when the link has no title (HTSK-11, 20).
 9. IF a session's `cwd` matches no worktree in the tree THEN the system SHALL
    render it as a single-row orphan group labelled with the `cwd` folder leaf
    and the note `detached · <folder>`. <!-- RAIL-09, unwanted-behaviour -->
@@ -219,7 +224,7 @@ boundary, press `Enter` — the terminal swaps to that session and the row repor
 | RAIL-05 | P1: Grouped rail | T1 | Implementing |
 | RAIL-06 | P1: Grouped rail | T1 | Implementing |
 | RAIL-07 | P1: Grouped rail | T1, T3 | Implementing |
-| RAIL-08 | P1: Grouped rail | T1, T3 | Implementing |
+| RAIL-08 | P1: Grouped rail | T1, T3 | Implementing — **amended by AD-048** |
 | RAIL-09 | P1: Grouped rail | T1, T3 | Implementing |
 | RAIL-10 | P1: Grouped rail | T1, T3 | Implementing |
 | RAIL-11 | P1: Grouped rail | T1, T3 | Implementing |

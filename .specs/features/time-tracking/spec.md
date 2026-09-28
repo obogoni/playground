@@ -37,7 +37,7 @@ be copied into Clockify.
 | Screen lock / unlock affecting the count | Owner decision Q16: lock never pauses or resumes anything |
 | Persisting a manual pause across respawn or app restart | Owner decision Q24: a respawn (and a restored session) counts again |
 | CSV/TSV export, Clockify import files | Owner chose per-day text (Q19) |
-| Editing the snapshot fields (task, worktree) of a period | Only start/end are editable (Q12); re-attributing a period is not requested |
+| Editing the snapshot fields (task, worktree) of a period | Only start/end are editable (Q12); re-attributing a period is not requested. **Superseded for the task field by AD-048 (2026-09-27):** `hours-task-assign` lets a closed period's task be set by hand (HTSK-25..27); the worktree fields stay read-only |
 | Rounding rules (15-min blocks etc.) | Durations are shown truncated to the minute; rounding is Clockify's job |
 | Workflow (headless) agent runs | They are not sessions and have no terminal; only `SessionManager` sessions are tracked |
 | Multi-machine sync of the log | The app is single-machine; the log lives in `%APPDATA%` |
@@ -93,6 +93,10 @@ for details the grilling did not reach; the owner confirmed all of them at spec 
 1. WHEN a session's PTY starts (spawn, duplicate or respawn) THEN the app SHALL open a period for that session whose start is the start instant.  <!-- TIME-01, event-driven -->
 2. WHEN a session stops, its PTY exits, or the session is paused THEN the app SHALL close that session's open period with the end at that instant and append it to `time-log.jsonl`.  <!-- TIME-02, event-driven -->
 3. The app SHALL record on every period the session id, agent name, cwd, workspace path, repo name, branch, task id (null when the branch carries none) and, when the task is pinned with cached details, the task title — captured when the period opens.  <!-- TIME-03, ubiquitous -->
+   > **Amended by AD-048 (2026-09-27).** `hours-task-assign` lets a session be linked to a work
+   > item; while it is, its periods record the link's id and title instead of the branch's task,
+   > with `taskByHand: true` when they differ (HTSK-09..11, 36). A session with no link records the
+   > branch's task exactly as above (HTSK-10), and the branch field is never rewritten.
 4. WHILE a session has an open period the app SHALL rewrite `time-open.json` with that period's last-seen instant at least every 60 s.  <!-- TIME-04, state-driven -->
 5. WHEN the app starts and `time-open.json` holds periods THEN the app SHALL close each one with its end at its last-seen instant, append them to `time-log.jsonl`, and empty `time-open.json`.  <!-- TIME-05, event-driven -->
 6. WHEN the operating system reports `suspend` THEN the app SHALL close every open period with the end at the suspend instant.  <!-- TIME-06, event-driven -->
@@ -233,7 +237,7 @@ for details the grilling did not reach; the owner confirmed all of them at spec 
 | -------------- | ----- | ----- | ------ |
 | TIME-01 | P1: Sessions record dated periods | Tasks | In Tasks |
 | TIME-02 | P1: Sessions record dated periods | Tasks | In Tasks |
-| TIME-03 | P1: Sessions record dated periods | Tasks | In Tasks |
+| TIME-03 | P1: Sessions record dated periods | Tasks | In Tasks — **amended by AD-048** |
 | TIME-04 | P1: Sessions record dated periods | Tasks | In Tasks |
 | TIME-05 | P1: Sessions record dated periods | Tasks | In Tasks |
 | TIME-06 | P1: Sessions record dated periods | Tasks | In Tasks |

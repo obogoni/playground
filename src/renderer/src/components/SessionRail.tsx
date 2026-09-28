@@ -1,9 +1,9 @@
 import type { JSX, KeyboardEvent, MouseEvent } from 'react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AgentDef } from '../../../shared/agents'
 import type { SessionView } from '../../../shared/config'
-import type { PinnedTaskView } from '../../../shared/tasks'
-import type { TimeSnapshot } from '../../../shared/time'
+import type { PinnedTaskView, SessionTask } from '../../../shared/tasks'
+import type { PeriodTaskChoice, TimeSnapshot } from '../../../shared/time'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { agentTileStyle } from '../lib/agent-color'
 import {
@@ -20,6 +20,7 @@ import {
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { taskTotalMs, worktreeTotalMs } from '../lib/time-totals'
 import { Icon } from './Icon'
+import { TaskPicker } from './TaskPicker'
 import { SessionClock, TotalClock } from './TimeCounter'
 import './SessionRail.css'
 
@@ -39,6 +40,15 @@ interface SessionRailProps {
   onRespawn: (id: string) => void
   onRemove: (id: string) => void
   onNew: () => void
+  /** Links a session to a task, or back to its branch with null (HTSK-19). */
+  onSetTask: (id: string, task: SessionTask | null) => void
+}
+
+/** A row's context menu, or the picker it opened, at the pointer. */
+interface RowMenu {
+  sessionId: string
+  x: number
+  y: number
 }
 
 /** 344px master list (rail v2): header + one card per task group, one row per
@@ -55,13 +65,45 @@ export function SessionRail({
   onStop,
   onRespawn,
   onRemove,
-  onNew
+  onNew,
+  onSetTask
 }: SessionRailProps): JSX.Element {
   const { running: runningCount, working, needYou } = headerCounts(sessions)
   const groups = buildRailGroups(sessions, tree, tasks)
   const rows = flatRows(groups)
   const [focusedId, setFocusedId] = useState<string | null>(null)
   const rowRefs = useRef(new Map<string, HTMLDivElement>())
+  const [menu, setMenu] = useState<RowMenu | null>(null)
+  const [picker, setPicker] = useState<RowMenu | null>(null)
+
+  // Any click or Escape dismisses the row menu, as in the sidebar and the
+  // commit list. The menu renders outside the row: RAIL-12 allows no new
+  // control on a row.
+  useEffect(() => {
+    if (!menu) return
+    const close = (): void => setMenu(null)
+    const onKey = (event: globalThis.KeyboardEvent): void => {
+      if (event.key === 'Escape') setMenu(null)
+    }
+    window.addEventListener('click', close)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('click', close)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [menu])
+
+  const openMenu = (event: MouseEvent, id: string): void => {
+    event.preventDefault()
+    setPicker(null)
+    setMenu({ sessionId: id, x: event.clientX, y: event.clientY })
+  }
+
+  // A session picker has no No task; From branch removes the link (HTSK-13).
+  const chooseTask = (sessionId: string, choice: PeriodTaskChoice): void => {
+    setPicker(null)
+    onSetTask(sessionId, choice.kind === 'task' ? { id: choice.id, title: choice.title } : null)
+  }
 
   // Roving tabIndex: the focused row is the rail's single tab stop. It follows
   // the selection until an arrow key moves it, and falls back to the first row.
@@ -133,10 +175,35 @@ export function SessionRail({
               onStop={onStop}
               onRespawn={onRespawn}
               onRemove={onRemove}
+              onMenu={openMenu}
             />
           ))
         )}
       </div>
+      {menu && (
+        <div className="rail-ctx-menu" role="menu" style={{ left: menu.x, top: menu.y }}>
+          <button
+            type="button"
+            role="menuitem"
+            className="rail-ctx-item rail-change-task"
+            onClick={() => {
+              setMenu(null)
+              setPicker(menu)
+            }}
+          >
+            <Icon name="tag" size={13} /> Change task…
+          </button>
+        </div>
+      )}
+      {picker && (
+        <TaskPicker
+          key={picker.sessionId}
+          tasks={tasks}
+          at={{ x: picker.x, y: picker.y }}
+          onChoose={(choice) => chooseTask(picker.sessionId, choice)}
+          onClose={() => setPicker(null)}
+        />
+      )}
     </aside>
   )
 }
@@ -153,6 +220,7 @@ interface TaskGroupCardProps {
   onStop: (id: string) => void
   onRespawn: (id: string) => void
   onRemove: (id: string) => void
+  onMenu: (event: MouseEvent, id: string) => void
 }
 
 /** One group card: a header variant plus its rows. The card itself is never
@@ -168,7 +236,8 @@ function TaskGroupCard({
   onSelect,
   onStop,
   onRespawn,
-  onRemove
+  onRemove,
+  onMenu
 }: TaskGroupCardProps): JSX.Element {
   const holdsSelection = group.rows.some((row) => row.id === selectedId)
   // Task groups total by task id; an orphan group is one session, totalled by its cwd.
@@ -209,8 +278,11 @@ function TaskGroupCard({
               </span>
             )}
           </div>
+          {/* A linked task without pinned details shows the link's title (HTSK-20). */}
           {group.details ? (
             <span className="rail-group-title">{group.details.title}</span>
+          ) : group.title ? (
+            <span className="rail-group-title linked">{group.title}</span>
           ) : (
             <span className="rail-group-branch">{group.branch}</span>
           )}
@@ -240,6 +312,7 @@ function TaskGroupCard({
             onStop={onStop}
             onRespawn={onRespawn}
             onRemove={onRemove}
+            onMenu={onMenu}
           />
         ))}
       </div>
@@ -259,6 +332,7 @@ interface SessionRowProps {
   onStop: (id: string) => void
   onRespawn: (id: string) => void
   onRemove: (id: string) => void
+  onMenu: (event: MouseEvent, id: string) => void
 }
 
 /** Statuses that mean the agent is mid-work, and so spin (ACTV-14). */
@@ -296,7 +370,8 @@ function SessionRow({
   onSelect,
   onStop,
   onRespawn,
-  onRemove
+  onRemove,
+  onMenu
 }: SessionRowProps): JSX.Element {
   const handlers: Record<RowAction, (id: string) => void> = {
     stop: onStop,
@@ -326,6 +401,7 @@ function SessionRow({
       title={row.tooltip}
       onClick={() => onSelect(row.id)}
       onKeyDown={(event) => onRowKeyDown(event, row.id)}
+      onContextMenu={(event) => onMenu(event, row.id)}
     >
       <span className="rail-row-tile" style={agentTileStyle(agents, row.session.agent)}>
         {row.session.agent.charAt(0)}

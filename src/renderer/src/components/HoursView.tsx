@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { JSX } from 'react'
-import type { TimeEditResult, TimeSnapshot } from '../../../shared/time'
+import type { PinnedTaskView } from '../../../shared/tasks'
+import type { PeriodTaskChoice, TimeEditResult, TimeSnapshot } from '../../../shared/time'
 import {
   buildWeekReport,
   weekRange,
@@ -38,6 +39,12 @@ interface HoursViewProps {
   liveTitles: Map<number, string>
   onDelete: (id: string) => Promise<TimeEditResult>
   onAdjust: (id: string, start: string, end: string) => Promise<TimeEditResult>
+  /** Splits a closed period at a UTC ISO instant (HTSK-28). */
+  onSplit: (id: string, at: string) => Promise<TimeEditResult>
+  /** The pinned tasks, for a period's Change task picker (HTSK-24). */
+  tasks: PinnedTaskView[]
+  /** Moves a closed period to another task (HTSK-25..27). */
+  onReassign: (id: string, choice: PeriodTaskChoice) => Promise<TimeEditResult>
 }
 
 const pad = (n: number): string => String(n).padStart(2, '0')
@@ -94,7 +101,10 @@ export function HoursView({
   snapshot,
   liveTitles,
   onDelete,
-  onAdjust
+  onAdjust,
+  onSplit,
+  tasks,
+  onReassign
 }: HoursViewProps): JSX.Element {
   const [weekStart, setWeekStart] = useState(() => weekRange(new Date()).start)
   const week = weekRange(new Date(weekStart))
@@ -292,6 +302,9 @@ export function HoursView({
                   day={shownDay}
                   onDelete={onDelete}
                   onAdjust={onAdjust}
+                  onSplit={onSplit}
+                  tasks={tasks}
+                  onReassign={onReassign}
                   focus={current.focus}
                   colours={colours}
                   onClose={closeDrawer}
@@ -345,6 +358,9 @@ interface DayCardProps {
   day: DayReport
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
+  onSplit: HoursViewProps['onSplit']
+  tasks: HoursViewProps['tasks']
+  onReassign: HoursViewProps['onReassign']
   /** The block to focus; absent, the card renders as the list view did. */
   focus?: BlockFocus
   /** Colour roles of the shown week, for the swatch beside each group (HCAL-11). */
@@ -376,6 +392,9 @@ function DayCard({
   day,
   onDelete,
   onAdjust,
+  onSplit,
+  tasks,
+  onReassign,
   focus,
   colours,
   onClose,
@@ -421,6 +440,9 @@ function DayCard({
           role={roleOf(colours, group.key)}
           onDelete={onDelete}
           onAdjust={onAdjust}
+          onSplit={onSplit}
+          tasks={tasks}
+          onReassign={onReassign}
           focus={focus?.groupKey === group.key ? focus : undefined}
           onHover={onHover}
         />
@@ -434,6 +456,9 @@ interface GroupSectionProps {
   role: ColourRole
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
+  onSplit: HoursViewProps['onSplit']
+  tasks: HoursViewProps['tasks']
+  onReassign: HoursViewProps['onReassign']
   focus?: BlockFocus
   onHover: (key: string | null) => void
 }
@@ -443,6 +468,9 @@ function GroupSection({
   role,
   onDelete,
   onAdjust,
+  onSplit,
+  tasks,
+  onReassign,
   focus,
   onHover
 }: GroupSectionProps): JSX.Element {
@@ -469,6 +497,9 @@ function GroupSection({
           block={block}
           onDelete={onDelete}
           onAdjust={onAdjust}
+          onSplit={onSplit}
+          tasks={tasks}
+          onReassign={onReassign}
           focus={focus?.start === block.start ? focus : undefined}
         />
       ))}
@@ -480,10 +511,21 @@ interface BlockLineProps {
   block: Block
   onDelete: HoursViewProps['onDelete']
   onAdjust: HoursViewProps['onAdjust']
+  onSplit: HoursViewProps['onSplit']
+  tasks: HoursViewProps['tasks']
+  onReassign: HoursViewProps['onReassign']
   focus?: BlockFocus
 }
 
-function BlockLine({ block, onDelete, onAdjust, focus }: BlockLineProps): JSX.Element {
+function BlockLine({
+  block,
+  onDelete,
+  onAdjust,
+  onSplit,
+  tasks,
+  onReassign,
+  focus
+}: BlockLineProps): JSX.Element {
   const [expanded, setExpanded] = useState(false)
   const [seenFocus, setSeenFocus] = useState<BlockFocus | undefined>(undefined)
   const ref = useRef<HTMLDivElement>(null)
@@ -528,6 +570,9 @@ function BlockLine({ block, onDelete, onAdjust, focus }: BlockLineProps): JSX.El
               row={row}
               onDelete={onDelete}
               onAdjust={onAdjust}
+              onSplit={onSplit}
+              tasks={tasks}
+              onReassign={onReassign}
             />
           ))}
         </div>

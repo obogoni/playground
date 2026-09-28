@@ -3,8 +3,8 @@ import type { JSX, KeyboardEvent } from 'react'
 import type { AgentDef } from '../../../shared/agents'
 import { undoByteFor } from '../lib/terminal-keys'
 import type { SessionView } from '../../../shared/config'
-import type { PinnedTaskView } from '../../../shared/tasks'
-import type { TimeSnapshot } from '../../../shared/time'
+import type { PinnedTaskView, SessionTask } from '../../../shared/tasks'
+import type { PeriodTaskChoice, TimeSnapshot } from '../../../shared/time'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { agentTileStyle } from '../lib/agent-color'
 import { deriveAttribution, linkedPinFor } from '../lib/session-attribution'
@@ -12,6 +12,7 @@ import { detailPillClass, detailPillText, detailPillTitle } from '../lib/session
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import { SessionRail } from './SessionRail'
+import { TaskPicker } from './TaskPicker'
 import { SessionClock } from './TimeCounter'
 import { TerminalPane } from './TerminalPane'
 import './AgentsView.css'
@@ -34,6 +35,8 @@ interface AgentsViewProps {
   onPauseTime: (id: string) => void
   onResumeTime: (id: string) => void
   onToast: (message: string) => void
+  /** Links a session to a task, or back to its branch with null (HTSK-12, HTSK-13). */
+  onSetTask: (id: string, task: SessionTask | null) => void
 }
 
 /**
@@ -59,7 +62,8 @@ export function AgentsView({
   onNew,
   onPauseTime,
   onResumeTime,
-  onToast
+  onToast,
+  onSetTask
 }: AgentsViewProps): JSX.Element {
   const active = sessions.find((s) => s.id === selectedId) ?? sessions[0] ?? null
 
@@ -77,6 +81,7 @@ export function AgentsView({
         onRespawn={onRespawn}
         onRemove={onRemove}
         onNew={onNew}
+        onSetTask={onSetTask}
       />
       {active ? (
         <SessionDetail
@@ -94,6 +99,7 @@ export function AgentsView({
           onPauseTime={onPauseTime}
           onResumeTime={onResumeTime}
           onToast={onToast}
+          onSetTask={onSetTask}
         />
       ) : (
         <div className="agents-detail-empty">
@@ -123,6 +129,7 @@ interface SessionDetailProps {
   onPauseTime: (id: string) => void
   onResumeTime: (id: string) => void
   onToast: (message: string) => void
+  onSetTask: (id: string, task: SessionTask | null) => void
 }
 
 function SessionDetail({
@@ -139,9 +146,14 @@ function SessionDetail({
   onOpenWorktree,
   onPauseTime,
   onResumeTime,
-  onToast
+  onToast,
+  onSetTask
 }: SessionDetailProps): JSX.Element {
-  const { branch, taskId, detached } = deriveAttribution(tree, session.cwd)
+  const { branch, taskId, detached, linked, linkTitle } = deriveAttribution(
+    tree,
+    session.cwd,
+    session.task
+  )
   const pin = linkedPinFor(tasks, taskId)
   // The worktree is reachable only when the cwd matched a live worktree (ACTX-04).
   const canOpenWorktree = !detached && !session.pathMissing
@@ -150,6 +162,14 @@ function SessionDetail({
   const timePaused = time.paused.includes(session.id)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(session.title)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const taskTitle = pin?.details?.title ?? linkTitle
+
+  // From branch removes the link (HTSK-13); a session picker has no No task.
+  const chooseTask = (choice: PeriodTaskChoice): void => {
+    setPickerOpen(false)
+    onSetTask(session.id, choice.kind === 'task' ? { id: choice.id, title: choice.title } : null)
+  }
 
   const startRename = (): void => {
     setDraft(session.title)
@@ -268,23 +288,44 @@ function SessionDetail({
         {detached ? (
           <span className="agents-strip-tag">detached</span>
         ) : (
-          <>
-            {branch && <span className="agents-strip-branch">{branch}</span>}
-            {taskId !== null && <span className="agents-strip-task">#{taskId}</span>}
-            {pin?.details && (
+          branch && <span className="agents-strip-branch">{branch}</span>
+        )}
+        {/* The effective task, also for a detached session, opens the picker (HTSK-18). */}
+        <span className="agents-strip-task-host">
+          <button
+            type="button"
+            className="agents-strip-task-btn"
+            title={
+              linked
+                ? 'Task set by hand · click to change'
+                : 'Task from the branch · click to change'
+            }
+            onClick={() => setPickerOpen(true)}
+          >
+            {taskId === null ? (
+              <span className="agents-strip-no-task">No task</span>
+            ) : (
               <>
-                <span className={`task-pill ${typeClass(badgeTypeOf(pin.details))}`}>
-                  <span className="task-pill-dot" />
-                  {badgeTypeOf(pin.details)}
-                </span>
-                <span className={`task-pill ${stateClass(pin.details.state)}`}>
-                  {pin.details.state}
-                </span>
-                <span className="agents-strip-task-title">{pin.details.title}</span>
+                <span className="agents-strip-task">#{taskId}</span>
+                {pin?.details && (
+                  <>
+                    <span className={`task-pill ${typeClass(badgeTypeOf(pin.details))}`}>
+                      <span className="task-pill-dot" />
+                      {badgeTypeOf(pin.details)}
+                    </span>
+                    <span className={`task-pill ${stateClass(pin.details.state)}`}>
+                      {pin.details.state}
+                    </span>
+                  </>
+                )}
+                {taskTitle && <span className="agents-strip-task-title">{taskTitle}</span>}
               </>
             )}
-          </>
-        )}
+          </button>
+          {pickerOpen && (
+            <TaskPicker tasks={tasks} onChoose={chooseTask} onClose={() => setPickerOpen(false)} />
+          )}
+        </span>
         {session.pathMissing && <span className="agents-strip-tag red">path missing</span>}
       </div>
 

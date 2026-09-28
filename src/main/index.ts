@@ -413,6 +413,7 @@ app.whenReady().then(() => {
   handle('tasks:unpin', (ref) => taskBoard.unpin(ref))
   handle('tasks:refresh', () => taskBoard.refresh())
   handle('tasks:parent', ({ id, org, project }) => adoGateway.parentOf({ id, org, project }))
+  handle('tasks:lookup', ({ input }) => taskBoard.lookup(input))
   // The renderer names the task; main opens the URL it stored at pin time (PTOP-01..07).
   handle('tasks:open', (ref) =>
     openPinnedTask(
@@ -487,23 +488,26 @@ app.whenReady().then(() => {
 
   // Time tracking (AD-021). The tracker must recover the periods a crash left
   // open before SessionManager exists, so no new run can mix with them.
+  // Pinned task id → cached title, first pin with details of an id (TIME-03, HTSK-06).
+  const pinnedTitles = (): Map<number, string> => {
+    const titles = new Map<number, string>()
+    for (const task of taskBoard.list().tasks) {
+      if (task.details && !titles.has(task.id)) titles.set(task.id, task.details.title)
+    }
+    return titles
+  }
   const tracker = new TimeTracker({
     store: new TimeLogStore(app.getPath('userData')),
     now: Date.now,
     newId: randomUUID,
-    resolveSnapshot: (cwd) => {
-      const pinnedTitles = new Map<number, string>()
-      for (const task of taskBoard.list().tasks) {
-        if (task.details && !pinnedTitles.has(task.id))
-          pinnedTitles.set(task.id, task.details.title)
-      }
-      return buildSnapshot({
+    resolveSnapshot: (cwd) =>
+      buildSnapshot({
         cwd,
         ...readGit(cwd),
         workspacePaths: registry.list().map((ws) => ws.path),
-        pinnedTitles
-      })
-    },
+        pinnedTitles: pinnedTitles()
+      }),
+    pinnedTitle: (id) => pinnedTitles().get(id) ?? null,
     emit: () => emitToWindow('time:changed', { at: new Date().toISOString() })
   })
   tracker.recover()
@@ -513,6 +517,8 @@ app.whenReady().then(() => {
   handle('time:resume', ({ sessionId }) => tracker.resume(sessionId))
   handle('time:delete', ({ id }) => tracker.deletePeriod(id))
   handle('time:adjust', ({ id, start, end }) => tracker.adjustPeriod(id, start, end))
+  handle('time:reassign', ({ id, choice }) => tracker.reassignPeriod(id, choice))
+  handle('time:split', ({ id, at }) => tracker.splitPeriod(id, at))
   // The sidecar heartbeat bounds what a crash can lose to 60 s (TIME-04); unref'd
   // so it never keeps the process alive.
   setInterval(() => tracker.heartbeat(), 60_000).unref()
@@ -609,8 +615,8 @@ app.whenReady().then(() => {
   hookServer.onEvent((sessionId, payload) => sessions.handleHookEvent(sessionId, payload))
   namePoller.onListing((names) => sessions.applyNames(names))
   handle('sessions:list', () => sessions.list())
-  handle('sessions:spawn', ({ agentName, cwd, adhocCommand }) =>
-    sessions.spawn(agentName, cwd, adhocCommand)
+  handle('sessions:spawn', ({ agentName, cwd, adhocCommand, task }) =>
+    sessions.spawn(agentName, cwd, adhocCommand, task)
   )
   // Returning the promise is load-bearing: ipcMain.handle awaits it, so the
   // renderer's `sessions:stop` only resolves once the PTY has really exited
@@ -619,6 +625,8 @@ app.whenReady().then(() => {
   handle('sessions:stop', ({ id }) => sessions.stop(id))
   handle('sessions:respawn', ({ id }) => sessions.respawn(id))
   handle('sessions:rename', ({ id, title }) => sessions.rename(id, title))
+  // Persist first, then the tracker closes and opens through the lifecycle (HTSK-12).
+  handle('sessions:set-task', ({ id, task }) => sessions.setTask(id, task))
   handle('sessions:duplicate', ({ id }) => sessions.duplicate(id))
   handle('sessions:remove', ({ id }) => sessions.remove(id))
   handle('sessions:attach', ({ id }) => sessions.attach(id))

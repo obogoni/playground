@@ -40,10 +40,36 @@
  *      week says it has no time for it, keeping the chip at 0h00 with the
  *      neutral swatch and its ×; the × and a second click clear it; no
  *      bar changes colour throughout (HTF-07..15)
+ *  13. on the seeded `develop` Wednesday two weeks back: `Split at` starts on
+ *      the period's midpoint; splitting at its start is refused and splitting
+ *      at 10:00 gives two periods on `develop`; the parts moved to #9201 and
+ *      #9202 regroup the day and the legend and wear the hand mark naming
+ *      `develop`; From branch moves a part back to No task with no mark and no
+ *      flag; a running row offers neither Change task nor Split at, a closed
+ *      one both (HTSK-23, 25..29, 33..40)
+ *  14. the C:/Windows session, detached, is linked to #9201 from its rail
+ *      row's `Change task…` menu (no `No task` offered): its row moves under
+ *      #9201, its open period is closed and reopened on 9201 with the flag, the
+ *      link is saved in the config, choosing it again changes nothing, and the
+ *      strip's From branch puts everything back (HTSK-11..14, 17..19)
+ *  15. the new-session dialog starts on `From branch` from Agents and on #9202
+ *      from #9202's Agent button; an ad-hoc spawn in the #9202 worktree with
+ *      #9201 chosen records 9201 with the flag on `feature/9202-seed` and sits
+ *      under #9201; its strip's From branch records 9202 with no flag and moves
+ *      it under #9202 (HTSK-07..11, 13, 36)
  *
  * NOT automatable here: keyboard focus showing the tooltip, and the two-theme
  * look. The ad-hoc sessions carry no task, so every task colour is read on the
  * seeded Sunday.
+ *
+ * Verify by hand (sections 13 to 15 cannot reach these):
+ *   - the picker's typed lookup: a work item number shows one `{type} #{id}
+ *     {title}` row, a bad one shows main's error text, and choosing the row
+ *     pins nothing (HTSK-02..05); the smoke never types there, since it would
+ *     reach Azure DevOps
+ *   - a linked session's notification names the linked task (HTSK-21)
+ *   - a session's link survives a real app restart (HTSK-17)
+ *   - the hand mark's look, in the light and the dark theme (HTSK-38)
  *
  * The sessions are ad-hoc `pwsh` in C:/Windows and C:/Windows/System32 — never a
  * registry agent, which on a machine with the CLI installed starts a real agent.
@@ -52,20 +78,31 @@
  *
  * It runs only on its own throwaway data, never on the owner's hours:
  *   1. node scripts/smoke-hours-calendar.mjs --seed
- *        writes a tall past Sunday into a new directory under %TEMP% and
- *        prints the next command
+ *        writes a tall past Sunday into a new directory under %TEMP%, plus a
+ *        git repo `ws/acme-widgets` on `develop` with a worktree
+ *        `wt/acme-widgets-9202` on `feature/9202-seed`, a config registering
+ *        `ws` and pinning acme/platform #9201 and #9202, and a closed 09:00 to
+ *        12:00 period on `develop` two Wednesdays back; prints the next command
  *   2. npm run dev -- -- "--user-data-dir=<that directory>" --remote-debugging-port=9222
+ *        --disable-renderer-backgrounding --disable-backgrounding-occluded-windows
+ *        --disable-background-timer-throttling
  *   3. node scripts/smoke-hours-calendar.mjs
  *        refuses with `not running on the seeded data` unless every seeded
  *        period is in the app; on a pass it closes the app and deletes the
  *        directory, on a failure it leaves both and prints the directory
+ *
+ * SMOKE_ONLY=assign on step 3 runs sections 13 to 15 alone, from a fresh seed
+ * and launch like any drive, for iterating on them; the full drive still runs
+ * before a PR.
  */
 
+import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const PORT = Number(process.env.SMOKE_PORT) || 9222
+const ONLY = process.env.SMOKE_ONLY ?? null
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 const FOLDERS = ['C:\\Windows', 'C:\\Windows\\System32']
 
@@ -220,6 +257,9 @@ const SEED_TITLES = [
   'Fix the timezone offset'
 ]
 const seedId = (i) => `hours-smoke-seed-${String(i + 1).padStart(2, '0')}`
+// The `develop` period sections 13 and 14 split and reassign, and the two pins they choose.
+const DEVELOP_ID = 'hours-smoke-develop'
+const PINS = [9201, 9202]
 
 if (process.argv.includes('--seed')) {
   const dir = join(TEMP, `playground-smoke-hours-${Date.now()}`)
@@ -246,11 +286,64 @@ if (process.argv.includes('--seed')) {
       taskTitle: title
     })
   })
-  mkdirSync(dir)
+  // A repo on `develop` with a worktree for #9202, in a workspace the config
+  // registers. Fictitious author and ids only.
+  const ws = join(dir, 'ws')
+  const repo = join(ws, 'acme-widgets')
+  const worktree = join(dir, 'wt', 'acme-widgets-9202')
+  mkdirSync(repo, { recursive: true })
+  mkdirSync(join(dir, 'wt'))
+  const git = (...args) => execFileSync('git', args, { cwd: repo, stdio: 'pipe' })
+  git('init', '-b', 'develop')
+  git(
+    '-c',
+    'user.name=Acme Seed',
+    '-c',
+    'user.email=seed@example.com',
+    'commit',
+    '--allow-empty',
+    '-m',
+    'Seed'
+  )
+  git('worktree', 'add', '-b', 'feature/9202-seed', worktree)
+  writeFileSync(
+    join(dir, 'config.json'),
+    JSON.stringify({
+      workspaces: [{ id: ws.toLowerCase(), path: ws, displayName: 'ws' }],
+      pinnedTasks: PINS.map((id) => ({
+        id,
+        org: 'acme',
+        project: 'platform',
+        url: `https://dev.azure.com/acme/platform/_workitems/edit/${id}`
+      }))
+    })
+  )
+  const wednesday = weekDay(-2, 2)
+  const at = (h) => new Date(wednesday.getFullYear(), wednesday.getMonth(), wednesday.getDate(), h)
+  lines.push(
+    JSON.stringify({
+      v: 1,
+      id: DEVELOP_ID,
+      sessionId: 'hours-smoke-develop',
+      agent: 'Ad-hoc',
+      cwd: repo,
+      start: at(9).toISOString(),
+      end: at(12).toISOString(),
+      workspacePath: ws,
+      repoName: 'acme-widgets',
+      branch: 'develop',
+      taskId: null,
+      taskTitle: null
+    })
+  )
   writeFileSync(join(dir, 'time-log.jsonl'), lines.join('\n') + '\n')
   writeFileSync(POINTER, dir)
-  console.log(`Seeded ${lines.length} periods on ${dayHeader(sunday)} in ${dir}`)
-  console.log(`Launch: npm run dev -- -- "--user-data-dir=${dir}" --remote-debugging-port=${PORT}`)
+  console.log(
+    `Seeded ${lines.length} periods (${dayHeader(sunday)}, ${dayHeader(wednesday)}) in ${dir}`
+  )
+  console.log(
+    `Launch: npm run dev -- -- "--user-data-dir=${dir}" --remote-debugging-port=${PORT} --disable-renderer-backgrounding --disable-backgrounding-occluded-windows --disable-background-timer-throttling`
+  )
   process.exit(0)
 }
 
@@ -267,7 +360,9 @@ await waitFor(`typeof window.api !== 'undefined'`, 'the preload bridge')
 // Refuse anything but the seeded directory, before a session or a write.
 const seededDir = existsSync(POINTER) ? readFileSync(POINTER, 'utf8').trim() : null
 const snapshotIds = new Set((await invoke('time:snapshot')).periods.map((p) => p.id))
-const missingSeed = SEED_TITLES.map((_, i) => seedId(i)).filter((id) => !snapshotIds.has(id))
+const missingSeed = [...SEED_TITLES.map((_, i) => seedId(i)), DEVELOP_ID].filter(
+  (id) => !snapshotIds.has(id)
+)
 if (!seededDir || missingSeed.length > 0) {
   console.error(
     `not running on the seeded data — ${!seededDir ? `no ${POINTER}` : `${missingSeed.length} seeded periods missing`}; run with --seed first`
@@ -282,20 +377,8 @@ const knownPeriods = new Set(before.periods.map((p) => p.id))
 const sessionIds = []
 const todayHeader = dayHeader(todayMidnight)
 
-try {
-  for (const cwd of FOLDERS) {
-    const view = await invoke('sessions:spawn', {
-      agentName: 'Ad-hoc',
-      cwd,
-      adhocCommand: 'pwsh -NoLogo -NoProfile'
-    })
-    sessionIds.push(view.id)
-  }
-  await sleep(1500)
-  await reloadInto('hours')
-  await waitFor(`document.querySelector('.hcal') !== null`, 'the calendar')
-  await sleep(500)
-
+/** Sections 1 to 12, on the calendar the setup opened. */
+async function calendarSections() {
   // 1. Columns.
   const snap = await invoke('time:snapshot')
   const labels = await headLabels()
@@ -973,6 +1056,474 @@ try {
     ) && palette.size === 14,
     `${palette.size} bars`
   )
+}
+
+// Probes for sections 13 to 15, evaluated in the page.
+/** Sets a React-controlled input's value the way typing does. */
+const setInput = (selector, value) =>
+  evaluate(
+    `(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return false; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, ${JSON.stringify(value)}); el.dispatchEvent(new Event('input', { bubbles: true })); return true })()`
+  )
+/** Polls `expression` like `waitFor`, but answers false instead of throwing. */
+async function until(expression, tries = 16) {
+  for (let i = 0; i < tries; i++) {
+    if (await evaluate(expression)) return true
+    await sleep(250)
+  }
+  return false
+}
+/** A local instant as a `datetime-local` value, to the second. */
+const toLocal = (d) =>
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+const drawerGroups = () =>
+  evaluate(
+    `[...document.querySelectorAll('.hours-drawer .hours-group')].map(g => ({ label: g.querySelector('.hours-group-label').textContent, total: g.querySelector('.hours-group-total').textContent, blocks: [...g.querySelectorAll('.hours-block')].map(b => ({ range: b.querySelector('.hours-block-range').textContent, count: b.querySelector('.hours-block-count').textContent })), rows: [...g.querySelectorAll('.period-row')].map(r => { const hand = r.querySelector('.period-row-hand'); return { range: r.querySelector('.period-row-range').textContent, open: r.classList.contains('open'), hand: hand ? { title: hand.getAttribute('title'), aria: hand.getAttribute('aria-label') } : null, change: r.querySelector('.period-row-change-task') !== null, split: r.querySelector('.period-row-split') !== null } }) }))`
+  )
+const expandBlocks = async () => {
+  await evaluate(
+    `[...document.querySelectorAll('.hours-drawer .hours-block-line[aria-expanded="false"]')].forEach(b => b.click()), true`
+  )
+  await sleep(250)
+}
+const legendLabels = () =>
+  evaluate(`[...document.querySelectorAll('.hleg-label')].map(l => l.textContent)`)
+/** The drawer's period row in `group` whose range starts with `rangeStart`. */
+const periodRow = (group, rangeStart) =>
+  `[...([...document.querySelectorAll('.hours-drawer .hours-group')].find(g => g.querySelector('.hours-group-label').textContent === ${JSON.stringify(group)})?.querySelectorAll('.period-row') ?? [])].find(r => r.querySelector('.period-row-range').textContent.startsWith(${JSON.stringify(rangeStart)}))`
+/** Clicks the picker entry labelled `label` inside `host`. */
+const choose = (host, label) =>
+  evaluate(
+    `(() => { const e = [...(${host}?.querySelectorAll('.task-picker-entry') ?? [])].find(x => x.querySelector('.task-picker-label')?.textContent === ${JSON.stringify(label)}); if (!e) return false; e.click(); return true })()`
+  )
+/** Change task on a drawer row, then the picker entry `label`. */
+async function reassignRow(group, rangeStart, label) {
+  await expandBlocks()
+  const row = periodRow(group, rangeStart)
+  const opened = await evaluate(
+    `(() => { const b = ${row}?.querySelector('.period-row-change-task'); if (!b) return false; b.click(); return true })()`
+  )
+  await sleep(250)
+  const chosen = opened && (await choose(`${row}?.querySelector('.period-row-picker')`, label))
+  await sleep(1200)
+  await expandBlocks()
+  return chosen
+}
+
+/** 13. Split and reassign the seeded `develop` period (HTSK-23, 25..29, 33..40). */
+async function periodSection() {
+  const seeded = before.periods.find((p) => p.id === DEVELOP_ID)
+  const seededStart = new Date(seeded.start)
+  const at = (h, m = 0) =>
+    new Date(seededStart.getFullYear(), seededStart.getMonth(), seededStart.getDate(), h, m)
+  const dayStart = at(0).getTime()
+  const dayEnd = dayStart + 24 * 3600_000
+  const onDay = (snapshot) =>
+    snapshot.periods.filter((p) => Date.parse(p.start) < dayEnd && Date.parse(p.end) > dayStart)
+  const devHeader = dayHeader(at(0))
+  const NO_TASK = 'No task · acme-widgets'
+  const HAND = 'Assigned by hand (branch: develop)'
+
+  await nav('This week')
+  await sleep(300)
+  for (let i = 0; i < 2; i++) {
+    await nav('Previous week')
+    await sleep(300)
+  }
+  await clickHead(devHeader)
+  await sleep(400)
+  await expandBlocks()
+  const pre = await drawerGroups()
+  check(
+    'precondition: the develop day holds one No-task block of one 09:00–12:00 period, unmarked',
+    pre.length === 1 &&
+      pre[0].label === NO_TASK &&
+      pre[0].blocks.length === 1 &&
+      pre[0].blocks[0].range === '09:00–12:00' &&
+      pre[0].blocks[0].count === '1 period' &&
+      pre[0].rows.length === 1 &&
+      pre[0].rows[0].hand === null,
+    JSON.stringify(pre)
+  )
+
+  const first = periodRow(NO_TASK, '09:00:00')
+  await evaluate(`${first}?.querySelector('.period-row-split')?.click(), true`)
+  await sleep(300)
+  const splitField = '.hours-drawer .period-row-split-input'
+  const field = await evaluate(
+    `document.querySelector(${JSON.stringify(splitField)})?.value ?? null`
+  )
+  // The field drops `:00` seconds, so the instant is compared, not the text.
+  check(
+    "`Split at` opens on the period's midpoint, 10:30:00",
+    field !== null && new Date(field).getTime() === at(10, 30).getTime(),
+    `${field}`
+  )
+
+  const splitButton = `document.querySelector('.hours-drawer .period-row-split-form .period-row-btn.primary')`
+  await setInput(splitField, toLocal(at(9)))
+  await evaluate(`${splitButton}?.click(), true`)
+  await sleep(900)
+  const refusedError = await evaluate(
+    `document.querySelector('.hours-drawer .period-row-error')?.textContent ?? null`
+  )
+  const refused = await drawerGroups()
+  const refusedLog = onDay(await invoke('time:snapshot'))
+  check(
+    "splitting at the period's start is refused and leaves one period",
+    refusedError === 'Split time must be inside the period.' &&
+      refused[0]?.blocks[0]?.count === '1 period' &&
+      refusedLog.length === 1,
+    `${refusedError}; ${refused[0]?.blocks[0]?.count}; ${refusedLog.length} in the log`
+  )
+
+  await setInput(splitField, toLocal(at(10)))
+  await evaluate(`${splitButton}?.click(), true`)
+  await until(
+    `document.querySelector('.hours-drawer .hours-block-count')?.textContent === '2 periods'`
+  )
+  await expandBlocks()
+  const split = await drawerGroups()
+  const parts = onDay(await invoke('time:snapshot'))
+  check(
+    'splitting at 10:00:00 gives two periods on develop, the seed keeping its id and 09:00–10:00',
+    split[0]?.blocks[0]?.count === '2 periods' &&
+      JSON.stringify(split[0].rows.map((r) => r.range)) ===
+        JSON.stringify(['09:00:00–10:00:00', '10:00:00–12:00:00']) &&
+      parts.length === 2 &&
+      parts.some((p) => p.id === DEVELOP_ID && p.end === at(10).toISOString()) &&
+      parts.some((p) => p.id !== DEVELOP_ID && p.start === at(10).toISOString()) &&
+      parts.every((p) => p.branch === 'develop'),
+    `${JSON.stringify(split[0]?.rows.map((r) => r.range))}; ${JSON.stringify(parts.map((p) => [p.id, p.branch]))}`
+  )
+
+  const toFirst = await reassignRow(NO_TASK, '09:00:00', '#9201')
+  const moved = await drawerGroups()
+  const movedChips = await legendLabels()
+  const groupOf = (list, label) => list.find((g) => g.label === label)
+  check(
+    'the first part moved to #9201 makes a 1h00 task group beside a 2h00 No-task one, with its chip',
+    toFirst &&
+      moved.length === 2 &&
+      groupOf(moved, 'Task #9201')?.total === '1h00' &&
+      groupOf(moved, NO_TASK)?.total === '2h00' &&
+      movedChips.includes('Task #9201'),
+    `${JSON.stringify(moved.map((g) => [g.label, g.total]))}; chips ${movedChips.join(' | ')}`
+  )
+  const markedRow = groupOf(moved, 'Task #9201')?.rows[0]
+  const plainRows = groupOf(moved, NO_TASK)?.rows ?? []
+  check(
+    'the moved part wears the hand mark naming its branch, the No-task part none',
+    markedRow?.hand?.title === HAND &&
+      markedRow.hand.aria === HAND &&
+      plainRows.length === 1 &&
+      plainRows[0].hand === null,
+    `${JSON.stringify(markedRow?.hand)}; ${JSON.stringify(plainRows.map((r) => r.hand))}`
+  )
+
+  const toSecond = await reassignRow(NO_TASK, '10:00:00', '#9202')
+  const both = await drawerGroups()
+  const bothChips = await legendLabels()
+  check(
+    'the second part moved to #9202 leaves two task groups, no No-task group or chip, both marked',
+    toSecond &&
+      JSON.stringify(both.map((g) => g.label).sort()) ===
+        JSON.stringify(['Task #9201', 'Task #9202']) &&
+      !bothChips.includes(NO_TASK) &&
+      bothChips.includes('Task #9202') &&
+      both.every((g) => g.rows.length === 1 && g.rows[0].hand?.title === HAND),
+    `${JSON.stringify(both.map((g) => [g.label, g.rows.map((r) => r.hand?.title ?? null)]))}; chips ${bothChips.join(' | ')}`
+  )
+
+  const back = await reassignRow('Task #9201', '09:00:00', 'From branch')
+  const returned = await drawerGroups()
+  const seedAfter = (await invoke('time:snapshot')).periods.find((p) => p.id === DEVELOP_ID)
+  const returnedRow = groupOf(returned, NO_TASK)?.rows.find((r) => r.range.startsWith('09:00:00'))
+  check(
+    'From branch moves the first part back to No task, unmarked, with no flag and its branch kept',
+    back &&
+      returnedRow !== undefined &&
+      returnedRow.hand === null &&
+      seedAfter?.taskId === null &&
+      seedAfter.taskTitle === null &&
+      !('taskByHand' in seedAfter) &&
+      seedAfter.branch === 'develop',
+    `${JSON.stringify(returned.map((g) => g.label))}; ${JSON.stringify(seedAfter)}`
+  )
+
+  // A closed and a running row today: pausing and resuming the C:/Windows
+  // session closes its period and opens the next one in the same block.
+  await invoke('time:pause', { sessionId: sessionIds[0] })
+  await sleep(300)
+  await invoke('time:resume', { sessionId: sessionIds[0] })
+  await sleep(800)
+  await nav('This week')
+  await sleep(300)
+  await clickHead(todayHeader)
+  await sleep(400)
+  await expandBlocks()
+  const todayRows = (await drawerGroups()).flatMap((g) => g.rows)
+  const running = todayRows.filter((r) => r.open)
+  const closed = todayRows.filter((r) => !r.open)
+  check(
+    'a running row offers neither Change task nor Split at, a closed row both',
+    running.length >= 1 &&
+      closed.length >= 1 &&
+      running.every((r) => !r.change && !r.split) &&
+      closed.every((r) => r.change && r.split),
+    `${running.length} running, ${closed.length} closed: ${JSON.stringify(todayRows.map((r) => [r.open, r.change, r.split]))}`
+  )
+}
+
+/** A rail row, found by its tooltip: a detached row names its cwd, a worktree row its branch. */
+const railRow = (tooltipEnd) =>
+  `[...document.querySelectorAll('.rail-row')].find(r => (r.getAttribute('title') ?? '').endsWith(${JSON.stringify(tooltipEnd)}))`
+/** The rail group holding `row`: its task id (null for an orphan) and its note. */
+const railGroupOf = (row) =>
+  evaluate(
+    `(() => { const g = ${row}?.closest('.rail-group'); if (!g) return null; return { id: g.querySelector('.rail-group-id')?.textContent ?? null, note: g.querySelector('.rail-group-note')?.textContent ?? null } })()`
+  )
+/** Right-clicks `row`, then its menu's `Change task…`; answers the menu's item texts. */
+async function rowChangeTask(row) {
+  await evaluate(
+    `(() => { const r = ${row}; if (!r) return false; const b = r.getBoundingClientRect(); r.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX: b.x + 40, clientY: b.y + b.height / 2 })); return true })()`
+  )
+  await sleep(250)
+  const items = await evaluate(
+    `[...document.querySelectorAll('.rail-ctx-menu .rail-ctx-item')].map(i => i.textContent.trim())`
+  )
+  await evaluate(`document.querySelector('.rail-ctx-menu .rail-change-task')?.click(), true`)
+  await sleep(300)
+  return items
+}
+const RAIL_PICKER = `document.querySelector('.task-picker.task-picker-at')`
+const STRIP_HOST = `document.querySelector('.agents-strip-task-host')`
+
+/** 14. Link the C:/Windows session from its rail row and its strip (HTSK-11..14, 17..19). */
+async function railSection() {
+  const id = sessionIds[0]
+  const row = railRow(` · ${FOLDERS[0]}`)
+  const openOf = async () =>
+    (await invoke('time:snapshot')).open.find((p) => p.sessionId === id) ?? null
+  const closedOf = async () =>
+    (await invoke('time:snapshot')).periods.filter(
+      (p) => p.sessionId === id && !knownPeriods.has(p.id)
+    )
+  const persisted = async () => (await invoke('config:get')).sessions.find((s) => s.id === id)
+
+  await reloadInto('agents')
+  await until(`${row} !== undefined`, 40)
+  const group0 = await railGroupOf(row)
+  const open0 = await openOf()
+  check(
+    'precondition: the C:/Windows session sits in a detached orphan group, its open period with no task',
+    group0?.id === null && group0.note === 'detached · Windows' && open0?.taskId === null,
+    `${JSON.stringify(group0)}; open task ${open0?.taskId}`
+  )
+
+  const items = await rowChangeTask(row)
+  const entries = await evaluate(
+    `[...(${RAIL_PICKER}?.querySelectorAll('.task-picker-entry .task-picker-label') ?? [])].map(l => l.textContent)`
+  )
+  check(
+    'right-clicking its row offers `Change task…`, opening a picker with From branch and both pins, no No task',
+    JSON.stringify(items) === JSON.stringify(['Change task…']) &&
+      JSON.stringify(entries) === JSON.stringify(['From branch', '#9201', '#9202']),
+    `${JSON.stringify(items)}; ${JSON.stringify(entries)}`
+  )
+
+  const linked = await choose(RAIL_PICKER, '#9201')
+  await sleep(1200)
+  const group1 = await railGroupOf(row)
+  check(
+    'choosing #9201 puts its row in the group headed #9201, out of every orphan group',
+    linked && group1?.id === '#9201' && group1.note === null,
+    JSON.stringify(group1)
+  )
+
+  const open1 = await openOf()
+  const previous = (await closedOf()).find((p) => p.id === open0?.id)
+  check(
+    'its open period records 9201 with the flag, and the one before ends where it starts',
+    open1?.taskId === 9201 &&
+      open1.taskByHand === true &&
+      open1.id !== open0?.id &&
+      previous !== undefined &&
+      previous.taskId === null &&
+      previous.end === open1.start,
+    `open ${JSON.stringify(open1 && [open1.taskId, open1.taskByHand, open1.start])}; previous ${JSON.stringify(previous && [previous.taskId, previous.end])}`
+  )
+
+  const saved = await persisted()
+  check(
+    'the config holds the session linked to 9201',
+    saved?.task?.id === 9201,
+    JSON.stringify(saved?.task)
+  )
+
+  // Past the 1 s floor, so a needless close would leave a period behind.
+  await sleep(1500)
+  const closedBefore = (await closedOf()).length
+  await rowChangeTask(row)
+  const again = await choose(RAIL_PICKER, '#9201')
+  await sleep(1200)
+  const closedAfter = (await closedOf()).length
+  const open2 = await openOf()
+  check(
+    'choosing #9201 again closes and opens nothing',
+    again && closedAfter === closedBefore && open2?.id === open1?.id,
+    `closed ${closedBefore} → ${closedAfter}; open ${open1?.id === open2?.id ? 'kept' : 'replaced'}`
+  )
+
+  await evaluate(`${row}?.click(), true`)
+  await sleep(600)
+  const strip = await evaluate(`document.querySelector('.agents-strip-task')?.textContent ?? null`)
+  await evaluate(`document.querySelector('.agents-strip-task-btn')?.click(), true`)
+  await sleep(300)
+  const unlinked = await choose(STRIP_HOST, 'From branch')
+  await sleep(1200)
+  const group3 = await railGroupOf(row)
+  const open3 = await openOf()
+  const saved3 = await persisted()
+  check(
+    "its strip shows #9201, and the strip's From branch puts it back in the orphan group with no task anywhere",
+    strip === '#9201' &&
+      unlinked &&
+      group3?.id === null &&
+      group3.note === 'detached · Windows' &&
+      open3?.taskId === null &&
+      saved3 !== undefined &&
+      !('task' in saved3),
+    `strip ${strip}; ${JSON.stringify(group3)}; open task ${open3?.taskId}; saved ${JSON.stringify(saved3?.task)}`
+  )
+}
+
+const DIALOG = `document.querySelector('.dialog-panel')`
+const dialogTask = () => evaluate(`${DIALOG}?.querySelector('.ns-task-value')?.textContent ?? null`)
+const cancelDialog = () =>
+  evaluate(
+    `[...(${DIALOG}?.querySelectorAll('.dialog-btn-ghost') ?? [])].find(b => b.textContent.trim() === 'Cancel')?.click(), true`
+  )
+
+/** 15. The new-session dialog's Task field (HTSK-07..11, 13, 36). */
+async function dialogSection() {
+  const ADHOC = 'pwsh -NoLogo -NoProfile'
+  const BRANCH = 'feature/9202-seed'
+  await evaluate(`document.querySelector('.session-rail-new')?.click(), true`)
+  await sleep(400)
+  const fromAgents = await dialogTask()
+  await cancelDialog()
+  await sleep(300)
+  check(
+    'the Agents `New` button opens the dialog with Task `From branch`',
+    fromAgents === 'From branch',
+    `${fromAgents}`
+  )
+
+  const card = `[...document.querySelectorAll('.task-card')].find(c => c.querySelector('.task-card-id')?.textContent === '#9202')`
+  await reloadInto('tree')
+  await until(`${card}?.querySelector('.task-agent-btn')?.disabled === false`, 40)
+  await evaluate(`${card}?.querySelector('.task-agent-btn')?.click(), true`)
+  await sleep(400)
+  const fromCard = await dialogTask()
+  check(
+    "pinned #9202's Agent button, its worktree existing, opens the dialog with Task `#9202`",
+    fromCard === '#9202',
+    `${fromCard}`
+  )
+
+  await evaluate(`${DIALOG}?.querySelector('.ns-agent-chip.adhoc')?.click(), true`)
+  await sleep(200)
+  await setInput('.dialog-panel .ns-adhoc-input', ADHOC)
+  await sleep(150)
+  await evaluate(`${DIALOG}?.querySelector('.ns-task-change')?.click(), true`)
+  await sleep(250)
+  const picked = await choose(`${DIALOG}?.querySelector('.ns-task')`, '#9201')
+  await sleep(250)
+  const form = await evaluate(
+    `(() => { const d = ${DIALOG}; return d ? { adhoc: d.querySelector('.ns-agent-chip.adhoc')?.classList.contains('selected') ?? false, command: d.querySelector('.ns-adhoc-input')?.value ?? null, cwd: d.querySelector('.ns-cwd-chip.selected .ns-cwd-branch')?.textContent ?? null, task: d.querySelector('.ns-task-value')?.textContent ?? null, run: d.querySelector('.dialog-path-value')?.textContent ?? null } : null })()`
+  )
+  // Spawn only the ad-hoc shell: a registry agent would start a real CLI.
+  const safe = form?.adhoc === true && form.command === ADHOC && (form.run ?? '').startsWith(ADHOC)
+  const known = new Set((await invoke('sessions:list')).map((v) => v.id))
+  if (safe) {
+    await evaluate(`${DIALOG}?.querySelector('.dialog-btn-primary')?.click(), true`)
+  } else {
+    await cancelDialog()
+  }
+  await sleep(1500)
+  const spawned = (await invoke('sessions:list')).filter((v) => !known.has(v.id))
+  for (const v of spawned) sessionIds.push(v.id)
+  const id = spawned[0]?.id
+  const worktree = (await invoke('tree:get'))
+    .flatMap((w) => w.repos.flatMap((r) => r.worktrees))
+    .find((wt) => wt.branch === BRANCH)
+  const openOf = async () =>
+    (await invoke('time:snapshot')).open.find((p) => p.sessionId === id) ?? null
+  const open3 = await openOf()
+  check(
+    'an ad-hoc spawn in the #9202 worktree with #9201 chosen records 9201, flagged, on its branch',
+    safe &&
+      picked &&
+      form.cwd === BRANCH &&
+      form.task === '#9201' &&
+      spawned.length === 1 &&
+      open3?.taskId === 9201 &&
+      open3.taskByHand === true &&
+      open3.branch === BRANCH &&
+      worktree !== undefined &&
+      open3.cwd.toLowerCase() === worktree.path.toLowerCase(),
+    `${JSON.stringify(form)}; ${spawned.length} spawned; open ${JSON.stringify(open3 && [open3.taskId, open3.taskByHand, open3.branch])}`
+  )
+
+  const row = railRow(` · ${BRANCH}`)
+  await until(`${row} !== undefined`, 40)
+  const group3 = await railGroupOf(row)
+  check(
+    'its rail row sits under #9201, not under #9202',
+    group3?.id === '#9201',
+    JSON.stringify(group3)
+  )
+
+  await evaluate(`${row}?.click(), true`)
+  await sleep(600)
+  const strip = await evaluate(`document.querySelector('.agents-strip-task')?.textContent ?? null`)
+  await evaluate(`document.querySelector('.agents-strip-task-btn')?.click(), true`)
+  await sleep(300)
+  const unlinked = await choose(STRIP_HOST, 'From branch')
+  await sleep(1200)
+  const open4 = await openOf()
+  const group4 = await railGroupOf(row)
+  check(
+    "its strip's From branch records its branch's 9202 with no flag and moves its row under #9202",
+    strip === '#9201' &&
+      unlinked &&
+      open4?.taskId === 9202 &&
+      !('taskByHand' in open4) &&
+      open4.id !== open3?.id &&
+      group4?.id === '#9202',
+    `strip ${strip}; open ${JSON.stringify(open4 && [open4.taskId, open4.taskByHand])}; ${JSON.stringify(group4)}`
+  )
+}
+
+try {
+  for (const cwd of FOLDERS) {
+    const view = await invoke('sessions:spawn', {
+      agentName: 'Ad-hoc',
+      cwd,
+      adhocCommand: 'pwsh -NoLogo -NoProfile'
+    })
+    sessionIds.push(view.id)
+  }
+  await sleep(1500)
+  await reloadInto('hours')
+  await waitFor(`document.querySelector('.hcal') !== null`, 'the calendar')
+  await sleep(500)
+
+  // SMOKE_ONLY=assign skips sections 1 to 12: nothing in 13 to 15 reads them.
+  if (ONLY !== 'assign') await calendarSections()
+  await periodSection()
+  await railSection()
+  await dialogSection()
 } finally {
   for (const id of sessionIds) {
     await invoke('sessions:stop', { id }).catch(() => {})
@@ -992,7 +1543,9 @@ try {
 }
 
 const failed = checks.filter((c) => !c.ok)
-console.log(`\n${checks.length - failed.length}/${checks.length} checks passed`)
+console.log(
+  `\n${checks.length - failed.length}/${checks.length} checks passed${ONLY === 'assign' ? ' (sections 13 to 15 only)' : ''}`
+)
 if (failed.length > 0) {
   console.log(`Seeded data left in place for inspection: ${seededDir}`)
   process.exit(1)

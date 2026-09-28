@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SEEDED_AGENTS } from '../shared/agents'
 import type { PersistedSession } from '../shared/config'
+import type { SessionTask } from '../shared/tasks'
 import type { ActivityChange } from './activity-notification'
 import { ConfigStore } from './config-store'
 import type { PtyHandle, PtyPort } from './pty-port'
@@ -505,7 +506,8 @@ describe('SessionManager lifecycle observer', () => {
       fsExists: () => true,
       lifecycle: {
         started: (meta) => calls.push(`started:${meta.id}:${meta.agent}:${meta.cwd}`),
-        ended: (id) => calls.push(`ended:${id}`)
+        ended: (id) => calls.push(`ended:${id}`),
+        taskChanged: (id, task) => calls.push(`taskChanged:${id}:${task?.id ?? null}`)
       }
     })
     return { manager, calls, port }
@@ -561,6 +563,129 @@ describe('SessionManager lifecycle observer', () => {
     const { manager, calls } = withObserver(failing)
     expect(() => manager.spawn('Claude', CWD)).toThrow(/shell not found/)
     expect(calls).toEqual([])
+  })
+})
+
+describe('SessionManager task link', () => {
+  const LINK: SessionTask = { id: 12345, title: 'Fix login redirect' }
+
+  /** A manager over `dir` (a fresh temp dir when absent) recording every lifecycle call. */
+  function linked(dir?: string): {
+    manager: SessionManager
+    config: ConfigStore
+    port: ReturnType<typeof fakePort>
+    started: PersistedSession[]
+    changed: Array<[string, SessionTask | null]>
+    dir: string
+  } {
+    const root = dir ?? mkdtempSync(join(tmpdir(), 'sm-task-'))
+    if (!dir) dirs.push(root)
+    const config = new ConfigStore(root)
+    const port = fakePort()
+    const started: PersistedSession[] = []
+    const changed: Array<[string, SessionTask | null]> = []
+    const manager = new SessionManager({
+      port,
+      config,
+      emit: recordingEmit() as unknown as EmitFn,
+      fsExists: () => true,
+      lifecycle: {
+        started: (meta) => started.push(meta),
+        ended: () => {},
+        taskChanged: (id, task) => changed.push([id, task])
+      }
+    })
+    return { manager, config, port, started, changed, dir: root }
+  }
+
+  const persisted = (config: ConfigStore, id: string): PersistedSession | undefined =>
+    config.get().sessions.find((s) => s.id === id)
+
+  it('spawn with a task persists it and hands it to the tracker (HTSK-09, HTSK-17)', () => {
+    const { manager, config, started } = linked()
+
+    const view = manager.spawn('Claude', CWD, undefined, LINK)
+
+    expect(persisted(config, view.id)?.task).toEqual(LINK)
+    expect(view.task).toEqual(LINK)
+    expect(started.map((m) => m.task)).toEqual([LINK])
+  })
+
+  it('an ad-hoc spawn with a task persists it and hands it to the tracker (HTSK-09, HTSK-17)', () => {
+    const { manager, config, started } = linked()
+
+    const view = manager.spawn('Ad-hoc', CWD, 'pwsh -NoLogo -NoProfile', LINK)
+
+    expect(persisted(config, view.id)?.task).toEqual(LINK)
+    expect(started.map((m) => m.task)).toEqual([LINK])
+  })
+
+  it('setTask persists the link, returns it on the view and tells the tracker (HTSK-12)', () => {
+    const { manager, config, changed } = linked()
+    const view = manager.spawn('Claude', CWD)
+
+    const updated = manager.setTask(view.id, LINK)
+
+    expect(persisted(config, view.id)?.task).toEqual(LINK)
+    expect(updated.task).toEqual(LINK)
+    expect(updated.status).toBe('running')
+    expect(changed).toEqual([[view.id, LINK]])
+  })
+
+  it('setTask(id, null) removes the task key and tells the tracker (HTSK-13)', () => {
+    const { manager, config, changed } = linked()
+    const view = manager.spawn('Claude', CWD, undefined, LINK)
+
+    const updated = manager.setTask(view.id, null)
+
+    expect(persisted(config, view.id)).not.toHaveProperty('task')
+    expect(updated).not.toHaveProperty('task')
+    expect(changed).toEqual([[view.id, null]])
+  })
+
+  it('setTask on a stopped session persists the link and starts nothing (HTSK-16)', async () => {
+    const { manager, config, port, started } = linked()
+    const view = manager.spawn('Claude', CWD)
+    const stopping = manager.stop(view.id)
+    port.handles[0].emitExit(0)
+    await stopping
+    started.length = 0
+
+    const updated = manager.setTask(view.id, LINK)
+
+    expect(persisted(config, view.id)?.task).toEqual(LINK)
+    expect(updated.status).toBe('stopped')
+    expect(port.handles).toHaveLength(1)
+    expect(started).toEqual([])
+  })
+
+  it('setTask on an unknown id throws', () => {
+    const { manager } = linked()
+    expect(() => manager.setTask('nope', LINK)).toThrow('Unknown session: nope')
+  })
+
+  it('a restarted manager lists the link and respawn hands it to the tracker (HTSK-16, HTSK-17)', () => {
+    const first = linked()
+    const view = first.manager.spawn('Claude', CWD)
+    first.manager.setTask(view.id, LINK)
+
+    const second = linked(first.dir)
+
+    expect(second.manager.list().find((s) => s.id === view.id)?.task).toEqual(LINK)
+    second.manager.respawn(view.id)
+    expect(second.started.map((m) => [m.id, m.task])).toEqual([[view.id, LINK]])
+  })
+
+  it('duplicate of a linked session persists the copy with the same link (HTSK-22)', () => {
+    const { manager, config, started } = linked()
+    const src = manager.spawn('Claude', CWD, undefined, LINK)
+    started.length = 0
+
+    const copy = manager.duplicate(src.id)
+
+    expect(copy.id).not.toBe(src.id)
+    expect(persisted(config, copy.id)?.task).toEqual(LINK)
+    expect(started.map((m) => [m.id, m.task])).toEqual([[copy.id, LINK]])
   })
 })
 
@@ -779,7 +904,8 @@ describe('SessionManager activity transitions', () => {
         cwd: CWD,
         before: null,
         after: { state: 'working', subagents: 0 },
-        attached: false
+        attached: false,
+        task: null
       }
     ])
   })
@@ -1069,5 +1195,19 @@ describe('SessionManager — session names (AD-040)', () => {
 
     expect(manager.list()[0].name).toBe('alpha')
     expect(nameEvents(emit)).toEqual([{ id: view.id, name: 'alpha' }])
+  })
+})
+
+describe('SessionManager activity transitions of a linked session', () => {
+  it('reports the task set by setTask on the next transition (HTSK-21)', () => {
+    const changes: ActivityChange[] = []
+    const { manager } = makeManager({ onActivityChange: (change) => changes.push(change) })
+    const view = manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+
+    manager.setTask(view.id, { id: 4821, title: 'Diagnose login loop' })
+    manager.handleHookEvent(view.id, hookEvent('Stop'))
+
+    expect(changes.map((c) => c.task)).toEqual([null, { id: 4821, title: 'Diagnose login loop' }])
   })
 })

@@ -215,6 +215,39 @@
   min-width: 0;
 }
 
+/* The strip's task: a button opening the picker below it (HTSK-18). */
+.agents-strip-task-host {
+  position: relative;
+  min-width: 0;
+  display: inline-flex;
+}
+
+.agents-strip-task-btn {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 2px 7px;
+  margin: -2px -7px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.agents-strip-task-btn:hover,
+.agents-strip-task-btn:focus-visible {
+  border-color: var(--border);
+  background: var(--panel);
+}
+
+.agents-strip-no-task {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
 .agents-strip-tag {
   font-size: 10px;
   font-weight: 700;
