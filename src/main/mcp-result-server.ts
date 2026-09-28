@@ -189,6 +189,10 @@ export function createMcpResultServer(): McpResultServer {
         await reg.server.close()
       }
       registrations.clear()
+      // The server starts on a workflow's first agent step, but quit stops it every
+      // time, and close() on a server that is not listening rejects with "Server is
+      // not running" (RSTP-01..03).
+      if (!httpServer.listening) return
       await new Promise<void>((resolve, reject) => {
         httpServer.close((err) => (err ? reject(err) : resolve()))
       })
