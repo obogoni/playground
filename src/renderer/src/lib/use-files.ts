@@ -18,7 +18,16 @@ import type { LaunchResult } from '../../../shared/shortcuts'
 import { api } from './api'
 import { mergePages } from './commit-view'
 import { diffRequestFor, tabKeyOf, tabsWithAllChanges, type DiffMode } from './diff-view'
-import { filesStateFor, launcherTarget, tabsAfterClose, tabsAffected } from './files-view'
+import {
+  filesStateFor,
+  launcherTarget,
+  pinTab,
+  tabsAfterBulkClose,
+  tabsAfterClose,
+  tabsAffected,
+  unpinTab,
+  type BulkClose
+} from './files-view'
 
 /** One open file (FXPL-18): what was read for it, and when it was last picked. */
 export interface FileTab {
@@ -62,8 +71,11 @@ export interface CommitTab {
   at: number
 }
 
-/** Everything the tab strip can hold: the open tabs, plus the fixed one. */
-export type ViewTab = FileTab | DiffTab | CommitTab
+/**
+ * Everything the tab strip can hold: the open tabs, plus the fixed one. Any
+ * open tab can be pinned (FPOL-01); absent means unpinned.
+ */
+export type ViewTab = (FileTab | DiffTab | CommitTab) & { pinned?: boolean }
 export type StripTab = ViewTab | { kind: 'all-changes' }
 
 /**
@@ -176,6 +188,10 @@ export interface UseFiles {
   openCommitInBrowser: (sha: string) => Promise<LaunchResult>
   focusTab: (key: string) => void
   closeTab: (key: string) => void
+  /** Pins an unpinned tab or unpins a pinned one; the focus stays where it is (FPOL-01/03/04). */
+  togglePin: (key: string) => void
+  /** One of the strip's bulk closes, on the selected worktree's tabs (FPOL-06..11). */
+  closeTabs: (action: BulkClose) => void
 }
 
 /**
@@ -687,6 +703,39 @@ export function useFiles({
     [worktreePath, patchFiles, mode]
   )
 
+  // Pins live on the worktree's tabs, so each worktree keeps its own (FXPL-18).
+  const togglePin = useCallback(
+    (key: string): void => {
+      if (!worktreePath) return
+      patchFiles(worktreePath, (s) => {
+        const tab = s.tabs.find((open) => tabKeyOf(open) === key)
+        if (!tab) return {}
+        return { tabs: tab.pinned ? unpinTab(s.tabs, key) : pinTab(s.tabs, key) }
+      })
+    },
+    [worktreePath, patchFiles]
+  )
+
+  const closeTabs = useCallback(
+    (action: BulkClose): void => {
+      if (!worktreePath) return
+      patchFiles(worktreePath, (s) => {
+        // The strip, as for one close: the rule has to see All changes to
+        // spare it and to hand it the focus (FDIF-17).
+        const strip = tabsWithAllChanges(s.tabs, mode).map((tab) => ({
+          key: tabKeyOf(tab),
+          pinned: 'pinned' in tab && tab.pinned === true
+        }))
+        const after = tabsAfterBulkClose(strip, s.activeTab, action)
+        return {
+          tabs: s.tabs.filter((tab) => after.keys.includes(tabKeyOf(tab))),
+          activeTab: after.active
+        }
+      })
+    },
+    [worktreePath, patchFiles, mode]
+  )
+
   // `tabsWithAllChanges` is generic over what the strip holds and widens its
   // element type to `TabRef`; nothing it returns is anything but one of the
   // open tabs or the fixed one, which is exactly `StripTab`.
@@ -738,7 +787,9 @@ export function useFiles({
     loadMoreCommits,
     openCommitInBrowser,
     focusTab,
-    closeTab
+    closeTab,
+    togglePin,
+    closeTabs
   }
 }
 
