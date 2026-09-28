@@ -431,7 +431,7 @@ T15 → T16
 
 ## Fix Round 1 (verifier round 1: FAIL on test evidence)
 
-The Verifier found every AC met in code; a smoke mutant removing the bars' leave and focus handlers and the drawer headers' leave handler passed all 48 checks (L-051, L-052), and the palette's exact values were never asserted (L-053).
+The Verifier found every AC met in code; a smoke mutant removing the bars' leave and focus handlers and the drawer headers' leave handler passed all 48 checks (L-060, L-061), and the palette's exact values were never asserted (L-062).
 
 ### T14: Smoke — leaving each source, focusing a bar, the exact palette
 
@@ -485,7 +485,7 @@ The Verifier found every AC met in code; a smoke mutant removing the bars' leave
 
 ## Fix Round 2 (verifier round 2: FAIL on one minor gap)
 
-The round-1 gaps closed; the edge case T15 added was checked only for the picked chip's presence, so a chip painted slot 1 with a 1 min total survived (L-054), and the spec quoted `0m` where the legend renders `0h00` (L-055).
+The round-1 gaps closed; the edge case T15 added was checked only for the picked chip's presence, so a chip painted slot 1 with a 1 min total survived (L-063), and the spec quoted `0m` where the legend renders `0h00` (L-064).
 
 ### T16: Smoke and spec — the kept chip's total, swatch and ×
 

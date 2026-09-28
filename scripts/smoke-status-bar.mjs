@@ -1,4 +1,4 @@
-/* CDP smoke for the status bar (STBR-01..32). Drives the bar and both popovers
+/* CDP smoke for the status bar (STBR-01..29, 31). Drives the bar and the sync popover
  * through the states the unit tests cannot reach, against real git: a temp
  * workspace whose repo clones a temp BARE remote, plus a second bare remote.
  * Nothing here touches a real remote — every push goes to a bare repo under
@@ -17,25 +17,45 @@
  *   <tmp>/acme-workspace/acme-gizmo  a second repo with no remote at all
  *   <tmp>/other       a second clone that pushes the "remote" commits
  *   <tmp>/loose       a plain folder, the cwd of the non-worktree session
+ *   <tmp>/wt/scrf     added mid-run: the counter follows a terminal commit,
+ *                     focus and a turn end (SCRF-01/07/09/10)
+ *   <tmp>/fakebin     a fake `claude.cmd` that only records its hook token
  *
- * Sessions: ad-hoc `pwsh -NoLogo` sessions only (never a registry agent, never
- * any input sent). Only the sessions this script spawned are stopped/removed.
+ * Sessions: ad-hoc `pwsh -NoLogo` sessions, plus one session of a throwaway
+ * agent whose command is the fake `claude.cmd` above: never a real agent,
+ * never any input sent. Only the sessions this script spawned are
+ * stopped/removed, and the throwaway agent is removed on the way out.
  *
- * Owner state: the dev app runs on the owner's real user data, so the UI
- * direction, theme, workspace list and the Agents selection are snapshotted
- * first and restored in a `finally`, even on failure.
+ * Owner state: run the dev app on a throwaway --user-data-dir, never the
+ * owner's real one. The UI direction, theme, workspace list and the Agents
+ * selection are still snapshotted first and restored in a `finally`, even on
+ * failure.
  *
  * Screenshots (light + dark) go to %TEMP%\status-bar-smoke\ — never the repo.
  *
  * NOT automatable here (hand-verify from the screenshots): both themes read
- * well; the middle ellipsis looks right; the popovers sit above the bar.
+ * well; the middle ellipsis looks right; the sync popover sits above the bar.
  *
- * Run: npm run dev -- -- --remote-debugging-port=9222   (in one shell)
+ * The changed-file counter's click is not driven here: since FXPL-31 it opens
+ * the Files direction in uncommitted mode instead of a popover (STBR-30 and
+ * STBR-32 are superseded), and scripts/smoke-files.mjs covers it in step 15,
+ * "The status-bar counter lands in Files". This script reads the counter only.
+ *
+ * Run: npm run dev -- -- --user-data-dir=<a throwaway dir> --remote-debugging-port=9222
+ *                                                      (in one shell)
  *      node scripts/smoke-status-bar.mjs                  (in another)
  */
 
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 
@@ -57,6 +77,9 @@ const TARGET_TITLE = 'stbr-smoke target'
 const FOLDER_TITLE = 'stbr-smoke folder'
 const SUBFOLDER_TITLE = 'stbr-smoke subfolder'
 const DUMMY_TITLE = 'stbr-smoke nudge'
+const SCRF_BRANCH = 'user/dev/4821-fix-login/12350-counter-refresh'
+const TURN_TITLE = 'stbr-smoke turn end'
+const FAKE_AGENT = 'Fake claude (status bar smoke)'
 /** A window narrow enough that LONG_BRANCH overflows 70% of the bar (STBR-06). */
 const NARROW_WIDTH = 900
 
@@ -178,8 +201,10 @@ const wtDir = {
   pub: join(root, 'wt', 'publish'),
   detached: join(root, 'wt', 'detached'),
   gone: join(root, 'wt', 'gone'),
-  many: join(root, 'wt', 'many')
+  many: join(root, 'wt', 'many'),
+  scrf: join(root, 'wt', 'scrf')
 }
+const fakeBin = join(root, 'fakebin')
 
 function seed() {
   git(root, 'init', '-q', '--bare', '-b', 'main', originBare)
@@ -236,7 +261,7 @@ function seed() {
   for (let i = 1; i <= MANY_COMMITS; i++) commit(other, 'many.txt', `Remote batch commit ${i}`)
   git(other, 'push', '-q')
 
-  // The primary checkout carries one change of each status (STBR-30).
+  // The primary checkout carries one change of each status: the counter reads 5 (STBR-29).
   writeFileSync(join(primary, 'modify-me.txt'), 'changed\n')
   unlinkSync(join(primary, 'delete-me.txt'))
   git(primary, 'mv', 'rename-me.txt', 'renamed.txt')
@@ -443,7 +468,7 @@ const waitOutcome = async (ws) => {
 const closePopovers = (ws) => evaluate(ws, `(document.body.click(), true)`)
 
 /** Let every running CSS animation (popIn, toastIn) finish before reading or shooting. */
-const settle = (ws, selector = '.sync-pop, .changes-pop, .toast') =>
+const settle = (ws, selector = '.sync-pop, .toast') =>
   evaluate(
     ws,
     `Promise.race([
@@ -529,6 +554,7 @@ const owner = JSON.parse(
 const mine = [] // session ids this script spawned
 let ownerTreeSelection = null
 let registered = false
+let fakeAgentRegistered = false
 
 async function spawn(cwd, title) {
   const id = await evaluate(
@@ -896,83 +922,21 @@ async function main() {
   )
   await closePopovers(ws)
 
-  // --- Changes popover: all five statuses (STBR-29, 30) ---
+  // --- The counter follows the git state, focus and a turn end (SCRF-01, 07, 09, 10) ---
+  await counterRefresh()
+
+  // --- The counter: five changed files, and 0 on a clean worktree (STBR-29, 31) ---
   await selectWorktree(ws, 'main')
   b = await bar(ws)
   check('the primary checkout counts five changed files (STBR-29)', b.changes === '5', b.changes)
-  await evaluate(ws, `(document.querySelector('button.status-bar-changes').click(), true)`)
-  const rows = await waitFor(
-    ws,
-    `JSON.stringify([...document.querySelectorAll('.changes-pop .changes-pop-row')].map((r) => {
-       const pill = r.querySelector('.changes-pop-pill')
-       return { label: pill?.textContent, cls: pill?.className, path: r.querySelector('.changes-pop-path')?.textContent }
-     }))`,
-    (v) => v.length > 0
-  )
-  await settle(ws)
-  const changesLayer = JSON.parse(await evaluate(ws, TOPMOST('.changes-pop')))
-  check(
-    'the changes popover is the topmost layer across its whole box, fully opaque',
-    changesLayer.covered === 0 && changesLayer.opacity === '1',
-    JSON.stringify(changesLayer)
-  )
-  const labels = rows.map((r) => r.label).sort()
-  check(
-    'the changes popover shows Modified, Added, Deleted, Renamed and Untracked (STBR-30)',
-    labels.join() === 'Added,Deleted,Modified,Renamed,Untracked' &&
-      rows.every((r) => r.cls.includes(r.label.toLowerCase())),
-    rows.map((r) => `${r.label}:${r.path}`).join(', ')
-  )
-  // React keeps a node's handlers on its `__reactProps$…` key, so a row wired
-  // to a click shows up here even though the DOM carries no onclick attribute.
-  const inert = JSON.parse(
-    await evaluate(
-      ws,
-      `(() => {
-         const pop = document.querySelector('.changes-pop')
-         const rows = [...pop.querySelectorAll('.changes-pop-row')]
-         const nodes = [...pop.querySelectorAll('.changes-pop-list, .changes-pop-list *')]
-         const handlers = nodes.filter((el) => {
-           const key = Object.keys(el).find((k) => k.startsWith('__reactProps'))
-           const props = key ? el[key] : {}
-           return Object.keys(props).some((k) => /^on(Click|MouseDown|MouseUp|DoubleClick|KeyDown|ContextMenu)/.test(k))
-         })
-         return JSON.stringify({
-           rows: rows.length,
-           rowTags: [...new Set(rows.map((r) => r.tagName))],
-           controls: pop.querySelectorAll('button, a, input, select, [role=button], [role=link], [tabindex], [onclick]').length,
-           handlers: handlers.map((el) => el.className)
-         })
-       })()`
-    )
-  )
-  check(
-    'no changed-file row is, or holds, a control or a click handler (STBR-32)',
-    inert.rows === 5 &&
-      inert.rowTags.join() === 'DIV' &&
-      inert.controls === 0 &&
-      inert.handlers.length === 0,
-    JSON.stringify(inert)
-  )
-  await closePopovers(ws)
 
-  // --- A clean worktree: counter 0, popover says so (STBR-31) ---
   await selectWorktree(ws, PUBLISH_BRANCH)
   b = await bar(ws)
-  await evaluate(ws, `(document.querySelector('button.status-bar-changes').click(), true)`)
-  const emptyText = await waitFor(
-    ws,
-    `JSON.stringify(document.querySelector('.changes-pop .changes-pop-empty')?.textContent ?? null)`,
-    (v) => v !== null && v !== 'Loading…'
-  )
   check(
-    'a clean worktree counts 0 and its popover says "No changes." (STBR-31)',
-    b.changes === '0' &&
-      emptyText === 'No changes.' &&
-      git(wtDir.pub, 'status', '--porcelain') === '',
-    `counter ${b.changes}; popover "${emptyText}"`
+    'a clean worktree counts 0 (STBR-31)',
+    b.changes === '0' && git(wtDir.pub, 'status', '--porcelain') === '',
+    `counter ${b.changes}`
   )
-  await closePopovers(ws)
 
   // --- Detached HEAD: its label, and no operation offered (STBR-08, 13) ---
   await selectWorktree(ws, detachedLabel)
@@ -1121,67 +1085,23 @@ async function main() {
     `counter before ${staleChanges} (porcelain ${porcelain}), after the Fetch ${b.changes}`
   )
 
-  // --- Dismissal: Escape and an outside click close either popover (edge case) ---
-  const POPS = `JSON.stringify({
-    sync: Boolean(document.querySelector('.sync-pop')),
-    changes: Boolean(document.querySelector('.changes-pop'))
-  })`
-  // A synthetic keydown on the body reaches the popovers' window listeners and
+  // --- Dismissal: Escape closes the sync popover (edge case) ---
+  const POPS = `JSON.stringify({ sync: Boolean(document.querySelector('.sync-pop')) })`
+  // A synthetic keydown on the body reaches the popover's window listener and
   // nothing focused, so no terminal ever receives it.
   const escape = () =>
     evaluate(
       ws,
       `(document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })), true)`
     )
-  const clickSync = () =>
-    evaluate(ws, `(document.querySelector('button.status-bar-sync').click(), true)`)
-  const clickChanges = () =>
-    evaluate(ws, `(document.querySelector('button.status-bar-changes').click(), true)`)
   let pops = JSON.parse(await evaluate(ws, POPS))
   const syncWasOpen = pops.sync
   await escape()
   pops = await waitFor(ws, POPS, (p) => !p.sync, 2000)
   check(
     'Escape closes the sync popover',
-    syncWasOpen && !pops.sync && !pops.changes,
+    syncWasOpen && !pops.sync,
     JSON.stringify({ before: syncWasOpen, after: pops })
-  )
-  await clickChanges()
-  const changesOpened = (await waitFor(ws, POPS, (p) => p.changes, 2000)).changes
-  await escape()
-  pops = await waitFor(ws, POPS, (p) => !p.changes, 2000)
-  check(
-    'Escape closes the changes popover',
-    changesOpened && !pops.changes && !pops.sync,
-    JSON.stringify({ before: changesOpened, after: pops })
-  )
-  await clickChanges()
-  const changesReopened = (await waitFor(ws, POPS, (p) => p.changes, 2000)).changes
-  await closePopovers(ws)
-  pops = await waitFor(ws, POPS, (p) => !p.changes, 2000)
-  check(
-    'a click outside closes the changes popover',
-    changesReopened && !pops.changes && !pops.sync,
-    JSON.stringify({ before: changesReopened, after: pops })
-  )
-
-  // --- One popover at a time (edge case) ---
-  await openSync(ws)
-  await clickChanges()
-  await sleep(300)
-  pops = await waitFor(ws, POPS, (p) => p.changes && !p.sync, 2000)
-  check(
-    'with the sync popover open, clicking the counter leaves only the changes popover open',
-    pops.changes && !pops.sync,
-    JSON.stringify(pops)
-  )
-  await clickSync()
-  await sleep(300)
-  pops = await waitFor(ws, POPS, (p) => p.sync && !p.changes, 2000)
-  check(
-    'with the changes popover open, clicking the sync section leaves only the sync popover open',
-    pops.sync && !pops.changes,
-    JSON.stringify(pops)
   )
   await closePopovers(ws)
   rmSync(join(wtDir.sync, 'tree-refresh-probe.txt'), { force: true })
@@ -1214,21 +1134,193 @@ async function main() {
     await waitFor(ws, POP, (p) => p.lists.every((l) => l.commits.length > 0))
     await shot(ws, `sync-popover-${theme}.png`)
     await closePopovers(ws)
-    await selectWorktree(ws, 'main')
-    await evaluate(ws, `(document.querySelector('button.status-bar-changes').click(), true)`)
-    await waitFor(
-      ws,
-      `JSON.stringify(document.querySelectorAll('.changes-pop-row').length)`,
-      (n) => n === 5
-    )
-    await shot(ws, `changes-popover-${theme}.png`)
-    await closePopovers(ws)
     await selectWorktree(ws, SYNC_BRANCH)
     const t = await toastFromClosedPopover(ws)
     if (t) await shot(ws, `toast-above-bar-${theme}.png`, { quick: true })
     else console.log(`      no toast appeared for the ${theme} screenshot`)
     await sleep(2400)
   }
+}
+
+/**
+ * Changed files in the SCRF worktree right now, as git sees them. Plain
+ * `status` rewrites the index (T1), which would trigger the very watcher
+ * these checks observe.
+ */
+const scrfChanges = () =>
+  git(wtDir.scrf, '--no-optional-locks', 'status', '--porcelain').split('\n').filter(Boolean).length
+
+/** A window focus as Chromium delivers it: blur first, then focus. */
+const fireFocus = (ws) =>
+  evaluate(
+    ws,
+    `(window.dispatchEvent(new Event('blur')), window.dispatchEvent(new Event('focus')), true)`
+  )
+
+/**
+ * A fake `claude` for the turn-end check: its name makes the app hand it the
+ * hook token (only `claude` publishes hooks), and it writes that token and the
+ * `--settings` path it was given next to itself, then idles. No real agent
+ * runs and no input is ever sent to the session.
+ */
+function writeFakeClaude() {
+  mkdirSync(fakeBin, { recursive: true })
+  writeFileSync(
+    join(fakeBin, 'claude.cmd'),
+    [
+      '@echo off',
+      '>"%~dp0settings.txt" echo %~2',
+      '>"%~dp0token.txt" echo %PLAYGROUND_ACTIVITY_TOKEN%',
+      ':idle',
+      'ping -n 3600 127.0.0.1 >nul',
+      'goto idle',
+      ''
+    ].join('\r\n')
+  )
+}
+
+/** Wait for a file the fake agent writes, and return its trimmed content. */
+async function readWhenWritten(path, timeoutMs = 8000) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    try {
+      const text = readFileSync(path, 'utf8').trim()
+      if (text !== '') return text
+    } catch {
+      /* not written yet */
+    }
+    await sleep(150)
+  }
+  return null
+}
+
+async function postHook(url, token, event) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ hook_event_name: event })
+  })
+  return res.status
+}
+
+async function counterRefresh() {
+  // A worktree of its own, so no earlier check's state leaks in.
+  git(primary, 'worktree', 'add', '-q', '-b', SCRF_BRANCH, wtDir.scrf, 'main')
+  for (const f of ['one.txt', 'two.txt', 'three.txt']) writeFileSync(join(wtDir.scrf, f), `${f}\n`)
+  await refresh(ws)
+  await selectWorktree(ws, SCRF_BRANCH)
+  let b = await waitBar(ws, (v) => v.changes === '3')
+  check('the counter worktree starts with three untracked files', b.changes === '3', b.changes)
+  // The watcher opens once tree:get has returned; give its git-dir lookup a beat.
+  await sleep(500)
+
+  // SCRF-01: a commit made outside the app, with no click.
+  const committedAt = Date.now()
+  gitRetryingLock(wtDir.scrf, 'add', 'one.txt', 'two.txt')
+  gitRetryingLock(wtDir.scrf, 'commit', '-q', '-m', 'Commit two of three')
+  b = await waitBar(ws, (v) => v.changes === '1', 4000)
+  const took = Date.now() - committedAt
+  check(
+    'a commit made in a terminal drops the counter within 2 s, with no click (SCRF-01)',
+    b.changes === '1' && took <= 2000 && scrfChanges() === 1,
+    `${b.changes} after ${took} ms; git sees ${scrfChanges()}`
+  )
+
+  // Edits alone reach nothing: no timer, no watch on the working tree.
+  for (const f of ['four.txt', 'five.txt']) writeFileSync(join(wtDir.scrf, f), `${f}\n`)
+  await sleep(1500)
+  b = await bar(ws)
+  check(
+    'edits with no commit, focus or turn end leave the counter as it was',
+    b.changes === '1' && scrfChanges() === 3,
+    `${b.changes}; git sees ${scrfChanges()}`
+  )
+
+  // SCRF-09: a focus past the 5 s debounce rebuilds the tree. The count must
+  // not already read 3 before the focus, or the focus proved nothing.
+  await sleep(5500)
+  const beforeFocus = (await bar(ws)).changes
+  await fireFocus(ws)
+  b = await waitBar(ws, (v) => v.changes === '3', 4000)
+  check(
+    'regaining focus rebuilds the tree and shows the edits (SCRF-09)',
+    beforeFocus !== '3' && b.changes === '3',
+    `${beforeFocus} → ${b.changes}`
+  )
+
+  // SCRF-10: a second focus inside the debounce rebuilds nothing.
+  writeFileSync(join(wtDir.scrf, 'six.txt'), 'six\n')
+  await fireFocus(ws)
+  await sleep(1500)
+  b = await bar(ws)
+  check(
+    'a second focus within 5 s rebuilds nothing (SCRF-10)',
+    b.changes === '3' && scrfChanges() === 4,
+    `${b.changes}; git sees ${scrfChanges()}`
+  )
+
+  // SCRF-07: an agent's turn ending in the worktree recounts it.
+  writeFakeClaude()
+  await evaluate(
+    ws,
+    `(async () => {
+       const cfg = await window.api.invoke('config:get')
+       const agents = cfg.agents.filter((a) => a.name !== ${J(FAKE_AGENT)})
+       await window.api.invoke('config:patch', {
+         agents: [...agents, { name: ${J(FAKE_AGENT)}, command: ${J(join(fakeBin, 'claude.cmd'))}, args: [], color: '--accent' }]
+       })
+       return true
+     })()`
+  )
+  fakeAgentRegistered = true
+  const agentId = await evaluate(
+    ws,
+    `(async () => {
+       const v = await window.api.invoke('sessions:spawn', { agentName: ${J(FAKE_AGENT)}, cwd: ${J(wtDir.scrf)} })
+       await window.api.invoke('sessions:rename', { id: v.id, title: ${J(TURN_TITLE)} })
+       return v.id
+     })()`
+  )
+  mine.push(agentId)
+  // A direct-IPC spawn pushes nothing; a session that exits at once makes the
+  // renderer re-fetch the list, so the fake session's pushes are not dropped.
+  const nudge = await spawn(loose, DUMMY_TITLE)
+  await evaluate(
+    ws,
+    `(async () => { await window.api.invoke('sessions:stop', { id: ${J(nudge)} }); return true })()`
+  )
+  const token = await readWhenWritten(join(fakeBin, 'token.txt'))
+  const settingsPath = await readWhenWritten(join(fakeBin, 'settings.txt'))
+  let url = null
+  try {
+    url = JSON.parse(readFileSync(settingsPath, 'utf8')).hooks?.Stop?.[0]?.hooks?.[0]?.url ?? null
+  } catch {
+    /* reported below */
+  }
+  check(
+    'the fake agent received a hook token and the hook settings',
+    Boolean(token) && token !== '%PLAYGROUND_ACTIVITY_TOKEN%' && Boolean(url),
+    `token ${token ? 'yes' : 'no'}; url ${url ?? settingsPath}`
+  )
+  if (!token || !url) return
+  await sleep(800)
+  const working = await postHook(url, token, 'UserPromptSubmit')
+  writeFileSync(join(wtDir.scrf, 'seven.txt'), 'seven\n')
+  await sleep(1500)
+  b = await bar(ws)
+  check(
+    'a turn in progress leaves the counter as it was',
+    working === 204 && b.changes === '3' && scrfChanges() === 5,
+    `POST ${working}; ${b.changes}; git sees ${scrfChanges()}`
+  )
+  const beforeStop = b.changes
+  const stopped = await postHook(url, token, 'Stop')
+  b = await waitBar(ws, (v) => v.changes === '5', 4000)
+  check(
+    "the agent's turn ending recounts its worktree (SCRF-07)",
+    stopped === 204 && beforeStop !== '5' && b.changes === '5',
+    `POST ${stopped}; ${beforeStop} → ${b.changes}`
+  )
 }
 
 /** Stop and remove this script's sessions through the rail (so the renderer drops them). */
@@ -1243,7 +1335,7 @@ async function removeMySessions() {
   )
   await sleep(800)
   await direction(ws, 'Agents')
-  for (const title of [TARGET_TITLE, FOLDER_TITLE, SUBFOLDER_TITLE, DUMMY_TITLE]) {
+  for (const title of [TARGET_TITLE, FOLDER_TITLE, SUBFOLDER_TITLE, DUMMY_TITLE, TURN_TITLE]) {
     await evaluate(
       ws,
       `(() => {
@@ -1278,6 +1370,17 @@ try {
     await send(ws, 'Emulation.clearDeviceMetricsOverride').catch(() => {})
     await closePopovers(ws)
     await removeMySessions()
+    if (fakeAgentRegistered) {
+      const left = await evaluate(
+        ws,
+        `(async () => {
+           const cfg = await window.api.invoke('config:get')
+           await window.api.invoke('config:patch', { agents: cfg.agents.filter((a) => a.name !== ${J(FAKE_AGENT)}) })
+           return (await window.api.invoke('config:get')).agents.some((a) => a.name === ${J(FAKE_AGENT)})
+         })()`
+      )
+      check('the throwaway fake-claude agent is removed', left === false)
+    }
     if (registered) {
       await evaluate(
         ws,

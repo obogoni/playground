@@ -6,6 +6,7 @@ import { api } from '../lib/api'
 import { CommitList } from './CommitList'
 import { buildTree, isSolution, type TreeNode } from '../lib/files-view'
 import { absoluteIn, type UseFiles } from '../lib/use-files'
+import { FileIcon } from './FileIcon'
 import { Icon } from './Icon'
 import './FileTree.css'
 
@@ -74,7 +75,7 @@ function FolderRows({ dir, depth, files, onFile }: FolderRowsProps): JSX.Element
             title={entry.path}
             onClick={() => onFile(entry.path)}
           >
-            <Icon name="file" size={13} />
+            <FileIcon name={entry.name} kind="file" />
             <span className="file-tree-name">{entry.name}</span>
           </button>
         ) : (
@@ -95,6 +96,11 @@ function FolderRows({ dir, depth, files, onFile }: FolderRowsProps): JSX.Element
               >
                 <Icon name="chevron-down" size={13} />
               </span>
+              <FileIcon
+                name={entry.name}
+                kind="folder"
+                open={files.expanded.includes(entry.path)}
+              />
               <span className="file-tree-name">{entry.name}</span>
             </button>
             {files.expanded.includes(entry.path) && (
@@ -135,6 +141,7 @@ function ChangedRows({ nodes, depth, onFile, onFolder }: ChangedRowsProps): JSX.
             <span className={`file-tree-pill ${node.status}`} title={STATUS_LABEL[node.status]}>
               {STATUS_LETTER[node.status]}
             </span>
+            <FileIcon name={node.name} kind="file" />
             <span className="file-tree-name">{node.name}</span>
           </button>
         ) : (
@@ -149,6 +156,7 @@ function ChangedRows({ nodes, depth, onFile, onFolder }: ChangedRowsProps): JSX.
               <span className="file-tree-chevron open">
                 <Icon name="chevron-down" size={13} />
               </span>
+              <FileIcon name={node.name} kind="folder" open />
               <span className="file-tree-name">{node.name}</span>
             </button>
             <ChangedRows

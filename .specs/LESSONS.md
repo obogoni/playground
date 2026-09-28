@@ -282,31 +282,85 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: P1 - src/renderer/src/components/HoursView.tsx:286 vs scripts/smoke-hours-calendar.mjs:342-356 (smoke)
 - last seen: 2026-09-19T22:19:57Z
 
-### L-051 - When several sources feed one hover or focus state, read the view after each source's leave before the next source enters, because the next enter overwrites a leave that never fired
+### L-051 - Before writing an edge case as 'exactly today's behaviour', read the state owner's lifecycle code (e.g. TimeTracker.ended drops the run and its paused flag); a grilled default about existing behaviour is a premise to verify, not a fact.
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `spec/edge-cases` · harmful: 0
+- features: session-strip-polish
+- evidence: spec.md Edge Cases; src/main/time-tracker.ts:80-86 (spec/edge-cases)
+- last seen: 2026-09-19T19:49:53Z
+
+### L-052 - In a smoke that toggles state, start each check from a state the previous check confirmed and flip it, so a dead input fails its own check instead of a later one passing because nothing changed.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke-*.mjs` · harmful: 0
+- features: session-strip-polish
+- evidence: scripts/smoke-strip.mjs:317-320 (round 1) (scripts/smoke-*.mjs)
+- last seen: 2026-09-19T19:49:54Z
+
+### L-053 - When a task removes or renames a UI control, grep scripts/ for its label and selectors; smoke scripts are outside the unit gate and break silently.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke-*.mjs` · harmful: 0
+- features: session-strip-polish
+- evidence: scripts/smoke-time.mjs:188-212 (round 1) (scripts/smoke-*.mjs)
+- last seen: 2026-09-19T19:49:54Z
+
+### L-054 - When a criterion names several events or conditions (A, B or C), write one test per event or condition in which it alone decides the outcome; an it.each keeps it cheap
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `activity-machine` · harmful: 0
+- features: activity-subagent-attribution
+- evidence: M09 M20 M24 M26 M27 src/main/activity-machine.ts:176 (activity-machine)
+- last seen: 2026-09-26T01:30:53Z
+
+### L-055 - An edge case phrased 'whatever X is pending' needs a test with X actually pending
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `activity-machine` · harmful: 0
+- features: activity-subagent-attribution
+- evidence: M10 src/main/activity-machine.ts:161 (activity-machine)
+- last seen: 2026-09-26T01:30:53Z
+
+### L-056 - Assert a styled state by the value the spec names, such as its colour, not only by whether the style is present
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-ui` · harmful: 0
+- features: files-view-polish
+- evidence: FPOL-02 scripts/smoke-files-diff.mjs:322 (smoke-ui)
+- last seen: 2026-09-26T17:54:24Z
+
+### L-057 - When a change widens a condition to more elements, assert that the elements it still excludes lack the element
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-ui` · harmful: 0
+- features: files-view-polish
+- evidence: FPOL-02 src/renderer/src/components/FileTabs.tsx:241 (smoke-ui)
+- last seen: 2026-09-26T17:54:24Z
+
+### L-058 - Budget entry-chunk growth against the unminified renderer build, where eager glue code counts byte for byte
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `renderer-build` · harmful: 0
+- features: file-icons
+- evidence: tasks.md T6 SPEC_DEVIATION (entry chunk +4,633 B vs 1 KB) (renderer-build)
+- last seen: 2026-09-26T17:05:30Z
+
+### L-059 - When an AC keeps today's look as a fallback, name the fallback for elements that had nothing before
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer-ui` · harmful: 0
+- features: file-icons
+- evidence: FICN-13 (validation.md, FileIcon.tsx:53-62) (renderer-ui)
+- last seen: 2026-09-26T17:05:30Z
+
+### L-060 - When several sources feed one hover or focus state, read the view after each source's leave before the next source enters, because the next enter overwrites a leave that never fired
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
 - features: hours-task-focus
 - evidence: validation.md SM1; scripts/smoke-hours-calendar.mjs:818-838; HTF-08 (smoke)
 - last seen: 2026-09-26T21:15:08Z
 
-### L-052 - When an acceptance criterion names several sources for one behaviour, give each source its own check; covering one source leaves the others unverified
+### L-061 - When an acceptance criterion names several sources for one behaviour, give each source its own check; covering one source leaves the others unverified
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
 - features: hours-task-focus
 - evidence: HTF-09; scripts/smoke-hours-calendar.mjs:829-838 (smoke)
 - last seen: 2026-09-26T21:15:08Z
 
-### L-053 - When the spec fixes exact colour values, assert the computed colours against those values in order, not only that they are distinct
+### L-062 - When the spec fixes exact colour values, assert the computed colours against those values in order, not only that they are distinct
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
 - features: hours-task-focus
 - evidence: HTF-01; scripts/smoke-hours-calendar.mjs:739 (smoke)
 - last seen: 2026-09-26T21:15:09Z
 
-### L-054 - When a spec edge case states what an element shows, assert each stated value on screen, not only that the element is present
+### L-063 - When a spec edge case states what an element shows, assert each stated value on screen, not only that the element is present
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
 - features: hours-task-focus
 - evidence: validation.md SM7; scripts/smoke-hours-calendar.mjs:928; spec edge case 4 (smoke) (smoke)
 - last seen: 2026-09-26T21:48:16Z
 
-### L-055 - Quote UI text in the spec only as the app renders it; check a literal against the formatter before writing it in backticks
+### L-064 - Quote UI text in the spec only as the app renders it; check a literal against the formatter before writing it in backticks
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
 - features: hours-task-focus
 - evidence: spec.md edge case 4; src/renderer/src/components/HoursLegend.tsx:54 (0m vs 0h00) (specs)
