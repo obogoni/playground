@@ -9,7 +9,7 @@ import type { ActivityChange } from './activity-notification'
 import { ConfigStore } from './config-store'
 import type { PtyHandle, PtyPort } from './pty-port'
 import type { SpawnPlan } from './spawn-plan'
-import { ACTIVITY_TOKEN_ENV, TASK_URL_ENV } from './claude-hook-settings'
+import { ACTIVITY_TOKEN_ENV } from './claude-hook-settings'
 import {
   SessionManager,
   SESSION_EXIT_WAIT_MS,
@@ -855,7 +855,11 @@ describe('SessionManager activity hooks', () => {
 
     manager.spawn('Claude', CWD)
 
-    expect(port.envs[0]?.[TASK_URL_ENV]).toBe(TASK_URL)
+    // Literal names: they are the published contract (README), not an internal constant.
+    expect(port.envs[0]).toEqual({
+      PLAYGROUND_ACTIVITY_TOKEN: expect.any(String),
+      PLAYGROUND_TASK_URL: TASK_URL
+    })
   })
 
   it('hands the task link url again to a respawned run (ATSK-01)', async () => {
@@ -865,7 +869,10 @@ describe('SessionManager activity hooks', () => {
 
     manager.respawn(view.id)
 
-    expect(port.envs[1]?.[TASK_URL_ENV]).toBe(TASK_URL)
+    expect(port.envs[1]).toEqual({
+      PLAYGROUND_ACTIVITY_TOKEN: expect.any(String),
+      PLAYGROUND_TASK_URL: TASK_URL
+    })
   })
 
   it('keeps a running session on the launch it started with when the registry changes (ACTV-30)', () => {
