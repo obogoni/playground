@@ -116,3 +116,4 @@ Pre-PR gate: `npm run typecheck && npm run lint && npm test`.
 - [`.specs/project/`](.specs/project/) — vision, roadmap, and decision log; [`.specs/features/`](.specs/features/) — per-feature spec → design → tasks
 - [`design/handoff/`](design/handoff/) — the hifi design reference (the source of the screenshots above); reference-only, never shipped
 - The screenshots are regenerated from the prototype with `npx electron scripts/capture-prototype-shots.mjs`
+- [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) — the licences of the file icons and their mapping

@@ -287,3 +287,32 @@
 .agents-detail-time.paused {
   color: var(--text-faint);
 }
+
+/* The running session's clock is its own pause button (STRP-07..11). */
+button.agents-detail-time {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 8px;
+  padding: 5px 8px;
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+
+button.agents-detail-time:hover {
+  border-color: var(--border-strong);
+}
+
+/* Hover brightens a counting clock only; a paused one stays dim (TIME-17). */
+button.agents-detail-time:not(.paused):hover {
+  color: var(--text);
+}
+
+button.agents-detail-time:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

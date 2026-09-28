@@ -1,7 +1,7 @@
 import { app, shell, clipboard, dialog, BrowserWindow, Notification, powerMonitor } from 'electron'
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import { randomBytes, randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, watch, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { mkdir, stat, writeFile } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
 import { promisify } from 'node:util'
@@ -21,8 +21,9 @@ import { commitFiles, listCommits, openCommit } from './commit-log'
 import { diffStats, readDiffSides } from './file-diff'
 import { readForView } from './file-reader'
 import { changedSince, listBases, listDir } from './file-tree'
-import { FileWatcher, type WatchPort } from './file-watcher'
+import { FileWatcher, type Scheduler } from './file-watcher'
 import { git } from './git'
+import { GitStateWatcher } from './git-state-watcher'
 import { readCommits, readSyncState, runGitOp } from './git-sync'
 import { runHookShell } from './hook-shell'
 import { emit, handle, onSend } from './ipc'
@@ -37,12 +38,14 @@ import { LinkOpener } from './link-opener'
 import { SessionNamePoller } from './session-name-poller'
 import { SessionNotifier } from './session-notifier'
 import { ShortcutLauncher, spawnDetached } from './shortcut-launcher'
-import { TaskBoard } from './task-board'
+import { openPinnedTask, TaskBoard } from './task-board'
 import { TimeLogStore } from './time-log-store'
 import { buildSnapshot, readGit } from './time-snapshot'
 import { TimeTracker } from './time-tracker'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
+import { windowOpenDecision } from './url-policy'
+import { watchPort } from './watch-port'
 import type { CtxDeps, GitFetchOptions, ShellResult } from './workflow-ctx'
 import {
   discoverWorkflows,
@@ -53,7 +56,7 @@ import {
 import { WorkflowManager } from './workflow-manager'
 import { WorkflowRunStore } from './workflow-run-store'
 import { scaffoldWorkflow } from './workflow-scaffold'
-import { changedFilesOf, createWorktree, removeWorktree } from './worktree-manager'
+import { changedFilesOf, createWorktree, removeWorktree, worktreeStatus } from './worktree-manager'
 import { workspaceTemplates } from './workspace-config'
 import { WorkspaceRegistry } from './workspace-registry'
 
@@ -135,21 +138,33 @@ async function readFileDropList(): Promise<string> {
 }
 
 /**
- * The real `fs.watch` behind `FileWatcher`'s port. A path that vanishes between
- * the selection and the watch throws synchronously, and an unwatchable path
- * errors asynchronously; neither may take the main process down, so both come
- * back as a handle that watches nothing.
+ * The git dir both watchers watch. `--git-dir` answers relatively for a
+ * primary checkout and absolutely for a linked worktree, whose git dir lives
+ * outside its own root.
  */
-const watchPort: WatchPort = (path, opts, listener) => {
-  try {
-    const watcher = watch(path, { recursive: opts.recursive }, (_event, filename) =>
-      listener(typeof filename === 'string' ? filename : '')
-    )
-    watcher.on('error', () => watcher.close())
-    return { close: () => watcher.close() }
-  } catch {
-    return { close: () => {} }
+async function resolveGitDir(worktreePath: string): Promise<string> {
+  const { stdout } = await git(worktreePath, ['rev-parse', '--git-dir'])
+  return resolve(worktreePath, stdout.trim())
+}
+
+/** The real batching delay behind both watchers' `Scheduler`. */
+const timerScheduler: Scheduler = {
+  after: (ms, fn) => {
+    const timer = setTimeout(fn, ms)
+    return () => clearTimeout(timer)
   }
+}
+
+/**
+ * One worktree's changes, recounted for the git-state watcher or on request
+ * (SCRF-06). A failure is logged and answered `null`, so the last count stays.
+ */
+async function recountWorktree(
+  worktreePath: string
+): Promise<{ dirty: boolean; changes: number } | null> {
+  const status = await worktreeStatus(worktreePath)
+  if (status === null) console.warn('[git-state] could not recount', worktreePath)
+  return status
 }
 
 /**
@@ -222,8 +237,13 @@ function createWindow(): void {
     win.show()
   })
 
+  // Every new window is denied; an https link one asked for opens in the
+  // browser, anything else is only logged by its scheme (#115, AD-044). The
+  // linked task card's `target="_blank"` link lands here.
   win.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    const decision = windowOpenDecision(details.url)
+    if (decision.open) void shell.openExternal(details.url)
+    else console.warn(`[window-open] ${decision.reason}`)
     return { action: 'deny' }
   })
 
@@ -281,7 +301,27 @@ app.whenReady().then(() => {
   })
   handle('workspaces:remove', ({ id }) => registry.remove(id))
   handle('workspaces:templates', ({ workspacePath }) => workspaceTemplates(workspacePath))
-  handle('tree:get', () => buildTree(registry))
+  // A commit made in any terminal recounts that worktree alone (SCRF-01); the
+  // watched set follows every tree snapshot (SCRF-04).
+  const gitStateWatcher = new GitStateWatcher({
+    watch: watchPort,
+    resolveGitDir,
+    schedule: timerScheduler,
+    onSettled: (worktreePath) => {
+      void recountWorktree(worktreePath).then((status) => {
+        if (status && mainWindow) {
+          emit(mainWindow.webContents, 'worktree:status', { worktreePath, ...status })
+        }
+      })
+    }
+  })
+  handle('tree:get', async () => {
+    const tree = await buildTree(registry)
+    void gitStateWatcher.sync(
+      tree.flatMap((ws) => ws.repos.flatMap((repo) => repo.worktrees.map((wt) => wt.path)))
+    )
+    return tree
+  })
   // WPC-10: ONE hook-wrapped create, shared by the IPC handler below and the
   // workflow ctx further down. Because both consumers get this same wrapper —
   // never bare `createWorktree` — no call path can skip a repo's init command.
@@ -300,6 +340,7 @@ app.whenReady().then(() => {
     removeWorktree(repoPath, worktreePath, { force })
   )
   handle('worktrees:changes', ({ worktreePath }) => changedFilesOf(worktreePath))
+  handle('worktrees:status', ({ worktreePath }) => recountWorktree(worktreePath))
   handle('git:sync-state', ({ worktreePath }) => readSyncState(worktreePath))
   handle('git:commits', ({ worktreePath }) => readCommits(worktreePath))
   handle('git:run', ({ worktreePath, op, remote }) => runGitOp(worktreePath, op, remote))
@@ -308,18 +349,8 @@ app.whenReady().then(() => {
   // modules behind them are unit-tested, this is only the wiring.
   const fileWatcher = new FileWatcher({
     watch: watchPort,
-    // `--git-dir` answers relatively for a primary checkout and absolutely for
-    // a linked worktree, whose git dir lives outside its own root.
-    resolveGitDir: async (worktreePath) => {
-      const { stdout } = await git(worktreePath, ['rev-parse', '--git-dir'])
-      return resolve(worktreePath, stdout.trim())
-    },
-    schedule: {
-      after: (ms, fn) => {
-        const timer = setTimeout(fn, ms)
-        return () => clearTimeout(timer)
-      }
-    },
+    resolveGitDir,
+    schedule: timerScheduler,
     emit: (event) => {
       if (mainWindow) emit(mainWindow.webContents, 'files:changed', event)
     }
@@ -341,9 +372,10 @@ app.whenReady().then(() => {
   handle('commits:open', ({ worktreePath, sha }) =>
     openCommit(worktreePath, sha, (url) => shell.openExternal(url))
   )
-  // Close every watch handle before the process goes away (FXPL-23).
+  // Close every watch handle before the process goes away (FXPL-23, SCRF quit edge case).
   app.on('will-quit', () => {
     void fileWatcher.select(null)
+    gitStateWatcher.closeAll()
   })
 
   const launcher = new ShortcutLauncher()
@@ -375,6 +407,13 @@ app.whenReady().then(() => {
   handle('tasks:unpin', (ref) => taskBoard.unpin(ref))
   handle('tasks:refresh', () => taskBoard.refresh())
   handle('tasks:parent', ({ id, org, project }) => adoGateway.parentOf({ id, org, project }))
+  // The renderer names the task; main opens the URL it stored at pin time (PTOP-01..07).
+  handle('tasks:open', (ref) =>
+    openPinnedTask(
+      { tasks: configStore.get().pinnedTasks, openExternal: (url) => shell.openExternal(url) },
+      ref
+    )
+  )
 
   // Agent sessions (AM2). SessionManager owns every session's lifecycle,
   // persistence, and stream routing; emit is lazily bound to the live window.
@@ -677,8 +716,9 @@ app.whenReady().then(() => {
   })
 
   // Free the shared MCP result server's loopback port when the app quits (WF3-10).
+  // Nothing awaits a quit handler, so a failed stop is logged, not left unhandled (RSTP-07).
   app.on('will-quit', () => {
-    void resultServer.stop()
+    resultServer.stop().catch((err) => console.error('[mcp-result-server] stop failed', err))
   })
 
   // Silent auto-update. Inert under `electron-vite dev` unless PLAYGROUND_FORCE_UPDATE=1
@@ -712,7 +752,7 @@ app.on('window-all-closed', () => {
   // closes whatever is still open, at the quit instant (TIME-09).
   timeTracker?.closeAll()
   namePoller?.dispose()
-  void stopHookServer?.()
+  stopHookServer?.().catch((err) => console.error('[activity-hooks] stop failed', err))
   if (process.platform !== 'darwin') {
     app.quit()
   }

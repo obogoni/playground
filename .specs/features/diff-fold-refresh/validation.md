@@ -157,7 +157,7 @@ was killed.
    - the offset cleared too early (V6).
    The seam's own rules are all killed (R1-R5).
 3. **14f2 can fail, and its preconditions are real.**
-   - It reads the first line on screen by DOM position, per L-046, not `scrollTop`.
+   - It reads the first line on screen by DOM position, per L-068, not `scrollTop`.
    - It requires the wheel to move that line (`scrolledTo !== lineOneAt`, `l017` -> `l023`).
    - It requires the new diff to arrive (`scrollArrived.after !== null`, strip labels changed).
    - It compares after `settled` (the strip count still for 600 ms), so it reads the final state, not the
@@ -209,7 +209,7 @@ was killed.
 | Minimum code | ✅ `readingBeforeUpdate` is 5 lines and replaces the inline guard; T17 adds one ref, one restore and one clear per lifecycle end |
 | Surgical changes | ✅ Since round 1: `diff-view.ts` (+29), `DiffViewer.tsx` (+26 / −19), the two test / smoke files, and the spec and tasks |
 | No scope creep | ✅ The scroll fix is the one the owner put in this PR |
-| Matches patterns | ✅ Pure seam per L-018; the scroll read per L-046 |
+| Matches patterns | ✅ Pure seam per L-018; the scroll read per L-068 |
 | Spec-anchored outcome check | ✅ FOLD-06 and the FOLD-05 split case are now stated and pinned |
 | Per-layer coverage expectation | ✅ Every pure rule is 1:1 (FOLD-08 via the seam); components by CDP smoke, per `.specs/codebase/TESTING.md` |
 | Every test maps to a spec requirement | ✅ The new tests carry FOLD IDs, except `diff-view.test.ts:770` (null regions), which maps to T15's Done-when |
