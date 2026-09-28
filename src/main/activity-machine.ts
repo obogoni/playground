@@ -21,6 +21,39 @@ export interface MachineState {
   subagentIds: string[]
   /** State to restore when the compaction that interrupted it finishes. */
   beforeCompact?: ActivityState
+  /**
+   * Ids the main agent's last `Stop` listed in `background_tasks`: subagents and
+   * shells still running, whose results will wake it again. Absent until a
+   * `Stop` carries the list (it is undocumented; measured on Claude Code 2.1.283).
+   */
+  background?: string[]
+  /**
+   * Background subagents that stopped but whose result has not reached the
+   * main agent yet. It arrives as a `<task-notification>` prompt a few
+   * milliseconds after a `Stop` that already lists nothing (measured).
+   */
+  owed?: string[]
+  /** Whether the main agent's turn has ended: set by its `Stop`, cleared by its next act. */
+  mainStopped?: boolean
+  /**
+   * Who asked the question on screen: `agent_id`s, or {@link MAIN}. Only their
+   * own next act answers it (ASUB-07, ASUB-08). Empty or absent means the asker
+   * is unknown, and any event moves the state on, as before.
+   */
+  askedBy?: string[]
+}
+
+/** The sender of a hook that carries no `agent_id`: the main agent. */
+const MAIN = 'main'
+
+const TOOL_EVENTS = ['PreToolUse', 'PostToolUse', 'PostToolUseFailure']
+const QUESTION_EVENTS = ['PermissionRequest', 'Elicitation']
+/** Events that start over from nothing, whatever was pending. */
+const RESET_EVENTS = ['SessionStart', 'SessionEnd']
+
+interface BackgroundTask {
+  id: string
+  type: string
 }
 
 /** Notification types that mean the agent is blocked on the user. */
@@ -43,7 +76,19 @@ function str(payload: Record<string, unknown>, key: string): string | undefined 
   return typeof value === 'string' ? value : undefined
 }
 
-/** Build the next state, keeping the subagent set and dropping stale detail. */
+function backgroundTasks(payload: Record<string, unknown>): BackgroundTask[] | undefined {
+  const value = payload.background_tasks
+  if (!Array.isArray(value)) return undefined
+  return value.filter(
+    (task): task is BackgroundTask =>
+      typeof task === 'object' &&
+      task !== null &&
+      typeof (task as Record<string, unknown>).id === 'string' &&
+      typeof (task as Record<string, unknown>).type === 'string'
+  )
+}
+
+/** Build the next state, keeping the private fields and dropping stale detail. */
 function to(
   state: MachineState | null,
   next: ActivityState,
@@ -51,14 +96,14 @@ function to(
 ): MachineState {
   const subagentIds = state?.subagentIds ?? []
   return {
+    ...state,
     view: {
       state: next,
       subagents: subagentIds.length,
       ...(detail.tool ? { tool: detail.tool } : {}),
       ...(detail.error ? { error: detail.error } : {})
     },
-    subagentIds,
-    ...(state?.beforeCompact ? { beforeCompact: state.beforeCompact } : {})
+    subagentIds
   }
 }
 
@@ -77,7 +122,78 @@ export function applyHookEvent(
 ): MachineState | null {
   const event = str(payload, 'hook_event_name')
   if (event === undefined) return state
+  const sender = str(payload, 'agent_id') ?? MAIN
+  // Claude Code's side agents (prompt suggestion, session recap) run tools with
+  // an agent_id that never started as a subagent; they are not the session's work.
+  if (TOOL_EVENTS.includes(event) && sender !== MAIN && !state?.subagentIds.includes(sender)) {
+    return state
+  }
+  const next = applyEvent(state, event, payload)
+  const acted =
+    next !== null &&
+    sender === MAIN &&
+    (event === 'UserPromptSubmit' || TOOL_EVENTS.includes(event))
+      ? { ...next, mainStopped: false }
+      : next
+  return attribute(state, acted, event, sender)
+}
 
+function isBlocked(state: MachineState | null): boolean {
+  return state?.view.state === 'needs-approval' || state?.view.state === 'needs-input'
+}
+
+function withoutAskers(state: MachineState): MachineState {
+  return state.askedBy === undefined ? state : { ...state, askedBy: undefined }
+}
+
+/**
+ * Keeps a question on screen until the agent that asked moves (ASUB-07,
+ * ASUB-08). While it is pending, anyone else's event still updates the
+ * bookkeeping — subagents, background, owed results — but not the view.
+ * Notifications are nobody's act: they repeat the question or report idleness.
+ */
+function attribute(
+  before: MachineState | null,
+  next: MachineState | null,
+  event: string,
+  sender: string
+): MachineState | null {
+  if (next === null || next === before || RESET_EVENTS.includes(event)) return next
+  const askers = before?.askedBy ?? []
+  if (QUESTION_EVENTS.includes(event)) {
+    return { ...next, askedBy: askers.includes(sender) ? askers : [...askers, sender] }
+  }
+  if (before === null || !isBlocked(before) || askers.length === 0) {
+    return isBlocked(next) ? next : withoutAskers(next)
+  }
+  const remaining = event === 'Notification' ? askers : askers.filter((id) => id !== sender)
+  if (remaining.length > 0) {
+    return { ...next, view: { ...before.view, subagents: next.view.subagents }, askedBy: remaining }
+  }
+  // The asker acted, so the question is answered. Its tool event or answer maps
+  // as usual; its SubagentStop maps to nothing, so it settles here.
+  return withoutAskers(
+    event === 'SubagentStop' ? to(next, stillBusy(next) ? 'working' : 'waiting') : next
+  )
+}
+
+/** Whether work is still going on once a question is answered (ASUB-08). */
+function stillBusy(state: MachineState): boolean {
+  return !state.mainStopped || backgroundBusy(state) || (state.owed ?? []).length > 0
+}
+
+/** What the last `Stop` listed, or without a list, the live subagents (ASUB-16). */
+function backgroundBusy(state: MachineState | null): boolean {
+  return state?.background !== undefined
+    ? state.background.length > 0
+    : (state?.subagentIds.length ?? 0) > 0
+}
+
+function applyEvent(
+  state: MachineState | null,
+  event: string,
+  payload: Record<string, unknown>
+): MachineState | null {
   switch (event) {
     case 'SessionStart':
       // Currently unreachable: Claude Code 2.1.273 does not deliver SessionStart
@@ -88,6 +204,7 @@ export function applyHookEvent(
       // and PostCompact is what resumes it.
       return str(payload, 'source') === 'compact' ? state : to(null, 'waiting')
     case 'UserPromptSubmit':
+      return withResultDelivered(to(state, 'working'), str(payload, 'prompt'))
     case 'PostToolUse':
     case 'PostToolUseFailure':
     case 'ElicitationResult':
@@ -99,7 +216,7 @@ export function applyHookEvent(
     case 'Elicitation':
       return to(state, 'needs-input')
     case 'Stop':
-      return to(state, 'waiting')
+      return applyStop(state, backgroundTasks(payload))
     case 'StopFailure':
       return to(state, 'error', { error: str(payload, 'error') })
     case 'Notification':
@@ -113,7 +230,7 @@ export function applyHookEvent(
     case 'SubagentStart':
       return applySubagent(state, str(payload, 'agent_id'), 'start')
     case 'SubagentStop':
-      return applySubagent(state, str(payload, 'agent_id'), 'stop')
+      return applySubagentStop(state, payload)
     case 'SessionEnd':
       return CONTINUING_END_REASONS.includes(str(payload, 'reason') ?? '')
         ? to(null, 'waiting')
@@ -130,8 +247,66 @@ function applyNotification(
   if (type === undefined) return state
   if (APPROVAL_NOTIFICATIONS.includes(type)) return to(state, 'needs-approval')
   if (INPUT_NOTIFICATIONS.includes(type)) return to(state, 'needs-input')
-  if (type === 'idle_prompt') return to(state, 'waiting')
+  if (type === 'idle_prompt') return applyIdlePrompt(state)
   return state
+}
+
+/**
+ * The main agent ended a turn. Background work it started wakes it again with
+ * its result, so the turn is the user's only when its `background_tasks` lists
+ * nothing still running, subagents and shells alike (ASUB-01, ASUB-03). The
+ * list is also the truth about live subagents, so it replaces the counted set
+ * (ASUB-17). A `Stop` without the list — an older Claude Code — falls back to
+ * the counted subagents (ASUB-16).
+ */
+function applyStop(state: MachineState | null, tasks: BackgroundTask[] | undefined): MachineState {
+  const owing = (state?.owed ?? []).length > 0
+  if (tasks === undefined) {
+    const busy = owing || (state?.subagentIds.length ?? 0) > 0
+    return { ...to(state, busy ? 'working' : 'waiting'), background: undefined, mainStopped: true }
+  }
+  const background = tasks.map((task) => task.id)
+  const subagentIds = tasks.filter((task) => task.type === 'subagent').map((task) => task.id)
+  const next = to(state, owing || background.length > 0 ? 'working' : 'waiting')
+  return { ...withSubagents(next, subagentIds), background, mainStopped: true }
+}
+
+/**
+ * A background subagent stopping is still listed in its own `SubagentStop`,
+ * and its result will wake the main agent once more: until that result is
+ * delivered, the job is not over (ASUB-14). Side agents and foreground
+ * subagents are not listed, so they owe nothing.
+ */
+function applySubagentStop(
+  state: MachineState | null,
+  payload: Record<string, unknown>
+): MachineState | null {
+  const agentId = str(payload, 'agent_id')
+  const next = applySubagent(state, agentId, 'stop')
+  if (next === null || agentId === undefined) return next
+  const listed = backgroundTasks(payload)?.some(
+    (task) => task.id === agentId && task.type === 'subagent'
+  )
+  const owed = next.owed ?? []
+  return listed && !owed.includes(agentId) ? { ...next, owed: [...owed, agentId] } : next
+}
+
+/** A `<task-notification>` prompt delivers the result of the task it names (ASUB-15). */
+function withResultDelivered(state: MachineState, prompt: string | undefined): MachineState {
+  if (prompt === undefined || state.owed === undefined) return state
+  const owed = state.owed.filter((id) => !prompt.includes(`<task-id>${id}</task-id>`))
+  return owed.length === state.owed.length ? state : { ...state, owed }
+}
+
+/**
+ * `idle_prompt` fires 60 s after the main agent stops even while background
+ * work runs (measured), so it means "your turn" only when the last `Stop`
+ * listed nothing — or, without a list, when no subagent is live (ASUB-05,
+ * ASUB-16). It stays the only signal after an interrupt, which fires nothing.
+ */
+function applyIdlePrompt(state: MachineState | null): MachineState | null {
+  // A result still owed at this point was lost; waiting is the recovery.
+  return backgroundBusy(state) ? state : { ...withSubagents(to(state, 'waiting'), []), owed: [] }
 }
 
 function applySubagent(
@@ -160,7 +335,7 @@ function applySubagent(
 export function applyKeystroke(state: MachineState | null): MachineState | null {
   if (state === null) return state
   const blocked = state.view.state === 'needs-approval' || state.view.state === 'needs-input'
-  return blocked ? to(state, 'working') : state
+  return blocked ? withoutAskers(to(state, 'working')) : state
 }
 
 /** Whether two views would render identically — the ACTV-06 emit gate. */

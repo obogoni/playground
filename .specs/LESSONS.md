@@ -222,13 +222,103 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: M21 src/main/time-log-store.ts:107 (file-stores)
 - last seen: 2026-09-16T22:42:48Z
 
-### L-041 - Assert a styled state by the value the spec names, such as its colour, not only by whether the style is present
+### L-041 - Test interval-layout logic with several clusters in one input, not one cluster per case
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer/lib` · harmful: 0
+- features: hours-calendar
+- evidence: M12,M13 hours-calendar.ts:127 (renderer/lib)
+- last seen: 2026-09-19T20:43:35Z
+
+### L-042 - Cover the exact-boundary case where one interval ends as the next starts for every interval comparison
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer/lib` · harmful: 0
+- features: hours-calendar
+- evidence: M10 hours-calendar.ts:128 (renderer/lib)
+- last seen: 2026-09-19T20:43:36Z
+
+### L-043 - Test rounding with inputs on both sides of the half so floor, ceil and round are distinguishable
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer/lib` · harmful: 0
+- features: hours-calendar
+- evidence: M8 hours-calendar.ts:75 (renderer/lib)
+- last seen: 2026-09-19T20:43:36Z
+
+### L-044 - State numeric UI thresholds in the spec acceptance criterion, not only in the design
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-12 (+1 more)
+- last seen: 2026-09-19T20:43:36Z
+
+### L-045 - A check whose assertion is satisfied by either branch of a conditional render is not evidence for either; drive the branch the criterion names from data the check itself creates.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-17 - scripts/smoke-hours-calendar.mjs:303-313 (smoke)
+- last seen: 2026-09-19T21:43:36Z
+
+### L-046 - A state flag that re-arms a close or cleanup rule needs a check that starts from the state where the flag is still false, not only from the common state where it is already true.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: MH - src/renderer/src/components/HoursView.tsx:123-126 (renderer)
+- last seen: 2026-09-19T21:43:36Z
+
+### L-047 - A global key handler that exempts text fields is behaviour the acceptance criterion must state, or the exemption is untestable and a mutant removing it survives.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-25 - src/renderer/src/components/HoursView.tsx:66-67 (renderer)
+- last seen: 2026-09-19T21:43:36Z
+
+### L-048 - When an acceptance criterion gains a clause about rendered text or a visual token, add its assertion in the same change; a clause no check reads is where wrong output ships unnoticed.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: N1, N4, N5 - src/renderer/src/components/HoursView.tsx:306-327 (renderer)
+- last seen: 2026-09-19T22:02:37Z
+
+### L-049 - A count shown to the user must count what its label names; do not label a group count as a task count when a group may carry no task.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-15 - src/renderer/src/components/HoursView.tsx:309 (renderer)
+- last seen: 2026-09-19T22:02:37Z
+
+### L-050 - Exercise a fix at the boundary value it was made for; an end-to-end check whose fixture never reaches that value cannot fail when the fix is undone.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-calendar
+- evidence: P1 - src/renderer/src/components/HoursView.tsx:286 vs scripts/smoke-hours-calendar.mjs:342-356 (smoke)
+- last seen: 2026-09-19T22:19:57Z
+
+### L-051 - Before writing an edge case as 'exactly today's behaviour', read the state owner's lifecycle code (e.g. TimeTracker.ended drops the run and its paused flag); a grilled default about existing behaviour is a premise to verify, not a fact.
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `spec/edge-cases` · harmful: 0
+- features: session-strip-polish
+- evidence: spec.md Edge Cases; src/main/time-tracker.ts:80-86 (spec/edge-cases)
+- last seen: 2026-09-19T19:49:53Z
+
+### L-052 - In a smoke that toggles state, start each check from a state the previous check confirmed and flip it, so a dead input fails its own check instead of a later one passing because nothing changed.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke-*.mjs` · harmful: 0
+- features: session-strip-polish
+- evidence: scripts/smoke-strip.mjs:317-320 (round 1) (scripts/smoke-*.mjs)
+- last seen: 2026-09-19T19:49:54Z
+
+### L-053 - When a task removes or renames a UI control, grep scripts/ for its label and selectors; smoke scripts are outside the unit gate and break silently.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke-*.mjs` · harmful: 0
+- features: session-strip-polish
+- evidence: scripts/smoke-time.mjs:188-212 (round 1) (scripts/smoke-*.mjs)
+- last seen: 2026-09-19T19:49:54Z
+
+### L-054 - When a criterion names several events or conditions (A, B or C), write one test per event or condition in which it alone decides the outcome; an it.each keeps it cheap
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `activity-machine` · harmful: 0
+- features: activity-subagent-attribution
+- evidence: M09 M20 M24 M26 M27 src/main/activity-machine.ts:176 (activity-machine)
+- last seen: 2026-09-26T01:30:53Z
+
+### L-055 - An edge case phrased 'whatever X is pending' needs a test with X actually pending
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `activity-machine` · harmful: 0
+- features: activity-subagent-attribution
+- evidence: M10 src/main/activity-machine.ts:161 (activity-machine)
+- last seen: 2026-09-26T01:30:53Z
+
+### L-056 - Assert a styled state by the value the spec names, such as its colour, not only by whether the style is present
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-ui` · harmful: 0
 - features: files-view-polish
 - evidence: FPOL-02 scripts/smoke-files-diff.mjs:322 (smoke-ui)
 - last seen: 2026-09-26T17:54:24Z
 
-### L-042 - When a change widens a condition to more elements, assert that the elements it still excludes lack the element
+### L-057 - When a change widens a condition to more elements, assert that the elements it still excludes lack the element
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-ui` · harmful: 0
 - features: files-view-polish
 - evidence: FPOL-02 src/renderer/src/components/FileTabs.tsx:241 (smoke-ui)
