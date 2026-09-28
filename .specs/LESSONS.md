@@ -336,6 +336,36 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: FICN-13 (validation.md, FileIcon.tsx:53-62) (renderer-ui)
 - last seen: 2026-09-26T17:05:30Z
 
+### L-060 - When several sources feed one hover or focus state, read the view after each source's leave before the next source enters, because the next enter overwrites a leave that never fired
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: validation.md SM1; scripts/smoke-hours-calendar.mjs:818-838; HTF-08 (smoke)
+- last seen: 2026-09-26T21:15:08Z
+
+### L-061 - When an acceptance criterion names several sources for one behaviour, give each source its own check; covering one source leaves the others unverified
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: HTF-09; scripts/smoke-hours-calendar.mjs:829-838 (smoke)
+- last seen: 2026-09-26T21:15:08Z
+
+### L-062 - When the spec fixes exact colour values, assert the computed colours against those values in order, not only that they are distinct
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: HTF-01; scripts/smoke-hours-calendar.mjs:739 (smoke)
+- last seen: 2026-09-26T21:15:09Z
+
+### L-063 - When a spec edge case states what an element shows, assert each stated value on screen, not only that the element is present
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: validation.md SM7; scripts/smoke-hours-calendar.mjs:928; spec edge case 4 (smoke) (smoke)
+- last seen: 2026-09-26T21:48:16Z
+
+### L-064 - Quote UI text in the spec only as the app renders it; check a literal against the formatter before writing it in backticks
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: hours-task-focus
+- evidence: spec.md edge case 4; src/renderer/src/components/HoursLegend.tsx:54 (0m vs 0h00) (specs)
+- last seen: 2026-09-26T21:48:16Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

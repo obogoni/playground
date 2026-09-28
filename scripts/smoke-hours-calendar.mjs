@@ -29,12 +29,21 @@
  *      card: the card reaches past its last group, the drawer scrolls it as one
  *      unit and the page does not scroll; a short day still fills the drawer
  *      (HDRW-01..04)
+ *  11. the seeded Sunday's fourteen tasks wear eight distinct colours and six
+ *      Other bars, the first eight in the palette's colours and order in both
+ *      themes; each task's legend and drawer swatches wear its bar's colour;
+ *      the summary reads `14 tasks · 14 blocks` (HTF-01, 03, 05, 16, 17)
+ *  12. pointing at a legend chip, a drawer group header or a bar, or focusing a
+ *      chip or a bar, leaves only that task's bars at full opacity, and leaving
+ *      each restores them; clicking a chip shows only the seeded Sunday, closes a drawer open
+ *      on Monday and marks the chip with a ×; ◀ ▶ keep the pick and the current
+ *      week says it has no time for it, keeping the chip at 0h00 with the
+ *      neutral swatch and its ×; the × and a second click clear it; no
+ *      bar changes colour throughout (HTF-07..15)
  *
- * NOT automatable here, all from the same fact — ad-hoc sessions in a non-git
- * cwd carry no task: the colours of the task slots (HCAL-11 and the frozen
- * ranking are unit-tested) and the summary line's `N tasks` wording, since
- * every fixture day counts zero tasks and that branch never renders. Nor is
- * keyboard focus showing the tooltip, nor the two-theme look.
+ * NOT automatable here: keyboard focus showing the tooltip, and the two-theme
+ * look. The ad-hoc sessions carry no task, so every task colour is read on the
+ * seeded Sunday.
  *
  * The sessions are ad-hoc `pwsh` in C:/Windows and C:/Windows/System32 — never a
  * registry agent, which on a machine with the CLI installed starts a real agent.
@@ -713,6 +722,256 @@ try {
     short
       ? `card ${short.cardHeight.toFixed(1)} vs drawer ${short.drawerClient}, last group ${short.lastBottom.toFixed(1)}`
       : 'no card'
+  )
+
+  // 11. Eight colours on the seeded Sunday, never two on one day (HTF-01, 03, 05, 16, 17).
+  for (let i = 0; i < 8 && !(await headLabels()).some((l) => l.startsWith(seedHeader)); i++) {
+    await nav('Previous week')
+    await sleep(300)
+  }
+  await clickHead(seedHeader)
+  await sleep(400)
+  const sunday = await evaluate(
+    `(() => { const roleOf = el => [...el.classList].find(c => c.startsWith('role-')); const bg = el => getComputedStyle(el).backgroundColor; const bars = [...document.querySelectorAll('.hcal-col.selected .hcal-bar')].map(b => ({ label: b.getAttribute('aria-label').split(', ')[0], role: roleOf(b), bg: bg(b) })); const chips = new Map([...document.querySelectorAll('.hleg-chip')].map(c => [c.querySelector('.hleg-label').textContent, bg(c.querySelector('.hleg-swatch'))])); const rows = new Map([...document.querySelectorAll('.hours-drawer .hours-group')].map(g => [g.querySelector('.hours-group-label').textContent, bg(g.querySelector('.hours-group-swatch'))])); return { bars: bars.map(b => ({ ...b, chip: chips.get(b.label) ?? null, row: rows.get(b.label) ?? null })), count: document.querySelector('.hours-drawer .hours-day-count')?.textContent ?? null } })()`
+  )
+  const slotBars = sunday.bars.filter((b) => /^role-slot[1-8]$/.test(b.role))
+  const otherBars = sunday.bars.filter((b) => b.role === 'role-other')
+  const slotColours = new Set(slotBars.map((b) => b.bg))
+  check(
+    "the seeded Sunday's fourteen tasks wear eight distinct colours and six Other bars",
+    sunday.bars.length === 14 &&
+      slotBars.length === 8 &&
+      slotColours.size === 8 &&
+      otherBars.length === 6 &&
+      new Set(otherBars.map((b) => b.bg)).size === 1 &&
+      !slotColours.has(otherBars[0].bg),
+    `${slotBars.length} slot bars in ${slotColours.size} colours, ${otherBars.length} Other`
+  )
+  check(
+    "each seeded task's legend and drawer swatches wear its bar's colour",
+    sunday.bars.length === 14 && sunday.bars.every((b) => b.chip === b.bg && b.row === b.bg),
+    JSON.stringify(sunday.bars.filter((b) => b.chip !== b.bg || b.row !== b.bg).slice(0, 2))
+  )
+  check(
+    "the seeded Sunday's summary counts its tasks",
+    sunday.count === '14 tasks · 14 blocks',
+    `${sunday.count}`
+  )
+  // The seed's first eight tasks share the day and have equal time, so they
+  // take the slots in seed order: their bars wear AD-045's palette in order.
+  const PALETTE = {
+    dark: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'],
+    light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948']
+  }
+  const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`
+  const shownTheme = await evaluate(`document.documentElement.dataset.theme`)
+  const worn = {}
+  for (const theme of ['dark', 'light']) {
+    worn[theme] = await evaluate(
+      `(() => { document.documentElement.dataset.theme = ${JSON.stringify(theme)}; const bars = [...document.querySelectorAll('.hcal-col.selected .hcal-bar')]; return ${JSON.stringify(SEED_TITLES.slice(0, 8))}.map(t => { const b = bars.find(x => x.getAttribute('aria-label').split(', ')[0].includes(t)); return b ? getComputedStyle(b).backgroundColor : null }) })()`
+    )
+  }
+  await evaluate(`document.documentElement.dataset.theme = ${JSON.stringify(shownTheme)}, true`)
+  const offPalette = Object.entries(PALETTE).flatMap(([theme, hexes]) =>
+    hexes
+      .map((hex, i) => [theme, i + 1, rgb(hex), worn[theme][i]])
+      .filter(([, , want, got]) => want !== got)
+  )
+  check(
+    "the seeded Sunday's first eight tasks wear the palette's eight colours in order, in both themes",
+    offPalette.length === 0,
+    JSON.stringify(offPalette.slice(0, 3))
+  )
+
+  // 12. Hover and filter by task, in the seeded week (HTF-07..15).
+  const labelOf = (title) =>
+    evaluate(
+      `[...document.querySelectorAll('.hleg-label')].map(l => l.textContent).find(t => t.includes(${JSON.stringify(title)})) ?? null`
+    )
+  const [taskA, taskB, taskC, taskD] = await Promise.all(
+    SEED_TITLES.slice(0, 4).map((title) => labelOf(title))
+  )
+  const chipOf = (label) =>
+    `[...document.querySelectorAll('.hleg-chip')].find(c => c.querySelector('.hleg-label').textContent === ${JSON.stringify(label)})`
+  const barOf = (label) =>
+    `[...document.querySelectorAll('.hcal-bar')].find(b => b.getAttribute('aria-label').startsWith(${JSON.stringify(`${label}, `)}))`
+  const rowOf = (label) =>
+    `[...document.querySelectorAll('.hours-drawer .hours-group')].find(g => g.querySelector('.hours-group-label').textContent === ${JSON.stringify(label)})?.querySelector('.hours-group-head')`
+  const bars = () =>
+    evaluate(
+      `[...document.querySelectorAll('.hcal-bar')].map(b => ({ label: b.getAttribute('aria-label').split(', ')[0], bg: getComputedStyle(b).backgroundColor, opacity: Number(getComputedStyle(b).opacity) }))`
+    )
+  /** Only `label`'s bars at full opacity, every other of the fourteen at 30%. */
+  const onlyFull = (list, label) =>
+    list.length === 14 &&
+    list.some((b) => b.label === label) &&
+    list.every((b) => (b.label === label ? b.opacity === 1 : Math.abs(b.opacity - 0.3) < 0.01))
+  const opacities = (list) =>
+    [...new Set(list.map((b) => `${b.label === taskA ? 'A' : '·'}${b.opacity}`))].join(' ')
+  const pointAt = async (element) => {
+    const at = await evaluate(
+      `(() => { const e = ${element}; if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } })()`
+    )
+    if (at) await send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...at })
+    await sleep(400)
+    return at !== null
+  }
+  const pointAway = async () => {
+    await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 2, y: 2 })
+    await sleep(400)
+  }
+  const colourOf = (list) => new Map(list.map((b) => [b.label, b.bg]))
+  const sameColours = (list, reference) =>
+    list.length > 0 && list.every((b) => reference.get(b.label) === b.bg)
+  const pressedChips = () =>
+    evaluate(
+      `[...document.querySelectorAll('.hleg-chip')].filter(c => c.querySelector('.hleg-pick').getAttribute('aria-pressed') === 'true').map(c => ({ label: c.querySelector('.hleg-label').textContent, total: c.querySelector('.hleg-total').textContent, swatch: [...c.querySelector('.hleg-swatch').classList].find(x => x.startsWith('role-')), clear: c.querySelector('.hleg-clear') !== null }))`
+    )
+  const allFull = (list) => list.length === 14 && list.every((b) => b.opacity === 1)
+
+  await pointAway()
+  const rest = await bars()
+  const palette = colourOf(rest)
+  const pointedChip = await pointAt(chipOf(taskA))
+  const chipHover = await bars()
+  check(
+    "pointing at a legend chip leaves only its task's bars at full opacity",
+    Boolean(taskA) && allFull(rest) && pointedChip && onlyFull(chipHover, taskA),
+    `${taskA}: ${opacities(chipHover)}`
+  )
+  await pointAway()
+  const left = await bars()
+  check('leaving the chip restores every bar', allFull(left), opacities(left))
+  const pointedRow = await pointAt(rowOf(taskB))
+  const rowHover = await bars()
+  await pointAway()
+  // Read after each leave, before the next source enters: an enter would
+  // overwrite a hover that never cleared.
+  const rowLeft = await bars()
+  const pointedBar = await pointAt(barOf(taskC))
+  const barHover = await bars()
+  await pointAway()
+  const barLeft = await bars()
+  check(
+    'pointing at a drawer group header or at a bar does the same for its task',
+    pointedRow && onlyFull(rowHover, taskB) && pointedBar && onlyFull(barHover, taskC),
+    `row ${pointedRow}, bar ${pointedBar}`
+  )
+  check(
+    'leaving a drawer group header or a bar restores every bar',
+    onlyFull(rowHover, taskB) && allFull(rowLeft) && onlyFull(barHover, taskC) && allFull(barLeft),
+    `${opacities(rowLeft)} / ${opacities(barLeft)}`
+  )
+  await evaluate(`${barOf(taskB)}?.focus(), true`)
+  await sleep(400)
+  const barFocus = await bars()
+  await evaluate(`document.activeElement.blur(), true`)
+  await sleep(400)
+  const barBlurred = await bars()
+  check(
+    'keyboard focus on a bar fades the other tasks, and leaving it restores them',
+    onlyFull(barFocus, taskB) && allFull(barBlurred),
+    `${opacities(barFocus)} / ${opacities(barBlurred)}`
+  )
+  await evaluate(`${chipOf(taskD)}?.querySelector('.hleg-pick')?.focus(), true`)
+  await sleep(400)
+  const chipFocus = await bars()
+  await evaluate(`document.activeElement.blur(), true`)
+  await sleep(400)
+  const blurred = await bars()
+  check(
+    'keyboard focus on a chip fades the other tasks, and leaving it restores them',
+    onlyFull(chipFocus, taskD) && allFull(blurred),
+    opacities(chipFocus)
+  )
+
+  const seedMonday = dayHeader(
+    new Date(seedStart.getFullYear(), seedStart.getMonth(), seedStart.getDate() - 6)
+  )
+  await clickHead(seedMonday)
+  await sleep(300)
+  const openOnMonday = (await drawerOpen()) && (await detailTitle()) === seedMonday
+  await evaluate(`${chipOf(taskA)}?.querySelector('.hleg-pick')?.click(), true`)
+  await sleep(400)
+  const pickedHeads = await headLabels()
+  const picked = await bars()
+  const pressed = await pressedChips()
+  check(
+    'clicking a chip shows only the days its task took',
+    pickedHeads.length === 1 && pickedHeads[0].startsWith(seedHeader),
+    pickedHeads.map((l) => l.slice(0, 16)).join(' | ')
+  )
+  check(
+    'the picked chip shows as selected with a ×',
+    pressed.length === 1 && pressed[0].label === taskA && pressed[0].clear,
+    JSON.stringify(pressed)
+  )
+  check(
+    "the pick fades the other tasks' bars on the days it shows",
+    onlyFull(picked, taskA),
+    opacities(picked)
+  )
+  check(
+    'the pick closes a drawer whose day it filters out',
+    openOnMonday && !(await drawerOpen()) && (await pressedLabel()) === null,
+    `open on Monday ${openOnMonday}`
+  )
+  await nav('Next week')
+  await sleep(400)
+  const away = {
+    empty: await emptyTexts(),
+    grid: await evaluate(`document.querySelector('.hcal') !== null`),
+    pressed: await pressedChips()
+  }
+  await nav('Previous week')
+  await sleep(400)
+  const backHeads = await headLabels()
+  check(
+    'moving weeks keeps the pick, and a week without its task says so',
+    away.empty.includes(`No time for ${taskA} this week.`) &&
+      !away.grid &&
+      away.pressed.length === 1 &&
+      away.pressed[0].label === taskA &&
+      backHeads.length === 1 &&
+      backHeads[0].startsWith(seedHeader),
+    `${away.empty.join(' | ')}; back: ${backHeads.map((l) => l.slice(0, 16)).join(' | ')}`
+  )
+  check(
+    'in that week the picked chip stays, with a zero total, the neutral swatch and its ×',
+    away.pressed.length === 1 &&
+      away.pressed[0].total === '0h00' &&
+      away.pressed[0].swatch === 'role-other' &&
+      away.pressed[0].clear,
+    JSON.stringify(away.pressed)
+  )
+  await evaluate(`${chipOf(taskA)}?.querySelector('.hleg-clear')?.click(), true`)
+  await sleep(400)
+  const clearedHeads = await headLabels()
+  const cleared = await bars()
+  const clearedPressed = await pressedChips()
+  await evaluate(`${chipOf(taskA)}?.querySelector('.hleg-pick')?.click(), true`)
+  await sleep(400)
+  const repickedHeads = (await headLabels()).length
+  await evaluate(`${chipOf(taskA)}?.querySelector('.hleg-pick')?.click(), true`)
+  await sleep(400)
+  const reclearedHeads = await headLabels()
+  const recleared = await bars()
+  check(
+    'the × or a second click on the chip shows every day again',
+    clearedHeads.length === 6 &&
+      clearedPressed.length === 0 &&
+      allFull(cleared) &&
+      repickedHeads === 1 &&
+      reclearedHeads.length === 6 &&
+      allFull(recleared),
+    `${clearedHeads.length} days after ×, ${repickedHeads} after a pick, ${reclearedHeads.length} after a second click`
+  )
+  check(
+    'no bar changes colour while tasks are pointed at, picked or cleared',
+    [chipHover, rowHover, barHover, barFocus, chipFocus, picked, cleared, recleared].every((list) =>
+      sameColours(list, palette)
+    ) && palette.size === 14,
+    `${palette.size} bars`
   )
 } finally {
   for (const id of sessionIds) {

@@ -21,6 +21,10 @@ interface HoursCalendarProps {
   /** Local midnight of the selected day, or null. */
   selected: number | null
   focus?: BlockFocus
+  /** Groups whose bars fade while another is in focus (HTF-07, HTF-10). */
+  dimmed: Set<string>
+  /** A bar under the pointer or keyboard focus, or null when it leaves (HTF-07..09). */
+  onHover: (key: string | null) => void
   onSelectDay: (date: number) => void
   onSelectBlock: (date: number, focus: BlockFocus) => void
 }
@@ -34,7 +38,9 @@ const clock = (ms: number): string => {
 /**
  * The shown week as day columns on one hour axis, each merged block a bar in
  * its overlap lane, coloured by its task's role (HCAL-01..05, 08, 10..12,
- * 18..20, 22, 23). Every number comes from the pure `hours-calendar` model.
+ * 18..20, 22, 23). While a group is in focus the others' bars fade, and a bar
+ * under the pointer or keyboard focus puts its own group in focus (HTF-07..10).
+ * Every number comes from the pure `hours-calendar` model.
  */
 export function HoursCalendar({
   columns,
@@ -43,6 +49,8 @@ export function HoursCalendar({
   now,
   selected,
   focus,
+  dimmed,
+  onHover,
   onSelectDay,
   onSelectBlock
 }: HoursCalendarProps): JSX.Element {
@@ -125,6 +133,8 @@ export function HoursCalendar({
                 focused={
                   selected === date && focus?.groupKey === groupKey && focus.start === block.start
                 }
+                dimmed={dimmed.has(groupKey)}
+                onHover={(on) => onHover(on ? groupKey : null)}
                 onActivate={() => onSelectBlock(date, { groupKey, start: block.start })}
               />
             ))}
@@ -145,6 +155,10 @@ interface BarProps {
   /** Open the tooltip to the left, so the last columns keep it on screen. */
   tipLeft: boolean
   focused: boolean
+  /** Another group is in focus (HTF-07, HTF-10). */
+  dimmed: boolean
+  /** The pointer or keyboard focus entered (true) or left (false) the bar. */
+  onHover: (on: boolean) => void
   onActivate: () => void
 }
 
@@ -157,6 +171,8 @@ function Bar({
   lanes,
   tipLeft,
   focused,
+  dimmed,
+  onHover,
   onActivate
 }: BarProps): JSX.Element {
   const range = `${clock(block.start)}–${box.ongoing ? 'now' : clock(block.end)}`
@@ -176,6 +192,7 @@ function Bar({
         `role-${role}`,
         box.ongoing && 'ongoing',
         focused && 'focused',
+        dimmed && 'dimmed',
         tipLeft && 'tip-left'
       ]
         .filter(Boolean)
@@ -183,6 +200,10 @@ function Bar({
       style={style}
       aria-label={`${label}, ${range}, ${duration}`}
       onClick={onActivate}
+      onMouseEnter={() => onHover(true)}
+      onMouseLeave={() => onHover(false)}
+      onFocus={() => onHover(true)}
+      onBlur={() => onHover(false)}
     >
       <span className="hcal-bar-label">{label}</span>
       <span className="hcal-tip" aria-hidden="true">
