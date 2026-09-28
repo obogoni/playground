@@ -83,6 +83,78 @@
   color: var(--text);
 }
 
+/* FPOL-02: every tab's pin, before its close button: outlined while the tab is
+   unpinned, filled in the accent colour while it is pinned. */
+.file-tab-pin {
+  display: flex;
+  align-items: center;
+  padding: 5px 2px 5px 4px;
+  color: var(--text-faint);
+}
+
+.file-tab-pin:hover {
+  color: var(--accent);
+}
+
+.file-tab.pinned .file-tab-pin {
+  color: var(--accent);
+}
+
+.file-tab.pinned .file-tab-pin svg {
+  fill: currentColor;
+}
+
+/* FPOL-12: the ⋯ button ends the strip, at its right edge. */
+.file-tabs-more {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  align-self: center;
+  margin-left: auto;
+  padding: 4px 6px;
+  border-radius: 6px;
+  color: var(--text-faint);
+}
+
+.file-tabs-more:hover {
+  background: var(--panel);
+  color: var(--text);
+}
+
+/* The strip's menu, built like the commit list's and the sidebar's (FPOL-12/13). */
+.file-tabs-menu {
+  position: fixed;
+  z-index: 70;
+  min-width: 176px;
+  padding: 5px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 12px 36px var(--shadow);
+}
+
+.file-tabs-menu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 7px;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.file-tabs-menu-item:hover {
+  background: var(--panel-2);
+}
+
+.file-tabs-menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
+}
+
 /*
  * The diff controls (FDIF-12/16/25/27), shown only while a diff surface is in
  * front of the reader. Above the launcher row, so the row stays where FXPL-25

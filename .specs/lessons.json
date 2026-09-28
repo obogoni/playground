@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 56,
+  "next_id": 58,
   "lessons": [
     {
       "id": "L-001",
@@ -911,6 +911,42 @@
       ],
       "created": "2026-09-26T01:30:53Z",
       "last_seen": "2026-09-26T01:30:53Z"
+    },
+    {
+      "id": "L-056",
+      "key": "ac_gap::assert a styled state by the value the spec names such as its colour not only by whether the style is present",
+      "text": "Assert a styled state by the value the spec names, such as its colour, not only by whether the style is present",
+      "signal": "ac_gap",
+      "scope": "smoke-ui",
+      "status": "candidate",
+      "features": [
+        "files-view-polish"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "FPOL-02 scripts/smoke-files-diff.mjs:322 (smoke-ui)"
+      ],
+      "created": "2026-09-26T17:54:24Z",
+      "last_seen": "2026-09-26T17:54:24Z"
+    },
+    {
+      "id": "L-057",
+      "key": "ac_gap::when a change widens a condition to more elements assert that the elements it still excludes lack the element",
+      "text": "When a change widens a condition to more elements, assert that the elements it still excludes lack the element",
+      "signal": "ac_gap",
+      "scope": "smoke-ui",
+      "status": "candidate",
+      "features": [
+        "files-view-polish"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "FPOL-02 src/renderer/src/components/FileTabs.tsx:241 (smoke-ui)"
+      ],
+      "created": "2026-09-26T17:54:24Z",
+      "last_seen": "2026-09-26T17:54:24Z"
     }
   ]
 }

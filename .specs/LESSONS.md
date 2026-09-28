@@ -312,6 +312,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: M10 src/main/activity-machine.ts:161 (activity-machine)
 - last seen: 2026-09-26T01:30:53Z
 
+### L-056 - Assert a styled state by the value the spec names, such as its colour, not only by whether the style is present
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-ui` · harmful: 0
+- features: files-view-polish
+- evidence: FPOL-02 scripts/smoke-files-diff.mjs:322 (smoke-ui)
+- last seen: 2026-09-26T17:54:24Z
+
+### L-057 - When a change widens a condition to more elements, assert that the elements it still excludes lack the element
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-ui` · harmful: 0
+- features: files-view-polish
+- evidence: FPOL-02 src/renderer/src/components/FileTabs.tsx:241 (smoke-ui)
+- last seen: 2026-09-26T17:54:24Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
