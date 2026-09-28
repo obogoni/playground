@@ -113,6 +113,15 @@ describe('describeNotification', () => {
     })
   })
 
+  it('names an MCP tool by its raw name (STRP-06)', () => {
+    expect(
+      describeNotification(
+        session,
+        activity('needs-approval', { tool: 'mcp__azure-devops__wit_work_item' })
+      ).body
+    ).toBe('Needs approval to run mcp__azure-devops__wit_work_item')
+  })
+
   it('still asks for approval when no tool is known', () => {
     expect(describeNotification(session, activity('needs-approval')).body).toBe(
       'Needs your approval'

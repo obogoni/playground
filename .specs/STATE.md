@@ -51,6 +51,7 @@ Handoff snapshot.
 | AD-029 | 2026-09-19 | **Effective when `hours-calendar` ships, the Hours direction is a week calendar and TIME-34 is superseded.** The week (still Monday 00:00 to next Monday, TIME-32) renders as day columns — Monday to Friday always, Saturday or Sunday only when they hold time — with each merged block (TIME-36) drawn as a bar at the hours it happened, parallel blocks side by side in lanes. One selected day is shown below the grid through the unchanged `DayCard`, so groups, raw periods, edit, delete and Copy (TIME-35..41, 44..49) keep working exactly as specified. `buildWeekReport`, the merge rule and the Copy format are untouched. **Numbered 029 because AD-022..AD-028 are recorded on the `feature/status-bar` stack** (the Files epic), which this branch — cut from `feature/time-tracking` — does not contain. | Owner request: the list answered "how long" but not "when", and running agents in parallel was invisible in text. Replacing only the presentation keeps every tested computation and shipped action; the AD-018 / AD-028 pattern keeps a merged spec from describing a list that no longer exists. Spec / design / tasks: `.specs/features/hours-calendar/` (HCAL-01..24). |
 | AD-030 | 2026-09-19 | **Categorical chart colours are validated against the app's own surfaces, and where any mark can touch any other, at most three are used.** Validated with the `dataviz` skill's validator, `--pairs all`, on the view's `--panel` (`#ffffff` light, `#221f1b` dark): only **blue `#2a78d6` / `#3987e5`, orange `#eb6834` / `#d95926`, aqua `#1baf7a` / `#199e70`** (light / dark) pass every check in both themes. Further categories fold into a neutral **Other**; they are never given a generated or extra hue. The session-state tokens (`--green`, `--amber`, `--red`, `--blue`, `--pink`) are never used as series colours. Any later chart re-runs the validator on its own surface and adjacency before adding a colour. | Measured, not assumed: the reference eight-colour palette fails the normal-vision floor with every pair in play (red ↔ orange ΔE 7.1 light), and a fourth colour fails in dark (violet ↔ blue ΔE 9.8) — pairs that full-colour readers cannot tell apart and that labels do not excuse. Recording it spares the next chart from rediscovering it. First applied by `hours-calendar` (owner decision: the three tasks with the most time get the colours). |
 | AD-031 | 2026-09-19 | **The Hours calendar fits the window and opens a day in a drawer, amending AD-029.** After the first build the owner compared three no-scroll mockups and chose layout B: the legend becomes a row of chips above the grid, the grid's hour height follows the available height, and the selected day's detail — still the unchanged `DayCard`, so TIME-35..41 and 44..49 hold — moves from under the grid into a drawer beside it. The drawer is **closed** when the view opens and whenever the week changes; a header or bar click opens it, its X or Esc closes it, and it closes when its day loses its last period. HCAL-15..19 and 21 are revised, HCAL-25 and 26 added. The default-day rule HCAL-16 had required is gone, so `defaultDay` and its three unit tests are removed with it. | The stacked grid, legend and day card ran past the window at every size, so reading the week and acting on a day meant scrolling. Of the three mockups (day in focus, week + drawer, horizontal timeline) B keeps everything already built and verified — columns, lanes, colours, the frozen map — and changes only where the detail lives. Opening closed was the owner's call: the week is the default view, the detail an action. Spec / tasks: `.specs/features/hours-calendar/` (HCAL-15..26, T12..T16). |
+| AD-044 | 2026-09-26 | **The app opens an address by itself only when it is `https:`; a terminal link may also be `http:`.** `isHttpsUrl` in `src/main/url-policy.ts` is the one rule for every address the app opens on its own: a new window the renderer asks for (`setWindowOpenHandler`, which denies the window and opens an `https:` link in the browser) and an address built from a remote, such as a commit page (`openCommit`). A refused window link is logged by its scheme, never by the address. Links the user Ctrl+clicks in a terminal keep LINK-04's `http:` or `https:`. F4's `isOpenableLink` (AD-026) is meant to be this same function. | #115. The window-open handler was the Electron template's, forwarding any scheme (`file:`, `ms-settings:`, a registered protocol handler, a UNC path) to `shell.openExternal`, in an app about to render third-party text (AD-026). It was not dormant: the worktree detail's linked-task card is a `target="_blank"` link and opens through it; those are `https://dev.azure.com` addresses, so the rule keeps them working. The terminal is the deliberate exception (owner decision, 2026-09-26): an agent printing a dev server's `http://localhost` address is the common case, the user sees the address before clicking, and LINK-04 is specified and verified that way. Unifying on `https:` everywhere would break that; unifying on `http:` would contradict AD-026. |
 
 
 ## Handoff
@@ -465,3 +466,35 @@ Verifier PASS round 6 on branch `feature/hours-calendar`, rebased onto `origin/m
   empty directory took the same branch. Commits `6a2211e..6fa96d4` pushed to `fork`; PR #99 closes #105. A
   follow-up makes a pass fail when the clean-up leaves the seed behind (the Verifier's one minor gap).
 - **Next:** review of PR #99.
+
+### `session-strip-polish` (PR #98)
+
+Lesson candidates L-030..L-032 of this branch were renumbered **L-051..L-053** at rebase time (`origin/main` already held L-030..L-040, and #99 claims L-041..L-050).
+
+**Status (current, 2026-09-19): `session-strip-polish` COMPLETE. T1-T6 are executed, and the
+independent Verifier returned **PASS** in round 2 of 3, on branch `feature/session-strip-polish`
+(cut from `develop` at `9919139`, rebased onto `origin/main` on 2026-09-25 after #93 and #94
+merged). Open upstream as PR #98. Report: `.specs/features/session-strip-polish/validation.md`;
+`validate_state.py` exits 0.**
+
+- **Commits:** T1-T6 are `5522aa8`..`adcaaa4`. Then `19ef7bc` closed the Verifier's round-1
+  gaps, `80dbb7f` records the report and `423d055` adds lessons L-051..L-053.
+- **Verification:** the suite went from 1200 to **1216** tests (69 files). Typecheck, lint
+  (17 warnings, the baseline) and `npx electron-vite build` all exit 0. The discrimination
+  sensor killed 11 of 11 mutants. `scripts/smoke-strip.mjs` ran **24/24** against the dev
+  app, and the repaired `scripts/smoke-time.mjs` ran **26/26**.
+- **Spec correction:** the spec assumed that a session stopped while paused keeps its paused
+  flag. It does not: `TimeTracker.ended` drops the run with its mark, and a respawn starts
+  counting again. The edge cases and the assumption row are marked `[corrected at Execute]`.
+  The tracker is unchanged, because it is out of scope.
+- **Owner-pending hand checks:**
+  - the clock button in light and dark: hover border, focus ring, and a paused clock staying
+    dim on hover;
+  - a screen reader announcing the clock as a pressed / not-pressed toggle.
+- **Next:**
+  - owner hand checks;
+  - review of PR #98. The branch was rebased with `--onto origin/main 9919139`, so it now
+    carries only its own 11 commits; the code diff is unchanged and the conflicts were all in
+    `.specs/`. Gate on the rebased tip: typecheck 0, lint 0 errors / 18 warnings, **1679 tests**.
+- **Follow-up, not in scope:** `smoke-time.mjs:186` selects the first running row under
+  `C:\Windows`, not the session it spawned. It could pause an owner's session in that folder.
