@@ -113,7 +113,7 @@ Milestones follow the PRD's suggested slice ordering (issue #1, "Further Notes")
 - Fast-forward only, in-place `merge --ff-only` inside the worktree holding the checked-out base (else a direct ref fetch); any refresh failure (no upstream / fetch fail / diverged / dirty base) **blocks** the create with a readable inline error — never a silent stale base (WBR-02)
 - Per-dialog default, **not persisted** (no `AppConfig` field); inert when no base branch is given; new optional `worktrees:create` `updateBase` field; `GIT_TERMINAL_PROMPT=0` so a credential-less fetch fails fast (WBR-03/05)
 
-**Session Strip Polish** - PLANNED (spec + tasks on `feature/session-strip-polish`)
+**Session Strip Polish** - COMPLETE (on `feature/session-strip-polish`, PR #98)
 
 - An MCP tool reads `MCP <server>` in the session detail's activity pill, the raw tool name kept in its tooltip; the rail tooltip and the OS notification keep the raw name (STRP-01..06)
 - The session clock pauses and resumes on click — a `<button aria-pressed>` with a pause / play icon — replacing the Pause time / Resume time buttons (STRP-07..15)

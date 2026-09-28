@@ -14,6 +14,12 @@ export function formatHms(ms: number): string {
   return `${pad(Math.floor(seconds / 3600))}:${pad(Math.floor(seconds / 60) % 60)}:${pad(seconds % 60)}`
 }
 
+/** The clickable session clock's tooltip: the current run, plus what a click
+ *  does (TIME-23, STRP-12). */
+export function clockToggleTitle(runMs: number, paused: boolean): string {
+  return `current run ${formatHms(runMs)} · click to ${paused ? 'resume' : 'pause'}`
+}
+
 /** Worktree and task totals: `hh:mm` (TIME-25, TIME-26, TIME-30). */
 export function formatHm(ms: number): string {
   const minutes = Math.floor(ms / 60_000)
