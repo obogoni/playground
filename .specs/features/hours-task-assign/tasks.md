@@ -902,9 +902,9 @@ The new sessions join the cleanup list. Then the full gate.
 
 **Done when**:
 
-- [ ] Each check seen failing on its mutant, then passing: the dialog starting on the first pin (15.1); the dialog ignoring `source.taskId` (15.2); `onSpawn` dropping the task (15.3); `taskChanged` ignoring a `null` link, relaunched (15.4)
-- [ ] The whole smoke passes twice in a row on a fresh seed
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+- [x] Each check seen failing on its mutant, then passing: the dialog starting on the first pin (15.1); the dialog ignoring `source.taskId` (15.2); `onSpawn` dropping the task (15.3); `taskChanged` ignoring a `null` link, relaunched (15.4)
+- [x] The whole smoke passes twice in a row on a fresh seed (73/73, twice)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build` (1795 tests / 95 files; 0 errors / 18 warnings)
 
 **Tests**: manual
 **Gate**: manual

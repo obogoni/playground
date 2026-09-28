@@ -1397,6 +1397,114 @@ async function railSection() {
   )
 }
 
+const DIALOG = `document.querySelector('.dialog-panel')`
+const dialogTask = () => evaluate(`${DIALOG}?.querySelector('.ns-task-value')?.textContent ?? null`)
+const cancelDialog = () =>
+  evaluate(
+    `[...(${DIALOG}?.querySelectorAll('.dialog-btn-ghost') ?? [])].find(b => b.textContent.trim() === 'Cancel')?.click(), true`
+  )
+
+/** 15. The new-session dialog's Task field (HTSK-07..11, 13, 36). */
+async function dialogSection() {
+  const ADHOC = 'pwsh -NoLogo -NoProfile'
+  const BRANCH = 'feature/9202-seed'
+  await evaluate(`document.querySelector('.session-rail-new')?.click(), true`)
+  await sleep(400)
+  const fromAgents = await dialogTask()
+  await cancelDialog()
+  await sleep(300)
+  check(
+    'the Agents `New` button opens the dialog with Task `From branch`',
+    fromAgents === 'From branch',
+    `${fromAgents}`
+  )
+
+  const card = `[...document.querySelectorAll('.task-card')].find(c => c.querySelector('.task-card-id')?.textContent === '#9202')`
+  await reloadInto('tree')
+  await until(`${card}?.querySelector('.task-agent-btn')?.disabled === false`, 40)
+  await evaluate(`${card}?.querySelector('.task-agent-btn')?.click(), true`)
+  await sleep(400)
+  const fromCard = await dialogTask()
+  check(
+    "pinned #9202's Agent button, its worktree existing, opens the dialog with Task `#9202`",
+    fromCard === '#9202',
+    `${fromCard}`
+  )
+
+  await evaluate(`${DIALOG}?.querySelector('.ns-agent-chip.adhoc')?.click(), true`)
+  await sleep(200)
+  await setInput('.dialog-panel .ns-adhoc-input', ADHOC)
+  await sleep(150)
+  await evaluate(`${DIALOG}?.querySelector('.ns-task-change')?.click(), true`)
+  await sleep(250)
+  const picked = await choose(`${DIALOG}?.querySelector('.ns-task')`, '#9201')
+  await sleep(250)
+  const form = await evaluate(
+    `(() => { const d = ${DIALOG}; return d ? { adhoc: d.querySelector('.ns-agent-chip.adhoc')?.classList.contains('selected') ?? false, command: d.querySelector('.ns-adhoc-input')?.value ?? null, cwd: d.querySelector('.ns-cwd-chip.selected .ns-cwd-branch')?.textContent ?? null, task: d.querySelector('.ns-task-value')?.textContent ?? null, run: d.querySelector('.dialog-path-value')?.textContent ?? null } : null })()`
+  )
+  // Spawn only the ad-hoc shell: a registry agent would start a real CLI.
+  const safe = form?.adhoc === true && form.command === ADHOC && (form.run ?? '').startsWith(ADHOC)
+  const known = new Set((await invoke('sessions:list')).map((v) => v.id))
+  if (safe) {
+    await evaluate(`${DIALOG}?.querySelector('.dialog-btn-primary')?.click(), true`)
+  } else {
+    await cancelDialog()
+  }
+  await sleep(1500)
+  const spawned = (await invoke('sessions:list')).filter((v) => !known.has(v.id))
+  for (const v of spawned) sessionIds.push(v.id)
+  const id = spawned[0]?.id
+  const worktree = (await invoke('tree:get'))
+    .flatMap((w) => w.repos.flatMap((r) => r.worktrees))
+    .find((wt) => wt.branch === BRANCH)
+  const openOf = async () =>
+    (await invoke('time:snapshot')).open.find((p) => p.sessionId === id) ?? null
+  const open3 = await openOf()
+  check(
+    'an ad-hoc spawn in the #9202 worktree with #9201 chosen records 9201, flagged, on its branch',
+    safe &&
+      picked &&
+      form.cwd === BRANCH &&
+      form.task === '#9201' &&
+      spawned.length === 1 &&
+      open3?.taskId === 9201 &&
+      open3.taskByHand === true &&
+      open3.branch === BRANCH &&
+      worktree !== undefined &&
+      open3.cwd.toLowerCase() === worktree.path.toLowerCase(),
+    `${JSON.stringify(form)}; ${spawned.length} spawned; open ${JSON.stringify(open3 && [open3.taskId, open3.taskByHand, open3.branch])}`
+  )
+
+  const row = railRow(` · ${BRANCH}`)
+  await until(`${row} !== undefined`, 40)
+  const group3 = await railGroupOf(row)
+  check(
+    'its rail row sits under #9201, not under #9202',
+    group3?.id === '#9201',
+    JSON.stringify(group3)
+  )
+
+  await evaluate(`${row}?.click(), true`)
+  await sleep(600)
+  const strip = await evaluate(`document.querySelector('.agents-strip-task')?.textContent ?? null`)
+  await evaluate(`document.querySelector('.agents-strip-task-btn')?.click(), true`)
+  await sleep(300)
+  const unlinked = await choose(STRIP_HOST, 'From branch')
+  await sleep(1200)
+  const open4 = await openOf()
+  const group4 = await railGroupOf(row)
+  check(
+    "its strip's From branch records its branch's 9202 with no flag and moves its row under #9202",
+    strip === '#9201' &&
+      unlinked &&
+      open4?.taskId === 9202 &&
+      !('taskByHand' in open4) &&
+      open4.id !== open3?.id &&
+      group4?.id === '#9202',
+    `strip ${strip}; open ${JSON.stringify(open4 && [open4.taskId, open4.taskByHand])}; ${JSON.stringify(group4)}`
+  )
+}
+
 try {
   for (const cwd of FOLDERS) {
     const view = await invoke('sessions:spawn', {
@@ -1415,6 +1523,7 @@ try {
   if (ONLY !== 'assign') await calendarSections()
   await periodSection()
   await railSection()
+  await dialogSection()
 } finally {
   for (const id of sessionIds) {
     await invoke('sessions:stop', { id }).catch(() => {})
