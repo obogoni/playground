@@ -83,26 +83,73 @@
   cursor: default;
 }
 
+/* Fits the window: nothing here scrolls but the drawer (HCAL-26). */
 .hours-body {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  padding: 18px 22px 28px;
+  overflow: hidden;
+  padding: 14px 22px 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .hours-empty {
-  margin: 48px auto;
   font-size: 13px;
   color: var(--text-faint);
 }
 
-/* Day card */
+/* The calendar and, while a day is selected, its drawer (HCAL-15, HCAL-25). */
+.hours-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 12px;
+}
+
+.hours-main > .hcal {
+  min-width: 0;
+}
+
+.hours-drawer {
+  flex: none;
+  width: 380px;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hours-drawer-close {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--text-muted);
+}
+
+.hours-drawer-close:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+
+.hours-drawer .hours-empty {
+  margin: 0;
+  padding: 4px;
+}
+
+/* Day card: the drawer's whole surface (HCAL-15). */
 .hours-day {
-  max-width: 880px;
+  flex: none;
   width: 100%;
+  min-height: 100%;
   box-sizing: border-box;
   background: var(--panel);
   border: 1px solid var(--border);
@@ -115,8 +162,36 @@
 
 .hours-day-head {
   display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.hours-day-titles {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hours-day-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+/* Total, counts and Copy, the day at a glance. */
+.hours-day-stats {
+  display: flex;
   align-items: center;
   gap: 10px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border-radius: 9px;
+}
+
+.hours-day-count {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .hours-day-title {
@@ -128,7 +203,7 @@
 
 .hours-day-total {
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: 17px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--accent-text);
@@ -162,16 +237,44 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
 }
 
 .hours-group-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
   padding: 0 4px 4px;
+}
+
+/* The task's colour in the calendar (HCAL-11), so a row and its bar match. */
+.hours-group-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  border-radius: 3px;
+}
+
+.hours-group-swatch.role-slot1 {
+  background: var(--hcal-slot1);
+}
+
+.hours-group-swatch.role-slot2 {
+  background: var(--hcal-slot2);
+}
+
+.hours-group-swatch.role-slot3 {
+  background: var(--hcal-slot3);
+}
+
+.hours-group-swatch.role-other {
+  background: var(--text-faint);
+}
+
+.hours-group-swatch.role-no-task {
+  background: transparent;
+  border: 1.5px solid var(--text-muted);
 }
 
 .hours-group-label {
@@ -215,6 +318,11 @@
 
 .hours-block-line:hover {
   background: var(--panel-2);
+}
+
+/* The block a calendar bar was activated for (HCAL-19). */
+.hours-block.focused .hours-block-line {
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
 }
 
 .hours-block-chevron {
