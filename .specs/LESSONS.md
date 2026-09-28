@@ -312,6 +312,30 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: spec.md edge case 4; src/renderer/src/components/HoursLegend.tsx:54 (0m vs 0h00) (specs)
 - last seen: 2026-09-26T21:48:16Z
 
+### L-056 - For a rule that rejects when either of two parts fails, test each arm alone: a case where both fail cannot tell || from &&.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main` · harmful: 0
+- features: hours-task-assign
+- evidence: src/main/time-tracker.ts:242 (U12) (src/main)
+- last seen: 2026-09-28T00:27:37Z
+
+### L-057 - When a mark on screen shows a stored flag, the smoke needs a row where the flag and the value it usually follows disagree, or a mark derived from that value passes.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-assign
+- evidence: src/renderer/src/components/PeriodRow.tsx hand mark (S2) (smoke)
+- last seen: 2026-09-28T00:27:37Z
+
+### L-058 - Test an optional-field validator with every value class it must accept or reject (absent, true, false, null, wrong type), not one wrong-type sample.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main` · harmful: 0
+- features: hours-task-assign
+- evidence: src/main/time-log-store.ts:28 (U19, U20) (src/main)
+- last seen: 2026-09-28T00:27:37Z
+
+### L-059 - A 'no change when already X' criterion must say whether X is the explicit setting or the effective value, e.g. a session link versus the task its branch names.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · harmful: 0
+- features: hours-task-assign
+- evidence: HTSK-14
+- last seen: 2026-09-28T00:27:37Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

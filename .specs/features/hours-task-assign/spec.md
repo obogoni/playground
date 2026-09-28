@@ -262,3 +262,17 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 - [ ] A morning of diagnosis on `develop` is booked to its user story without touching the log by hand
 - [ ] A week in which sessions start on `develop` produces a Clockify copy with no No task lines the owner did not intend
 - [ ] The owner's existing `time-log.jsonl` loads with every period intact and unmarked
+
+---
+
+## Follow-ups
+
+Recorded by the Verifier (PASS, round 1, 2026-09-27) under the owner's budget rules: none is a
+production defect, and every AC has evidence. Details in `validation.md`, § Follow-ups.
+
+- **F1** HTSK-30: no test splits a period with only one part under 1 s (unit survivor U12)
+- **F2** HTSK-38: the smoke has no row where the task is set but the flag is not, so a mark driven by the task would pass (smoke survivor S2)
+- **F3** HTSK-43: no store case for `taskByHand: false` (read) or `null` (skipped) (unit survivors U19, U20)
+- **F4** HTSK-03 holds by construction only; the typed lookup stays on the hand-verify list
+- **F5** Thin smoke evidence: synthetic `contextmenu`, pickers clicked with `.click()`, the closed row built by pause and resume; restart, notification text, the strip's `No task`, the linked header title and the mark's look are hand checks
+- **F6** The seeded `acme/platform` pins fire a real, failing details fetch on focus, and the checks rely on it failing
