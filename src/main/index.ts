@@ -615,6 +615,8 @@ app.whenReady().then(() => {
   })
   const sessions = sessionManager
   hookServer.onEvent((sessionId, payload) => sessions.handleHookEvent(sessionId, payload))
+  // The same path as the picker: persist, then the tracker closes and opens (ATSK-02, HTSK-12).
+  hookServer.onTaskLink((sessionId, task) => sessions.setTask(sessionId, task))
   namePoller.onListing((names) => sessions.applyNames(names))
   handle('sessions:list', () => sessions.list())
   handle('sessions:spawn', ({ agentName, cwd, adhocCommand, task }) =>
