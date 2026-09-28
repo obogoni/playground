@@ -300,6 +300,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: scripts/smoke-time.mjs:188-212 (round 1) (scripts/smoke-*.mjs)
 - last seen: 2026-09-19T19:49:54Z
 
+### L-054 - When a criterion names several events or conditions (A, B or C), write one test per event or condition in which it alone decides the outcome; an it.each keeps it cheap
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `activity-machine` · harmful: 0
+- features: activity-subagent-attribution
+- evidence: M09 M20 M24 M26 M27 src/main/activity-machine.ts:176 (activity-machine)
+- last seen: 2026-09-26T01:30:53Z
+
+### L-055 - An edge case phrased 'whatever X is pending' needs a test with X actually pending
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `activity-machine` · harmful: 0
+- features: activity-subagent-attribution
+- evidence: M10 src/main/activity-machine.ts:161 (activity-machine)
+- last seen: 2026-09-26T01:30:53Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
