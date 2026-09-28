@@ -144,6 +144,29 @@
   line-height: 1.35;
 }
 
+/* The title and #id open the work item in the browser (PTOP-01..03): buttons
+   that keep the text's look, plus a link's pointer, hover underline and a
+   visible focus ring. */
+.task-card-link {
+  padding: 0;
+  text-align: left;
+  border-radius: 3px;
+}
+
+.task-card-title.task-card-link {
+  display: block;
+}
+
+.task-card-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.task-card-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .task-card-unavailable {
   margin-top: 9px;
   font-size: 11.5px;

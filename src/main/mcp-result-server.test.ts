@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { Server as HttpServer } from 'node:http'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { createMcpResultServer, type McpResultServer } from './mcp-result-server'
@@ -144,7 +145,8 @@ describe('createMcpResultServer — bind-failure reject (WF4-20)', () => {
     const second = createMcpResultServer()
     // `port` is held by the beforeEach server on 127.0.0.1 → EADDRINUSE.
     await expect(second.start(port)).rejects.toThrow()
-    await second.stop().catch(() => {})
+    // A server that never bound is not listening: stopping it succeeds (RSTP-03).
+    await expect(second.stop()).resolves.toBeUndefined()
   })
 })
 
@@ -163,5 +165,49 @@ describe('createMcpResultServer — revoke (WF3-09)', () => {
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' })
     })
     expect(res.status).toBe(401) // later calls with a revoked token are unauthorized
+  })
+})
+
+describe('createMcpResultServer — stop() when not listening (RSTP-01..05)', () => {
+  it('resolves stop() on a server that was never started (RSTP-01)', async () => {
+    const idle = createMcpResultServer()
+    await expect(idle.stop()).resolves.toBeUndefined()
+  })
+
+  it('resolves a second stop() after the first one resolved (RSTP-02)', async () => {
+    await expect(server.stop()).resolves.toBeUndefined()
+    await expect(server.stop()).resolves.toBeUndefined()
+  })
+
+  it('rejects stop() with the error closing the listening server reports (RSTP-04)', async () => {
+    const failure = new Error('close failed')
+    const close = vi.spyOn(HttpServer.prototype, 'close').mockImplementationOnce(function (
+      this: HttpServer,
+      callback?: (err?: Error) => void
+    ) {
+      callback?.(failure)
+      return this
+    })
+    try {
+      await expect(server.stop()).rejects.toBe(failure)
+    } finally {
+      // The real listener is still open; afterEach's stop() closes it.
+      close.mockRestore()
+    }
+  })
+
+  it('rejects a pending emit_result when a listening server stops (RSTP-05)', async () => {
+    const pending = server.register('tok-stop', EXPECT)
+    const settled = expect(pending).rejects.toThrow('server stopped before emit_result')
+    await server.stop()
+    await settled
+  })
+
+  it('rejects a pending emit_result when a never-started server stops (RSTP-05)', async () => {
+    const idle = createMcpResultServer()
+    const pending = idle.register('tok-idle', EXPECT)
+    const settled = expect(pending).rejects.toThrow('server stopped before emit_result')
+    await idle.stop()
+    await settled
   })
 })
