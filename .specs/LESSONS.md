@@ -324,6 +324,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: FPOL-02 src/renderer/src/components/FileTabs.tsx:241 (smoke-ui)
 - last seen: 2026-09-26T17:54:24Z
 
+### L-058 - Budget entry-chunk growth against the unminified renderer build, where eager glue code counts byte for byte
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `renderer-build` · harmful: 0
+- features: file-icons
+- evidence: tasks.md T6 SPEC_DEVIATION (entry chunk +4,633 B vs 1 KB) (renderer-build)
+- last seen: 2026-09-26T17:05:30Z
+
+### L-059 - When an AC keeps today's look as a fallback, name the fallback for elements that had nothing before
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer-ui` · harmful: 0
+- features: file-icons
+- evidence: FICN-13 (validation.md, FileIcon.tsx:53-62) (renderer-ui)
+- last seen: 2026-09-26T17:05:30Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

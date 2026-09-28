@@ -10,6 +10,7 @@ import { AllChangesTab } from './AllChangesTab'
 import { CodeViewer } from './CodeViewer'
 import { CommitTab } from './CommitTab'
 import { DiffViewer, type DiffHandle } from './DiffViewer'
+import { FileIcon } from './FileIcon'
 import { FilePlaceholder } from './FilePlaceholder'
 import { Icon, type IconName } from './Icon'
 import './FileTabs.css'
@@ -229,6 +230,9 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
                 title={title}
                 onClick={() => files.focusTab(key)}
               >
+                {(tab.kind === 'file' || tab.kind === 'diff') && (
+                  <FileIcon name={label} kind="file" />
+                )}
                 {tab.kind === 'diff' && (
                   <span className="file-tab-glyph" aria-hidden="true">
                     &plusmn;
