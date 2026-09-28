@@ -322,7 +322,7 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [x] Tests with literal expected values: `entryForRow(list, 'dir')` finds a listed `dir/` (FDSC-43) and `'src/a.ts'` its entry; `entriesUnder(list, 'src')` returns entries at depths 1 and 3 and not `srcx/a.ts` nor `src` siblings outside the folder (FDSC-34); Discard all needs no helper: it sends the uncommitted list as it is (FDSC-35, T17); `discardGroups` puts each of the five statuses in its group, one `it.each` row per status (L-054), in tree order (FDSC-10, 11); `confirmLabel(1)` is `Discard 1 file`, `confirmLabel(2)` `Discard 2 files` (FDSC-14); `sessionWarning(0)` is null, `(1)` `1 session is running in this worktree and may be using these files.`, `(2)` `2 sessions are running in this worktree and may be using these files.` (FDSC-12, 13); `keptReason` returns `The Recycle Bin refused it.`, `Links and junctions are never moved.`, `It is outside the worktree.`, and a `git` detail verbatim (FDSC-21)
+- [x] Tests with literal expected values: `entryForRow(list, 'dir')` finds a listed `dir/` (FDSC-43) and `'src/a.ts'` its entry; `entriesUnder(list, 'src')` returns entries at depths 1 and 3 and not `srcx/a.ts` nor `src` siblings outside the folder (FDSC-34); Discard all needs no helper: it sends the uncommitted list as it is (FDSC-35, T17); `discardGroups` puts each of the five statuses in its group, one `it.each` row per status (L-081), in tree order (FDSC-10, 11); `confirmLabel(1)` is `Discard 1 file`, `confirmLabel(2)` `Discard 2 files` (FDSC-14); `sessionWarning(0)` is null, `(1)` `1 session is running in this worktree and may be using these files.`, `(2)` `2 sessions are running in this worktree and may be using these files.` (FDSC-12, 13); `keptReason` returns `The Recycle Bin refused it.`, `Links and junctions are never moved.`, `It is outside the worktree.`, and a `git` detail verbatim (FDSC-21)
 - [x] Gate check passes: `npx vitest run src/renderer/src/lib/discard-view.test.ts`
 - [x] Test count: T7 count + the new tests
 
@@ -348,7 +348,7 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [x] Tests, one status deciding each (L-054): a discarded `modified` closes `diff:uncommitted:p` and re-reads `p` (FDSC-28, 29); `untracked` and `added` close `diff:uncommitted:p` and `file:p` (FDSC-30); `renamed` closes `file:new`, re-reads `file:old` (FDSC-29, 30); a kept entry closes and re-reads nothing (FDSC-32); `diff:since-base:p` and a `commit:` tab of the same path are never closed (FDSC-33); a discarded `dir/` closes `file:dir/a.txt` and `file:dir/sub/b.txt` but not `file:dirx/c.txt` (FDSC-43)
+- [x] Tests, one status deciding each (L-081): a discarded `modified` closes `diff:uncommitted:p` and re-reads `p` (FDSC-28, 29); `untracked` and `added` close `diff:uncommitted:p` and `file:p` (FDSC-30); `renamed` closes `file:new`, re-reads `file:old` (FDSC-29, 30); a kept entry closes and re-reads nothing (FDSC-32); `diff:since-base:p` and a `commit:` tab of the same path are never closed (FDSC-33); a discarded `dir/` closes `file:dir/a.txt` and `file:dir/sub/b.txt` but not `file:dirx/c.txt` (FDSC-43)
 - [x] Gate check passes: `npx vitest run src/renderer/src/lib/discard-view.test.ts`
 - [x] Test count: T9 count + the new tests
 
@@ -477,7 +477,7 @@ T19 → T20 → T21
 **Done when**:
 
 - [x] `SinceBase` renders `ChangedRows` with no discard handler, so diff-to-origin rows have no menu (FDSC-40)
-- [x] `.file-tree-row`, `.file-tree-name`, `.file-tree-end` and `.status-glyph` kept, so #131's and the icon section's smoke selectors still match (`grep -n "file-tree-row\|file-tree-name" scripts/*.mjs` reviewed; L-053)
+- [x] `.file-tree-row`, `.file-tree-name`, `.file-tree-end` and `.status-glyph` kept, so #131's and the icon section's smoke selectors still match (`grep -n "file-tree-row\|file-tree-name" scripts/*.mjs` reviewed; L-080)
 - [x] Row layout reads the same as before in the dev app (hand read; T20 checks behaviour)
 - [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
@@ -553,7 +553,7 @@ T19 → T20 → T21
 
 **Done when**:
 
-- [x] `grep -n "diff-section-header" scripts/*.mjs` shows no read of `aria-expanded` or `.click()` left on the container (L-053); #131's header checks still find the glyph inside `.diff-section-header`, last
+- [x] `grep -n "diff-section-header" scripts/*.mjs` shows no read of `aria-expanded` or `.click()` left on the container (L-080); #131's header checks still find the glyph inside `.diff-section-header`, last
 - [x] `CommitTab.tsx:43` unchanged: it passes no `onDiscard` (FDSC-41)
 - [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
@@ -701,7 +701,7 @@ Twenty-one tasks: three batches (Phases 1–2, eight tasks; Phases 3–4, six; P
 | T15: row menu | 1 component part | ✅ Granular |
 | T16: hover ↶ | 1 component part + its rules | ⚠️ Cohesive |
 | T17: Discard all | 1 component part | ✅ Granular |
-| T18: section ↶ | 1 component + 1 prop + the smoke selectors it moves | ⚠️ Cohesive (L-053) |
+| T18: section ↶ | 1 component + 1 prop + the smoke selectors it moves | ⚠️ Cohesive (L-080) |
 | T19: mode gate | 1 prop | ✅ Granular |
 | T20–T21: smoke | 1 section each | ✅ Granular |
 

@@ -174,7 +174,7 @@ Chosen for the riskiest behaviours: discard offered in a read-only mode, the wro
 | Spec-anchored outcome check | ✅ Literal strings and git state asserted, not "a call happened" |
 | Per-layer coverage | ✅ Main: real git plus a staged Recycle Bin; renderer: pure helpers; UI: CDP smoke per gesture |
 | Every test maps to a requirement | ✅ Every new test names an FDSC ID, apart from the plain unstaged-edit case and the tree-order case, which support FDSC-04 and FDSC-10 |
-| Documented guidelines | ✅ `.specs/LESSONS.md` lessons applied (L-020 recording runner, L-025 edge-case IDs, L-026 pinned git config; also the one-status-per-row rule tasks.md cites as L-054, a number from another branch) |
+| Documented guidelines | ✅ `.specs/LESSONS.md` lessons applied (L-020 recording runner, L-025 edge-case IDs, L-026 pinned git config; also the one-status-per-row rule tasks.md cites as L-081, a number from another branch) |
 
 ---
 

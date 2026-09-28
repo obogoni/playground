@@ -192,7 +192,7 @@ and restores nothing (hence the per-entry retry); `restore -SW` resolves a `UU` 
   `.diff-section-end` (the ↶ `.diff-section-discard` when `onDiscard` is given, then
   `StatusGlyph`). The FDIF smoke reads `aria-expanded` from `.diff-section-header` and clicks it
   (`smoke-files-diff.mjs:521-657`); those five reads move to `.diff-section-toggle` in the same
-  task (L-053). #131's header checks keep working: the glyph is still inside `.diff-section-header`,
+  task (L-080). #131's header checks keep working: the glyph is still inside `.diff-section-header`,
   last, flush with its padding.
 - **Gate**: `AllChangesTab` gets `onDiscard?: (changed: ChangedPath) => void` and passes it to each
   section. `FileTabs` passes it only while `files.mode === 'uncommitted'`; `CommitTab.tsx:43` never
@@ -264,7 +264,7 @@ export interface ChangedFile {
 | Pathspecs are globs by default | every `git restore` call | `a[b].txt` also matches `ab.txt` | `--literal-pathspecs` on every call; unit test with both files |
 | Command-line length on Windows | batched restore | A large Discard all fails outright | Chunks under 8,000 characters; unit test with 300 × 120-character paths |
 | `trashItem` is one shell operation per path | phase A | Discard all of hundreds of untracked files takes seconds | The confirm button reads `Discarding…` and is disabled (FDSC-16); untracked folders go as one path |
-| Tree rows and section headers are `<button>`s today (`FileTree.tsx:133`, `DiffSection.tsx:129`) | row and header markup | A ↶ nested in a button is invalid HTML | Container + sibling buttons (above); FDIF smoke selectors updated in the same task (L-053) |
+| Tree rows and section headers are `<button>`s today (`FileTree.tsx:133`, `DiffSection.tsx:129`) | row and header markup | A ↶ nested in a button is invalid HTML | Container + sibling buttons (above); FDIF smoke selectors updated in the same task (L-080) |
 | Real-git tests near the timeout | `vitest.config.ts` (30 s) | The new suite could push others over (L-005) | Measure the full suite's time before and after the main tasks; keep one repo per test, few commits |
 | `core.autocrlf=true` in Git for Windows' system config | test repos | Content comparisons flip on CRLF | Test repos set `core.autocrlf false` and `status.renames true` locally (L-026); assertions read `git status --porcelain` and `git diff HEAD` rather than bytes where possible |
 | Parser tests pin the old rename shape | `worktree-manager.test.ts:269-292` | Three tests fail once `oldPath` is added | Rewritten to the new shape, named in the commit body (the spec supersedes them) |

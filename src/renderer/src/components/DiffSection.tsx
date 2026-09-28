@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 import type { ChangedPath, DiffRequest, DiffSides, FileStat } from '../../../shared/files'
 import { api } from '../lib/api'
 import { changeStatusView } from '../lib/change-status'
+import type { UnchangedChoice } from '../lib/files-view'
 import { DiffViewer, type DiffHandle } from './DiffViewer'
 import { FilePlaceholder } from './FilePlaceholder'
 import { Icon } from './Icon'
@@ -42,6 +43,8 @@ interface DiffSectionProps {
   ignoreWhitespace: boolean
   /** Bumped when every open diff must re-read against a new git state (FDIF-31/32). */
   refreshToken: number
+  /** The stack's last Hide unchanged / Show unchanged press, for this section's editor. */
+  unchanged: UnchangedChoice | null
   onToggle: (path: string) => void
   /** The section's own box, so the stack's observer can watch it. */
   onElement: (path: string, element: HTMLElement | null) => void
@@ -76,6 +79,7 @@ export function DiffSection({
   layout,
   ignoreWhitespace,
   refreshToken,
+  unchanged,
   onToggle,
   onElement,
   onHandle,
@@ -168,6 +172,7 @@ export function DiffSection({
             layout={layout}
             ignoreWhitespace={ignoreWhitespace}
             fitContent
+            unchanged={unchanged}
             onHeight={setHeight}
             onHandle={(handle) => onHandle(path, handle)}
           />

@@ -49,12 +49,40 @@ Handoff snapshot.
 | AD-042 | 2026-09-19 | **Every agent session runs with `FORCE_HYPERLINK=1`; the app claims hyperlink support for the whole PTY, alongside `TERM=xterm-256color` and `COLORTERM=truecolor`, and still never claims a `TERM_PROGRAM`.** Hyperlink-aware CLIs (Claude Code inlines the `supports-hyperlinks` check and tests this variable before `TERM_PROGRAM`) then emit OSC 8 for every path and URL they print, and xterm renders those cells with its own dashed underline — the look the owner wanted from Orca, which forces the same variable. | Measured 2026-09-19 on Claude Code 2.1.278: without the variable every path is plain text (the first `terminal-links` delivery never saw an OSC 8); with it the `Write(...)` header carries `file:///C:/…` and a markdown link its `https://` target in `blueBright`. `TERM_PROGRAM` stays unclaimed because the CSI-u finding of INPUT-12 is untouched by this variable. Any other CLI honouring the convention emits OSC 8 that xterm renders harmlessly. Spec: `terminal-links` LINK-33. |
 | AD-043 | 2026-09-19 | **An OSC 8 hyperlink whose target is `file://` opens through the same file rules as a printed path; every other non-`http(s)` OSC 8 scheme is provided to xterm (hover underline, pointer) but never opened — Ctrl+click passes through to the agent.** `linkHandler.allowNonHttpProtocols` is on, the pane classifies the hovered target by scheme, and main converts the URL to a path (`fileURLToPath`, host must be empty or `localhost`, fragment dropped) before the LINK-09..13 rules. | Reverses the Design-time withdrawal of LINK-21, taken when no agent had been seen emitting OSC 8. With AD-042 every path Claude Code prints is a `file://` OSC 8, and the URL is more reliable than re-detecting the visible text (absolute, percent-encoded, unaffected by wrapping). The all-or-nothing gate costs only a hover underline on schemes whose cells already carry xterm's dashed one. Orca sets the same option. Spec: `terminal-links` LINK-21/22. |
 | AD-047 | 2026-09-27 | **The Files direction's one write is discarding uncommitted changes.** Whole files only, always confirmed with the exact list; tracked files go back to `HEAD` in the index and the working tree; a path the last commit does not hold leaves through the Recycle Bin (`shell.trashItem`), and a file the Recycle Bin refuses is kept; nothing is ever deleted by the app itself; the main process owns every git call (`--literal-pathspecs`) and takes no revision from the renderer. Supersedes, for uncommitted changes only, the read-only rule of epic grill Q2 as written in `files-explore` (Out of Scope, "any write to a file") and `files-diff` (reason of the hunk row). Diff-to-origin, commits and hunk discards stay read-only. AD-025 (Monaco is a read-only viewer) is unchanged. **Numbered 047 because `AD-044`..`AD-046` are claimed by open branches** (`pinned-task-open`, `window-open-https`, `hours-task-assign`, `hours-task-focus`, `diff-fold-refresh`). | Owner decision (issue #132): undoing an agent's stray edit meant leaving the app for a terminal. The safety conditions are the owner's: every discard is confirmed with the files it touches, and nothing the user could want back is deleted permanently, so new files, added files and a rename's new file go to the Recycle Bin, and links and junctions are never moved. Spec/design: `.specs/features/files-discard/` (FDSC-17, FDSC-40, FDSC-42). |
+| AD-046 | 2026-09-27 | **The diff viewer owns its fold state across a refresh.** It computes the unchanged regions from `getLineChanges()` with Monaco's own rule (`unchangedRegions`, mirroring `UnchangedRegion.fromDiffs`) and the shared `UNCHANGED_REGIONS` constants, reads the fold states before `setValue`, and writes folds only through `applyFolds`, which hands `restoreViewState` a `modelState`: an internal shape of the pinned `monaco-editor` 0.56.0, validated on read by `hiddenRangesOf`. Any Monaco upgrade re-runs the Files diff smoke's section 14 (`SMOKE_ONLY=fold`) before merging. | `setValue` wipes the decorations Monaco carries folds in, so every region came back revealed (issue #130, measured in T1). Feeding an edit instead keeps Monaco's line-wise transfer, which reveals a new region built from formerly visible lines (FOLD-04). Regions are matched by left-side lines, which an agent's writes do not move. |
+| AD-029 | 2026-09-19 | **Effective when `hours-calendar` ships, the Hours direction is a week calendar and TIME-34 is superseded.** The week (still Monday 00:00 to next Monday, TIME-32) renders as day columns — Monday to Friday always, Saturday or Sunday only when they hold time — with each merged block (TIME-36) drawn as a bar at the hours it happened, parallel blocks side by side in lanes. One selected day is shown below the grid through the unchanged `DayCard`, so groups, raw periods, edit, delete and Copy (TIME-35..41, 44..49) keep working exactly as specified. `buildWeekReport`, the merge rule and the Copy format are untouched. **Numbered 029 because AD-022..AD-028 are recorded on the `feature/status-bar` stack** (the Files epic), which this branch — cut from `feature/time-tracking` — does not contain. | Owner request: the list answered "how long" but not "when", and running agents in parallel was invisible in text. Replacing only the presentation keeps every tested computation and shipped action; the AD-018 / AD-028 pattern keeps a merged spec from describing a list that no longer exists. Spec / design / tasks: `.specs/features/hours-calendar/` (HCAL-01..24). |
+| AD-030 | 2026-09-19 | **Categorical chart colours are validated against the app's own surfaces, and where any mark can touch any other, at most three are used.** Validated with the `dataviz` skill's validator, `--pairs all`, on the view's `--panel` (`#ffffff` light, `#221f1b` dark): only **blue `#2a78d6` / `#3987e5`, orange `#eb6834` / `#d95926`, aqua `#1baf7a` / `#199e70`** (light / dark) pass every check in both themes. Further categories fold into a neutral **Other**; they are never given a generated or extra hue. The session-state tokens (`--green`, `--amber`, `--red`, `--blue`, `--pink`) are never used as series colours. Any later chart re-runs the validator on its own surface and adjacency before adding a colour. | Measured, not assumed: the reference eight-colour palette fails the normal-vision floor with every pair in play (red ↔ orange ΔE 7.1 light), and a fourth colour fails in dark (violet ↔ blue ΔE 9.8) — pairs that full-colour readers cannot tell apart and that labels do not excuse. Recording it spares the next chart from rediscovering it. First applied by `hours-calendar` (owner decision: the three tasks with the most time get the colours). |
+| AD-031 | 2026-09-19 | **The Hours calendar fits the window and opens a day in a drawer, amending AD-029.** After the first build the owner compared three no-scroll mockups and chose layout B: the legend becomes a row of chips above the grid, the grid's hour height follows the available height, and the selected day's detail — still the unchanged `DayCard`, so TIME-35..41 and 44..49 hold — moves from under the grid into a drawer beside it. The drawer is **closed** when the view opens and whenever the week changes; a header or bar click opens it, its X or Esc closes it, and it closes when its day loses its last period. HCAL-15..19 and 21 are revised, HCAL-25 and 26 added. The default-day rule HCAL-16 had required is gone, so `defaultDay` and its three unit tests are removed with it. | The stacked grid, legend and day card ran past the window at every size, so reading the week and acting on a day meant scrolling. Of the three mockups (day in focus, week + drawer, horizontal timeline) B keeps everything already built and verified — columns, lanes, colours, the frozen map — and changes only where the detail lives. Opening closed was the owner's call: the week is the default view, the detail an action. Spec / tasks: `.specs/features/hours-calendar/` (HCAL-15..26, T12..T16). |
+| AD-045 | 2026-09-26 | **The Hours calendar uses eight task colours, never repeated on a day, superseding AD-030 for that view only.** The palette is the dataviz reference palette's eight categorical slots in order: blue, orange, aqua, yellow, magenta, green, violet, red, light `#2a78d6 #eb6834 #1baf7a #eda100 #e87ba4 #008300 #4a3aa7 #e34948`, dark `#3987e5 #d95926 #199e70 #c98500 #d55181 #008300 #9085e9 #e66767`. Colours are assigned per week: tasks in order of week total (ties by first start) each take the first slot not held by a task sharing one of their days; a task with all eight held is Other. Colours stay frozen while the week is on screen (HCAL-24), and so does the legend order. Every other chart keeps AD-030's three-colour rule. | The owner chose more hues over texture (`hours-task-focus`, grill Q1) and accepted the measured weak pairs: with `--pairs all` on `#ffffff` / `#221f1b` the normal-vision floor fails for red and orange (ΔE 7.1, both themes) and violet and blue (9.8, dark), and colour-blind simulation fails green and orange (3.2, light, protan) and magenta and aqua (1.6, dark, deutan). The relief dataviz requires where the floor is not met is in the view: the legend, tooltips and bar labels name every task, and hovering or selecting a task fades or hides every other. With three colours a busy day showed most of its tasks in one grey. |
+| AD-044 | 2026-09-26 | **The app opens an address by itself only when it is `https:`; a terminal link may also be `http:`.** `isHttpsUrl` in `src/main/url-policy.ts` is the one rule for every address the app opens on its own: a new window the renderer asks for (`setWindowOpenHandler`, which denies the window and opens an `https:` link in the browser) and an address built from a remote, such as a commit page (`openCommit`). A refused window link is logged by its scheme, never by the address. Links the user Ctrl+clicks in a terminal keep LINK-04's `http:` or `https:`. F4's `isOpenableLink` (AD-026) is meant to be this same function. | #115. The window-open handler was the Electron template's, forwarding any scheme (`file:`, `ms-settings:`, a registered protocol handler, a UNC path) to `shell.openExternal`, in an app about to render third-party text (AD-026). It was not dormant: the worktree detail's linked-task card is a `target="_blank"` link and opens through it; those are `https://dev.azure.com` addresses, so the rule keeps them working. The terminal is the deliberate exception (owner decision, 2026-09-26): an agent printing a dev server's `http://localhost` address is the common case, the user sees the address before clicking, and LINK-04 is specified and verified that way. Unifying on `https:` everywhere would break that; unifying on `http:` would contradict AD-026. |
 
 
 ## Handoff
 
-**Status (current, 2026-09-20): the Files epic's first three slices are COMPLETE and each has an
-open upstream PR. Merged locally into `develop` (`6912ce3`).**
+**Status (current, 2026-09-26): `hours-task-focus` (issue #110) is COMPLETE, Verifier PASS on round 3
+of 3, and shipped as PR #129 (closes #110, depends on #99).**
+
+- **Branch:** `feature/hours-task-focus`, rebased on 2026-09-26 from the pre-rebase
+  `feature/hours-calendar` onto `7d85337` (PR #99 plus the drawer growth fix). The rebase rewrote
+  the plan commit; force-pushed to `fork` with the owner's go-ahead. PR #129 stacks on #99.
+- **What shipped:** eight task colours per week, never repeated on a day (AD-045, superseding AD-030
+  for the Hours calendar only); hovering or focusing a legend chip, a drawer group header or a bar
+  fades the other groups to 30%; clicking a chip shows only that group's days, kept across weeks,
+  with a × to clear it.
+- **Verification:**
+  - Gates: suite 1691 -> 1704 (91 files); typecheck clean; lint 0 errors / 18 warnings (the
+    baseline). The seeded CDP smoke `scripts/smoke-hours-calendar.mjs` passes 52/52; every new
+    check was seen failing on a named mutant.
+  - Round 1 failed on test evidence: the smoke never checked leaving a header or a bar, focus on a
+    bar, or the exact palette. Round 2 failed on the picked chip kept in a week without its task.
+    Both were fixed (T14 to T16). Report: `.specs/features/hours-task-focus/validation.md`.
+  - Lessons L-051 to L-055 of this branch were renumbered **L-060 to L-064** at merge time
+    (`origin/main` already held L-051 to L-059).
+- **Judgement calls, both accepted by the Verifier:** the legend keeps coloured tasks in the order
+  they were coloured, so live time never reorders them; the picked chip stays in the legend with
+  `0h00`, the neutral swatch and its × in a week without its group (spec edge case 4).
+- **Next:** once #99 merges, run `git rebase --onto origin/main feature/hours-calendar feature/hours-task-focus`.
+  Merge into local `develop` after that, replaying lessons by key and appending AD-045 after AD-044.
 
 | Slice | Branch | Verifier | PR |
 | ----- | ------ | -------- | -- |
@@ -427,3 +455,71 @@ branch ships without it).
 ### `time-tracking` (PR #93, merged on 2026-09-25)
 
 Lesson candidates L-017..L-022 of this branch were renumbered **L-035..L-040** at merge time (`origin/main` already held L-017..L-034). AD-021 keeps its number.
+
+### `hours-calendar` (PR #99)
+
+Lesson candidates L-023..L-032 of this branch were renumbered **L-041..L-050** at rebase time (`origin/main` already held L-023..L-040).
+
+**Status (current, 2026-09-19): `hours-calendar` DONE — layout B + the drawer polish, independent
+Verifier PASS round 6 on branch `feature/hours-calendar`, rebased onto `origin/main` on
+2026-09-25 after #93 merged. Open upstream as PR #99.**
+
+- 19 tasks in 5 phases (`19a2504`..`200147c`). Phases 1–3 built the week calendar; Phase 4 (AD-031)
+  turned it into layout B — legend chips, a grid that fills the height, the day's detail in a drawer
+  closed by default; Phase 5 matched the drawer to the approved mockup and closed the verifier gaps.
+- Verifier ran **six rounds** (the owner approved rounds beyond the 3-iteration bound): PASS at
+  rounds 2 and 6, FAIL at 1, 3, 4 and 5. Every gap was evidence, except one real defect caught before
+  release — the drawer's summary line rendered `1 blocks` (fixed in `4e2ce9f`, pinned in `200147c`).
+  Lessons L-041..L-050. Final: 27/27 ACs evidenced, 8/8 reachable mutants killed, `validate_state.py`
+  exit 0.
+- Gate: typecheck 0, lint 0 errors / **18 warnings** (the baseline), **893 tests**.
+- Live smokes on the dev app, owner-approved, last run 2026-09-19: `smoke-hours-calendar.mjs`
+  **29/29**, `smoke-time.mjs` unedited **26/26**; cleanup verified each time.
+- **Known, recorded, non-blocking:** the summary line's `N tasks` wording never renders in the smoke
+  (its ad-hoc sessions carry no task — same cause as HCAL-11's note, now in the script header); the
+  spec's Coverage line is derived but nothing checks it, and it silently reverted once when the
+  task-closing helper rewrote it; chip truncation and the drawer's side stay CSS-only.
+- **Rebase onto `origin/main` (2026-09-25):** code diff unchanged; the conflicts were all in
+  `.specs/` — decision rows and roadmap entries kept on both sides, lessons renumbered as above.
+  Gate on the rebased tip: typecheck 0, lint 0 errors / 18 warnings, **1691 tests**.
+- **Drawer growth (issue #105), 2026-09-25:** a busy day's groups spilled out of the day card in the drawer.
+  `flex: none` on `.hours-day` (`bcc8e3f`) fixes it; `min-height: 100%` still fills the drawer on a short day. The
+  Hours smoke now brings its own data: `--seed` writes a tall past Sunday into a throwaway `--user-data-dir`, the run
+  refuses anything else (`not running on the seeded data`), and step 10 checks the card geometry. Red 32/34 before
+  the fix, 34/34 after; independent Verifier PASS, 4/4 mutants killed (`hours-drawer-growth/validation.md`). The
+  refusal against the owner's real data was not run (launching the dev app on it is not permitted to the agent); an
+  empty directory took the same branch. Commits `6a2211e..6fa96d4` pushed to `fork`; PR #99 closes #105. A
+  follow-up makes a pass fail when the clean-up leaves the seed behind (the Verifier's one minor gap).
+- **Next:** review of PR #99.
+
+### `session-strip-polish` (PR #98)
+
+Lesson candidates L-030..L-032 of this branch were renumbered **L-051..L-053** at rebase time (`origin/main` already held L-030..L-040, and #99 claims L-041..L-050).
+
+**Status (current, 2026-09-19): `session-strip-polish` COMPLETE. T1-T6 are executed, and the
+independent Verifier returned **PASS** in round 2 of 3, on branch `feature/session-strip-polish`
+(cut from `develop` at `9919139`, rebased onto `origin/main` on 2026-09-25 after #93 and #94
+merged). Open upstream as PR #98. Report: `.specs/features/session-strip-polish/validation.md`;
+`validate_state.py` exits 0.**
+
+- **Commits:** T1-T6 are `5522aa8`..`adcaaa4`. Then `19ef7bc` closed the Verifier's round-1
+  gaps, `80dbb7f` records the report and `423d055` adds lessons L-051..L-053.
+- **Verification:** the suite went from 1200 to **1216** tests (69 files). Typecheck, lint
+  (17 warnings, the baseline) and `npx electron-vite build` all exit 0. The discrimination
+  sensor killed 11 of 11 mutants. `scripts/smoke-strip.mjs` ran **24/24** against the dev
+  app, and the repaired `scripts/smoke-time.mjs` ran **26/26**.
+- **Spec correction:** the spec assumed that a session stopped while paused keeps its paused
+  flag. It does not: `TimeTracker.ended` drops the run with its mark, and a respawn starts
+  counting again. The edge cases and the assumption row are marked `[corrected at Execute]`.
+  The tracker is unchanged, because it is out of scope.
+- **Owner-pending hand checks:**
+  - the clock button in light and dark: hover border, focus ring, and a paused clock staying
+    dim on hover;
+  - a screen reader announcing the clock as a pressed / not-pressed toggle.
+- **Next:**
+  - owner hand checks;
+  - review of PR #98. The branch was rebased with `--onto origin/main 9919139`, so it now
+    carries only its own 11 commits; the code diff is unchanged and the conflicts were all in
+    `.specs/`. Gate on the rebased tip: typecheck 0, lint 0 errors / 18 warnings, **1679 tests**.
+- **Follow-up, not in scope:** `smoke-time.mjs:186` selects the first running row under
+  `C:\Windows`, not the session it spawned. It could pause an owner's session in that folder.

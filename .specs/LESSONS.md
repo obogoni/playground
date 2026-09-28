@@ -222,115 +222,277 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: M21 src/main/time-log-store.ts:107 (file-stores)
 - last seen: 2026-09-16T22:42:48Z
 
-### L-041 - Budget entry-chunk growth against the unminified renderer build, where eager glue code counts byte for byte
+### L-041 - Test interval-layout logic with several clusters in one input, not one cluster per case
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer/lib` · harmful: 0
+- features: hours-calendar
+- evidence: M12,M13 hours-calendar.ts:127 (renderer/lib)
+- last seen: 2026-09-19T20:43:35Z
+
+### L-042 - Cover the exact-boundary case where one interval ends as the next starts for every interval comparison
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer/lib` · harmful: 0
+- features: hours-calendar
+- evidence: M10 hours-calendar.ts:128 (renderer/lib)
+- last seen: 2026-09-19T20:43:36Z
+
+### L-043 - Test rounding with inputs on both sides of the half so floor, ceil and round are distinguishable
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer/lib` · harmful: 0
+- features: hours-calendar
+- evidence: M8 hours-calendar.ts:75 (renderer/lib)
+- last seen: 2026-09-19T20:43:36Z
+
+### L-044 - State numeric UI thresholds in the spec acceptance criterion, not only in the design
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-12 (+1 more)
+- last seen: 2026-09-19T20:43:36Z
+
+### L-045 - A check whose assertion is satisfied by either branch of a conditional render is not evidence for either; drive the branch the criterion names from data the check itself creates.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-17 - scripts/smoke-hours-calendar.mjs:303-313 (smoke)
+- last seen: 2026-09-19T21:43:36Z
+
+### L-046 - A state flag that re-arms a close or cleanup rule needs a check that starts from the state where the flag is still false, not only from the common state where it is already true.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: MH - src/renderer/src/components/HoursView.tsx:123-126 (renderer)
+- last seen: 2026-09-19T21:43:36Z
+
+### L-047 - A global key handler that exempts text fields is behaviour the acceptance criterion must state, or the exemption is untestable and a mutant removing it survives.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-25 - src/renderer/src/components/HoursView.tsx:66-67 (renderer)
+- last seen: 2026-09-19T21:43:36Z
+
+### L-048 - When an acceptance criterion gains a clause about rendered text or a visual token, add its assertion in the same change; a clause no check reads is where wrong output ships unnoticed.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: N1, N4, N5 - src/renderer/src/components/HoursView.tsx:306-327 (renderer)
+- last seen: 2026-09-19T22:02:37Z
+
+### L-049 - A count shown to the user must count what its label names; do not label a group count as a task count when a group may carry no task.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer` · harmful: 0
+- features: hours-calendar
+- evidence: HCAL-15 - src/renderer/src/components/HoursView.tsx:309 (renderer)
+- last seen: 2026-09-19T22:02:37Z
+
+### L-050 - Exercise a fix at the boundary value it was made for; an end-to-end check whose fixture never reaches that value cannot fail when the fix is undone.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-calendar
+- evidence: P1 - src/renderer/src/components/HoursView.tsx:286 vs scripts/smoke-hours-calendar.mjs:342-356 (smoke)
+- last seen: 2026-09-19T22:19:57Z
+
+### L-051 - Before writing an edge case as 'exactly today's behaviour', read the state owner's lifecycle code (e.g. TimeTracker.ended drops the run and its paused flag); a grilled default about existing behaviour is a premise to verify, not a fact.
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `spec/edge-cases` · harmful: 0
+- features: session-strip-polish
+- evidence: spec.md Edge Cases; src/main/time-tracker.ts:80-86 (spec/edge-cases)
+- last seen: 2026-09-19T19:49:53Z
+
+### L-052 - In a smoke that toggles state, start each check from a state the previous check confirmed and flip it, so a dead input fails its own check instead of a later one passing because nothing changed.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke-*.mjs` · harmful: 0
+- features: session-strip-polish
+- evidence: scripts/smoke-strip.mjs:317-320 (round 1) (scripts/smoke-*.mjs)
+- last seen: 2026-09-19T19:49:54Z
+
+### L-053 - When a task removes or renames a UI control, grep scripts/ for its label and selectors; smoke scripts are outside the unit gate and break silently.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke-*.mjs` · harmful: 0
+- features: session-strip-polish
+- evidence: scripts/smoke-time.mjs:188-212 (round 1) (scripts/smoke-*.mjs)
+- last seen: 2026-09-19T19:49:54Z
+
+### L-054 - When a criterion names several events or conditions (A, B or C), write one test per event or condition in which it alone decides the outcome; an it.each keeps it cheap
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `activity-machine` · harmful: 0
+- features: activity-subagent-attribution
+- evidence: M09 M20 M24 M26 M27 src/main/activity-machine.ts:176 (activity-machine)
+- last seen: 2026-09-26T01:30:53Z
+
+### L-055 - An edge case phrased 'whatever X is pending' needs a test with X actually pending
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `activity-machine` · harmful: 0
+- features: activity-subagent-attribution
+- evidence: M10 src/main/activity-machine.ts:161 (activity-machine)
+- last seen: 2026-09-26T01:30:53Z
+
+### L-056 - Assert a styled state by the value the spec names, such as its colour, not only by whether the style is present
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-ui` · harmful: 0
+- features: files-view-polish
+- evidence: FPOL-02 scripts/smoke-files-diff.mjs:322 (smoke-ui)
+- last seen: 2026-09-26T17:54:24Z
+
+### L-057 - When a change widens a condition to more elements, assert that the elements it still excludes lack the element
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-ui` · harmful: 0
+- features: files-view-polish
+- evidence: FPOL-02 src/renderer/src/components/FileTabs.tsx:241 (smoke-ui)
+- last seen: 2026-09-26T17:54:24Z
+
+### L-058 - Budget entry-chunk growth against the unminified renderer build, where eager glue code counts byte for byte
 - signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `renderer-build` · harmful: 0
 - features: file-icons
 - evidence: tasks.md T6 SPEC_DEVIATION (entry chunk +4,633 B vs 1 KB) (renderer-build)
 - last seen: 2026-09-26T17:05:30Z
 
-### L-042 - When an AC keeps today's look as a fallback, name the fallback for elements that had nothing before
+### L-059 - When an AC keeps today's look as a fallback, name the fallback for elements that had nothing before
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer-ui` · harmful: 0
 - features: file-icons
 - evidence: FICN-13 (validation.md, FileIcon.tsx:53-62) (renderer-ui)
 - last seen: 2026-09-26T17:05:30Z
 
-### L-043 - Assert a reused component in every host the spec names at runtime; a citation that the host mounts it does not kill a host-specific branch or style override
+### L-060 - When several sources feed one hover or focus state, read the view after each source's leave before the next source enters, because the next enter overwrites a leave that never fired
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: validation.md SM1; scripts/smoke-hours-calendar.mjs:818-838; HTF-08 (smoke)
+- last seen: 2026-09-26T21:15:08Z
+
+### L-061 - When an acceptance criterion names several sources for one behaviour, give each source its own check; covering one source leaves the others unverified
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: HTF-09; scripts/smoke-hours-calendar.mjs:829-838 (smoke)
+- last seen: 2026-09-26T21:15:08Z
+
+### L-062 - When the spec fixes exact colour values, assert the computed colours against those values in order, not only that they are distinct
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: HTF-01; scripts/smoke-hours-calendar.mjs:739 (smoke)
+- last seen: 2026-09-26T21:15:09Z
+
+### L-063 - When a spec edge case states what an element shows, assert each stated value on screen, not only that the element is present
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: hours-task-focus
+- evidence: validation.md SM7; scripts/smoke-hours-calendar.mjs:928; spec edge case 4 (smoke) (smoke)
+- last seen: 2026-09-26T21:48:16Z
+
+### L-064 - Quote UI text in the spec only as the app renders it; check a literal against the formatter before writing it in backticks
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: hours-task-focus
+- evidence: spec.md edge case 4; src/renderer/src/components/HoursLegend.tsx:54 (0m vs 0h00) (specs)
+- last seen: 2026-09-26T21:48:16Z
+
+### L-065 - When a rule matches items by one of two coordinates, give the test a fixture where the two coordinates disagree, or matching by the wrong one still passes
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: diff-fold-refresh
+- evidence: U10 src/renderer/src/lib/diff-view.test.ts:616 (testing)
+- last seen: 2026-09-27T13:52:57Z
+
+### L-066 - Test a range-overlap rule with two ranges that only touch, or a strict and a non-strict comparison cannot be told apart
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: diff-fold-refresh
+- evidence: U15 src/renderer/src/lib/diff-view.ts overlaps (testing)
+- last seen: 2026-09-27T13:52:57Z
+
+### L-067 - When a spec defines a partial form of a state, every rule that names the state must say whether the partial form counts, and a test must pin that reading
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: diff-fold-refresh
+- evidence: FOLD-06 / U07 src/renderer/src/lib/diff-view.ts foldPlan (spec)
+- last seen: 2026-09-27T13:52:57Z
+
+### L-068 - Assert a Monaco editor's scroll position by its first rendered line number, never by a scrollable element's scrollTop, which stays 0 under virtual scrolling
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
+- features: diff-fold-refresh
+- evidence: FOLD-09 scripts/smoke-files-diff.mjs:876 (scripts/smoke)
+- last seen: 2026-09-27T13:52:57Z
+
+### L-069 - When a component rule moves into a pure seam, also mutate the call site's arguments: the seam's tests cannot see a caller that passes the wrong state
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer components` · harmful: 0
+- features: diff-fold-refresh
+- evidence: validation.md V8 (DiffViewer.tsx:307 call site of readingBeforeUpdate) (renderer components)
+- last seen: 2026-09-27T14:34:31Z
+
+### L-070 - Assert a reused component in every host the spec names at runtime; a citation that the host mounts it does not kill a host-specific branch or style override
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
 - features: files-status-glyphs
 - evidence: FSTS-21 / S8b (validation.md; src/renderer/src/components/CommitTab.tsx:43) (scripts/smoke)
 - last seen: 2026-09-27T15:46:21Z
 
-### L-044 - Assert a reused component in every host the spec names at runtime; a citation that the host mounts it does not kill a host-specific branch or style override
+### L-071 - Assert a reused component in every host the spec names at runtime; a citation that the host mounts it does not kill a host-specific branch or style override
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
 - features: files-status-glyphs
 - evidence: S11 src/renderer/src/components/DiffSection.css:78 (validation.md) (scripts/smoke)
 - last seen: 2026-09-27T15:46:21Z
 
-### L-045 - When an AC names an ellipsis, assert the computed text-overflow as well as scrollWidth > clientWidth; overflow alone passes when the text is clipped bare
+### L-072 - When an AC names an ellipsis, assert the computed text-overflow as well as scrollWidth > clientWidth; overflow alone passes when the text is clipped bare
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
 - features: files-status-glyphs
 - evidence: S10 src/renderer/src/components/FileTree.css:112; FSTS-04/20 (validation.md) (scripts/smoke)
 - last seen: 2026-09-27T15:46:21Z
 
-### L-046 - Assert a smoke-checked indicator is painted (visibility, ancestor opacity, box size) as well as its text, title and position; DOM reads pass on a hidden element
+### L-073 - Assert a smoke-checked indicator is painted (visibility, ancestor opacity, box size) as well as its text, title and position; DOM reads pass on a hidden element
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `scripts/smoke` · harmful: 0
 - features: files-status-glyphs
 - evidence: S7 src/renderer/src/components/FileTree.css:134 (validation.md) (scripts/smoke)
 - last seen: 2026-09-27T15:46:21Z
 
-### L-047 - A computed text-overflow of ellipsis is set even when nothing is clipped; assert overflow other than visible and nowrap with it, or the drawn result, never text-overflow alone
+### L-074 - A computed text-overflow of ellipsis is set even when nothing is clipped; assert overflow other than visible and nowrap with it, or the drawn result, never text-overflow alone
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke-cdp` · harmful: 0
 - features: files-status-glyphs
 - evidence: validation.md round 2: R5, R5h (FSTS-04, FSTS-20); smoke-files-diff.mjs:929,1177 (smoke-cdp)
 - last seen: 2026-09-27T16:29:15Z
 
-### L-048 - When an AC applies conditional clauses to every host of a reused component, seed each condition in every host, or that host's check cannot exercise the clause
+### L-075 - When an AC applies conditional clauses to every host of a reused component, seed each condition in every host, or that host's check cannot exercise the clause
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-cdp` · harmful: 0
 - features: files-status-glyphs
 - evidence: validation.md round 2: R7 (FSTS-21 clause 20); smoke-files-diff.mjs:1403 (smoke-cdp)
 - last seen: 2026-09-27T16:29:15Z
 
-### L-049 - When an AC says an overflowing value is cut, also state that a value that fits shows whole, so a cap that cuts every value can fail a check
+### L-076 - When an AC says an overflowing value is cut, also state that a value that fits shows whole, so a cap that cuts every value can fail a check
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
 - features: files-status-glyphs
 - evidence: validation.md round 2: R6 (FSTS-04, FSTS-20) (specs)
 - last seen: 2026-09-27T16:29:15Z
 
-### L-050 - When a trailing badge must stay readable, assert that the element before it ends before the badge begins; DOM order and the badge's edge do not prove nothing is drawn under it
+### L-077 - When a trailing badge must stay readable, assert that the element before it ends before the badge begins; DOM order and the badge's edge do not prove nothing is drawn under it
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
 - features: files-status-glyphs
 - evidence: validation.md round 3: V1, V1h, V4, V4h (smoke)
 - last seen: 2026-09-27T17:26:34Z
 
-### L-051 - For a fits-shows-whole criterion, sample a value that fits within a few pixels of its space, or a width cap between the widest sample and the space passes
+### L-078 - For a fits-shows-whole criterion, sample a value that fits within a few pixels of its space, or a width cap between the widest sample and the space passes
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
 - features: files-status-glyphs
 - evidence: validation.md round 3: V6, V6h (smoke)
 - last seen: 2026-09-27T17:26:34Z
 
-### L-052 - Measure an overlap on the badge's own box, not on the wrapper that holds it; a child drawn outside its parent's box passes a check on the parent
+### L-079 - Measure an overlap on the badge's own box, not on the wrapper that holds it; a child drawn outside its parent's box passes a check on the parent
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
 - features: files-status-glyphs
 - evidence: validation.md round 4: W4, W4h (smoke LAYOUT) (smoke)
 - last seen: 2026-09-27T18:08:55Z
 
-### L-053 - Give a defensive branch that keeps an item on an unexpected filesystem error its own test with an injected failure, and a reason text that names what actually happened
+### L-080 - Give a defensive branch that keeps an item on an unexpected filesystem error its own test with an injected failure, and a reason text that names what actually happened
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `main-process` · harmful: 0
 - features: files-discard
 - evidence: validation.md U15 (file-discard.ts:169) (main-process)
 - last seen: 2026-09-27T21:04:56Z
 
-### L-054 - When a helper branches on a status together with an optional field, add a test row for every combination the parser can produce, not only one row per status
+### L-081 - When a helper branches on a status together with an optional field, add a test row for every combination the parser can produce, not only one row per status
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer-lib` · harmful: 0
 - features: files-discard
 - evidence: validation.md V2 (discard-view.ts:117) (renderer-lib)
 - last seen: 2026-09-27T21:04:56Z
 
-### L-055 - When one item touches several paths in sequence, state in the spec whether a refusal on a later path undoes the earlier moves or only reports the item kept
+### L-082 - When one item touches several paths in sequence, state in the spec whether a refusal on a later path undoes the earlier moves or only reports the item kept
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
 - features: files-discard
 - evidence: validation.md gap 2 (FDSC-47 vs FDSC-27) (spec)
 - last seen: 2026-09-27T21:04:56Z
 
-### L-056 - When a safety rule exempts links from a move, state what happens to links nested inside a folder that is moved whole
+### L-083 - When a safety rule exempts links from a move, state what happens to links nested inside a folder that is moved whole
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
 - features: files-discard
 - evidence: validation.md gap 3 (FDSC-22 vs FDSC-43) (spec)
 - last seen: 2026-09-27T21:04:56Z
 
-### L-057 - When a confirmation captures the items a request will send, capture and send the target they were listed from with them, and state that pairing in the spec
+### L-084 - When a confirmation captures the items a request will send, capture and send the target they were listed from with them, and state that pairing in the spec
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
 - features: files-discard
 - evidence: validation.md gap 4 (FDSC-42, FDSC-45) (spec)
 - last seen: 2026-09-27T21:04:56Z
 
-### L-058 - When one AC orders a list and another splits it under headings, state whether the order holds within each group or across the whole list
+### L-085 - When one AC orders a list and another splits it under headings, state whether the order holds within each group or across the whole list
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
 - features: files-discard
 - evidence: validation.md gap 1 (FDSC-10 vs FDSC-11) (spec)
 - last seen: 2026-09-27T21:04:56Z
 
-### L-059 - When a design restructures an element that an earlier feature's smoke checks measure, name those checks in the design so the structure is chosen once
+### L-086 - When a design restructures an element that an earlier feature's smoke checks measure, name those checks in the design so the structure is chosen once
 - signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `design` · harmful: 0
 - features: files-discard
 - evidence: SPEC_DEVIATION FileTree.tsx ChangedRows, DiffSection.tsx header (design)

@@ -8,7 +8,7 @@ import type { TimeSnapshot } from '../../../shared/time'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { agentTileStyle } from '../lib/agent-color'
 import { deriveAttribution, linkedPinFor } from '../lib/session-attribution'
-import { detailPillClass, detailPillText } from '../lib/session-activity'
+import { detailPillClass, detailPillText, detailPillTitle } from '../lib/session-activity'
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import { SessionRail } from './SessionRail'
@@ -197,36 +197,29 @@ function SessionDetail({
           )}
           <span className="agents-detail-cwd">{session.cwd}</span>
         </div>
-        <span className={`agents-detail-pill ${detailPillClass(session)}`}>
+        <span
+          className={`agents-detail-pill ${detailPillClass(session)}`}
+          title={detailPillTitle(session)}
+        >
           {detailPillText(session)}
         </span>
+        {/* The clock pauses and resumes itself only while the session runs; a
+            stopped session has no open period to close (STRP-07, STRP-13). */}
         <SessionClock
           className={`agents-detail-time${timePaused ? ' paused' : ''}`}
           snapshot={time}
           sessionId={session.id}
           withRunTooltip
+          toggle={
+            running
+              ? {
+                  paused: timePaused,
+                  onToggle: () => (timePaused ? onResumeTime(session.id) : onPauseTime(session.id))
+                }
+              : undefined
+          }
         />
         <div className="agents-detail-actions">
-          {running &&
-            (timePaused ? (
-              <button
-                type="button"
-                className="agents-detail-btn"
-                title="Resume counting this session's time"
-                onClick={() => onResumeTime(session.id)}
-              >
-                <Icon name="play" size={11} /> Resume time
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="agents-detail-btn"
-                title="Pause counting this session's time; the agent keeps running"
-                onClick={() => onPauseTime(session.id)}
-              >
-                <Icon name="pause" size={11} /> Pause time
-              </button>
-            ))}
           {canOpenWorktree && (
             <button
               type="button"
