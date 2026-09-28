@@ -916,6 +916,18 @@ describe('TimeTracker split a closed period', () => {
       '2026-09-15T09:00:00.750Z',
       'Each part must last at least 1 second.'
     ],
+    [
+      'leaving only the first part under 1 s',
+      'morning',
+      '2026-09-15T09:00:00.500Z',
+      'Each part must last at least 1 second.'
+    ],
+    [
+      'leaving only the second part under 1 s',
+      'morning',
+      '2026-09-15T11:59:59.500Z',
+      'Each part must last at least 1 second.'
+    ],
     ['an invalid date', 'morning', 'not-a-date', 'Split time must be a valid date.']
   ])(
     'rejects a split %s and leaves the log unrewritten (HTSK-29..31)',

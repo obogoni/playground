@@ -270,9 +270,14 @@ in the drawer. Scope is upstream issue #133, grilled and approved by the owner.
 Recorded by the Verifier (PASS, round 1, 2026-09-27) under the owner's budget rules: none is a
 production defect, and every AC has evidence. Details in `validation.md`, § Follow-ups.
 
-- **F1** HTSK-30: no test splits a period with only one part under 1 s (unit survivor U12)
+- **F1** ~~HTSK-30: no test splits a period with only one part under 1 s (unit survivor U12)~~ Closed 2026-09-27: two rows in `time-tracker.test.ts`; U12 now killed
 - **F2** HTSK-38: the smoke has no row where the task is set but the flag is not, so a mark driven by the task would pass (smoke survivor S2)
-- **F3** HTSK-43: no store case for `taskByHand: false` (read) or `null` (skipped) (unit survivors U19, U20)
+- **F3** ~~HTSK-43: no store case for `taskByHand: false` (read) or `null` (skipped) (unit survivors U19, U20)~~ Closed 2026-09-27: one case in `time-log-store.test.ts`; U19 and U20 now killed
 - **F4** HTSK-03 holds by construction only; the typed lookup stays on the hand-verify list
 - **F5** Thin smoke evidence: synthetic `contextmenu`, pickers clicked with `.click()`, the closed row built by pause and resume; restart, notification text, the strip's `No task`, the linked header title and the mark's look are hand checks
 - **F6** The seeded `acme/platform` pins fire a real, failing details fetch on focus, and the checks rely on it failing
+
+**Owner decision (2026-09-27), from the Verifier's spec-precision gap 1:** linking an unlinked
+session to the task its own branch already names closes its open period and opens an identical one
+(same task, no hand flag). This is accepted as it ships; HTSK-14's no-op covers only a session
+already *linked* to the chosen task.

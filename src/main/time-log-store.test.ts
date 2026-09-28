@@ -253,6 +253,22 @@ describe('TimeLogStore hand-set task flag', () => {
     expect(logged).toHaveLength(1)
   })
 
+  it('reads a taskByHand: false line, a boolean, and skips a taskByHand: null one (HTSK-43)', () => {
+    writeFileSync(
+      logFile(),
+      [
+        JSON.stringify({ v: 1, ...period('off'), taskByHand: false }),
+        JSON.stringify({ v: 1, ...period('nil'), taskByHand: null })
+      ].join('\n') + '\n',
+      'utf8'
+    )
+
+    expect(new TimeLogStore(dir, log).readPeriods()).toEqual({
+      periods: [{ ...period('off'), taskByHand: false }],
+      skipped: 1
+    })
+  })
+
   it('writes a period without the flag as a v:1 line with no taskByHand key (HTSK-42)', () => {
     new TimeLogStore(dir, log).append(period('a'))
 
