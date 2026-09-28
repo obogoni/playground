@@ -1,0 +1,328 @@
+/*
+ * Hours week calendar (HCAL). Task colours are the dataviz reference palette's
+ * eight categorical slots in order (AD-045, superseding AD-030 here) — change
+ * one only after re-running the dataviz validator with `--pairs all` against
+ * this view's --panel in both themes and updating AD-045's weak pairs.
+ */
+
+:root,
+:root[data-theme='dark'] {
+  --hcal-slot1: #3987e5;
+  --hcal-slot2: #d95926;
+  --hcal-slot3: #199e70;
+  --hcal-slot4: #c98500;
+  --hcal-slot5: #d55181;
+  --hcal-slot6: #008300;
+  --hcal-slot7: #9085e9;
+  --hcal-slot8: #e66767;
+}
+
+:root[data-theme='light'] {
+  --hcal-slot1: #2a78d6;
+  --hcal-slot2: #eb6834;
+  --hcal-slot3: #1baf7a;
+  --hcal-slot4: #eda100;
+  --hcal-slot5: #e87ba4;
+  --hcal-slot6: #008300;
+  --hcal-slot7: #4a3aa7;
+  --hcal-slot8: #e34948;
+}
+
+/* Takes the height the Hours body leaves; the hour rows divide it (HCAL-26). */
+.hcal {
+  flex: 1 1 0;
+  width: 100%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 44px repeat(var(--hcal-cols), minmax(0, 1fr));
+  grid-template-rows: auto minmax(240px, 1fr);
+  column-gap: 4px;
+  row-gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px 14px 6px;
+}
+
+/* ── Column headers (HCAL-03, 04, 05, 18) ───────────────────────── */
+
+.hcal-head {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: left;
+}
+
+.hcal-head:hover {
+  background: var(--panel-2);
+}
+
+.hcal-head.selected {
+  border-color: var(--border-strong);
+  background: var(--panel-2);
+}
+
+.hcal-head.today .hcal-head-day {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.hcal-head.future {
+  opacity: 0.5;
+}
+
+.hcal-head-day {
+  white-space: nowrap;
+}
+
+.hcal-head-total {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+/* ── Hour axis and day columns (HCAL-09) ────────────────────────── */
+
+.hcal-axis {
+  position: relative;
+}
+
+.hcal-hour {
+  position: absolute;
+  right: 6px;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+.hcal-col {
+  position: relative;
+  min-width: 0;
+  border-bottom: 1px solid var(--border);
+  background-image: linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 100% calc(100% / var(--hcal-hours));
+}
+
+.hcal-col.today {
+  background-color: color-mix(in oklab, var(--accent) 6%, transparent);
+}
+
+.hcal-col.selected {
+  background-color: var(--panel-2);
+}
+
+.hcal-col.future {
+  opacity: 0.5;
+}
+
+/* ── Bars (HCAL-08, 10, 11, 12) ─────────────────────────────────── */
+
+.hcal-bar {
+  position: absolute;
+  top: var(--bar-top);
+  left: calc(var(--bar-lane) * 100% / var(--bar-lanes));
+  width: calc(100% / var(--bar-lanes) - 2px);
+  /* A 2 px surface gap below each bar; never shorter than 6 px (HCAL-12). */
+  height: max(6px, calc(var(--bar-height) - 2px));
+  box-sizing: border-box;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: var(--hcal-c);
+  container-type: size;
+  transition: opacity 0.12s;
+}
+
+/* Another task is in focus: this bar steps back (HTF-07, HTF-10). */
+.hcal-bar.dimmed {
+  opacity: 0.3;
+}
+
+/* The hit target is the bar plus a 4 px halo. */
+.hcal-bar::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+.hcal-bar.role-slot1 {
+  --hcal-c: var(--hcal-slot1);
+}
+
+.hcal-bar.role-slot2 {
+  --hcal-c: var(--hcal-slot2);
+}
+
+.hcal-bar.role-slot3 {
+  --hcal-c: var(--hcal-slot3);
+}
+
+.hcal-bar.role-slot4 {
+  --hcal-c: var(--hcal-slot4);
+}
+
+.hcal-bar.role-slot5 {
+  --hcal-c: var(--hcal-slot5);
+}
+
+.hcal-bar.role-slot6 {
+  --hcal-c: var(--hcal-slot6);
+}
+
+.hcal-bar.role-slot7 {
+  --hcal-c: var(--hcal-slot7);
+}
+
+.hcal-bar.role-slot8 {
+  --hcal-c: var(--hcal-slot8);
+}
+
+.hcal-bar.role-other {
+  --hcal-c: var(--text-faint);
+}
+
+/* Task-less time is outlined, never filled, so it never reads as Other. */
+.hcal-bar.role-no-task {
+  --hcal-c: var(--text-muted);
+  background: transparent;
+  border: 1.5px solid var(--hcal-c);
+}
+
+/* The hovered bar lifts: raised above its neighbours and ringed. */
+.hcal-bar:hover,
+.hcal-bar:focus-visible {
+  z-index: 3;
+}
+
+.hcal-bar:hover {
+  outline: 1px solid var(--text-muted);
+  outline-offset: 1px;
+}
+
+.hcal-bar:focus-visible,
+.hcal-bar.focused {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+.hcal-bar.focused {
+  z-index: 2;
+}
+
+/* Direct label, only where one line of it fits (36 × 64 px). */
+.hcal-bar-label {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  max-width: calc(100% - 6px);
+  box-sizing: border-box;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--panel) 88%, transparent);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+@container (max-height: 35px) or (max-width: 63px) {
+  .hcal-bar-label {
+    display: none;
+  }
+}
+
+/* ── Ongoing block (HCAL-23) ────────────────────────────────────── */
+
+.hcal-bar.ongoing::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-bottom: 2px dashed var(--panel);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hcal-bar.ongoing {
+    animation: hcal-pulse 2.4s ease-in-out infinite;
+  }
+}
+
+@keyframes hcal-pulse {
+  50% {
+    opacity: 0.72;
+  }
+}
+
+/* ── Tooltip on hover and focus (HCAL-22) ───────────────────────── */
+
+.hcal-tip {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: calc(100% + 8px);
+  z-index: 4;
+  width: max-content;
+  max-width: 260px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 6px 18px var(--shadow);
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: left;
+  pointer-events: none;
+}
+
+.hcal-bar.tip-left .hcal-tip {
+  left: auto;
+  right: calc(100% + 8px);
+}
+
+.hcal-bar:hover .hcal-tip,
+.hcal-bar:focus-visible .hcal-tip {
+  display: flex;
+}
+
+.hcal-tip-value {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+.hcal-tip-range {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.hcal-tip-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hcal-tip-key {
+  flex: none;
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--hcal-c);
+}

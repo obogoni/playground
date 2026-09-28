@@ -4,7 +4,7 @@
  */
 
 /** pt-BR weekday abbreviations, indexed by `Date.getDay()` (copy format, Q19). */
-const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+export const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
 const pad = (n: number): string => String(n).padStart(2, '0')
 
@@ -12,6 +12,12 @@ const pad = (n: number): string => String(n).padStart(2, '0')
 export function formatHms(ms: number): string {
   const seconds = Math.floor(ms / 1000)
   return `${pad(Math.floor(seconds / 3600))}:${pad(Math.floor(seconds / 60) % 60)}:${pad(seconds % 60)}`
+}
+
+/** The clickable session clock's tooltip: the current run, plus what a click
+ *  does (TIME-23, STRP-12). */
+export function clockToggleTitle(runMs: number, paused: boolean): string {
+  return `current run ${formatHms(runMs)} · click to ${paused ? 'resume' : 'pause'}`
 }
 
 /** Worktree and task totals: `hh:mm` (TIME-25, TIME-26, TIME-30). */

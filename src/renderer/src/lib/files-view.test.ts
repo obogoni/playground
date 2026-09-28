@@ -1,16 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import type { AppConfig } from '../../../shared/config'
 import type { ChangedPath } from '../../../shared/files'
-import { ALL_CHANGES_KEY } from './diff-view'
+import { ALL_CHANGES_KEY, tabKeyOf, type TabRef } from './diff-view'
 import {
   buildTree,
   fileType,
   filesStateFor,
   formatSize,
   isSolution,
+  keepUnchanged,
   launcherTarget,
+  pinTab,
+  pressUnchanged,
   tabsAffected,
-  tabsAfterClose
+  tabsAfterBulkClose,
+  tabsAfterClose,
+  unpinTab
 } from './files-view'
 
 function ui(files?: AppConfig['ui']['files']): AppConfig['ui'] {
@@ -208,5 +213,221 @@ describe('fileType', () => {
     // `GITIGNORE file`.
     expect(fileType('.gitignore')).toBe('No extension')
     expect(fileType('LICENSE')).toBe('No extension')
+  })
+})
+
+describe('pinTab and unpinTab (FPOL-01, 03, 04, 05)', () => {
+  type Tab = TabRef & { pinned?: boolean }
+  const file = (path: string, pinned?: boolean): Tab =>
+    pinned ? { kind: 'file', path, pinned } : { kind: 'file', path }
+  const commit = (sha: string): Tab => ({ kind: 'commit', sha })
+  const strip = (tabs: Tab[]): string[] =>
+    tabs.map((t) => `${tabKeyOf(t)}${t.pinned ? ' (pinned)' : ''}`)
+
+  it('moves a pinned tab to the front, after the tabs pinned before it (FPOL-01)', () => {
+    const tabs = [file('a.ts', true), file('b.ts'), file('c.ts'), commit('abc123')]
+
+    expect(strip(pinTab(tabs, 'commit:abc123'))).toEqual([
+      'file:a.ts (pinned)',
+      'commit:abc123 (pinned)',
+      'file:b.ts',
+      'file:c.ts'
+    ])
+  })
+
+  it('moves an unpinned tab to the front of the unpinned tabs (FPOL-03)', () => {
+    const tabs = [file('a.ts', true), file('b.ts', true), file('c.ts'), file('d.ts')]
+
+    expect(strip(unpinTab(tabs, 'file:a.ts'))).toEqual([
+      'file:b.ts (pinned)',
+      'file:a.ts',
+      'file:c.ts',
+      'file:d.ts'
+    ])
+  })
+
+  it('changes nothing when pinning a pinned tab or unpinning an unpinned one', () => {
+    const tabs = [file('a.ts', true), file('b.ts')]
+
+    expect(pinTab(tabs, 'file:a.ts')).toBe(tabs)
+    expect(unpinTab(tabs, 'file:b.ts')).toBe(tabs)
+  })
+
+  it('never pins or moves All changes, nor a key it does not hold (FPOL-05)', () => {
+    const tabs = [file('a.ts'), file('b.ts')]
+
+    expect(pinTab(tabs, ALL_CHANGES_KEY)).toBe(tabs)
+    expect(pinTab(tabs, 'file:gone.ts')).toBe(tabs)
+    expect(unpinTab(tabs, 'file:gone.ts')).toBe(tabs)
+  })
+
+  it('keeps every tab key, so the active key still names the same tab (FPOL-04)', () => {
+    const tabs = [file('a.ts'), file('b.ts'), commit('abc123')]
+    const keys = tabs.map(tabKeyOf).sort()
+
+    expect(pinTab(tabs, 'file:b.ts').map(tabKeyOf).sort()).toEqual(keys)
+    expect(unpinTab(pinTab(tabs, 'file:b.ts'), 'file:b.ts').map(tabKeyOf).sort()).toEqual(keys)
+  })
+})
+
+describe('tabsAfterBulkClose (FPOL-06..11)', () => {
+  const AC = { key: ALL_CHANGES_KEY, pinned: false }
+  const t = (key: string, pinned = false): { key: string; pinned: boolean } => ({ key, pinned })
+  // All changes, two pinned tabs, three unpinned: the strip of a diff mode.
+  const strip = [AC, t('p1', true), t('p2', true), t('a'), t('b'), t('c')]
+
+  it('Close all keeps only All changes, pinned tabs included in the close (FPOL-06)', () => {
+    expect(tabsAfterBulkClose(strip, 'p1', { kind: 'all' })).toEqual({
+      keys: [ALL_CHANGES_KEY],
+      active: ALL_CHANGES_KEY
+    })
+  })
+
+  it('Close unpinned keeps every pinned tab (FPOL-07)', () => {
+    expect(tabsAfterBulkClose(strip, 'p2', { kind: 'unpinned' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p1', 'p2'],
+      active: 'p2'
+    })
+  })
+
+  it('Close others keeps the anchor and every pinned tab (FPOL-08)', () => {
+    expect(tabsAfterBulkClose(strip, 'b', { kind: 'others', anchor: 'b' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p1', 'p2', 'b'],
+      active: 'b'
+    })
+  })
+
+  it('Close to the right closes only the unpinned tabs right of the anchor (FPOL-09)', () => {
+    expect(tabsAfterBulkClose(strip, 'a', { kind: 'right', anchor: 'a' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p1', 'p2', 'a'],
+      active: 'a'
+    })
+    // From a pinned anchor: the other pinned tab to its right survives.
+    expect(tabsAfterBulkClose(strip, 'p1', { kind: 'right', anchor: 'p1' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p1', 'p2'],
+      active: 'p1'
+    })
+  })
+
+  it('Close on a pinned tab closes it (FPOL-10)', () => {
+    expect(tabsAfterBulkClose(strip, 'a', { kind: 'close', anchor: 'p1' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p2', 'a', 'b', 'c'],
+      active: 'a'
+    })
+  })
+
+  it('never closes All changes', () => {
+    expect(tabsAfterBulkClose(strip, 'a', { kind: 'close', anchor: ALL_CHANGES_KEY })).toEqual({
+      keys: strip.map((x) => x.key),
+      active: 'a'
+    })
+  })
+
+  it('moves a closed active tab to the nearest survivor on its right first (FPOL-11)', () => {
+    expect(tabsAfterBulkClose(strip, 'a', { kind: 'others', anchor: 'c' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p1', 'p2', 'c'],
+      active: 'c'
+    })
+  })
+
+  it('falls back to the nearest survivor on its left (FPOL-11)', () => {
+    expect(tabsAfterBulkClose(strip, 'c', { kind: 'right', anchor: 'a' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p1', 'p2', 'a'],
+      active: 'a'
+    })
+  })
+
+  it('falls back to All changes when nothing else survives in a diff mode (FPOL-11)', () => {
+    expect(tabsAfterBulkClose([AC, t('a'), t('b')], 'b', { kind: 'unpinned' })).toEqual({
+      keys: [ALL_CHANGES_KEY],
+      active: ALL_CHANGES_KEY
+    })
+  })
+
+  it('leaves no focus when there was none', () => {
+    expect(tabsAfterBulkClose(strip, null, { kind: 'unpinned' })).toEqual({
+      keys: [ALL_CHANGES_KEY, 'p1', 'p2'],
+      active: null
+    })
+  })
+
+  it('closes nothing for an anchor the strip does not hold', () => {
+    const keys = strip.map((x) => x.key)
+
+    for (const kind of ['close', 'others', 'right'] as const) {
+      expect(tabsAfterBulkClose(strip, 'a', { kind, anchor: 'gone' })).toEqual({
+        keys,
+        active: 'a'
+      })
+    }
+  })
+
+  it('leaves nothing active when nothing survives in Explore (FPOL-11)', () => {
+    expect(tabsAfterBulkClose([t('a', true), t('b')], 'b', { kind: 'all' })).toEqual({
+      keys: [],
+      active: null
+    })
+  })
+})
+
+describe('pressUnchanged', () => {
+  it('records a first press with its mode and press 1 (FOLD-14)', () => {
+    expect(pressUnchanged({}, ALL_CHANGES_KEY, 'show')).toEqual({
+      [ALL_CHANGES_KEY]: { mode: 'show', press: 1 }
+    })
+  })
+
+  it('counts a second press of the same button, so it applies again (FOLD-12)', () => {
+    const once = pressUnchanged({}, ALL_CHANGES_KEY, 'hide')
+
+    expect(pressUnchanged(once, ALL_CHANGES_KEY, 'hide')).toEqual({
+      [ALL_CHANGES_KEY]: { mode: 'hide', press: 2 }
+    })
+  })
+
+  it('switches the mode when the other button is pressed (FOLD-14)', () => {
+    const hidden = pressUnchanged({}, ALL_CHANGES_KEY, 'hide')
+
+    expect(pressUnchanged(hidden, ALL_CHANGES_KEY, 'show')[ALL_CHANGES_KEY]).toEqual({
+      mode: 'show',
+      press: 2
+    })
+  })
+
+  it("leaves every other tab's choice as it was", () => {
+    const diff = tabKeyOf({ kind: 'diff', mode: 'uncommitted', path: 'fold/long.ts' })
+    const before = pressUnchanged({}, diff, 'show')
+
+    const after = pressUnchanged(before, ALL_CHANGES_KEY, 'hide')
+
+    expect(after[diff]).toBe(before[diff])
+    expect(before).toEqual({ [diff]: { mode: 'show', press: 1 } })
+  })
+
+  it('records a press whatever is mounted, since the rule knows nothing of editors (FOLD-27)', () => {
+    const pressed = pressUnchanged({}, ALL_CHANGES_KEY, 'show')
+
+    expect(keepUnchanged(pressed, [ALL_CHANGES_KEY])).toEqual(pressed)
+  })
+})
+
+describe('keepUnchanged', () => {
+  const diff = tabKeyOf({ kind: 'diff', mode: 'uncommitted', path: 'fold/long.ts' })
+  const other = tabKeyOf({ kind: 'diff', mode: 'uncommitted', path: 'fold/other.ts' })
+  const choices = pressUnchanged(
+    pressUnchanged(pressUnchanged({}, ALL_CHANGES_KEY, 'show'), diff, 'show'),
+    other,
+    'hide'
+  )
+
+  it("drops the choice of a tab that closed and keeps the open ones' (FOLD-21)", () => {
+    expect(keepUnchanged(choices, [ALL_CHANGES_KEY, other])).toEqual({
+      [ALL_CHANGES_KEY]: { mode: 'show', press: 1 },
+      [other]: { mode: 'hide', press: 1 }
+    })
+  })
+
+  it("never drops All changes' choice, which has no tab to close (FOLD-21)", () => {
+    expect(keepUnchanged(choices, [])).toEqual({ [ALL_CHANGES_KEY]: { mode: 'show', press: 1 } })
   })
 })
