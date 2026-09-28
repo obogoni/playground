@@ -1,7 +1,7 @@
 import type { AppConfig, FilesState } from '../../../shared/config'
 import type { ChangedPath } from '../../../shared/files'
 import type { ChangeStatus } from '../../../shared/worktrees'
-import { ALL_CHANGES_KEY } from './diff-view'
+import { ALL_CHANGES_KEY, tabKeyOf, type TabRef, type UnchangedMode } from './diff-view'
 
 /** A changed file as the tree renders it, carrying the status it was listed with. */
 export interface FileNode {
@@ -85,6 +85,88 @@ export function tabsAfterClose(
   return { tabs: left, active: adjacent }
 }
 
+/** An open tab as the pin rules see it: its identity, and whether it is pinned. */
+export type PinnableTab = TabRef & { pinned?: boolean }
+
+/**
+ * Pins a tab (FPOL-01): it moves to the front of the strip, after the tabs
+ * pinned before it, so pinned tabs sit right after All changes in pin order.
+ * The strip keeps that order on its own because new tabs are appended. The
+ * same list comes back for a key it does not hold, All changes included
+ * (FPOL-05), and for a tab already pinned. Keys never change, so the active
+ * tab stays the same one (FPOL-04).
+ */
+export function pinTab<T extends PinnableTab>(tabs: T[], key: string): T[] {
+  const index = tabs.findIndex((tab) => tabKeyOf(tab) === key)
+  if (index === -1 || tabs[index].pinned) return tabs
+  const rest = tabs.filter((_, at) => at !== index)
+  const pinnedCount = rest.filter((tab) => tab.pinned).length
+  return [
+    ...rest.slice(0, pinnedCount),
+    { ...tabs[index], pinned: true },
+    ...rest.slice(pinnedCount)
+  ]
+}
+
+/** Unpins a tab (FPOL-03): it moves to the front of the unpinned tabs. */
+export function unpinTab<T extends PinnableTab>(tabs: T[], key: string): T[] {
+  const index = tabs.findIndex((tab) => tabKeyOf(tab) === key)
+  if (index === -1 || !tabs[index].pinned) return tabs
+  const rest = tabs.filter((_, at) => at !== index)
+  const pinnedCount = rest.filter((tab) => tab.pinned).length
+  const unpinned = { ...tabs[index] }
+  delete unpinned.pinned
+  return [...rest.slice(0, pinnedCount), unpinned, ...rest.slice(pinnedCount)]
+}
+
+/** One of the strip's bulk closes (FPOL-06..10); the first three act from a tab. */
+export type BulkClose =
+  | { kind: 'close' | 'others' | 'right'; anchor: string }
+  | { kind: 'unpinned' | 'all' }
+
+/**
+ * Which tabs a bulk close leaves, and which is focused (FPOL-06..11). Close
+ * all closes pinned tabs too; Close unpinned, Close others and Close to the
+ * right never close a pinned one; Close closes its anchor, pinned or not. All
+ * changes is never closed (FDIF-17). An active tab that survives stays active;
+ * a closed one hands the focus to the nearest survivor on its right, else on
+ * its left — which in a diff mode is at worst All changes, the first tab —
+ * and to nothing when no tab survives, as in Explore.
+ */
+export function tabsAfterBulkClose(
+  strip: { key: string; pinned: boolean }[],
+  active: string | null,
+  action: BulkClose
+): { keys: string[]; active: string | null } {
+  const anchorAt =
+    action.kind === 'close' || action.kind === 'others' || action.kind === 'right'
+      ? strip.findIndex((tab) => tab.key === action.anchor)
+      : -1
+  const closes = (tab: { key: string; pinned: boolean }, at: number): boolean => {
+    if (tab.key === ALL_CHANGES_KEY) return false
+    switch (action.kind) {
+      case 'all':
+        return true
+      case 'unpinned':
+        return !tab.pinned
+      case 'close':
+        return at === anchorAt
+      case 'others':
+        return anchorAt !== -1 && at !== anchorAt && !tab.pinned
+      case 'right':
+        return anchorAt !== -1 && at > anchorAt && !tab.pinned
+    }
+  }
+  const survives = strip.map((tab, at) => !closes(tab, at))
+  const keys = strip.filter((_, at) => survives[at]).map((tab) => tab.key)
+  const activeAt = strip.findIndex((tab) => tab.key === active)
+  if (activeAt === -1 || survives[activeAt]) return { keys, active }
+  const right = strip.findIndex((_, at) => at > activeAt && survives[at])
+  if (right !== -1) return { keys, active: strip[right].key }
+  const left = survives.lastIndexOf(true, activeAt)
+  return { keys, active: left === -1 ? null : strip[left].key }
+}
+
 /** A path the user picked, and when — the recency FXPL-26 compares. */
 export interface Selected {
   path: string
@@ -151,6 +233,41 @@ export function formatSize(bytes: number): string {
 export function fileType(name: string): string {
   const dot = name.lastIndexOf('.')
   return dot > 0 ? `${name.slice(dot + 1).toUpperCase()} file` : 'No extension'
+}
+
+/**
+ * The last Hide unchanged / Show unchanged press of one tab. `press` counts
+ * every press, so the same button pressed again still reaches the diffs:
+ * after a strip revealed by hand, Hide unchanged has to fold it (FOLD-12).
+ */
+export interface UnchangedChoice {
+  mode: UnchangedMode
+  press: number
+}
+
+/** Each tab's choice, by tab key. Kept in memory only (FOLD-22). */
+export type UnchangedChoices = Record<string, UnchangedChoice>
+
+/** The choices after a press of Hide unchanged or Show unchanged in tab `key`. */
+export function pressUnchanged(
+  choices: UnchangedChoices,
+  key: string,
+  mode: UnchangedMode
+): UnchangedChoices {
+  return { ...choices, [key]: { mode, press: (choices[key]?.press ?? 0) + 1 } }
+}
+
+/**
+ * The choices of the tabs still open (FOLD-21): a closed tab's choice goes, and
+ * the same diff opened again starts folded. All changes is never closed, so its
+ * choice always stays.
+ */
+export function keepUnchanged(
+  choices: UnchangedChoices,
+  liveKeys: readonly string[]
+): UnchangedChoices {
+  const live = new Set([...liveKeys, ALL_CHANGES_KEY])
+  return Object.fromEntries(Object.entries(choices).filter(([key]) => live.has(key)))
 }
 
 function comparablePath(path: string): string {

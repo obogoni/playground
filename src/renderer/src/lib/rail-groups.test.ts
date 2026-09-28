@@ -529,6 +529,16 @@ describe('rail rows with agent activity', () => {
     )
   })
 
+  it('keeps the raw MCP tool name in the tooltip (STRP-06)', () => {
+    const tooltip = tooltipOf(
+      running({ state: 'working', tool: 'mcp__azure-devops__wit_work_item', subagents: 0 })
+    )
+    expect(tooltip).toBe(
+      'Claude · 24173-fix-login · user/otavio/24173-fix-login · mcp__azure-devops__wit_work_item'
+    )
+    expect(tooltip).not.toContain('MCP azure-devops')
+  })
+
   it.each([
     [1, '1 subagent'],
     [3, '3 subagents']

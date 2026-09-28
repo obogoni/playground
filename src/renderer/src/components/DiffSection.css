@@ -23,10 +23,19 @@
   padding: 7px 10px;
   color: var(--text-muted);
   text-align: left;
+  cursor: pointer;
 }
 
 .diff-section-header:hover {
   background: color-mix(in oklab, var(--text-faint) 8%, transparent);
+}
+
+/* The toggle carries the header's click from the keyboard; it draws only the
+   chevron. */
+.diff-section-toggle {
+  flex: none;
+  display: flex;
+  padding: 0;
 }
 
 .diff-section-chevron {
@@ -38,41 +47,6 @@
 
 .diff-section-chevron.open {
   transform: none;
-}
-
-/* The letters the tree already uses for a change status, at the same weight. */
-.diff-section-pill {
-  flex: none;
-  width: 16px;
-  text-align: center;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.diff-section-pill.modified {
-  background: color-mix(in oklab, var(--amber) 16%, transparent);
-  color: var(--amber);
-}
-
-.diff-section-pill.added {
-  background: color-mix(in oklab, var(--green) 16%, transparent);
-  color: var(--green);
-}
-
-.diff-section-pill.deleted {
-  background: color-mix(in oklab, var(--red) 16%, transparent);
-  color: var(--red);
-}
-
-.diff-section-pill.renamed {
-  background: color-mix(in oklab, var(--accent) 16%, transparent);
-  color: var(--accent);
-}
-
-.diff-section-pill.untracked {
-  background: color-mix(in oklab, var(--text-faint) 20%, transparent);
-  color: var(--text-muted);
 }
 
 .diff-section-path {
@@ -100,6 +74,36 @@
 
 .diff-section-counts .removed {
   color: var(--red);
+}
+
+/* A deleted file's path, and only the path, is struck (FSTS-19). */
+.diff-section-path.struck {
+  text-decoration: line-through;
+}
+
+/* The header's last group: the status glyph, flush with the header's right
+   padding whether or not the counts render (FSTS-16/17). The discard action
+   (#132) goes before it. */
+.diff-section-end {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+/* The uncommitted stack's ↶ (FDSC-38), always shown, before the glyph. */
+.diff-section-discard {
+  display: flex;
+  align-items: center;
+  padding: 1px;
+  border-radius: 5px;
+  color: var(--text-faint);
+}
+
+.diff-section-discard:hover {
+  background: var(--panel-2);
+  color: var(--text);
 }
 
 /*

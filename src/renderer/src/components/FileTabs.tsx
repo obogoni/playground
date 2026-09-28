@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
+import type { ChangedPath } from '../../../shared/files'
 import type { ShortcutTool } from '../../../shared/shortcuts'
 import { api } from '../lib/api'
 import { commitTabTitle } from '../lib/commit-view'
-import { tabKeyOf } from '../lib/diff-view'
+import { ALL_CHANGES_KEY, tabKeyOf } from '../lib/diff-view'
+import type { BulkClose } from '../lib/files-view'
 import type { DiffTab, FileTab, StripTab, UseFiles } from '../lib/use-files'
 import { AllChangesTab } from './AllChangesTab'
 import { CodeViewer } from './CodeViewer'
 import { CommitTab } from './CommitTab'
 import { DiffViewer, type DiffHandle } from './DiffViewer'
+import { FileIcon } from './FileIcon'
 import { FilePlaceholder } from './FilePlaceholder'
 import { Icon, type IconName } from './Icon'
 import './FileTabs.css'
@@ -19,6 +22,8 @@ interface FileTabsProps {
   files: UseFiles
   /** The launcher's existing failure toast (FXPL-30). */
   onToast: (message: string) => void
+  /** Opens the discard confirmation for these uncommitted entries (FDSC-38). */
+  onDiscard: (entries: ChangedPath[]) => void
 }
 
 /** The launcher row of FXPL-25, in the order the requirement lists it. */
@@ -28,6 +33,18 @@ const LAUNCHERS: { tool: ShortcutTool; label: string; icon: IconName }[] = [
   { tool: 'vs2022', label: 'VS 2022', icon: 'shield' },
   { tool: 'vs2026', label: 'VS 2026', icon: 'shield' }
 ]
+
+/**
+ * The strip's menu (FPOL-12/13): a tab's own, opened by right-clicking it, or
+ * the ⋯ button's, which names no tab and offers only the closes that need none.
+ */
+interface StripMenu {
+  x: number
+  y: number
+  /** The right-clicked tab's key; null for the ⋯ menu. */
+  anchor: string | null
+  pinned: boolean
+}
 
 /**
  * VS Code's own binding for next / previous change in its diff editor, read out
@@ -85,6 +102,7 @@ function DiffBody({
       sides={tab.sides}
       layout={files.diffLayout}
       ignoreWhitespace={files.diffIgnoreWhitespace}
+      unchanged={files.unchangedFor(tabKeyOf(tab))}
       onHandle={onHandle}
     />
   )
@@ -115,7 +133,7 @@ function DiffBody({
  * Only the active tab is mounted, keyed by its tab key, so Monaco creates one
  * editor per tab and disposes it when the tab loses focus or closes.
  */
-export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.Element {
+export function FileTabs({ worktreePath, files, onToast, onDiscard }: FileTabsProps): JSX.Element {
   const active: StripTab | null =
     files.strip.find((tab) => tabKeyOf(tab) === files.activeTab) ?? null
 
@@ -139,6 +157,29 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
+  const [menu, setMenu] = useState<StripMenu | null>(null)
+
+  // Any click or Escape dismisses the menu and changes no tab, as the sidebar's
+  // and the commit list's menus do (FPOL-13).
+  useEffect(() => {
+    if (!menu) return
+    const close = (): void => setMenu(null)
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setMenu(null)
+    }
+    window.addEventListener('click', close)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('click', close)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [menu])
+
+  const bulk = (action: BulkClose): void => {
+    files.closeTabs(action)
+    setMenu(null)
+  }
+
   const launch = (tool: ShortcutTool): void => {
     const path = files.launchTarget
     if (!path) return
@@ -159,6 +200,7 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
         {files.strip.map((tab) => {
           const key = tabKeyOf(tab)
           const fixed = tab.kind === 'all-changes'
+          const pinned = tab.kind !== 'all-changes' && tab.pinned === true
           // FCMT-04: a commit tab is named by its sha and subject, and carries
           // its whole message as the tooltip.
           const label =
@@ -176,7 +218,13 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
           return (
             <div
               key={key}
-              className={`file-tab${key === files.activeTab ? ' active' : ''}${fixed ? ' fixed' : ''}`}
+              className={`file-tab${key === files.activeTab ? ' active' : ''}${fixed ? ' fixed' : ''}${pinned ? ' pinned' : ''}`}
+              onContextMenu={(event) => {
+                event.preventDefault()
+                // FPOL-05: All changes offers neither Pin nor a close.
+                if (fixed) return
+                setMenu({ x: event.clientX, y: event.clientY, anchor: key, pinned })
+              }}
             >
               <button
                 type="button"
@@ -186,6 +234,9 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
                 title={title}
                 onClick={() => files.focusTab(key)}
               >
+                {(tab.kind === 'file' || tab.kind === 'diff') && (
+                  <FileIcon name={label} kind="file" />
+                )}
                 {tab.kind === 'diff' && (
                   <span className="file-tab-glyph" aria-hidden="true">
                     &plusmn;
@@ -193,7 +244,22 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
                 )}
                 {label}
               </button>
-              {/* FDIF-17: the fixed tab cannot be closed, so it carries no close button. */}
+              {/* FPOL-02/03: every tab carries its pin before the close button;
+                  it is filled while the tab is pinned, and a click toggles it. */}
+              {!fixed && (
+                <button
+                  type="button"
+                  className="file-tab-pin"
+                  aria-label={`${pinned ? 'Unpin' : 'Pin'} ${title}`}
+                  aria-pressed={pinned}
+                  title={pinned ? 'Unpin' : 'Pin'}
+                  onClick={() => files.togglePin(key)}
+                >
+                  <Icon name="pin" size={12} />
+                </button>
+              )}
+              {/* FDIF-17: the fixed tab cannot be closed, so it carries no close button.
+                  FPOL-10: a pinned tab keeps it. */}
               {!fixed && (
                 <button
                   type="button"
@@ -208,7 +274,86 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
             </div>
           )
         })}
+        {/* FPOL-12: the tab-independent closes, at the end of the strip. */}
+        <button
+          type="button"
+          className="file-tabs-more"
+          aria-label="Close tabs"
+          title="Close tabs"
+          onClick={(event) => {
+            event.stopPropagation()
+            const box = event.currentTarget.getBoundingClientRect()
+            setMenu(
+              menu?.anchor === null
+                ? null
+                : { x: box.left, y: box.bottom + 2, anchor: null, pinned: false }
+            )
+          }}
+        >
+          <Icon name="ellipsis" size={14} />
+        </button>
       </div>
+
+      {menu && (
+        <div className="file-tabs-menu" role="menu" style={{ left: menu.x, top: menu.y }}>
+          {menu.anchor !== null && (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                className="file-tabs-menu-item"
+                onClick={() => {
+                  files.togglePin(menu.anchor as string)
+                  setMenu(null)
+                }}
+              >
+                {menu.pinned ? 'Unpin' : 'Pin'}
+              </button>
+              <div className="file-tabs-menu-sep" />
+              <button
+                type="button"
+                role="menuitem"
+                className="file-tabs-menu-item"
+                onClick={() => bulk({ kind: 'close', anchor: menu.anchor as string })}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="file-tabs-menu-item"
+                onClick={() => bulk({ kind: 'others', anchor: menu.anchor as string })}
+              >
+                Close others
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="file-tabs-menu-item"
+                onClick={() => bulk({ kind: 'right', anchor: menu.anchor as string })}
+              >
+                Close to the right
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tabs-menu-item"
+            onClick={() => bulk({ kind: 'unpinned' })}
+          >
+            Close unpinned
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tabs-menu-item"
+            onClick={() => bulk({ kind: 'all' })}
+          >
+            Close all
+          </button>
+        </div>
+      )}
 
       {onDiffSurface && (
         <div className="file-tabs-controls" aria-label="Diff controls">
@@ -255,6 +400,28 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
           >
             <Icon name="chevron-down" size={14} />
           </button>
+          {/* FOLD-18: one file's diff folds or reveals like All changes, whose
+              own buttons sit in its header. */}
+          {diffTab && (
+            <>
+              <button
+                type="button"
+                className="file-tabs-toggle"
+                title="Fold the unchanged lines of this file"
+                onClick={() => files.pressUnchanged(tabKeyOf(diffTab), 'hide')}
+              >
+                Hide unchanged
+              </button>
+              <button
+                type="button"
+                className="file-tabs-toggle"
+                title="Show the unchanged lines of this file"
+                onClick={() => files.pressUnchanged(tabKeyOf(diffTab), 'show')}
+              >
+                Show unchanged
+              </button>
+            </>
+          )}
           {/* FDIF-27/28: the whole file, unless the change is its deletion. */}
           {diffTab && diffTab.changed.status !== 'deleted' && (
             <button
@@ -300,6 +467,12 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
             ignoreWhitespace={files.diffIgnoreWhitespace}
             refreshToken={files.refreshToken}
             onHandle={onHandle}
+            // FDSC-38/40: the section ↶ belongs to the uncommitted stack only;
+            // diff to origin gets none.
+            onDiscard={files.mode === 'uncommitted' ? (changed) => onDiscard([changed]) : undefined}
+            // One tab across both diff lenses, so one choice (FOLD-20).
+            unchanged={files.unchangedFor(ALL_CHANGES_KEY)}
+            onUnchanged={(mode) => files.pressUnchanged(ALL_CHANGES_KEY, mode)}
           />
         ) : active.kind === 'diff' ? (
           <DiffBody key={tabKeyOf(active)} files={files} tab={active} onHandle={onHandle} />
@@ -311,6 +484,8 @@ export function FileTabs({ worktreePath, files, onToast }: FileTabsProps): JSX.E
             layout={files.diffLayout}
             ignoreWhitespace={files.diffIgnoreWhitespace}
             onHandle={onHandle}
+            unchanged={files.unchangedFor(tabKeyOf(active))}
+            onUnchanged={(mode) => files.pressUnchanged(tabKeyOf(active), mode)}
           />
         ) : (
           <FileBody key={tabKeyOf(active)} tab={active} />

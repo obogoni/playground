@@ -9,6 +9,7 @@ import type {
   CommitRow,
   DirListing,
   DiffRequest,
+  DiscardResult,
   DiffSides,
   FileContent,
   FileStat,
@@ -17,8 +18,28 @@ import type {
 import type { LaunchResult } from '../../../shared/shortcuts'
 import { api } from './api'
 import { mergePages } from './commit-view'
-import { diffRequestFor, tabKeyOf, tabsWithAllChanges, type DiffMode } from './diff-view'
-import { filesStateFor, launcherTarget, tabsAfterClose, tabsAffected } from './files-view'
+import {
+  diffRequestFor,
+  tabKeyOf,
+  tabsWithAllChanges,
+  type DiffMode,
+  type UnchangedMode
+} from './diff-view'
+import { afterDiscard } from './discard-view'
+import {
+  filesStateFor,
+  keepUnchanged,
+  launcherTarget,
+  pinTab,
+  pressUnchanged as recordPress,
+  tabsAfterBulkClose,
+  tabsAfterClose,
+  tabsAffected,
+  unpinTab,
+  type BulkClose,
+  type UnchangedChoice,
+  type UnchangedChoices
+} from './files-view'
 
 /** One open file (FXPL-18): what was read for it, and when it was last picked. */
 export interface FileTab {
@@ -62,8 +83,11 @@ export interface CommitTab {
   at: number
 }
 
-/** Everything the tab strip can hold: the open tabs, plus the fixed one. */
-export type ViewTab = FileTab | DiffTab | CommitTab
+/**
+ * Everything the tab strip can hold: the open tabs, plus the fixed one. Any
+ * open tab can be pinned (FPOL-01); absent means unpinned.
+ */
+export type ViewTab = (FileTab | DiffTab | CommitTab) & { pinned?: boolean }
 export type StripTab = ViewTab | { kind: 'all-changes' }
 
 /**
@@ -87,6 +111,12 @@ interface WorktreeFiles {
   stats: FileStat[]
   /** The Commits list as far as it has been paged in (FCMT-02/09); null before it loads. */
   commits: CommitPage | null
+  /**
+   * Each tab's last Hide unchanged / Show unchanged press, by tab key. Here
+   * and not in the tabs' components, which unmount on every tab switch; in
+   * memory only, never written to the config (FOLD-19, FOLD-22).
+   */
+  unchanged: UnchangedChoices
 }
 
 /** A worktree the user has not opened yet. Constant, so it stays referentially stable. */
@@ -100,7 +130,8 @@ const EMPTY: WorktreeFiles = {
   uncommitted: [],
   bases: null,
   stats: [],
-  commits: null
+  commits: null,
+  unchanged: {}
 }
 
 export interface UseFilesOptions {
@@ -176,6 +207,20 @@ export interface UseFiles {
   openCommitInBrowser: (sha: string) => Promise<LaunchResult>
   focusTab: (key: string) => void
   closeTab: (key: string) => void
+  /**
+   * Discards exactly these uncommitted entries, as the confirmation listed them
+   * (FDSC-45), then settles the tabs the result touched and re-lists the mode
+   * (FDSC-28..32). Never rejects: a failed request reads as every entry kept.
+   */
+  discard: (entries: ChangedPath[]) => Promise<DiscardResult>
+  /** Pins an unpinned tab or unpins a pinned one; the focus stays where it is (FPOL-01/03/04). */
+  togglePin: (key: string) => void
+  /** One of the strip's bulk closes, on the selected worktree's tabs (FPOL-06..11). */
+  closeTabs: (action: BulkClose) => void
+  /** The last Hide unchanged / Show unchanged press of one tab, or null (FOLD-14). */
+  unchangedFor: (key: string) => UnchangedChoice | null
+  /** Records a press of Hide unchanged or Show unchanged in one tab (FOLD-12, FOLD-13). */
+  pressUnchanged: (key: string, mode: UnchangedMode) => void
 }
 
 /**
@@ -680,11 +725,103 @@ export function useFiles({
         const after = tabsAfterClose(keys, index, s.activeTab)
         return {
           tabs: s.tabs.filter((tab) => after.tabs.includes(tabKeyOf(tab))),
-          activeTab: after.active
+          activeTab: after.active,
+          // A closed tab forgets its choice (FOLD-21).
+          unchanged: keepUnchanged(s.unchanged, after.tabs)
         }
       })
     },
     [worktreePath, patchFiles, mode]
+  )
+
+  const discard = useCallback(
+    async (entries: ChangedPath[]): Promise<DiscardResult> => {
+      if (!worktreePath) {
+        return { files: entries.map((entry) => keptByGit(entry, 'No worktree is selected.')) }
+      }
+      const wt = worktreePath
+      // FDSC-45: the entries go as the confirmation listed them, never re-derived
+      // from whatever the list holds by now.
+      const result = await api
+        .invoke('files:discard', { worktreePath: wt, entries })
+        .catch((err: unknown) => ({
+          files: entries.map((entry) =>
+            keptByGit(entry, err instanceof Error ? err.message : String(err))
+          )
+        }))
+      // Which tabs close and which re-read is afterDiscard's decision alone.
+      patchFiles(wt, (s) => {
+        const { close } = afterDiscard(s.tabs.map(tabKeyOf), entries, result)
+        if (close.length === 0) return {}
+        // One close at a time through the strip, so focus moves the way
+        // closing each tab by hand would move it (FXPL-19).
+        let keys = tabsWithAllChanges(s.tabs, live.current.mode).map(tabKeyOf)
+        let active = s.activeTab
+        for (const key of close) {
+          const index = keys.indexOf(key)
+          if (index === -1) continue
+          const after = tabsAfterClose(keys, index, active)
+          keys = after.tabs
+          active = after.active
+        }
+        return {
+          tabs: s.tabs.filter((tab) => keys.includes(tabKeyOf(tab))),
+          activeTab: active,
+          // A closed tab forgets its choice (FOLD-21).
+          unchanged: keepUnchanged(s.unchanged, keys)
+        }
+      })
+      const current = live.current
+      if (current.worktreePath === wt) {
+        const { reread } = afterDiscard(current.here.tabs.map(tabKeyOf), entries, result)
+        for (const path of reread) readTab(wt, path)
+        refreshMode(wt, current.mode, current.effectiveBase, current.here.expanded)
+      }
+      return result
+    },
+    [worktreePath, patchFiles, readTab, refreshMode]
+  )
+
+  // Pins live on the worktree's tabs, so each worktree keeps its own (FXPL-18).
+  const togglePin = useCallback(
+    (key: string): void => {
+      if (!worktreePath) return
+      patchFiles(worktreePath, (s) => {
+        const tab = s.tabs.find((open) => tabKeyOf(open) === key)
+        if (!tab) return {}
+        return { tabs: tab.pinned ? unpinTab(s.tabs, key) : pinTab(s.tabs, key) }
+      })
+    },
+    [worktreePath, patchFiles]
+  )
+
+  const closeTabs = useCallback(
+    (action: BulkClose): void => {
+      if (!worktreePath) return
+      patchFiles(worktreePath, (s) => {
+        // The strip, as for one close: the rule has to see All changes to
+        // spare it and to hand it the focus (FDIF-17).
+        const strip = tabsWithAllChanges(s.tabs, mode).map((tab) => ({
+          key: tabKeyOf(tab),
+          pinned: 'pinned' in tab && tab.pinned === true
+        }))
+        const after = tabsAfterBulkClose(strip, s.activeTab, action)
+        return {
+          tabs: s.tabs.filter((tab) => after.keys.includes(tabKeyOf(tab))),
+          activeTab: after.active,
+          unchanged: keepUnchanged(s.unchanged, after.keys)
+        }
+      })
+    },
+    [worktreePath, patchFiles, mode]
+  )
+
+  const pressUnchanged = useCallback(
+    (key: string, mode: UnchangedMode): void => {
+      if (!worktreePath) return
+      patchFiles(worktreePath, (s) => ({ unchanged: recordPress(s.unchanged, key, mode) }))
+    },
+    [worktreePath, patchFiles]
   )
 
   // `tabsWithAllChanges` is generic over what the strip holds and widens its
@@ -738,8 +875,18 @@ export function useFiles({
     loadMoreCommits,
     openCommitInBrowser,
     focusTab,
-    closeTab
+    closeTab,
+    discard,
+    togglePin,
+    closeTabs,
+    unchangedFor: (key) => here.unchanged[key] ?? null,
+    pressUnchanged
   }
+}
+
+/** An entry the discard could not act on, reported with git's cause (design, Error Handling). */
+function keptByGit(entry: ChangedPath, detail: string): DiscardResult['files'][number] {
+  return { path: entry.path, kept: { cause: 'git', detail } }
 }
 
 /**

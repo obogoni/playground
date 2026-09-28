@@ -411,16 +411,35 @@ export function parsePorcelainBlocks(stdout: string): PorcelainBlock[] {
   return blocks
 }
 
-async function statusOf(worktreePath: string): Promise<{ dirty: boolean; changes: number }> {
+/**
+ * `git status --porcelain` without the index refresh plain `status` does on the
+ * side (SCRF-11). That refresh rewrites `index`, which is exactly what the
+ * git-state watcher reacts to, so a count run the plain way would trigger
+ * another count.
+ */
+const STATUS_ARGS = ['--no-optional-locks', 'status', '--porcelain']
+
+/**
+ * One worktree's change count, or `null` when git could not answer — a path
+ * that vanished, a broken gitdir — so a recount can keep the last count
+ * instead of showing a clean zero (SCRF-06).
+ */
+export async function worktreeStatus(
+  worktreePath: string
+): Promise<{ dirty: boolean; changes: number } | null> {
   try {
-    const { stdout } = await git(worktreePath, ['status', '--porcelain'])
+    const { stdout } = await git(worktreePath, STATUS_ARGS)
     const changes = stdout.split(/\r?\n/).filter(Boolean).length
     return { dirty: changes > 0, changes }
   } catch {
-    // A worktree whose path vanished or whose gitdir is broken: report clean
-    // rather than failing the whole repo listing.
-    return { dirty: false, changes: 0 }
+    return null
   }
+}
+
+async function statusOf(worktreePath: string): Promise<{ dirty: boolean; changes: number }> {
+  // A worktree whose path vanished or whose gitdir is broken: report clean
+  // rather than failing the whole repo listing.
+  return (await worktreeStatus(worktreePath)) ?? { dirty: false, changes: 0 }
 }
 
 /**
@@ -431,7 +450,7 @@ async function statusOf(worktreePath: string): Promise<{ dirty: boolean; changes
  */
 export async function changedFilesOf(worktreePath: string): Promise<ChangedFile[]> {
   try {
-    const { stdout } = await git(worktreePath, ['status', '--porcelain'])
+    const { stdout } = await git(worktreePath, STATUS_ARGS)
     return parseChangedFiles(stdout)
   } catch {
     return []
@@ -442,7 +461,8 @@ export async function changedFilesOf(worktreePath: string): Promise<ChangedFile[
  * Pure porcelain → `ChangedFile[]` (one row per non-empty line, so the count
  * matches `statusOf`'s `changes`). The two-char `XY` code maps to a single label
  * by destructive precedence — deleted > added/copied > renamed > modified — with
- * `??` untracked; renames/copies surface the post-`-> ` destination path. Git's
+ * `??` untracked; renames/copies surface the post-`-> ` destination path, with
+ * the pre-`-> ` source as `oldPath`. Git's
  * C-style quoting on special-char/non-ASCII paths is stripped back to the raw path.
  */
 export function parseChangedFiles(stdout: string): ChangedFile[] {
@@ -456,12 +476,17 @@ export function parseChangedFiles(stdout: string): ChangedFile[] {
       continue
     }
     // Only rename (R) and copy (C) entries carry the "orig -> dest" arrow; the
-    // surviving file is the destination. Restrict the split to those codes —
-    // splitting unconditionally would corrupt a plain path that legitimately
-    // contains " -> ".
+    // surviving file is the destination, and the source is kept as `oldPath`
+    // (FDSC-24). Restrict the split to those codes — splitting unconditionally
+    // would corrupt a plain path that legitimately contains " -> ".
     if (code.includes('R') || code.includes('C')) {
       const arrow = rest.indexOf(' -> ')
-      if (arrow >= 0) rest = rest.slice(arrow + ' -> '.length)
+      if (arrow >= 0) {
+        const oldPath = unquotePath(rest.slice(0, arrow))
+        rest = rest.slice(arrow + ' -> '.length)
+        files.push({ path: unquotePath(rest), status: statusFromCode(code), oldPath })
+        continue
+      }
     }
     files.push({ path: unquotePath(rest), status: statusFromCode(code) })
   }

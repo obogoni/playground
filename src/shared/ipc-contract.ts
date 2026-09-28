@@ -9,11 +9,13 @@ import type {
 import type {
   BaseOptions,
   ChangedListing,
+  ChangedPath,
   CommitDetail,
   CommitPage,
   DiffRequest,
   DiffSides,
   DirListing,
+  DiscardResult,
   FileContent,
   FileStat,
   FilesChanged,
@@ -103,6 +105,11 @@ export interface IpcContract {
   }
   /** Live `git status --porcelain` of a worktree, parsed for the remove confirm (FRWT-01); [] when clean/unreadable. */
   'worktrees:changes': { req: { worktreePath: string }; res: ChangedFile[] }
+  /** One worktree's change count, recounted on demand; `null` when git could not answer, so the last count stays (SCRF-06/07). */
+  'worktrees:status': {
+    req: { worktreePath: string }
+    res: { dirty: boolean; changes: number } | null
+  }
   /** Branch, upstream, ahead/behind, remotes and fetch age from local refs — never the network; failures land in `error` (STBR-09/12/13/14/22). */
   'git:sync-state': { req: { worktreePath: string }; res: SyncState }
   /** Incoming and outgoing commits against the upstream, 20 each plus the "+N more" counts (STBR-15/16). */
@@ -120,6 +127,8 @@ export interface IpcContract {
   'tasks:parent': { req: { id: number; org: string; project: string }; res: ParentOfResult }
   /** Fetches one work item for the task picker without pinning it; failures are returned (HTSK-02, HTSK-04, HTSK-05). */
   'tasks:lookup': { req: { input: string }; res: LookupTaskResult }
+  /** Opens a pinned task's stored work item URL in the browser; main refuses anything not https on dev.azure.com (PTOP-01..07). */
+  'tasks:open': { req: { id: number; org: string; project: string }; res: LaunchResult }
   /** Persisted ∪ running sessions, reconciled with pathMissing (no network/spawn). */
   'sessions:list': { req: void; res: SessionView[] }
   /** Resolve agent (or run `adhocCommand` raw) + cwd, shell-host the PTY, persist, return the view; `task` links it by hand (HTSK-09). */
@@ -199,6 +208,14 @@ export interface IpcContract {
     req: { worktreePath: string; mode: FilesMode; base?: string }
     res: FileStat[]
   }
+  /**
+   * Discard the listed uncommitted entries: tracked files back to HEAD, the rest
+   * to the Recycle Bin. No revision field: main restores to HEAD only (FDSC-42).
+   */
+  'files:discard': {
+    req: { worktreePath: string; entries: ChangedPath[] }
+    res: DiscardResult
+  }
   /** One page of the branch's own commits since its base (FCMT-02/08/09/12/23). */
   'commits:list': {
     req: { worktreePath: string; base: string; cursor?: string }
@@ -261,6 +278,8 @@ export interface IpcEvents {
   'workflow:focus-run': { runId: string }
   /** One batch of disk changes in the watched worktree (FXPL-21/22). */
   'files:changed': FilesChanged
+  /** A worktree's git state moved and its changes were recounted; patch them into the tree (SCRF-01/03). */
+  'worktree:status': { worktreePath: string; dirty: boolean; changes: number }
 }
 
 export interface IpcSends {
