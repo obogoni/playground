@@ -4,7 +4,7 @@
  */
 
 /** pt-BR weekday abbreviations, indexed by `Date.getDay()` (copy format, Q19). */
-const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+export const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
 const pad = (n: number): string => String(n).padStart(2, '0')
 
