@@ -135,18 +135,18 @@ manual step that is easy to forget, and every minute before it lands under No ta
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| ATSK-01 | P1: The agent links its own session (AC 1) | Execute | Pending |
-| ATSK-02 | P1: The agent links its own session (AC 2) | Execute | Pending |
-| ATSK-03 | P1: The agent links its own session (AC 3) | Execute | Pending |
-| ATSK-04 | P1: The agent links its own session (AC 4) | Execute | Pending |
-| ATSK-05 | P1: The agent links its own session (AC 5) | Execute | Pending |
-| ATSK-06 | P1: The agent links its own session (AC 6) | Execute | Pending |
-| ATSK-07 | P1: Only the session itself (AC 7) | Execute | Pending |
-| ATSK-08 | P1: Only the session itself (AC 8) | Execute | Pending |
-| ATSK-09 | P1: Only the session itself (AC 9) | Execute | Pending |
-| ATSK-10 | P1: Only the session itself (AC 10) | Execute | Pending |
-| ATSK-11 | P1: Only the session itself (AC 11) | Execute | Pending |
-| ATSK-12 | P2: The contract is documented (AC 12) | Execute | Pending |
+| ATSK-01 | P1: The agent links its own session (AC 1) | Execute | Implementing |
+| ATSK-02 | P1: The agent links its own session (AC 2) | Execute | Implementing |
+| ATSK-03 | P1: The agent links its own session (AC 3) | Execute | Implementing |
+| ATSK-04 | P1: The agent links its own session (AC 4) | Execute | Implementing |
+| ATSK-05 | P1: The agent links its own session (AC 5) | Execute | Implementing |
+| ATSK-06 | P1: The agent links its own session (AC 6) | Execute | Implementing |
+| ATSK-07 | P1: Only the session itself (AC 7) | Execute | Implementing |
+| ATSK-08 | P1: Only the session itself (AC 8) | Execute | Implementing |
+| ATSK-09 | P1: Only the session itself (AC 9) | Execute | Implementing |
+| ATSK-10 | P1: Only the session itself (AC 10) | Execute | Implementing |
+| ATSK-11 | P1: Only the session itself (AC 11) | Execute | Implementing |
+| ATSK-12 | P2: The contract is documented (AC 12) | Execute | Implementing |
 
 **Coverage:** 12 total, 0 mapped to tasks (Medium: tasks implicit in Execute), 12 pending.
 
