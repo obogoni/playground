@@ -296,14 +296,16 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Live check (spec Success Criteria): with `npm run dev`, create a worktree on `user/otavio/<real-id>-x` from a terminal, focus the app → the card appears without a manual pin; unpin → it returns after the next focus
-- [ ] Test count: unchanged from T7
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Live check (spec Success Criteria): with `npm run dev`, create a worktree on `user/otavio/<real-id>-x` from a terminal, focus the app → the card appears without a manual pin; unpin → it returns after the next focus
+- [x] Test count: unchanged from T7
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `feat(tasks): refresh the pinned pane when auto-pin adds tasks`
+
+**Status**: ✅ Done
 
 ---
 

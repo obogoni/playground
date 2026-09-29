@@ -316,6 +316,9 @@ function App(): JSX.Element {
     return off
   }, [selectRun])
 
+  // A tree refresh auto-pinned tasks its worktree branches carry (APIN-06).
+  useEffect(() => api.on('tasks:changed', ({ snapshot }) => setTasks(snapshot)), [])
+
   const addWorkspace = (): void => {
     api
       .invoke('workspaces:add')
