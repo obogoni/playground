@@ -294,10 +294,12 @@ T10 → T11
 
 **Done when**:
 
-- [ ] `group.kind === 'level'` renders the handoff-derived header (Design §Visuals); task and orphan groups render unchanged
-- [ ] Typecheck passes with the new union member (no `never` fall-through)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B + ≥37 tests pass (no silent deletions)
+- [x] `group.kind === 'level'` renders the handoff-derived header (Design §Visuals); task and orphan groups render unchanged
+- [x] Typecheck passes with the new union member (no `never` fall-through)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B + ≥37 tests pass (no silent deletions)
+
+**Status**: ✅ Done
 
 **Tests**: none
 **Gate**: build

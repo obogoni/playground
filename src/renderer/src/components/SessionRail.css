@@ -233,6 +233,12 @@
   color: var(--red);
 }
 
+/* Level group note (ISO-08): the repo branch or the workspace folder leaf is a
+   name, not an orphan reason, so it drops the italic. */
+.rail-group-note.level {
+  font-style: normal;
+}
+
 /* §3 rows block. */
 .rail-group-rows {
   display: flex;
