@@ -76,9 +76,13 @@ interface FakeHooks extends ActivityHooks {
   revoked: string[]
 }
 
+const TASK_URL = 'http://127.0.0.1:4000/task'
+
 function fakeHooks(settingsPath: string | null = 'C:\\app\\hooks.json'): FakeHooks {
   const hooks: FakeHooks = {
     settingsPath,
+    // The server publishes both at the same instant, so one never exists without the other.
+    taskUrl: settingsPath === null ? null : TASK_URL,
     registered: [],
     revoked: [],
     register: (token, sessionId) => {
@@ -576,6 +580,7 @@ describe('SessionManager task link', () => {
     port: ReturnType<typeof fakePort>
     started: PersistedSession[]
     changed: Array<[string, SessionTask | null]>
+    emit: EmitFnRecorder
     dir: string
   } {
     const root = dir ?? mkdtempSync(join(tmpdir(), 'sm-task-'))
@@ -584,10 +589,11 @@ describe('SessionManager task link', () => {
     const port = fakePort()
     const started: PersistedSession[] = []
     const changed: Array<[string, SessionTask | null]> = []
+    const emit = recordingEmit()
     const manager = new SessionManager({
       port,
       config,
-      emit: recordingEmit() as unknown as EmitFn,
+      emit: emit as unknown as EmitFn,
       fsExists: () => true,
       lifecycle: {
         started: (meta) => started.push(meta),
@@ -595,7 +601,7 @@ describe('SessionManager task link', () => {
         taskChanged: (id, task) => changed.push([id, task])
       }
     })
-    return { manager, config, port, started, changed, dir: root }
+    return { manager, config, port, started, changed, emit, dir: root }
   }
 
   const persisted = (config: ConfigStore, id: string): PersistedSession | undefined =>
@@ -657,6 +663,17 @@ describe('SessionManager task link', () => {
     expect(updated.status).toBe('stopped')
     expect(port.handles).toHaveLength(1)
     expect(started).toEqual([])
+  })
+
+  it('setTask announces the new link so the renderer shows it unasked (ATSK-06)', () => {
+    const { manager, emit } = linked()
+    const view = manager.spawn('Claude', CWD)
+
+    manager.setTask(view.id, LINK)
+
+    expect(emit.events.filter((e) => e.channel === 'session:task').map((e) => e.payload)).toEqual([
+      { id: view.id, task: LINK }
+    ])
   })
 
   it('setTask on an unknown id throws', () => {
@@ -831,6 +848,31 @@ describe('SessionManager activity hooks', () => {
     expect(tokens[0]).not.toBe(tokens[1])
     expect(port.envs[1]?.[ACTIVITY_TOKEN_ENV]).toBe(tokens[1])
     expect(manager.list()[0].activity).toBeUndefined()
+  })
+
+  it('hands the task link url to a session that gets a token (ATSK-01)', () => {
+    const { manager, port } = makeManager()
+
+    manager.spawn('Claude', CWD)
+
+    // Literal names: they are the published contract (README), not an internal constant.
+    expect(port.envs[0]).toEqual({
+      PLAYGROUND_ACTIVITY_TOKEN: expect.any(String),
+      PLAYGROUND_TASK_URL: TASK_URL
+    })
+  })
+
+  it('hands the task link url again to a respawned run (ATSK-01)', async () => {
+    const { manager, port } = makeManager()
+    const view = manager.spawn('Claude', CWD)
+    await manager.stop(view.id)
+
+    manager.respawn(view.id)
+
+    expect(port.envs[1]).toEqual({
+      PLAYGROUND_ACTIVITY_TOKEN: expect.any(String),
+      PLAYGROUND_TASK_URL: TASK_URL
+    })
   })
 
   it('keeps a running session on the launch it started with when the registry changes (ACTV-30)', () => {

@@ -39,6 +39,25 @@ Going from "task in ADO" to "worktree on disk with tools open on it" is normally
 - Spawn CLI coding agents (**Claude / Copilot / Codex**) as worktree-rooted embedded terminals — a card rail next to a live `xterm.js` terminal (master-detail)
 - Multiple concurrent sessions; attach/detach with ring-buffer scrollback replay; per-session Stop / Respawn / Remove
 - Sessions are attributed to their worktree and task; sessions persist as metadata and reload as **stopped** (one-click respawn) — PTYs never survive app quit
+- An agent can link its own session to a work item — the same link the task picker sets — so a
+  skill that starts from a work item id files the session and its hours under that item without a
+  click
+
+```powershell
+# From inside a Claude session the app spawned: only there are both variables set
+$body = @{ id = 12345; title = 'Example task' } | ConvertTo-Json
+Invoke-WebRequest -UseBasicParsing -Method Post -Uri $env:PLAYGROUND_TASK_URL `
+  -Headers @{ Authorization = "Bearer $env:PLAYGROUND_ACTIVITY_TOKEN" } `
+  -ContentType 'application/json' -Body $body
+```
+
+`id` is the work item id, a positive integer. `title` is optional: a string of at most 255
+characters after trimming, or `null`; a blank title counts as `null`. The call links only the
+session whose token it carries, from that instant on, and answers with a status and no body: `204`
+linked (linking the same id again moves no time), `400` invalid body, `401` missing or unknown
+token, `404` unknown path, `405` not a `POST`, `413` body over 4 KiB. When the variables are absent,
+the caller is not in a session the app can link: not Claude Code, not spawned by the app, or
+spawned before the app's listener was up.
 
 ![Agents view — embedded agent terminals attributed to their worktree and task](docs/screenshots/agents.png)
 

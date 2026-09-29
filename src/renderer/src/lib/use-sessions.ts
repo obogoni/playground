@@ -55,6 +55,8 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
   useEffect(() => {
     const offStatus = api.on('session:status', refreshSessions)
     const offExit = api.on('session:exit', refreshSessions)
+    // A link set in main, e.g. by the session's agent (ATSK-06).
+    const offTask = api.on('session:task', refreshSessions)
     const offActivity = api.on('session:activity', ({ id, activity }) => {
       setSessions((prev) => applyActivity(prev, id, activity))
     })
@@ -64,6 +66,7 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
     return () => {
       offStatus()
       offExit()
+      offTask()
       offActivity()
       offName()
     }

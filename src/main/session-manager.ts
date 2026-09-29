@@ -6,7 +6,7 @@ import type { IpcEvent, IpcEvents } from '../shared/ipc-contract'
 import type { SessionTask } from '../shared/tasks'
 import { applyHookEvent, applyKeystroke, sameView, type MachineState } from './activity-machine'
 import type { ActivityChange } from './activity-notification'
-import { ACTIVITY_TOKEN_ENV } from './claude-hook-settings'
+import { ACTIVITY_TOKEN_ENV, TASK_URL_ENV } from './claude-hook-settings'
 import type { ConfigStore } from './config-store'
 import { isKeystroke } from './keystroke'
 import type { PtyHandle, PtyPort } from './pty-port'
@@ -21,6 +21,8 @@ export interface ActivityHooks {
   /** Generated `--settings` file; `null` when the server never started, which
    *  degrades every session to the pre-feature rendering (ACTV-29). */
   settingsPath: string | null
+  /** The server's task link url, published with `settingsPath`; `null` until then (ATSK-01). */
+  taskUrl: string | null
   register(token: string, sessionId: string): void
   revoke(token: string): void
 }
@@ -184,6 +186,7 @@ export class SessionManager {
     const live = this.#running.get(id)
     if (live) live.meta = withTask(live.meta, task)
     this.deps.lifecycle?.taskChanged(id, task)
+    this.deps.emit('session:task', { id, task })
     return this.#toView(next)
   }
 
@@ -355,9 +358,12 @@ export class SessionManager {
     const plan = meta.command
       ? buildRawSpawnPlan(meta.command, meta.cwd, shell)
       : buildSpawnPlan(token === null ? agent! : this.#withHookSettings(agent!), meta.cwd, shell)
+    const taskUrl = this.deps.hooks?.taskUrl
     const handle = this.deps.port.spawn(
       plan,
-      token === null ? undefined : { [ACTIVITY_TOKEN_ENV]: token }
+      token === null
+        ? undefined
+        : { [ACTIVITY_TOKEN_ENV]: token, ...(taskUrl ? { [TASK_URL_ENV]: taskUrl } : {}) }
     )
     const buffer = new SessionRingBuffer()
     handle.onData((data) => {
