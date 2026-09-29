@@ -353,14 +353,16 @@ T10 → T11
 
 **Done when**:
 
-- [ ] Selector shows `Workspace`, `Repo`, `Worktree` in that order, initial value from `initialLevel` (spec P1 Level selector AC 1, 5, 6)
-- [ ] Grid lists `levelOptions(tree, level)`; empty level shows `No workspaces yet.` / `No repos yet.` / `No worktrees yet.` with Browse still shown (AC 2–4, 8)
-- [ ] Switching level applies `cwdAfterLevelChange`; Spawn disabled while `cwd === null` (AC 7)
-- [ ] Browse applies `adoptBrowsed`; a folder with no level keeps the existing detached notice (AC 9)
-- [ ] `onSpawn` signature and `sessions:spawn` payload unchanged (AC 10)
-- [ ] Task highlight in the Worktree level unchanged
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B + ≥37 tests pass (no silent deletions)
+- [x] Selector shows `Workspace`, `Repo`, `Worktree` in that order, initial value from `initialLevel` (spec P1 Level selector AC 1, 5, 6)
+- [x] Grid lists `levelOptions(tree, level)`; empty level shows `No workspaces yet.` / `No repos yet.` / `No worktrees yet.` with Browse still shown (AC 2–4, 8)
+- [x] Switching level applies `cwdAfterLevelChange`; Spawn disabled while `cwd === null` (AC 7)
+- [x] Browse applies `adoptBrowsed`; a folder with no level keeps the existing detached notice (AC 9)
+- [x] `onSpawn` signature and `sessions:spawn` payload unchanged (AC 10)
+- [x] Task highlight in the Worktree level unchanged
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B + ≥37 tests pass (no silent deletions)
+
+**Status**: ✅ Done
 
 **Tests**: none
 **Gate**: build
