@@ -323,11 +323,13 @@ T10 → T11
 
 **Done when**:
 
-- [ ] Right-click on a non-missing workspace header and on a healthy repo row shows "Spawn agent here"; choosing it calls `onSpawnAgent(<spawn cwd>)` (spec P1 Spawn from rows AC 1–4)
-- [ ] A missing workspace or errored repo shows no menu (AC 5–6); worktree rows behave as today (AC 7)
-- [ ] Right-click on the workspace header does not toggle collapse
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B + ≥37 tests pass (no silent deletions)
+- [x] Right-click on a non-missing workspace header and on a healthy repo row shows "Spawn agent here"; choosing it calls `onSpawnAgent(<spawn cwd>)` (spec P1 Spawn from rows AC 1–4)
+- [x] A missing workspace or errored repo shows no menu (AC 5–6); worktree rows behave as today (AC 7)
+- [x] Right-click on the workspace header does not toggle collapse
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B + ≥37 tests pass (no silent deletions)
+
+**Status**: ✅ Done
 
 **Tests**: none
 **Gate**: build

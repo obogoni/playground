@@ -3,6 +3,7 @@ import type { JSX, MouseEvent } from 'react'
 import type { PinnedTaskView } from '../../../shared/tasks'
 import { taskIdFromBranch } from '../../../shared/tasks'
 import type { RepoNode, WorkspaceNode, WorktreeNode } from '../../../shared/tree'
+import { repoSpawnCwd, workspaceSpawnCwd } from '../lib/isolation-level'
 import { SIDEBAR_BOUNDS, SIDEBAR_DEFAULT_WIDTH, resolvePaneWidth } from '../lib/pane-layout'
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { isCollapsed } from '../lib/workspace-collapse'
@@ -18,7 +19,7 @@ interface SidebarProps {
   onAddWorkspace: () => void
   onRemoveWorkspace: (id: string) => void
   onNewWorktree: (repoPath: string) => void
-  /** Opens the New Session dialog pre-filled with a worktree-row cwd. */
+  /** Opens the New Session dialog pre-filled with a workspace, repo or worktree row cwd. */
   onSpawnAgent: (cwd: string) => void
   /** Persisted sidebar width; absent = 230px default (PANE-01). */
   width?: number
@@ -179,9 +180,14 @@ function Workspace({
   collapsed,
   onToggleCollapse
 }: WorkspaceProps): JSX.Element {
+  // A missing workspace offers no menu: spawning in it would fail (ISO-04).
+  const spawnCwd = workspaceSpawnCwd(workspace)
   return (
     <section className="sidebar-workspace">
-      <div className="sidebar-workspace-row">
+      <div
+        className="sidebar-workspace-row"
+        onContextMenu={spawnCwd === null ? undefined : (e) => onRowContextMenu(e, spawnCwd)}
+      >
         <button
           type="button"
           className="sidebar-workspace-chevron"
@@ -247,9 +253,14 @@ function Repo({
   onNewWorktree,
   onRowContextMenu
 }: RepoProps): JSX.Element {
+  // An errored repo, or one without a primary checkout, offers no menu (ISO-04).
+  const spawnCwd = repoSpawnCwd(repo)
   return (
     <div className="sidebar-repo">
-      <div className="sidebar-repo-row">
+      <div
+        className="sidebar-repo-row"
+        onContextMenu={spawnCwd === null ? undefined : (e) => onRowContextMenu(e, spawnCwd)}
+      >
         <Icon name="git-branch" size={13} />
         <span className="sidebar-repo-name">{repo.name}</span>
         <span className="sidebar-repo-count">{repo.worktrees.length}</span>

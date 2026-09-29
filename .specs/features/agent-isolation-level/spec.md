@@ -166,7 +166,7 @@ An agent can only be started from a worktree row. Starting one at the root of a 
 | -------------- | ----- | ----- | ------ |
 | ISO-01 | P1: Level derivation (AC 1–4) | Tasks | Implementing |
 | ISO-02 | P1: Level derivation (AC 5–6, normalization + precedence) | Tasks | Implementing |
-| ISO-03 | P1: Spawn from rows (AC 1–4, 7) | Tasks | Pending |
+| ISO-03 | P1: Spawn from rows (AC 1–4, 7) | Tasks | Implementing |
 | ISO-04 | P1: Spawn from rows (AC 5–6, guards) | Tasks | Implementing |
 | ISO-05 | P1: Level selector (AC 1–4, grids) | Tasks | Implementing |
 | ISO-06 | P1: Level selector (AC 5–9, default + switching + browse) | Tasks | Implementing |
