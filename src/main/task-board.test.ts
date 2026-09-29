@@ -438,6 +438,111 @@ describe('TaskBoard overlapping writes (APIN-08)', () => {
   })
 })
 
+describe('TaskBoard.autoPin', () => {
+  let dir: string
+  let store: ConfigStore
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'wtm-tasks-auto-'))
+    store = new ConfigStore(dir)
+  })
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  const ref = (id: number): WorkItemRef & { url: string } => ({
+    id,
+    org: 'acme',
+    project: 'platform',
+    url: `https://dev.azure.com/acme/platform/_workitems/edit/${id}`
+  })
+  const persistedIds = (): number[] => new ConfigStore(dir).get().pinnedTasks.map((t) => t.id)
+
+  it('pins a found derived ref with one batch fetch and reports it (APIN-05)', async () => {
+    const source = stubSource({ [refKey(ref(4821))]: FIX_LOGIN })
+    const board = new TaskBoard(store, source)
+
+    const result = await board.autoPin([ref(4821), ref(77)])
+
+    expect(source.calls).toEqual([[ref(4821), ref(77)]])
+    expect(result.added).toBe(1)
+    expect(result.snapshot.tasks).toEqual([{ ...ref(4821), details: FIX_LOGIN }])
+    expect(result.snapshot.auth).toBe('ok')
+    expect(persistedIds()).toEqual([4821])
+  })
+
+  it('neither fetches nor duplicates a ref that is already pinned (APIN-05)', async () => {
+    store.patch({ pinnedTasks: [ref(4821)] })
+    const source = stubSource({ [refKey(ref(4821))]: FIX_LOGIN })
+    const board = new TaskBoard(store, source)
+
+    const result = await board.autoPin([ref(4821)])
+
+    expect(source.calls).toEqual([])
+    expect(result.added).toBe(0)
+    expect(persistedIds()).toEqual([4821])
+  })
+
+  it('persists nothing on auth failure and retries on the next pass (APIN-07)', async () => {
+    const source = stubSource({ [refKey(ref(4821))]: FIX_LOGIN }, { failAuth: true })
+    const board = new TaskBoard(store, source)
+
+    const result = await board.autoPin([ref(4821)])
+    await board.autoPin([ref(4821)])
+
+    expect(result.added).toBe(0)
+    expect(result.snapshot.auth).toBe('failed')
+    expect(persistedIds()).toEqual([])
+    expect(source.calls).toHaveLength(2)
+  })
+
+  it('does not pin a ref ADO cannot find, nor fetch it again this session (APIN-07)', async () => {
+    const source = stubSource({})
+    const board = new TaskBoard(store, source)
+
+    const first = await board.autoPin([ref(4821)])
+    const second = await board.autoPin([ref(4821)])
+
+    expect(first.added).toBe(0)
+    expect(second.added).toBe(0)
+    expect(persistedIds()).toEqual([])
+    expect(source.calls).toHaveLength(1)
+  })
+
+  it('pins a ref once when two passes overlap (APIN-08)', async () => {
+    const source = stubSource({ [refKey(ref(4821))]: FIX_LOGIN })
+    const board = new TaskBoard(store, source)
+
+    const [a, b] = await Promise.all([board.autoPin([ref(4821)]), board.autoPin([ref(4821)])])
+
+    expect(a.added + b.added).toBe(1)
+    expect(persistedIds()).toEqual([4821])
+    expect(source.calls).toHaveLength(1)
+  })
+
+  it('keeps a manual pin that overlaps an auto-pin pass (APIN-08)', async () => {
+    const source = stubSource({ [refKey(ref(4821))]: FIX_LOGIN, [refKey(ref(77))]: FIX_LOGIN })
+    const board = new TaskBoard(store, source)
+
+    await Promise.all([board.pin(ref(77).url), board.autoPin([ref(4821)])])
+
+    expect(persistedIds().sort((x, y) => x - y)).toEqual([77, 4821])
+  })
+
+  it('pins nothing and fetches nothing when autoPinFromWorktrees is false (APIN-09)', async () => {
+    store.patch({ ado: { autoPinFromWorktrees: false } })
+    const source = stubSource({ [refKey(ref(4821))]: FIX_LOGIN })
+    const board = new TaskBoard(store, source)
+
+    const result = await board.autoPin([ref(4821)])
+
+    expect(result.added).toBe(0)
+    expect(source.calls).toEqual([])
+    expect(persistedIds()).toEqual([])
+  })
+})
+
 describe('TaskBoard.lookup', () => {
   let dir: string
   let store: ConfigStore

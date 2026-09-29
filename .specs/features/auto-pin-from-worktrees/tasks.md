@@ -203,21 +203,23 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] AC 1: found ref → appended to `config.pinnedTasks`, `added: 1`, snapshot carries its details
-- [ ] AC 2: an already-pinned ref → no fetch call recorded, `added: 0`
-- [ ] AC 6: auth failure → nothing persisted, `snapshot.auth === 'failed'`; a second call fetches again
-- [ ] AC 7: not-found ref → not pinned; a second call makes no fetch for it
-- [ ] AC 8: two overlapping `autoPin` calls with the same ref → pinned once, one fetch
-- [ ] AC 9: `autoPinFromWorktrees: false` → no fetch, `added: 0`
-- [ ] A manual `pin()` interleaved with `autoPin` for a different id → both persist
-- [ ] New test fixtures clean up with async `rm`
-- [ ] Gate check passes: `npx vitest run src/main/task-board.test.ts`
-- [ ] Test count: previous + ≥7 tests pass
+- [x] AC 1: found ref → appended to `config.pinnedTasks`, `added: 1`, snapshot carries its details
+- [x] AC 2: an already-pinned ref → no fetch call recorded, `added: 0`
+- [x] AC 6: auth failure → nothing persisted, `snapshot.auth === 'failed'`; a second call fetches again
+- [x] AC 7: not-found ref → not pinned; a second call makes no fetch for it
+- [x] AC 8: two overlapping `autoPin` calls with the same ref → pinned once, one fetch
+- [x] AC 9: `autoPinFromWorktrees: false` → no fetch, `added: 0`
+- [x] A manual `pin()` interleaved with `autoPin` for a different id → both persist
+- [x] New test fixtures clean up with async `rm`
+- [x] Gate check passes: `npx vitest run src/main/task-board.test.ts`
+- [x] Test count: previous + ≥7 tests pass
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(tasks): auto-pin derived work items in TaskBoard`
+
+**Status**: ✅ Done
 
 ---
 

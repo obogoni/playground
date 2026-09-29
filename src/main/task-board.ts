@@ -142,6 +142,10 @@ export class TaskBoard {
   private details = new Map<string, WorkItemDetails>()
   private auth: AdoAuthState = 'unknown'
   private lastSyncAt: number | null = null
+  /** Derived refs ADO did not find this session — never fetched again until restart (APIN-07). */
+  private notFound = new Set<string>()
+  /** Derived refs an auto-pin pass is fetching right now (APIN-08). */
+  private inflight = new Set<string>()
 
   constructor(
     private readonly config: ConfigStore,
@@ -207,6 +211,49 @@ export class TaskBoard {
       return { ok: false, error: `Work item #${ref.id} not found in ${ref.org}/${ref.project}.` }
     }
     return { ok: true, item: { id: ref.id, type: detail.type, title: detail.title } }
+  }
+
+  /**
+   * Pins the refs derived from worktree branches that are not pinned yet,
+   * after validating them in ADO like a manual pin (APIN-05..09). Refs already
+   * pinned, not found earlier this session, or being fetched by an overlapping
+   * pass are skipped without a fetch, so a steady tree costs no ADO call.
+   */
+  async autoPin(refs: PinnedTask[]): Promise<{ added: number; snapshot: TasksSnapshot }> {
+    const { ado, pinnedTasks } = this.config.get()
+    if (!ado.autoPinFromWorktrees) return { added: 0, snapshot: this.list() }
+    const candidates = refs.filter(
+      (ref) =>
+        !pinnedTasks.some((task) => sameRef(task, ref)) &&
+        !this.notFound.has(refKey(ref)) &&
+        !this.inflight.has(refKey(ref))
+    )
+    if (candidates.length === 0) return { added: 0, snapshot: this.list() }
+
+    for (const ref of candidates) this.inflight.add(refKey(ref))
+    try {
+      const fetched = await this.source.getWorkItems(candidates)
+      if (!fetched.ok) {
+        this.auth = 'failed'
+        return { added: 0, snapshot: this.list() }
+      }
+      this.auth = 'ok'
+      this.lastSyncAt = Date.now()
+      const found: PinnedTask[] = []
+      for (const ref of candidates) {
+        const detail = fetched.details.get(refKey(ref))
+        if (!detail) {
+          this.notFound.add(refKey(ref))
+          continue
+        }
+        this.details.set(refKey(ref), await this.withBadgeType(ref, detail))
+        found.push(ref)
+      }
+      const added = this.appendPins(found)
+      return { added: added.length, snapshot: this.list() }
+    } finally {
+      for (const ref of candidates) this.inflight.delete(refKey(ref))
+    }
   }
 
   /**
