@@ -261,14 +261,16 @@ T10 → T11
 
 **Done when**:
 
-- [ ] Task-less workspace session → group `Workspace · <displayName>`, note = workspace path leaf, `ariaLabel` = label (spec P1 Rail group AC 1)
-- [ ] Task-less repo session → group `Repo · <repo name>`, note = primary checkout branch (AC 2)
-- [ ] Two task-less sessions at the same path (differing only in case) → one group keyed `level:<normalized path>`, rows in persisted order; same repo name in two workspaces → two groups (AC 3, Edge Case "same repo name")
-- [ ] Branch-tagged primary checkout and hand-linked task at workspace level → task group (AC 4)
-- [ ] `pathMissing` workspace/repo session → `worktree path missing` orphan (AC 5)
-- [ ] Every existing `rail-groups.test.ts` case still passes unchanged (AC 6); workspace removed from the tree → `detached · <folder>` (Edge Case "workspace removed")
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/rail-groups.test.ts`
-- [ ] Test count: B + ≥37 tests pass (no silent deletions)
+- [x] Task-less workspace session → group `Workspace · <displayName>`, note = workspace path leaf, `ariaLabel` = label (spec P1 Rail group AC 1)
+- [x] Task-less repo session → group `Repo · <repo name>`, note = primary checkout branch (AC 2)
+- [x] Two task-less sessions at the same path (differing only in case) → one group keyed `level:<normalized path>`, rows in persisted order; same repo name in two workspaces → two groups (AC 3, Edge Case "same repo name")
+- [x] Branch-tagged primary checkout and hand-linked task at workspace level → task group (AC 4)
+- [x] `pathMissing` workspace/repo session → `worktree path missing` orphan (AC 5)
+- [x] Every existing `rail-groups.test.ts` case still passes unchanged (AC 6); workspace removed from the tree → `detached · <folder>` (Edge Case "workspace removed")
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/rail-groups.test.ts`
+- [x] Test count: B + ≥37 tests pass (no silent deletions)
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick

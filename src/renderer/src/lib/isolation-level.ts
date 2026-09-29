@@ -20,7 +20,7 @@ export interface IsolationMatch {
 }
 
 /** Case-insensitive, `\` = `/`, one trailing separator ignored (ISO-02). */
-function normalizePath(path: string): string {
+export function normalizePath(path: string): string {
   const slashed = path.replace(/\\/g, '/').toLowerCase()
   return slashed.endsWith('/') ? slashed.slice(0, -1) : slashed
 }
