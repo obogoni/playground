@@ -1599,6 +1599,24 @@
       "last_seen": "2026-09-29T13:32:35Z"
     },
     {
+      "id": "L-094",
+      "key": "spec_precision_gap::when a spec splits one existing list into several views state which view each existing entry point and highlight lands on for items that moved out of the default view",
+      "text": "When a spec splits one existing list into several views, state which view each existing entry point and highlight lands on for items that moved out of the default view",
+      "signal": "spec_precision_gap",
+      "scope": "renderer-dialogs",
+      "status": "candidate",
+      "features": [
+        "agent-isolation-level"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md G1; src/renderer/src/components/NewSessionDialog.tsx:217-220 (renderer-dialogs)"
+      ],
+      "created": "2026-09-29T20:52:08Z",
+      "last_seen": "2026-09-29T20:52:08Z"
+    },
+    {
       "id": "L-095",
       "key": "ac_gap::a powershell snippet published for scripts or agents must call invoke webrequest usebasicparsing windows powershell 5 1 otherwise prompts after the response so a non interactive caller errors although the request succeeded",
       "text": "A PowerShell snippet published for scripts or agents must call Invoke-WebRequest -UseBasicParsing: Windows PowerShell 5.1 otherwise prompts after the response, so a non-interactive caller errors although the request succeeded.",

@@ -1,11 +1,18 @@
 import { useState } from 'react'
 import type { JSX } from 'react'
 import type { AgentDef } from '../../../shared/agents'
-import { taskIdFromBranch } from '../../../shared/tasks'
 import type { PinnedTaskView, SessionTask } from '../../../shared/tasks'
 import type { PeriodTaskChoice } from '../../../shared/time'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { api } from '../lib/api'
+import type { IsolationLevel } from '../lib/isolation-level'
+import {
+  adoptBrowsed,
+  cwdAfterLevelChange,
+  initialLevel,
+  levelOptions,
+  type LevelOption
+} from '../lib/session-levels'
 import { Icon } from './Icon'
 import { TaskPicker } from './TaskPicker'
 import './NewWorktreeDialog.css'
@@ -17,7 +24,7 @@ const ADHOC = 'Ad-hoc'
 
 /** Pre-fill carried in from whichever entry point opened the dialog. */
 export interface NewSessionSource {
-  /** Worktree (or browsed) cwd to pre-select. */
+  /** Workspace, repo, worktree (or browsed) cwd to pre-select; its level opens the selector. */
   cwd?: string
   /** Task the spawn is for — drives the header line + highlight. */
   taskId?: number
@@ -37,26 +44,22 @@ interface NewSessionDialogProps {
   onClose: () => void
 }
 
-interface CwdOption {
-  path: string
-  branch: string
-  repoName: string
-  workspaceName: string
-  taskId: number | null
-}
+/** The level selector, in handoff order (ISO-05). */
+const LEVELS: { level: IsolationLevel; label: string; empty: string }[] = [
+  { level: 'workspace', label: 'Workspace', empty: 'No workspaces yet.' },
+  { level: 'repo', label: 'Repo', empty: 'No repos yet.' },
+  { level: 'worktree', label: 'Worktree', empty: 'No worktrees yet.' }
+]
 
-function worktreeOptions(tree: WorkspaceNode[]): CwdOption[] {
-  return tree.flatMap((ws) =>
-    ws.repos.flatMap((repo) =>
-      repo.worktrees.map((wt) => ({
-        path: wt.path,
-        branch: wt.branch,
-        repoName: repo.name,
-        workspaceName: ws.displayName,
-        taskId: taskIdFromBranch(wt.branch)
-      }))
-    )
-  )
+/** A chip's two lines: workspace = name + path; repo = name + branch · ws;
+ *  worktree = branch + repo · ws (· #task), as before. */
+function chipLines(o: LevelOption): [string, string] {
+  if (o.level === 'workspace') return [o.workspaceName, o.path]
+  if (o.level === 'repo') return [o.repoName, `${o.branch} · ${o.workspaceName}`]
+  return [
+    o.branch,
+    `${o.repoName} · ${o.workspaceName}${o.taskId !== null ? ` · #${o.taskId}` : ''}`
+  ]
 }
 
 /**
@@ -76,9 +79,11 @@ export function NewSessionDialog({
   onSpawn,
   onClose
 }: NewSessionDialogProps): JSX.Element {
-  const options = worktreeOptions(tree)
   const [agentName, setAgentName] = useState(agents[0]?.name ?? ADHOC)
+  const [level, setLevel] = useState<IsolationLevel>(() => initialLevel(tree, source.cwd))
   const [cwd, setCwd] = useState<string | null>(source.cwd ?? null)
+  const options = levelOptions(tree, level)
+  const emptyText = LEVELS.find((l) => l.level === level)?.empty
   const [adhocCommand, setAdhocCommand] = useState('')
   // A task card opens the dialog on its task, with the pin's title when cached.
   const [task, setTask] = useState<SessionTask | null>(() =>
@@ -94,7 +99,7 @@ export function NewSessionDialog({
   const isAdhoc = agentName === ADHOC
   const agent = agents.find((a) => a.name === agentName)
   const highlight = new Set(source.highlightWorktrees ?? [])
-  // A browsed (detached) cwd isn't in the worktree grid; surface it separately.
+  // A browsed (detached) cwd isn't in the level's grid; surface it separately.
   const detachedCwd = cwd !== null && !options.some((o) => o.path === cwd) ? cwd : null
   const willRun = isAdhoc
     ? adhocCommand.trim()
@@ -108,9 +113,19 @@ export function NewSessionDialog({
     api
       .invoke('dialog:pickFolder')
       .then(({ path }) => {
-        if (path) setCwd(path)
+        if (!path) return
+        // A folder the tree knows selects its level and chip (ISO-06).
+        const adopted = adoptBrowsed(tree, path)
+        if (adopted.level !== null) setLevel(adopted.level)
+        setCwd(adopted.cwd)
       })
       .catch(console.error)
+  }
+
+  // A cwd the new level doesn't list is cleared, so Spawn waits for a pick (ISO-06).
+  const switchLevel = (next: IsolationLevel): void => {
+    setLevel(next)
+    setCwd((current) => cwdAfterLevelChange(tree, next, current))
   }
 
   // A session picker never offers No task; From branch means no link.
@@ -181,14 +196,31 @@ export function NewSessionDialog({
 
           <div>
             <div className="dialog-field-label">Working directory</div>
+            <div className="ns-level-segmented" role="group" aria-label="Isolation level">
+              {LEVELS.map((l) => (
+                <button
+                  key={l.level}
+                  type="button"
+                  className={`ns-level-segment${l.level === level ? ' selected' : ''}`}
+                  aria-pressed={l.level === level}
+                  onClick={() => switchLevel(l.level)}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
             {options.length === 0 ? (
-              <div className="dialog-no-repos">
-                No worktrees — register a workspace, or browse for a folder below.
-              </div>
+              <div className="dialog-no-repos">{emptyText}</div>
             ) : (
               <div className="ns-cwd-grid">
                 {options.map((o) => {
-                  const tagged = source.taskId !== undefined && o.taskId === source.taskId
+                  // A primary checkout on the task's branch is tagged too, so a task
+                  // card that points at it still highlights its Repo chip.
+                  const tagged =
+                    o.level !== 'workspace' &&
+                    source.taskId !== undefined &&
+                    o.taskId === source.taskId
+                  const [line1, line2] = chipLines(o)
                   return (
                     <button
                       key={o.path}
@@ -198,11 +230,8 @@ export function NewSessionDialog({
                       }`}
                       onClick={() => setCwd(o.path)}
                     >
-                      <span className="ns-cwd-branch">{o.branch}</span>
-                      <span className="ns-cwd-sub">
-                        {o.repoName} · {o.workspaceName}
-                        {o.taskId !== null ? ` · #${o.taskId}` : ''}
-                      </span>
+                      <span className="ns-cwd-branch">{line1}</span>
+                      <span className="ns-cwd-sub">{line2}</span>
                     </button>
                   )
                 })}

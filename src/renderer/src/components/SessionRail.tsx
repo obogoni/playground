@@ -240,7 +240,8 @@ function TaskGroupCard({
   onMenu
 }: TaskGroupCardProps): JSX.Element {
   const holdsSelection = group.rows.some((row) => row.id === selectedId)
-  // Task groups total by task id; an orphan group is one session, totalled by its cwd.
+  // Task groups total by task id; an orphan group is one session, and a level
+  // group holds sessions at one path, so both total by the first row's cwd.
   const total =
     group.kind === 'task'
       ? {
@@ -286,6 +287,15 @@ function TaskGroupCard({
           ) : (
             <span className="rail-group-branch">{group.branch}</span>
           )}
+        </div>
+      ) : group.kind === 'level' ? (
+        <div className="rail-group-header" title={group.label}>
+          <div className="rail-group-head-row">
+            <Icon name={group.level === 'workspace' ? 'folder' : 'git-branch'} size={12} />
+            <span className="rail-group-name">{group.label}</span>
+            <TotalClock className="rail-group-time" {...total} />
+          </div>
+          <span className="rail-group-note level">{group.note}</span>
         </div>
       ) : (
         <div className="rail-group-header" title={group.label}>

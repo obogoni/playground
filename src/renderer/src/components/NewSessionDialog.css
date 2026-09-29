@@ -48,6 +48,39 @@
   color: var(--text-faint);
 }
 
+/* Isolation level selector (ISO-05): the Settings shell-picker segmented
+   control, each segment flex: 1, selected = accent border + tint. */
+.ns-level-segmented {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.ns-level-segment {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 7px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    color 0.12s;
+}
+
+.ns-level-segment:hover {
+  border-color: var(--border-strong);
+}
+
+.ns-level-segment.selected {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  color: var(--text);
+}
+
 .ns-cwd-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

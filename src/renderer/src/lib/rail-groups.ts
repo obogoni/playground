@@ -1,6 +1,7 @@
 import type { ActivityState, SessionView } from '../../../shared/config'
 import type { PinnedTaskView, WorkItemDetails } from '../../../shared/tasks'
 import type { WorkspaceNode } from '../../../shared/tree'
+import { isolationLevelOf, normalizePath } from './isolation-level'
 import { deriveAttribution, linkedPinFor } from './session-attribution'
 import { rowLabel } from './session-name'
 
@@ -52,7 +53,7 @@ export interface RailRow {
 }
 
 interface RailGroupBase {
-  /** `task:<id>` or `session:<id>` — the React key (RAIL-02). */
+  /** `task:<id>`, `level:<normalized path>` or `session:<id>` — the React key (RAIL-02, ISO-08). */
   key: string
   rows: RailRow[]
   /** role="group" aria-label (RAIL-19). */
@@ -80,7 +81,18 @@ export interface OrphanGroup extends RailGroupBase {
   note: string
 }
 
-export type RailGroup = TaskGroup | OrphanGroup
+/** A task-less session at a workspace or repo root (ISO-08, AD-050). Sessions
+ *  at the same level and path share it, keyed `level:<normalized path>`. */
+export interface LevelGroup extends RailGroupBase {
+  kind: 'level'
+  level: 'workspace' | 'repo'
+  /** `Workspace · <displayName>` | `Repo · <repo name>`. */
+  label: string
+  /** The workspace path leaf, or the primary checkout's branch. */
+  note: string
+}
+
+export type RailGroup = TaskGroup | OrphanGroup | LevelGroup
 
 /** CSS class for a row status — mirrors task-pills.ts's class-returning
  *  convention and folds the space out of `path missing`. */
@@ -150,7 +162,8 @@ export function headerCounts(sessions: SessionView[]): HeaderCounts {
 
 interface PendingGroup {
   key: string
-  kind: 'task' | 'orphan'
+  kind: 'task' | 'orphan' | 'level'
+  level: 'workspace' | 'repo' | null
   taskId: number | null
   branch: string | null
   details: WorkItemDetails | null
@@ -183,7 +196,9 @@ export function buildRailGroups(
       session.cwd,
       session.task
     )
-    const key = taskId !== null ? `task:${taskId}` : `session:${session.id}`
+    // Precedence task → path missing → level → orphan (ISO-08, ISO-09).
+    const level = taskId === null && !session.pathMissing ? levelGroup(tree, session.cwd) : null
+    const key = taskId !== null ? `task:${taskId}` : level ? level.key : `session:${session.id}`
     let group = byKey.get(key)
     if (!group) {
       group =
@@ -191,6 +206,7 @@ export function buildRailGroups(
           ? {
               key,
               kind: 'task',
+              level: null,
               taskId,
               branch: branch ?? session.cwd,
               details: linkedPinFor(tasks, taskId)?.details ?? null,
@@ -200,7 +216,7 @@ export function buildRailGroups(
               note: '',
               entries: []
             }
-          : orphanGroup(key, session, branch, detached)
+          : (level ?? orphanGroup(key, session, branch, detached))
       byKey.set(key, group)
       pending.push(group)
     }
@@ -209,6 +225,27 @@ export function buildRailGroups(
   }
 
   return pending.map(toRailGroup)
+}
+
+/** The level group a task-less, present session joins, or null when its cwd is
+ *  a linked worktree or matches no tree node (ISO-08, ISO-09). */
+function levelGroup(tree: WorkspaceNode[], cwd: string): PendingGroup | null {
+  const match = isolationLevelOf(tree, cwd)
+  if (!match || match.level === 'worktree') return null
+  const repo = match.level === 'repo' ? match.repo : undefined
+  return {
+    key: `level:${normalizePath(match.path)}`,
+    kind: 'level',
+    level: match.level,
+    taskId: null,
+    branch: null,
+    details: null,
+    title: undefined,
+    reason: null,
+    label: repo ? `Repo · ${repo.name}` : `Workspace · ${match.workspace.displayName}`,
+    note: repo ? (match.worktree?.branch ?? '') : folderLeaf(match.path),
+    entries: []
+  }
 }
 
 /** Orphan classification and its note text (RAIL-09, RAIL-10, RAIL-11). */
@@ -230,6 +267,7 @@ function orphanGroup(
   return {
     key,
     kind: 'orphan',
+    level: null,
     taskId: null,
     branch,
     details: null,
@@ -253,6 +291,17 @@ function toRailGroup(group: PendingGroup): RailGroup {
       details: group.details,
       title: group.title ?? null,
       ariaLabel: `#${group.taskId} ${group.details?.title ?? group.title ?? branch}`,
+      rows
+    }
+  }
+  if (group.kind === 'level' && group.level !== null) {
+    return {
+      key: group.key,
+      kind: 'level',
+      level: group.level,
+      label: group.label,
+      note: group.note,
+      ariaLabel: group.label,
       rows
     }
   }
