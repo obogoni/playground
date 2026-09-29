@@ -112,21 +112,21 @@ Worktrees created outside the app (e.g. by the `start-task` skill, which produce
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| APIN-01 | P1: Template matcher (AC 1–3) | Design | Pending |
-| APIN-02 | P1: Template matcher (AC 4, optional segments) | Design | Pending |
-| APIN-03 | P1: Template matcher (AC 5–7) | Design | Pending |
-| APIN-04 | P1: Template matcher (AC 8, round-trip) | Design | Pending |
-| APIN-05 | P1: Auto-pin (AC 1–3, 10) | Design | Pending |
-| APIN-06 | P1: Auto-pin (AC 4, renderer update) | Design | Pending |
-| APIN-07 | P1: Auto-pin (AC 5–7, failure paths) | Design | Pending |
-| APIN-08 | P1: Auto-pin (AC 8, concurrency) | Design | Pending |
-| APIN-09 | P1: Auto-pin (AC 9, toggle) | Design | Pending |
+| APIN-01 | P1: Template matcher (AC 1–3) | Done | Verified |
+| APIN-02 | P1: Template matcher (AC 4, optional segments) | Done | Verified |
+| APIN-03 | P1: Template matcher (AC 5–7) | Done | Verified |
+| APIN-04 | P1: Template matcher (AC 8, round-trip) | Done | Verified |
+| APIN-05 | P1: Auto-pin (AC 1–3, 10) | Done | Verified |
+| APIN-06 | P1: Auto-pin (AC 4, renderer update) | Done | Verified |
+| APIN-07 | P1: Auto-pin (AC 5–7, failure paths) | Done | Verified |
+| APIN-08 | P1: Auto-pin (AC 8, concurrency) | Done | Verified |
+| APIN-09 | P1: Auto-pin (AC 9, toggle) | Done | Verified |
 
-**Coverage:** 9 total, 0 mapped to tasks, 9 unmapped ⚠️ (tasks come after spec approval)
+**Coverage:** 9 total, 9 verified ✅ (T1–T11; Verifier PASS on round 1, 18/18 ACs, sensor 11/11 killed; live CDP check 8/8)
 
 ---
 
 ## Success Criteria
 
-- [ ] Creating a worktree with `start-task` (branch `user/otavio/<id>-<slug>`) and focusing the app pins `<id>` with its live card, with no manual paste
-- [ ] Existing Vitest suite stays green; new matcher + TaskBoard cases cover every AC above
+- [x] Creating a worktree with `start-task` (branch `user/otavio/<id>-<slug>`) and focusing the app pins `<id>` with its live card, with no manual paste
+- [x] Existing Vitest suite stays green; new matcher + TaskBoard cases cover every AC above

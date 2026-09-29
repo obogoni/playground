@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/auto-pin-from-worktrees/design.md`
-**Status**: In Progress (approved 2026-09-29)
+**Status**: Done (approved 2026-09-29, verified 2026-09-29)
 **Branch**: `feature/auto-pin-from-worktrees` (cut from `origin/main`)
 **Test baseline**: measured green on the branch before T1 (call it **B**). Every "Test count" below is written as `B + N`, cumulative.
 **Before T1**: AD-049 is recorded in `.specs/STATE.md` (design §Tech Decisions); it is committed together with the spec docs in the first commit.
