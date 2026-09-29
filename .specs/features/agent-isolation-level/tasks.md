@@ -170,12 +170,14 @@ T10 → T11
 
 **Done when**:
 
-- [ ] `workspace` → one option per non-missing workspace with `displayName` + `path` (spec P1 Level selector AC 2), including a workspace with no repos
-- [ ] `repo` → one option per primary checkout with repo name, branch and workspace name; same repo name in two workspaces yields two options with distinct workspace names (AC 3, Edge Case "same repo name")
-- [ ] `worktree` → only `isDefault === false` worktrees, with branch, repo, workspace and `taskId` as today (AC 4)
-- [ ] Empty tree → `[]` for every level (AC 8 data side)
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/session-levels.test.ts`
-- [ ] Test count: B + ≥17 tests pass (no silent deletions)
+- [x] `workspace` → one option per non-missing workspace with `displayName` + `path` (spec P1 Level selector AC 2), including a workspace with no repos
+- [x] `repo` → one option per primary checkout with repo name, branch and workspace name; same repo name in two workspaces yields two options with distinct workspace names (AC 3, Edge Case "same repo name")
+- [x] `worktree` → only `isDefault === false` worktrees, with branch, repo, workspace and `taskId` as today (AC 4)
+- [x] Empty tree → `[]` for every level (AC 8 data side)
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/session-levels.test.ts`
+- [x] Test count: B + ≥17 tests pass (no silent deletions)
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
