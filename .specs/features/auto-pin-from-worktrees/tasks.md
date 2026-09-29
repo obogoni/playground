@@ -60,6 +60,12 @@ T4 → T5
 T6 → T7 → T8
 ```
 
+### Phase 4: Fix found in the live check
+
+```
+T9
+```
+
 ---
 
 ## Task Breakdown
@@ -309,14 +315,46 @@ T6 → T7 → T8
 
 ---
 
+### T9: Keep details of tasks pinned during a refresh
+
+**What**: `refresh()` keeps cached details for refs pinned while its ADO fetch was in flight, instead of replacing the cache with only the refs it started with.
+**Where**: `src/main/task-board.ts`
+**Depends on**: None (Phase 3 complete)
+**Reuses**: `stubSource` harness
+**Requirement**: APIN-06
+
+Found while reading the focus handler during the T8 live check: focus runs `tasks:refresh` and `tree:get` together, so an auto-pin that lands mid-refresh lost its details and rendered "details unavailable" until the next focus.
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Test: a refresh held open while `autoPin` pins another ref → after both settle, the auto-pinned card carries its details
+- [x] A ref pinned before the refresh that ADO no longer returns still degrades to id-only (existing behavior)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: previous + 1 tests pass
+
+**Tests**: unit
+**Gate**: build
+
+**Commit**: `fix(tasks): keep details of tasks pinned during a refresh`
+
+**Status**: ✅ Done
+
+---
+
 ## Phase Execution Map
 
 ```
-Phase 1 → Phase 2 → Phase 3
+Phase 1 → Phase 2 → Phase 3 → Phase 4
 
 Phase 1:  T1 ------→ T2 ------→ T3
 Phase 2:  T4 ------→ T5
 Phase 3:  T6 ------→ T7 ------→ T8
+Phase 4:  T9
 ```
 
 ---
@@ -333,6 +371,7 @@ Phase 3:  T6 ------→ T7 ------→ T8
 | T6: runAutoPin | 1 function | ✅ Granular |
 | T7: main wiring | 1 handler + 1 event type | ⚠️ 2 related things, cohesive |
 | T8: renderer subscription | 1 effect | ✅ Granular |
+| T9: refresh keeps new details | 1 method change | ✅ Granular |
 
 ## Diagram-Definition Cross-Check
 
@@ -346,6 +385,7 @@ Phase 3:  T6 ------→ T7 ------→ T8
 | T6 | None (after Phase 2) | start of Phase 3 | ✅ Match |
 | T7 | T6 | T6 → T7 | ✅ Match |
 | T8 | T7 | T7 → T8 | ✅ Match |
+| T9 | None (after Phase 3) | start of Phase 4 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -359,3 +399,4 @@ Phase 3:  T6 ------→ T7 ------→ T8
 | T6 | Pure logic / orchestration | unit | unit | ✅ OK |
 | T7 | Shell wiring + type contract | none | none | ✅ OK |
 | T8 | Renderer | none | none | ✅ OK |
+| T9 | DI orchestrator | unit | unit | ✅ OK |

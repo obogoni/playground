@@ -295,6 +295,12 @@ export class TaskBoard {
       const detail = fetched.details.get(refKey(ref))
       if (detail) resolved.set(refKey(ref), await this.withBadgeType(ref, detail))
     }
+    // A pin or auto-pin that landed during the fetch cached its own details;
+    // this refresh never asked about it, so it must not wipe them (APIN-06).
+    const refreshed = new Set(pinnedTasks.map(refKey))
+    for (const [key, detail] of this.details) {
+      if (!refreshed.has(key)) resolved.set(key, detail)
+    }
     this.details = resolved
     return this.list()
   }

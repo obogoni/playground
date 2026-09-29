@@ -530,6 +530,33 @@ describe('TaskBoard.autoPin', () => {
     expect(persistedIds().sort((x, y) => x - y)).toEqual([77, 4821])
   })
 
+  it('keeps the details of a task auto-pinned while a refresh was fetching (APIN-06)', async () => {
+    store.patch({ pinnedTasks: [ref(77)] })
+    const inner = stubSource({ [refKey(ref(77))]: FIX_LOGIN, [refKey(ref(4821))]: FIX_LOGIN })
+    let release = (): void => {}
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    let first = true
+    const source: WorkItemSource = {
+      getWorkItemWithRelations: inner.getWorkItemWithRelations,
+      getWorkItems: async (refs) => {
+        if (first) {
+          first = false
+          await gate
+        }
+        return inner.getWorkItems(refs)
+      }
+    }
+    const board = new TaskBoard(store, source)
+
+    const refreshing = board.refresh()
+    await board.autoPin([ref(4821)])
+    release()
+    await refreshing
+
+    const card = board.list().tasks.find((task) => task.id === 4821)
+    expect(card?.details).toEqual(FIX_LOGIN)
+  })
+
   it('pins nothing and fetches nothing when autoPinFromWorktrees is false (APIN-09)', async () => {
     store.patch({ ado: { autoPinFromWorktrees: false } })
     const source = stubSource({ [refKey(ref(4821))]: FIX_LOGIN })
