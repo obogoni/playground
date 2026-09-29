@@ -45,7 +45,7 @@ Going from "task in ADO" to "worktree on disk with tools open on it" is normally
 
 ```powershell
 # From inside a Claude session the app spawned: only there are both variables set
-$body = @{ id = 25651; title = 'Leitor de CPF' } | ConvertTo-Json
+$body = @{ id = 12345; title = 'Example task' } | ConvertTo-Json
 Invoke-WebRequest -UseBasicParsing -Method Post -Uri $env:PLAYGROUND_TASK_URL `
   -Headers @{ Authorization = "Bearer $env:PLAYGROUND_ACTIVITY_TOKEN" } `
   -ContentType 'application/json' -Body $body

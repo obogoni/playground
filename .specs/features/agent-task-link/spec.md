@@ -70,7 +70,7 @@ manual step that is easy to forget, and every minute before it lands under No ta
 5. WHEN the session is linked to a task other than N, or to none, THEN its open period SHALL close and a new one SHALL open with task N at the same instant (HTSK-12)
 6. WHEN a link is made through the endpoint THEN the rail, the session detail strip and the Hours views SHALL show it without any user action and without restarting the app
 
-**Independent Test**: In a running Claude session, `POST` `{ "id": 25651, "title": "Leitor de CPF" }` with the session's token to `PLAYGROUND_TASK_URL`: the call returns `204`, the session moves under a `#25651` group headed `Leitor de CPF`, and the Hours drawer shows a new open period for #25651 starting at the call.
+**Independent Test**: In a running Claude session, `POST` `{ "id": 12345, "title": "Example task" }` with the session's token to `PLAYGROUND_TASK_URL`: the call returns `204`, the session moves under a `#12345` group headed `Example task`, and the Hours drawer shows a new open period for #12345 starting at the call.
 
 ---
 

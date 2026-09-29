@@ -175,7 +175,7 @@ describe('ActivityHookServer task link', () => {
 
   /** A body of exactly `bytes` bytes: JSON whitespace pads it without changing its value. */
   const paddedTo = (bytes: number): string => {
-    const head = '{"id":25651,"title":"Leitor de CPF"'
+    const head = '{"id":12345,"title":"Example task"'
     return head + ' '.repeat(bytes - head.length - 1) + '}'
   }
 
@@ -186,41 +186,41 @@ describe('ActivityHookServer task link', () => {
   })
 
   it('links the calling session and answers 204 with no body (ATSK-02)', async () => {
-    const res = await send(JSON.stringify({ id: 25651, title: 'Leitor de CPF' }), {
+    const res = await send(JSON.stringify({ id: 12345, title: 'Example task' }), {
       token: 'token-1'
     })
 
     expect(res).toEqual({ status: 204, body: '' })
-    expect(links).toEqual([{ sessionId: 'session-1', task: { id: 25651, title: 'Leitor de CPF' } }])
+    expect(links).toEqual([{ sessionId: 'session-1', task: { id: 12345, title: 'Example task' } }])
     expect(events).toEqual([])
   })
 
   it('stores the title trimmed (ATSK-02)', async () => {
-    await send(JSON.stringify({ id: 25651, title: '  Leitor de CPF \n' }), { token: 'token-1' })
+    await send(JSON.stringify({ id: 12345, title: '  Example task \n' }), { token: 'token-1' })
 
-    expect(links.map((l) => l.task)).toEqual([{ id: 25651, title: 'Leitor de CPF' }])
+    expect(links.map((l) => l.task)).toEqual([{ id: 12345, title: 'Example task' }])
   })
 
   it('accepts a title of exactly 255 characters after trimming (ATSK-02)', async () => {
     const title = 'x'.repeat(255)
 
-    const res = await send(JSON.stringify({ id: 25651, title: ` ${title} ` }), {
+    const res = await send(JSON.stringify({ id: 12345, title: ` ${title} ` }), {
       token: 'token-1'
     })
 
     expect(res.status).toBe(204)
-    expect(links.map((l) => l.task)).toEqual([{ id: 25651, title }])
+    expect(links.map((l) => l.task)).toEqual([{ id: 12345, title }])
   })
 
   it.each([
-    ['omitted', { id: 25651 }],
-    ['null', { id: 25651, title: null }],
-    ['blank', { id: 25651, title: '   ' }]
+    ['omitted', { id: 12345 }],
+    ['null', { id: 12345, title: null }],
+    ['blank', { id: 12345, title: '   ' }]
   ])('stores a null title when it is %s (ATSK-03)', async (_label, body) => {
     const res = await send(JSON.stringify(body), { token: 'token-1' })
 
     expect(res.status).toBe(204)
-    expect(links.map((l) => l.task)).toEqual([{ id: 25651, title: null }])
+    expect(links.map((l) => l.task)).toEqual([{ id: 12345, title: null }])
   })
 
   it('changes only the session its token names (ATSK-08)', async () => {
@@ -233,7 +233,7 @@ describe('ActivityHookServer task link', () => {
     ['no token', undefined],
     ['a token of no live session', 'token-of-nobody']
   ])('answers 401 with no body to %s and links nothing (ATSK-07)', async (_label, token) => {
-    const res = await send(JSON.stringify({ id: 25651, title: 'x' }), { token })
+    const res = await send(JSON.stringify({ id: 12345, title: 'x' }), { token })
 
     expect(res).toEqual({ status: 401, body: '' })
     expect(links).toEqual([])
@@ -242,7 +242,7 @@ describe('ActivityHookServer task link', () => {
   it('answers 401 to a revoked token and links nothing (ATSK-07)', async () => {
     server.revoke('token-1')
 
-    const res = await send(JSON.stringify({ id: 25651, title: 'x' }), { token: 'token-1' })
+    const res = await send(JSON.stringify({ id: 12345, title: 'x' }), { token: 'token-1' })
 
     expect(res).toEqual({ status: 401, body: '' })
     expect(links).toEqual([])
@@ -250,15 +250,15 @@ describe('ActivityHookServer task link', () => {
 
   it.each([
     ['a body that is not JSON', 'not json'],
-    ['an array', '[25651]'],
+    ['an array', '[12345]'],
     ['null', 'null'],
     ['a missing id', JSON.stringify({ title: 'x' })],
-    ['an id that is a string', JSON.stringify({ id: '25651', title: 'x' })],
+    ['an id that is a string', JSON.stringify({ id: '12345', title: 'x' })],
     ['an id of 0', JSON.stringify({ id: 0, title: 'x' })],
     ['a negative id', JSON.stringify({ id: -1, title: 'x' })],
     ['a fractional id', JSON.stringify({ id: 1.5, title: 'x' })],
     ['an id above 2^53-1', JSON.stringify({ id: 2 ** 53, title: 'x' })],
-    ['a title that is a number', JSON.stringify({ id: 25651, title: 42 })],
+    ['a title that is a number', JSON.stringify({ id: 12345, title: 42 })],
     ['a title of 256 characters after trimming', JSON.stringify({ id: 1, title: 'x'.repeat(256) })]
   ])('answers 400 with no body to %s and links nothing (ATSK-09)', async (_label, body) => {
     const res = await send(body, { token: 'token-1' })
@@ -284,7 +284,7 @@ describe('ActivityHookServer task link', () => {
   it('answers 404 with no body to a POST on a path it does not serve (ATSK-10)', async () => {
     const other = taskUrl.replace(/\/task$/, '/other')
 
-    const res = await send(JSON.stringify({ id: 25651, title: 'x' }), {
+    const res = await send(JSON.stringify({ id: 12345, title: 'x' }), {
       token: 'token-1',
       to: other
     })
@@ -298,7 +298,7 @@ describe('ActivityHookServer task link', () => {
     const res = await send(paddedTo(4096), { token: 'token-1' })
 
     expect(res.status).toBe(204)
-    expect(links.map((l) => l.task)).toEqual([{ id: 25651, title: 'Leitor de CPF' }])
+    expect(links.map((l) => l.task)).toEqual([{ id: 12345, title: 'Example task' }])
   })
 
   it('answers 413 with no body to a body over 4 KiB and links nothing (ATSK-10)', async () => {
@@ -317,7 +317,7 @@ describe('ActivityHookServer task link', () => {
   })
 
   it('never treats a link body posted to the hooks url as a link (ATSK-11)', async () => {
-    await send(JSON.stringify({ id: 25651, title: 'x' }), { token: 'token-1', to: hooksUrl })
+    await send(JSON.stringify({ id: 12345, title: 'x' }), { token: 'token-1', to: hooksUrl })
 
     expect(links).toEqual([])
   })
