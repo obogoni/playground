@@ -41,7 +41,7 @@ Worktrees created outside the app (e.g. by the `start-task` skill, which produce
 | Assumption / decision | Chosen default | Rationale | Confirmed? |
 | --------------------- | -------------- | --------- | ---------- |
 | How non-`{id}` placeholders match | `{type}` → `feature` or `bugfix`; `{usId}` → one or more digits; `{slug}`, `{usSlug}`, `{dev}` → any run of characters without `/` (may be empty); unknown `{x}` → literal text (mirrors `branchNameFor` pass-through); literal text is escaped and matched exactly; the whole branch must match (anchored) | Mirrors `branchNameFor` rendering, so any branch the app or a template-following skill creates matches | n |
-| Segments dropped during rendering | A template path segment made only of placeholders other than `{id}` plus `-` is optional in the matcher, so a branch with that segment dropped still matches (e.g. `user/{dev}/{usId}-{usSlug}/{id}-{slug}` matches `user/otavio/123-foo`) | `branchNameFor` drops empty segments when `{dev}`/`{usId}` are blank, so the matcher has to accept that output | n |
+| Segments dropped during rendering | A template path segment made only of placeholders `branchNameFor` can render empty (`{dev}`, `{usId}`, `{usSlug}`, `{slug}`) plus `-` is optional, and a `-` next to one of them is optional too in the matcher, so a branch with that segment dropped still matches (e.g. `user/{dev}/{usId}-{usSlug}/{id}-{slug}` matches `user/otavio/123-foo`) | `branchNameFor` drops empty segments when `{dev}`/`{usId}` are blank, so the matcher has to accept that output | n |
 | Case sensitivity | Literal text matches case-insensitively | Git on Windows is case-insensitive in practice; `slugOf` already lowercases | n |
 | Template without `{id}` | Auto-pin is a no-op for that workspace | Nothing to capture | n |
 | org/project of a derived ID | `ado.defaultOrg` + `ado.defaultProject`; when either is unset, auto-pin is a silent no-op | Same resolution as a bare-ID manual pin; a branch carries no org | n |
@@ -66,7 +66,7 @@ Worktrees created outside the app (e.g. by the `start-task` skill, which produce
 1. WHEN `taskIdFromTemplate('user/otavio/{id}-{slug}', 'user/otavio/4821-fix-login')` is called THEN the matcher SHALL return `4821`  <!-- event-driven -->
 2. WHEN the branch doesn't match the template's literal text (e.g. `user/maria/4821-x` against `user/otavio/{id}-{slug}`, or `main`) THEN the matcher SHALL return `null`  <!-- event-driven -->
 3. WHEN the template is `{type}/{id}-{slug}` THEN `feature/77-a` and `bugfix/77-a` SHALL return `77` and `chore/77-a` SHALL return `null`  <!-- event-driven -->
-4. WHEN a template segment consists only of non-`{id}` placeholders and `-` THEN a branch with that segment absent SHALL still match (`user/{dev}/{usId}-{usSlug}/{id}-{slug}` + `user/otavio/123-foo` → `123`; + `user/otavio/9-us/123-foo` → `123`)  <!-- event-driven -->
+4. WHEN a template segment consists only of empty-able placeholders (`{dev}`, `{usId}`, `{usSlug}`, `{slug}`) and `-` THEN a branch with that segment absent SHALL still match (`user/{dev}/{usId}-{usSlug}/{id}-{slug}` + `user/otavio/123-foo` → `123`; + `user/otavio/9-us/123-foo` → `123`)  <!-- event-driven -->
 5. IF the template contains no `{id}` THEN the matcher SHALL return `null` for every branch  <!-- unwanted -->
 6. WHEN the template is blank or null THEN the matcher SHALL use `DEFAULT_BRANCH_TEMPLATE`  <!-- event-driven -->
 7. The matcher SHALL match the whole branch (anchored at both ends) and literal text case-insensitively  <!-- ubiquitous -->

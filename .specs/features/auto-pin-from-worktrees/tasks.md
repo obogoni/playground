@@ -108,22 +108,24 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Spec AC 1: `user/otavio/{id}-{slug}` + `user/otavio/4821-fix-login` → `4821`
-- [ ] Spec AC 2: `user/maria/4821-x` and `main` → `null`
-- [ ] Spec AC 3: `{type}/{id}-{slug}`: `feature/77-a`, `bugfix/77-a` → `77`; `chore/77-a` → `null`
-- [ ] Spec AC 4: `user/{dev}/{usId}-{usSlug}/{id}-{slug}` + `user/otavio/123-foo` → `123`, + `user/otavio/9-us/123-foo` → `123`
-- [ ] Spec AC 5: a template without `{id}` → `null`
-- [ ] Spec AC 6: null and blank template behave as `DEFAULT_BRANCH_TEMPLATE`
-- [ ] Spec AC 7: `USER/Otavio/4821-x` matches `user/otavio/{id}-{slug}`; `x/user/otavio/4821-a` and `user/otavio/4821-a/extra` do not
-- [ ] Spec AC 8: round-trip over each template above with a titled task, an empty-slug title (`'!!!'`), and with and without `devAlias`/parent → returns the rendered id
-- [ ] Edge cases: `0042` → `42`; `0` → `null`; `(detached abc1234)` → `null`; regex metacharacters in literal text (`fix.{id}`) are escaped
-- [ ] Gate check passes: `npx vitest run src/shared/tasks.test.ts`
-- [ ] Test count: B + 2 + ≥12 tests pass
+- [x] Spec AC 1: `user/otavio/{id}-{slug}` + `user/otavio/4821-fix-login` → `4821`
+- [x] Spec AC 2: `user/maria/4821-x` and `main` → `null`
+- [x] Spec AC 3: `{type}/{id}-{slug}`: `feature/77-a`, `bugfix/77-a` → `77`; `chore/77-a` → `null`
+- [x] Spec AC 4: `user/{dev}/{usId}-{usSlug}/{id}-{slug}` + `user/otavio/123-foo` → `123`, + `user/otavio/9-us/123-foo` → `123`
+- [x] Spec AC 5: a template without `{id}` → `null`
+- [x] Spec AC 6: null and blank template behave as `DEFAULT_BRANCH_TEMPLATE`
+- [x] Spec AC 7: `USER/Otavio/4821-x` matches `user/otavio/{id}-{slug}`; `x/user/otavio/4821-a` and `user/otavio/4821-a/extra` do not
+- [x] Spec AC 8: round-trip over each template above with a titled task, an empty-slug title (`'!!!'`), and with and without `devAlias`/parent → returns the rendered id
+- [x] Edge cases: `0042` → `42`; `0` → `null`; `(detached abc1234)` → `null`; regex metacharacters in literal text (`fix.{id}`) are escaped
+- [x] Gate check passes: `npx vitest run src/shared/tasks.test.ts`
+- [x] Test count: B + 2 + ≥12 tests pass
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(tasks): match branches against the branch template to derive task ids`
+
+**Status**: ✅ Done
 
 ---
 
