@@ -1,4 +1,5 @@
 import { mkdtempSync, rmSync } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -400,6 +401,40 @@ describe('TaskBoard', () => {
     expect(result.ok).toBe(true)
     expect(new ConfigStore(dir).get().pinnedTasks).toHaveLength(1)
     expect(board.list().tasks[0].details).toEqual({ ...task, parentType: 'Fault' })
+  })
+})
+
+describe('TaskBoard overlapping writes (APIN-08)', () => {
+  let dir: string
+  let store: ConfigStore
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'wtm-tasks-race-'))
+    store = new ConfigStore(dir)
+  })
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  const URL_4821 = 'https://dev.azure.com/acme/platform/_workitems/edit/4821'
+  const URL_77 = 'https://dev.azure.com/acme/platform/_workitems/edit/77'
+  const items = { 'acme/platform/#4821': FIX_LOGIN, 'acme/platform/#77': FIX_LOGIN }
+
+  it('keeps both pins when two pins overlap', async () => {
+    const board = new TaskBoard(store, stubSource(items))
+
+    await Promise.all([board.pin(URL_4821), board.pin(URL_77)])
+
+    expect(new ConfigStore(dir).get().pinnedTasks.map((task) => task.id)).toEqual([4821, 77])
+  })
+
+  it('persists one pin when the same task is pinned twice at once', async () => {
+    const board = new TaskBoard(store, stubSource(items))
+
+    await Promise.all([board.pin(URL_4821), board.pin(URL_4821)])
+
+    expect(new ConfigStore(dir).get().pinnedTasks.map((task) => task.id)).toEqual([4821])
   })
 })
 

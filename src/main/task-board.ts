@@ -183,7 +183,7 @@ export class TaskBoard {
 
     this.details.set(refKey(ref), await this.withBadgeType(ref, detail))
     this.lastSyncAt = Date.now()
-    this.config.patch({ pinnedTasks: [...pinnedTasks, ref] })
+    this.appendPins([ref])
     return { ok: true, snapshot: this.list() }
   }
 
@@ -207,6 +207,22 @@ export class TaskBoard {
       return { ok: false, error: `Work item #${ref.id} not found in ${ref.org}/${ref.project}.` }
     }
     return { ok: true, item: { id: ref.id, type: detail.type, title: detail.title } }
+  }
+
+  /**
+   * Appends to the pinned set as it is *now*, skipping refs pinned meanwhile.
+   * Callers read the set before awaiting ADO, so writing that stale copy back
+   * would drop a pin another call added during the await (APIN-08).
+   */
+  private appendPins(refs: PinnedTask[]): PinnedTask[] {
+    const current = this.config.get().pinnedTasks
+    const added = refs.filter(
+      (ref, i) =>
+        !current.some((task) => sameRef(task, ref)) &&
+        refs.findIndex((other) => sameRef(other, ref)) === i
+    )
+    if (added.length > 0) this.config.patch({ pinnedTasks: [...current, ...added] })
+    return added
   }
 
   unpin(ref: WorkItemRef): TasksSnapshot {

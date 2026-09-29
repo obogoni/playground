@@ -175,14 +175,16 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Test: two `pin()` calls for different ids started before either resolves (stub with deferred promises) → both persist
-- [ ] Gate check passes: `npx vitest run src/main/task-board.test.ts`
-- [ ] Test count: previous + 1 tests pass
+- [x] Test: two `pin()` calls for different ids started before either resolves (stub with deferred promises) → both persist
+- [x] Gate check passes: `npx vitest run src/main/task-board.test.ts`
+- [x] Test count: previous + 1 tests pass
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `fix(tasks): re-read pinned tasks before persisting a pin`
+
+**Status**: ✅ Done
 
 ---
 
