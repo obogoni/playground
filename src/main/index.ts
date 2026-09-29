@@ -59,6 +59,7 @@ import { WorkflowRunStore } from './workflow-run-store'
 import { scaffoldWorkflow } from './workflow-scaffold'
 import { changedFilesOf, createWorktree, removeWorktree, worktreeStatus } from './worktree-manager'
 import { workspaceTemplates } from './workspace-config'
+import { runAutoPin } from './worktree-tasks'
 import { WorkspaceRegistry } from './workspace-registry'
 
 const execFileAsync = promisify(execFile)
@@ -321,6 +322,14 @@ app.whenReady().then(() => {
     void gitStateWatcher.sync(
       tree.flatMap((ws) => ws.repos.flatMap((repo) => repo.worktrees.map((wt) => wt.path)))
     )
+    // APIN-05: pin tasks the worktree branches carry, without holding up the tree.
+    void runAutoPin(tree, {
+      ado: () => configStore.get().ado,
+      workspaceTemplate: (path) => workspaceTemplates(path).branchTemplate,
+      autoPin: (refs) => taskBoard.autoPin(refs),
+      emit: (snapshot) => emitToWindow('tasks:changed', { snapshot }),
+      logError: (err) => console.error('Auto-pin from worktrees failed:', err)
+    })
     return tree
   })
   // WPC-10: ONE hook-wrapped create, shared by the IPC handler below and the

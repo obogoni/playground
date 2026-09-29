@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { branchNameFor, taskIdFromBranch } from './tasks'
+import { branchNameFor, taskIdFromBranch, taskIdFromTemplate } from './tasks'
 
 const task = (id: number, type: string, title: string): Parameters<typeof branchNameFor>[0] => ({
   id,
@@ -167,5 +167,98 @@ describe('taskIdFromBranch', () => {
   it('returns null when no number is present', () => {
     expect(taskIdFromBranch('main')).toBeNull()
     expect(taskIdFromBranch('feature/dark-mode')).toBeNull()
+  })
+})
+
+describe('taskIdFromTemplate', () => {
+  const MINE = 'user/otavio/{id}-{slug}'
+  const NESTED = 'user/{dev}/{usId}-{usSlug}/{id}-{slug}'
+
+  it('returns the id of a branch built from the template (APIN-01)', () => {
+    expect(taskIdFromTemplate(MINE, 'user/otavio/4821-fix-login')).toBe(4821)
+  })
+
+  it('returns null when the literal text does not match (APIN-01)', () => {
+    expect(taskIdFromTemplate(MINE, 'user/maria/4821-x')).toBeNull()
+    expect(taskIdFromTemplate(MINE, 'main')).toBeNull()
+  })
+
+  it('matches {type} as feature or bugfix only (APIN-01)', () => {
+    expect(taskIdFromTemplate('{type}/{id}-{slug}', 'feature/77-a')).toBe(77)
+    expect(taskIdFromTemplate('{type}/{id}-{slug}', 'bugfix/77-a')).toBe(77)
+    expect(taskIdFromTemplate('{type}/{id}-{slug}', 'chore/77-a')).toBeNull()
+  })
+
+  it('accepts a branch whose placeholder-only segment was dropped (APIN-02)', () => {
+    expect(taskIdFromTemplate(NESTED, 'user/otavio/123-foo')).toBe(123)
+    expect(taskIdFromTemplate(NESTED, 'user/otavio/9-us/123-foo')).toBe(123)
+  })
+
+  it('returns null for every branch when the template has no {id} (APIN-03)', () => {
+    expect(taskIdFromTemplate('user/otavio/{slug}', 'user/otavio/4821-x')).toBeNull()
+  })
+
+  it('uses the default template when the template is null or blank (APIN-03)', () => {
+    expect(taskIdFromTemplate(null, 'feature/4821-x')).toBe(4821)
+    expect(taskIdFromTemplate('   ', 'bugfix/4821-x')).toBe(4821)
+    expect(taskIdFromTemplate(null, 'user/otavio/4821-x')).toBeNull()
+  })
+
+  it('matches literal text case-insensitively (APIN-03)', () => {
+    expect(taskIdFromTemplate(MINE, 'USER/Otavio/4821-x')).toBe(4821)
+  })
+
+  it('anchors the match at both ends of the branch (APIN-03)', () => {
+    expect(taskIdFromTemplate(MINE, 'x/user/otavio/4821-a')).toBeNull()
+    expect(taskIdFromTemplate(MINE, 'user/otavio/4821-a/extra')).toBeNull()
+  })
+
+  it('reads leading zeros as the number and rejects id 0', () => {
+    expect(taskIdFromTemplate(MINE, 'user/otavio/0042-x')).toBe(42)
+    expect(taskIdFromTemplate(MINE, 'user/otavio/0-x')).toBeNull()
+  })
+
+  it('never matches a detached HEAD', () => {
+    expect(taskIdFromTemplate(MINE, '(detached abc1234)')).toBeNull()
+    expect(taskIdFromTemplate('{id}', '(detached 1234567)')).toBeNull()
+  })
+
+  it('treats regex metacharacters in literal text as literals', () => {
+    expect(taskIdFromTemplate('fix.{id}', 'fix.55')).toBe(55)
+    expect(taskIdFromTemplate('fix.{id}', 'fixx55')).toBeNull()
+  })
+
+  it('recovers the id branchNameFor rendered, for every context (APIN-04)', () => {
+    const templates = [
+      MINE,
+      NESTED,
+      '{type}/{id}-{slug}',
+      'user/{dev}/{id}-{slug}',
+      '{dev}-{id}',
+      '{id}/{slug}',
+      'user/{id}/{dev}',
+      '{type}/{id}-{slug}/{usId}'
+    ]
+    const titles = ['Fix login redirect', '!!!']
+    const contexts = [
+      {},
+      { devAlias: 'otavio' },
+      { devAlias: 'otavio', parent: { id: 9, title: 'Checkout flow' } },
+      { parent: { id: 9, title: '' } }
+    ]
+    for (const template of templates) {
+      for (const title of titles) {
+        for (const type of ['Task', 'Bug']) {
+          for (const ctx of contexts) {
+            const branch = branchNameFor(task(4821, type, title), template, ctx)
+            expect({ template, branch, id: taskIdFromTemplate(template, branch) }).toEqual({
+              template,
+              branch,
+              id: 4821
+            })
+          }
+        }
+      }
+    }
   })
 })

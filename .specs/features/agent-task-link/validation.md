@@ -2,7 +2,7 @@
 
 **Date**: 2026-09-28 (round 1 against `23e32cd`, round 2 against `d3f6601`)
 **Spec**: `.specs/features/agent-task-link/spec.md` (ATSK-01..12)
-**Diff range**: `679f433..d3f6601` (2092880 spec, e65b1e2 hook server route, 55aa7e6 env url, 9eb91e6 `session:task` push, cc202e2 wiring, 23e32cd docs + AD-049, d3f6601 round-1 fixes)
+**Diff range**: `679f433..d3f6601` (2092880 spec, e65b1e2 hook server route, 55aa7e6 env url, 9eb91e6 `session:task` push, cc202e2 wiring, 23e32cd docs + AD-051, d3f6601 round-1 fixes)
 **Verifier**: independent sub-agent (author ≠ verifier). Every AC was re-derived from the spec, not from the commit messages or the author's smoke. The round-2 claims were re-run by the Verifier, not taken from the fix commit.
 **Example data**: after verification, the example work item in the tests, the README and the probe records below was renamed from a real one to `12345` / `Example task` before publishing; line references are unchanged, and the suite was re-run on the renamed tests.
 
@@ -68,7 +68,7 @@ The README block was re-extracted from `README.md:47-51` at `d3f6601` and run ve
 
 `.specs/LESSONS.md` and `.specs/lessons.json` became modified during round 2. The Verifier did not change them: they hold the coordinator's recording of the round-1 lessons (L-009 recurrence, now confirmed, and new candidate L-091).
 
-The Verifier checked them read-only: `lessons.json` went from 85 to 86 entries, only L-091 was added, and no candidate was dropped. They were left untouched and uncommitted. The mutant restores only ever checked out the single mutated source file.
+The Verifier checked them read-only: `lessons.json` went from 85 to 86 entries, only L-091 (renumbered L-095 on merge with main) was added, and no candidate was dropped. They were left untouched and uncommitted. The mutant restores only ever checked out the single mutated source file.
 
 ### Requirement Traceability (round 2, proposed)
 
@@ -98,7 +98,7 @@ The feature is Medium-sized, with tasks implicit in Execute, so there is no `tas
 | 55aa7e6 | `PLAYGROUND_TASK_URL` beside the token on every session that gets one (ATSK-01) | ✅ Done, but the name is not pinned (Gap 1) |
 | 9eb91e6 | `setTask` pushes `session:task` (ATSK-06) | ✅ Done |
 | cc202e2 | `onTaskLink → sessions.setTask` wiring and the renderer subscription (ATSK-02, ATSK-06) | ✅ Done (hand-verified layer) |
-| 23e32cd | README contract, AD-049 | ✅ Done, but the snippet has a PS 5.1 issue (Gap 2) |
+| 23e32cd | README contract, AD-051 | ✅ Done, but the snippet has a PS 5.1 issue (Gap 2) |
 
 ---
 
@@ -174,7 +174,7 @@ Author evidence, cited but not re-run: the built-app smoke (`scratchpad/atl-smok
 | Minimum code | ✅ One validator (`asTaskLink`, 11 lines), one route branch, one env key, one emit, one subscription |
 | Surgical changes | ✅ Hooks path logic is unchanged except the shared path/cap selection; no unrelated edits |
 | No scope creep | ✅ No unlink, no pin, no network fetch, no CLI (Out of Scope honoured) |
-| Matches patterns | ✅ Reuses `bearerToken`, `answer`, `asEventObject`, `warnOnce`; the push mirrors `session:status`/`session:name`; AD-049 recorded |
+| Matches patterns | ✅ Reuses `bearerToken`, `answer`, `asEventObject`, `warnOnce`; the push mirrors `session:status`/`session:name`; AD-051 recorded |
 | Spec-anchored outcome check | ❌ ATSK-01's name is asserted through the constant (Gap 1) |
 | Per-layer coverage (TESTING.md) | ✅ Deep modules unit-tested (hook server 29 new tests, SessionManager 3); `index.ts` wiring and renderer hand-verified per TESTING.md:42-43, 67-68 |
 | Every test maps to a requirement | ✅ Each of the 32 new tests names its ATSK id |

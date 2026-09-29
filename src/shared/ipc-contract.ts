@@ -282,6 +282,8 @@ export interface IpcEvents {
   'files:changed': FilesChanged
   /** A worktree's git state moved and its changes were recounted; patch them into the tree (SCRF-01/03). */
   'worktree:status': { worktreePath: string; dirty: boolean; changes: number }
+  /** An auto-pin pass after `tree:get` pinned tasks derived from worktree branches (APIN-06). */
+  'tasks:changed': { snapshot: TasksSnapshot }
 }
 
 export interface IpcSends {

@@ -71,6 +71,23 @@ describe('ConfigStore', () => {
     expect(onDisk.workspaces).toEqual(['x'])
   })
 
+  it('defaults ado.autoPinFromWorktrees to true for a config written before the flag existed', () => {
+    writeFileSync(
+      join(dir, 'config.json'),
+      JSON.stringify({ ado: { defaultOrg: 'acme', defaultProject: 'platform' } })
+    )
+
+    const store = new ConfigStore(dir)
+    expect(store.get().ado.autoPinFromWorktrees).toBe(true)
+    expect(store.get().ado.defaultOrg).toBe('acme')
+  })
+
+  it('keeps ado.autoPinFromWorktrees false across a reload', () => {
+    new ConfigStore(dir).patch({ ado: { autoPinFromWorktrees: false } })
+
+    expect(new ConfigStore(dir).get().ado.autoPinFromWorktrees).toBe(false)
+  })
+
   it('patch returns the merged config and get() reflects it immediately', () => {
     const store = new ConfigStore(dir)
 
