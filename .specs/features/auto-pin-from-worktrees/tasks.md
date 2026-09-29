@@ -400,14 +400,16 @@ Verifier gap 2: mutant M18 (unpin adds the ref to `notFound`) survived.
 
 **Done when**:
 
-- [ ] autoPin → unpin → autoPin: second pass reports `added: 1`, two fetch calls, ref persisted
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: previous + 1 tests pass
+- [x] autoPin → unpin → autoPin: second pass reports `added: 1`, two fetch calls, ref persisted
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: previous + 1 tests pass
 
 **Tests**: unit
 **Gate**: build
 
 **Commit**: `test(tasks): cover auto-pin returning a task after unpin`
+
+**Status**: ✅ Done
 
 ---
 

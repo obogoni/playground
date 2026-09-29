@@ -530,6 +530,19 @@ describe('TaskBoard.autoPin', () => {
     expect(persistedIds().sort((x, y) => x - y)).toEqual([77, 4821])
   })
 
+  it('auto-pins a task again after it was unpinned while its worktree still matches', async () => {
+    const source = stubSource({ [refKey(ref(4821))]: FIX_LOGIN })
+    const board = new TaskBoard(store, source)
+
+    await board.autoPin([ref(4821)])
+    board.unpin(ref(4821))
+    const again = await board.autoPin([ref(4821)])
+
+    expect(again.added).toBe(1)
+    expect(source.calls).toHaveLength(2)
+    expect(persistedIds()).toEqual([4821])
+  })
+
   it('keeps the details of a task auto-pinned while a refresh was fetching (APIN-06)', async () => {
     store.patch({ pinnedTasks: [ref(77)] })
     const inner = stubSource({ [refKey(ref(77))]: FIX_LOGIN, [refKey(ref(4821))]: FIX_LOGIN })
