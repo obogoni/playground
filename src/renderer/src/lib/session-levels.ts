@@ -5,7 +5,14 @@ import { isolationLevelOf, samePath, type IsolationLevel } from './isolation-lev
 /** One working-directory chip in the New Session dialog, per level (ISO-05). */
 export type LevelOption =
   | { level: 'workspace'; path: string; workspaceName: string }
-  | { level: 'repo'; path: string; repoName: string; branch: string; workspaceName: string }
+  | {
+      level: 'repo'
+      path: string
+      repoName: string
+      branch: string
+      workspaceName: string
+      taskId: number | null
+    }
   | {
       level: 'worktree'
       path: string
@@ -38,7 +45,8 @@ export function levelOptions(tree: WorkspaceNode[], level: IsolationLevel): Leve
                   path: wt.path,
                   repoName: repo.name,
                   branch: wt.branch,
-                  workspaceName: ws.displayName
+                  workspaceName: ws.displayName,
+                  taskId: taskIdFromBranch(wt.branch)
                 }
               : {
                   level,

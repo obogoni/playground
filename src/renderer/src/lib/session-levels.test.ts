@@ -43,6 +43,25 @@ const EMPTY: WorkspaceNode = { id: 'f:/empty', path: 'F:/Empty', displayName: 'e
 const tree = [WORK, SIDE, GONE, EMPTY]
 
 describe('levelOptions (ISO-05)', () => {
+  it('carries the task id of a primary checkout on a task branch, so a task card can highlight it', () => {
+    const onTask: WorkspaceNode = {
+      id: 'g:/t',
+      path: 'G:/T',
+      displayName: 't',
+      repos: [repo('app', wt('G:/T/app', 'user/otavio/4821-fix-login', true))]
+    }
+    expect(levelOptions([onTask], 'repo')).toEqual([
+      {
+        level: 'repo',
+        path: 'G:/T/app',
+        repoName: 'app',
+        branch: 'user/otavio/4821-fix-login',
+        workspaceName: 't',
+        taskId: 4821
+      }
+    ])
+  })
+
   it('lists one chip per non-missing workspace with its name and path (AC 2)', () => {
     expect(levelOptions(tree, 'workspace')).toEqual([
       { level: 'workspace', path: 'M:/Work', workspaceName: 'work' },
@@ -58,21 +77,24 @@ describe('levelOptions (ISO-05)', () => {
         path: 'M:/Work/api',
         repoName: 'api',
         branch: 'main',
-        workspaceName: 'work'
+        workspaceName: 'work',
+        taskId: null
       },
       {
         level: 'repo',
         path: 'M:/Work/web',
         repoName: 'web',
         branch: 'develop',
-        workspaceName: 'work'
+        workspaceName: 'work',
+        taskId: null
       },
       {
         level: 'repo',
         path: 'D:/Side/api',
         repoName: 'api',
         branch: 'trunk',
-        workspaceName: 'side'
+        workspaceName: 'side',
+        taskId: null
       }
     ])
   })

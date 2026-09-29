@@ -214,8 +214,10 @@ export function NewSessionDialog({
             ) : (
               <div className="ns-cwd-grid">
                 {options.map((o) => {
+                  // A primary checkout on the task's branch is tagged too, so a task
+                  // card that points at it still highlights its Repo chip.
                   const tagged =
-                    o.level === 'worktree' &&
+                    o.level !== 'workspace' &&
                     source.taskId !== undefined &&
                     o.taskId === source.taskId
                   const [line1, line2] = chipLines(o)
