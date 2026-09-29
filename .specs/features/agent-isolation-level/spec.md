@@ -48,6 +48,7 @@ An agent can only be started from a worktree row. Starting one at the root of a 
 | Primary checkout whose branch carries a task ID | Task group wins in the rail (existing behaviour); the level shows only when there is no task | Keeps `deriveAttribution` unchanged; the task is what the dev is working on | n |
 | Session with a hand-linked task (`session.task`) at workspace/repo level | Task group wins in the rail (existing HTSK-11 rule) | Same as above | n |
 | Grouping of several sessions at the same workspace/repo | Sessions at the same level + path share one group, keyed `level:<normalized path>` | Mirrors the task group (many sessions, one header); the dev asked for "grupo próprio" | n |
+| Task highlight on a primary checkout | A Repo chip whose branch carries the dialog's task is highlighted like a Worktree chip | A task card can point at a primary checkout on a task branch; before this feature that chip was highlighted in the single grid (Verifier G1) | y |
 | Default level when the dialog opens | From the source cwd's level when there is one; the generic "+ New session" and task-driven entries open on `Worktree` | Keeps every current entry point behaving as today | n |
 | Worktree level contents | Linked worktrees only; the primary checkout moves to the Repo level | The levels are disjoint, so a chip never shows up twice | n |
 | Empty level in the selector | The level stays selectable and the grid shows `No <level>s yet.`; Browse stays available | A disabled tab hides why it's empty | n |
@@ -164,19 +165,19 @@ An agent can only be started from a worktree row. Starting one at the root of a 
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| ISO-01 | P1: Level derivation (AC 1–4) | Tasks | Implementing |
-| ISO-02 | P1: Level derivation (AC 5–6, normalization + precedence) | Tasks | Implementing |
-| ISO-03 | P1: Spawn from rows (AC 1–4, 7) | Tasks | Implementing |
-| ISO-04 | P1: Spawn from rows (AC 5–6, guards) | Tasks | Implementing |
-| ISO-05 | P1: Level selector (AC 1–4, grids) | Tasks | Implementing |
-| ISO-06 | P1: Level selector (AC 5–9, default + switching + browse) | Tasks | Implementing |
-| ISO-07 | P1: Level selector (AC 10, spawn contract) | Tasks | Implementing |
-| ISO-08 | P1: Rail group (AC 1–3) | Tasks | Implementing |
-| ISO-09 | P1: Rail group (AC 4–6, precedence + no regression) | Tasks | Implementing |
-| ISO-10 | P1: Rail group (AC 7, Open worktree) | Tasks | Implementing |
-| ISO-11 | P2: Created worktrees reach the tree (AC 1–2) | Tasks | Pending |
+| ISO-01 | P1: Level derivation (AC 1–4) | Done | Verified |
+| ISO-02 | P1: Level derivation (AC 5–6, normalization + precedence) | Done | Verified |
+| ISO-03 | P1: Spawn from rows (AC 1–4, 7) | Done | Verified |
+| ISO-04 | P1: Spawn from rows (AC 5–6, guards) | Done | Verified |
+| ISO-05 | P1: Level selector (AC 1–4, grids) | Done | Verified |
+| ISO-06 | P1: Level selector (AC 5–9, default + switching + browse) | Done | Verified |
+| ISO-07 | P1: Level selector (AC 10, spawn contract) | Done | Verified |
+| ISO-08 | P1: Rail group (AC 1–3) | Done | Verified |
+| ISO-09 | P1: Rail group (AC 4–6, precedence + no regression) | Done | Verified |
+| ISO-10 | P1: Rail group (AC 7, Open worktree) | Done | Verified |
+| ISO-11 | P2: Created worktrees reach the tree (AC 1–2) | Done | AC2 verified; AC1 hand check pending |
 
-**Coverage:** 11 total, 0 mapped to tasks, 11 unmapped ⚠️ (tasks come after spec approval)
+**Coverage:** 11 total, 11 mapped to tasks (T1–T11); ISO-01..10 verified (Verifier PASS, sensor 18/18 killed, live smoke 17/17), ISO-11 AC1 hand check pending
 
 ---
 

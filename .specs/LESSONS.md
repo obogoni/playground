@@ -540,6 +540,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: APIN-04 AC 8 ({usId}{id} -> 94821) (specs)
 - last seen: 2026-09-29T13:32:35Z
 
+### L-094 - When a spec splits one existing list into several views, state which view each existing entry point and highlight lands on for items that moved out of the default view
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer-dialogs` · harmful: 0
+- features: agent-isolation-level
+- evidence: validation.md G1; src/renderer/src/components/NewSessionDialog.tsx:217-220 (renderer-dialogs)
+- last seen: 2026-09-29T20:52:08Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
