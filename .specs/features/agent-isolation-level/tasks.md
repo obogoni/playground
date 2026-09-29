@@ -386,9 +386,11 @@ T10 → T11
 
 **Done when**:
 
-- [ ] Button hidden for workspace sessions, shown for repo and worktree sessions, and `onOpenWorktree` receives the tree node id (spec P1 Rail group AC 7)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B + ≥37 tests pass (no silent deletions)
+- [x] Button hidden for workspace sessions, shown for repo and worktree sessions, and `onOpenWorktree` receives the tree node id (spec P1 Rail group AC 7)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B + ≥37 tests pass (no silent deletions)
+
+**Status**: ✅ Done
 
 **Tests**: none
 **Gate**: build
