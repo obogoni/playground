@@ -1,6 +1,6 @@
 import { taskIdFromBranch } from '../../../shared/tasks'
 import type { WorkspaceNode } from '../../../shared/tree'
-import type { IsolationLevel } from './isolation-level'
+import { isolationLevelOf, samePath, type IsolationLevel } from './isolation-level'
 
 /** One working-directory chip in the New Session dialog, per level (ISO-05). */
 export type LevelOption =
@@ -51,4 +51,32 @@ export function levelOptions(tree: WorkspaceNode[], level: IsolationLevel): Leve
         )
     )
   )
+}
+
+/** The level the dialog opens on: the source cwd's own, else Worktree, so the
+ *  generic and task-driven entries behave as before (ISO-06). */
+export function initialLevel(tree: WorkspaceNode[], sourceCwd: string | undefined): IsolationLevel {
+  if (sourceCwd === undefined) return 'worktree'
+  return isolationLevelOf(tree, sourceCwd)?.level ?? 'worktree'
+}
+
+/** The selection after a level switch: kept when the new level lists it,
+ *  cleared otherwise so Spawn waits for a new pick (ISO-06). */
+export function cwdAfterLevelChange(
+  tree: WorkspaceNode[],
+  level: IsolationLevel,
+  cwd: string | null
+): string | null {
+  if (cwd === null) return null
+  return levelOptions(tree, level).some((o) => samePath(o.path, cwd)) ? cwd : null
+}
+
+/** A browsed folder the tree knows takes its level and the tree's spelling,
+ *  so its chip is the selection; any other folder stays detached (ISO-06). */
+export function adoptBrowsed(
+  tree: WorkspaceNode[],
+  path: string
+): { level: IsolationLevel | null; cwd: string } {
+  const match = isolationLevelOf(tree, path)
+  return match ? { level: match.level, cwd: match.path } : { level: null, cwd: path }
 }

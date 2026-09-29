@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RepoNode, WorkspaceNode, WorktreeNode } from '../../../shared/tree'
-import { levelOptions } from './session-levels'
+import { adoptBrowsed, cwdAfterLevelChange, initialLevel, levelOptions } from './session-levels'
 
 function wt(path: string, branch: string, isDefault: boolean): WorktreeNode {
   return { id: path, branch, path, isDefault, dirty: false, changes: 0 }
@@ -110,5 +110,65 @@ describe('levelOptions (ISO-05)', () => {
     expect(levelOptions([], 'workspace')).toEqual([])
     expect(levelOptions([], 'repo')).toEqual([])
     expect(levelOptions([], 'worktree')).toEqual([])
+  })
+})
+
+describe('initialLevel (ISO-06)', () => {
+  it('opens on Worktree without a source cwd (AC 5)', () => {
+    expect(initialLevel(tree, undefined)).toBe('worktree')
+  })
+
+  it('opens on Worktree when the source cwd has no level (AC 5)', () => {
+    expect(initialLevel(tree, 'C:/scratch/notes')).toBe('worktree')
+  })
+
+  it("opens on the source cwd's level (AC 6, Spawn from rows AC 2, 4, 7)", () => {
+    expect(initialLevel(tree, 'M:/Work')).toBe('workspace')
+    expect(initialLevel(tree, 'M:/Work/api')).toBe('repo')
+    expect(initialLevel(tree, 'M:/Work/api-24173')).toBe('worktree')
+  })
+
+  it('derives the level from a source cwd spelled differently from the tree (AC 6)', () => {
+    expect(initialLevel(tree, 'm:\\work\\')).toBe('workspace')
+  })
+})
+
+describe('cwdAfterLevelChange (ISO-06)', () => {
+  it("keeps the cwd when it is one of the new level's chips (AC 7)", () => {
+    expect(cwdAfterLevelChange(tree, 'repo', 'M:/Work/api')).toBe('M:/Work/api')
+  })
+
+  it('clears a workspace cwd when switching to Repo (AC 7)', () => {
+    expect(cwdAfterLevelChange(tree, 'repo', 'M:/Work')).toBeNull()
+  })
+
+  it('clears a primary checkout cwd when switching to Worktree (AC 7)', () => {
+    expect(cwdAfterLevelChange(tree, 'worktree', 'M:/Work/api')).toBeNull()
+  })
+
+  it('clears a browsed folder with no level on any switch (AC 7)', () => {
+    expect(cwdAfterLevelChange(tree, 'workspace', 'C:/scratch/notes')).toBeNull()
+  })
+
+  it('keeps nothing selected when nothing was (AC 7)', () => {
+    expect(cwdAfterLevelChange(tree, 'workspace', null)).toBeNull()
+  })
+})
+
+describe('adoptBrowsed (ISO-06)', () => {
+  it("selects the level and the tree's spelling for a browsed folder with a level (AC 9)", () => {
+    expect(adoptBrowsed(tree, 'm:\\work\\web')).toEqual({ level: 'repo', cwd: 'M:/Work/web' })
+    expect(adoptBrowsed(tree, 'D:\\Side')).toEqual({ level: 'workspace', cwd: 'D:/Side' })
+    expect(adoptBrowsed(tree, 'M:/Work/web-spike')).toEqual({
+      level: 'worktree',
+      cwd: 'M:/Work/web-spike'
+    })
+  })
+
+  it('keeps a browsed folder with no level as browsed (AC 9, Edge Case "subfolder")', () => {
+    expect(adoptBrowsed(tree, 'M:\\Work\\api\\src')).toEqual({
+      level: null,
+      cwd: 'M:\\Work\\api\\src'
+    })
   })
 })

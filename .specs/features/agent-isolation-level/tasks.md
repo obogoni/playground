@@ -201,11 +201,13 @@ T10 → T11
 
 **Done when**:
 
-- [ ] `initialLevel` → `worktree` without a source cwd or when the cwd has no level; the cwd's level otherwise (spec P1 Level selector AC 5–6)
-- [ ] `cwdAfterLevelChange` keeps the cwd when it is one of the new level's options and returns `null` otherwise (AC 7)
-- [ ] `adoptBrowsed` returns `{ level, cwd: <tree spelling> }` for a folder with a level and `{ level: null, cwd: <as browsed> }` otherwise (AC 9)
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/session-levels.test.ts`
-- [ ] Test count: B + ≥24 tests pass (no silent deletions)
+- [x] `initialLevel` → `worktree` without a source cwd or when the cwd has no level; the cwd's level otherwise (spec P1 Level selector AC 5–6)
+- [x] `cwdAfterLevelChange` keeps the cwd when it is one of the new level's options and returns `null` otherwise (AC 7)
+- [x] `adoptBrowsed` returns `{ level, cwd: <tree spelling> }` for a folder with a level and `{ level: null, cwd: <as browsed> }` otherwise (AC 9)
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/session-levels.test.ts`
+- [x] Test count: B + ≥24 tests pass (no silent deletions)
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
