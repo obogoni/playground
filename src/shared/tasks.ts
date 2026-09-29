@@ -112,11 +112,14 @@ function compileBranchTemplate(template: string | null): RegExp | null {
       const optional = tokens.every((token) => emptyable(token) || /^-+$/.test(token))
       return { pattern, optional }
     })
+  // An optional segment carries its '/' on the side facing the `{id}` segment
+  // (always mandatory), so dropping it leaves no stray separator at either end.
+  const lastMandatory = segments.findLastIndex(({ optional }) => !optional)
   const body = segments
     .map(({ pattern, optional }, i) => {
-      const last = i === segments.length - 1
-      if (!optional) return last ? pattern : `${pattern}/`
-      return last ? `(?:${pattern})?` : `(?:${pattern}/)?`
+      if (i > lastMandatory) return `(?:/${pattern})?`
+      if (optional) return `(?:${pattern}/)?`
+      return i < lastMandatory ? `${pattern}/` : pattern
     })
     .join('')
   return new RegExp(`^${body}$`, 'i')

@@ -66,6 +66,12 @@ T6 → T7 → T8
 T9
 ```
 
+### Phase 5: Verifier round 1 fixes
+
+```
+T10 → T11
+```
+
 ---
 
 ## Task Breakdown
@@ -346,15 +352,75 @@ Found while reading the focus handler during the T8 live check: focus runs `task
 
 ---
 
+### T10: Match branches whose trailing segment was dropped
+
+**What**: The matcher attaches the `/` to an optional segment on the side of the `{id}` segment: segments before the last mandatory one keep `(?:seg/)?`, segments after it become `(?:/seg)?`.
+**Where**: `src/shared/tasks.ts`
+**Depends on**: None (Phase 4 complete)
+**Reuses**: round-trip test
+**Requirement**: APIN-02, APIN-04
+
+Verifier gap 1: `{id}/{slug}` + title `!!!` renders `4821`, `user/{id}/{dev}` + blank alias renders `user/4821`, `{type}/{id}-{slug}/{usId}` + no parent renders `feature/4821-fix`; all three matched back to `null`.
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] The three templates above join the APIN-04 round-trip test and recover `4821`
+- [x] Spec Assumptions records adjacent numeric placeholders (`{usId}{id}`) as unsupported (Verifier spec-precision gap)
+- [x] Gate check passes: `npx vitest run src/shared/tasks.test.ts`
+- [x] Test count: unchanged (round-trip cases extend an existing test)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `fix(tasks): match branches whose trailing template segment was dropped`
+
+**Status**: ✅ Done
+
+---
+
+### T11: Test that an unpinned task is auto-pinned again
+
+**What**: Unit test for the spec edge case "unpinned while a worktree still matches → next refresh pins it again".
+**Where**: `src/main/task-board.test.ts`
+**Depends on**: T10
+**Reuses**: `TaskBoard.autoPin` harness
+**Requirement**: APIN-05
+
+Verifier gap 2: mutant M18 (unpin adds the ref to `notFound`) survived.
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] autoPin → unpin → autoPin: second pass reports `added: 1`, two fetch calls, ref persisted
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [ ] Test count: previous + 1 tests pass
+
+**Tests**: unit
+**Gate**: build
+
+**Commit**: `test(tasks): cover auto-pin returning a task after unpin`
+
+---
+
 ## Phase Execution Map
 
 ```
-Phase 1 → Phase 2 → Phase 3 → Phase 4
+Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5
 
 Phase 1:  T1 ------→ T2 ------→ T3
 Phase 2:  T4 ------→ T5
 Phase 3:  T6 ------→ T7 ------→ T8
 Phase 4:  T9
+Phase 5:  T10 -----→ T11
 ```
 
 ---
@@ -386,6 +452,8 @@ Phase 4:  T9
 | T7 | T6 | T6 → T7 | ✅ Match |
 | T8 | T7 | T7 → T8 | ✅ Match |
 | T9 | None (after Phase 3) | start of Phase 4 | ✅ Match |
+| T10 | None (after Phase 4) | start of Phase 5 | ✅ Match |
+| T11 | T10 | T10 → T11 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -400,3 +468,5 @@ Phase 4:  T9
 | T7 | Shell wiring + type contract | none | none | ✅ OK |
 | T8 | Renderer | none | none | ✅ OK |
 | T9 | DI orchestrator | unit | unit | ✅ OK |
+| T10 | Pure logic | unit | unit | ✅ OK |
+| T11 | DI orchestrator (test only) | unit | unit | ✅ OK |

@@ -229,7 +229,16 @@ describe('taskIdFromTemplate', () => {
   })
 
   it('recovers the id branchNameFor rendered, for every context (APIN-04)', () => {
-    const templates = [MINE, NESTED, '{type}/{id}-{slug}', 'user/{dev}/{id}-{slug}', '{dev}-{id}']
+    const templates = [
+      MINE,
+      NESTED,
+      '{type}/{id}-{slug}',
+      'user/{dev}/{id}-{slug}',
+      '{dev}-{id}',
+      '{id}/{slug}',
+      'user/{id}/{dev}',
+      '{type}/{id}-{slug}/{usId}'
+    ]
     const titles = ['Fix login redirect', '!!!']
     const contexts = [
       {},
