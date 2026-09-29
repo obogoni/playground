@@ -238,16 +238,18 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `added: 1` → emit called once with the snapshot; `added: 0` → emit not called
-- [ ] `autoPin` rejecting → the promise resolves, error logged, emit not called
-- [ ] Workspace template lookup falls back to `config.ado.branchTemplate` when `workspaceTemplates` returns null
-- [ ] Gate check passes: `npx vitest run src/main/worktree-tasks.test.ts`
-- [ ] Test count: previous + ≥3 tests pass
+- [x] `added: 1` → emit called once with the snapshot; `added: 0` → emit not called
+- [x] `autoPin` rejecting → the promise resolves, error logged, emit not called
+- [x] Workspace template lookup falls back to `config.ado.branchTemplate` when `workspaceTemplates` returns null
+- [x] Gate check passes: `npx vitest run src/main/worktree-tasks.test.ts`
+- [x] Test count: previous + ≥3 tests pass
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(tasks): orchestrate auto-pin passes and change notification`
+
+**Status**: ✅ Done
 
 ---
 

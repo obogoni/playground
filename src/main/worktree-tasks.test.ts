@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { WorkspaceNode, WorktreeNode } from '../shared/tree'
-import { derivedTaskRefs } from './worktree-tasks'
+import type { PinnedTask, TasksSnapshot } from '../shared/tasks'
+import { derivedTaskRefs, runAutoPin, type AutoPinDeps } from './worktree-tasks'
 
 const acme = { defaultOrg: 'acme', defaultProject: 'platform' }
 
@@ -65,5 +66,80 @@ describe('derivedTaskRefs', () => {
     const tree = [workspace('/ws', ['(detached abc1234)', 'feature/99-x', 'develop'])]
 
     expect(derivedTaskRefs(tree, () => 'user/otavio/{id}-{slug}', acme)).toEqual([])
+  })
+})
+
+describe('runAutoPin', () => {
+  const ado = {
+    defaultOrg: 'acme',
+    defaultProject: 'platform',
+    branchTemplate: 'user/otavio/{id}-{slug}'
+  }
+  const snapshot: TasksSnapshot = { tasks: [], auth: 'ok', lastSyncAt: 1 }
+
+  const harness = (
+    autoPin: (refs: PinnedTask[]) => Promise<{ added: number; snapshot: TasksSnapshot }>,
+    workspaceTemplate: (path: string) => string | null = () => null
+  ): { deps: AutoPinDeps; emitted: TasksSnapshot[]; logged: unknown[] } => {
+    const emitted: TasksSnapshot[] = []
+    const logged: unknown[] = []
+    const deps = {
+      ado: () => ado,
+      workspaceTemplate,
+      autoPin,
+      emit: (s: TasksSnapshot) => emitted.push(s),
+      logError: (err: unknown) => logged.push(err)
+    }
+    return { deps, emitted, logged }
+  }
+
+  it('emits the snapshot once when the pass adds tasks (APIN-06)', async () => {
+    const { deps, emitted } = harness(async () => ({ added: 1, snapshot }))
+
+    await runAutoPin([workspace('/ws', ['user/otavio/4821-x'])], deps)
+
+    expect(emitted).toEqual([snapshot])
+  })
+
+  it('emits nothing when the pass adds nothing (APIN-06)', async () => {
+    const { deps, emitted } = harness(async () => ({ added: 0, snapshot }))
+
+    await runAutoPin([workspace('/ws', ['user/otavio/4821-x'])], deps)
+
+    expect(emitted).toEqual([])
+  })
+
+  it('swallows and logs a failing pass without emitting', async () => {
+    const boom = new Error('boom')
+    const { deps, emitted, logged } = harness(async () => {
+      throw boom
+    })
+
+    await expect(runAutoPin([workspace('/ws', ['user/otavio/4821-x'])], deps)).resolves.toBe(
+      undefined
+    )
+    expect(logged).toEqual([boom])
+    expect(emitted).toEqual([])
+  })
+
+  it('uses the workspace override, else the global template (APIN-05)', async () => {
+    const seen: number[][] = []
+    const { deps } = harness(
+      async (refs) => {
+        seen.push(refs.map((r) => r.id))
+        return { added: 0, snapshot }
+      },
+      (path) => (path === '/a' ? 'team/{id}-{slug}' : null)
+    )
+
+    await runAutoPin(
+      [
+        workspace('/a', ['team/10-x', 'user/otavio/20-y']),
+        workspace('/b', ['team/30-x', 'user/otavio/40-y'])
+      ],
+      deps
+    )
+
+    expect(seen).toEqual([[10, 40]])
   })
 })
