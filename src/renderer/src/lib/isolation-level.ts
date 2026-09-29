@@ -53,3 +53,16 @@ export function isolationLevelOf(tree: WorkspaceNode[], cwd: string): IsolationM
   const workspace = tree.find((ws) => samePath(ws.path, cwd))
   return workspace ? { level: 'workspace', path: workspace.path, workspace } : null
 }
+
+/** The cwd a workspace row's "Spawn agent here" opens, or null when the row
+ *  must not offer it: spawning in a missing folder fails (ISO-04). */
+export function workspaceSpawnCwd(workspace: WorkspaceNode): string | null {
+  return workspace.missing ? null : workspace.path
+}
+
+/** The cwd a repo row's "Spawn agent here" opens: its primary checkout. Null
+ *  when git failed or the tree holds no primary checkout (ISO-04). */
+export function repoSpawnCwd(repo: RepoNode): string | null {
+  if (repo.error) return null
+  return repo.worktrees.find((w) => w.isDefault)?.path ?? null
+}

@@ -141,10 +141,12 @@ T10 → T11
 
 **Done when**:
 
-- [ ] Workspace not missing → its `path`; `missing: true` → `null` (spec P1 Spawn from rows AC 5)
-- [ ] Repo → its primary checkout's `path`; `error` set or no `isDefault` worktree → `null` (AC 6)
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/isolation-level.test.ts`
-- [ ] Test count: B + ≥12 tests pass (no silent deletions)
+- [x] Workspace not missing → its `path`; `missing: true` → `null` (spec P1 Spawn from rows AC 5)
+- [x] Repo → its primary checkout's `path`; `error` set or no `isDefault` worktree → `null` (AC 6)
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/isolation-level.test.ts`
+- [x] Test count: B + ≥12 tests pass (no silent deletions)
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick

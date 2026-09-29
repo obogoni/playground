@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RepoNode, WorkspaceNode, WorktreeNode } from '../../../shared/tree'
-import { isolationLevelOf, samePath } from './isolation-level'
+import { isolationLevelOf, repoSpawnCwd, samePath, workspaceSpawnCwd } from './isolation-level'
 
 function wt(path: string, branch: string, isDefault: boolean): WorktreeNode {
   return { id: path, branch, path, isDefault, dirty: false, changes: 0 }
@@ -167,5 +167,37 @@ describe('samePath (ISO-02)', () => {
     ['C:/code/x//', 'C:/code/x']
   ])('treats %s and %s as different paths', (a, b) => {
     expect(samePath(a, b)).toBe(false)
+  })
+})
+
+describe('row spawn targets (ISO-04)', () => {
+  it('spawns a workspace row at the workspace path', () => {
+    expect(workspaceSpawnCwd(WS_PLAIN)).toBe('M:/Obogoni')
+  })
+
+  it('offers no spawn on a missing workspace (Spawn from rows AC 5)', () => {
+    expect(workspaceSpawnCwd({ ...WS_PLAIN, missing: true })).toBeNull()
+  })
+
+  it('spawns a workspace with no repos at its path (Edge Case "no repos")', () => {
+    expect(workspaceSpawnCwd({ ...WS_PLAIN, repos: [] })).toBe('M:/Obogoni')
+  })
+
+  it("spawns a repo row at its primary checkout's path", () => {
+    const moved: RepoNode = {
+      ...PG_REPO,
+      path: 'M:/Obogoni/PLAYGROUND',
+      worktrees: [PG_LINKED, PG_MAIN]
+    }
+
+    expect(repoSpawnCwd(moved)).toBe('M:/Obogoni/playground')
+  })
+
+  it('offers no spawn on a repo with a git error (Spawn from rows AC 6)', () => {
+    expect(repoSpawnCwd({ ...PG_REPO, error: 'not a git repository' })).toBeNull()
+  })
+
+  it('offers no spawn on a repo without a primary checkout (Spawn from rows AC 6)', () => {
+    expect(repoSpawnCwd({ ...PG_REPO, worktrees: [PG_LINKED] })).toBeNull()
   })
 })
