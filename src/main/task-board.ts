@@ -72,7 +72,7 @@ export function parseTaskInput(
   return { ok: true, ref: makeRef(segments[0], segments[1], Number(segments[4])) }
 }
 
-function makeRef(org: string, project: string, id: number): PinnedTask {
+export function makeRef(org: string, project: string, id: number): PinnedTask {
   const url = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(project)}/_workitems/edit/${id}`
   return { id, org, project, url }
 }
@@ -142,6 +142,10 @@ export class TaskBoard {
   private details = new Map<string, WorkItemDetails>()
   private auth: AdoAuthState = 'unknown'
   private lastSyncAt: number | null = null
+  /** Derived refs ADO did not find this session — never fetched again until restart (APIN-07). */
+  private notFound = new Set<string>()
+  /** Derived refs an auto-pin pass is fetching right now (APIN-08). */
+  private inflight = new Set<string>()
 
   constructor(
     private readonly config: ConfigStore,
@@ -183,7 +187,7 @@ export class TaskBoard {
 
     this.details.set(refKey(ref), await this.withBadgeType(ref, detail))
     this.lastSyncAt = Date.now()
-    this.config.patch({ pinnedTasks: [...pinnedTasks, ref] })
+    this.appendPins([ref])
     return { ok: true, snapshot: this.list() }
   }
 
@@ -209,6 +213,65 @@ export class TaskBoard {
     return { ok: true, item: { id: ref.id, type: detail.type, title: detail.title } }
   }
 
+  /**
+   * Pins the refs derived from worktree branches that are not pinned yet,
+   * after validating them in ADO like a manual pin (APIN-05..09). Refs already
+   * pinned, not found earlier this session, or being fetched by an overlapping
+   * pass are skipped without a fetch, so a steady tree costs no ADO call.
+   */
+  async autoPin(refs: PinnedTask[]): Promise<{ added: number; snapshot: TasksSnapshot }> {
+    const { ado, pinnedTasks } = this.config.get()
+    if (!ado.autoPinFromWorktrees) return { added: 0, snapshot: this.list() }
+    const candidates = refs.filter(
+      (ref) =>
+        !pinnedTasks.some((task) => sameRef(task, ref)) &&
+        !this.notFound.has(refKey(ref)) &&
+        !this.inflight.has(refKey(ref))
+    )
+    if (candidates.length === 0) return { added: 0, snapshot: this.list() }
+
+    for (const ref of candidates) this.inflight.add(refKey(ref))
+    try {
+      const fetched = await this.source.getWorkItems(candidates)
+      if (!fetched.ok) {
+        this.auth = 'failed'
+        return { added: 0, snapshot: this.list() }
+      }
+      this.auth = 'ok'
+      this.lastSyncAt = Date.now()
+      const found: PinnedTask[] = []
+      for (const ref of candidates) {
+        const detail = fetched.details.get(refKey(ref))
+        if (!detail) {
+          this.notFound.add(refKey(ref))
+          continue
+        }
+        this.details.set(refKey(ref), await this.withBadgeType(ref, detail))
+        found.push(ref)
+      }
+      const added = this.appendPins(found)
+      return { added: added.length, snapshot: this.list() }
+    } finally {
+      for (const ref of candidates) this.inflight.delete(refKey(ref))
+    }
+  }
+
+  /**
+   * Appends to the pinned set as it is *now*, skipping refs pinned meanwhile.
+   * Callers read the set before awaiting ADO, so writing that stale copy back
+   * would drop a pin another call added during the await (APIN-08).
+   */
+  private appendPins(refs: PinnedTask[]): PinnedTask[] {
+    const current = this.config.get().pinnedTasks
+    const added = refs.filter(
+      (ref, i) =>
+        !current.some((task) => sameRef(task, ref)) &&
+        refs.findIndex((other) => sameRef(other, ref)) === i
+    )
+    if (added.length > 0) this.config.patch({ pinnedTasks: [...current, ...added] })
+    return added
+  }
+
   unpin(ref: WorkItemRef): TasksSnapshot {
     const remaining = this.config.get().pinnedTasks.filter((task) => !sameRef(task, ref))
     this.config.patch({ pinnedTasks: remaining })
@@ -231,6 +294,12 @@ export class TaskBoard {
     for (const ref of pinnedTasks) {
       const detail = fetched.details.get(refKey(ref))
       if (detail) resolved.set(refKey(ref), await this.withBadgeType(ref, detail))
+    }
+    // A pin or auto-pin that landed during the fetch cached its own details;
+    // this refresh never asked about it, so it must not wipe them (APIN-06).
+    const refreshed = new Set(pinnedTasks.map(refKey))
+    for (const [key, detail] of this.details) {
+      if (!refreshed.has(key)) resolved.set(key, detail)
     }
     this.details = resolved
     return this.list()

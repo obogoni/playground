@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 91,
+  "next_id": 94,
   "lessons": [
     {
       "id": "L-001",
@@ -1541,6 +1541,60 @@
       ],
       "created": "2026-09-28T00:27:37Z",
       "last_seen": "2026-09-28T00:27:37Z"
+    },
+    {
+      "id": "L-091",
+      "key": "ac_gap::when a spec states a round trip property between a renderer and its inverse parser test it over templates that exercise every structural position of each empty able placeholder leading middle trailing segment not only the examples named in the spec",
+      "text": "When a spec states a round-trip property between a renderer and its inverse parser, test it over templates that exercise every structural position of each empty-able placeholder (leading, middle, trailing segment), not only the examples named in the spec",
+      "signal": "ac_gap",
+      "scope": "shared-tasks",
+      "status": "candidate",
+      "features": [
+        "auto-pin-from-worktrees"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "APIN-04 AC 8; src/shared/tasks.ts:115-119 (shared-tasks)"
+      ],
+      "created": "2026-09-29T13:32:34Z",
+      "last_seen": "2026-09-29T13:32:34Z"
+    },
+    {
+      "id": "L-092",
+      "key": "surviving_mutant::give every spec edge case that crosses two operations such as undo then redo its own unit test even when a live check covers it since only the unit test fails when one side regresses",
+      "text": "Give every spec edge case that crosses two operations (such as undo then redo) its own unit test even when a live check covers it, since only the unit test fails when one side regresses",
+      "signal": "surviving_mutant",
+      "scope": "testing",
+      "status": "candidate",
+      "features": [
+        "auto-pin-from-worktrees"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M18; src/main/task-board.ts unpin; spec Edge Case 5 (testing)"
+      ],
+      "created": "2026-09-29T13:32:35Z",
+      "last_seen": "2026-09-29T13:32:35Z"
+    },
+    {
+      "id": "L-093",
+      "key": "spec_precision_gap::when a spec requires a template to be parseable back into its values state which templates are unsupported because adjacent placeholders make the rendered text ambiguous",
+      "text": "When a spec requires a template to be parseable back into its values, state which templates are unsupported because adjacent placeholders make the rendered text ambiguous",
+      "signal": "spec_precision_gap",
+      "scope": "specs",
+      "status": "candidate",
+      "features": [
+        "auto-pin-from-worktrees"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "APIN-04 AC 8 ({usId}{id} -> 94821) (specs)"
+      ],
+      "created": "2026-09-29T13:32:35Z",
+      "last_seen": "2026-09-29T13:32:35Z"
     }
   ]
 }

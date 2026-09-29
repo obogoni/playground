@@ -58,6 +58,85 @@ export function taskIdFromBranch(branch: string): number | null {
   return match ? Number(match[0]) : null
 }
 
+/** Placeholders `branchNameFor` may render empty — their segment can vanish, and an adjacent '-' is trimmed. */
+const EMPTYABLE_PLACEHOLDERS = new Set(['dev', 'usId', 'usSlug', 'slug'])
+
+const PLACEHOLDER_PATTERNS: Record<string, string> = {
+  usId: '\\d+',
+  type: '(?:feature|bugfix)',
+  slug: '[^/]*?',
+  usSlug: '[^/]*?',
+  dev: '[^/]*?'
+}
+
+const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * Compiles a branch template into an anchored, case-insensitive matcher whose
+ * first group captures `{id}` (APIN-01..03) — the inverse of `branchNameFor`.
+ * A segment made only of empty-able placeholders and '-' is optional, and a
+ * '-' next to an empty-able placeholder is optional, mirroring the per-segment
+ * drop and edge trim rendering applies. Null when the template has no `{id}`.
+ */
+function compileBranchTemplate(template: string | null): RegExp | null {
+  const source = template?.trim() || DEFAULT_BRANCH_TEMPLATE
+  if (!source.includes('{id}')) return null
+  let captured = false
+  const segments = source
+    .split('/')
+    .filter((segment) => segment !== '')
+    .map((segment) => {
+      const tokens = segment.split(/(\{[A-Za-z]+\})/).filter((token) => token !== '')
+      const name = (token: string | undefined): string | null =>
+        token && /^\{[A-Za-z]+\}$/.test(token) ? token.slice(1, -1) : null
+      const emptyable = (token: string | undefined): boolean =>
+        EMPTYABLE_PLACEHOLDERS.has(name(token) ?? '')
+      const pattern = tokens
+        .map((token, i) => {
+          const placeholder = name(token)
+          if (placeholder === 'id') {
+            if (captured) return '\\d+'
+            captured = true
+            return '(\\d+)'
+          }
+          if (placeholder !== null && placeholder in PLACEHOLDER_PATTERNS) {
+            return PLACEHOLDER_PATTERNS[placeholder]
+          }
+          const literal = escapeRegExp(token)
+          const dashOnly = /^-+$/.test(token)
+          return dashOnly && (emptyable(tokens[i - 1]) || emptyable(tokens[i + 1]))
+            ? `(?:${literal})?`
+            : literal
+        })
+        .join('')
+      const optional = tokens.every((token) => emptyable(token) || /^-+$/.test(token))
+      return { pattern, optional }
+    })
+  // An optional segment carries its '/' on the side facing the `{id}` segment
+  // (always mandatory), so dropping it leaves no stray separator at either end.
+  const lastMandatory = segments.findLastIndex(({ optional }) => !optional)
+  const body = segments
+    .map(({ pattern, optional }, i) => {
+      if (i > lastMandatory) return `(?:/${pattern})?`
+      if (optional) return `(?:${pattern}/)?`
+      return i < lastMandatory ? `${pattern}/` : pattern
+    })
+    .join('')
+  return new RegExp(`^${body}$`, 'i')
+}
+
+/**
+ * The work item ID a branch carries when it matches the branch template, else
+ * null (APIN-01..04). Stricter than `taskIdFromBranch`: only this path may
+ * trigger an ADO fetch for an unpinned ID (AD-049).
+ */
+export function taskIdFromTemplate(template: string | null, branch: string): number | null {
+  const match = compileBranchTemplate(template)?.exec(branch)
+  if (!match) return null
+  const id = Number(match[1])
+  return id === 0 ? null : id
+}
+
 /** Persisted pin (PRD §Data model): identity is org/project/id; details stay live. */
 export interface PinnedTask {
   id: number

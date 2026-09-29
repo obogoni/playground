@@ -127,6 +127,8 @@ export interface AppConfig {
     worktreeTemplate: string
     /** Developer alias for the `{dev}` branch-template placeholder; blank renders an empty segment. */
     devAlias: string
+    /** Pin the task a worktree's branch carries when it matches the branch template (APIN-09). */
+    autoPinFromWorktrees: boolean
   }
   pinnedTasks: PinnedTask[]
   /** Agent sessions; restored as `stopped` on load. */
@@ -156,7 +158,8 @@ export const DEFAULT_CONFIG: AppConfig = {
     defaultProject: null,
     branchTemplate: DEFAULT_BRANCH_TEMPLATE,
     worktreeTemplate: DEFAULT_WORKTREE_TEMPLATE,
-    devAlias: ''
+    devAlias: '',
+    autoPinFromWorktrees: true
   },
   pinnedTasks: [],
   sessions: []

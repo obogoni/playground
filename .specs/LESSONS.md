@@ -522,6 +522,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: HTSK-14
 - last seen: 2026-09-28T00:27:37Z
 
+### L-091 - When a spec states a round-trip property between a renderer and its inverse parser, test it over templates that exercise every structural position of each empty-able placeholder (leading, middle, trailing segment), not only the examples named in the spec
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `shared-tasks` · harmful: 0
+- features: auto-pin-from-worktrees
+- evidence: APIN-04 AC 8; src/shared/tasks.ts:115-119 (shared-tasks)
+- last seen: 2026-09-29T13:32:34Z
+
+### L-092 - Give every spec edge case that crosses two operations (such as undo then redo) its own unit test even when a live check covers it, since only the unit test fails when one side regresses
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: auto-pin-from-worktrees
+- evidence: M18; src/main/task-board.ts unpin; spec Edge Case 5 (testing)
+- last seen: 2026-09-29T13:32:35Z
+
+### L-093 - When a spec requires a template to be parseable back into its values, state which templates are unsupported because adjacent placeholders make the rendered text ambiguous
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: auto-pin-from-worktrees
+- evidence: APIN-04 AC 8 ({usId}{id} -> 94821) (specs)
+- last seen: 2026-09-29T13:32:35Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
