@@ -110,12 +110,14 @@ T10 → T11
 
 **Done when**:
 
-- [ ] Linked worktree path → `worktree`, primary checkout path → `repo`, workspace path → `workspace`, unknown path / repo subfolder → `null` (spec P1 Level derivation AC 1–4, Edge Case "subfolder")
-- [ ] `M:\Obogoni\` matches `m:/obogoni`; `/` vs `\` and one trailing separator ignored (AC 5)
-- [ ] Workspace path equal to a primary checkout path → `repo` (AC 6)
-- [ ] Missing workspace (`missing: true`) and repo with `error` set still derive from whatever nodes the tree holds; a workspace with zero repos → `workspace` (Edge Case "no repos")
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/isolation-level.test.ts`
-- [ ] Test count: B + ≥8 tests pass (no silent deletions)
+- [x] Linked worktree path → `worktree`, primary checkout path → `repo`, workspace path → `workspace`, unknown path / repo subfolder → `null` (spec P1 Level derivation AC 1–4, Edge Case "subfolder")
+- [x] `M:\Obogoni\` matches `m:/obogoni`; `/` vs `\` and one trailing separator ignored (AC 5)
+- [x] Workspace path equal to a primary checkout path → `repo` (AC 6)
+- [x] Missing workspace (`missing: true`) and repo with `error` set still derive from whatever nodes the tree holds; a workspace with zero repos → `workspace` (Edge Case "no repos")
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/isolation-level.test.ts`
+- [x] Test count: B + ≥8 tests pass (no silent deletions)
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick

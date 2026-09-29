@@ -1,0 +1,55 @@
+import type { RepoNode, WorkspaceNode, WorktreeNode } from '../../../shared/tree'
+
+/**
+ * Where a session runs, derived from its cwd against the tree at render time
+ * and never stored (AD-050). The levels are disjoint: a registered workspace
+ * folder is `workspace`, a repo's primary checkout is `repo`, a linked
+ * worktree is `worktree` (ISO-01).
+ */
+export type IsolationLevel = 'workspace' | 'repo' | 'worktree'
+
+export interface IsolationMatch {
+  level: IsolationLevel
+  /** The matched node's path, in the tree's own spelling. */
+  path: string
+  workspace: WorkspaceNode
+  /** Set for `repo` and `worktree`. */
+  repo?: RepoNode
+  /** Set for `repo` (the primary checkout) and `worktree`. */
+  worktree?: WorktreeNode
+}
+
+/** Case-insensitive, `\` = `/`, one trailing separator ignored (ISO-02). */
+function normalizePath(path: string): string {
+  const slashed = path.replace(/\\/g, '/').toLowerCase()
+  return slashed.endsWith('/') ? slashed.slice(0, -1) : slashed
+}
+
+export function samePath(a: string, b: string): boolean {
+  return normalizePath(a) === normalizePath(b)
+}
+
+/**
+ * The level a cwd runs at, or null when it matches no tree node (a browsed
+ * folder, a repo subfolder). Worktree nodes are checked across the whole tree
+ * before workspace paths, so a workspace that is itself a repo reads as `repo`
+ * (ISO-02).
+ */
+export function isolationLevelOf(tree: WorkspaceNode[], cwd: string): IsolationMatch | null {
+  for (const workspace of tree) {
+    for (const repo of workspace.repos) {
+      const worktree = repo.worktrees.find((w) => samePath(w.path, cwd))
+      if (worktree) {
+        return {
+          level: worktree.isDefault ? 'repo' : 'worktree',
+          path: worktree.path,
+          workspace,
+          repo,
+          worktree
+        }
+      }
+    }
+  }
+  const workspace = tree.find((ws) => samePath(ws.path, cwd))
+  return workspace ? { level: 'workspace', path: workspace.path, workspace } : null
+}
