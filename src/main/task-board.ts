@@ -72,7 +72,7 @@ export function parseTaskInput(
   return { ok: true, ref: makeRef(segments[0], segments[1], Number(segments[4])) }
 }
 
-function makeRef(org: string, project: string, id: number): PinnedTask {
+export function makeRef(org: string, project: string, id: number): PinnedTask {
   const url = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(project)}/_workitems/edit/${id}`
   return { id, org, project, url }
 }

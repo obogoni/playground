@@ -144,17 +144,19 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Worktrees across two workspaces with the same id → one ref (spec Auto-pin AC 3)
-- [ ] `templateFor` returning an override for workspace A and null for B → A matches its override and B the global (AC 10)
-- [ ] Either default unset → `[]` (AC 5)
-- [ ] Non-matching and detached branches → skipped; refs carry `defaultOrg`/`defaultProject` and the canonical URL
-- [ ] Gate check passes: `npx vitest run src/main/worktree-tasks.test.ts src/main/task-board.test.ts`
-- [ ] Test count: previous + ≥5 tests pass
+- [x] Worktrees across two workspaces with the same id → one ref (spec Auto-pin AC 3)
+- [x] `templateFor` returning an override for workspace A and null for B → A matches its override and B the global (AC 10)
+- [x] Either default unset → `[]` (AC 5)
+- [x] Non-matching and detached branches → skipped; refs carry `defaultOrg`/`defaultProject` and the canonical URL
+- [x] Gate check passes: `npx vitest run src/main/worktree-tasks.test.ts src/main/task-board.test.ts`
+- [x] Test count: previous + ≥5 tests pass
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(tasks): derive work item refs from the worktree tree`
+
+**Status**: ✅ Done
 
 ---
 
