@@ -268,14 +268,16 @@ T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `ipc-contract.ts` event added; `tree:get` reply unchanged in shape and timing
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged from T6
+- [x] `ipc-contract.ts` event added; `tree:get` reply unchanged in shape and timing
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: unchanged from T6
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `feat(tasks): run auto-pin after every tree refresh`
+
+**Status**: ✅ Done
 
 ---
 
