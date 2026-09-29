@@ -66,3 +66,16 @@ export function repoSpawnCwd(repo: RepoNode): string | null {
   if (repo.error) return null
   return repo.worktrees.find((w) => w.isDefault)?.path ?? null
 }
+
+/**
+ * The tree node id the session detail's "Open worktree" selects, or null to
+ * hide the button: a worktree session opens its worktree, a repo session its
+ * primary checkout, and a workspace session has no node to select (ISO-10).
+ */
+export function openWorktreeTarget(
+  tree: WorkspaceNode[],
+  session: { cwd: string; pathMissing: boolean }
+): string | null {
+  if (session.pathMissing) return null
+  return isolationLevelOf(tree, session.cwd)?.worktree?.id ?? null
+}

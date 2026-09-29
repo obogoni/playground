@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { RepoNode, WorkspaceNode, WorktreeNode } from '../../../shared/tree'
-import { isolationLevelOf, repoSpawnCwd, samePath, workspaceSpawnCwd } from './isolation-level'
+import {
+  isolationLevelOf,
+  openWorktreeTarget,
+  repoSpawnCwd,
+  samePath,
+  workspaceSpawnCwd
+} from './isolation-level'
 
 function wt(path: string, branch: string, isDefault: boolean): WorktreeNode {
   return { id: path, branch, path, isDefault, dirty: false, changes: 0 }
@@ -199,5 +205,42 @@ describe('row spawn targets (ISO-04)', () => {
 
   it('offers no spawn on a repo without a primary checkout (Spawn from rows AC 6)', () => {
     expect(repoSpawnCwd({ ...PG_REPO, worktrees: [PG_LINKED] })).toBeNull()
+  })
+})
+
+describe('openWorktreeTarget (ISO-10)', () => {
+  const at = (cwd: string, pathMissing = false): { cwd: string; pathMissing: boolean } => ({
+    cwd,
+    pathMissing
+  })
+
+  it("selects a worktree session's own worktree node (Rail group AC 7)", () => {
+    expect(openWorktreeTarget(tree, at(PG_LINKED.path))).toBe(PG_LINKED.id)
+  })
+
+  it('selects the primary checkout for a repo session (Rail group AC 7)', () => {
+    expect(openWorktreeTarget(tree, at(PG_MAIN.path))).toBe(PG_MAIN.id)
+  })
+
+  it('hides the button for a workspace session (Rail group AC 7)', () => {
+    expect(openWorktreeTarget(tree, at(WS_PLAIN.path))).toBeNull()
+  })
+
+  it('hides the button for a session with no level', () => {
+    expect(openWorktreeTarget(tree, at('C:/scratch/sandbox'))).toBeNull()
+  })
+
+  it('hides the button when the session path is missing', () => {
+    expect(openWorktreeTarget(tree, at(PG_LINKED.path, true))).toBeNull()
+    expect(openWorktreeTarget(tree, at(PG_MAIN.path, true))).toBeNull()
+  })
+
+  it("returns the tree's id for a cwd differing only in case", () => {
+    const odd = wt('M:/Obogoni/Odd-Case', 'feature/1-x', false)
+    const oddTree: WorkspaceNode[] = [
+      { ...WS_PLAIN, repos: [{ ...PG_REPO, worktrees: [PG_MAIN, { ...odd, id: 'node-odd' }] }] }
+    ]
+
+    expect(openWorktreeTarget(oddTree, at('m:/obogoni/odd-case'))).toBe('node-odd')
   })
 })

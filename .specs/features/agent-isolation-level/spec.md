@@ -173,7 +173,7 @@ An agent can only be started from a worktree row. Starting one at the root of a 
 | ISO-07 | P1: Level selector (AC 10, spawn contract) | Tasks | Pending |
 | ISO-08 | P1: Rail group (AC 1–3) | Tasks | Pending |
 | ISO-09 | P1: Rail group (AC 4–6, precedence + no regression) | Tasks | Pending |
-| ISO-10 | P1: Rail group (AC 7, Open worktree) | Tasks | Pending |
+| ISO-10 | P1: Rail group (AC 7, Open worktree) | Tasks | Implementing |
 | ISO-11 | P2: Created worktrees reach the tree (AC 1–2) | Tasks | Pending |
 
 **Coverage:** 11 total, 0 mapped to tasks, 11 unmapped ⚠️ (tasks come after spec approval)

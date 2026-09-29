@@ -231,11 +231,13 @@ T10 → T11
 
 **Done when**:
 
-- [ ] `worktree` level → that worktree's `id`; `repo` level → the primary checkout's `id` (spec P1 Rail group AC 7)
-- [ ] `workspace` level, no level, or `session.pathMissing` → `null`
-- [ ] A cwd differing only in case from the tree path still returns the tree's `id`
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/isolation-level.test.ts`
-- [ ] Test count: B + ≥29 tests pass (no silent deletions)
+- [x] `worktree` level → that worktree's `id`; `repo` level → the primary checkout's `id` (spec P1 Rail group AC 7)
+- [x] `workspace` level, no level, or `session.pathMissing` → `null`
+- [x] A cwd differing only in case from the tree path still returns the tree's `id`
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/isolation-level.test.ts`
+- [x] Test count: B + ≥29 tests pass (no silent deletions)
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
