@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 95,
+  "next_id": 96,
   "lessons": [
     {
       "id": "L-001",
@@ -69,17 +69,19 @@
       "text": "A default-constant test that asserts resolvePaneWidth(undefined, bounds, DEFAULT) against DEFAULT itself cannot detect a change to that constant — pin every spec-derived default with a literal assertion, not a self-referential one.",
       "signal": "surviving_mutant",
       "scope": "renderer/lib",
-      "status": "candidate",
+      "status": "confirmed",
       "features": [
-        "sidebar-resize-collapse"
+        "sidebar-resize-collapse",
+        "agent-task-link"
       ],
-      "recurrence": 1,
+      "recurrence": 2,
       "harmful": 0,
       "evidence": [
-        "src/renderer/src/lib/pane-layout.test.ts:41 (renderer/lib)"
+        "src/renderer/src/lib/pane-layout.test.ts:41 (renderer/lib)",
+        "validation.md M7; src/main/session-manager.test.ts:858 (ATSK-01) (src/main)"
       ],
       "created": "2026-08-31T22:35:36Z",
-      "last_seen": "2026-08-31T22:35:36Z"
+      "last_seen": "2026-09-28T22:09:36Z"
     },
     {
       "id": "L-010",
@@ -1613,6 +1615,24 @@
       ],
       "created": "2026-09-29T20:52:08Z",
       "last_seen": "2026-09-29T20:52:08Z"
+    },
+    {
+      "id": "L-095",
+      "key": "ac_gap::a powershell snippet published for scripts or agents must call invoke webrequest usebasicparsing windows powershell 5 1 otherwise prompts after the response so a non interactive caller errors although the request succeeded",
+      "text": "A PowerShell snippet published for scripts or agents must call Invoke-WebRequest -UseBasicParsing: Windows PowerShell 5.1 otherwise prompts after the response, so a non-interactive caller errors although the request succeeded.",
+      "signal": "ac_gap",
+      "scope": "docs",
+      "status": "candidate",
+      "features": [
+        "agent-task-link"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md round 1 gap 2; README.md:49 (ATSK-12) (docs)"
+      ],
+      "created": "2026-09-28T22:09:36Z",
+      "last_seen": "2026-09-28T22:09:36Z"
     }
   ]
 }
