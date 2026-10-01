@@ -211,14 +211,14 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 | PERF-07 | P1: GPU terminal — AC 4, 5 | Execute | Done (T7, T8), UAT pending |
 | PERF-08 | P2: Activity re-renders — AC 1 | Execute | Done (T10) |
 | PERF-09 | P2: Activity re-renders — AC 2, 3 | Execute | Done (T9–T12), UAT pending |
-| PERF-10 | P2: Activity re-renders — AC 4 | Design | Pending |
+| PERF-10 | P2: Activity re-renders — AC 4 | Execute | Implementing (T13) |
 | PERF-11 | P2: Recount — AC 1 | Design | Pending |
 | PERF-12 | P2: Recount — AC 2 | Design | Pending |
 | PERF-13 | P2: Recount — AC 3, 4 | Design | Pending |
 | PERF-14 | P2: Clocks — AC 1, 2, 3 | Design | Pending |
 | PERF-15 | P3: Measurable — AC 1 | Execute | Done (T3, T4) |
 | PERF-16 | P3: Measurable — AC 2 | Execute | Done (T1, T2) |
-| PERF-17 | P3: Measurable — AC 3 | Execute | Implementing (T3, T4, T11, T12) |
+| PERF-17 | P3: Measurable — AC 3 | Execute | Done (T3, T4, T11–T13), UAT pending |
 | PERF-18 | P3: Measurable — AC 4, 5 | Execute | Done (T1–T4) |
 
 **Coverage:** 18 total, 0 mapped to tasks, 18 unmapped ⚠️ (mapped at Tasks)
