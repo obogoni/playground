@@ -547,10 +547,12 @@ T27 → T28
 **Requirement**: PERF-19
 
 **Done when**:
-- [ ] Dir-major, ext-minor order; first hit wins; empty and quoted PATH entries handled; default PATHEXT when unset
-- [ ] A directory with `á` returns the path with `á` byte-for-byte
-- [ ] No hit → `null`
-- [ ] Gate: quick
+- [x] Dir-major, ext-minor order; first hit wins; empty and quoted PATH entries handled; default PATHEXT when unset
+- [x] A directory with `á` returns the path with `á` byte-for-byte
+- [x] No hit → `null`
+- [x] Gate: quick
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
