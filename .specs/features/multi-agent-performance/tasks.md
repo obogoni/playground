@@ -502,7 +502,9 @@ T20 → T21 → T22
 **Requirement**: PERF-12, PERF-13
 
 **Done when**:
-- [ ] Gate: build passes; Test count unchanged
+- [x] Gate: build passes; Test count unchanged
+
+**Status**: ✅ Done
 
 **Tests**: none
 **Gate**: build
