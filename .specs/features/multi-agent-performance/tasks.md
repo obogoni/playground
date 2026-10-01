@@ -208,8 +208,10 @@ T20 → T21 → T22
 **Requirement**: PERF-04
 
 **Done when**:
-- [ ] `npm ls @xterm/addon-webgl` shows 0.19.0 deduped against `@xterm/xterm@6.0.0`
-- [ ] Gate: build passes; Test count unchanged
+- [x] `npm ls @xterm/addon-webgl` shows 0.19.0 deduped against `@xterm/xterm@6.0.0`
+- [x] Gate: build passes; Test count unchanged
+
+**Status**: ✅ Done
 
 **Tests**: none
 **Gate**: build

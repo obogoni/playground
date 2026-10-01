@@ -205,7 +205,7 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 | PERF-01 | P1: Keystrokes not delayed — AC 1 | Execute | Done (T5) |
 | PERF-02 | P1: Keystrokes not delayed — AC 2, 3; Edge Cases | Execute | Done (T5) |
 | PERF-03 | P1: Keystrokes not delayed — AC 4, 5 | Execute | Done (T5) |
-| PERF-04 | P1: GPU terminal — AC 1 | Design | Pending |
+| PERF-04 | P1: GPU terminal — AC 1 | Execute | Implementing (T6) |
 | PERF-05 | P1: GPU terminal — AC 2 | Design | Pending |
 | PERF-06 | P1: GPU terminal — AC 3 | Design | Pending |
 | PERF-07 | P1: GPU terminal — AC 4, 5 | Design | Pending |
