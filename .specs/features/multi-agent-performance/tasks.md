@@ -166,8 +166,10 @@ T20 → T21 → T22
 **Requirement**: PERF-15, PERF-17, PERF-18
 
 **Done when**:
-- [ ] Gate: build passes; Test count unchanged
+- [x] Gate: build passes; Test count unchanged
 - [ ] Dev app with the flag set logs `[perf] longtask` lines; without it, none
+
+**Status**: ✅ Done
 
 **Tests**: none
 **Gate**: build

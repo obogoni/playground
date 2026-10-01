@@ -11,6 +11,10 @@ import './styles/global.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { perfEnabled, startLongTaskLog } from './lib/perf-probe'
+
+// Debug-only long-task log (PERF-15); no observer is registered without the flag (PERF-18).
+if (perfEnabled()) startLongTaskLog()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
