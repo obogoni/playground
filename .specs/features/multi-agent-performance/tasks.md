@@ -101,11 +101,13 @@ T20 → T21 → T22
 **Requirement**: PERF-16, PERF-18
 
 **Done when**:
-- [ ] Line format is `[perf] loop p50=<n> p99=<n> max=<n>` in ms with 1 decimal (nanosecond histogram → ms), asserted literally
-- [ ] Interval is 10,000 ms and resolution 10 ms, asserted literally (L-009)
-- [ ] `enabled: false` → no monitor created, no interval, no log
-- [ ] Stop disables the monitor and clears the interval
-- [ ] Gate: quick; Test count B + ≥5
+- [x] Line format is `[perf] loop p50=<n> p99=<n> max=<n>` in ms with 1 decimal (nanosecond histogram → ms), asserted literally
+- [x] Interval is 10,000 ms and resolution 10 ms, asserted literally (L-009)
+- [x] `enabled: false` → no monitor created, no interval, no log
+- [x] Stop disables the monitor and clears the interval
+- [x] Gate: quick; Test count B + ≥5
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
