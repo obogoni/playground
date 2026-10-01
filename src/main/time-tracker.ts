@@ -25,6 +25,12 @@ export interface TimeTrackerDeps {
   newId: () => string
   /** Attribution at open time (TIME-03); never throws, nulls when unresolvable (TIME-12). */
   resolveSnapshot: (cwd: string) => PeriodSnapshotFields
+  /**
+   * The same attribution read without blocking (PERF-21). When present, every
+   * opened period is patched with its answer; `resolveSnapshot` is then only
+   * the cached guess the period opens on.
+   */
+  resolveSnapshotAsync?: (cwd: string) => Promise<PeriodSnapshotFields>
   /** Pinned title for a task id from the TaskBoard cache; null when unknown (HTSK-06). */
   pinnedTitle: (id: number) => string | null
   /** Pushes `time:changed`; bound to the window by index.ts. */
@@ -266,7 +272,7 @@ export class TimeTracker {
     run: Pick<Run, 'agent' | 'cwd' | 'task'>,
     at: string = this.#nowIso()
   ): OpenPeriod {
-    return {
+    const open: OpenPeriod = {
       id: this.deps.newId(),
       sessionId,
       agent: run.agent,
@@ -275,6 +281,50 @@ export class TimeTracker {
       start: at,
       lastSeen: at
     }
+    // The task is the one this period opened with: a later task change closes
+    // it and opens another, which gets its own read.
+    const task = run.task
+    this.deps
+      .resolveSnapshotAsync?.(run.cwd)
+      .then((fresh) =>
+        this.#reattribute(open.id, withSessionTask(fresh, task, this.deps.pinnedTitle))
+      )
+      .catch(() => {})
+    return open
+  }
+
+  /**
+   * Applies a late attribution to the period `id` (PERF-21): in place while it
+   * is open, in the log once it closed and was kept, nowhere when it was
+   * discarded. An answer equal to what the period carries writes nothing.
+   */
+  #reattribute(id: string, fields: PeriodSnapshotFields): void {
+    const patch = <P extends OpenPeriod | TimePeriod>(period: P): P | null => {
+      const { workspacePath, repoName, branch, taskId, taskTitle, taskByHand, ...rest } = period
+      const same =
+        workspacePath === fields.workspacePath &&
+        repoName === fields.repoName &&
+        branch === fields.branch &&
+        taskId === fields.taskId &&
+        taskTitle === fields.taskTitle &&
+        taskByHand === fields.taskByHand
+      return same ? null : ({ ...rest, ...fields } as P)
+    }
+    for (const run of this.#runs.values()) {
+      if (run.open?.id !== id) continue
+      const next = patch(run.open)
+      if (next) {
+        run.open = next
+        this.#changed()
+      }
+      return
+    }
+    const index = this.#periods.findIndex((p) => p.id === id)
+    if (index === -1) return
+    const next = patch(this.#periods[index])
+    if (!next) return
+    this.#periods = [...this.#periods.slice(0, index), next, ...this.#periods.slice(index + 1)]
+    this.#rewritten()
   }
 
   /** Appends the closed period, or discards it when shorter than 1 s or reversed (TIME-11). */

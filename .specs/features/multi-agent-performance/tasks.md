@@ -627,13 +627,15 @@ T27 → T28
 **Requirement**: PERF-21
 
 **Done when**:
-- [ ] Open period: resolve with different fields → `snapshot().open[0]` carries them, `writeOpen` and `emit` called
-- [ ] Closed and kept (≥ 1 s) before resolve → the closed period carries them, `rewrite` and `emit` called
-- [ ] Discarded (< 1 s) before resolve → no rewrite, no emit, periods unchanged
-- [ ] Same fields → no write, no emit; rejection → nothing changes
-- [ ] Hand-set task: the patched period keeps the hand-set task fields (`withSessionTask`)
-- [ ] Every existing `time-tracker.test.ts` test passes unmodified
-- [ ] Gate: quick
+- [x] Open period: resolve with different fields → `snapshot().open[0]` carries them, `writeOpen` and `emit` called
+- [x] Closed and kept (≥ 1 s) before resolve → the closed period carries them, `rewrite` and `emit` called
+- [x] Discarded (< 1 s) before resolve → no rewrite, no emit, periods unchanged
+- [x] Same fields → no write, no emit; rejection → nothing changes
+- [x] Hand-set task: the patched period keeps the hand-set task fields (`withSessionTask`)
+- [x] Every existing `time-tracker.test.ts` test passes unmodified
+- [x] Gate: quick
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
