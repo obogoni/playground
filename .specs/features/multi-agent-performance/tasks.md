@@ -228,11 +228,13 @@ T20 → T21 → T22
 **Requirement**: PERF-04, PERF-05, PERF-06, PERF-07
 
 **Done when**:
-- [ ] Load OK → `kind() === 'webgl'`, `loadAddon` called once
-- [ ] `create` or `loadAddon` throws → `warn` called once, `kind() === 'dom'`, no throw out
-- [ ] Context loss → addon disposed once, `kind() === 'dom'`
-- [ ] Context loss then `dispose()` (unmount) → addon disposed exactly once (Edge Case)
-- [ ] Gate: quick; Test count B + ≥24
+- [x] Load OK → `kind() === 'webgl'`, `loadAddon` called once
+- [x] `create` or `loadAddon` throws → `warn` called once, `kind() === 'dom'`, no throw out
+- [x] Context loss → addon disposed once, `kind() === 'dom'`
+- [x] Context loss then `dispose()` (unmount) → addon disposed exactly once (Edge Case)
+- [x] Gate: quick; Test count B + ≥24
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
