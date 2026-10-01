@@ -287,10 +287,12 @@ T20 → T21 → T22
 **Requirement**: PERF-08, PERF-09
 
 **Done when**:
-- [ ] Equal when two `buildRailGroups` runs over the same inputs yield the row (fresh objects)
-- [ ] Not equal when any of `label`, `status`, `tooltip`, `actions`, `session` identity differ (one test each)
-- [ ] `applyActivity(list, 'A', …)`: every non-A element `toBe` the original; A is a new object
-- [ ] Gate: quick; Test count B + ≥31
+- [x] Equal when two `buildRailGroups` runs over the same inputs yield the row (fresh objects)
+- [x] Not equal when any of `label`, `status`, `tooltip`, `actions`, `session` identity differ (one test each)
+- [x] `applyActivity(list, 'A', …)`: every non-A element `toBe` the original; A is a new object
+- [x] Gate: quick; Test count B + ≥31
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick

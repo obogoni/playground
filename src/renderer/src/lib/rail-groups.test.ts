@@ -7,7 +7,9 @@ import {
   buildRailGroups,
   flatRows,
   headerCounts,
+  railRowEqual,
   statusClass,
+  type RailRow,
   type LevelGroup,
   type OrphanGroup,
   type TaskGroup
@@ -967,5 +969,56 @@ describe('buildRailGroups level groups (ISO-08, ISO-09)', () => {
     expect(group.key).toBe('session:s1')
     expect(group.reason).toBe('detached')
     expect(group.note).toBe('detached · Work')
+  })
+})
+
+describe('railRowEqual (PERF-09)', () => {
+  const sessions = [
+    session({ id: 's1', status: 'running', activity: { state: 'working', subagents: 0 } }),
+    session({ id: 's2' })
+  ]
+  const rowsOf = (): RailRow[] => flatRows(buildRailGroups(sessions, tree(WT_A), pinned))
+
+  it('treats the fresh rows of two runs over the same inputs as equal', () => {
+    const first = rowsOf()
+    const second = rowsOf()
+
+    expect(second[0]).not.toBe(first[0])
+    expect(second[0].actions).not.toBe(first[0].actions)
+    expect(railRowEqual(first[0], second[0])).toBe(true)
+    expect(railRowEqual(first[1], second[1])).toBe(true)
+  })
+
+  it('compares actions element by element', () => {
+    const [row] = rowsOf()
+
+    expect(railRowEqual(row, { ...row, actions: ['stop'] })).toBe(true)
+    expect(railRowEqual(row, { ...row, actions: ['respawn', 'remove'] })).toBe(false)
+    expect(railRowEqual(row, { ...row, actions: ['stop', 'remove'] })).toBe(false)
+  })
+
+  it('is not equal when the id differs', () => {
+    const [row] = rowsOf()
+    expect(railRowEqual(row, { ...row, id: 'other' })).toBe(false)
+  })
+
+  it('is not equal when the label differs', () => {
+    const [row] = rowsOf()
+    expect(railRowEqual(row, { ...row, label: 'Claude 2' })).toBe(false)
+  })
+
+  it('is not equal when the status differs', () => {
+    const [row] = rowsOf()
+    expect(railRowEqual(row, { ...row, status: 'waiting' })).toBe(false)
+  })
+
+  it('is not equal when the tooltip differs', () => {
+    const [row] = rowsOf()
+    expect(railRowEqual(row, { ...row, tooltip: `${row.tooltip} · Bash` })).toBe(false)
+  })
+
+  it('compares the session by identity, not by content', () => {
+    const [row] = rowsOf()
+    expect(railRowEqual(row, { ...row, session: { ...row.session } })).toBe(false)
   })
 })
