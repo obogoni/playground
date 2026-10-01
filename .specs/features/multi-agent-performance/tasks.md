@@ -697,7 +697,9 @@ T29 → T30
 **Requirement**: PERF-22
 
 **Done when**:
-- [ ] Gate: build (the existing real-git suites exercise `git()` through the pacer)
+- [x] Gate: build (the existing real-git suites exercise `git()` through the pacer)
+
+**Status**: ✅ Done
 
 **Tests**: none
 **Gate**: build
