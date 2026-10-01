@@ -1,0 +1,231 @@
+# Terminal Last Row Design
+
+**Spec**: `.specs/features/terminal-last-row/spec.md` (TROW-01..10)
+**Status**: Draft
+
+---
+
+## Verdict
+
+1. **Measure first.** T1 builds the smoke in report mode and runs it on the current build. It must reproduce the predicted model below at every probe. If it does not, the plan stops and goes back to the owner before any fix.
+2. **Split the pane.** `.terminal-pane` stays the padded outer element and keeps everything that lives in the padding today: the copy chip and every mouse and drop listener. A new unpadded `.terminal-host` inside it is what `term.open` and the ResizeObserver get. The fit addon then reads the height that is really there.
+3. **Refit on a display scale change.** A pure helper watches a `matchMedia` resolution query and re-arms it with the new ratio after each change. The pane refits on the next animation frame, after xterm's own re-measure, and sends `session:resize`.
+4. **Prove it in the real app.** `scripts/smoke-terminal-rows.mjs` sweeps heights and display scales over CDP. Every check is seen failing on a broken build first: the current build for the rows checks, the post-split build for the scale checks, and scripted mutants after each fix.
+
+Main, preload and the IPC contract do not change.
+
+---
+
+## Verified Facts This Design Stands On
+
+| Fact | Evidence |
+| ---- | -------- |
+| The terminal opens into the padded element: `term.open(container)` on `<div ref={containerRef} className="terminal-pane" />`, then `fit.fit()` | `src/renderer/src/components/TerminalPane.tsx:171-172`, `:593` |
+| `.terminal-pane` is `padding: 8px 10px; box-sizing: border-box; overflow: hidden; position: relative; height: 100%` | `src/renderer/src/components/TerminalPane.css:4-14` |
+| In the Agents view it is a flex child: `.agents-detail .terminal-pane { flex: 1; min-height: 0 }` inside the `.agents-detail` column | `src/renderer/src/components/AgentsView.css:10-16`, `:267-270` |
+| The fit reads `getComputedStyle(term.element.parentElement).height` (padding included under `border-box`), truncates it with `parseInt`, and subtracts only the padding of `term.element` (`.xterm`, zero) | `node_modules/@xterm/addon-fit/src/FitAddon.ts:73`, `:84` |
+| Columns subtract a 14 px scrollbar lane whenever scrollback is on (default 1000) | `FitAddon.ts:68-70`; `node_modules/@xterm/xterm/src/browser/shared/Constants.ts:7` |
+| The addon's floors are 2 columns and 1 row | `FitAddon.ts:23-24`, `:87-88` |
+| `sendResize` is `fit.fit()` then `session:resize` with `term.cols` / `term.rows`; one ResizeObserver on the container is the only refit trigger | `TerminalPane.tsx:453-459` |
+| The copy chip is appended to the container before `term.open` and positioned against it (`right: 14px; top: 10px; z-index: 20`) | `TerminalPane.tsx:134-137`; `TerminalPane.css:30-49` |
+| Every mouse and drop listener is on the container: link gesture (capture) `:346-347`, right-click copy/paste and context menu (capture) `:554-555`, drag/drop `:556-557` | `TerminalPane.tsx` |
+| xterm already watches the display scale: `ScreenDprMonitor` re-arms `screen and (resolution: <dpr>dppx)` after each change and also checks on window `resize`; on a change `RenderService` re-measures the cell synchronously. Nothing refits the terminal's rows and columns | `node_modules/@xterm/xterm/src/browser/services/CoreBrowserService.ts:73-136`; `RenderService.ts:266-276` |
+| The DOM renderer's CSS cell height is `round(device cell height × rows / dpr) / rows`, so at a non-integer ratio it is fractional and the canvas can be up to 0.5 px off a whole multiple | `node_modules/@xterm/xterm/src/browser/renderer/dom/DomRenderer.ts:114-127` |
+| Main resizes only positive sizes; the PTY is spawned without cols/rows and gets them from the first `session:resize` | `src/main/session-manager.ts:324-326`; `src/main/pty-port.ts:31-36` |
+| An ad-hoc session runs its command as `pwsh.exe -NoExit -Command <command>` | `src/main/spawn-plan.ts:90-95` |
+| Only the selected running session mounts a `TerminalPane`, keyed by session id; views swap by conditional rendering | `src/renderer/src/components/AgentsView.tsx:334-341` |
+| The only other user of `.terminal-pane` is the agent smoke, through descendant selectors (`.terminal-pane .xterm-rows`), which still match after the split | `scripts/smoke-agent.mjs` |
+
+---
+
+## Predicted Model (T1 confirms it or stops the plan)
+
+On the current build, with vertical padding P = 16 (top 8, bottom 8), content height c = pane height − 16, CSS cell height h:
+
+| Quantity | Predicted value |
+| -------- | --------------- |
+| Rows the terminal gets | ⌊(⌊c⌋ + 16) / h⌋, the addon reading the padded height |
+| Rows that fit | ⌊⌊c⌋ / h⌋ |
+| Extra row | whenever (c mod h) ≥ h − 16, so at every remainder from 1 px up for h ≈ 17 |
+| Clipped part of the last row | max(0, rows × h − c − 8) px: an extra row is cut when (c mod h) ≤ h − 9 (1-8 px at h = 17) and drawn whole inside the bottom padding when (c mod h) ≥ h − 8 |
+| PTY rows | equal to the terminal's rows (same wrong count) |
+| Columns | ⌊(⌊content width⌋ + 20 − 14) / w⌋: 6 px of overestimate that lands in the 10 px right padding |
+
+This refines the issue's wording ("whenever the leftover height is 1-8 px the fit asks for one row too many"): the extra row is asked for at more remainders than that, and 1-8 px is where part of it is hidden. The cause and the fix are the same.
+
+**Stop rule.** T1 stops the plan, with no fix task started, and reports to the owner if any of these holds at any probe:
+
+- the element `.xterm` opens into is not `.terminal-pane`;
+- the terminal's rows differ from ⌊(⌊c⌋ + 16) / h⌋;
+- the clipped amount differs from max(0, rows × h − c − 8) by more than 0.5 px;
+- no probe clips the last row at all.
+
+T1 appends the measured table to this file under `## Measured (T1)`.
+
+---
+
+## Architecture
+
+```
+Current                                   After
+.terminal-pane  (padding 8/10, border-box, .terminal-pane  (padding 8/10, border-box,
+  overflow hidden, position relative)       overflow hidden, position relative)
+  ├─ .terminal-copied (chip)                ├─ .terminal-copied (chip)
+  └─ .xterm  ◄─ term.open, observed         └─ .terminal-host (no padding, no border,
+                                                 fills the content box)  ◄─ term.open, observed
+                                                 └─ .xterm
+listeners: on .terminal-pane                listeners: on .terminal-pane (unchanged)
+```
+
+```mermaid
+graph TD
+    RO[ResizeObserver on .terminal-host] --> SR[sendResize: fit.fit + session:resize]
+    DPR[watchDevicePixelRatio] -->|next animation frame| SR
+    XT[xterm ScreenDprMonitor] -->|re-measures cell, same change| CELL[css cell size]
+    CELL --> SR
+    SR --> MAIN[main: session-manager resize, unchanged]
+```
+
+---
+
+## Code Reuse Analysis
+
+### Existing Components to Leverage
+
+| Component | Location | How to Use |
+| --------- | -------- | ---------- |
+| `sendResize` | `TerminalPane.tsx:453-459` | Unchanged; called by the observer and by the display scale refit |
+| `.terminal-pane` rules | `TerminalPane.css:4-14`, `AgentsView.css:267-270` | Stay on the outer element, so the padding, background, flex sizing and the chip's containing block are unchanged |
+| CDP helpers (`pageTarget`, `send`, `evaluate`, `check`) | `scripts/smoke-agent.mjs` | Copied into the new smoke, as every smoke does |
+| `--seed` throwaway userData, pointer file, refusal on other data, launch line with the anti-occlusion flags | `scripts/smoke-hours-calendar.mjs:79-95`, `:238-346` | Same pattern for the new smoke |
+| Ad-hoc `sessions:spawn`, `sessions:rename`, `sessions:stop`, `sessions:remove`, `Emulation.setDeviceMetricsOverride` / `clearDeviceMetricsOverride`, direction switch | `scripts/smoke-status-bar.mjs:559-570`, `:642-650`, `:1332-1370`, `:330` | Spawn and clean up the fill session, change the viewport |
+| `SMOKE_ONLY=<section>` focused mode | `scripts/smoke-files-diff.mjs:517-550` | `SMOKE_ONLY=rows`, `look`, `dpr` |
+| Pure-helper + injected-fake test pattern | `.specs/codebase/TESTING.md` (patterns 1 and 3) | The display scale watcher takes a window-like object |
+
+### Integration Points
+
+| System | Integration Method |
+| ------ | ------------------ |
+| `session:resize` IPC | Same message, sent from the same `sendResize` |
+| xterm `ScreenDprMonitor` | Not called; the app's own query observes the same change, and the refit is deferred one frame past it |
+
+---
+
+## Components
+
+### `TerminalPane` (modified)
+
+- **Purpose**: Open the terminal into an unpadded host inside the padded pane, and refit on a display scale change.
+- **Location**: `src/renderer/src/components/TerminalPane.tsx`, `TerminalPane.css`
+- **Interfaces**: props unchanged. Markup becomes `<div ref={paneRef} className="terminal-pane"><div ref={hostRef} className="terminal-host" /></div>`.
+- **Changes**:
+  - `term.open(host)` and `observer.observe(host)`. Everything else that used `container` stays on the pane: the chip, both capture `mousedown` listeners, `mouseup`, `contextmenu`, `dragover`, `drop`, and their removal.
+  - `.terminal-host`: zero padding and border, fills the pane's content box, and its height never depends on its content (for example `height: 100%` with `min-height: 0`, or the pane as a flex column and the host `flex: 1; min-height: 0`). `overflow: hidden`, no `z-index`, so the chip (z-index 20) stays above every xterm layer.
+  - After `observer.observe(host)`: `const stopDpr = watchDevicePixelRatio(window, () => { cancelAnimationFrame(dprFrame); dprFrame = requestAnimationFrame(sendResize) })`. The cleanup calls `stopDpr()` and `cancelAnimationFrame(dprFrame)` beside `observer.disconnect()`.
+- **Dependencies**: `watchDevicePixelRatio`.
+- **Reuses**: `sendResize`, the existing cleanup block.
+
+### `watchDevicePixelRatio` (new)
+
+- **Purpose**: Call back on every `devicePixelRatio` change, re-arming the query each time.
+- **Location**: `src/renderer/src/lib/device-pixel-ratio.ts` (+ `device-pixel-ratio.test.ts`)
+- **Interfaces**:
+  - `type DprWindow = Pick<Window, 'devicePixelRatio' | 'matchMedia'>`
+  - `watchDevicePixelRatio(win: DprWindow, onChange: (dpr: number) => void): () => void`: arms `(resolution: <win.devicePixelRatio>dppx)` with a `change` listener. On a change it removes that listener, arms a new query for the new ratio, then calls `onChange(newRatio)`. The returned function removes the current listener; no call happens after it.
+- **Dependencies**: none (no DOM import; the window is injected).
+- **Reuses**: the re-arm technique of xterm's `ScreenDprMonitor` (`CoreBrowserService.ts:115-127`).
+
+### `scripts/smoke-terminal-rows.mjs` (new)
+
+- **Purpose**: Measure and check the terminal's rows, columns and last row against the pane over CDP, at many heights and display scales.
+- **Modes**:
+  1. `--seed` (app not running): creates a throwaway userData directory under the OS temp folder, with a config that registers one fictional workspace folder `rows-smoke` (the refusal marker) and the fill script `fill-rows.mjs`. It writes a pointer file and prints the launch line: `npm run dev -- -- "--user-data-dir=<dir>" --remote-debugging-port=9222 --disable-renderer-backgrounding --disable-backgrounding-occluded-windows --disable-background-timer-throttling`.
+  2. Drive (default): refuses with `not running on the seeded data` unless `config:get` shows exactly the seeded workspace. It switches to Agents, spawns one Ad-hoc session (`node '<dir>/fill-rows.mjs'`, cwd `<dir>`, never a registry agent), selects it and waits for the fill marker. Then it runs the sections, prints one table row per probe and the checks. In a `finally` it clears the metrics override and stops and removes its session. On a full pass it deletes the directory; on a failure it keeps it and prints it.
+  3. `SMOKE_ONLY=rows | look | dpr` runs one section after the same setup. If T3 drops `dpr` (Route B), `SMOKE_ONLY=probe` replaces it: one reading at the app's real size and scale, no override, with the `rows` checks.
+- **Fill script** (written by `--seed`, never committed): hides the cursor and draws `row <i>` on rows 1..n−1 and `ROWS=<n> COLS=<m> LAST` on row n, with no trailing newline. It reads `process.stdout.getWindowSize()`, redraws on `resize` and also polls every 100 ms, so it does not depend on libuv's resize event under ConPTY.
+- **Probe(height, dpr)**: `Emulation.setDeviceMetricsOverride({ width: <launch width>, height, deviceScaleFactor: dpr, mobile: false })`. It then waits until the DOM row count is stable across two animation frames and the fill marker's `ROWS` equals it, with a 3 s timeout that fails the probe. It reads:
+  - `parent`: the element `.xterm` opens into (`.xterm`.parentElement), its class, and its content box (border box minus padding and border);
+  - `h`, `w`: the first `.xterm-rows > div` height and the CSS cell width (`.xterm-screen` width / cols);
+  - `rows` (count of `.xterm-rows > div`), `cols`, `ptyRows`, `ptyCols` (from the marker), the text of the last DOM row;
+  - `lastBottom` (last row's bottom), `lastRight` (`.xterm-screen` right);
+  - `visible`: the viewport intersected with the padding box of every ancestor of the last row whose `overflow-y` (or `overflow-x` for the right edge) is not `visible`;
+  - `addonModel` = ⌊parseInt(computed height of parent) / h⌋ and `clipModel` = max(0, rows × h − c − padBottom(parent)), for T1's stop rule;
+  - offsets: the parent's content box against the `.terminal-pane` border box, the first row's top-left against it, and the chip's right/top against it.
+- **Sections and checks**:
+
+| Section | Probes | Checks (each aggregated over its probes, failing probes listed) |
+| ------- | ------ | ---------------------------------------------------------------- |
+| `rows` | DPR 1: max(20, ⌈h⌉ + 3) consecutive heights in 1 px steps from 600 px. DPR 1.25 and 1.5: 20 heights each | rows = ⌊⌊c⌋ / h⌋ (0.5 px tolerance at non-integer DPR) (TROW-02); lastBottom ≤ visible bottom + 0.5 (TROW-03); cols = ⌊(⌊W⌋ − 14) / w⌋ and lastRight ≤ visible right + 0.5 (TROW-04); ptyRows = rows, ptyCols = cols, and the last DOM row contains the marker (TROW-05) |
+| `look` | 3 heights at DPR 1 | parent content box inset (8, 10, 8, 10) from the pane (TROW-07 AC 1); first row's text origin (10, 8) (AC 2); chip at right 14, top 10 (AC 3) |
+| `dpr` (added by T3) | 8 fixed heights; at each, DPR 1 → 1.25 → 1.5 → 2 → 1 with the CSS height unchanged | after each step, the `rows` checks hold with the new h (TROW-09); the second and later steps hold too (TROW-10, re-arm) |
+
+- **Guards against checks that cannot fail** (each a check of its own):
+  - at DPR 1 the probes' ⌊c⌋ mod h covers every integer remainder 0..⌈h⌉−1;
+  - consecutive probes differ in ⌊c⌋ by exactly 1 px (the override really resized the pane);
+  - `rows` changes at least once across the DPR 1 sweep, and the marker's `ROWS` follows it;
+  - in `dpr`: `window.devicePixelRatio` equals the requested factor, `matchMedia('(resolution: <dpr>dppx)').matches` is true, h differs between at least two factors, and at least one probe's expected rows change between factors.
+
+  A failed guard fails the run. It is never reported as a pass.
+
+### Mutant runner (scratch, never committed)
+
+A throwaway node script in the OS temp folder, outside the repository. For one mutant it:
+
+1. reads the target file and asserts the anchor text occurs exactly once (anchored on the prettier-formatted text);
+2. copies the file to `<file>.orig`, then writes the mutated text;
+3. relaunches the dev app on a fresh `--seed` (renderer edits hot-reload, but a fresh launch removes doubt), then runs the section with `SMOKE_ONLY`;
+4. in a `finally`, kills the app, restores the file from `.orig` and deletes `.orig`;
+5. then requires `git status --porcelain` to equal its value before step 1.
+
+| Mutant | Target and change | Must fail |
+| ------ | ----------------- | --------- |
+| M1 host padding | `.terminal-host` gets `padding: 8px 10px; box-sizing: border-box` | `rows`: TROW-02, 03, 04 |
+| M2 chip on the host | the chip is appended to the host instead of the pane | `look`: chip check |
+| M3 pane padding | `.terminal-pane` `padding: 8px 10px` becomes `padding: 6px 10px` | `look`: inset and origin checks |
+| M4 no scale refit | the `watchDevicePixelRatio(...)` call is replaced by a no-op | `dpr`: TROW-09 |
+| M5 no re-arm | `watchDevicePixelRatio` keeps the first query after a change | unit test (TROW-10) and `dpr` second step |
+| M6 no dispose | the returned function does not remove the listener | unit test (TROW-10) |
+
+M2 and M3 run on the current build in T1, where the pane is also the parent. M2 there appends the chip to `.xterm` instead.
+
+---
+
+## Error Handling Strategy
+
+| Error Scenario | Handling | User Impact |
+| -------------- | -------- | ----------- |
+| The addon proposes no size (cell not measured yet, element detached) | Unchanged: `fit()` does nothing, and the send carries the unchanged size | None, as today |
+| A zero size reaches main | Unchanged: `resize` skips it (`session-manager.ts:325-326`) | None |
+| A display scale change fires after unmount | The listener is removed and the pending frame cancelled in cleanup | None |
+| Scale change and resize in the same frame | Both refits run, and the frame-deferred one runs last with the final cell size | One extra `session:resize` with the same size |
+| The smoke's probe never settles | The probe fails after 3 s with its last reading | Smoke FAIL, never a silent pass |
+
+---
+
+## Risks & Concerns
+
+| Concern | Location (file:line) | Impact | Mitigation |
+| ------- | -------------------- | ------ | ---------- |
+| Moving `term.open` could carry the listeners and chip along with it | `TerminalPane.tsx:137`, `:346-347`, `:554-557` | Right-click, link and drop in the padding would stop working, and the chip would shift by (10, 8) px | Only `term.open` and `observer.observe` move. TROW-07 offsets are smoke-checked with M2 and M3. TROW-08 gestures are a hand check in T2 |
+| The host's height could follow its content | `TerminalPane.css` (new rule) | The observer would never see the host grow, and rows would freeze | The host's height must come from the pane, never from its content. T2's sweep grows and shrinks the pane, and the rows-change guard catches a frozen host |
+| Ordering against xterm's own re-measure | `CoreBrowserService.ts:125`; `RenderService.ts:266-276` | A refit before the re-measure would size rows from the old cell | Refit on the next animation frame (Tech Decisions). T3/T5 check rows against the new h |
+| CDP scale emulation might not reach xterm | `scripts/smoke-terminal-rows.mjs` `dpr` section | A scale check that cannot fail | The `dpr` guards. If any fails in T3, the section is dropped and the route is the unit tests plus a hand check (spec Assumptions) |
+| Columns drop by 2-3 at the same window width | `FitAddon.ts:68-70`, `:85` | Visible change on the right edge | Owner decision pending (spec Assumptions). T1 measures today's last column against the scrollbar lane |
+| The fit addon reads private xterm state (`_core._renderService.dimensions`) | `FitAddon.ts:60-61` | An xterm upgrade can break the fit | Pre-existing and unchanged; the smoke catches a regression on upgrade |
+| `.terminal-pane .xterm-viewport::-webkit-scrollbar` rules likely style nothing under xterm 6's overlay scrollbar | `TerminalPane.css:17-24`; `xterm.css:224-235` | Dead CSS | Out of scope; mentioned, not deleted |
+
+---
+
+## Tech Decisions
+
+| Decision | Choice | Rationale |
+| -------- | ------ | --------- |
+| What stays on the outer element | The chip and every listener stay on `.terminal-pane`; only `term.open` and the observer move to the host | Behaviour in the padding and the chip's position stay identical with zero CSS changes to either |
+| When the scale refit runs | `requestAnimationFrame` after the query's `change`, with a pending frame cancelled and replaced | It does not depend on listener order across `MediaQueryList` objects, and it coalesces with a same-frame observer delivery |
+| How the smoke changes the height | Viewport emulation in 1 px steps; real `Browser.setWindowBounds` cross-check at 3 heights in T1 if Electron accepts it | Prior art, deterministic; layout, `ResizeObserver` and `getComputedStyle` see the emulated viewport as a real one |
+| How the smoke reads the PTY's size | The fill script's last line | End to end, with no new IPC; it also proves the TUI's last line is on screen |
+| Smoke tolerance | 0.5 px | xterm rounds its canvas to whole device pixels (`DomRenderer.ts:124-127`) |
+
+### Project-level decision to record
+
+**AD-TBD (number chosen at Execute; main holds up to AD-051).** The element an xterm terminal opens into carries no padding and no border. Spacing around a terminal belongs to a wrapper, which also owns the pane's mouse and drop listeners and any overlay. A terminal refits (`fit()` + `session:resize`) on a ResizeObserver of that host and on every `devicePixelRatio` change, through a `matchMedia` resolution query that is re-armed after each change. Rationale: the fit addon subtracts only the padding of xterm's own element, so a padded host makes it ask for rows that do not fit (#146). Recorded in `.specs/STATE.md` at Execute, in T2's commit.
