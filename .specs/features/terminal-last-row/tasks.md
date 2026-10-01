@@ -8,13 +8,14 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 ---
 
-**Spec**: `.specs/features/terminal-last-row/spec.md` (TROW-01..10)
+**Spec**: `.specs/features/terminal-last-row/spec.md` (TROW-01..11)
 **Design**: `.specs/features/terminal-last-row/design.md`
 **Status**: Draft
 **Branch**: `feature/terminal-last-row` (cut from `origin/main`)
 **Test baseline**: **B** = the `npm test` count on the branch before T1, measured in T1's setup and written here. Every "Test count" below is `B + N`, cumulative.
 **Stop rule**: T1 measures the cause on the current build. If the measured cause differs from the model in `design.md` §Predicted Model, Execute stops after T1 and the plan goes back to the owner. T2 does not start.
-**Pending owner** (spec Assumptions): spacing reading, the column change, height emulation, sweep size, display scale route, the fill script. They are confirmed with the plan, before T1.
+**Owner decision 2026-10-01**: keep today's columns. Only the vertical axis changes: the pane takes `padding: 8px 0` and a `border-box` host takes `padding: 0 10px` (`design.md` §Verdict 2, TROW-11).
+**Pending owner** (spec Assumptions): spacing reading, height emulation, sweep size, display scale route, the fill script. They are confirmed with the plan, before T1.
 
 **Smoke rules for every task that runs the app:**
 
@@ -82,11 +83,11 @@ T4 → T5
 
 ### T1: Measure the rows on the current build
 
-**What**: The smoke's `--seed` and drive modes with the `rows` and `look` sections, run in report mode on the unchanged build to measure the cause
+**What**: The smoke's `--seed` and drive modes with the `rows`, `cols` and `look` sections, run in report mode on the unchanged build to measure the cause and record today's column baseline
 **Where**: `scripts/smoke-terminal-rows.mjs` (new)
 **Depends on**: None
 **Reuses**: CDP helpers from `scripts/smoke-agent.mjs`; seed, pointer and refusal from `scripts/smoke-hours-calendar.mjs`; spawn, cleanup and viewport override from `scripts/smoke-status-bar.mjs`; `SMOKE_ONLY` from `scripts/smoke-files-diff.mjs`
-**Requirement**: TROW-02, TROW-03, TROW-04, TROW-05, TROW-07
+**Requirement**: TROW-02, TROW-03, TROW-04, TROW-05, TROW-07, TROW-11
 
 **Tools**:
 
@@ -99,7 +100,8 @@ T4 → T5
 - [ ] The script follows `design.md` §`scripts/smoke-terminal-rows.mjs`: `--seed` writes the throwaway userData, the fictional `rows-smoke` workspace and the fill script; the drive refuses any other data, spawns only the Ad-hoc fill session, and stops, removes and clears the override in `finally`
 - [ ] On the current build, `SMOKE_ONLY=rows` probes max(20, ⌈h⌉ + 3) consecutive heights at DPR 1 and 20 each at 1.25 and 1.5. The full table is appended to `design.md` under `## Measured (T1)`, including today's columns, the last column's right edge against the 14 px scrollbar lane, and `parent`, `addonModel` and `clipModel` per probe
 - [ ] Stop rule (`design.md` §Predicted Model) evaluated and its verdict written under the table. If any condition holds: STOP, report the table to the owner, and do not start T2
-- [ ] First seen failing, on the natural broken build (padding on the host): the rows-fit check fails at every probe with ⌊c⌋ mod h ≥ h − 16; the last-row check fails at every probe whose `clipModel` exceeds 0.5 px (1-8 px remainders at h = 17), and only there; the PTY check fails wherever the rows check does; the columns check fails at ≥1 probe. A check that does not fail where the model says is a stop-rule finding
+- [ ] First seen failing, on the natural broken build (padding on the host): the rows-fit check fails at every probe with ⌊c⌋ mod h ≥ h − 16; the last-row check fails at every probe whose `clipModel` exceeds 0.5 px (1-8 px remainders at h = 17), and only there; the PTY check fails wherever the rows check does. A check that does not fail where the model says is a stop-rule finding
+- [ ] Column baseline recorded on the current build: `SMOKE_ONLY=cols SMOKE_BASELINE=write` writes `playground-smoke-rows-cols.json` to the OS temp folder (per `design.md` §Modes 4), and the counts are copied under `## Measured (T1)`. The last-column check (TROW-04) passes at every `rows` and `cols` probe; a probe where it fails is a stop-rule finding. The `cols` comparison (TROW-11) and TROW-04 cannot fail on the build that defines the baseline, so they are first seen failing in T2, under M7 and M8. The cols-changes guard passes at each DPR
 - [ ] Guards pass: remainder coverage 0..⌈h⌉−1 at DPR 1, 1 px steps, rows changes across the sweep and the marker follows it
 - [ ] `SMOKE_ONLY=look` passes on the current build (inset 8/10/8/10, origin (10, 8), chip right 14 / top 10, within 0.5 px), and fails under M2 (chip appended to `.xterm`) and M3 (pane padding `6px 10px`), each through the mutant runner (anchor count 1, `.orig` restored, porcelain unchanged)
 - [ ] `Browser.setWindowBounds` tried for 3 heights: if Electron accepts it, the readings match the emulated ones within 0.5 px; if it rejects it, the error is recorded under the table and emulation stands
@@ -113,13 +115,13 @@ T4 → T5
 
 ---
 
-### T2: Open the terminal into an unpadded host
+### T2: Open the terminal into a host with no vertical padding
 
-**What**: `TerminalPane` renders `.terminal-pane` (padded, unchanged) around a new `.terminal-host` (no padding, no border, height from the pane), passes the host to `term.open` and the ResizeObserver, and keeps the chip and every listener on the pane. The `.terminal-host` rule goes in `TerminalPane.css`
+**What**: `TerminalPane` renders `.terminal-pane` (padding now `8px 0`) around a new `.terminal-host` (`padding: 0 10px`, `box-sizing: border-box`, no border, height from the pane). It passes the host to `term.open` and the ResizeObserver, and keeps the chip and every listener on the pane. Both rules live in `TerminalPane.css`
 **Where**: `src/renderer/src/components/TerminalPane.tsx` (modify, with its stylesheet)
 **Depends on**: T1
 **Reuses**: `sendResize`, the existing cleanup block, `.terminal-pane` rules (`design.md` §TerminalPane)
-**Requirement**: TROW-01, TROW-02, TROW-03, TROW-04, TROW-05, TROW-06, TROW-07, TROW-08
+**Requirement**: TROW-01, TROW-02, TROW-03, TROW-04, TROW-05, TROW-06, TROW-07, TROW-08, TROW-11
 
 **Tools**:
 
@@ -130,8 +132,9 @@ T4 → T5
 
 - [ ] `term.open(host)` and `observer.observe(host)`; the chip, both capture `mousedown` listeners, `mouseup`, `contextmenu`, `dragover` and `drop` stay on the pane, with their removal unchanged (TROW-01)
 - [ ] `SMOKE_ONLY=rows` passes every probe at DPR 1, 1.25 and 1.5, guards included (TROW-02..05)
+- [ ] `SMOKE_ONLY=cols` passes: at every probed width and DPR the column count equals T1's baseline, and the last column is inside the visible box (TROW-11, TROW-04)
 - [ ] `SMOKE_ONLY=look` passes, and its readings equal T1's within 0.5 px (TROW-07)
-- [ ] M1 (host padding `8px 10px`, `border-box`) makes the `rows` checks fail again; M2 (chip on the host) and M3 (pane padding `6px 10px`) make `look` fail; each through the mutant runner
+- [ ] M1 (host `padding: 8px 10px`) makes the `rows` checks fail again; M7 (host `content-box`) makes the TROW-11 comparison fail, its first-seen-failing run; M8 (host `padding: 0 10px 0 30px`) makes TROW-04 fail, its first-seen-failing run; M2 (chip on the host) and M3 (pane top padding 6 px) make `look` fail; each through the mutant runner
 - [ ] Hand check (TROW-08), with the pointer inside the left padding: right-click copies a Shift+drag selection and pastes on the next right-click; Ctrl+click on a printed path opens it; a file dropped from Explorer pastes its quoted path. Theme toggle recolours the terminal. Light and dark screenshots saved to the OS temp folder and looked at
 - [ ] `git diff --stat` touches nothing under `src/main` or `src/preload` (TROW-06)
 - [ ] The AD-TBD text in `design.md` §Project-level decision is appended to `.specs/STATE.md` `## Decisions` as the next free AD number at that moment, and that number replaces `AD-TBD` in `design.md`
@@ -164,7 +167,7 @@ T4 → T5
 - [ ] The `dpr` guards run before any check: `window.devicePixelRatio` equals the factor, `matchMedia('(resolution: <dpr>dppx)').matches`, h differs between at least two factors, and at least one probe's expected rows change between factors
 - [ ] **Route A** (every guard passes): on T2's build, the section fails with stale rows at ≥1 step. That is its first-seen-failing run, on the natural broken build. The failing steps are written under `## Display scale route (T3)` in `design.md`
 - [ ] **Route B** (any guard fails): the `dpr` section is removed from the script and replaced by `SMOKE_ONLY=probe`, which takes one reading at the app's real size and scale with no override and runs the `rows` checks on it. The failed guard and its readings are written under `## Display scale route (T3)`, and T5 takes its Route B
-- [ ] `SMOKE_ONLY=rows` and `SMOKE_ONLY=look` still pass on T2's build
+- [ ] `SMOKE_ONLY=rows`, `SMOKE_ONLY=cols` and `SMOKE_ONLY=look` still pass on T2's build
 - [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
 - [ ] Test count: B tests pass (no silent deletions)
 
@@ -255,7 +258,7 @@ Execution is strictly sequential, in task-number order. 5 tasks fit one batch, s
 | Task | Scope | Status |
 | ---- | ----- | ------ |
 | T1: Measure the rows | 1 script (two sections + seed) | ⚠️ Cohesive (one probe, read two ways) |
-| T2: Unpadded host | 1 component + its stylesheet rule | ✅ Granular |
+| T2: Host with no vertical padding | 1 component + its two stylesheet rules | ✅ Granular |
 | T3: Display scale check | 1 script section | ✅ Granular |
 | T4: Display scale watcher | 1 function | ✅ Granular |
 | T5: Refit on scale change | 1 component change | ✅ Granular |

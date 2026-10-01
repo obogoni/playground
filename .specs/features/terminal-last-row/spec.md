@@ -16,6 +16,7 @@ The likely cause, read from the code: the terminal opens into `.terminal-pane`, 
 - [ ] At every pane height, the terminal's rows and the PTY's rows equal the rows that fit in the host's real height.
 - [ ] After a display scale change, the terminal refits and the PTY gets the new size, with no window resize needed.
 - [ ] The padding between the pane's edge and the terminal is unchanged: 8 px top and bottom, 10 px left and right.
+- [ ] At every viewport, the terminal has the same number of columns as the current build has there.
 
 ## Out of Scope
 
@@ -38,12 +39,12 @@ Every ambiguity is resolved or recorded here. Rows marked `owner confirmed 2026-
 | --------------------- | -------------- | --------- | ---------- |
 | Cause of the clipped row | The fit sizes rows from the padded element's computed height (padding included under `border-box`) and subtracts only `.xterm`'s padding; the extra row overflows the content box and `overflow: hidden` clips part of it | Read from `TerminalPane.css:4-14` and `@xterm/addon-fit` 0.11 `FitAddon.ts` `proposeDimensions` | owner confirmed 2026-10-01 |
 | Cause verification | T1 measures it in the running app at many heights before any fix; if the measured cause differs from the predicted model (`design.md` §Predicted model), the plan goes back to the owner | The cause was read, not measured | owner confirmed 2026-10-01 |
-| Fix shape | The component splits its container into a padded outer element and an unpadded host passed to `term.open`; the ResizeObserver watches the host | Owner decision; the fit then reads the height that is really there | owner confirmed 2026-10-01 |
+| Fix shape | The component splits its container into an outer element and a host passed to `term.open`; the ResizeObserver watches the host. The outer element carries the vertical padding (`8px 0`); the host carries the horizontal padding (`0 10px`) with `box-sizing: border-box`, and no vertical padding | Owner decision, narrowed by the owner's choice to keep today's columns: the addon reads the host's border-box height (now unpadded, so rows are exact) and its border-box width (still the pane's full width, so columns are computed exactly as today; `FitAddon.ts:72-85`) | owner confirmed 2026-10-01 |
 | Display scale refit | A `matchMedia` resolution query, re-armed after each change, triggers a refit that sends `session:resize` like any other resize | Owner decision | owner confirmed 2026-10-01 |
 | Main process | No change to the PTY resize path | Owner decision | owner confirmed 2026-10-01 |
 | How layout is verified | In the real app by a CDP smoke, not by unit tests: about 20 consecutive heights, checking the last row's bottom against the visible box and rows against ⌊available height / cell height⌋; first seen failing on the current build; prior art `scripts/smoke-agent.mjs` | Owner decision; layout has no honest unit test | owner confirmed 2026-10-01 |
-| What "same spacing as today" means | The 8 px / 10 px padding between the pane's border and the terminal host is unchanged, and the first row's text starts at the same offset from the pane as today. The leftover under the last row (less than one cell) and the scrollbar lane sit inside the host, so the gap below the last row becomes 8 px plus that leftover, never less than 8 px | The owner's fix (no padding on the host) makes this the only reading that holds at every height; today's bottom gap is negative at some heights, which is the bug | pending owner |
-| Columns after the split | Columns are computed from the host's real width minus xterm's 14 px scrollbar lane. Today the fit adds the 20 px of horizontal padding, so after the fix a pane of the same width gets 2 or 3 fewer columns and the right margin grows by about 20 px. Accept it: the agent gets the columns that fit beside the scrollbar | Inherent to the owner's fix; keeping today's columns would need padding back on the host. T1 measures today's last column against the scrollbar lane so the owner sees both numbers | pending owner |
+| What "same spacing as today" means | The 8 px / 10 px padding between the pane's border and the terminal's text area is unchanged, and the first row's text starts at the same offset from the pane as today. The leftover under the last row (less than one cell) sits inside the host, so the gap below the last row becomes 8 px plus that leftover, never less than 8 px | The owner's fix (no vertical padding on the host) makes this the only reading that holds at every height; today's bottom gap is negative at some heights, which is the bug | pending owner |
+| Columns after the split | Keep today's columns: for the same viewport width, height and display scale, the terminal has the same column count as on the current build, and the right edge looks as it does today | Owner choice. The host keeps the 10 px horizontal padding under `border-box`, so the addon reads the same width as today and subtracts the same 14 px scrollbar lane | owner confirmed 2026-10-01: keep today's columns |
 | How the smoke changes the height | CDP `Emulation.setDeviceMetricsOverride` with a fixed width and 1 px height steps, not an OS window resize. If Electron accepts `Browser.setWindowBounds`, T1 repeats 3 heights with a real resize and the numbers must match | Prior art (`scripts/smoke-status-bar.mjs:642`); deterministic, free of the OS window's minimum size and frame | pending owner |
 | Sweep size | At DPR 1: max(20, ⌈cell height⌉ + 3) consecutive heights, so every integer remainder of the cell height occurs. Also 20 heights at DPR 1.25 and at 1.5 | The issue asks for about 20; fractional cell heights at a scaled display are where rounding errors live | pending owner |
 | How the display scale refit is verified | CDP `deviceScaleFactor` emulation, if T3 shows the page honestly sees it (`devicePixelRatio` changes, the resolution query matches, xterm's cell height changes). Otherwise the smoke drops the section and the refit is covered by the helper's unit tests plus a hand check that changes the Windows display scale with the app open | An emulation the terminal does not react to would make a check that cannot fail | pending owner |
@@ -63,13 +64,14 @@ Every ambiguity is resolved or recorded here. Rows marked `owner confirmed 2026-
 
 **Acceptance Criteria**:
 
-1. The terminal SHALL open into a host element with zero padding and zero border, placed inside the `.terminal-pane` element, which keeps `padding: 8px 10px`  <!-- ubiquitous -->
+1. The terminal SHALL open into a host element with zero vertical padding, zero border, `padding-left` and `padding-right` of 10 px and `box-sizing: border-box`, placed inside the `.terminal-pane` element, which carries `padding: 8px 0`  <!-- ubiquitous -->
 2. The ResizeObserver that triggers a refit SHALL observe the host element  <!-- ubiquitous -->
 3. WHEN the host's size changes THEN the terminal SHALL have ⌊⌊H⌋ / h⌋ rows, where H is the host's content height and h the CSS cell height; at a non-integer device pixel ratio a count whose total height is within 0.5 px of that bound SHALL also pass (xterm rounds its canvas to whole device pixels)  <!-- event-driven -->
 4. WHEN the host's size changes THEN the bottom of the terminal's last row SHALL be at or above the bottom of the pane's visible box (the viewport intersected with the padding box of every ancestor whose `overflow-y` is not `visible`), within 0.5 px  <!-- event-driven -->
-5. WHEN the host's size changes THEN the terminal SHALL have ⌊(⌊W⌋ − 14) / w⌋ columns, where W is the host's content width, 14 px xterm's scrollbar lane and w the CSS cell width, and the right edge of the last column SHALL be inside the visible box  <!-- event-driven -->
+5. WHEN the host's size changes THEN the right edge of the terminal's last column SHALL be inside the pane's visible box, within 0.5 px  <!-- event-driven -->
+6. WHEN the viewport has a given width, height and display scale THEN the terminal SHALL have the same number of columns as the current build has at that viewport (today: ⌊(⌊B⌋ − 14) / w⌋, B the width the addon reads, which includes the 20 px of horizontal padding, and w the CSS cell width)  <!-- event-driven -->
 
-**Independent Test**: The smoke sweeps the pane through consecutive heights and every probe passes AC 3 and 4; the same sweep fails on the current build.
+**Independent Test**: The smoke sweeps the pane through consecutive heights and every probe passes AC 3 and 4; the same sweep fails on the current build. A width sweep compares the column count at each viewport with a baseline recorded on the current build (AC 6).
 
 ---
 
@@ -148,23 +150,25 @@ Every ambiguity is resolved or recorded here. Rows marked `owner confirmed 2026-
 | TROW-01 | P1: Last row visible (AC 1-2, host split) | Tasks | In Tasks |
 | TROW-02 | P1: Last row visible (AC 3, rows that fit; Edge Cases 1-3) | Tasks | In Tasks |
 | TROW-03 | P1: Last row visible (AC 4, last row inside the visible box) | Tasks | In Tasks |
-| TROW-04 | P1: Last row visible (AC 5, columns) | Tasks | In Tasks |
+| TROW-04 | P1: Last row visible (AC 5, last column inside the visible box) | Tasks | In Tasks |
 | TROW-05 | P1: Real size (AC 1-2, PTY gets the size) | Tasks | In Tasks |
 | TROW-06 | P1: Real size (AC 3, main unchanged) | Tasks | In Tasks |
 | TROW-07 | P1: Same look (AC 1-3, offsets) | Tasks | In Tasks |
 | TROW-08 | P1: Same look (AC 4, gestures in the padding) | Tasks | In Tasks |
 | TROW-09 | P2: Display scale (AC 1, 4, refit after re-measure) | Tasks | In Tasks |
 | TROW-10 | P2: Display scale (AC 2-3, re-arm and dispose; Edge Cases 4-6) | Tasks | In Tasks |
+| TROW-11 | P1: Last row visible (AC 6, columns equal the current build's at the same viewport) | Tasks | In Tasks |
 
 **ID format:** `TROW-NN`.
 
-**Coverage:** 10 total, 10 mapped to tasks (T1-T5), 0 unmapped.
+**Coverage:** 11 total, 11 mapped to tasks (T1-T5), 0 unmapped.
 
 ---
 
 ## Success Criteria
 
 - [ ] `scripts/smoke-terminal-rows.mjs` fails on the current build at the heights the model predicts, then passes every probe at DPR 1, 1.25 and 1.5 on the fixed build
-- [ ] With the padding put back on the host (mutant), the rows checks fail again; with the display scale refit removed (mutant), the scale checks fail
+- [ ] The column count at every probed viewport equals the current build's baseline, and differs from it when the host's horizontal padding is removed (mutant)
+- [ ] With the vertical padding put back on the host (mutant), the rows checks fail again; with the display scale refit removed (mutant), the scale checks fail
 - [ ] The three offsets (host inset, text origin, chip) match the current build within 0.5 px
 - [ ] `npm run typecheck && npm run lint && npm test` stays green, with the new helper's unit tests added

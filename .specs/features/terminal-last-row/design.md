@@ -1,6 +1,6 @@
 # Terminal Last Row Design
 
-**Spec**: `.specs/features/terminal-last-row/spec.md` (TROW-01..10)
+**Spec**: `.specs/features/terminal-last-row/spec.md` (TROW-01..11)
 **Status**: Draft
 
 ---
@@ -8,7 +8,7 @@
 ## Verdict
 
 1. **Measure first.** T1 builds the smoke in report mode and runs it on the current build. It must reproduce the predicted model below at every probe. If it does not, the plan stops and goes back to the owner before any fix.
-2. **Split the pane.** `.terminal-pane` stays the padded outer element and keeps everything that lives in the padding today: the copy chip and every mouse and drop listener. A new unpadded `.terminal-host` inside it is what `term.open` and the ResizeObserver get. The fit addon then reads the height that is really there.
+2. **Split the padding by axis.** `.terminal-pane` stays the outer element and keeps the copy chip and every mouse and drop listener. Its padding becomes `8px 0`. A new `.terminal-host` inside it is what `term.open` and the ResizeObserver get. The host is `border-box` with `padding: 0 10px` and no vertical padding. The fit addon then reads the height that is really there, so rows are exact. It also reads the same width as today, so columns do not change (owner decision 2026-10-01: keep today's columns).
 3. **Refit on a display scale change.** A pure helper watches a `matchMedia` resolution query and re-arms it with the new ratio after each change. The pane refits on the next animation frame, after xterm's own re-measure, and sends `session:resize`.
 4. **Prove it in the real app.** `scripts/smoke-terminal-rows.mjs` sweeps heights and display scales over CDP. Every check is seen failing on a broken build first: the current build for the rows checks, the post-split build for the scale checks, and scripted mutants after each fix.
 
@@ -25,6 +25,7 @@ Main, preload and the IPC contract do not change.
 | In the Agents view it is a flex child: `.agents-detail .terminal-pane { flex: 1; min-height: 0 }` inside the `.agents-detail` column | `src/renderer/src/components/AgentsView.css:10-16`, `:267-270` |
 | The fit reads `getComputedStyle(term.element.parentElement).height` (padding included under `border-box`), truncates it with `parseInt`, and subtracts only the padding of `term.element` (`.xterm`, zero) | `node_modules/@xterm/addon-fit/src/FitAddon.ts:73`, `:84` |
 | Columns subtract a 14 px scrollbar lane whenever scrollback is on (default 1000) | `FitAddon.ts:68-70`; `node_modules/@xterm/xterm/src/browser/shared/Constants.ts:7` |
+| The fit reads the parent's width the same way as its height: `parseInt(getComputedStyle(parent).width)`, which under `border-box` is the border-box width with the horizontal padding included, minus only `.xterm`'s own padding and the scrollbar lane. A `border-box` host with `padding: 0 10px` that fills a pane with no horizontal padding therefore reads exactly the width today's pane reads, and gets today's columns | `FitAddon.ts:72-85` |
 | The addon's floors are 2 columns and 1 row | `FitAddon.ts:23-24`, `:87-88` |
 | `sendResize` is `fit.fit()` then `session:resize` with `term.cols` / `term.rows`; one ResizeObserver on the container is the only refit trigger | `TerminalPane.tsx:453-459` |
 | The copy chip is appended to the container before `term.open` and positioned against it (`right: 14px; top: 10px; z-index: 20`) | `TerminalPane.tsx:134-137`; `TerminalPane.css:30-49` |
@@ -49,7 +50,7 @@ On the current build, with vertical padding P = 16 (top 8, bottom 8), content he
 | Extra row | whenever (c mod h) ≥ h − 16, so at every remainder from 1 px up for h ≈ 17 |
 | Clipped part of the last row | max(0, rows × h − c − 8) px: an extra row is cut when (c mod h) ≤ h − 9 (1-8 px at h = 17) and drawn whole inside the bottom padding when (c mod h) ≥ h − 8 |
 | PTY rows | equal to the terminal's rows (same wrong count) |
-| Columns | ⌊(⌊content width⌋ + 20 − 14) / w⌋: 6 px of overestimate that lands in the 10 px right padding |
+| Columns | ⌊(⌊B⌋ − 14) / w⌋, B the pane's border-box width (content width + 20): 6 px of overestimate that lands in the 10 px right padding, so the last column is drawn whole. The fix keeps this formula and its result |
 
 This refines the issue's wording ("whenever the leftover height is 1-8 px the fit asks for one row too many"): the extra row is asked for at more remainders than that, and 1-8 px is where part of it is hidden. The cause and the fix are the same.
 
@@ -58,7 +59,8 @@ This refines the issue's wording ("whenever the leftover height is 1-8 px the fi
 - the element `.xterm` opens into is not `.terminal-pane`;
 - the terminal's rows differ from ⌊(⌊c⌋ + 16) / h⌋;
 - the clipped amount differs from max(0, rows × h − c − 8) by more than 0.5 px;
-- no probe clips the last row at all.
+- no probe clips the last row at all;
+- the last column's right edge is outside the visible box at any probe (keeping today's columns would then keep a clipped column).
 
 T1 appends the measured table to this file under `## Measured (T1)`.
 
@@ -68,11 +70,12 @@ T1 appends the measured table to this file under `## Measured (T1)`.
 
 ```
 Current                                   After
-.terminal-pane  (padding 8/10, border-box, .terminal-pane  (padding 8/10, border-box,
+.terminal-pane  (padding 8/10, border-box, .terminal-pane  (padding 8px 0, border-box,
   overflow hidden, position relative)       overflow hidden, position relative)
   ├─ .terminal-copied (chip)                ├─ .terminal-copied (chip)
-  └─ .xterm  ◄─ term.open, observed         └─ .terminal-host (no padding, no border,
-                                                 fills the content box)  ◄─ term.open, observed
+  └─ .xterm  ◄─ term.open, observed         └─ .terminal-host (padding 0 10px, border-box,
+                                                 no border, fills the content box)
+                                                 ◄─ term.open, observed
                                                  └─ .xterm
 listeners: on .terminal-pane                listeners: on .terminal-pane (unchanged)
 ```
@@ -95,7 +98,7 @@ graph TD
 | Component | Location | How to Use |
 | --------- | -------- | ---------- |
 | `sendResize` | `TerminalPane.tsx:453-459` | Unchanged; called by the observer and by the display scale refit |
-| `.terminal-pane` rules | `TerminalPane.css:4-14`, `AgentsView.css:267-270` | Stay on the outer element, so the padding, background, flex sizing and the chip's containing block are unchanged |
+| `.terminal-pane` rules | `TerminalPane.css:4-14`, `AgentsView.css:267-270` | Stay on the outer element, so the background, flex sizing and the chip's containing block are unchanged; only `padding` becomes `8px 0`, and the host takes `0 10px` |
 | CDP helpers (`pageTarget`, `send`, `evaluate`, `check`) | `scripts/smoke-agent.mjs` | Copied into the new smoke, as every smoke does |
 | `--seed` throwaway userData, pointer file, refusal on other data, launch line with the anti-occlusion flags | `scripts/smoke-hours-calendar.mjs:79-95`, `:238-346` | Same pattern for the new smoke |
 | Ad-hoc `sessions:spawn`, `sessions:rename`, `sessions:stop`, `sessions:remove`, `Emulation.setDeviceMetricsOverride` / `clearDeviceMetricsOverride`, direction switch | `scripts/smoke-status-bar.mjs:559-570`, `:642-650`, `:1332-1370`, `:330` | Spawn and clean up the fill session, change the viewport |
@@ -115,12 +118,13 @@ graph TD
 
 ### `TerminalPane` (modified)
 
-- **Purpose**: Open the terminal into an unpadded host inside the padded pane, and refit on a display scale change.
+- **Purpose**: Open the terminal into a host with no vertical padding inside the pane, keep today's width for the fit, and refit on a display scale change.
 - **Location**: `src/renderer/src/components/TerminalPane.tsx`, `TerminalPane.css`
 - **Interfaces**: props unchanged. Markup becomes `<div ref={paneRef} className="terminal-pane"><div ref={hostRef} className="terminal-host" /></div>`.
 - **Changes**:
   - `term.open(host)` and `observer.observe(host)`. Everything else that used `container` stays on the pane: the chip, both capture `mousedown` listeners, `mouseup`, `contextmenu`, `dragover`, `drop`, and their removal.
-  - `.terminal-host`: zero padding and border, fills the pane's content box, and its height never depends on its content (for example `height: 100%` with `min-height: 0`, or the pane as a flex column and the host `flex: 1; min-height: 0`). `overflow: hidden`, no `z-index`, so the chip (z-index 20) stays above every xterm layer.
+  - `.terminal-pane`: `padding: 8px 10px` becomes `padding: 8px 0`; every other declaration stays.
+  - `.terminal-host`: `padding: 0 10px`, `box-sizing: border-box`, no border, fills the pane's content box (so its border-box width is the pane's full width, as the pane's own was), and its height never depends on its content (for example `height: 100%` with `min-height: 0`, or the pane as a flex column and the host `flex: 1; min-height: 0`). `overflow: hidden`, no `z-index`, so the chip (z-index 20) stays above every xterm layer.
   - After `observer.observe(host)`: `const stopDpr = watchDevicePixelRatio(window, () => { cancelAnimationFrame(dprFrame); dprFrame = requestAnimationFrame(sendResize) })`. The cleanup calls `stopDpr()` and `cancelAnimationFrame(dprFrame)` beside `observer.disconnect()`.
 - **Dependencies**: `watchDevicePixelRatio`.
 - **Reuses**: `sendResize`, the existing cleanup block.
@@ -141,7 +145,8 @@ graph TD
 - **Modes**:
   1. `--seed` (app not running): creates a throwaway userData directory under the OS temp folder, with a config that registers one fictional workspace folder `rows-smoke` (the refusal marker) and the fill script `fill-rows.mjs`. It writes a pointer file and prints the launch line: `npm run dev -- -- "--user-data-dir=<dir>" --remote-debugging-port=9222 --disable-renderer-backgrounding --disable-backgrounding-occluded-windows --disable-background-timer-throttling`.
   2. Drive (default): refuses with `not running on the seeded data` unless `config:get` shows exactly the seeded workspace. It switches to Agents, spawns one Ad-hoc session (`node '<dir>/fill-rows.mjs'`, cwd `<dir>`, never a registry agent), selects it and waits for the fill marker. Then it runs the sections, prints one table row per probe and the checks. In a `finally` it clears the metrics override and stops and removes its session. On a full pass it deletes the directory; on a failure it keeps it and prints it.
-  3. `SMOKE_ONLY=rows | look | dpr` runs one section after the same setup. If T3 drops `dpr` (Route B), `SMOKE_ONLY=probe` replaces it: one reading at the app's real size and scale, no override, with the `rows` checks.
+  3. `SMOKE_ONLY=rows | cols | look | dpr` runs one section after the same setup.
+  4. Column baseline: `SMOKE_ONLY=cols SMOKE_BASELINE=write`, run on the current build in T1, writes the column count per probed viewport (width, height, DPR) and the measured cell width per DPR to `playground-smoke-rows-cols.json` in the OS temp folder, outside the seed directory so a passing run does not delete it. Every later `cols` run compares against it. It refuses with `no column baseline` when the file is missing, or when a cell width differs by more than 0.01 px (another font or machine). Then the baseline is rebuilt by running the same command with `TerminalPane.tsx` and `TerminalPane.css` restored from `origin/main` through the mutant runner. If T3 drops `dpr` (Route B), `SMOKE_ONLY=probe` replaces it: one reading at the app's real size and scale, no override, with the `rows` checks.
 - **Fill script** (written by `--seed`, never committed): hides the cursor and draws `row <i>` on rows 1..n−1 and `ROWS=<n> COLS=<m> LAST` on row n, with no trailing newline. It reads `process.stdout.getWindowSize()`, redraws on `resize` and also polls every 100 ms, so it does not depend on libuv's resize event under ConPTY.
 - **Probe(height, dpr)**: `Emulation.setDeviceMetricsOverride({ width: <launch width>, height, deviceScaleFactor: dpr, mobile: false })`. It then waits until the DOM row count is stable across two animation frames and the fill marker's `ROWS` equals it, with a 3 s timeout that fails the probe. It reads:
   - `parent`: the element `.xterm` opens into (`.xterm`.parentElement), its class, and its content box (border box minus padding and border);
@@ -155,7 +160,8 @@ graph TD
 
 | Section | Probes | Checks (each aggregated over its probes, failing probes listed) |
 | ------- | ------ | ---------------------------------------------------------------- |
-| `rows` | DPR 1: max(20, ⌈h⌉ + 3) consecutive heights in 1 px steps from 600 px. DPR 1.25 and 1.5: 20 heights each | rows = ⌊⌊c⌋ / h⌋ (0.5 px tolerance at non-integer DPR) (TROW-02); lastBottom ≤ visible bottom + 0.5 (TROW-03); cols = ⌊(⌊W⌋ − 14) / w⌋ and lastRight ≤ visible right + 0.5 (TROW-04); ptyRows = rows, ptyCols = cols, and the last DOM row contains the marker (TROW-05) |
+| `rows` | DPR 1: max(20, ⌈h⌉ + 3) consecutive heights in 1 px steps from 600 px. DPR 1.25 and 1.5: 20 heights each | rows = ⌊⌊c⌋ / h⌋ (0.5 px tolerance at non-integer DPR) (TROW-02); lastBottom ≤ visible bottom + 0.5 (TROW-03); lastRight ≤ visible right + 0.5 (TROW-04); ptyRows = rows, ptyCols = cols, and the last DOM row contains the marker (TROW-05) |
+| `cols` | At a fixed height, max(12, ⌈w⌉ + 4) consecutive widths in 1 px steps ending at the launch width, at DPR 1, 1.25 and 1.5 | cols equals the baseline's count for the same width, height and DPR (TROW-11); ptyCols = cols; lastRight ≤ visible right + 0.5 (TROW-04). Guard: the cols count changes at least once across each DPR's sweep |
 | `look` | 3 heights at DPR 1 | parent content box inset (8, 10, 8, 10) from the pane (TROW-07 AC 1); first row's text origin (10, 8) (AC 2); chip at right 14, top 10 (AC 3) |
 | `dpr` (added by T3) | 8 fixed heights; at each, DPR 1 → 1.25 → 1.5 → 2 → 1 with the CSS height unchanged | after each step, the `rows` checks hold with the new h (TROW-09); the second and later steps hold too (TROW-10, re-arm) |
 
@@ -179,9 +185,11 @@ A throwaway node script in the OS temp folder, outside the repository. For one m
 
 | Mutant | Target and change | Must fail |
 | ------ | ----------------- | --------- |
-| M1 host padding | `.terminal-host` gets `padding: 8px 10px; box-sizing: border-box` | `rows`: TROW-02, 03, 04 |
+| M1 vertical padding back | `.terminal-host` `padding: 0 10px` becomes `padding: 8px 10px` | `rows`: TROW-02, 03, 05 |
+| M7 host not border-box | `.terminal-host` `box-sizing: border-box` becomes `box-sizing: content-box` (the addon then reads a width 20 px narrower) | `cols`: TROW-11 |
+| M8 last column pushed right | `.terminal-host` `padding: 0 10px` becomes `padding: 0 10px 0 30px` | `cols`: TROW-04 |
 | M2 chip on the host | the chip is appended to the host instead of the pane | `look`: chip check |
-| M3 pane padding | `.terminal-pane` `padding: 8px 10px` becomes `padding: 6px 10px` | `look`: inset and origin checks |
+| M3 pane padding | the pane's top padding becomes 6 px (`8px 10px` → `6px 10px` on the current build, `8px 0` → `6px 0 8px` after the split) | `look`: inset and origin checks |
 | M4 no scale refit | the `watchDevicePixelRatio(...)` call is replaced by a no-op | `dpr`: TROW-09 |
 | M5 no re-arm | `watchDevicePixelRatio` keeps the first query after a change | unit test (TROW-10) and `dpr` second step |
 | M6 no dispose | the returned function does not remove the listener | unit test (TROW-10) |
@@ -206,11 +214,11 @@ M2 and M3 run on the current build in T1, where the pane is also the parent. M2 
 
 | Concern | Location (file:line) | Impact | Mitigation |
 | ------- | -------------------- | ------ | ---------- |
-| Moving `term.open` could carry the listeners and chip along with it | `TerminalPane.tsx:137`, `:346-347`, `:554-557` | Right-click, link and drop in the padding would stop working, and the chip would shift by (10, 8) px | Only `term.open` and `observer.observe` move. TROW-07 offsets are smoke-checked with M2 and M3. TROW-08 gestures are a hand check in T2 |
+| Moving `term.open` could carry the listeners and chip along with it | `TerminalPane.tsx:137`, `:346-347`, `:554-557` | Right-click, link and drop in the padding would stop working, and the chip would shift 8 px down | Only `term.open` and `observer.observe` move. TROW-07 offsets are smoke-checked with M2 and M3. TROW-08 gestures are a hand check in T2 |
 | The host's height could follow its content | `TerminalPane.css` (new rule) | The observer would never see the host grow, and rows would freeze | The host's height must come from the pane, never from its content. T2's sweep grows and shrinks the pane, and the rows-change guard catches a frozen host |
 | Ordering against xterm's own re-measure | `CoreBrowserService.ts:125`; `RenderService.ts:266-276` | A refit before the re-measure would size rows from the old cell | Refit on the next animation frame (Tech Decisions). T3/T5 check rows against the new h |
 | CDP scale emulation might not reach xterm | `scripts/smoke-terminal-rows.mjs` `dpr` section | A scale check that cannot fail | The `dpr` guards. If any fails in T3, the section is dropped and the route is the unit tests plus a hand check (spec Assumptions) |
-| Columns drop by 2-3 at the same window width | `FitAddon.ts:68-70`, `:85` | Visible change on the right edge | Owner decision pending (spec Assumptions). T1 measures today's last column against the scrollbar lane |
+| Columns hinge on the host staying `border-box` and filling the pane's full width | `FitAddon.ts:74`, `:85`; `TerminalPane.css` (new rule) | A `content-box` host, or horizontal padding left on the pane, gives 2-3 fewer columns, which the owner refused | The `cols` section compares every probe with the current build's baseline; M7 proves it catches the slip |
 | The fit addon reads private xterm state (`_core._renderService.dimensions`) | `FitAddon.ts:60-61` | An xterm upgrade can break the fit | Pre-existing and unchanged; the smoke catches a regression on upgrade |
 | `.terminal-pane .xterm-viewport::-webkit-scrollbar` rules likely style nothing under xterm 6's overlay scrollbar | `TerminalPane.css:17-24`; `xterm.css:224-235` | Dead CSS | Out of scope; mentioned, not deleted |
 
@@ -220,7 +228,8 @@ M2 and M3 run on the current build in T1, where the pane is also the parent. M2 
 
 | Decision | Choice | Rationale |
 | -------- | ------ | --------- |
-| What stays on the outer element | The chip and every listener stay on `.terminal-pane`; only `term.open` and the observer move to the host | Behaviour in the padding and the chip's position stay identical with zero CSS changes to either |
+| What stays on the outer element | The chip and every listener stay on `.terminal-pane`; only `term.open` and the observer move to the host | Behaviour in the padding and the chip's position stay identical with no CSS change to either |
+| Where each padding goes | Vertical `8px` on the pane, horizontal `10px` on a `border-box` host | Rows come from the unpadded height and columns from today's width (owner: keep today's columns). The other shapes fail one axis: an unpadded host loses 2-3 columns, and padding on `.xterm` (which the addon does subtract) would change today's horizontal formula as well |
 | When the scale refit runs | `requestAnimationFrame` after the query's `change`, with a pending frame cancelled and replaced | It does not depend on listener order across `MediaQueryList` objects, and it coalesces with a same-frame observer delivery |
 | How the smoke changes the height | Viewport emulation in 1 px steps; real `Browser.setWindowBounds` cross-check at 3 heights in T1 if Electron accepts it | Prior art, deterministic; layout, `ResizeObserver` and `getComputedStyle` see the emulated viewport as a real one |
 | How the smoke reads the PTY's size | The fill script's last line | End to end, with no new IPC; it also proves the TUI's last line is on screen |
@@ -228,4 +237,4 @@ M2 and M3 run on the current build in T1, where the pane is also the parent. M2 
 
 ### Project-level decision to record
 
-**AD-TBD (number chosen at Execute; main holds up to AD-051).** The element an xterm terminal opens into carries no padding and no border. Spacing around a terminal belongs to a wrapper, which also owns the pane's mouse and drop listeners and any overlay. A terminal refits (`fit()` + `session:resize`) on a ResizeObserver of that host and on every `devicePixelRatio` change, through a `matchMedia` resolution query that is re-armed after each change. Rationale: the fit addon subtracts only the padding of xterm's own element, so a padded host makes it ask for rows that do not fit (#146). Recorded in `.specs/STATE.md` at Execute, in T2's commit.
+**AD-TBD (number chosen at Execute; main holds up to AD-051).** The element an xterm terminal opens into carries no vertical padding and no border, and is `border-box`. Vertical spacing around a terminal belongs to a wrapper. Horizontal padding may stay on the host, because the fit addon reads the host's border-box width and that width sets the columns. The wrapper also owns the pane's mouse and drop listeners and any overlay. A terminal refits (`fit()` + `session:resize`) on a ResizeObserver of that host and on every `devicePixelRatio` change, through a `matchMedia` resolution query that is re-armed after each change. Rationale: the fit addon subtracts only the padding of xterm's own element, so a padded host makes it ask for rows that do not fit (#146). Recorded in `.specs/STATE.md` at Execute, in T2's commit.
