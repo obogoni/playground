@@ -14,7 +14,7 @@ apart, one recount at a time, one trailing run, 3 at once in all) and every reco
 git-state events, turn ends and the tree build; the status bar's sync reads borrow the lane. The
 renderer keeps the tree when a recount changes nothing, and the status bar re-reads on its own
 worktree's `worktree:status` and on a `tree:get` result.
-**Status**: Draft (planned 2026-10-01), awaiting the owner's approval.
+**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01).
 
 **Branch**: `feature/git-recount-coalesce`, stacked on `feature/perf-diagnostics` (#147, plan commit
 `d4a3da9`, not executed yet). The future PR body carries `Closes #149` and "depends on #147".

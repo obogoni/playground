@@ -1,7 +1,7 @@
 # Git Recount Coalescing Design
 
 **Spec**: `.specs/features/git-recount-coalesce/spec.md`
-**Status**: Draft (planned 2026-10-01). Executes only after #147 (`perf-diagnostics`): T1 reads its
+**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01). Executes only after #147 (`perf-diagnostics`): T1 reads its
 baseline and can stop the feature.
 
 ---
@@ -349,8 +349,8 @@ No new data. The IPC payloads keep their shape:
 
 | Concern | Location (file:line) | Impact | Mitigation |
 | ------- | -------------------- | ------ | ---------- |
-| The spacing delays a recount that follows another within a second | `src/main/recount-scheduler.ts` (new) | A second commit right after a first shows up to 1,000 ms later than today | SCRF-01's 2,000 ms bound and RCNT-27..29 are smoke checks (T17); the values are pending owner |
-| `tree:get` now waits for pooled, single-flight recounts | `src/main/index.ts:320-333`, `src/main/tree.ts:12-36` | A cold build of N worktrees takes about ceil(N / 3) `git status` times; a worktree recounted under a second ago waits up to 1,000 ms | Bounded and measured: T18 records the startup row and a hand-timed Refresh on the bench seed; the pool size is pending owner |
+| The spacing delays a recount that follows another within a second | `src/main/recount-scheduler.ts` (new) | A second commit right after a first shows up to 1,000 ms later than today | SCRF-01's 2,000 ms bound and RCNT-27..29 are smoke checks (T17); the owner confirmed the values on 2026-10-01 and accepted that the status bar may take up to about 1 s to update |
+| `tree:get` now waits for pooled, single-flight recounts | `src/main/index.ts:320-333`, `src/main/tree.ts:12-36` | A cold build of N worktrees takes about ceil(N / 3) `git status` times; a worktree recounted under a second ago waits up to 1,000 ms | Bounded and measured: T18 records the startup row and a hand-timed Refresh on the bench seed; the owner confirmed the pool size on 2026-10-01 |
 | Existing tests pin superseded behaviour | `src/main/git-state-watcher.test.ts:108-145` (the 250 ms batch, SCRF-02), `src/renderer/src/lib/tree-status.test.ts:44-50` (new identity on an equal count, SCRF-03) | Rewriting a test is normally forbidden | These rewrites follow from owner-confirmed supersessions (issue #149); each task names the tests it rewrites and why, and the spec notes land in the same commit |
 | Earlier smoke checks measure what this restructures (L-086) | `scripts/smoke-status-bar.mjs` `counterRefresh` (SCRF-01/07/09/10), the STBR-11 check "a local commit shows ↓0 ↑1 after a refresh"; `scripts/smoke-files-commits.mjs` check 20 (FCMT-32) | A broken trigger would only show there | T17 runs the full status bar smoke; T15 runs the Files Commits smoke |
 | The status bar's own operations run outside the lane | `src/main/index.ts:356` (`git:run`) | A pull's index write starts a recount beside the pull | Out of Scope: user-initiated, rare; the bench drives no operation |
