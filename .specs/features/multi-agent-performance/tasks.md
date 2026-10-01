@@ -327,8 +327,10 @@ T20 → T21 → T22
 **Requirement**: PERF-09, PERF-17
 
 **Done when**:
-- [ ] Gate: build passes; Test count unchanged
+- [x] Gate: build passes; Test count unchanged
 - [ ] Dev app with flag: a working session logs no `[perf] render TopBar` / `Sidebar` lines
+
+**Status**: ✅ Done
 
 **Tests**: none
 **Gate**: build

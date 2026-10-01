@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { JSX } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { ComponentProps, JSX } from 'react'
 import type { AgentDef } from '../../shared/agents'
 import type { ActivityState, AppConfig } from '../../shared/config'
 import { DEFAULT_CONFIG } from '../../shared/config'
@@ -12,6 +12,7 @@ import { FilesView } from './components/FilesView'
 import { HoursView } from './components/HoursView'
 import { NewSessionDialog, type NewSessionSource } from './components/NewSessionDialog'
 import { NewWorktreeDialog } from './components/NewWorktreeDialog'
+import { PerfProfiler } from './components/PerfProfiler'
 import { SessionNotices } from './components/SessionNotices'
 import { SettingsDialog } from './components/SettingsDialog'
 import { Sidebar } from './components/Sidebar'
@@ -38,11 +39,36 @@ import { filesStateFor } from './lib/files-view'
 import { useFiles } from './lib/use-files'
 import { useSessions } from './lib/use-sessions'
 import { useTime } from './lib/use-time'
+import { useLatestCallback } from './lib/use-latest-callback'
 import { useTree } from './lib/use-tree'
 import { useWorkflowRuns } from './lib/use-workflow-runs'
 import './App.css'
 
 type UiState = AppConfig['ui']
+
+/** No folded workspace, with one identity so the memoized Sidebar keeps its props. */
+const NO_COLLAPSED: string[] = []
+
+/**
+ * TopBar and Sidebar show no session, so an activity or name push must not
+ * re-render them (PERF-09). Each profiler sits inside its memo, so the render
+ * log shows real re-renders only (PERF-17).
+ */
+const MemoTopBar = memo(function ProfiledTopBar(props: ComponentProps<typeof TopBar>) {
+  return (
+    <PerfProfiler name="TopBar">
+      <TopBar {...props} />
+    </PerfProfiler>
+  )
+})
+
+const MemoSidebar = memo(function ProfiledSidebar(props: ComponentProps<typeof Sidebar>) {
+  return (
+    <PerfProfiler name="Sidebar">
+      <Sidebar {...props} />
+    </PerfProfiler>
+  )
+})
 
 /** Worktrees per extracted task ID across all workspaces (STWK-04, spec §Edge Cases). */
 function countWorktreesByTask(tree: WorkspaceNode[]): Map<number, number> {
@@ -142,6 +168,12 @@ function App(): JSX.Element {
     }
     return titles
   }, [tasks.tasks])
+  // TopBar's props keep their identity across session pushes (PERF-09).
+  const syncOrg = adoOrg ?? tasks.tasks[0]?.org ?? null
+  const sync = useMemo(
+    () => ({ auth: tasks.auth, lastSyncAt: tasks.lastSyncAt, org: syncOrg }),
+    [tasks.auth, tasks.lastSyncAt, syncOrg]
+  )
 
   // Same reason, and one more: the Files watch follows the direction, so leaving
   // Files has to send `files:watch(null)` instead of racing FilesView's unmount
@@ -319,26 +351,27 @@ function App(): JSX.Element {
   // A tree refresh auto-pinned tasks its worktree branches carry (APIN-06).
   useEffect(() => api.on('tasks:changed', ({ snapshot }) => setTasks(snapshot)), [])
 
-  const addWorkspace = (): void => {
+  const addWorkspace = useLatestCallback((): void => {
     api
       .invoke('workspaces:add')
       .then((entry) => {
         if (entry) refreshTree()
       })
       .catch(console.error)
-  }
+  })
 
-  const removeWorkspace = (id: string): void => {
+  const removeWorkspace = useLatestCallback((id: string): void => {
     api.invoke('workspaces:remove', { id }).then(refreshTree).catch(console.error)
-    if (isCollapsed(collapsedIds, id)) {
-      update({ collapsedWorkspaces: dropCollapsedId(collapsedIds, id) })
+    const folded = ui?.collapsedWorkspaces ?? NO_COLLAPSED
+    if (isCollapsed(folded, id)) {
+      update({ collapsedWorkspaces: dropCollapsedId(folded, id) })
     }
-  }
+  })
 
   // Fold/unfold a workspace row in the tree sidebar (WSCL-01, WSCL-05).
-  const toggleWorkspaceCollapsed = (id: string): void => {
-    update({ collapsedWorkspaces: toggleCollapsedId(collapsedIds, id) })
-  }
+  const toggleWorkspaceCollapsed = useLatestCallback((id: string): void => {
+    update({ collapsedWorkspaces: toggleCollapsedId(ui?.collapsedWorkspaces ?? NO_COLLAPSED, id) })
+  })
 
   // PRD start-work flow: refresh and select the new worktree, no auto-open.
   const worktreeCreated = (worktreePath: string): void => {
@@ -398,6 +431,25 @@ function App(): JSX.Element {
     })
   }
 
+  // Stable callbacks for the memoized TopBar and Sidebar (PERF-09). Hooks, so
+  // they sit above the early return; `ui` is set whenever either can call them.
+  const toggleTheme = useLatestCallback((): void =>
+    update({ theme: ui?.theme === 'dark' ? 'light' : 'dark' })
+  )
+  const changeDirection = useLatestCallback((direction: UiState['direction']): void =>
+    update({ direction })
+  )
+  const refreshAll = useLatestCallback((): void => {
+    refreshTree()
+    refreshTasks()
+  })
+  const openSettings = useLatestCallback((): void => setSettingsOpen(true))
+  const spawnAgentIn = useLatestCallback((cwd: string): void => openNewSession({ cwd }))
+  const setSidebarWidth = useLatestCallback((w: number): void => update({ sidebarWidth: w }))
+  const toggleSidebar = useLatestCallback((): void =>
+    update({ sidebarCollapsed: !(ui?.sidebarCollapsed ?? false) })
+  )
+
   if (!ui) {
     // One frame at most; avoids a default-theme flash before hydration.
     return <></>
@@ -414,30 +466,23 @@ function App(): JSX.Element {
   const tasksWidth = resolvePaneWidth(ui.tasksWidth, TASKS_BOUNDS, TASKS_DEFAULT_WIDTH)
   const tasksCollapsed = ui.tasksCollapsed ?? false
   // Workspace ids folded in the sidebar tree; absent = every workspace expanded (WSCL-06).
-  const collapsedIds = ui.collapsedWorkspaces ?? []
+  const collapsedIds = ui.collapsedWorkspaces ?? NO_COLLAPSED
 
   return (
     <>
-      <TopBar
+      <MemoTopBar
         theme={ui.theme}
         direction={ui.direction}
-        sync={{
-          auth: tasks.auth,
-          lastSyncAt: tasks.lastSyncAt,
-          org: adoOrg ?? tasks.tasks[0]?.org ?? null
-        }}
-        onThemeToggle={() => update({ theme: ui.theme === 'dark' ? 'light' : 'dark' })}
-        onDirectionChange={(direction) => update({ direction })}
-        onRefresh={() => {
-          refreshTree()
-          refreshTasks()
-        }}
-        onOpenSettings={() => setSettingsOpen(true)}
+        sync={sync}
+        onThemeToggle={toggleTheme}
+        onDirectionChange={changeDirection}
+        onRefresh={refreshAll}
+        onOpenSettings={openSettings}
       />
       <main className="content">
         {ui.direction === 'tree' ? (
           <>
-            <Sidebar
+            <MemoSidebar
               tree={tree}
               tasks={tasks.tasks}
               selectedId={selectedId}
@@ -445,11 +490,11 @@ function App(): JSX.Element {
               onAddWorkspace={addWorkspace}
               onRemoveWorkspace={removeWorkspace}
               onNewWorktree={setDialogRepoPath}
-              onSpawnAgent={(cwd) => openNewSession({ cwd })}
+              onSpawnAgent={spawnAgentIn}
               width={sidebarWidth}
               collapsed={sidebarCollapsed}
-              onWidthChange={(w) => update({ sidebarWidth: w })}
-              onToggleCollapsed={() => update({ sidebarCollapsed: !sidebarCollapsed })}
+              onWidthChange={setSidebarWidth}
+              onToggleCollapsed={toggleSidebar}
               collapsedIds={collapsedIds}
               onToggleCollapse={toggleWorkspaceCollapsed}
             />
@@ -558,16 +603,18 @@ function App(): JSX.Element {
           />
         )}
       </main>
-      <StatusBar
-        tree={tree}
-        selectedId={selectedId}
-        sessions={sessions}
-        selectedSessionId={selectedSessionId}
-        direction={ui.direction}
-        onToast={setToast}
-        onOpenChanges={openChangedFiles}
-        onRefreshTree={refreshTree}
-      />
+      <PerfProfiler name="StatusBar">
+        <StatusBar
+          tree={tree}
+          selectedId={selectedId}
+          sessions={sessions}
+          selectedSessionId={selectedSessionId}
+          direction={ui.direction}
+          onToast={setToast}
+          onOpenChanges={openChangedFiles}
+          onRefreshTree={refreshTree}
+        />
+      </PerfProfiler>
       {dialogRepoPath && (
         <NewWorktreeDialog
           tree={tree}
