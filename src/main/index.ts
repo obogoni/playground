@@ -1,5 +1,5 @@
 import { app, shell, clipboard, dialog, BrowserWindow, Notification, powerMonitor } from 'electron'
-import { execFile, execFileSync, spawn } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { mkdir, stat, writeFile } from 'node:fs/promises'
@@ -12,6 +12,7 @@ import icon from '../../resources/icon.png?asset'
 import { readNotificationPrefs } from '../shared/notifications'
 import { AdoGateway } from './ado-gateway'
 import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-runner'
+import { BinaryResolver } from './binary-resolver'
 import { createActivityHookServer } from './activity-hook-server'
 import { linkTask } from './activity-notification'
 import { buildClaudeHookSettings } from './claude-hook-settings'
@@ -30,6 +31,7 @@ import { runHookShell } from './hook-shell'
 import { emit, handle, onSend } from './ipc'
 import { createMcpResultServer } from './mcp-result-server'
 import { purgePasteDir } from './paste-temp'
+import { findOnPath } from './path-lookup'
 import { startLoopDelayLog } from './perf-monitor'
 import { withPostCreateHook } from './post-create-hook'
 import { PtyPort } from './pty-port'
@@ -582,25 +584,25 @@ app.whenReady().then(() => {
     })
     .catch((err) => console.error('[activity-hooks] server did not start', err))
 
-  // Resolve the `claude` binary (WF3-23): the first `where claude` hit on PATH, else the
-  // optional `agent.claudePath` config override, else throw so the step fails clearly
+  // Resolve the `claude` binary (WF3-23): the first PATH hit, else the optional
+  // `agent.claudePath` config override, else throw so the step fails clearly
   // without spawning. `agent` is not a typed AppConfig section yet (WF4+), read via cast.
   // Declared here, ahead of the SessionManager, because the name poller needs it too.
-  const resolveClaude = (): string => {
-    try {
-      const out = execFileSync('where', ['claude'], { encoding: 'utf8', windowsHide: true })
-      const first = out
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .find((line) => line.length > 0)
-      if (first) return first
-    } catch {
-      // not on PATH — fall through to the config override
-    }
-    const configured = (configStore.get() as { agent?: { claudePath?: string } }).agent?.claudePath
-    if (configured) return configured
-    throw new Error('agent binary not found')
-  }
+  // Answered from a cache refreshed in the background, never by a blocking
+  // `where` on the main process (PERF-19, PERF-20).
+  const claudeResolver = new BinaryResolver({
+    lookup: () =>
+      findOnPath('claude', { PATH: process.env.PATH, PATHEXT: process.env.PATHEXT }, (path) =>
+        stat(path).then(
+          (st) => st.isFile(),
+          () => false
+        )
+      ),
+    configured: () =>
+      (configStore.get() as { agent?: { claudePath?: string } }).agent?.claudePath ?? null,
+    now: Date.now
+  })
+  const resolveClaude = (): string => claudeResolver.get()
 
   // Session names (AD-040): the poller reads `claude agents --json` through the
   // same spawn seam and env posture as the headless runner; `cwd` is only there

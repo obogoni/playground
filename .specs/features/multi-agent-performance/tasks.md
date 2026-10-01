@@ -589,8 +589,10 @@ T27 → T28
 **Requirement**: PERF-19, PERF-20
 
 **Done when**:
-- [ ] No `execFileSync('where'` left in `src/main`
-- [ ] Gate: build
+- [x] No `execFileSync('where'` left in `src/main`
+- [x] Gate: build
+
+**Status**: ✅ Done
 
 **Tests**: none
 **Gate**: build
