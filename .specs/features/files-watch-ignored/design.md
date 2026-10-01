@@ -1,7 +1,7 @@
 # Files Watch Ignored Design
 
 **Spec**: `.specs/features/files-watch-ignored/spec.md`
-**Status**: Draft (planned 2026-10-01). Executes after #147 (`feature/perf-diagnostics`); T1 can stop the
+**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01). Executes after #147 (`feature/perf-diagnostics`); T1 can stop the
 feature and send it back to the owner, and so can T2.
 
 Line numbers below are from this branch at `d4a3da9` (the #147 plan on `origin/main` `60ff148`), before

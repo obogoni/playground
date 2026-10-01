@@ -13,7 +13,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 not ignore; every Files read passes `READ_ONLY_FLAGS` so it never rewrites the index; the Files hook runs
 batch refreshes through a `RefreshGate` with one merged trailing run; an All changes section re-reads
 only on a content key, a per-path disk revision or the git-state token.
-**Status**: Draft (planned 2026-10-01), awaiting the owner's approval.
+**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01).
 
 **Branch**: `feature/files-watch-ignored`, stacked on `feature/perf-diagnostics` (plan commit `d4a3da9`).
 **Execute only after #147 has executed** (its bench, summary and baseline exist). T1 rebases this branch
