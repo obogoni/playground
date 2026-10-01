@@ -186,11 +186,13 @@ T20 → T21 → T22
 **Requirement**: PERF-01, PERF-02, PERF-03
 
 **Done when**:
-- [ ] Every existing test in `session-ring-buffer.test.ts` passes unmodified
-- [ ] Reference-equivalence test: the current algorithm copied into the test as the oracle; ≥ 3 seeded random streams of BMP text (ASCII, `é`, `✻`, ANSI incl. `?1049h`/`?2004h`, chunk sizes 1–4,096, newline-dense and newline-free runs) with small caps (e.g. 2,000 bytes / 50 lines) compare `snapshot()` and `tail(2)` after every append
-- [ ] Cost test (PERF-01): 10,000 × 45 B appends on a buffer filled to 1,000,000 bytes and to 5,000 lines complete in < 250 ms
-- [ ] Edge cases: single chunk > `maxBytes`; chunk with no newline; mode sequence split across chunks then trimmed; astral char at the byte boundary is never split and counts 4 bytes
-- [ ] Gate: quick; Test count B + ≥19
+- [x] Every existing test in `session-ring-buffer.test.ts` passes unmodified
+- [x] Reference-equivalence test: the current algorithm copied into the test as the oracle; ≥ 3 seeded random streams of BMP text (ASCII, `é`, `✻`, ANSI incl. `?1049h`/`?2004h`, chunk sizes 1–4,096, newline-dense and newline-free runs) with small caps (e.g. 2,000 bytes / 50 lines) compare `snapshot()` and `tail(2)` after every append
+- [x] Cost test (PERF-01): 10,000 × 45 B appends on a buffer filled to 1,000,000 bytes and to 5,000 lines complete in < 250 ms
+- [x] Edge cases: single chunk > `maxBytes`; chunk with no newline; mode sequence split across chunks then trimmed; astral char at the byte boundary is never split and counts 4 bytes
+- [x] Gate: quick; Test count B + ≥19
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
