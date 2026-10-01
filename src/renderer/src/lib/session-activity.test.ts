@@ -59,6 +59,19 @@ describe('applyActivity', () => {
     expect(next[0]).toBe(a)
   })
 
+  it('keeps every other session the same object and gives the pushed one a new object (PERF-08)', () => {
+    const a = session({ id: 'a' })
+    const b = session({ id: 'b' })
+    const c = session({ id: 'c', activity: { state: 'waiting', subagents: 0 } })
+
+    const next = applyActivity([a, b, c], 'b', { state: 'working', subagents: 0 })
+
+    expect(next[0]).toBe(a)
+    expect(next[2]).toBe(c)
+    expect(next[1]).not.toBe(b)
+    expect(next[1].activity).toEqual({ state: 'working', subagents: 0 })
+  })
+
   it('replaces the activity a session already held', () => {
     const a = session({ id: 'a', activity: { state: 'working', tool: 'Bash', subagents: 1 } })
 

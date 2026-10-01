@@ -348,6 +348,24 @@ function resolveRows(group: PendingGroup): RailRow[] {
   })
 }
 
+/**
+ * Whether two rows show the same thing. `buildRailGroups` builds fresh row
+ * objects on every render, so a memoized row compares content: `actions`
+ * element by element, `session` by identity — `applyActivity` keeps the
+ * identity of every session a push did not touch (PERF-08, PERF-09).
+ */
+export function railRowEqual(a: RailRow, b: RailRow): boolean {
+  return (
+    a.id === b.id &&
+    a.session === b.session &&
+    a.label === b.label &&
+    a.status === b.status &&
+    a.tooltip === b.tooltip &&
+    a.actions.length === b.actions.length &&
+    a.actions.every((action, index) => action === b.actions[index])
+  )
+}
+
 /** Every row in visual order, group boundaries flattened away — the order the
  *  keyboard walks (RAIL-21, RAIL-22). */
 export function flatRows(groups: RailGroup[]): RailRow[] {

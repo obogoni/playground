@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 96,
+  "next_id": 98,
   "lessons": [
     {
       "id": "L-001",
@@ -1633,6 +1633,42 @@
       ],
       "created": "2026-09-28T22:09:36Z",
       "last_seen": "2026-09-28T22:09:36Z"
+    },
+    {
+      "id": "L-096",
+      "key": "spec_deviation::when a design changes an element that an earlier feature s spec already constrains cite that requirement in the design and either amend it or keep it explicitly so the implementer never has to choose between the two",
+      "text": "When a design changes an element that an earlier feature's spec already constrains, cite that requirement in the design and either amend it or keep it explicitly, so the implementer never has to choose between the two",
+      "signal": "spec_deviation",
+      "scope": "design",
+      "status": "candidate",
+      "features": [
+        "multi-agent-performance"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/renderer/src/components/AgentsView.tsx:225 SPEC_DEVIATION (PERF-10 pill title vs STRP-05) (design)"
+      ],
+      "created": "2026-10-01T20:45:03Z",
+      "last_seen": "2026-10-01T20:45:03Z"
+    },
+    {
+      "id": "L-097",
+      "key": "surviving_mutant::for a queue or scheduler test that it goes idle when it cannot make progress no pending deferred turn while at capacity not only that it never exceeds capacity a loosened outer guard keeps the cap but spins the event loop",
+      "text": "For a queue or scheduler, test that it goes idle when it cannot make progress (no pending deferred turn while at capacity), not only that it never exceeds capacity: a loosened outer guard keeps the cap but spins the event loop",
+      "signal": "surviving_mutant",
+      "scope": "testing/schedulers",
+      "status": "candidate",
+      "features": [
+        "multi-agent-performance"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/main/spawn-pacer.ts:27 (P8 mutant 2) (testing/schedulers)"
+      ],
+      "created": "2026-10-01T22:23:16Z",
+      "last_seen": "2026-10-01T22:23:16Z"
     }
   ]
 }

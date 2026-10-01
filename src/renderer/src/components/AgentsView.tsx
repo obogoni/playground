@@ -12,6 +12,7 @@ import { deriveAttribution, linkedPinFor } from '../lib/session-attribution'
 import { detailPillClass, detailPillText, detailPillTitle } from '../lib/session-activity'
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
+import { PerfProfiler } from './PerfProfiler'
 import { SessionRail } from './SessionRail'
 import { TaskPicker } from './TaskPicker'
 import { SessionClock } from './TimeCounter'
@@ -85,23 +86,25 @@ export function AgentsView({
         onSetTask={onSetTask}
       />
       {active ? (
-        <SessionDetail
-          session={active}
-          tree={tree}
-          agents={agents}
-          tasks={tasks}
-          time={time}
-          onStop={onStop}
-          onRespawn={onRespawn}
-          onRemove={onRemove}
-          onRename={onRename}
-          onDuplicate={onDuplicate}
-          onOpenWorktree={onOpenWorktree}
-          onPauseTime={onPauseTime}
-          onResumeTime={onResumeTime}
-          onToast={onToast}
-          onSetTask={onSetTask}
-        />
+        <PerfProfiler name="SessionDetail" id={active.id}>
+          <SessionDetail
+            session={active}
+            tree={tree}
+            agents={agents}
+            tasks={tasks}
+            time={time}
+            onStop={onStop}
+            onRespawn={onRespawn}
+            onRemove={onRemove}
+            onRename={onRename}
+            onDuplicate={onDuplicate}
+            onOpenWorktree={onOpenWorktree}
+            onPauseTime={onPauseTime}
+            onResumeTime={onResumeTime}
+            onToast={onToast}
+            onSetTask={onSetTask}
+          />
+        </PerfProfiler>
       ) : (
         <div className="agents-detail-empty">
           <Icon name="terminal" size={26} />
@@ -219,9 +222,15 @@ function SessionDetail({
           )}
           <span className="agents-detail-cwd">{session.cwd}</span>
         </div>
+        {/* The pill stays on one line and truncates, so its title carries the
+            full text (PERF-10).
+            SPEC_DEVIATION: design.md puts the full text in the title in every case;
+            while the activity names a tool, the title stays the raw tool name.
+            Reason: STRP-05 requires the raw tool name as the pill's title, and the
+            design does not amend it. */}
         <span
           className={`agents-detail-pill ${detailPillClass(session)}`}
-          title={detailPillTitle(session)}
+          title={detailPillTitle(session) || detailPillText(session)}
         >
           {detailPillText(session)}
         </span>

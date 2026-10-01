@@ -41,11 +41,24 @@ describe('patchWorktreeStatus', () => {
     expect(worktree(patched, '/repo-a/feat')).toMatchObject({ dirty: false, changes: 0 })
   })
 
-  it('gives the tree a new identity even when the count is unchanged (SCRF-03)', () => {
-    const patched = patchWorktreeStatus(tree, '/repo-a/main', { dirty: true, changes: 5 })
+  // AD-052 amends SCRF-03: the status bar re-reads ahead/behind from a recount
+  // signal, so an unchanged count keeps the tree's identity.
+  it('returns the same tree when the recount matches the current count (PERF-11, AD-052)', () => {
+    expect(patchWorktreeStatus(tree, '/repo-a/main', { dirty: true, changes: 5 })).toBe(tree)
+  })
+
+  it('returns a new tree when only the dirty flag changed (PERF-11)', () => {
+    const patched = patchWorktreeStatus(tree, '/repo-a/main', { dirty: false, changes: 5 })
 
     expect(patched).not.toBe(tree)
-    expect(patched).toEqual(tree)
+    expect(worktree(patched, '/repo-a/main')).toMatchObject({ dirty: false, changes: 5 })
+  })
+
+  it('returns a new tree when only the change count changed (PERF-11)', () => {
+    const patched = patchWorktreeStatus(tree, '/repo-a/main', { dirty: true, changes: 6 })
+
+    expect(patched).not.toBe(tree)
+    expect(worktree(patched, '/repo-a/main')).toMatchObject({ dirty: true, changes: 6 })
   })
 
   it('returns the same tree for a worktree it no longer holds (removed-worktree edge case)', () => {

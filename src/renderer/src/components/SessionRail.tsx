@@ -1,5 +1,5 @@
 import type { JSX, KeyboardEvent, MouseEvent } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import type { AgentDef } from '../../../shared/agents'
 import type { SessionView } from '../../../shared/config'
 import type { PinnedTaskView, SessionTask } from '../../../shared/tasks'
@@ -11,6 +11,7 @@ import {
   buildRailGroups,
   flatRows,
   headerCounts,
+  railRowEqual,
   statusClass,
   type RailGroup,
   type RailRow,
@@ -18,8 +19,10 @@ import {
   type RowStatus
 } from '../lib/rail-groups'
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
-import { taskTotalMs, worktreeTotalMs } from '../lib/time-totals'
+import { timeIndex } from '../lib/time-index'
+import { useLatestCallback } from '../lib/use-latest-callback'
 import { Icon } from './Icon'
+import { PerfProfiler } from './PerfProfiler'
 import { TaskPicker } from './TaskPicker'
 import { SessionClock, TotalClock } from './TimeCounter'
 import './SessionRail.css'
@@ -61,10 +64,10 @@ export function SessionRail({
   tasks,
   time,
   selectedId,
-  onSelect,
-  onStop,
-  onRespawn,
-  onRemove,
+  onSelect: onSelectProp,
+  onStop: onStopProp,
+  onRespawn: onRespawnProp,
+  onRemove: onRemoveProp,
   onNew,
   onSetTask
 }: SessionRailProps): JSX.Element {
@@ -75,6 +78,12 @@ export function SessionRail({
   const rowRefs = useRef(new Map<string, HTMLDivElement>())
   const [menu, setMenu] = useState<RowMenu | null>(null)
   const [picker, setPicker] = useState<RowMenu | null>(null)
+  // Every function a row receives keeps one identity across renders, so the
+  // memoized row can ignore function props in its comparator (PERF-09).
+  const onSelect = useLatestCallback(onSelectProp)
+  const onStop = useLatestCallback(onStopProp)
+  const onRespawn = useLatestCallback(onRespawnProp)
+  const onRemove = useLatestCallback(onRemoveProp)
 
   // Any click or Escape dismisses the row menu, as in the sidebar and the
   // commit list. The menu renders outside the row: RAIL-12 allows no new
@@ -93,11 +102,11 @@ export function SessionRail({
     }
   }, [menu])
 
-  const openMenu = (event: MouseEvent, id: string): void => {
+  const openMenu = useLatestCallback((event: MouseEvent, id: string): void => {
     event.preventDefault()
     setPicker(null)
     setMenu({ sessionId: id, x: event.clientX, y: event.clientY })
-  }
+  })
 
   // A session picker has no No task; From branch removes the link (HTSK-13).
   const chooseTask = (sessionId: string, choice: PeriodTaskChoice): void => {
@@ -114,97 +123,103 @@ export function SessionRail({
       ? selectedId
       : (rows[0]?.id ?? null)
 
-  const registerRow = (id: string, node: HTMLDivElement | null): void => {
+  const registerRow = useLatestCallback((id: string, node: HTMLDivElement | null): void => {
     if (node) rowRefs.current.set(id, node)
     else rowRefs.current.delete(id)
-  }
+  })
 
   // Arrows move focus only — the active session, and therefore the TerminalPane
   // mount, is untouched until Enter or Space (RAIL-21, RAIL-22, RAIL-23).
-  const onRowKeyDown = (event: KeyboardEvent<HTMLDivElement>, id: string): void => {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault()
-      const next = adjacentRowId(groups, id, event.key === 'ArrowDown' ? 1 : -1)
-      if (next === null) return
-      setFocusedId(next)
-      rowRefs.current.get(next)?.focus()
-      return
+  const onRowKeyDown = useLatestCallback(
+    (event: KeyboardEvent<HTMLDivElement>, id: string): void => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault()
+        const next = adjacentRowId(groups, id, event.key === 'ArrowDown' ? 1 : -1)
+        if (next === null) return
+        setFocusedId(next)
+        rowRefs.current.get(next)?.focus()
+        return
+      }
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        onSelect(id)
+      }
     }
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault()
-      onSelect(id)
-    }
-  }
+  )
 
   return (
-    <aside className="session-rail">
-      <header className="session-rail-header">
-        <div className="session-rail-title-row">
-          <span className="session-rail-title">AGENTS</span>
-          <span className="session-rail-count">
-            {runningCount} running
-            {working > 0 && <span className="working"> · {working} working</span>}
-            {needYou > 0 && <span className="need-you"> · {needYou} need you</span>}
-          </span>
-        </div>
-        <button type="button" className="session-rail-new" onClick={onNew}>
-          <Icon name="plus" size={14} strokeWidth={2.2} /> New session
-        </button>
-      </header>
-      {runningCount >= CONCURRENCY_WARN_AT && (
-        <div className="session-rail-warning" role="status">
-          <Icon name="alert" size={14} />
-          <span>{runningCount} live sessions — each is a real OS process consuming resources.</span>
-        </div>
-      )}
-      <div className="session-rail-list" role="listbox" aria-label="Agent sessions">
-        {groups.length === 0 ? (
-          <div className="session-rail-empty">No sessions yet.</div>
-        ) : (
-          groups.map((group) => (
-            <TaskGroupCard
-              key={group.key}
-              group={group}
-              agents={agents}
-              time={time}
-              selectedId={selectedId}
-              tabStopId={tabStopId}
-              registerRow={registerRow}
-              onRowKeyDown={onRowKeyDown}
-              onSelect={onSelect}
-              onStop={onStop}
-              onRespawn={onRespawn}
-              onRemove={onRemove}
-              onMenu={openMenu}
-            />
-          ))
-        )}
-      </div>
-      {menu && (
-        <div className="rail-ctx-menu" role="menu" style={{ left: menu.x, top: menu.y }}>
-          <button
-            type="button"
-            role="menuitem"
-            className="rail-ctx-item rail-change-task"
-            onClick={() => {
-              setMenu(null)
-              setPicker(menu)
-            }}
-          >
-            <Icon name="tag" size={13} /> Change task…
+    <PerfProfiler name="SessionRail">
+      <aside className="session-rail">
+        <header className="session-rail-header">
+          <div className="session-rail-title-row">
+            <span className="session-rail-title">AGENTS</span>
+            <span className="session-rail-count">
+              {runningCount} running
+              {working > 0 && <span className="working"> · {working} working</span>}
+              {needYou > 0 && <span className="need-you"> · {needYou} need you</span>}
+            </span>
+          </div>
+          <button type="button" className="session-rail-new" onClick={onNew}>
+            <Icon name="plus" size={14} strokeWidth={2.2} /> New session
           </button>
+        </header>
+        {runningCount >= CONCURRENCY_WARN_AT && (
+          <div className="session-rail-warning" role="status">
+            <Icon name="alert" size={14} />
+            <span>
+              {runningCount} live sessions — each is a real OS process consuming resources.
+            </span>
+          </div>
+        )}
+        <div className="session-rail-list" role="listbox" aria-label="Agent sessions">
+          {groups.length === 0 ? (
+            <div className="session-rail-empty">No sessions yet.</div>
+          ) : (
+            groups.map((group) => (
+              <TaskGroupCard
+                key={group.key}
+                group={group}
+                agents={agents}
+                time={time}
+                selectedId={selectedId}
+                tabStopId={tabStopId}
+                registerRow={registerRow}
+                onRowKeyDown={onRowKeyDown}
+                onSelect={onSelect}
+                onStop={onStop}
+                onRespawn={onRespawn}
+                onRemove={onRemove}
+                onMenu={openMenu}
+              />
+            ))
+          )}
         </div>
-      )}
-      {picker && (
-        <TaskPicker
-          key={picker.sessionId}
-          tasks={tasks}
-          at={{ x: picker.x, y: picker.y }}
-          onChoose={(choice) => chooseTask(picker.sessionId, choice)}
-          onClose={() => setPicker(null)}
-        />
-      )}
-    </aside>
+        {menu && (
+          <div className="rail-ctx-menu" role="menu" style={{ left: menu.x, top: menu.y }}>
+            <button
+              type="button"
+              role="menuitem"
+              className="rail-ctx-item rail-change-task"
+              onClick={() => {
+                setMenu(null)
+                setPicker(menu)
+              }}
+            >
+              <Icon name="tag" size={13} /> Change task…
+            </button>
+          </div>
+        )}
+        {picker && (
+          <TaskPicker
+            key={picker.sessionId}
+            tasks={tasks}
+            at={{ x: picker.x, y: picker.y }}
+            onChoose={(choice) => chooseTask(picker.sessionId, choice)}
+            onClose={() => setPicker(null)}
+          />
+        )}
+      </aside>
+    </PerfProfiler>
   )
 }
 
@@ -242,14 +257,16 @@ function TaskGroupCard({
   const holdsSelection = group.rows.some((row) => row.id === selectedId)
   // Task groups total by task id; an orphan group is one session, and a level
   // group holds sessions at one path, so both total by the first row's cwd.
+  // The index is cached per snapshot, so a tick never rescans the history (PERF-14).
+  const index = timeIndex(time)
   const total =
     group.kind === 'task'
       ? {
-          totalAt: (now: number) => taskTotalMs(time, group.taskId, now),
+          totalAt: (now: number) => index.taskTotalMs(group.taskId, now),
           live: time.open.some((p) => p.taskId === group.taskId)
         }
       : {
-          totalAt: (now: number) => worktreeTotalMs(time, group.rows[0].session.cwd, now),
+          totalAt: (now: number) => index.worktreeTotalMs(group.rows[0].session.cwd, now),
           live: time.open.some(
             (p) => p.cwd.toLowerCase() === group.rows[0].session.cwd.toLowerCase()
           )
@@ -369,7 +386,20 @@ const ACTION_ICON = {
   remove: { name: 'trash', size: 12, verb: 'Remove' }
 } as const
 
-function SessionRow({
+/** A row re-renders only when what it shows changed: the row by content, the
+ *  other data props by identity. Function props are ignored — `SessionRail`
+ *  routes every one of them through `useLatestCallback` (PERF-09). */
+function railRowPropsEqual(a: SessionRowProps, b: SessionRowProps): boolean {
+  return (
+    railRowEqual(a.row, b.row) &&
+    a.agents === b.agents &&
+    a.time === b.time &&
+    a.selected === b.selected &&
+    a.tabStop === b.tabStop
+  )
+}
+
+const SessionRow = memo(function SessionRow({
   row,
   agents,
   time,
@@ -389,6 +419,13 @@ function SessionRow({
     remove: onRemove
   }
 
+  // One ref callback per row id: an inline one would detach and re-attach the
+  // row node on every render.
+  const rowRef = useCallback(
+    (node: HTMLDivElement | null) => registerRow(row.id, node),
+    [registerRow, row.id]
+  )
+
   // Action buttons live inside the selection control, so every one of them
   // stops the click from reaching the row (RAIL-17).
   const act = (event: MouseEvent, fn: () => void): void => {
@@ -402,41 +439,43 @@ function SessionRow({
   // invalid HTML. Handoff §6 offers `role="option"` as the sanctioned alternative,
   // and the roles, focus and selection semantics the ACs name are unchanged.
   return (
-    <div
-      className={`rail-row${selected ? ' selected' : ''}`}
-      role="option"
-      aria-selected={selected}
-      tabIndex={tabStop ? 0 : -1}
-      ref={(node) => registerRow(row.id, node)}
-      title={row.tooltip}
-      onClick={() => onSelect(row.id)}
-      onKeyDown={(event) => onRowKeyDown(event, row.id)}
-      onContextMenu={(event) => onMenu(event, row.id)}
-    >
-      <span className="rail-row-tile" style={agentTileStyle(agents, row.session.agent)}>
-        {row.session.agent.charAt(0)}
-      </span>
-      <span className="rail-row-label">{row.label}</span>
-      <span className={`rail-row-status ${statusClass(row.status)}`} aria-label={row.status}>
-        {row.status}
-      </span>
-      {/* The one addition AD-021 allows on a row beyond RAIL-12's list. */}
-      <SessionClock className="rail-row-time" snapshot={time} sessionId={row.id} />
-      <StatusIndicator status={row.status} />
-      <span className="rail-row-actions">
-        {row.actions.map((action) => (
-          <button
-            key={action}
-            type="button"
-            className={`rail-row-btn${action === 'remove' ? ' red' : ''}`}
-            title={`${ACTION_ICON[action].verb} ${row.label} session`}
-            aria-label={`${ACTION_ICON[action].verb} ${row.label} session`}
-            onClick={(e) => act(e, () => handlers[action](row.id))}
-          >
-            <Icon name={ACTION_ICON[action].name} size={ACTION_ICON[action].size} />
-          </button>
-        ))}
-      </span>
-    </div>
+    <PerfProfiler name="SessionRow" id={row.id}>
+      <div
+        className={`rail-row${selected ? ' selected' : ''}`}
+        role="option"
+        aria-selected={selected}
+        tabIndex={tabStop ? 0 : -1}
+        ref={rowRef}
+        title={row.tooltip}
+        onClick={() => onSelect(row.id)}
+        onKeyDown={(event) => onRowKeyDown(event, row.id)}
+        onContextMenu={(event) => onMenu(event, row.id)}
+      >
+        <span className="rail-row-tile" style={agentTileStyle(agents, row.session.agent)}>
+          {row.session.agent.charAt(0)}
+        </span>
+        <span className="rail-row-label">{row.label}</span>
+        <span className={`rail-row-status ${statusClass(row.status)}`} aria-label={row.status}>
+          {row.status}
+        </span>
+        {/* The one addition AD-021 allows on a row beyond RAIL-12's list. */}
+        <SessionClock className="rail-row-time" snapshot={time} sessionId={row.id} />
+        <StatusIndicator status={row.status} />
+        <span className="rail-row-actions">
+          {row.actions.map((action) => (
+            <button
+              key={action}
+              type="button"
+              className={`rail-row-btn${action === 'remove' ? ' red' : ''}`}
+              title={`${ACTION_ICON[action].verb} ${row.label} session`}
+              aria-label={`${ACTION_ICON[action].verb} ${row.label} session`}
+              onClick={(e) => act(e, () => handlers[action](row.id))}
+            >
+              <Icon name={ACTION_ICON[action].name} size={ACTION_ICON[action].size} />
+            </button>
+          ))}
+        </span>
+      </div>
+    </PerfProfiler>
   )
-}
+}, railRowPropsEqual)

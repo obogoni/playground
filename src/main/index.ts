@@ -1,5 +1,5 @@
 import { app, shell, clipboard, dialog, BrowserWindow, Notification, powerMonitor } from 'electron'
-import { execFile, execFileSync, spawn } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { mkdir, stat, writeFile } from 'node:fs/promises'
@@ -10,8 +10,10 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
 import { readNotificationPrefs } from '../shared/notifications'
+import type { PeriodSnapshotFields } from '../shared/time'
 import { AdoGateway } from './ado-gateway'
 import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-runner'
+import { BinaryResolver } from './binary-resolver'
 import { createActivityHookServer } from './activity-hook-server'
 import { linkTask } from './activity-notification'
 import { buildClaudeHookSettings } from './claude-hook-settings'
@@ -30,6 +32,8 @@ import { runHookShell } from './hook-shell'
 import { emit, handle, onSend } from './ipc'
 import { createMcpResultServer } from './mcp-result-server'
 import { purgePasteDir } from './paste-temp'
+import { findOnPath } from './path-lookup'
+import { startLoopDelayLog } from './perf-monitor'
 import { withPostCreateHook } from './post-create-hook'
 import { PtyPort } from './pty-port'
 import { resolvePostCreateCommand } from './repo-config'
@@ -41,7 +45,7 @@ import { SessionNotifier } from './session-notifier'
 import { ShortcutLauncher, spawnDetached } from './shortcut-launcher'
 import { openPinnedTask, TaskBoard } from './task-board'
 import { TimeLogStore } from './time-log-store'
-import { buildSnapshot, readGit } from './time-snapshot'
+import { buildSnapshot, readGitAsync } from './time-snapshot'
 import { TimeTracker } from './time-tracker'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
@@ -268,6 +272,12 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // Debug-only event-loop delay log (PERF-16); nothing starts without the env flag (PERF-18).
+  const stopLoopDelayLog = startLoopDelayLog({
+    enabled: process.env.PLAYGROUND_DEBUG_PERF === '1'
+  })
+  app.on('will-quit', stopLoopDelayLog)
+
   // Set app user model id for windows. Derive it from the packaged identity so the
   // nightly build (a distinct app name) groups separately from stable on the taskbar.
   // Normalize the name into a dot-separated, lowercase slug so a spaced/cased name
@@ -505,17 +515,31 @@ app.whenReady().then(() => {
     }
     return titles
   }
+  // The last git read per cwd. A period opens on it (nulls on a miss) and the
+  // tracker patches it when the fresh read answers, so no `git rev-parse`
+  // ever blocks the main process (PERF-21).
+  const gitByCwd = new Map<string, { gitCommonDir: string | null; branch: string | null }>()
+  const snapshotFor = (
+    cwd: string,
+    git: { gitCommonDir: string | null; branch: string | null }
+  ): PeriodSnapshotFields =>
+    buildSnapshot({
+      cwd,
+      ...git,
+      workspacePaths: registry.list().map((ws) => ws.path),
+      pinnedTitles: pinnedTitles()
+    })
   const tracker = new TimeTracker({
     store: new TimeLogStore(app.getPath('userData')),
     now: Date.now,
     newId: randomUUID,
     resolveSnapshot: (cwd) =>
-      buildSnapshot({
-        cwd,
-        ...readGit(cwd),
-        workspacePaths: registry.list().map((ws) => ws.path),
-        pinnedTitles: pinnedTitles()
-      }),
+      snapshotFor(cwd, gitByCwd.get(cwd) ?? { gitCommonDir: null, branch: null }),
+    resolveSnapshotAsync: async (cwd) => {
+      const git = await readGitAsync(cwd)
+      gitByCwd.set(cwd, git)
+      return snapshotFor(cwd, git)
+    },
     pinnedTitle: (id) => pinnedTitles().get(id) ?? null,
     emit: () => emitToWindow('time:changed', { at: new Date().toISOString() })
   })
@@ -575,25 +599,25 @@ app.whenReady().then(() => {
     })
     .catch((err) => console.error('[activity-hooks] server did not start', err))
 
-  // Resolve the `claude` binary (WF3-23): the first `where claude` hit on PATH, else the
-  // optional `agent.claudePath` config override, else throw so the step fails clearly
+  // Resolve the `claude` binary (WF3-23): the first PATH hit, else the optional
+  // `agent.claudePath` config override, else throw so the step fails clearly
   // without spawning. `agent` is not a typed AppConfig section yet (WF4+), read via cast.
   // Declared here, ahead of the SessionManager, because the name poller needs it too.
-  const resolveClaude = (): string => {
-    try {
-      const out = execFileSync('where', ['claude'], { encoding: 'utf8', windowsHide: true })
-      const first = out
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .find((line) => line.length > 0)
-      if (first) return first
-    } catch {
-      // not on PATH — fall through to the config override
-    }
-    const configured = (configStore.get() as { agent?: { claudePath?: string } }).agent?.claudePath
-    if (configured) return configured
-    throw new Error('agent binary not found')
-  }
+  // Answered from a cache refreshed in the background, never by a blocking
+  // `where` on the main process (PERF-19, PERF-20).
+  const claudeResolver = new BinaryResolver({
+    lookup: () =>
+      findOnPath('claude', { PATH: process.env.PATH, PATHEXT: process.env.PATHEXT }, (path) =>
+        stat(path).then(
+          (st) => st.isFile(),
+          () => false
+        )
+      ),
+    configured: () =>
+      (configStore.get() as { agent?: { claudePath?: string } }).agent?.claudePath ?? null,
+    now: Date.now
+  })
+  const resolveClaude = (): string => claudeResolver.get()
 
   // Session names (AD-040): the poller reads `claude agents --json` through the
   // same spawn seam and env posture as the headless runner; `cwd` is only there

@@ -974,3 +974,156 @@ describe('TimeTracker split a closed period', () => {
     ])
   })
 })
+
+describe('TimeTracker asynchronous attribution (PERF-21)', () => {
+  const NULLS: PeriodSnapshotFields = {
+    workspacePath: null,
+    repoName: null,
+    branch: null,
+    taskId: null,
+    taskTitle: null
+  }
+
+  /** A tracker whose sync snapshot is the cache miss and whose async read the test settles. */
+  function asyncSetup(): Harness & {
+    settle: (value: PeriodSnapshotFields | Error) => Promise<void>
+    reads: string[]
+  } {
+    const clock = { now: T0 }
+    const store = fakeStore()
+    const resolved: string[] = []
+    const reads: string[] = []
+    const pending: { resolve: (v: PeriodSnapshotFields) => void; reject: (e: Error) => void }[] = []
+    let ids = 0
+    let emits = 0
+    const tracker = new TimeTracker({
+      store,
+      now: () => clock.now,
+      newId: () => `p${++ids}`,
+      resolveSnapshot: (cwd) => {
+        resolved.push(cwd)
+        return NULLS
+      },
+      resolveSnapshotAsync: (cwd) =>
+        new Promise((resolve, reject) => {
+          reads.push(cwd)
+          pending.push({ resolve, reject })
+        }),
+      pinnedTitle: (id) => PINNED.get(id) ?? null,
+      emit: () => {
+        emits++
+      }
+    })
+    return {
+      tracker,
+      store,
+      resolved,
+      reads,
+      advance: (ms: number) => {
+        clock.now += ms
+      },
+      emits: () => emits,
+      settle: async (value) => {
+        const next = pending.shift()!
+        if (value instanceof Error) next.reject(value)
+        else next.resolve(value)
+        await new Promise((r) => setTimeout(r, 0))
+      }
+    }
+  }
+
+  it('opens on the cached attribution and starts one async read for the cwd (AC 5)', () => {
+    const t = asyncSetup()
+    t.tracker.started(meta())
+    expect(t.tracker.snapshot().open[0]).toMatchObject(NULLS)
+    expect(t.reads).toEqual(['D:\\acme\\app-12345'])
+  })
+
+  it('patches an open period in place, rewrites the sidecar and emits (AC 6)', async () => {
+    const t = asyncSetup()
+    t.tracker.started(meta())
+    const writes = t.store.openWrites.length
+    const emits = t.emits()
+    await t.settle(SNAPSHOT)
+    const open = t.tracker.snapshot().open[0]
+    expect(open).toEqual({
+      id: 'p1',
+      sessionId: 's1',
+      agent: 'Claude',
+      cwd: 'D:\\acme\\app-12345',
+      ...SNAPSHOT,
+      start: iso(T0),
+      lastSeen: iso(T0)
+    })
+    expect(t.store.openWrites.length).toBe(writes + 1)
+    expect(t.store.openWrites.at(-1)).toEqual([open])
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it('patches a period that already closed and was kept, rewriting the log and emitting (AC 6)', async () => {
+    const t = asyncSetup()
+    t.tracker.started(meta())
+    t.advance(5 * SEC)
+    t.tracker.ended('s1')
+    const emits = t.emits()
+    await t.settle(SNAPSHOT)
+    const [period] = t.tracker.snapshot().periods
+    expect(period).toEqual({
+      id: 'p1',
+      sessionId: 's1',
+      agent: 'Claude',
+      cwd: 'D:\\acme\\app-12345',
+      ...SNAPSHOT,
+      start: iso(T0),
+      end: iso(T0 + 5 * SEC)
+    })
+    expect(t.store.rewrites).toEqual([[period]])
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it('changes nothing when the period was discarded under 1 s before the read answered (AC 7)', async () => {
+    const t = asyncSetup()
+    t.tracker.started(meta())
+    t.advance(500)
+    t.tracker.ended('s1')
+    const emits = t.emits()
+    const writes = t.store.openWrites.length
+    await t.settle(SNAPSHOT)
+    expect(t.tracker.snapshot().periods).toEqual([])
+    expect(t.store.rewrites).toEqual([])
+    expect(t.store.openWrites.length).toBe(writes)
+    expect(t.emits()).toBe(emits)
+  })
+
+  it('writes and emits nothing when the read answers the attribution the period already has', async () => {
+    const t = asyncSetup()
+    t.tracker.started(meta())
+    const emits = t.emits()
+    const writes = t.store.openWrites.length
+    await t.settle(NULLS)
+    expect(t.store.openWrites.length).toBe(writes)
+    expect(t.emits()).toBe(emits)
+  })
+
+  it('keeps the opened attribution when the read rejects (TIME-12)', async () => {
+    const t = asyncSetup()
+    t.tracker.started(meta())
+    const emits = t.emits()
+    await t.settle(new Error('git exploded'))
+    expect(t.tracker.snapshot().open[0]).toMatchObject(NULLS)
+    expect(t.emits()).toBe(emits)
+  })
+
+  it('keeps a hand-set task over the branch the read reports (HTSK-10)', async () => {
+    const t = asyncSetup()
+    t.tracker.started({ ...meta(), task: { id: 67890, title: 'Widget export' } })
+    await t.settle(SNAPSHOT)
+    expect(t.tracker.snapshot().open[0]).toMatchObject({
+      branch: 'feature/12345-fix-login-redirect',
+      repoName: 'app',
+      taskId: 67890,
+      taskTitle: 'Widget export',
+      taskByHand: true
+    })
+  })
+})

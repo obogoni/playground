@@ -1,7 +1,11 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { createSpawnPacer } from './spawn-pacer'
 
 const run = promisify(execFile)
+
+/** One queue for every git process the app starts (PERF-22). */
+const pace = createSpawnPacer()
 
 /** Stdout ceiling for any git call: far above what a large repository produces. */
 const MAX_STDOUT_BYTES = 64 * 1024 * 1024
@@ -19,19 +23,23 @@ export function git(
 ): Promise<{ stdout: string }> {
   // GIT_TERMINAL_PROMPT=0: a fetch with no cached credentials fails fast instead
   // of hanging the main process on an un-answerable prompt (WBR-02 → blocks).
-  return run('git', args, {
-    cwd,
-    windowsHide: true,
-    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
-    timeout: opts.timeoutMs,
-    // execFile defaults to 1 MiB of stdout and turns anything larger into
-    // "stdout maxBuffer length exceeded" — a message that says nothing about
-    // the repository being big. A large repository reaches that on ordinary
-    // commands, so the ceiling is a safety net here rather than a limit any
-    // caller is meant to rely on; the callers that need a real cap measure it
-    // themselves, as file-diff does before reading a blob.
-    maxBuffer: MAX_STDOUT_BYTES
-  })
+  // Paced: a tree refresh asks for many processes at once, and each spawn
+  // blocks the main process, so they start one event-loop turn apart (PERF-22).
+  return pace(() =>
+    run('git', args, {
+      cwd,
+      windowsHide: true,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+      timeout: opts.timeoutMs,
+      // execFile defaults to 1 MiB of stdout and turns anything larger into
+      // "stdout maxBuffer length exceeded" — a message that says nothing about
+      // the repository being big. A large repository reaches that on ordinary
+      // commands, so the ceiling is a safety net here rather than a limit any
+      // caller is meant to rely on; the callers that need a real cap measure it
+      // themselves, as file-diff does before reading a blob.
+      maxBuffer: MAX_STDOUT_BYTES
+    })
+  )
 }
 
 /**

@@ -11,6 +11,10 @@ import './StatusBar.css'
 
 interface StatusBarProps {
   tree: WorkspaceNode[]
+  /** From `useTree`: bumped per `tree:get` result (STBR-11, PERF-13). */
+  treeRevision: number
+  /** From `useTree`: recount results by worktree path, stable (PERF-12, AD-052). */
+  onRecounted: (cb: (worktreePath: string) => void) => () => void
   selectedId: string | null
   sessions: SessionView[]
   selectedSessionId: string | null
@@ -34,6 +38,8 @@ interface StatusBarProps {
  */
 export function StatusBar({
   tree,
+  treeRevision,
+  onRecounted,
   selectedId,
   sessions,
   selectedSessionId,
@@ -47,7 +53,14 @@ export function StatusBar({
   /** The sync popover is the only one left: the counter now navigates. */
   const [open, setOpen] = useState<'sync' | null>(null)
   const popoverPath = open === 'sync' ? targetPath : null
-  const sync = useGitSync({ targetPath, tree, popoverPath, onToast, onRefreshTree })
+  const sync = useGitSync({
+    targetPath,
+    treeRevision,
+    onRecounted,
+    popoverPath,
+    onToast,
+    onRefreshTree
+  })
   // Close only if this popover is still the open one: a click on the other
   // trigger has already switched `open` before the outside-click lands.
   const closeSync = useCallback(() => setOpen((o) => (o === 'sync' ? null : o)), [])

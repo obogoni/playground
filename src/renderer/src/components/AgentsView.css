@@ -110,6 +110,13 @@
   padding: 3px 9px;
   color: var(--text-muted);
   border: 1px solid var(--border);
+  /* One line whatever the activity text: a wrapping pill would grow the
+     header, resize the terminal and make the agent's TUI redraw (PERF-10). */
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .agents-detail-pill.green {
