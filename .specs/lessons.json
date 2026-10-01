@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 96,
+  "next_id": 97,
   "lessons": [
     {
       "id": "L-001",
@@ -1633,6 +1633,24 @@
       ],
       "created": "2026-09-28T22:09:36Z",
       "last_seen": "2026-09-28T22:09:36Z"
+    },
+    {
+      "id": "L-096",
+      "key": "spec_deviation::when a design changes an element that an earlier feature s spec already constrains cite that requirement in the design and either amend it or keep it explicitly so the implementer never has to choose between the two",
+      "text": "When a design changes an element that an earlier feature's spec already constrains, cite that requirement in the design and either amend it or keep it explicitly, so the implementer never has to choose between the two",
+      "signal": "spec_deviation",
+      "scope": "design",
+      "status": "candidate",
+      "features": [
+        "multi-agent-performance"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/renderer/src/components/AgentsView.tsx:225 SPEC_DEVIATION (PERF-10 pill title vs STRP-05) (design)"
+      ],
+      "created": "2026-10-01T20:45:03Z",
+      "last_seen": "2026-10-01T20:45:03Z"
     }
   ]
 }

@@ -552,6 +552,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: validation.md round 1 gap 2; README.md:49 (ATSK-12) (docs)
 - last seen: 2026-09-28T22:09:36Z
 
+### L-096 - When a design changes an element that an earlier feature's spec already constrains, cite that requirement in the design and either amend it or keep it explicitly, so the implementer never has to choose between the two
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `design` · harmful: 0
+- features: multi-agent-performance
+- evidence: src/renderer/src/components/AgentsView.tsx:225 SPEC_DEVIATION (PERF-10 pill title vs STRP-05) (design)
+- last seen: 2026-10-01T20:45:03Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
