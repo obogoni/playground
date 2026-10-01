@@ -2,12 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { createSpawnPacer, MAX_RUNNING } from './spawn-pacer'
 
 /** A `defer` the test turns by hand: each `turn()` runs what was deferred before it. */
-function manualLoop(): { defer: (fn: () => void) => void; turn: () => Promise<void> } {
+function manualLoop(): {
+  defer: (fn: () => void) => void
+  turn: () => Promise<void>
+  pending: () => number
+} {
   let queue: (() => void)[] = []
   return {
     defer: (fn) => {
       queue.push(fn)
     },
+    pending: () => queue.length,
     turn: async () => {
       const due = queue
       queue = []
@@ -71,6 +76,36 @@ describe('createSpawnPacer', () => {
     calls[1].resolve('ok')
     for (let i = 0; i < 3; i++) await loop.turn()
     expect(started).toEqual(['1', '2', '3', '4', '5'])
+  })
+
+  it('goes idle while every slot is busy instead of spinning the event loop (AC 2)', async () => {
+    const loop = manualLoop()
+    const pace = createSpawnPacer({ defer: loop.defer })
+    const started: string[] = []
+    for (const id of ['1', '2', '3', '4', '5', '6']) void pace(controlled(started, id).start)
+    for (let i = 0; i < 8; i++) await loop.turn()
+    expect(started).toEqual(['1', '2', '3', '4'])
+    // Nothing can start until a process settles, so no turn is left scheduled.
+    expect(loop.pending()).toBe(0)
+  })
+
+  it('yields with setImmediate by default (AC 1)', async () => {
+    const real = globalThis.setImmediate
+    const deferred: (() => void)[] = []
+    globalThis.setImmediate = ((fn: () => void) => {
+      deferred.push(fn)
+    }) as unknown as typeof setImmediate
+    try {
+      const pace = createSpawnPacer()
+      const started: string[] = []
+      void pace(controlled(started, 'a').start)
+      expect(started).toEqual([])
+      expect(deferred).toHaveLength(1)
+      deferred.shift()!()
+      expect(started).toEqual(['a'])
+    } finally {
+      globalThis.setImmediate = real
+    }
   })
 
   it('resolves and rejects each call with its own process result (AC 3)', async () => {
