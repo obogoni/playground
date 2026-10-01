@@ -1,9 +1,9 @@
 # Multi-Agent Performance Validation
 
-**Verdict**: PASS ✅
+**Verdict**: PASS ✅ (PERF-01..18, and Phase 7 PERF-19..21)
 **Date**: 2026-10-01
-**Spec**: `.specs/features/multi-agent-performance/spec.md` (PERF-01..18)
-**Diff range**: `a150e5b..423c091` (branch `feature/multi-agent-performance`, base `origin/main` 60ff148; 22 commits, 37 files)
+**Spec**: `.specs/features/multi-agent-performance/spec.md` (PERF-01..21)
+**Diff range**: Phase 7: `8a9ceb8..HEAD` (`8a9ceb8..83c8704`, see "Phase 7 (PERF-19..21)"). PERF-01..18: `a150e5b..423c091` (branch `feature/multi-agent-performance`, base `origin/main` 60ff148; 22 commits, 37 files)
 **Verifier**: independent sub-agent (author ≠ verifier); coverage re-derived from the spec and the diff, evidence-or-zero.
 
 All 18 requirements trace to a test assertion or to implementing code read for correctness. The tests assert the outcomes the spec defines. The sensor injected 27 behaviour mutations: 26 were killed, and the one survivor is equivalent to the original code. Typecheck and lint are clean, and the in-scope suites pass. The full suite has two failures, both in known real-git noise files that this diff does not touch. The renderer components and hooks follow the repo convention in `.specs/codebase/TESTING.md` (verified by hand), so their ACs are **UAT pending** for the owner. Reading that code found no defect.
@@ -171,6 +171,77 @@ Run in an isolated `git worktree add --detach M:/obogoni/map-verify-scratch HEAD
 
 ---
 
+## Phase 7 (PERF-19..21)
+
+**Verdict**: PASS ✅
+**Diff range**: `8a9ceb8..83c8704` (7 commits: `aa7478c` specs, `fbf9f4b` T23, `4c6ddfe` T24, `0ec33d5` T25, `ea2998c` T26, `e9526d7` T27, `83c8704` T28; 12 files)
+**Tasks**: T23–T28 are all `Status: ✅ Done` in `tasks.md` (`:555`–`:657`).
+
+### Spec-anchored acceptance criteria — P1: The main process never blocks on a child process
+
+| Criterion | Spec-defined outcome | `file:line` + assertion | Result |
+| --------- | -------------------- | ----------------------- | ------ |
+| PERF-19 AC1 (every PATH dir in order, every PATHEXT ext in order, no spawn) | First existing file, directory-major order | `src/main/path-lookup.test.ts:24` `expect(found).toBe('C:\\a\\claude.CMD')` while `C:\\b\\claude.EXE` also exists; `:25` `probed).toEqual(['C:\\a\\claude.EXE', 'C:\\a\\claude.CMD'])`; default PATHEXT `.COM;.EXE;.BAT;.CMD` pinned at `:49-54`; quoted and empty entries at `:42-43`. No spawn: `findOnPath` takes only an injected `isFile` (`src/main/path-lookup.ts:16-37`), wired to `fs/promises.stat` (`src/main/index.ts:608-619`) | ✅ PASS |
+| PERF-19 AC1 (path kept exactly, `á` survives) | `C:\Users\Otávio…\claude.exe` byte for byte | `path-lookup.test.ts:32` `toBe('C:\\Users\\OtávioBogoni\\.local\\bin\\claude.exe')`; `binary-resolver.test.ts:62` `get()` returns the same path | ✅ PASS |
+| PERF-19 AC2 (no PATH hit → `agent.claudePath`, else `agent binary not found`) | Configured path, else that exact error | `path-lookup.test.ts:66-69` `toBe(null)`; `binary-resolver.test.ts:50` `get()).toBe('D:\\tools\\claude.exe')` with the lookup unsettled; `:55` `toThrow('agent binary not found')`; `:62` the found path wins over the configured one. Wiring: `index.ts:617` `configured: () => …agent?.claudePath ?? null` | ✅ PASS |
+| PERF-20 AC3 (`get()` answers synchronously from the cache and never looks up on the caller's stack) | An answer without awaiting | `binary-resolver.test.ts:49-50`: the lookup is deferred and never settled, and `get()` still returns; `src/main/binary-resolver.ts:68-73` returns `string`, and `#start` only chains promises | ✅ PASS |
+| PERF-20 AC4 (≥ 30 s → one background lookup, ≤ 1 in flight) | None at 29,999 ms, one at 30,000 ms, never two | `binary-resolver.test.ts:43` `RELOOKUP_MS).toBe(30_000)`; `:72` `started()).toBe(1)` at +29,999; `:75` `toBe(2)` at +30,000; `:86` `toBe(1)` after two stale `get()` calls with one lookup unsettled; previous path kept on null or reject at `:97`, `:101` | ✅ PASS |
+| PERF-21 AC5 (open period attributed from the cached git state, nulls on a miss, no sync git) | Nulls on a miss; one async read per open | `src/main/time-tracker.test.ts:1038` `open[0]).toMatchObject(NULLS)`; `:1039` `reads).toEqual(['D:\\acme\\app-12345'])`. Cache hit: `index.ts:537` `gitByCwd.get(cwd) ?? {nulls}`, filled at `:538-541` from `readGitAsync`. `readGitAsync` returns a Promise and reads a real repo: `src/main/time-snapshot.test.ts:96` `toBeInstanceOf(Promise)`, `:98` `branch).toBe('feature/12345-login')`, `:99` common dir; nulls outside a repo at `:105` | ✅ PASS |
+| PERF-21 AC6 (different answer → patch: open in place + sidecar + `time:changed`; closed and kept → log rewrite + `time:changed`) | The exact period, one write, one emit | Open: `time-tracker.test.ts:1049` `toEqual({…SNAPSHOT…})`, `:1058` `openWrites.length).toBe(writes + 1)`, `:1059` sidecar content, `:1060` `emits()).toBe(emits + 1)`. Closed: `:1071` exact period, `:1080` `rewrites).toEqual([[period]])`, `:1081` one emit. An equal answer writes nothing: `:1104-1105`. A hand-set task is kept (HTSK-10): `:1121-1127` | ✅ PASS |
+| PERF-21 AC7 (discarded under 1 s → change nothing) | No period, no write, no emit | `time-tracker.test.ts:1092` `periods).toEqual([])`, `:1093` `rewrites).toEqual([])`, `:1094` openWrites unchanged, `:1095` emits unchanged | ✅ PASS |
+
+**Status**: ✅ 7/7 ACs trace to assertions on the spec-defined outcome. No spec-precision gap. The `max ≤ 115 ms` loop delay and the missing ENOENT line in the Independent Test are dev-app outcomes, so they are owner UAT (items 9–10).
+
+### Wiring review (hand-verified layer)
+
+- `src/main/index.ts` no longer imports `execFileSync`. `grep "'where'" src/main` finds nothing. No production caller of the sync `readGit(` remains: `grep 'readGit\b' src` finds only its definition (`time-snapshot.ts:50`) and a test title.
+- `resolveClaude` (`index.ts:620`) is `claudeResolver.get()`. The name poller (`session-name-poller.ts:109`) drops `#bin` on a spawn failure (`:120`, `:151`) and calls `resolveBin` again on the next poll. That call now answers from the cache, and at most one async PATH scan runs every 30 s. The blocking `where` loop found in the 2026-10-01 measurement is gone. `agent-step-runner.ts:263` still maps a throw to `agent binary not found` (WF3-23).
+- `resolveSnapshotAsync` (`index.ts:538-541`) stores the fresh read in `gitByCwd` before it builds the snapshot, so the next period for that `cwd` opens on it. The tracker reapplies the task the period opened with (`time-tracker.ts:287-290`).
+
+### Discrimination sensor (scratch worktree `M:\vfy-scratch-p7`, `node_modules` junction)
+
+| # | File | Mutation | Killed? |
+| - | ---- | -------- | ------- |
+| 1 | `src/main/path-lookup.ts:30` | Loop order swapped (extension-major instead of directory-major) | ✅ |
+| 2 | `src/main/path-lookup.ts:23` | Quote strip removed | ✅ |
+| 3 | `src/main/path-lookup.ts:4` | Default PATHEXT drops `.COM` | ✅ |
+| 4 | `src/main/path-lookup.ts:28` | A name with an extension is tried bare last | ✅ |
+| 5 | `src/main/binary-resolver.ts:69` | Throttle `>=` → `>` | ✅ |
+| 6 | `src/main/binary-resolver.ts:69` | In-flight guard removed | ✅ |
+| 7 | `src/main/binary-resolver.ts:81` | A null lookup clears the previous path | ✅ |
+| 8 | `src/main/binary-resolver.ts:70` | Configured path preferred over the found one | ✅ |
+| 9 | `src/main/binary-resolver.ts:64` | No lookup on construction | ✅ |
+| 10 | `src/main/time-tracker.ts:317` | Open patch without the sidecar write and emit | ✅ |
+| 11 | `src/main/time-tracker.ts:323` | Closed-period patch skipped | ✅ |
+| 12 | `src/main/time-tracker.ts:323` | A discarded period still rewrites the log and emits | ✅ |
+| 13 | `src/main/time-tracker.ts:304` | Same-attribution check always false | ✅ |
+| 14 | `src/main/time-tracker.ts:290` | Hand-set task ignored (raw fresh snapshot applied) | ✅ |
+| 15 | `src/main/time-tracker.ts:288` | Async read started for the wrong `cwd` | ✅ |
+| 16 | `src/main/time-snapshot.ts:84` | `readGitAsync` error → non-null values | ✅ |
+| 17 | `src/main/time-snapshot.ts:86` | `readGitAsync` swaps `gitCommonDir` and `branch` | ✅ |
+
+**Result**: 17/17 killed. PASS ✅. The first scripted run of #17 replaced the identical expression in the sync `readGit` (`time-snapshot.ts:64`), which is now dead code, and that mutant survived. Re-run on `readGitAsync`, #17 was killed.
+**Isolation**: the real tree's `git status --porcelain` was empty before and after the sensor. The junction was removed with `rmdir` (the real `node_modules` is intact) and the worktree with `git worktree remove --force`.
+
+### Gate
+
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0. 0 errors and 18 warnings, all in files outside the diff (`scripts/…`, `src/shared/tasks.test.ts`).
+- `npx vitest run` on the `path-lookup`, `binary-resolver`, `time-snapshot` and `time-tracker` tests: **87 passed, 0 failed**.
+- Full suite (orchestrator run, not repeated here): 2443 passed, 2 failed. The 2 failures are the known machine-load noise in `file-discard.test.ts` (FDSC-05) and `worktree-manager.test.ts` (force-remove). Neither file is in the diff.
+
+### Other synchronous child-process calls in `src/main` (findings, not fixed)
+
+- `src/main/workflow-loader.ts:137` runs `execFileSync(esbuildBin, …)` to bundle each workflow. `WorkflowManager.list()` reaches it once per workflow (`workflow-manager.ts:113`), and a run reaches it once (`:196`). It blocks main for each esbuild bundle while the Workflows list loads. It is not on a per-keystroke, per-chunk or timer path, and it was kept on purpose (EPIPE in packaged builds). Classed as warm, not hot.
+- `src/main/time-snapshot.ts:52`: the sync `readGit` is still exported but has no production caller. It is dead code, not a hot path, and can be deleted.
+
+### Low-ranked observations (no AC failed)
+
+1. At startup, before the first PATH scan settles, `get()` falls back to config. With config unset it throws `agent binary not found`. A poll or workflow step in those first milliseconds fails once and recovers on the next poll. PERF-20 AC3 allows this.
+2. The dead sync `readGit` (above).
+
+---
+
 ## Interactive UAT (owner, dev app with `localStorage['playground.debug.perf']='1'` and `PLAYGROUND_DEBUG_PERF=1`)
 
 1. PERF-04: the console shows `[perf] renderer=webgl` on opening a session.
@@ -181,6 +252,8 @@ Run in an isolated `git worktree add --detach M:/obogoni/map-verify-scratch HEAD
 6. PERF-12/13: commit in a non-target worktree and see no `git:sync-state` in the IPC log. Commit in the target and ahead/behind updates.
 7. INPUT-12 / glyphs: Claude Code's boxed TUI renders correctly maximized and narrow under WebGL.
 8. Success criteria: record main loop p99 (< 20 ms target) and long tasks with 3 working sessions, before vs after.
+9. PERF-19/20: the `[session-name] listing failed … ENOENT` line is gone from the main log, and Claude session names appear in the rail.
+10. PERF-19..21: with `PLAYGROUND_DEBUG_PERF=1` in the owner's multi-agent scenario, no `[perf] loop` line shows a `max` above 115 ms.
 
 ---
 
@@ -190,6 +263,7 @@ Run in an isolated `git worktree add --detach M:/obogoni/map-verify-scratch HEAD
 | ----------- | ---------- |
 | PERF-01, 02, 03, 05, 08, 11, 14, 15, 16, 18 | ✅ Verified |
 | PERF-04, 06, 07, 09, 10, 12, 13, 17 | ✅ Verified (code + unit where applicable), owner UAT pending |
+| PERF-19, 20, 21 | ✅ Verified (unit + wiring read), owner UAT pending (items 9–10) |
 
 ---
 
@@ -200,3 +274,5 @@ Run in an isolated `git worktree add --detach M:/obogoni/map-verify-scratch HEAD
 **Sensor**: 26/26 non-equivalent mutants killed (27 injected, 1 equivalent).
 **Gate**: typecheck ✅, lint ✅ (0 errors), in-scope 250/250. Full suite 2421/2423, with the 2 failures in known real-git noise files outside the diff.
 **Issues found**: none blocking. One design-level SPEC_DEVIATION (pill title vs STRP-05), recorded as a lesson.
+
+**Phase 7 (PERF-19..21)**: ✅ PASS. 7/7 ACs traced, sensor 17/17 killed, typecheck ✅, lint ✅, in-scope tests 87/87. Two findings do not block: the sync esbuild call in `workflow-loader.ts:137` runs on the warm workflow-list path, and the sync `readGit` is now dead code.
