@@ -12,7 +12,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 fields of a failed read and applies the read's result, through `git()`, to that same period only (matched by
 period id); `SessionNamePoller` keeps a miss count and a due time per session and starts a listing only for
 an eligible session.
-**Status**: Draft (planned 2026-10-01), awaiting the owner's approval.
+**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01).
 
 **Branch**: `feature/main-async-git`, stacked on `feature/perf-diagnostics` (#147). **Executes only after
 #147 has shipped on its branch**: T1 needs #147's diagnostics module, bench and `## Baseline`. The future PR

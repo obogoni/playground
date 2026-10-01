@@ -1,7 +1,7 @@
 # Main Async Git Design
 
 **Spec**: `.specs/features/main-async-git/spec.md`
-**Status**: Draft (planned 2026-10-01). Executes after `perf-diagnostics` (#147); T1's baseline can stop it.
+**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01). Executes after `perf-diagnostics` (#147); T1's baseline can stop it.
 
 ---
 
@@ -248,8 +248,8 @@ link equal to the branch's task carries no flag (HTSK-36).
 | ------- | -------------------- | ------ | ---------- |
 | 46 tracker tests assert snapshot fields right after a synchronous open | `src/main/time-tracker.test.ts:96-976` | With a promise read, an assertion made before the read settles sees the provisional fields | T2 adds `await t.flush()` where a test reads fields, and makes those tests `async`; no `expect` line changes, and T2's review diffs the file to show it. A count that a test takes right after an action stays synchronous, so the patch's extra write and push never reach it |
 | A heartbeat replaces `run.open` with a copy | `src/main/time-tracker.ts:160-166` | Patching the object `#open` returned would lose the newer `lastSeen` or write a stale copy | `#settled` reads `run.open` at settle time and matches by id (MAGIT-11 test) |
-| The provisional hand flag can show for up to 2 s | `src/renderer/src/components/PeriodRow.tsx:129` | An open period of a session linked to its branch's task shows the hand mark until the read settles | Accepted (spec assumption, pending owner); the closed record is right once the read settles, and a period closed first records what a timeout records today |
-| An open period sits under No task until its read settles | `src/renderer/src/components/HoursView.tsx` | The Hours view can move an open period between groups once, about 150 ms after it opens | Accepted (spec assumption, pending owner) |
+| The provisional hand flag can show for up to 2 s | `src/renderer/src/components/PeriodRow.tsx:129` | An open period of a session linked to its branch's task shows the hand mark until the read settles | Accepted (spec assumption, owner confirmed 2026-10-01); the closed record is right once the read settles, and a period closed first records what a timeout records today |
+| An open period sits under No task until its read settles | `src/renderer/src/components/HoursView.tsx` | The Hours view can move an open period between groups once, about 150 ms after it opens | Accepted (spec assumption, owner confirmed 2026-10-01) |
 | N sidecar rewrites and N pushes on a wake | `src/main/time-log-store.ts:139-144` (`writeOpen`, synchronous) | Each settled read rewrites `time-open.json`; small, but synchronous | The bench counts what it can; coalescing is the follow-up the issue allows if a stall points at it |
 | N concurrent `rev-parse` processes on a wake | `src/main/git.ts` | Six processes start at once instead of one after another | Read-only and short; #147's `peakConcurrent` shows them; one per worktree in the bench |
 | The bench's seeded repository is small | `scripts/bench-sessions.mjs` (#147 T15) | The baseline stall may read lower than the owner's 150 ms | T1 reports a missing stall to the owner (spec stop rule) and continues with the backoff |
