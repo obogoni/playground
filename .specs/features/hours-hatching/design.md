@@ -1,7 +1,7 @@
 # Hours Hatching Design
 
 **Spec**: `.specs/features/hours-hatching/spec.md`
-**Status**: Draft
+**Status**: Approved (owner, 2026-10-01)
 
 Line numbers below were read on `feature/hours-hatching` at `60ff148` (= `origin/main`).
 
@@ -256,7 +256,7 @@ panel (`#221f1b`) fails H2 in every dark slot (9.1 to 15.3); a 30% white ground 
 | Error Scenario | Handling | User Impact |
 | -------------- | -------- | ----------- |
 | A day holds all sixteen looks | The task is Other (HHAT-12) | A neutral bar, named by its label, tooltip and chip |
-| Only the previous chip's look is free | The task is Other (HHAT-13, pending owner) | As above; needs more than sixteen tasks |
+| Only the previous chip's look is free | The task is Other (HHAT-13, owner confirmed 2026-10-01) | As above; needs more than sixteen tasks |
 | A task appears while the week is shown | `roleOf` returns Other (unchanged, HCAL-24) | Neutral until the week is reopened |
 | `color-mix` unsupported | Not handled: Electron's Chromium supports it and the app already uses it (`HoursLegend.css:31`) | None |
 
@@ -272,7 +272,7 @@ panel (`#221f1b`) fails H2 in every dark slot (9.1 to 15.3); a 30% white ground 
 | Legend and drawer swatches lose their own slot rules | `HoursLegend.css:89-119`, `HoursView.css:259-289` | They then depend on `HoursCalendar.css` | They already depend on it for `--hcal-slotN`; the shared block's comment names all three surfaces |
 | A 14 px swatch could grow the chip | `HoursLegend.css:13-22, 35-46` | The legend row grows and HCAL-26's no-scroll fit breaks | 14 px sits inside the 12 px font's line box; section 7's no-scroll checks at 1100 × 640 run in the full drive |
 | Hard gradient stops alias at 45° | `HoursCalendar.css` (new rule) | Jagged stripes on a low-DPI screen | Hand-verify item in the smoke header, both themes |
-| The tooltip key stays solid | `HoursCalendar.css:322-329` | A hatched task's tooltip key matches its solid twin's | The tooltip names the task; pending owner |
+| The tooltip key stays solid | `HoursCalendar.css:322-329` | A hatched task's tooltip key matches its solid twin's | The tooltip names the task; owner confirmed 2026-10-01 |
 | Dark CVD worst pair in the WARN band | spec, validator output | Red and yellow close for deutan readers | The relief AD-045 requires stays: labels, tooltips, legend, hover and filter |
 | `hours-calendar/spec.md` HCAL-11 still says three colours | `.specs/features/hours-calendar/spec.md:76` | A merged spec describes a superseded rule | Pre-existing since AD-045; not this feature's change. Reported to the owner, not edited |
 | The unit tests pin the old rule in three places | `hours-calendar.test.ts:300-305, 345-349, 367-392` | They fail by design | T2 rewrites them to the new rule, each named in the commit body (the spec supersedes them) |

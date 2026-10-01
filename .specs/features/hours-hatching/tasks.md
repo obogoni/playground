@@ -9,13 +9,13 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/hours-hatching/design.md`
-**Status**: Draft (planned 2026-10-01, awaiting owner approval)
+**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01)
 
 **Branch**: `feature/hours-hatching`, cut from `origin/main` `60ff148`. The PR goes to `obogoni:main` with `Closes #152`.
 
 **Setup (before T1, no commit)**: the worktree has no `node_modules`. Run `npm ci --ignore-scripts` and `node node_modules/electron/install.js`, then record the **test baseline** here: `npx vitest run` count, `npm run typecheck`, and `npm run lint` errors and warnings.
 
-**Owner-to-confirm rows** (spec Assumptions, `pending owner`): the proposed hex values (T3, T9, T12), the hatch ground (T3, T9, T14), the hue-preference scope (T2), the only-previous-look-free rule (T2), the tooltip key (T3). The plan is built on the recommended defaults; a different answer changes only the tasks named.
+**Owner-confirmed rows** (spec Assumptions, `owner confirmed 2026-10-01`): the proposed hex values (T3, T9, T12), the hatch ground of 20% hue on white in both themes (T3, T9, T14), the hue-preference scope (T2), the only-previous-look-free rule (T2), the tooltip key (T3), all as the plan proposed them.
 
 **Stop rule**: T3 starts by re-running the dataviz validator on the spec's exact values. A non-zero exit in either theme, or an owner rejection of the values, stops Execute before T3's edit; the palette goes back to the owner.
 
@@ -132,8 +132,8 @@ T10 → T11 → T12 → T13 → T14 → T15
   - a seventeenth task on that day is Other (HHAT-12)
   - task 1 on Monday and Tuesday, tasks 2 to 8 on Monday, task 9 on Tuesday: task 9 is `slot2-hatched`, skipping the hue it shares a day with (HHAT-06, same day)
   - tasks 1 to 7 on Monday, task 8 alone on Tuesday, task 9 on Monday: task 9 is `slot1-hatched`, not `slot8-hatched`, the previous task's hue (HHAT-06, previous)
-  - tasks 1 to 8 on Monday, task 9 alone on Tuesday, tasks 10 to 16 on Monday, task 17 on Tuesday: task 17 is `slot2`, skipping solid blue whose hatched twin is on its day (hue preference on both fills, pending owner)
-  - tasks 1 to 15 on Monday, task 16 alone on Tuesday, task 17 on Monday: task 17 is Other, its one free look being the previous task's (HHAT-13, pending owner)
+  - tasks 1 to 8 on Monday, task 9 alone on Tuesday, tasks 10 to 16 on Monday, task 17 on Tuesday: task 17 is `slot2`, skipping solid blue whose hatched twin is on its day (hue preference on both fills, owner confirmed 2026-10-01)
+  - tasks 1 to 15 on Monday, task 16 alone on Tuesday, task 17 on Monday: task 17 is Other, its one free look being the previous task's (HHAT-13, owner confirmed 2026-10-01)
   - thirty-two tasks dealt one by one across the seven days use every look exactly twice (edge case)
   - a property run over generated weeks of 1 to 24 tasks finds no two neighbouring legend entries alike, no two same-day tasks alike, every task its own solid up to eight and its own look up to sixteen (HHAT-08, 09, 10, 11)
 - [ ] Three tests pinning the old rule are rewritten, each named in the commit body: "gives two tasks on different days both slot 1" (now `slot1`, `slot2`), "makes a ninth task on one day Other" (now `slot1-hatched`), the HCAL-21 legend-order test (task 9 `slot1-hatched`, task 10 `slot2-hatched`); the spec supersedes the rule they pinned
@@ -164,7 +164,7 @@ T10 → T11 → T12 → T13 → T14 → T15
 **Done when**:
 
 - [ ] Before the edit: `node <dataviz-skill-dir>/scripts/validate_palette.js "<light>" --mode light --surface "#ffffff" --pairs all` and the dark twin (`--surface "#221f1b"`) both exit 0 on the spec's exact values, outputs kept for T9 (stop rule otherwise)
-- [ ] `.hcal-tip-key` unchanged (tooltip key row, pending owner)
+- [ ] `.hcal-tip-key` unchanged (tooltip key row, owner confirmed 2026-10-01)
 - [ ] Gate check passes: `npm run lint && npx electron-vite build`
 
 **Tests**: none

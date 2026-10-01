@@ -31,8 +31,9 @@ and two pairs fail colour-vision simulation outright (AD-045). Issue #152.
 ## Assumptions & Open Questions
 
 Every row marked `owner confirmed 2026-10-01` comes from issue #152, grilled and confirmed that day; it
-is final. Rows marked `pending owner` are gray areas the issue does not settle: the plan is built on
-the stated default, and a different answer changes only the tasks named in `tasks.md`.
+is final. The gray areas the issue does not settle (the proposed hex values, the hatch ground, the
+hue preference scope, the only-previous-look rule and the tooltip key) were confirmed by the owner
+on 2026-10-01 as the plan proposed them.
 
 | Assumption / decision | Chosen default | Rationale | Confirmed? |
 | --------------------- | -------------- | --------- | ---------- |
@@ -46,18 +47,18 @@ the stated default, and a different answer changes only the tasks named in `task
 | Unchanged | Looks are frozen while the week is on screen (HCAL-24), assigned per week; task-less folders keep their outline; the legend order stays the colouring order; hover and the filter keep working | Issue #152, Solution 4 and User Story 10 | y, owner confirmed 2026-10-01 |
 | Palette retune | The worst pairs are retuned with the dataviz validator, `--pairs all`, on `#ffffff` (light) and `#221f1b` (dark), until they pass; the hues keep their order | Issue #152, Solution 1 and Implementation Decisions | y, owner confirmed 2026-10-01 |
 | Supersessions | This feature supersedes AD-045 (palette and assignment), HTF-02 (assignment), HTF-04 (Other at eight), HTF-16 (smoke: six Other bars), the palette values of HTF-01, and `hours-task-focus`'s Out of Scope row "Texture (hatching)". Recorded as a new decision, number chosen at Execute (main holds up to AD-051), with a supersession note in the merged spec in the same change | Issue #152, Implementation Decisions; the AD-018 / AD-029 / AD-048 pattern | y, owner confirmed 2026-10-01 |
-| Proposed hex values | Light `#2f76e8 #eb6623 #28ae76 #dbab37 #e984b7 #0f6f19 #4e3ca6 #d10b47`; dark `#2790da #b64906 #14a889 #bc8b03 #c90982 #117a2c #8c63f5 #f45468` (slots 1 to 8). Validator output below | Found by a search held to each slot's hue family (OKLCH hue within 10° of today's, lightness within 0.08, chroma at least 80% of today's), minimising the change; the largest move is 9.5 ΔE (dark magenta) | pending owner (the look of the new values) |
-| Hatch ground | The ground is the hue mixed 20% with white in OKLab, in both themes: `color-mix(in oklab, <hue> 20%, #fff)`. In the dark theme hatched bars are therefore pale | "A light tint" taken literally. A wash toward the dark panel instead fails the twin rule (ΔE 9.1 to 15.3 between a hatched look and its solid twin); white passes every slot in both themes | pending owner |
+| Proposed hex values | Light `#2f76e8 #eb6623 #28ae76 #dbab37 #e984b7 #0f6f19 #4e3ca6 #d10b47`; dark `#2790da #b64906 #14a889 #bc8b03 #c90982 #117a2c #8c63f5 #f45468` (slots 1 to 8). Validator output below | Found by a search held to each slot's hue family (OKLCH hue within 10° of today's, lightness within 0.08, chroma at least 80% of today's), minimising the change; the largest move is 9.5 ΔE (dark magenta) | owner confirmed 2026-10-01 (the look of the new values) |
+| Hatch ground | The ground is the hue mixed 20% with white in OKLab, in both themes: `color-mix(in oklab, <hue> 20%, #fff)`. In the dark theme hatched bars are therefore pale | "A light tint" taken literally. A wash toward the dark panel instead fails the twin rule (ΔE 9.1 to 15.3 between a hatched look and its solid twin); white passes every slot in both themes | owner confirmed 2026-10-01 |
 | Stripe geometry | Stripes 2 px wide in every 6 px, at 45°, measured along the gradient line | One stripe share (one third) that passes the legibility rule in both themes; at 14 px a swatch shows three to four stripes | y, agent's discretion inside "thin 45° stripes" |
-| Hue preference scope | The "prefer a hue not on the same day and not the previous chip's hue" tie-break is applied to solid picks too, not only hatched ones | One rule instead of two. It changes nothing in a week of sixteen tasks or fewer: until every solid is used, the least-used solids carry hues nobody holds; past sixteen it keeps a solid from sitting next to its hatched twin | pending owner |
-| Only the previous chip's look is free | IF every look but the previous legend chip's is held by same-day tasks THEN the task is Other | Keeps "never the look of the chip just before it" literal; needs a week of more than sixteen tasks with fifteen on one day | pending owner |
+| Hue preference scope | The "prefer a hue not on the same day and not the previous chip's hue" tie-break is applied to solid picks too, not only hatched ones | One rule instead of two. It changes nothing in a week of sixteen tasks or fewer: until every solid is used, the least-used solids carry hues nobody holds; past sixteen it keeps a solid from sitting next to its hatched twin | owner confirmed 2026-10-01 |
+| Only the previous chip's look is free | IF every look but the previous legend chip's is held by same-day tasks THEN the task is Other | Keeps "never the look of the chip just before it" literal; needs a week of more than sixteen tasks with fifteen on one day | owner confirmed 2026-10-01 |
 | Other and No task in the no-repeat rule | They are not among the sixteen looks: two Other chips may sit side by side, and so may two folders | Other is the overflow for a full day and sorts after every coloured chip (HCAL-21); each chip still names its task | y, follows from the issue's sixteen looks |
-| Tooltip key | The bar tooltip's 12 × 2 px key line stays solid in the hue for a hatched task | A 2 px line cannot show stripes, and the tooltip names the task beside it; the issue names bars, legend and drawer only | pending owner |
+| Tooltip key | The bar tooltip's 12 × 2 px key line stays solid in the hue for a hatched task | A 2 px line cannot show stripes, and the tooltip names the task beside it; the issue names bars, legend and drawer only | owner confirmed 2026-10-01 |
 | Relief channel | The dark palette's colour-vision worst pair sits in the validator's WARN band (6.4); the light palette's three sub-3:1 slots keep their WARN. The legend, the tooltips and the bar labels name every task, and hover and the filter isolate one (AD-045's relief, unchanged) | dataviz: a CVD floor-band pair and a sub-3:1 fill are legal only with secondary encoding, which the view already ships | y, unchanged from AD-045 |
 | Stop rule | IF the Execute re-run of the validator exits 1 in either theme, or the owner rejects the proposed values, THEN Execute stops before the palette task (T3) and the palette goes back to the owner | Issue #152, Further Notes: "if a pair can't pass in a theme, the plan goes back to the owner" | y, owner confirmed 2026-10-01 |
 | Base branch | `feature/hours-hatching`, cut from `origin/main` `60ff148` | `hours-task-focus` and `hours-task-assign` are on main | y |
 
-**Open questions:** none. All resolved or logged above; the `pending owner` rows carry a default.
+**Open questions:** none. All resolved or logged above; the owner confirmed the remaining defaults on 2026-10-01.
 
 ### Validator output (2026-10-01)
 
@@ -147,7 +148,7 @@ same search held 14.6 normal-vision with 7.8 CVD. The WARN band is legal with th
 
 11. The calendar SHALL never give the same look to two tasks that share a day
 12. IF every one of the sixteen looks is held by tasks sharing a day with a task THEN that task SHALL be Other
-13. IF the only look not held by a same-day task is the previous task's look THEN the task SHALL be Other (pending owner)
+13. IF the only look not held by a same-day task is the previous task's look THEN the task SHALL be Other (owner confirmed 2026-10-01)
 
 **Independent Test**: Seventeen tasks on one day give sixteen looks and one Other.
 
