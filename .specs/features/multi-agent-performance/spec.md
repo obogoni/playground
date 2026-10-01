@@ -64,6 +64,7 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 | Activity pill wrapping (item 6) | Fixed preventively with single-line + ellipsis, whether or not it reproduces | Cheap, and a wrapping header is a full-screen TUI redraw per activity change | n |
 | Owner measurement 2026-10-01 (after T1–T22) | **Phase 7 added (PERF-19..21).** The owner's run showed `max` loop delays of 400–2,100 ms. Cause, measured: `resolveClaude` runs `execFileSync('where', ['claude'])` (220–310 ms idle, `index.ts:591`); `where` prints in the console codepage, the UTF-8 decode mangles the `á` in the profile path, the spawn fails with ENOENT, and the name poller drops the binary and re-runs the blocking `where` on every nudge (at most once a second) and every 30 s. Second sync call: `readGit` (`execFileSync git rev-parse`, ~155 ms, 2 s timeout) on every period open | Same goal (keystrokes not blocked by main), same PR | y |
 | `p50 ≈ 15.5 ms` in the loop log | Read as Windows timer granularity (~15.6 ms), not lag; the Phase 7 bound is stated on `max` | `monitorEventLoopDelay` samples a timer, which cannot fire finer than the OS tick | y |
+| Owner CPU profile 2026-10-01 (after Phase 7) | **Phase 8 added (PERF-22).** 77 s main-process profile: every remaining busy stretch over 40 ms is a native `spawn` (35–65 ms each on this machine, even through async `execFile`) or node-pty's `WindowsPtyAgent` (255–285 ms per terminal opened). `tree:get` starts one `git` per repo and one `git status` per worktree at once, so the spawns stack into 462–664 ms blocks; it runs at startup and on window focus (SCRF-09). node-pty's cost is out of scope (needs a utility process) | Same goal, same PR | y |
 
 **Open questions:** none — all resolved or logged above.
 
@@ -157,6 +158,23 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 
 ---
 
+### P1: A burst of git calls never blocks the main process for long ⭐ MVP
+
+**User Story**: As a developer, I want the app's git calls to start one at a time with the event loop free between them, so that a tree refresh never freezes my typing.
+
+**Why P1**: Measured as the remaining 330–660 ms stalls after Phase 7 (owner CPU profile, 2026-10-01).
+
+**Acceptance Criteria**:
+
+1. WHEN several git calls are requested at once THEN `git()` SHALL start at most one process per event-loop turn, yielding to the loop (`setImmediate`) before each start  <!-- PERF-22 -->
+2. WHILE 4 git processes are running, `git()` SHALL queue further calls and start the next only when one finishes  <!-- PERF-22 -->
+3. Queued calls SHALL start in the order they were requested, and each SHALL resolve or reject with its own process's result, as today  <!-- PERF-22 -->
+4. IF a git process fails or times out THEN its slot SHALL be released and the next queued call SHALL start  <!-- PERF-22 -->
+
+**Independent Test**: Unit tests drive the pacer with a fake `defer` and controllable starts (order, one start per turn, cap of 4, slot release on reject). In the dev app, a CPU profile taken across startup and a few window focus switches shows no busy stretch over 100 ms made of `git` spawns (`analyze2.js`).
+
+---
+
 ### P1: The main process never blocks on a child process ⭐ MVP
 
 **User Story**: As a developer, I want the app to find the `claude` binary and read a worktree's git state without blocking the main process, so that no keystroke waits behind a child process.
@@ -245,8 +263,9 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 | PERF-19 | P1: Never blocks on a child — AC 1, 2 | Execute | Done (T23–T25), UAT pending |
 | PERF-20 | P1: Never blocks on a child — AC 3, 4 | Execute | Done (T24, T25), UAT pending |
 | PERF-21 | P1: Never blocks on a child — AC 5, 6, 7 | Execute | Done (T26–T28), UAT pending |
+| PERF-22 | P1: Git bursts — AC 1–4 | Tasks | Pending |
 
-**Coverage:** 21 total, 21 mapped to tasks (PERF-19..21 → T23–T28), 0 unmapped
+**Coverage:** 22 total, 22 mapped to tasks (PERF-19..21 → T23–T28, PERF-22 → T29–T30), 0 unmapped
 
 ---
 
@@ -255,5 +274,6 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 - [ ] Main event-loop delay p99 < 20 ms with 3 Claude Code sessions working (PERF-16 log, before vs after recorded in `validation.md`)
 - [ ] No `[perf] longtask` ≥ 50 ms in a 60 s window of typing and wheel-scrolling with 3 sessions working (PERF-15)
 - [ ] `npm run typecheck && npm run lint && npm test` green
+- [ ] No busy stretch over 100 ms made of `git` spawns in a main-process CPU profile (PERF-22)
 - [ ] No loop-delay `max` above 115 ms in the owner's multi-agent scenario (PERF-16 log, after Phase 7)
 - [ ] Owner UAT: typing and scrolling feel immediate with 3+ agents; Claude Code's boxed TUI renders correctly maximized and narrow

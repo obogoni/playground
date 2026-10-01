@@ -211,3 +211,18 @@ Added after the owner's measurement (spec Assumptions). Two modules and two wiri
 | A hand-set task changes between open and resolve | `time-tracker.ts` | Patch could apply the old task | The patch reads `run.task` at resolve time and targets the period by id; a task change already closed that period and opened a new one with its own read |
 | `where` and `findOnPath` could disagree on an exotic PATH (e.g. `%VAR%` entries) | `path-lookup.ts` | A different binary than before | PATH entries are already expanded in the process env on Windows; `agent.claudePath` stays as the override |
 
+---
+
+## Phase 8 addendum (2026-10-01): pace git spawns (PERF-22)
+
+- **Location**: `src/main/spawn-pacer.ts`; used by `git()` in `src/main/git.ts` (AD-023 makes it the single git entry point, so one change covers `listWorktrees`, `worktreeStatus`, `readSyncState`, the Files direction and the rest).
+- **Interface**: `createSpawnPacer({ maxRunning = 4, defer = setImmediate }): <T>(start: () => Promise<T>) => Promise<T>`.
+- **Behaviour**: a FIFO queue. A pump, scheduled with `defer`, starts the head call when fewer than `maxRunning` are running, then schedules itself again for the next one. So at most one `spawn` runs per event-loop turn, and IPC (keystrokes) is handled between two spawns. A settled call (resolve or reject) frees its slot and schedules the pump. A `start` that throws synchronously rejects that call and frees its slot.
+- **Why `setImmediate`**: it yields to the loop without the ~15.6 ms Windows timer floor a `setTimeout(0)` would add to every git call. Electron's main loop runs Chromium tasks (IPC) between libuv iterations. That the yield really lets input through is confirmed by the owner's follow-up profile, not by a unit test.
+- **Out of scope**: node-pty's synchronous ConPTY creation (~270 ms per opened terminal). The non-git spawns (`claude agents --json` every 30 s, `az`, hook shells) are single, not bursts.
+
+| Concern | Location | Impact | Mitigation |
+| ------- | -------- | ------ | ---------- |
+| A burst now takes longer end to end (one start per turn, at most 4 running) | `git.ts` | The tree's counts land a little later at startup | Each start is ~50 ms anyway; the total spawn time is unchanged, only spread out. 4 running in parallel keeps git's own work overlapped |
+| A git call that never settles would hold a slot forever | `spawn-pacer.ts` | Queue stalls after 4 hung calls | `execFile` settles on exit or on its `timeout`; the long-running git calls (fetch/push) already pass `timeoutMs` |
+

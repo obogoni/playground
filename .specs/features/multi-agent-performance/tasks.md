@@ -96,6 +96,12 @@ T26 → T28
 T27 → T28
 ```
 
+### Phase 8: Pace git spawns (added 2026-10-01)
+
+```
+T29 → T30
+```
+
 ---
 
 ## Task Breakdown
@@ -662,10 +668,45 @@ T27 → T28
 
 ---
 
+### T29: Spawn pacer
+
+**What**: `createSpawnPacer({ maxRunning, defer })` per design (Phase 8 addendum).
+**Where**: `src/main/spawn-pacer.ts` (new; co-located `.test.ts`)
+**Depends on**: None
+**Requirement**: PERF-22
+
+**Done when**:
+- [ ] 6 calls requested at once: none starts before the first `defer` turn; one start per turn; FIFO order
+- [ ] With 4 running, the 5th starts only after one settles (default `maxRunning` pinned as 4)
+- [ ] Each call resolves/rejects with its own result; a reject and a synchronous throw both free the slot
+- [ ] Gate: quick
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `perf(git): add a spawn pacer`
+
+---
+
+### T30: Route every git call through the pacer
+
+**What**: `git()` in `git.ts` schedules its `execFile` through one module-level pacer.
+**Where**: `src/main/git.ts`
+**Depends on**: T29
+**Requirement**: PERF-22
+
+**Done when**:
+- [ ] Gate: build (the existing real-git suites exercise `git()` through the pacer)
+
+**Tests**: none
+**Gate**: build
+**Commit**: `perf(git): start git processes one per event-loop turn`
+
+---
+
 ## Phase Execution Map
 
 ```
-Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7
+Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7 → Phase 8
 
 Phase 1:  T1 → T2
           T3 → T4
@@ -684,6 +725,7 @@ Phase 6:  T19
 Phase 7:  T23 → T24 → T25
           T26 → T28
           T27 → T28
+Phase 8:  T29 → T30
 ```
 
 Execution is strictly sequential: tasks run in numeric order within a phase.
@@ -785,5 +827,6 @@ Cross-phase: T11–T13 use `PerfProfiler` from T4, which sits in Phase 1 — a b
 | PERF-19 | T23, T24, T25 |
 | PERF-20 | T24, T25 |
 | PERF-21 | T26, T27, T28 |
+| PERF-22 | T29, T30 |
 
-**Coverage:** 21 total, 21 mapped, 0 unmapped.
+**Coverage:** 22 total, 22 mapped, 0 unmapped.
