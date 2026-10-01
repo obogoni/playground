@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/create-timeouts/design.md`
-**Status**: Draft (planned 2026-10-01, awaiting owner approval)
+**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01)
 
 **Branch**: `feature/create-timeouts`, cut from `origin/main` `60ff148`. Issue #153 runs after #145 (`feature/branch-slug-short`), which edits `git.ts`, `createWorktree`'s guards, both create dialogs, `worktree-manager.test.ts` and `smoke-start-work.mjs`. **Before T1**, once #145 has merged: `git fetch origin && git rebase origin/main`, then re-read the line numbers this plan cites. The PR body carries `Closes #153`.
 
@@ -17,7 +17,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Stop rule (T1)**: T1 must show today's code blocked on a fetch that waits for input. If git cannot be made to block that way on Windows, stop after T1 and report to the owner before any timeout or dialog work.
 
-**Owner-to-confirm rows** (spec Assumptions, `pending owner`): timeout values, timeout texts, step labels and placement, closing while busy, the partial worktree after a checkout timeout. The plan is built on the recommended defaults. A different answer changes only: values → T4, T5, T6; texts → T5, T6; labels → T10, T12, T13, T14, T15; closing → T10, T12, T13, T14, T15; partial worktree → T6.
+**Owner-confirmed rows** (spec Assumptions, `owner confirmed 2026-10-01`): timeout values (60 s for fetch and fast-forward, 10 min for the checkout, the hook keeps 120 s), timeout texts, step labels and placement, closing while busy (the dialog stays open: a backdrop click does nothing and Cancel is disabled with its tooltip), the partial worktree after a checkout timeout, all as the plan proposed them.
 
 **Hand-verify** (not automatable, listed in the smoke headers): a real credential manager window during a fetch (the create ends at 60 s; the window may stay open); the progress line during a slow checkout of a large repository; the spinner stopped under reduced motion.
 

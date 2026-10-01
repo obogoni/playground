@@ -1,7 +1,7 @@
 # Create Timeouts Design
 
 **Spec**: `.specs/features/create-timeouts/spec.md`
-**Status**: Draft
+**Status**: Approved (owner, 2026-10-01)
 
 Line numbers below were read on `feature/create-timeouts` at `60ff148` (= `origin/main`). #145 lands
 first on the same files; they will shift after the rebase.
@@ -240,7 +240,7 @@ Nothing is persisted. `CreateWorktreeResult` does not change: a timeout is an `o
 | Per-call or per-refresh limit | Per call (fetch, then fast-forward) | `execFile`'s timeout is per process; a shared deadline would need a clock the runner does not have |
 | Where `onStep` lives | Seventh positional parameter of the create | Matches the existing positional create signature; the workflow ctx's six-parameter type still accepts it |
 | Who reports `running-hook` | The decorator | Only it knows a command is declared |
-| Busy dialog | Stays open (spec Assumptions, pending owner) | No new notice channel; every step is bounded |
+| Busy dialog | Stays open (spec Assumptions, owner confirmed 2026-10-01) | No new notice channel; every step is bounded |
 | Git stdin | End the pipe, keep `execFile` | Measured equivalent EOF; keeps the runner's error shape |
 
 ### AD-TBD (number chosen at Execute; main holds up to AD-051)
