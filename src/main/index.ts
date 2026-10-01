@@ -30,6 +30,7 @@ import { runHookShell } from './hook-shell'
 import { emit, handle, onSend } from './ipc'
 import { createMcpResultServer } from './mcp-result-server'
 import { purgePasteDir } from './paste-temp'
+import { startLoopDelayLog } from './perf-monitor'
 import { withPostCreateHook } from './post-create-hook'
 import { PtyPort } from './pty-port'
 import { resolvePostCreateCommand } from './repo-config'
@@ -268,6 +269,12 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // Debug-only event-loop delay log (PERF-16); nothing starts without the env flag (PERF-18).
+  const stopLoopDelayLog = startLoopDelayLog({
+    enabled: process.env.PLAYGROUND_DEBUG_PERF === '1'
+  })
+  app.on('will-quit', stopLoopDelayLog)
+
   // Set app user model id for windows. Derive it from the packaged identity so the
   // nightly build (a distinct app name) groups separately from stable on the taskbar.
   // Normalize the name into a dot-separated, lowercase slug so a spaced/cased name

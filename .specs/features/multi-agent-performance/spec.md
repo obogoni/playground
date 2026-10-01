@@ -217,7 +217,7 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 | PERF-13 | P2: Recount — AC 3, 4 | Design | Pending |
 | PERF-14 | P2: Clocks — AC 1, 2, 3 | Design | Pending |
 | PERF-15 | P3: Measurable — AC 1 | Design | Pending |
-| PERF-16 | P3: Measurable — AC 2 | Execute | Implementing (T1) |
+| PERF-16 | P3: Measurable — AC 2 | Execute | Done (T1, T2) |
 | PERF-17 | P3: Measurable — AC 3 | Design | Pending |
 | PERF-18 | P3: Measurable — AC 4, 5 | Execute | Implementing (T1) |
 
