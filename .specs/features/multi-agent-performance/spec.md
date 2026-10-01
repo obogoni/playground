@@ -263,7 +263,7 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 | PERF-19 | P1: Never blocks on a child — AC 1, 2 | Execute | Done (T23–T25), UAT pending |
 | PERF-20 | P1: Never blocks on a child — AC 3, 4 | Execute | Done (T24, T25), UAT pending |
 | PERF-21 | P1: Never blocks on a child — AC 5, 6, 7 | Execute | Done (T26–T28), UAT pending |
-| PERF-22 | P1: Git bursts — AC 1–4 | Tasks | Pending |
+| PERF-22 | P1: Git bursts — AC 1–4 | Execute | Implementing (T29) |
 
 **Coverage:** 22 total, 22 mapped to tasks (PERF-19..21 → T23–T28, PERF-22 → T29–T30), 0 unmapped
 

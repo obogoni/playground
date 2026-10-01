@@ -676,10 +676,12 @@ T29 → T30
 **Requirement**: PERF-22
 
 **Done when**:
-- [ ] 6 calls requested at once: none starts before the first `defer` turn; one start per turn; FIFO order
-- [ ] With 4 running, the 5th starts only after one settles (default `maxRunning` pinned as 4)
-- [ ] Each call resolves/rejects with its own result; a reject and a synchronous throw both free the slot
-- [ ] Gate: quick
+- [x] 6 calls requested at once: none starts before the first `defer` turn; one start per turn; FIFO order
+- [x] With 4 running, the 5th starts only after one settles (default `maxRunning` pinned as 4)
+- [x] Each call resolves/rejects with its own result; a reject and a synchronous throw both free the slot
+- [x] Gate: quick
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
