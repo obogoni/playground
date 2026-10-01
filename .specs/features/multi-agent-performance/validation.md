@@ -1,9 +1,9 @@
 # Multi-Agent Performance Validation
 
-**Verdict**: FAIL ❌ (Phase 8 PERF-22: one surviving sensor mutant; PERF-01..18 and Phase 7 PERF-19..21 remain PASS)
+**Verdict**: PASS ✅ (Phases 1–8, PERF-01..22; Phase 8 passed on re-verification iteration 1 at 75724a2)
 **Date**: 2026-10-01
 **Spec**: `.specs/features/multi-agent-performance/spec.md` (PERF-01..22)
-**Diff range**: Phase 8: `cd5e318..HEAD` (`cd5e318..1a3ebd6`, see "Phase 8 (PERF-22)"). Phase 7: `8a9ceb8..HEAD` (`8a9ceb8..83c8704`, see "Phase 7 (PERF-19..21)"). PERF-01..18: `a150e5b..423c091` (branch `feature/multi-agent-performance`, base `origin/main` 60ff148; 22 commits, 37 files)
+**Diff range**: Phase 8: `cd5e318..HEAD` (`cd5e318..75724a2`; first run at 1a3ebd6, fix 75724a2, see "Phase 8 (PERF-22)"). Phase 7: `8a9ceb8..HEAD` (`8a9ceb8..83c8704`, see "Phase 7 (PERF-19..21)"). PERF-01..18: `a150e5b..423c091` (branch `feature/multi-agent-performance`, base `origin/main` 60ff148; 22 commits, 37 files)
 **Verifier**: independent sub-agent (author ≠ verifier); coverage re-derived from the spec and the diff, evidence-or-zero.
 
 All 18 requirements trace to a test assertion or to implementing code read for correctness. The tests assert the outcomes the spec defines. The sensor injected 27 behaviour mutations: 26 were killed, and the one survivor is equivalent to the original code. Typecheck and lint are clean, and the in-scope suites pass. The full suite has two failures, both in known real-git noise files that this diff does not touch. The renderer components and hooks follow the repo convention in `.specs/codebase/TESTING.md` (verified by hand), so their ACs are **UAT pending** for the owner. Reading that code found no defect.
@@ -244,7 +244,7 @@ Run in an isolated `git worktree add --detach M:/obogoni/map-verify-scratch HEAD
 
 ## Phase 8 (PERF-22)
 
-**Verdict**: FAIL ❌. All 4 ACs trace to passing tests and the production pacer reads correct, but one non-equivalent sensor mutant survived (a spin while all slots are full), so the tests do not pin that behaviour.
+**Verdict**: PASS ✅ on re-verification iteration 1 (75724a2). The first run at 1a3ebd6, recorded below, failed on one non-equivalent surviving mutant (a spin while all slots are full); the fix added tests that kill it. See "Re-verification (iteration 1)".
 **Diff range**: `cd5e318..HEAD` (`cd5e318..1a3ebd6`: 554010e specs, d236346 `spawn-pacer.ts` + test, 1a3ebd6 `git.ts` wiring).
 **Tasks**: T29 ✅ Done, T30 ✅ Done (`tasks.md`).
 
@@ -289,7 +289,7 @@ Command per mutant: `npx vitest run src/main/spawn-pacer.test.ts`.
 
 **Mutant 2 is a real defect the suite cannot see.** With `>`, `pump()` still defers when all 4 slots are busy. The turn starts nothing (the inner check holds the cap) and re-pumps, so `setImmediate` re-schedules itself for as long as 4 git processes run with calls queued. Cap, order and results are unchanged, so every AC test passes, but the main process spins a CPU core during exactly the bursts this phase targets. Confirmed in the scratch with a probe test (6 never-settling calls, 6 turns, then 20 more turns; asserts no deferred turn is pending and the `defer` count stops growing). It passes on HEAD and fails on mutant 2 (`expected [ [Function] ] to deeply equal []`). The probe was deleted with the scratch.
 
-**Result**: 8/9 non-equivalent mutants killed, 1 survived (10 injected, 1 equivalent). FAIL ❌.
+**Result (first run, 1a3ebd6, superseded)**: 8/9 non-equivalent mutants killed, 1 survived (10 injected, 1 equivalent). Not passing; see the re-verification below.
 **Isolation**: the real tree's `git status --porcelain` was empty before and after. The junction was removed with `rmdir` (real `node_modules` intact, 504 entries) and the worktree with `git worktree remove --force`. `git worktree list` shows only the real tree.
 
 ### Gate (real tree, HEAD 1a3ebd6)
@@ -319,6 +319,40 @@ The differences are within run-to-run noise: the two runs with the pacer differ 
 2. Low: AC1 names `setImmediate`, but no test pins the production default (`src/main/spawn-pacer.ts:20`). A `setTimeout(0)` or `queueMicrotask` default would pass the suite. Verified by reading only.
 3. Owner UAT: the CPU profile item below (not automatable).
 
+### Re-verification (iteration 1, HEAD 75724a2)
+
+**Fix under test**: 75724a2 `test(git): pin the pacer idle while full and its setImmediate yield`, touching only `src/main/spawn-pacer.test.ts` (+36/−1). Production code is unchanged since 1a3ebd6. Line numbers in the AC table above are as of 1a3ebd6; the fix shifted them by +5 (the manual loop gained `pending()`).
+
+**New tests, spec-anchored:**
+
+| Gap | AC | `file:line` + assertion | Assessment |
+| --- | -- | ----------------------- | ---------- |
+| 1. Spin while full | AC2 ("WHILE 4 are running … start the next only when one finishes") | `src/main/spawn-pacer.test.ts:81-90`: 6 never-settling calls under the default cap, 8 turns; `:87` `expect(started).toEqual(['1','2','3','4'])`, `:89` `expect(loop.pending()).toBe(0)` | Not shallow. It asserts the pacer schedules no turn while every slot is busy, which is the behaviour mutant A broke. `pending()` reads the manual loop's real queue, not a mock of the pacer |
+| 2. `setImmediate` default | AC1 ("yielding to the loop (`setImmediate`) before each start") | `src/main/spawn-pacer.test.ts:92-109`: stubs `globalThis.setImmediate`, builds `createSpawnPacer()` with defaults; `:102` `expect(started).toEqual([])`, `:103` `expect(deferred).toHaveLength(1)`, `:105` `expect(started).toEqual(['a'])` after running the deferred callback; the real `setImmediate` is restored in `finally` | Not shallow. The default parameter is read at call time, so the stub is the production path; another yield primitive leaves `deferred` empty |
+
+**Discrimination sensor** (scratch `git worktree add --detach M:/vfy-scratch-p8b HEAD`, `node_modules` junction via `mklink /J`; byte-exact restore after each mutant; command `npx vitest run src/main/spawn-pacer.test.ts`; scratch baseline 8/8 passed):
+
+| # | `file:line` | Mutation | Killed? |
+| - | ----------- | -------- | ------- |
+| A | `src/main/spawn-pacer.ts:27` | `running >= maxRunning` → `running > maxRunning` (the first run's survivor) | ✅ (idle-while-full test) |
+| B | `src/main/spawn-pacer.ts:20` | Default `defer = setImmediate` → `(fn) => { setTimeout(fn, 0) }` | ✅ (setImmediate default test) |
+| C | `src/main/spawn-pacer.ts:20` | Default `defer = setImmediate` → `queueMicrotask` | ✅ (setImmediate default test) |
+| 1 | `src/main/spawn-pacer.ts:29` | Run the turn synchronously instead of through `defer` | ✅ (2 tests) |
+| 3 | `src/main/spawn-pacer.ts:2` | Default `MAX_RUNNING` 4 → 5 | ✅ (3 tests) |
+| 4 | `src/main/spawn-pacer.ts:31` | LIFO: `shift()` → `pop()` | ✅ (5 tests) |
+| 5 | `src/main/spawn-pacer.ts:46` | Release the slot only on resolve, not on reject | ✅ (2 tests) |
+| 6 | `src/main/spawn-pacer.ts:41` | No `try/catch` around `start()` | ✅ (1 test) |
+| 7 | `src/main/spawn-pacer.ts:32` | The turn does not re-pump after a start | ✅ (4 tests) |
+| 8 | `src/main/spawn-pacer.ts:48` | A settle does not re-pump | ✅ (3 tests) |
+| 9 | `src/main/spawn-pacer.ts:31` | Two starts per turn | ✅ (1 test) |
+
+**Result**: 11/11 non-equivalent mutants killed, 0 survived (mutant 2b stays equivalent and was not re-run). PASS ✅.
+**Isolation**: the real tree's `git status --porcelain` was empty before and after. The junction was removed with `rmdir` (real `node_modules` intact, 504 entries) and the worktree with `git worktree remove --force`; `git worktree list` shows only the real tree.
+
+**Gate (real tree, HEAD 75724a2)**: `npm run typecheck` exit 0; `npm run lint` exit 0 (0 errors, the same 18 warnings outside the diff); `npx vitest run src/main/spawn-pacer.test.ts` 8 passed, 0 failed. Test count +2 against the first run; no test deleted or weakened.
+
+**Remaining gaps**: owner UAT item 11 only (CPU profile). Lesson L-097, recorded for the first run's survivor, stays as is; the re-verification found no new failure.
+
 ---
 
 ## Interactive UAT (owner, dev app with `localStorage['playground.debug.perf']='1'` and `PLAYGROUND_DEBUG_PERF=1`)
@@ -344,7 +378,7 @@ The differences are within run-to-run noise: the two runs with the pacer differ 
 | PERF-01, 02, 03, 05, 08, 11, 14, 15, 16, 18 | ✅ Verified |
 | PERF-04, 06, 07, 09, 10, 12, 13, 17 | ✅ Verified (code + unit where applicable), owner UAT pending |
 | PERF-19, 20, 21 | ✅ Verified (unit + wiring read), owner UAT pending (items 9–10) |
-| PERF-22 | ❌ Needs Fix (ACs 1–4 covered; surviving mutant 2 needs a test), owner UAT pending (item 11) |
+| PERF-22 | ✅ Verified (unit, sensor 11/11 on re-verification), owner UAT pending (item 11) |
 
 ---
 
@@ -358,4 +392,4 @@ The differences are within run-to-run noise: the two runs with the pacer differ 
 
 **Phase 7 (PERF-19..21)**: ✅ PASS. 7/7 ACs traced, sensor 17/17 killed, typecheck ✅, lint ✅, in-scope tests 87/87. Two findings do not block: the sync esbuild call in `workflow-loader.ts:137` runs on the warm workflow-list path, and the sync `readGit` is now dead code.
 
-**Phase 8 (PERF-22)**: ❌ FAIL. 4/4 ACs traced and the pacer reads correct, typecheck ✅, lint ✅, in-scope tests 71/71, but the sensor killed 8/9 non-equivalent mutants: `>=` → `>` at `src/main/spawn-pacer.ts:27` makes the pacer spin `setImmediate` while 4 git processes run, and no test notices. One fix task: a test asserting no turn is pending while all slots are full. The full-suite `git-sync`/`commit-log` timeouts are not caused by the pacer (same durations with and without it).
+**Phase 8 (PERF-22)**: ✅ PASS on re-verification iteration 1 (75724a2). 4/4 ACs traced, sensor 11/11 non-equivalent mutants killed (including the first run's `>=` → `>` survivor at `src/main/spawn-pacer.ts:27` and two non-`setImmediate` defaults), typecheck ✅, lint ✅, `spawn-pacer.test.ts` 8/8. The full-suite `git-sync`/`commit-log` timeouts are not caused by the pacer (same durations with and without it).
