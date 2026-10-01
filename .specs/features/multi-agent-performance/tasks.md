@@ -568,10 +568,12 @@ T27 → T28
 **Requirement**: PERF-19, PERF-20
 
 **Done when**:
-- [ ] `get()` before the first lookup settles → configured path, or throws `agent binary not found`; after it → found path
-- [ ] `get()` at +29,999 ms starts no lookup; at +30,000 ms starts exactly one; a second `get()` while it is in flight starts none (30,000 pinned literally)
-- [ ] A rejecting or `null` lookup keeps the previous path
-- [ ] Gate: quick
+- [x] `get()` before the first lookup settles → configured path, or throws `agent binary not found`; after it → found path
+- [x] `get()` at +29,999 ms starts no lookup; at +30,000 ms starts exactly one; a second `get()` while it is in flight starts none (30,000 pinned literally)
+- [x] A rejecting or `null` lookup keeps the previous path
+- [x] Gate: quick
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
