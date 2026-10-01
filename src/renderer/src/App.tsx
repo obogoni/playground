@@ -139,7 +139,9 @@ function App(): JSX.Element {
     refreshTree,
     refreshAndSelect,
     refreshAndSelectDefault,
-    recount
+    recount,
+    treeRevision,
+    onRecounted
   } = useTree()
   const {
     sessions,
@@ -606,6 +608,8 @@ function App(): JSX.Element {
       <PerfProfiler name="StatusBar">
         <StatusBar
           tree={tree}
+          treeRevision={treeRevision}
+          onRecounted={onRecounted}
           selectedId={selectedId}
           sessions={sessions}
           selectedSessionId={selectedSessionId}

@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CommitLists, GitOp, GitOpResult, SyncState } from '../../../shared/git'
-import type { WorkspaceNode } from '../../../shared/tree'
 import { api } from './api'
 
 export interface UseGitSyncOptions {
   /** The worktree the bar describes; null for a folder or no selection. */
   targetPath: string | null
-  /** The tree snapshot; a new identity means the tree refreshed (STBR-11). */
-  tree: WorkspaceNode[]
+  /** Bumped on every `tree:get` result: the tree refreshed (STBR-11, PERF-13). */
+  treeRevision: number
+  /** Subscribes to recount results by worktree path; a recount of the target
+   *  re-reads its sync state, one of any other path does not (PERF-12, PERF-13,
+   *  AD-052). Must be stable, or the subscription churns. */
+  onRecounted: (cb: (worktreePath: string) => void) => () => void
   /** The worktree whose sync popover is open, or null when it is closed (STBR-26). */
   popoverPath: string | null
   /** Report an outcome whose popover is no longer on screen (STBR-26). */
@@ -62,7 +65,8 @@ function outcomeToast(path: string, { op, result }: OpOutcome): string {
  */
 export function useGitSync({
   targetPath,
-  tree,
+  treeRevision,
+  onRecounted,
   popoverPath,
   onToast,
   onRefreshTree
@@ -114,7 +118,20 @@ export function useGitSync({
     if (targetPath === null) return
     loadState(targetPath)
     if (popoverPathRef.current === targetPath) loadCommits(targetPath)
-  }, [targetPath, tree, loadState, loadCommits])
+  }, [targetPath, treeRevision, loadState, loadCommits])
+
+  // A recount means git state moved there (a commit, say): re-read ahead/behind
+  // for the bar's own worktree only, changed count or not (PERF-12); a recount
+  // of any other worktree spawns no `git:sync-state` (PERF-13, AD-052).
+  useEffect(
+    () =>
+      onRecounted((path) => {
+        if (path !== targetPathRef.current) return
+        loadState(path)
+        if (popoverPathRef.current === path) loadCommits(path)
+      }),
+    [onRecounted, loadState, loadCommits]
+  )
 
   const run = useCallback(
     (op: GitOp, remote?: string): void => {

@@ -520,8 +520,10 @@ T20 → T21 → T22
 **Requirement**: PERF-12, PERF-13
 
 **Done when**:
-- [ ] Gate: build passes; Test count unchanged
+- [x] Gate: build passes; Test count unchanged
 - [ ] Dev app, two worktrees: a commit in the non-target worktree triggers no `git:sync-state`; a commit in the target updates ahead/behind; a manual refresh (`tree:get`) re-reads it
+
+**Status**: ✅ Done (dev-app check pending UAT)
 
 **Tests**: none
 **Gate**: build
