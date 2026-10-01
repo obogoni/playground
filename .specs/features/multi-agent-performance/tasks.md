@@ -483,8 +483,10 @@ T20 → T21 → T22
 **Requirement**: PERF-12, PERF-13
 
 **Done when**:
-- [ ] Add/emit/remove; duplicate add of one fn; throwing listener isolated
-- [ ] Gate: quick; Test count B + ≥46
+- [x] Add/emit/remove; duplicate add of one fn; throwing listener isolated
+- [x] Gate: quick; Test count B + ≥46
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
