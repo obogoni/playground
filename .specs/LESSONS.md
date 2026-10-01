@@ -558,6 +558,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: src/renderer/src/components/AgentsView.tsx:225 SPEC_DEVIATION (PERF-10 pill title vs STRP-05) (design)
 - last seen: 2026-10-01T20:45:03Z
 
+### L-097 - For a queue or scheduler, test that it goes idle when it cannot make progress (no pending deferred turn while at capacity), not only that it never exceeds capacity: a loosened outer guard keeps the cap but spins the event loop
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing/schedulers` · harmful: 0
+- features: multi-agent-performance
+- evidence: src/main/spawn-pacer.ts:27 (P8 mutant 2) (testing/schedulers)
+- last seen: 2026-10-01T22:23:16Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
