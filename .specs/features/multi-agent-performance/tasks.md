@@ -405,10 +405,12 @@ T20 → T21 → T22
 **Requirement**: PERF-14
 
 **Done when**:
-- [ ] 5 subscribers at 1,000 ms → exactly one `setInterval(…, 1000)`; all notified per tick
-- [ ] Last unsubscribe → `clearInterval`; a new subscriber restarts it
-- [ ] 1,000 ms and 15,000 ms subscribers → two intervals
-- [ ] Gate: quick; Test count B + ≥41
+- [x] 5 subscribers at 1,000 ms → exactly one `setInterval(…, 1000)`; all notified per tick
+- [x] Last unsubscribe → `clearInterval`; a new subscriber restarts it
+- [x] 1,000 ms and 15,000 ms subscribers → two intervals
+- [x] Gate: quick; Test count B + ≥41
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
