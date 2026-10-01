@@ -426,8 +426,10 @@ T20 → T21 → T22
 **Requirement**: PERF-14
 
 **Done when**:
-- [ ] Gate: build passes; Test count unchanged
+- [x] Gate: build passes; Test count unchanged
 - [ ] Dev app: rail and detail clocks tick together and show the same values as before
+
+**Status**: ✅ Done (dev-app check pending UAT)
 
 **Tests**: none
 **Gate**: build
