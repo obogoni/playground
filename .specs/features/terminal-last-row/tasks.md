@@ -10,12 +10,12 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/terminal-last-row/spec.md` (TROW-01..11)
 **Design**: `.specs/features/terminal-last-row/design.md`
-**Status**: Draft
+**Status**: Approved (owner, 2026-10-01)
 **Branch**: `feature/terminal-last-row` (cut from `origin/main`)
 **Test baseline**: **B** = the `npm test` count on the branch before T1, measured in T1's setup and written here. Every "Test count" below is `B + N`, cumulative.
 **Stop rule**: T1 measures the cause on the current build. If the measured cause differs from the model in `design.md` §Predicted Model, Execute stops after T1 and the plan goes back to the owner. T2 does not start.
 **Owner decision 2026-10-01**: keep today's columns. Only the vertical axis changes: the pane takes `padding: 8px 0` and a `border-box` host takes `padding: 0 10px` (`design.md` §Verdict 2, TROW-11).
-**Pending owner** (spec Assumptions): spacing reading, height emulation, sweep size, display scale route, the fill script. They are confirmed with the plan, before T1.
+**Owner confirmed 2026-10-01** (spec Assumptions): spacing reading, height emulation, sweep size, display scale route, the fill script, as the plan proposed them.
 
 **Smoke rules for every task that runs the app:**
 

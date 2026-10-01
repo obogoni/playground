@@ -1,7 +1,7 @@
 # Terminal Last Row Design
 
 **Spec**: `.specs/features/terminal-last-row/spec.md` (TROW-01..11)
-**Status**: Draft
+**Status**: Approved (owner, 2026-10-01)
 
 ---
 
