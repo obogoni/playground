@@ -384,10 +384,12 @@ T20 → T21 → T22
 **Requirement**: PERF-14
 
 **Done when**:
-- [ ] Each of the four equals its `time-totals.ts` counterpart over fixtures (overlapping closed periods, several open periods, case-differing `cwd`, open overlapping a closed one, empty snapshot) at ≥ 3 `now` values
-- [ ] Same snapshot → same index object; new snapshot → new index (Edge Case)
-- [ ] Counting proxy: building reads each closed period once; 100 calls at different `now` read no closed period
-- [ ] Gate: quick; Test count B + ≥38
+- [x] Each of the four equals its `time-totals.ts` counterpart over fixtures (overlapping closed periods, several open periods, case-differing `cwd`, open overlapping a closed one, empty snapshot) at ≥ 3 `now` values
+- [x] Same snapshot → same index object; new snapshot → new index (Edge Case)
+- [x] Counting proxy: building reads each closed period once; 100 calls at different `now` read no closed period
+- [x] Gate: quick; Test count B + ≥38
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
