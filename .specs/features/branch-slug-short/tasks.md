@@ -9,13 +9,13 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/branch-slug-short/design.md`
-**Status**: Draft (planned 2026-10-01, awaiting owner approval)
+**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01)
 
 **Branch**: `feature/branch-slug-short`, cut from `origin/main` `60ff148`. The PR body carries `Closes #145`.
 
 **Setup (part of T1, no separate commit)**: the worktree has no `node_modules`. Run `npm ci --ignore-scripts` and `node node_modules/electron/install.js`, then record the **test baseline** in T1: `npx vitest run` count, `npm run typecheck`, `npm run lint` errors and warnings, and the slowest test in `src/main/worktree-manager.test.ts` (L-005).
 
-**Owner-to-confirm rows** (spec Assumptions, `pending owner`): the 259 limit and its wording, the reflog folder rule, the P2 folder check, the fallback cap, the repeat order, the filler match after transliteration, the existing-branch skip, Recreate's order, the boolean read, fail-open, the 250 ms debounce, Create while pending, where the line shows, `GitError`, and the smoke's `SMOKE_LONG_TASK_URL`. The plan is built on the recommended defaults. Dropping P2 removes T7 and smoke checks 6–7; dropping the reflog rule removes its tests in T6; every other answer changes only the literal it names.
+**Owner-confirmed rows** (spec Assumptions, `owner confirmed 2026-10-01`): the 259 limit and its wording, the reflog folder rule, the P2 folder check, the fallback cap, the repeat order, the filler match after transliteration, the existing-branch skip, Recreate's order, the boolean read, fail-open, the 250 ms debounce, Create while pending, where the line shows, and `GitError`, all as the plan proposed them. The smoke's `SMOKE_LONG_TASK_URL` is optional: without it, the slug section (checks 8–9) is skipped with a printed notice and counts as neither pass nor fail, in a full run too; the slug rule's proof is T2's unit tests.
 
 ---
 
@@ -578,7 +578,7 @@ T15 → T16 → T17 → T18
 
 ### T18: Smoke: a long title, and the final gate
 
-**What**: `SMOKE_ONLY=slug`, with `SMOKE_LONG_TASK_URL` (refused when the title's previous-rule slug is 40 characters or shorter, computed in the smoke):
+**What**: `SMOKE_ONLY=slug`, an optional section. Without `SMOKE_LONG_TASK_URL` it prints a skip notice and counts as neither pass nor fail, in a `SMOKE_ONLY=slug` run and in a full run (no `SMOKE_ONLY`) alike; a full run then runs everything else. The URL is never written into the repository, and the slug rule's proof stays with T2's unit tests. With the variable set (refused when the title's previous-rule slug is 40 characters or shorter, computed in the smoke):
 - 8 pin it and open Start Work on `api`: the prefilled branch's last segment starts with `{id}-` and its slug is at most 40 characters; when the item has a parent, that segment starts with `{usId}-` and its slug is at most 40; `Create worktree` creates the worktree with `core.longpaths=false`, and it is removed through `worktrees:remove`;
 - 9 in the same dialog, a hand-typed name with a ref path of 287 shows the AC 17 text and disables Create.
 Then the full gate.
@@ -594,9 +594,10 @@ Then the full gate.
 
 **Done when**:
 
-- [ ] Each check seen failing on its mutant, then passing: the cap removed from `slugOf` (8, renderer reload); `StartWorkDialog` not gating Create on the problem (9)
+- [ ] When `SMOKE_LONG_TASK_URL` is set: each check seen failing on its mutant, then passing: the cap removed from `slugOf` (8, renderer reload); `StartWorkDialog` not gating Create on the problem (9)
+- [ ] Without `SMOKE_LONG_TASK_URL`: `SMOKE_ONLY=slug` prints the skip notice and reports the section as neither pass nor fail, and a full run prints the same notice and runs every other section
 - [ ] The URL and the title never appear in a committed file
-- [ ] `SMOKE_ONLY=longpath` and `SMOKE_ONLY=slug` pass on a fresh seed and launch
+- [ ] `SMOKE_ONLY=longpath` passes on a fresh seed and launch, and so does `SMOKE_ONLY=slug` when `SMOKE_LONG_TASK_URL` is set
 - [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
 
 **Tests**: manual
@@ -697,9 +698,9 @@ Every AC and edge case has its own unit test or numbered smoke check (L-021, L-0
 | BSLG-02, 33 | T2 unit |
 | BSLG-03, 04, 05, 32 | T2 unit (34 / 40 / 41 / 49 characters) |
 | BSLG-06, 07, 31 | T2 unit |
-| BSLG-08 | T2 unit; T18 smoke 8 |
+| BSLG-08 | T2 unit (the proof); T18 smoke 8 when `SMOKE_LONG_TASK_URL` is set |
 | BSLG-09 | T2 unit |
-| BSLG-10 | T2 unit (round trip); T18 smoke 8 |
+| BSLG-10 | T2 unit (round trip, the proof); T18 smoke 8 when `SMOKE_LONG_TASK_URL` is set |
 | BSLG-11 | T2 unit |
 | BSLG-12, 13, 43, 44 | T3 unit (synthetic and real) |
 | BSLG-14 | T1 measured; T5 unit; T17 smoke 5 |
@@ -708,11 +709,11 @@ Every AC and edge case has its own unit test or numbered smoke check (L-021, L-0
 | BSLG-17 | T6, T8 unit; T17 smoke 1 |
 | BSLG-18, 36 | T6 unit |
 | BSLG-19 | T6 unit; T17 smoke 2 |
-| BSLG-20 | T17 smoke 1, 2; T18 smoke 9 |
+| BSLG-20 | T17 smoke 1, 2; T18 smoke 9 when `SMOKE_LONG_TASK_URL` is set |
 | BSLG-21 | T6, T8, T9 unit; T17 smoke 3 |
 | BSLG-22 | T8 unit |
 | BSLG-23 | T12 unit; T17 smoke 2 |
-| BSLG-24 | T17 smoke 1 (New worktree); T18 smoke 8, 9 (Start Work, prefilled and typed) |
+| BSLG-24 | T17 smoke 1 (New worktree); T18 smoke 8, 9 (Start Work, prefilled and typed) when `SMOKE_LONG_TASK_URL` is set |
 | BSLG-25 | T9 unit; T17 smoke 4 |
 | BSLG-26 | T9 unit and grep |
 | BSLG-27 | T7 unit; T17 smoke 6 |

@@ -1,7 +1,7 @@
 # Branch Slug Short Design
 
 **Spec**: `.specs/features/branch-slug-short/spec.md`
-**Status**: Draft
+**Status**: Approved (owner, 2026-10-01)
 
 Line numbers below were read on `feature/branch-slug-short` at `60ff148` (= `origin/main`).
 
@@ -69,7 +69,7 @@ Reading of the rows:
 - **M4**: the worktree's admin folder `.git\worktrees\<folder name>\refs` meets the 248 folder limit
   when the repository name is long (BSLG-28). Its error line has no prefix, so BSLG-12 cannot surface
   it: the check is the only way the user learns why.
-- M2's message and the P2 rows are `pending owner` (spec Assumptions).
+- M2's message and the P2 rows were confirmed by the owner on 2026-10-01 (spec Assumptions).
 
 Not measured: M4 with `core.longpaths=true`. T1 measures it; the design assumes it is lifted, like
 M1 and M2.
@@ -205,8 +205,12 @@ Rules 3 and 4 are the P2 story; T7 adds them, and dropping P2 removes T7 only.
     `core.autocrlf` and `core.longpaths` in the repository's own config.
 - `--clean` removes the seed. The legacy STWK checks keep needing `SMOKE_TASK_URL`; their config
   path becomes `SMOKE_CONFIG` when set.
-- `SMOKE_ONLY=longpath`: checks 1–7, no Azure DevOps. `SMOKE_ONLY=slug`: checks 8–9, needs
-  `SMOKE_LONG_TASK_URL` and `az login`. No `SMOKE_ONLY`: everything, so both URLs.
+- `SMOKE_ONLY=longpath`: checks 1–7, no Azure DevOps. `SMOKE_ONLY=slug`: checks 8–9, optional:
+  with `SMOKE_LONG_TASK_URL` set (and `az login`) they run; without it the section prints a skip
+  notice and counts as neither pass nor fail. No `SMOKE_ONLY`: everything; without
+  `SMOKE_LONG_TASK_URL` it runs everything else and skips checks 8–9 with the same notice. The URL
+  is never written into the repository. The slug rule's proof is its unit tests (T2), not this
+  section.
 - The smoke computes each typed name's length from the repository's common git dir it reads with
   `git rev-parse`, so the checks hit their boundary on any base folder (L-050).
 
@@ -265,8 +269,8 @@ export interface PathCheckRequest {
 | CI's system git config | `.github/workflows/ci.yml:21` (`windows-latest`) | A runner with `core.longpaths=true` system-wide would pass a refusal test vacuously | Every test pins `core.longpaths` in the repository's own config (L-026); BSLG-40 tests that the repository value wins |
 | Worktree id suffix | git names the admin folder `<name>1`, `<name>2` when `<name>` is taken | Rule 4 is off by one or two characters | Accepted: the folder name is new by construction (`Target path already exists` guard); a stale admin folder is git's own state |
 | 8.3 short paths | a temp folder reached through an 8.3 name such as `RUNNER~1` | `rev-parse` may answer the long form, so the computed length differs from what Windows counts | `--path-format=absolute` returns git's view, which is what git uses to create the file; tests use `realpathSync.native`, as the existing ones do |
-| Smoke needs Azure DevOps for the long title | `scripts/smoke-start-work.mjs:16-22` | Checks 8–9 cannot run offline | They have their own focus mode; checks 1–7 run with no network. The URL is an environment value, never written to the repository |
-| Renderer components have no unit tests (AD-004) | dialogs | The Create gate could regress silently | The key-matching decision lives in `path-check.ts` (unit); smoke checks 1, 2 and 9 drive both dialogs |
+| Smoke needs Azure DevOps for the long title | `scripts/smoke-start-work.mjs:16-22` | Checks 8–9 cannot run offline | They are optional: without `SMOKE_LONG_TASK_URL` they are skipped with a printed notice, neither pass nor fail; checks 1–7 run with no network, and the slug rule rests on T2's unit tests. The URL is an environment value, never written to the repository |
+| Renderer components have no unit tests (AD-004) | dialogs | The Create gate could regress silently | The key-matching decision lives in `path-check.ts` (unit); smoke checks 1 and 2 drive the New worktree dialog, and check 9 drives Start Work when `SMOKE_LONG_TASK_URL` is set |
 
 ---
 
