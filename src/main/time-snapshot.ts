@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process'
+import { execFile, execFileSync } from 'node:child_process'
 import { basename, dirname, resolve } from 'node:path'
 import { taskIdFromBranch } from '../shared/tasks'
 import type { PeriodSnapshotFields } from '../shared/time'
@@ -65,4 +65,27 @@ export function readGit(cwd: string): { gitCommonDir: string | null; branch: str
   } catch {
     return { gitCommonDir: null, branch: null }
   }
+}
+
+/**
+ * `readGit` without blocking the main process (PERF-21): the same git call,
+ * timeout and nulls on any failure, through `execFile`. A period opens on the
+ * cached attribution and is patched when this answers.
+ */
+export function readGitAsync(
+  cwd: string
+): Promise<{ gitCommonDir: string | null; branch: string | null }> {
+  return new Promise((resolveRead) => {
+    execFile(
+      'git',
+      ['rev-parse', '--path-format=absolute', '--git-common-dir', '--abbrev-ref', 'HEAD'],
+      { cwd, timeout: 2000, windowsHide: true, encoding: 'utf8' },
+      (err, out) => {
+        const [gitCommonDir, branch] = err ? [] : out.split(/\r?\n/)
+        resolveRead(
+          gitCommonDir && branch ? { gitCommonDir, branch } : { gitCommonDir: null, branch: null }
+        )
+      }
+    )
+  })
 }

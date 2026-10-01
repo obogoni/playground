@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest'
-import { buildSnapshot } from './time-snapshot'
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, realpathSync } from 'node:fs'
+import { rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { buildSnapshot, readGitAsync } from './time-snapshot'
 
 const base = {
   cwd: 'D:\\acme\\app-12345',
@@ -65,5 +70,38 @@ describe('buildSnapshot', () => {
       taskId: null,
       taskTitle: null
     })
+  })
+})
+
+describe('readGitAsync', () => {
+  // mkdtemp under the profile's tmpdir holds an `á`; async `rm` cleans it where
+  // `rmSync` silently does nothing on this machine.
+  let dir = ''
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'rga-'))
+  })
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('reads the common git dir and the branch without blocking (PERF-21)', async () => {
+    execFileSync('git', ['init', '-q', '-b', 'feature/12345-login'], { cwd: dir })
+    // An unborn branch has no HEAD to abbreviate; one commit gives it one.
+    execFileSync(
+      'git',
+      ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'init'],
+      { cwd: dir }
+    )
+    const read = readGitAsync(dir)
+    expect(read).toBeInstanceOf(Promise)
+    const { gitCommonDir, branch } = await read
+    expect(branch).toBe('feature/12345-login')
+    expect(gitCommonDir && resolve(gitCommonDir).toLowerCase()).toBe(
+      resolve(realpathSync.native(dir), '.git').toLowerCase()
+    )
+  })
+
+  it('answers nulls outside a repository, like readGit (TIME-12)', async () => {
+    await expect(readGitAsync(dir)).resolves.toEqual({ gitCommonDir: null, branch: null })
   })
 })

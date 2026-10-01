@@ -608,8 +608,10 @@ T27 → T28
 **Requirement**: PERF-21
 
 **Done when**:
-- [ ] In a temp `git init` repo on a branch → `{ gitCommonDir, branch }` with the branch name; in a non-repo temp dir → nulls
-- [ ] Gate: quick
+- [x] In a temp `git init` repo on a branch → `{ gitCommonDir, branch }` with the branch name; in a non-repo temp dir → nulls
+- [x] Gate: quick
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
