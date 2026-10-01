@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { JSX } from 'react'
 import { UnicodeGraphemesAddon } from '@xterm/addon-unicode-graphemes'
 import { FitAddon } from '@xterm/addon-fit'
+import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal, type IBufferRange, type ITheme } from '@xterm/xterm'
 import { PASTE_GAP_MS, planPaste } from '../../../shared/paste'
 import { api } from '../lib/api'
@@ -22,6 +23,8 @@ import {
   COPIED_FEEDBACK_MS,
   selectionForRightClick
 } from '../lib/terminal-keys'
+import { perfEnabled } from '../lib/perf-probe'
+import { attachGpuRenderer } from '../lib/terminal-gpu'
 import { formatModeLog, isProbeEnabled, PROBE_FLAG_KEY } from '../lib/terminal-modes'
 import '@xterm/xterm/css/xterm.css'
 import './TerminalPane.css'
@@ -169,6 +172,10 @@ export function TerminalPane({
     // grapheme with the right width.
     term.loadAddon(new UnicodeGraphemesAddon())
     term.open(container)
+    // GPU rendering (PERF-04): the WebGL addon loads only after open(). No WebGL2
+    // or a lost context leaves the terminal on the DOM renderer (PERF-05, PERF-06).
+    const gpu = attachGpuRenderer(term, () => new WebglAddon(), console.warn)
+    if (perfEnabled()) console.debug(`[perf] renderer=${gpu.kind()}`)
     fit.fit()
 
     // Terminal-mode probe (TSP-01..04). The dead wheel after a Ctrl+C has three
@@ -586,6 +593,7 @@ export function TerminalPane({
       offData()
       offExit()
       inputSub.dispose()
+      gpu.dispose()
       term.dispose()
     }
   }, [sessionId, undoByte, cwd])

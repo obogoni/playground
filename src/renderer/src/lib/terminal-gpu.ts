@@ -22,7 +22,9 @@ export interface GpuRenderer {
  * without a GPU.
  */
 export function attachGpuRenderer<A extends GpuAddon>(
-  term: { loadAddon(addon: A): void },
+  // NoInfer: the addon type comes from `create`, so a real `Terminal` (whose
+  // `loadAddon` takes any `ITerminalAddon`) is accepted.
+  term: { loadAddon(addon: NoInfer<A>): void },
   create: () => A,
   warn: (msg: string, err: unknown) => void
 ): GpuRenderer {

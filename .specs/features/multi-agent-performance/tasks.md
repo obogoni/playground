@@ -250,8 +250,10 @@ T20 → T21 → T22
 **Requirement**: PERF-04, PERF-05, PERF-06, PERF-07
 
 **Done when**:
-- [ ] Gate: build passes; Test count unchanged
+- [x] Gate: build passes; Test count unchanged
 - [ ] Dev app: `[perf] renderer=webgl`; theme toggle recolors; `WEBGL_lose_context.loseContext()` keeps the terminal usable
+
+**Status**: ✅ Done
 
 **Tests**: none
 **Gate**: build
