@@ -463,9 +463,11 @@ T20 → T21 → T22
 **Requirement**: PERF-11
 
 **Done when**:
-- [ ] Unchanged status → `toBe(tree)`; changed `dirty` or `changes` → new tree with the patch (one test each)
-- [ ] Existing tests updated only where they asserted SCRF-03's new-identity-on-unchanged rule (AD-052)
-- [ ] Gate: quick; Test count B + ≥43
+- [x] Unchanged status → `toBe(tree)`; changed `dirty` or `changes` → new tree with the patch (one test each)
+- [x] Existing tests updated only where they asserted SCRF-03's new-identity-on-unchanged rule (AD-052)
+- [x] Gate: quick; Test count B + ≥43
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick

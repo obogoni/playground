@@ -4,20 +4,22 @@ import { worktreeIdForPath } from './tree-selection'
 
 /**
  * The tree with one worktree's `dirty`/`changes` replaced by a recount
- * (SCRF-01). Always a new tree when the worktree is present, even with an
- * unchanged count, so the status bar recomputes ahead/behind (SCRF-03); the
- * same tree when it is not, so a recount landing after its worktree was
- * removed changes nothing.
+ * (SCRF-01). The same tree when the count did not change (PERF-11) or when the
+ * worktree is gone, so a recount that changes nothing re-renders nothing. The
+ * status bar no longer relies on a new identity to re-read ahead/behind: it
+ * listens for recounts of its own worktree (AD-052, amending SCRF-03).
  */
 export function patchWorktreeStatus(
   tree: WorkspaceNode[],
   worktreePath: string,
   status: { dirty: boolean; changes: number }
 ): WorkspaceNode[] {
-  const holds = tree.some((ws) =>
-    ws.repos.some((repo) => repo.worktrees.some((wt) => wt.path === worktreePath))
-  )
-  if (!holds) return tree
+  const current = tree
+    .flatMap((ws) => ws.repos.flatMap((repo) => repo.worktrees))
+    .find((wt) => wt.path === worktreePath)
+  if (!current || (current.dirty === status.dirty && current.changes === status.changes)) {
+    return tree
+  }
   return tree.map((ws) => ({
     ...ws,
     repos: ws.repos.map((repo) => ({

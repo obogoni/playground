@@ -212,7 +212,7 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 | PERF-08 | P2: Activity re-renders — AC 1 | Execute | Done (T10) |
 | PERF-09 | P2: Activity re-renders — AC 2, 3 | Execute | Done (T9–T12), UAT pending |
 | PERF-10 | P2: Activity re-renders — AC 4 | Execute | Done (T13, T14), UAT pending |
-| PERF-11 | P2: Recount — AC 1 | Design | Pending |
+| PERF-11 | P2: Recount — AC 1 | Execute | Done (T19) |
 | PERF-12 | P2: Recount — AC 2 | Design | Pending |
 | PERF-13 | P2: Recount — AC 3, 4 | Design | Pending |
 | PERF-14 | P2: Clocks — AC 1, 2, 3 | Execute | Done (T15–T18), UAT pending |
