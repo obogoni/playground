@@ -211,7 +211,7 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 | PERF-07 | P1: GPU terminal — AC 4, 5 | Execute | Done (T7, T8), UAT pending |
 | PERF-08 | P2: Activity re-renders — AC 1 | Execute | Done (T10) |
 | PERF-09 | P2: Activity re-renders — AC 2, 3 | Execute | Done (T9–T12), UAT pending |
-| PERF-10 | P2: Activity re-renders — AC 4 | Execute | Implementing (T13) |
+| PERF-10 | P2: Activity re-renders — AC 4 | Execute | Done (T13, T14), UAT pending |
 | PERF-11 | P2: Recount — AC 1 | Design | Pending |
 | PERF-12 | P2: Recount — AC 2 | Design | Pending |
 | PERF-13 | P2: Recount — AC 3, 4 | Design | Pending |

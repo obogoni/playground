@@ -365,7 +365,9 @@ T20 → T21 → T22
 
 **Done when**:
 - [ ] Dev app at the narrowest window: a long pill truncates with `…`, header height unchanged, no `session:resize` on activity change
-- [ ] Gate: build passes
+- [x] Gate: build passes
+
+**Status**: ✅ Done
 
 **Tests**: none
 **Gate**: build
