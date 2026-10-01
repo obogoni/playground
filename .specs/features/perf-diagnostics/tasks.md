@@ -13,7 +13,7 @@ every counter and writes one JSON line a minute to `<userData>/perf-diagnostics.
 `PLAYGROUND_DIAGNOSTICS=1`, reached through `diagnostics()` from the git runner, the synchronous
 snapshot read, the PTY data path, the name poller and three lines in `index.ts`; `scripts/bench-sessions.mjs`
 drives N fake TUI sessions on the built app and prints the figures against the targets.
-**Status**: Draft (planned 2026-10-01), awaiting the owner's approval.
+**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01).
 
 **Branch**: `feature/perf-diagnostics`, cut from `origin/main` `60ff148`. The four fix issues are
 planned on branches stacked on this one. The future PR body carries `Closes #147`.

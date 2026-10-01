@@ -1,7 +1,7 @@
 # Performance Diagnostics Design
 
 **Spec**: `.specs/features/perf-diagnostics/spec.md`
-**Status**: Draft (planned 2026-10-01). T17's baseline can stop the fix issues (#148-#151) and send them back to the owner.
+**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01). T17's baseline can stop the fix issues (#148-#151) and send them back to the owner.
 
 ---
 
