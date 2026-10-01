@@ -651,8 +651,10 @@ T27 → T28
 **Requirement**: PERF-21
 
 **Done when**:
-- [ ] `readGit` (sync) no longer called from `index.ts`
-- [ ] Gate: build
+- [x] `readGit` (sync) no longer called from `index.ts`
+- [x] Gate: build
+
+**Status**: ✅ Done
 
 **Tests**: none
 **Gate**: build

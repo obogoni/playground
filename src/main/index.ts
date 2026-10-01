@@ -10,6 +10,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
 import { readNotificationPrefs } from '../shared/notifications'
+import type { PeriodSnapshotFields } from '../shared/time'
 import { AdoGateway } from './ado-gateway'
 import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-runner'
 import { BinaryResolver } from './binary-resolver'
@@ -44,7 +45,7 @@ import { SessionNotifier } from './session-notifier'
 import { ShortcutLauncher, spawnDetached } from './shortcut-launcher'
 import { openPinnedTask, TaskBoard } from './task-board'
 import { TimeLogStore } from './time-log-store'
-import { buildSnapshot, readGit } from './time-snapshot'
+import { buildSnapshot, readGitAsync } from './time-snapshot'
 import { TimeTracker } from './time-tracker'
 import { buildTree } from './tree'
 import { UpdateService } from './update-service'
@@ -514,17 +515,31 @@ app.whenReady().then(() => {
     }
     return titles
   }
+  // The last git read per cwd. A period opens on it (nulls on a miss) and the
+  // tracker patches it when the fresh read answers, so no `git rev-parse`
+  // ever blocks the main process (PERF-21).
+  const gitByCwd = new Map<string, { gitCommonDir: string | null; branch: string | null }>()
+  const snapshotFor = (
+    cwd: string,
+    git: { gitCommonDir: string | null; branch: string | null }
+  ): PeriodSnapshotFields =>
+    buildSnapshot({
+      cwd,
+      ...git,
+      workspacePaths: registry.list().map((ws) => ws.path),
+      pinnedTitles: pinnedTitles()
+    })
   const tracker = new TimeTracker({
     store: new TimeLogStore(app.getPath('userData')),
     now: Date.now,
     newId: randomUUID,
     resolveSnapshot: (cwd) =>
-      buildSnapshot({
-        cwd,
-        ...readGit(cwd),
-        workspacePaths: registry.list().map((ws) => ws.path),
-        pinnedTitles: pinnedTitles()
-      }),
+      snapshotFor(cwd, gitByCwd.get(cwd) ?? { gitCommonDir: null, branch: null }),
+    resolveSnapshotAsync: async (cwd) => {
+      const git = await readGitAsync(cwd)
+      gitByCwd.set(cwd, git)
+      return snapshotFor(cwd, git)
+    },
     pinnedTitle: (id) => pinnedTitles().get(id) ?? null,
     emit: () => emitToWindow('time:changed', { at: new Date().toISOString() })
   })

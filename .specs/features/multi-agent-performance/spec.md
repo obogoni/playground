@@ -244,7 +244,7 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 | PERF-18 | P3: Measurable — AC 4, 5 | Execute | Done (T1–T4) |
 | PERF-19 | P1: Never blocks on a child — AC 1, 2 | Execute | Done (T23–T25), UAT pending |
 | PERF-20 | P1: Never blocks on a child — AC 3, 4 | Execute | Done (T24, T25), UAT pending |
-| PERF-21 | P1: Never blocks on a child — AC 5, 6, 7 | Execute | Implementing (T26, T27) |
+| PERF-21 | P1: Never blocks on a child — AC 5, 6, 7 | Execute | Done (T26–T28), UAT pending |
 
 **Coverage:** 21 total, 21 mapped to tasks (PERF-19..21 → T23–T28), 0 unmapped
 
