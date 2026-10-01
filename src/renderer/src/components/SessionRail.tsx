@@ -19,7 +19,7 @@ import {
   type RowStatus
 } from '../lib/rail-groups'
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
-import { taskTotalMs, worktreeTotalMs } from '../lib/time-totals'
+import { timeIndex } from '../lib/time-index'
 import { useLatestCallback } from '../lib/use-latest-callback'
 import { Icon } from './Icon'
 import { PerfProfiler } from './PerfProfiler'
@@ -257,14 +257,16 @@ function TaskGroupCard({
   const holdsSelection = group.rows.some((row) => row.id === selectedId)
   // Task groups total by task id; an orphan group is one session, and a level
   // group holds sessions at one path, so both total by the first row's cwd.
+  // The index is cached per snapshot, so a tick never rescans the history (PERF-14).
+  const index = timeIndex(time)
   const total =
     group.kind === 'task'
       ? {
-          totalAt: (now: number) => taskTotalMs(time, group.taskId, now),
+          totalAt: (now: number) => index.taskTotalMs(group.taskId, now),
           live: time.open.some((p) => p.taskId === group.taskId)
         }
       : {
-          totalAt: (now: number) => worktreeTotalMs(time, group.rows[0].session.cwd, now),
+          totalAt: (now: number) => index.worktreeTotalMs(group.rows[0].session.cwd, now),
           live: time.open.some(
             (p) => p.cwd.toLowerCase() === group.rows[0].session.cwd.toLowerCase()
           )
