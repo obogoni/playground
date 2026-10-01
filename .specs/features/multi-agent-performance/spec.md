@@ -62,6 +62,8 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 | WebGL glyph rendering | xterm's WebGL renderer draws box-drawing glyphs itself (`customGlyphs`, default on). The Claude Code corner glyphs that forced Cascadia Mono (INPUT-12) are checked in UAT at a maximized and a narrow pane | Changes how those glyphs are painted; the font choice stays | n |
 | Debug flags | Renderer: `localStorage['playground.debug.perf'] = '1'` (same pattern as `PROBE_FLAG_KEY`). Main: env `PLAYGROUND_DEBUG_PERF=1` | Main has no localStorage; an env var needs no new setting or UI | n |
 | Activity pill wrapping (item 6) | Fixed preventively with single-line + ellipsis, whether or not it reproduces | Cheap, and a wrapping header is a full-screen TUI redraw per activity change | n |
+| Owner measurement 2026-10-01 (after T1–T22) | **Phase 7 added (PERF-19..21).** The owner's run showed `max` loop delays of 400–2,100 ms. Cause, measured: `resolveClaude` runs `execFileSync('where', ['claude'])` (220–310 ms idle, `index.ts:591`); `where` prints in the console codepage, the UTF-8 decode mangles the `á` in the profile path, the spawn fails with ENOENT, and the name poller drops the binary and re-runs the blocking `where` on every nudge (at most once a second) and every 30 s. Second sync call: `readGit` (`execFileSync git rev-parse`, ~155 ms, 2 s timeout) on every period open | Same goal (keystrokes not blocked by main), same PR | y |
+| `p50 ≈ 15.5 ms` in the loop log | Read as Windows timer granularity (~15.6 ms), not lag; the Phase 7 bound is stated on `max` | `monitorEventLoopDelay` samples a timer, which cannot fire finer than the OS tick | y |
 
 **Open questions:** none — all resolved or logged above.
 
@@ -155,6 +157,26 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 
 ---
 
+### P1: The main process never blocks on a child process ⭐ MVP
+
+**User Story**: As a developer, I want the app to find the `claude` binary and read a worktree's git state without blocking the main process, so that no keystroke waits behind a child process.
+
+**Why P1**: Measured as the source of the 400–2,100 ms stalls left after the scrollback fix (owner run, 2026-10-01).
+
+**Acceptance Criteria**:
+
+1. WHEN the app looks up the `claude` binary THEN it SHALL search each `PATH` directory for `claude` with each `PATHEXT` extension, in order, without spawning a process, and return the first existing file's path exactly as the filesystem spells it (a profile path such as `C:\Users\Otávio\.local\bin\claude.exe` keeps its `á`)  <!-- PERF-19 -->
+2. IF no `PATH` directory holds the binary THEN the lookup SHALL fall back to `agent.claudePath` from config, and IF that is unset too THEN it SHALL fail with `agent binary not found`, as today  <!-- PERF-19 -->
+3. The binary resolver SHALL answer `get()` synchronously from its cache and never run a lookup on the caller's stack  <!-- PERF-20 -->
+4. WHEN `get()` is called and the last lookup started 30 seconds ago or more THEN the resolver SHALL start one background lookup, with at most one lookup in flight  <!-- PERF-20 -->
+5. WHEN the time tracker opens a period THEN it SHALL attribute it from the git state cached for that `cwd` (nulls when none is cached) without a synchronous git call  <!-- PERF-21 -->
+6. WHEN the asynchronous git read for a just-opened period resolves with different attribution THEN the tracker SHALL update that period's attribution: in place while it is open (sidecar rewritten, `time:changed` emitted), or in the log when it already closed and was kept (log rewritten, `time:changed` emitted)  <!-- PERF-21 -->
+7. IF the period was discarded (under 1 s) before the read resolved THEN the tracker SHALL change nothing  <!-- PERF-21 -->
+
+**Independent Test**: Unit tests drive the PATH lookup with a fake filesystem (non-ASCII directory included), the resolver with a fake clock and a deferred lookup, and the tracker with a deferred async snapshot. In the dev app, the `[session-name] listing failed: … ENOENT` line is gone, Claude session names appear, and the loop log shows no `max` above 115 ms (100 ms plus the ~15.6 ms timer tick) in the owner's multi-agent scenario.
+
+---
+
 ### P3: Performance is measurable behind a flag
 
 **User Story**: As the owner, I want to switch on performance logging, so that I can capture a baseline before the fixes and confirm the improvement after.
@@ -220,8 +242,11 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 | PERF-16 | P3: Measurable — AC 2 | Execute | Done (T1, T2) |
 | PERF-17 | P3: Measurable — AC 3 | Execute | Done (T3, T4, T11–T13), UAT pending |
 | PERF-18 | P3: Measurable — AC 4, 5 | Execute | Done (T1–T4) |
+| PERF-19 | P1: Never blocks on a child — AC 1, 2 | Tasks | Pending |
+| PERF-20 | P1: Never blocks on a child — AC 3, 4 | Tasks | Pending |
+| PERF-21 | P1: Never blocks on a child — AC 5, 6, 7 | Tasks | Pending |
 
-**Coverage:** 18 total, 0 mapped to tasks, 18 unmapped ⚠️ (mapped at Tasks)
+**Coverage:** 21 total, 21 mapped to tasks (PERF-19..21 → T23–T28), 0 unmapped
 
 ---
 
@@ -230,4 +255,5 @@ sides of the IPC boundary, and every hot path grows with the number of sessions:
 - [ ] Main event-loop delay p99 < 20 ms with 3 Claude Code sessions working (PERF-16 log, before vs after recorded in `validation.md`)
 - [ ] No `[perf] longtask` ≥ 50 ms in a 60 s window of typing and wheel-scrolling with 3 sessions working (PERF-15)
 - [ ] `npm run typecheck && npm run lint && npm test` green
+- [ ] No loop-delay `max` above 115 ms in the owner's multi-agent scenario (PERF-16 log, after Phase 7)
 - [ ] Owner UAT: typing and scrolling feel immediate with 3+ agents; Claude Code's boxed TUI renders correctly maximized and narrow

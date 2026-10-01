@@ -176,3 +176,38 @@ graph LR
 | Recount → status bar signal | Listener set in `useTree`, not React state | A state counter would re-render App on every recount, which is what PERF-11 removes |
 
 > Project-level: **AD-052** (SCRF-03 amendment) is appended to `.specs/STATE.md` when this design is approved.
+
+---
+
+## Phase 7 addendum (2026-10-01): no synchronous child process in main (PERF-19..21)
+
+Added after the owner's measurement (spec Assumptions). Two modules and two wiring changes; no IPC change.
+
+### findOnPath
+
+- **Location**: `src/main/path-lookup.ts`
+- **Interface**: `findOnPath(name: string, env: { PATH?: string; PATHEXT?: string }, isFile: (path: string) => Promise<boolean>): Promise<string | null>`
+- **Behaviour**: splits `PATH` on `;` (empty entries skipped, surrounding quotes stripped), `PATHEXT` on `;` (default `.COM;.EXE;.BAT;.CMD` when unset), tries `join(dir, name + ext)` for each dir in order, each ext in order, and returns the first `isFile` hit as built (no re-encoding, so non-ASCII survives). A name that already has an extension is tried bare first. `where` searches the same order (dir-major), so the first hit is the one `where` printed first.
+- **Production `isFile`**: `fs.promises.stat(p).then((st) => st.isFile(), () => false)`.
+
+### BinaryResolver
+
+- **Location**: `src/main/binary-resolver.ts`
+- **Interface**: `new BinaryResolver({ lookup: () => Promise<string | null>, configured: () => string | null, now: () => number, minIntervalMs = 30_000 })` with `get(): string` and `refresh(): void`.
+- **Behaviour**: the constructor starts the first lookup. `get()` returns the last found path, else `configured()`, else throws `agent binary not found`; when the last lookup started `minIntervalMs` ago or more and none is in flight, it starts one in the background before returning. A lookup that rejects or finds nothing keeps the previous path. `get()` never awaits.
+- **Wiring**: `resolveClaude = () => claudeResolver.get()` in `index.ts`; the poller's `resolveBin` and the step runner's `resolveClaude` keep their sync signatures. The poller still drops `#bin` on a spawn failure; the next `get()` returns the cached path at no cost, and re-lookups are throttled to one per 30 s.
+
+### Asynchronous period attribution
+
+- `readGitAsync(cwd): Promise<{ gitCommonDir; branch }>` in `time-snapshot.ts`, the `execFile` twin of `readGit` (same args, timeout and nulls on failure). `readGit` stays for any other caller.
+- `TimeTrackerDeps` gains optional `resolveSnapshotAsync?: (cwd) => Promise<PeriodSnapshotFields>`. `#open` keeps calling the sync `resolveSnapshot` (now backed by a per-cwd cache in `index.ts`, nulls on a miss) and, when the async dep exists, starts it; on resolve it recomputes `withSessionTask(fresh, run.task, pinnedTitle)` and, if any field differs, patches the period by id: open (some `run.open.id` matches) → replace the run's open period, `#changed()`; closed and kept (found in `#periods`) → replace it, `#rewritten()`; neither → nothing (discarded). A rejection is ignored (attribution stays as opened, TIME-12).
+- `index.ts`: `gitCache = new Map<cwd, git>()`; `resolveSnapshot(cwd)` builds from `gitCache.get(cwd) ?? nulls`; `resolveSnapshotAsync(cwd)` awaits `readGitAsync`, stores it in the cache, and builds.
+
+### Risks
+
+| Concern | Location | Impact | Mitigation |
+| ------- | -------- | ------ | ---------- |
+| First period of a new `cwd` opens with null attribution for ~150 ms | `time-tracker.ts` `#open` | A renderer refetch in that window shows "From branch: none" briefly | The async patch emits `time:changed`, so the view corrects itself; the log line written at close carries the patched fields |
+| A hand-set task changes between open and resolve | `time-tracker.ts` | Patch could apply the old task | The patch reads `run.task` at resolve time and targets the period by id; a task change already closed that period and opened a new one with its own read |
+| `where` and `findOnPath` could disagree on an exotic PATH (e.g. `%VAR%` entries) | `path-lookup.ts` | A different binary than before | PATH entries are already expanded in the process env on Windows; `agent.claudePath` stays as the override |
+

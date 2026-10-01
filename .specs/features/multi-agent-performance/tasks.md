@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/multi-agent-performance/spec.md` (PERF-01..18)
 **Design**: `.specs/features/multi-agent-performance/design.md`
-**Status**: Approved (2026-10-01)
+**Status**: In Progress (Phase 7 added 2026-10-01, owner-approved)
 **Branch**: `feature/multi-agent-performance` (cut from `origin/main`)
 **Test baseline**: **B = 2319** tests on the branch before T1 (2026-10-01; 2–4 real-git tests in `file-discard`, `worktree-manager` fail locally from machine load — pre-existing noise, CI is the gate). Every "Test count" is `B + N`, cumulative. Known local noise: a few real-git/process tests in `src/main` can fail from machine load (pre-existing; CI is the gate).
 **Before T1**: AD-052 is recorded in `.specs/STATE.md`; it is committed with the spec docs in the first commit.
@@ -86,6 +86,14 @@ T15 → T18
 ```
 T19
 T20 → T21 → T22
+```
+
+### Phase 7: No synchronous child process in main (added 2026-10-01)
+
+```
+T23 → T24 → T25
+T26 → T28
+T27 → T28
 ```
 
 ---
@@ -531,10 +539,121 @@ T20 → T21 → T22
 
 ---
 
+### T23: PATH lookup without a child process
+
+**What**: `findOnPath(name, env, isFile)` per design (Phase 7 addendum).
+**Where**: `src/main/path-lookup.ts` (new; co-located `.test.ts`)
+**Depends on**: None
+**Requirement**: PERF-19
+
+**Done when**:
+- [ ] Dir-major, ext-minor order; first hit wins; empty and quoted PATH entries handled; default PATHEXT when unset
+- [ ] A directory with `á` returns the path with `á` byte-for-byte
+- [ ] No hit → `null`
+- [ ] Gate: quick
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `perf(agents): find the claude binary on PATH without spawning where`
+
+---
+
+### T24: Cached binary resolver
+
+**What**: `BinaryResolver` per design: sync `get()`, background lookup throttled to one per 30 s, at most one in flight, config fallback, `agent binary not found`.
+**Where**: `src/main/binary-resolver.ts` (new; co-located `.test.ts`)
+**Depends on**: T23
+**Requirement**: PERF-19, PERF-20
+
+**Done when**:
+- [ ] `get()` before the first lookup settles → configured path, or throws `agent binary not found`; after it → found path
+- [ ] `get()` at +29,999 ms starts no lookup; at +30,000 ms starts exactly one; a second `get()` while it is in flight starts none (30,000 pinned literally)
+- [ ] A rejecting or `null` lookup keeps the previous path
+- [ ] Gate: quick
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `perf(agents): resolve the claude binary from a cache`
+
+---
+
+### T25: Wire the resolver
+
+**What**: Replace the `execFileSync('where')` `resolveClaude` with `BinaryResolver` over `findOnPath('claude', process.env, isFile)` and the `agent.claudePath` override.
+**Where**: `src/main/index.ts`
+**Depends on**: T24
+**Requirement**: PERF-19, PERF-20
+
+**Done when**:
+- [ ] No `execFileSync('where'` left in `src/main`
+- [ ] Gate: build
+
+**Tests**: none
+**Gate**: build
+**Commit**: `perf(agents): stop blocking main on where claude`
+
+---
+
+### T26: Asynchronous git read
+
+**What**: `readGitAsync(cwd)` in `time-snapshot.ts` per design.
+**Where**: `src/main/time-snapshot.ts` (co-located `.test.ts`)
+**Depends on**: None
+**Requirement**: PERF-21
+
+**Done when**:
+- [ ] In a temp `git init` repo on a branch → `{ gitCommonDir, branch }` with the branch name; in a non-repo temp dir → nulls
+- [ ] Gate: quick
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `perf(time): add an asynchronous git read`
+
+---
+
+### T27: Patch period attribution asynchronously
+
+**What**: `TimeTracker` optional `resolveSnapshotAsync`; patch by id per design.
+**Where**: `src/main/time-tracker.ts` (co-located `.test.ts`)
+**Depends on**: None
+**Requirement**: PERF-21
+
+**Done when**:
+- [ ] Open period: resolve with different fields → `snapshot().open[0]` carries them, `writeOpen` and `emit` called
+- [ ] Closed and kept (≥ 1 s) before resolve → the closed period carries them, `rewrite` and `emit` called
+- [ ] Discarded (< 1 s) before resolve → no rewrite, no emit, periods unchanged
+- [ ] Same fields → no write, no emit; rejection → nothing changes
+- [ ] Hand-set task: the patched period keeps the hand-set task fields (`withSessionTask`)
+- [ ] Every existing `time-tracker.test.ts` test passes unmodified
+- [ ] Gate: quick
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `perf(time): attribute periods without a synchronous git call`
+
+---
+
+### T28: Wire the git cache into the tracker
+
+**What**: Per-cwd git cache in `index.ts`; `resolveSnapshot` reads it, `resolveSnapshotAsync` fills it via `readGitAsync`.
+**Where**: `src/main/index.ts`
+**Depends on**: T26, T27
+**Requirement**: PERF-21
+
+**Done when**:
+- [ ] `readGit` (sync) no longer called from `index.ts`
+- [ ] Gate: build
+
+**Tests**: none
+**Gate**: build
+**Commit**: `perf(time): read period attribution from a git cache`
+
+---
+
 ## Phase Execution Map
 
 ```
-Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6
+Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7
 
 Phase 1:  T1 → T2
           T3 → T4
@@ -550,6 +669,9 @@ Phase 5:  T15 → T17
           T15 → T18
 Phase 6:  T19
           T20 → T21 → T22
+Phase 7:  T23 → T24 → T25
+          T26 → T28
+          T27 → T28
 ```
 
 Execution is strictly sequential: tasks run in numeric order within a phase.
@@ -648,5 +770,8 @@ Cross-phase: T11–T13 use `PerfProfiler` from T4, which sits in Phase 1 — a b
 | PERF-16 | T1, T2 |
 | PERF-17 | T3, T4, T11, T12, T13 |
 | PERF-18 | T1, T2, T3, T4 |
+| PERF-19 | T23, T24, T25 |
+| PERF-20 | T24, T25 |
+| PERF-21 | T26, T27, T28 |
 
-**Coverage:** 18 total, 18 mapped, 0 unmapped.
+**Coverage:** 21 total, 21 mapped, 0 unmapped.
