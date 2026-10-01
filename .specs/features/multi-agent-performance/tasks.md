@@ -143,11 +143,13 @@ T20 → T21 → T22
 **Requirement**: PERF-15, PERF-17, PERF-18
 
 **Done when**:
-- [ ] Flag key is `'playground.debug.perf'`, threshold 50 ms, asserted literally
-- [ ] A 49 ms entry is not logged; a 50 ms entry is, as `[perf] longtask 50ms`
-- [ ] A throwing flag read → disabled
-- [ ] `formatRenderLine('SessionRow', 'a')` → `[perf] render SessionRow a`; without id → `[perf] render TopBar`
-- [ ] Gate: quick; Test count B + ≥11
+- [x] Flag key is `'playground.debug.perf'`, threshold 50 ms, asserted literally
+- [x] A 49 ms entry is not logged; a 50 ms entry is, as `[perf] longtask 50ms`
+- [x] A throwing flag read → disabled
+- [x] `formatRenderLine('SessionRow', 'a')` → `[perf] render SessionRow a`; without id → `[perf] render TopBar`
+- [x] Gate: quick; Test count B + ≥11
+
+**Status**: ✅ Done
 
 **Tests**: unit
 **Gate**: quick
