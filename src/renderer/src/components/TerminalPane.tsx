@@ -450,7 +450,11 @@ export function TerminalPane({
     const inputSub = term.onData((data) => api.send('session:input', { id: sessionId, data }))
     // Shell exit → a plain line (no card/rail behavior; that is AM2).
     const offExit = api.on('session:exit', (payload) => {
-      if (payload.id === sessionId) {
+      if (payload.id !== sessionId) return
+      // A host crash has no meaningful exit code: say what happened (PTYH-23).
+      if (payload.hostExited) {
+        term.write('\r\n\x1b[2m[PTY host exited unexpectedly]\x1b[0m\r\n')
+      } else {
         term.write(`\r\n\x1b[2m[shell exited with code ${payload.exitCode}]\x1b[0m\r\n`)
       }
     })

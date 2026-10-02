@@ -417,13 +417,15 @@ T14
 
 **Done when**:
 
-- [ ] Dev app: killing the PTY host process shows the notice in the attached session and both sessions turn `stopped`
-- [ ] Build gate passes
+- [ ] Dev app: killing the PTY host process shows the notice in the attached session and both sessions turn `stopped` (not hand-verified by the batch worker: the printed line is canvas-rendered; T14 covers it)
+- [x] Build gate passes
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `feat(terminal): tell the user when the PTY host exited`
+
+**Status**: ✅ Complete. Typecheck and lint clean; the visual notice is not hand-verified (see the open box)
 
 ---
 
