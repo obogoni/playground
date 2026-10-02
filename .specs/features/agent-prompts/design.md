@@ -2,7 +2,7 @@
 
 **Spec**: `.specs/features/agent-prompts/spec.md`
 **Context**: `.specs/features/agent-prompts/context.md`
-**Status**: Draft
+**Status**: Approved (re-checked after pty-host merged)
 
 **Constraints honoured:** AD-024 (the renderer never reads the filesystem; prompts are listed and
 read in main). AD-019/AD-051 (the app already passes per-session env vars to the PTY; the prompt
@@ -11,10 +11,13 @@ Confirmed lessons L-005 (keep real-fs tests few and fast) and L-009 (pin spec-de
 literals) apply. Memory: fixtures under `os.tmpdir()` clean up with async `rm`, never `rmSync`
 (the profile path has `á`).
 
-**Concurrent work:** `feature/pty-host` (another session) moves node-pty into a `utilityProcess`
-and makes `SessionManager.spawn`/`#start` async. It keeps `PtyPort.spawn(plan, env?)` and
-`buildSpawnPlan` unchanged. This feature touches the same two `SessionManager` methods and nothing
-else of theirs; see Risks.
+**Built on `pty-host` (PR #157, merged 2026-10-02, AD-053):** node-pty runs in a `utilityProcess`;
+`PtyPort` is an interface served by `PtyHostClient` (`spawn(plan, env?): Promise<PtyHandle>`), and
+`SessionManager.spawn`/`respawn`/`duplicate`/`#start` are `async`. The env a session passes reaches
+the host as `buildPtyEnv({...process.env, ...env})` (`src/main/terminal-env.ts:20`) over a
+`MessagePort` (structured clone, so a multi-line value survives unchanged) and node-pty's env block.
+A failed spawn logs `file`/`args`/`cwd` only (PTYH spec), so the prompt carried in env is never
+logged. This design was re-checked against `main` at `6d96ae4`; nothing in its approach changed.
 
 ---
 
@@ -149,8 +152,8 @@ main never re-reads the file between preview and spawn. Main re-checks the text 
 
 - **Location**: `src/main/session-manager.ts`
 - **Interfaces**:
-  - `spawn(agentName, cwd, adhocCommand?, task?, prompt?: string): SessionView`. With a prompt: throw if `adhocCommand` is set, if the prompt is empty after `trim()`, or if it is longer than `PROMPT_MAX_CHARS`. Nothing is persisted on a throw, as today.
-  - `#start(meta, prompt?: string)`: when `prompt` is set, the plan is `buildPromptSpawnPlan(hooked agent, cwd)` and the env gains `[PROMPT_ENV]: prompt`. Otherwise it behaves as today.
+  - `async spawn(agentName, cwd, adhocCommand?, task?, prompt?: string): Promise<SessionView>`. With a prompt: throw if `adhocCommand` is set, if the prompt is empty after `trim()`, or if it is longer than `PROMPT_MAX_CHARS`. It rejects before `#start`, so nothing is persisted (as PTYH-14 already guarantees for a failed spawn).
+  - `async #start(meta, prompt?: string)`: when `prompt` is set, the plan is `buildPromptSpawnPlan(hooked agent, cwd)` and the env gains `[PROMPT_ENV]: prompt`. Otherwise it behaves as today.
   - `respawn`/`duplicate` call `#start(meta)` with no prompt, so APR-33 holds by construction. `PersistedSession` is unchanged (APR-34).
 - **Reuses**: `#resolve`, `#hookable`, `#withHookSettings`
 
@@ -213,8 +216,7 @@ No persisted model changes.
 
 | Concern | Location (file:line) | Impact | Mitigation |
 | ------- | -------------------- | ------ | ---------- |
-| Merge overlap with `feature/pty-host` (async `spawn`/`#start`) | `src/main/session-manager.ts:138`, `:351` | Textual conflict in two methods | Keep this feature's change there to one new param + one branch in `#start`; whichever branch merges second rebases. No change to `PtyPort`. |
-| `SessionManager.spawn` grows a 5th positional param | `src/main/session-manager.ts:138` | Readability | Matches the file's existing idiom; converting to an options object would collide with pty-host's edit of the same signature. Deferred. |
+| `SessionManager.spawn` grows a 5th positional param | `src/main/session-manager.ts:145` | Readability | Matches the file's existing idiom and the IPC handler's destructuring (`index.ts:699`); an options object is a refactor outside this feature. |
 | A prompt starting with `-` would be taken as an option | measured above | Spawn fails with `unknown option` | `--` before the prompt (APR-30, amended) |
 | Batch-shim agents re-parse the prompt | measured above (`opencode.cmd`) | Truncated or altered prompt | Out of Scope row + README note; not silently "fixed" |
 | Prompt text visible in the process environment until pwsh removes it | `buildPromptSpawnPlan` | The agent's children never see it; the pwsh process does, briefly | `Remove-Item Env:PLAYGROUND_PROMPT` runs before the agent starts (measured) |
