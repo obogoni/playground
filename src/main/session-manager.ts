@@ -120,6 +120,13 @@ export class SessionManager {
    * (the PTY — and its buffer — never survive a restart). */
   readonly #retained = new Map<string, SessionRingBuffer>()
   #activeId: string | null = null
+  /** Ids whose PTY the host is still creating; a respawn of one is a no-op (PTYH-28). */
+  readonly #starting = new Set<string>()
+  /** Bumped by `killAll`; a spawn that started before the bump is killed on arrival (PTYH-19). */
+  // SPEC_DEVIATION: design.md names a `#disposed` flag set by killAll.
+  // Reason: a counter kills the same in-flight spawns but does not refuse every
+  // later spawn, which a sticky flag would after a killAll that is not a quit.
+  #generation = 0
 
   constructor(private readonly deps: SessionManagerDeps) {
     // PTYs never survive a restart (no daemon — PRD Out of Scope); normalize any
@@ -253,7 +260,7 @@ export class SessionManager {
   async respawn(id: string): Promise<SessionView> {
     const meta = this.deps.config.get().sessions.find((s) => s.id === id)
     if (!meta) throw new Error(`Unknown session: ${id}`)
-    if (this.#running.has(id)) return this.#toView(meta)
+    if (this.#running.has(id) || this.#starting.has(id)) return this.#toView(meta)
     this.#retained.delete(id) // fresh PTY → drop the stale preview buffer
     const live: PersistedSession = { ...meta, status: 'running' }
     await this.#start(live) // a failed spawn persists nothing: the session stays stopped (PTYH-14)
@@ -344,6 +351,8 @@ export class SessionManager {
     // path needs the exit guarantee; quit does not.
     for (const id of [...this.#running.keys()]) void this.stop(id)
     this.#activeId = null
+    // Spawns still in flight resolve after this point; #start kills them on arrival.
+    this.#generation++
   }
 
   #resolve(agentName: string): AgentDef {
@@ -364,12 +373,29 @@ export class SessionManager {
       ? buildRawSpawnPlan(meta.command, meta.cwd, shell)
       : buildSpawnPlan(token === null ? agent! : this.#withHookSettings(agent!), meta.cwd, shell)
     const taskUrl = this.deps.hooks?.taskUrl
-    const handle = await this.deps.port.spawn(
-      plan,
-      token === null
-        ? undefined
-        : { [ACTIVITY_TOKEN_ENV]: token, ...(taskUrl ? { [TASK_URL_ENV]: taskUrl } : {}) }
-    )
+    const generation = this.#generation
+    this.#starting.add(meta.id)
+    let handle: PtyHandle
+    try {
+      handle = await this.deps.port.spawn(
+        plan,
+        token === null
+          ? undefined
+          : { [ACTIVITY_TOKEN_ENV]: token, ...(taskUrl ? { [TASK_URL_ENV]: taskUrl } : {}) }
+      )
+    } catch (err) {
+      // The run never existed, so its token must not be accepted (PTYH-16).
+      if (token !== null) this.deps.hooks?.revoke(token)
+      throw err
+    } finally {
+      this.#starting.delete(meta.id)
+    }
+    if (generation !== this.#generation) {
+      // killAll ran while the host was creating this PTY: leave nothing running (PTYH-19).
+      handle.kill()
+      if (token !== null) this.deps.hooks?.revoke(token)
+      throw new Error('Sessions were stopped while this one was starting')
+    }
     const buffer = new SessionRingBuffer()
     handle.onData((data) => {
       buffer.append(data)

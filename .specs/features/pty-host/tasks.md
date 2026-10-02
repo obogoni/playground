@@ -360,15 +360,17 @@ T14
 
 **Done when**:
 
-- [ ] A rejected spawn of a hooked agent calls `hooks.revoke` with the token it registered
-- [ ] Two `respawn(id)` calls before the first resolves create exactly one PTY
-- [ ] A spawn that resolves after `killAll` has `kill()` called on its handle and adds no running session
-- [ ] Quick gate passes: `npx vitest run src/main/session-manager.test.ts`
+- [x] A rejected spawn of a hooked agent calls `hooks.revoke` with the token it registered
+- [x] Two `respawn(id)` calls before the first resolves create exactly one PTY
+- [x] A spawn that resolves after `killAll` has `kill()` called on its handle and adds no running session
+- [x] Quick gate passes: `npx vitest run src/main/session-manager.test.ts`
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `fix(sessions): revoke the token and dedupe respawns during an async spawn`
+
+**Status**: ✅ Complete. session-manager 89 → 93 tests. SPEC_DEVIATION (`session-manager.ts`): a `#generation` counter bumped by `killAll` replaces the design's sticky `#disposed` flag; the spawn it catches rejects and is killed, later spawns still work
 
 ---
 

@@ -200,7 +200,7 @@ sessions show the notice and turn `stopped`, the app stays up, and respawning on
 | PTYH-13 | P1: Failed spawn | Design | Implementing |
 | PTYH-14 | P1: Failed spawn | Design | Implementing |
 | PTYH-15 | P1: Failed spawn | Design | Implementing |
-| PTYH-16 | P1: Failed spawn | Design | Pending |
+| PTYH-16 | P1: Failed spawn | Design | Implementing |
 | PTYH-17 | P1: Quit | Design | Implementing |
 | PTYH-18 | P1: Quit | Design | Implementing |
 | PTYH-19 | P1: Quit | Design | Implementing |
@@ -212,7 +212,7 @@ sessions show the notice and turn `stopped`, the app stays up, and respawning on
 | PTYH-25 | P2: Host crash | Design | Implementing |
 | PTYH-26 | P2: Host crash | Design | Implementing |
 | PTYH-27 | P2: Host crash | Design | Implementing |
-| PTYH-28 | P1: Parity | Design | Pending |
+| PTYH-28 | P1: Parity | Design | Implementing |
 
 **Coverage:** 28 total, 0 mapped to tasks, 28 unmapped (Tasks phase pending)
 

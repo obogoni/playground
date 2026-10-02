@@ -533,6 +533,87 @@ describe('SessionManager rejected spawn (PTYH-14)', () => {
   })
 })
 
+describe('SessionManager async spawn window', () => {
+  /** Holds each spawn open until the test resolves it, like a host still creating the ConPTY. */
+  function deferSpawns(port: ReturnType<typeof fakePort>): {
+    calls: number
+    resolveNext(): FakeHandle
+  } {
+    const waiting: Array<{ plan: SpawnPlan; resolve: (h: PtyHandle) => void }> = []
+    const state = {
+      calls: 0,
+      resolveNext: (): FakeHandle => {
+        const next = waiting.shift()!
+        const h = makeFakeHandle(next.plan)
+        port.handles.push(h)
+        next.resolve(h)
+        return h
+      }
+    }
+    port.spawn = (plan) => {
+      state.calls++
+      return new Promise<PtyHandle>((resolve) => waiting.push({ plan, resolve }))
+    }
+    return state
+  }
+
+  it('revokes the registered activity token when the spawn rejects (PTYH-16)', async () => {
+    const { manager, port, hooks } = makeManager()
+    port.spawn = () => Promise.reject(new Error('Cannot create process, error code: 267'))
+
+    await expect(manager.spawn('Claude', CWD)).rejects.toThrow('Cannot create process')
+
+    expect(hooks.registered).toHaveLength(1)
+    expect(hooks.revoked).toEqual([hooks.registered[0].token])
+  })
+
+  it('a second respawn while the first is still starting creates no second PTY (PTYH-28)', async () => {
+    const { manager, port } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+    port.handles[0].emitExit(0)
+    const deferred = deferSpawns(port)
+
+    const first = manager.respawn(view.id)
+    const second = manager.respawn(view.id)
+    deferred.resolveNext()
+    await Promise.all([first, second])
+
+    expect(deferred.calls).toBe(1)
+    expect(port.handles).toHaveLength(2) // the original run + exactly one respawn
+    expect(manager.list()[0].status).toBe('running')
+  })
+
+  it('kills a PTY whose spawn resolves after killAll and adds no running session (PTYH-19)', async () => {
+    const { manager, config, port } = makeManager()
+    const deferred = deferSpawns(port)
+
+    const pending = manager.spawn('Claude', CWD)
+    manager.killAll()
+    const late = deferred.resolveNext()
+
+    await expect(pending).rejects.toThrow()
+    expect(late.killed).toBe(true)
+    expect(manager.list()).toEqual([])
+    expect(config.get().sessions).toEqual([])
+  })
+
+  it('a respawn that resolves after killAll is killed and the session stays stopped (PTYH-19)', async () => {
+    const { manager, config, port } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+    port.handles[0].emitExit(0)
+    const deferred = deferSpawns(port)
+
+    const pending = manager.respawn(view.id)
+    manager.killAll()
+    const late = deferred.resolveNext()
+
+    await expect(pending).rejects.toThrow()
+    expect(late.killed).toBe(true)
+    expect(manager.list()[0].status).toBe('stopped')
+    expect(config.get().sessions[0].status).toBe('stopped')
+  })
+})
+
 describe('SessionManager lifecycle observer', () => {
   function withObserver<P extends PtyPort>(
     port: P
