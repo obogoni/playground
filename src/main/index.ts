@@ -35,7 +35,8 @@ import { purgePasteDir } from './paste-temp'
 import { findOnPath } from './path-lookup'
 import { startLoopDelayLog } from './perf-monitor'
 import { withPostCreateHook } from './post-create-hook'
-import { PtyPort } from './pty-port'
+import { PtyHostClient } from './pty-host-client'
+import { forkPtyHost } from './pty-host-fork'
 import { resolvePostCreateCommand } from './repo-config'
 import { scrubAuthEnv } from './scrub-auth-env'
 import { SessionManager, type ActivityHooks, type EmitFn } from './session-manager'
@@ -222,6 +223,8 @@ let timeTracker: TimeTracker | null = null
 let stopHookServer: (() => Promise<void>) | null = null
 /** Kills the in-flight `claude agents --json` on quit (SNAME-14). */
 let namePoller: SessionNamePoller | null = null
+/** Owns every PTY, in a utility process so ConPTY creation never blocks main (PTYH-01). */
+let ptyHost: PtyHostClient | null = null
 
 function createWindow(): void {
   // Create the browser window.
@@ -268,6 +271,42 @@ function createWindow(): void {
   })
 }
 
+/** How long quit waits for the PTY host to kill every PTY and exit (PTYH-18). */
+const PTY_HOST_SHUTDOWN_MS = 3000
+
+/**
+ * True while the will-quit guard below holds a quit back for the PTY host.
+ * That emission is cancelled and re-raised by `app.quit()` once the host is
+ * gone, so every other will-quit handler skips it and runs once, on the quit
+ * that goes through.
+ */
+let quitDeferred = false
+let ptyHostDraining = false
+
+/** Register a will-quit handler that runs once per quit (see `quitDeferred`). */
+function onWillQuit(fn: () => void): void {
+  app.on('will-quit', () => {
+    if (!quitDeferred) fn()
+  })
+}
+
+// Registered before whenReady so it runs ahead of every other will-quit
+// handler. Quit paths that skip window-all-closed (`app.quit()` from the
+// updater) still let the host kill every PTY before main goes away
+// (PTYH-17, PTYH-18, PTYH-19): node-pty's kill runs only inside the host.
+app.on('will-quit', (event) => {
+  quitDeferred = ptyHostDraining || (ptyHost?.alive ?? false)
+  if (!quitDeferred) return
+  event.preventDefault()
+  if (ptyHostDraining) return
+  ptyHostDraining = true
+  sessionManager?.killAll()
+  void ptyHost!.shutdown(PTY_HOST_SHUTDOWN_MS).finally(() => {
+    ptyHostDraining = false
+    app.quit()
+  })
+})
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -276,7 +315,12 @@ app.whenReady().then(() => {
   const stopLoopDelayLog = startLoopDelayLog({
     enabled: process.env.PLAYGROUND_DEBUG_PERF === '1'
   })
-  app.on('will-quit', stopLoopDelayLog)
+  onWillQuit(stopLoopDelayLog)
+
+  // Forked now, before the first spawn, so opening a session does not also pay
+  // the host's start-up (spec Assumptions: PTY host start time).
+  ptyHost = new PtyHostClient({ fork: forkPtyHost, log: console.error })
+  ptyHost.start()
 
   // Set app user model id for windows. Derive it from the packaged identity so the
   // nightly build (a distinct app name) groups separately from stable on the taskbar.
@@ -398,7 +442,7 @@ app.whenReady().then(() => {
     openCommit(worktreePath, sha, (url) => shell.openExternal(url))
   )
   // Close every watch handle before the process goes away (FXPL-23, SCRF quit edge case).
-  app.on('will-quit', () => {
+  onWillQuit(() => {
     void fileWatcher.select(null)
     gitStateWatcher.closeAll()
   })
@@ -631,7 +675,7 @@ app.whenReady().then(() => {
     log: (msg) => console.error(msg)
   })
   sessionManager = new SessionManager({
-    port: new PtyPort(),
+    port: ptyHost,
     config: configStore,
     emit: emitToWindow,
     fsExists: existsSync,
@@ -768,7 +812,7 @@ app.whenReady().then(() => {
 
   // Free the shared MCP result server's loopback port when the app quits (WF3-10).
   // Nothing awaits a quit handler, so a failed stop is logged, not left unhandled (RSTP-07).
-  app.on('will-quit', () => {
+  onWillQuit(() => {
     resultServer.stop().catch((err) => console.error('[mcp-result-server] stop failed', err))
   })
 
@@ -799,14 +843,18 @@ app.on('window-all-closed', () => {
   // PTYs die on quit — no daemon (PRD Out of Scope). Kill every live session
   // so no orphaned shell/agent survives the window closing.
   sessionManager?.killAll()
-  // After killAll: its synchronous finalize already ended each run, so this only
-  // closes whatever is still open, at the quit instant (TIME-09).
-  timeTracker?.closeAll()
-  namePoller?.dispose()
-  stopHookServer?.().catch((err) => console.error('[activity-hooks] stop failed', err))
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+  // Then let the host run node-pty's own kill for every PTY and exit, or kill it
+  // at the deadline, before main goes away (PTYH-17, PTYH-18).
+  void (ptyHost?.shutdown(PTY_HOST_SHUTDOWN_MS) ?? Promise.resolve()).then(() => {
+    // After killAll: its synchronous finalize already ended each run, so this only
+    // closes whatever is still open, at the quit instant (TIME-09).
+    timeTracker?.closeAll()
+    namePoller?.dispose()
+    stopHookServer?.().catch((err) => console.error('[activity-hooks] stop failed', err))
+    if (process.platform !== 'darwin') {
+      app.quit()
+    }
+  })
 })
 
 // In this file you can include the rest of your app's specific main process

@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 98,
+  "next_id": 101,
   "lessons": [
     {
       "id": "L-001",
@@ -1669,6 +1669,60 @@
       ],
       "created": "2026-10-01T22:23:16Z",
       "last_seen": "2026-10-01T22:23:16Z"
+    },
+    {
+      "id": "L-098",
+      "key": "spec_precision_gap::word a child process exit ac in the fields the platform exit event actually carries electron utilityprocess exit gives only a code never an undefined exit reason",
+      "text": "Word a child-process exit AC in the fields the platform exit event actually carries (Electron utilityProcess exit gives only a code), never an undefined exit reason",
+      "signal": "spec_precision_gap",
+      "scope": "electron-process",
+      "status": "candidate",
+      "features": [
+        "pty-host"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "PTYH-27 (src/main/pty-host-client.test.ts:300) (electron-process)"
+      ],
+      "created": "2026-10-02T17:30:39Z",
+      "last_seen": "2026-10-02T17:30:39Z"
+    },
+    {
+      "id": "L-099",
+      "key": "ac_gap::when a spec edge case restates existing behaviour as today cite a test that already pins it or add one unchanged code is not evidence",
+      "text": "When a spec edge case restates existing behaviour as today, cite a test that already pins it or add one; unchanged code is not evidence",
+      "signal": "ac_gap",
+      "scope": "testing",
+      "status": "candidate",
+      "features": [
+        "pty-host"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "Edge case resize zero dims (src/main/session-manager.ts:338) (testing)"
+      ],
+      "created": "2026-10-02T17:30:44Z",
+      "last_seen": "2026-10-02T17:30:44Z"
+    },
+    {
+      "id": "L-100",
+      "key": "spec_deviation::to cancel async work that was in flight at a reset compare a generation counter captured at start instead of a sticky disposed flag so work started after a non terminal reset still runs",
+      "text": "To cancel async work that was in flight at a reset, compare a generation counter captured at start instead of a sticky disposed flag, so work started after a non-terminal reset still runs",
+      "signal": "spec_deviation",
+      "scope": "session-manager",
+      "status": "candidate",
+      "features": [
+        "pty-host"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "SPEC_DEVIATION src/main/session-manager.ts:126 (session-manager)"
+      ],
+      "created": "2026-10-02T17:30:50Z",
+      "last_seen": "2026-10-02T17:30:50Z"
     }
   ]
 }

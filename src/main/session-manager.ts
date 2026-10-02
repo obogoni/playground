@@ -120,6 +120,13 @@ export class SessionManager {
    * (the PTY — and its buffer — never survive a restart). */
   readonly #retained = new Map<string, SessionRingBuffer>()
   #activeId: string | null = null
+  /** Ids whose PTY the host is still creating; a respawn of one is a no-op (PTYH-28). */
+  readonly #starting = new Set<string>()
+  /** Bumped by `killAll`; a spawn that started before the bump is killed on arrival (PTYH-19). */
+  // SPEC_DEVIATION: design.md names a `#disposed` flag set by killAll.
+  // Reason: a counter kills the same in-flight spawns but does not refuse every
+  // later spawn, which a sticky flag would after a killAll that is not a quit.
+  #generation = 0
 
   constructor(private readonly deps: SessionManagerDeps) {
     // PTYs never survive a restart (no daemon — PRD Out of Scope); normalize any
@@ -135,7 +142,12 @@ export class SessionManager {
     return this.deps.config.get().sessions.map((s) => this.#toView(s))
   }
 
-  spawn(agentName: string, cwd: string, adhocCommand?: string, task?: SessionTask): SessionView {
+  async spawn(
+    agentName: string,
+    cwd: string,
+    adhocCommand?: string,
+    task?: SessionTask
+  ): Promise<SessionView> {
     const leaf = basename(cwd) || cwd
     const meta: PersistedSession = adhocCommand
       ? {
@@ -155,7 +167,7 @@ export class SessionManager {
           status: 'running',
           ...(task ? { task } : {})
         }
-    this.#start(meta) // throws on a bad cwd/shell/agent before anything is persisted
+    await this.#start(meta) // rejects on a bad cwd/shell/agent before anything is persisted (PTYH-14)
     this.#persistUpsert(meta)
     return this.#toView(meta)
   }
@@ -191,7 +203,7 @@ export class SessionManager {
   }
 
   /** Clone a session's agent + cwd (+ ad-hoc command, + task link) into a new running one. */
-  duplicate(id: string): SessionView {
+  async duplicate(id: string): Promise<SessionView> {
     const src = this.deps.config.get().sessions.find((s) => s.id === id)
     if (!src) throw new Error(`Unknown session: ${id}`)
     const leaf = basename(src.cwd) || src.cwd
@@ -204,7 +216,7 @@ export class SessionManager {
       ...(src.command ? { command: src.command } : {}),
       ...(src.task ? { task: src.task } : {})
     }
-    this.#start(meta)
+    await this.#start(meta)
     this.#persistUpsert(meta)
     return this.#toView(meta)
   }
@@ -245,13 +257,13 @@ export class SessionManager {
     }
   }
 
-  respawn(id: string): SessionView {
+  async respawn(id: string): Promise<SessionView> {
     const meta = this.deps.config.get().sessions.find((s) => s.id === id)
     if (!meta) throw new Error(`Unknown session: ${id}`)
-    if (this.#running.has(id)) return this.#toView(meta)
+    if (this.#running.has(id) || this.#starting.has(id)) return this.#toView(meta)
     this.#retained.delete(id) // fresh PTY → drop the stale preview buffer
     const live: PersistedSession = { ...meta, status: 'running' }
-    this.#start(live)
+    await this.#start(live) // a failed spawn persists nothing: the session stays stopped (PTYH-14)
     this.#persistUpsert(live)
     this.deps.emit('session:status', {
       id,
@@ -339,6 +351,8 @@ export class SessionManager {
     // path needs the exit guarantee; quit does not.
     for (const id of [...this.#running.keys()]) void this.stop(id)
     this.#activeId = null
+    // Spawns still in flight resolve after this point; #start kills them on arrival.
+    this.#generation++
   }
 
   #resolve(agentName: string): AgentDef {
@@ -348,7 +362,7 @@ export class SessionManager {
   }
 
   /** Spawn the PTY for a meta and wire its streams; registers the Map entry. */
-  #start(meta: PersistedSession): void {
+  async #start(meta: PersistedSession): Promise<void> {
     const shell = this.deps.config.get().ui.defaultShell
     // Resolved here, once, so a registry edit mid-session cannot change how a
     // running session was launched (ACTV-30).
@@ -359,12 +373,29 @@ export class SessionManager {
       ? buildRawSpawnPlan(meta.command, meta.cwd, shell)
       : buildSpawnPlan(token === null ? agent! : this.#withHookSettings(agent!), meta.cwd, shell)
     const taskUrl = this.deps.hooks?.taskUrl
-    const handle = this.deps.port.spawn(
-      plan,
-      token === null
-        ? undefined
-        : { [ACTIVITY_TOKEN_ENV]: token, ...(taskUrl ? { [TASK_URL_ENV]: taskUrl } : {}) }
-    )
+    const generation = this.#generation
+    this.#starting.add(meta.id)
+    let handle: PtyHandle
+    try {
+      handle = await this.deps.port.spawn(
+        plan,
+        token === null
+          ? undefined
+          : { [ACTIVITY_TOKEN_ENV]: token, ...(taskUrl ? { [TASK_URL_ENV]: taskUrl } : {}) }
+      )
+    } catch (err) {
+      // The run never existed, so its token must not be accepted (PTYH-16).
+      if (token !== null) this.deps.hooks?.revoke(token)
+      throw err
+    } finally {
+      this.#starting.delete(meta.id)
+    }
+    if (generation !== this.#generation) {
+      // killAll ran while the host was creating this PTY: leave nothing running (PTYH-19).
+      handle.kill()
+      if (token !== null) this.deps.hooks?.revoke(token)
+      throw new Error('Sessions were stopped while this one was starting')
+    }
     const buffer = new SessionRingBuffer()
     handle.onData((data) => {
       buffer.append(data)
@@ -374,9 +405,9 @@ export class SessionManager {
     const exited = new Promise<void>((resolve) => {
       markExited = resolve
     })
-    handle.onExit(({ exitCode }) => {
+    handle.onExit(({ exitCode, hostExited }) => {
       markExited()
-      this.#finalize(meta.id, exitCode)
+      this.#finalize(meta.id, exitCode, hostExited)
     })
     this.#running.set(meta.id, {
       meta: { ...meta, status: 'running' },
@@ -409,8 +440,12 @@ export class SessionManager {
     return { ...agent, args: [...agent.args, '--settings', this.deps.hooks!.settingsPath!] }
   }
 
-  /** Idempotent transition to stopped: drop the Map entry, persist, push status. */
-  #finalize(id: string, exitCode?: number): void {
+  /**
+   * Idempotent transition to stopped: drop the Map entry, persist, push status.
+   * `hostExited` marks a run the PTY host took down with it (PTYH-22), so the
+   * terminal can say so instead of printing an exit code (PTYH-23).
+   */
+  #finalize(id: string, exitCode?: number, hostExited?: true): void {
     // wasRunning is false when an explicit stop() already dropped the entry. We
     // still emit session:exit on the real onExit so listeners (TerminalPane's
     // "[shell exited with code …]") fire even after a stop() — only the
@@ -431,7 +466,9 @@ export class SessionManager {
     const wasRunning = this.#running.delete(id)
     if (wasRunning) this.#setStatus(id, 'stopped')
     if (wasRunning) this.deps.lifecycle?.ended(id)
-    if (exitCode !== undefined) this.deps.emit('session:exit', { id, exitCode })
+    if (exitCode !== undefined) {
+      this.deps.emit('session:exit', hostExited ? { id, exitCode, hostExited } : { id, exitCode })
+    }
   }
 
   /** Adopt a name and push it only when it changed (SNAME-11). */

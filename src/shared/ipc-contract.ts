@@ -244,7 +244,8 @@ export type IpcResponse<C extends IpcChannel> = IpcContract[C]['res']
  */
 export interface IpcEvents {
   'session:data': { id: string; data: string }
-  'session:exit': { id: string; exitCode: number }
+  /** `hostExited`: the PTY host process died under the session (PTYH-22, PTYH-23). */
+  'session:exit': { id: string; exitCode: number; hostExited?: true }
   'session:status': { id: string; status: SessionStatus; pathMissing: boolean }
   /** What the session's agent is doing, folded from its lifecycle hooks; `null`
    *  clears it back to the plain `running` rendering (ACTV-05). */

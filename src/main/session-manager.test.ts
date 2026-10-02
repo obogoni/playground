@@ -24,12 +24,12 @@ interface FakeHandle extends PtyHandle {
   writes: string[]
   resizes: Array<[number, number]>
   emitData(data: string): void
-  emitExit(exitCode: number): void
+  emitExit(exitCode: number, hostExited?: true): void
 }
 
 function makeFakeHandle(plan: SpawnPlan): FakeHandle {
   let dataCb: ((d: string) => void) | undefined
-  let exitCb: ((e: { exitCode: number }) => void) | undefined
+  let exitCb: ((e: { exitCode: number; hostExited?: true }) => void) | undefined
   const h: FakeHandle = {
     plan,
     killed: false,
@@ -51,7 +51,8 @@ function makeFakeHandle(plan: SpawnPlan): FakeHandle {
       h.killed = true
     },
     emitData: (d) => dataCb?.(d),
-    emitExit: (code) => exitCb?.({ exitCode: code })
+    emitExit: (code, hostExited) =>
+      exitCb?.(hostExited ? { exitCode: code, hostExited } : { exitCode: code })
   }
   return h
 }
@@ -62,11 +63,11 @@ function fakePort(): PtyPort & { handles: FakeHandle[]; envs: (NodeJS.ProcessEnv
   return {
     handles,
     envs,
-    spawn(plan: SpawnPlan, env?: NodeJS.ProcessEnv): PtyHandle {
+    spawn(plan: SpawnPlan, env?: NodeJS.ProcessEnv): Promise<PtyHandle> {
       const h = makeFakeHandle(plan)
       handles.push(h)
       envs.push(env)
-      return h
+      return Promise.resolve(h)
     }
   }
 }
@@ -187,9 +188,9 @@ function makeManager(
 const CWD = 'C:\\work\\repo-feature'
 
 describe('SessionManager', () => {
-  it('spawn resolves the agent, persists, and returns a running view', () => {
+  it('spawn resolves the agent, persists, and returns a running view', async () => {
     const { manager, config } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     expect(view.agent).toBe('Claude')
     expect(view.cwd).toBe(CWD)
     expect(view.status).toBe('running')
@@ -198,15 +199,15 @@ describe('SessionManager', () => {
     expect(config.get().sessions[0].id).toBe(view.id)
   })
 
-  it('rejects an unknown agent', () => {
+  it('rejects an unknown agent', async () => {
     const { manager } = makeManager()
-    expect(() => manager.spawn('Nope', CWD)).toThrow(/Unknown agent/)
+    await expect(manager.spawn('Nope', CWD)).rejects.toThrow(/Unknown agent/)
   })
 
-  it('spawns two independent sessions with distinct ids', () => {
+  it('spawns two independent sessions with distinct ids', async () => {
     const { manager, port } = makeManager()
-    const a = manager.spawn('Claude', CWD)
-    const b = manager.spawn('Codex', 'C:\\work\\other')
+    const a = await manager.spawn('Claude', CWD)
+    const b = await manager.spawn('Codex', 'C:\\work\\other')
     expect(a.id).not.toBe(b.id)
     expect(port.handles).toHaveLength(2)
     expect(
@@ -217,18 +218,18 @@ describe('SessionManager', () => {
     ).toEqual([a.id, b.id].sort())
   })
 
-  it('stop kills the PTY, drops it to stopped, and persists', () => {
+  it('stop kills the PTY, drops it to stopped, and persists', async () => {
     const { manager, config, port } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.stop(view.id)
     expect(port.handles[0].killed).toBe(true)
     expect(manager.list()[0].status).toBe('stopped')
     expect(config.get().sessions[0].status).toBe('stopped')
   })
 
-  it('emits session:exit on the real onExit even after an explicit stop()', () => {
+  it('emits session:exit on the real onExit even after an explicit stop()', async () => {
     const { manager, port, emit } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.stop(view.id) // drops the Map entry synchronously; exit code unknown yet
     expect(emit.events.some((e) => e.channel === 'session:exit')).toBe(false)
     port.handles[0].emitExit(0) // node-pty fires onExit asynchronously after kill()
@@ -236,17 +237,17 @@ describe('SessionManager', () => {
     expect(exits.at(-1)).toEqual({ channel: 'session:exit', payload: { id: view.id, exitCode: 0 } })
   })
 
-  it('killAll persists every session as stopped (status survives restart)', () => {
+  it('killAll persists every session as stopped (status survives restart)', async () => {
     const { manager, config } = makeManager()
-    manager.spawn('Claude', CWD)
-    manager.spawn('Codex', 'C:\\work\\other')
+    await manager.spawn('Claude', CWD)
+    await manager.spawn('Codex', 'C:\\work\\other')
     manager.killAll()
     expect(config.get().sessions.every((s) => s.status === 'stopped')).toBe(true)
   })
 
-  it('onExit transitions to stopped and emits session:status + session:exit', () => {
+  it('onExit transitions to stopped and emits session:status + session:exit', async () => {
     const { manager, port, emit } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     port.handles[0].emitExit(0)
     expect(manager.list()[0].status).toBe('stopped')
     const statuses = emit.events.filter((e) => e.channel === 'session:status')
@@ -257,11 +258,11 @@ describe('SessionManager', () => {
     expect(emit.events.some((e) => e.channel === 'session:exit')).toBe(true)
   })
 
-  it('respawn reuses the same id, agent, and cwd', () => {
+  it('respawn reuses the same id, agent, and cwd', async () => {
     const { manager, port } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.stop(view.id)
-    const again = manager.respawn(view.id)
+    const again = await manager.respawn(view.id)
     expect(again.id).toBe(view.id)
     expect(again.agent).toBe('Claude')
     expect(again.cwd).toBe(CWD)
@@ -269,9 +270,9 @@ describe('SessionManager', () => {
     expect(port.handles).toHaveLength(2) // a fresh PTY
   })
 
-  it('remove is rejected while running and allowed once stopped', () => {
+  it('remove is rejected while running and allowed once stopped', async () => {
     const { manager, config } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     expect(() => manager.remove(view.id)).toThrow(/running/)
     manager.stop(view.id)
     manager.remove(view.id)
@@ -287,15 +288,15 @@ describe('SessionManager', () => {
     expect(config.get().sessions[0].status).toBe('stopped')
   })
 
-  it('list flags pathMissing when the cwd no longer exists', () => {
+  it('list flags pathMissing when the cwd no longer exists', async () => {
     const { manager } = makeManager({ fsExists: () => false })
-    manager.spawn('Claude', CWD)
+    await manager.spawn('Claude', CWD)
     expect(manager.list()[0].pathMissing).toBe(true)
   })
 
-  it('attach replays the buffered snapshot then streams live deltas', () => {
+  it('attach replays the buffered snapshot then streams live deltas', async () => {
     const { manager, port, emit } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     port.handles[0].emitData('past output\n') // buffered while detached (no active id)
     expect(emit.events.some((e) => e.channel === 'session:data')).toBe(false)
     manager.attach(view.id)
@@ -306,9 +307,9 @@ describe('SessionManager', () => {
     expect(live.at(-1)?.payload).toEqual({ id: view.id, data: 'live' })
   })
 
-  it('detach stops live streaming but the PTY keeps buffering', () => {
+  it('detach stops live streaming but the PTY keeps buffering', async () => {
     const { manager, port, emit } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.attach(view.id)
     manager.detach(view.id)
     const before = emit.events.filter((e) => e.channel === 'session:data').length
@@ -317,10 +318,10 @@ describe('SessionManager', () => {
     expect(after).toBe(before) // no new data emitted
   })
 
-  it('routes input and resize to the addressed session only', () => {
+  it('routes input and resize to the addressed session only', async () => {
     const { manager, port } = makeManager()
-    const a = manager.spawn('Claude', CWD)
-    const b = manager.spawn('Codex', 'C:\\work\\other')
+    const a = await manager.spawn('Claude', CWD)
+    const b = await manager.spawn('Codex', 'C:\\work\\other')
     manager.input(a.id, 'ls\r')
     manager.resize(b.id, 120, 40)
     expect(port.handles[0].writes).toEqual(['ls\r'])
@@ -328,10 +329,19 @@ describe('SessionManager', () => {
     expect(port.handles[0].resizes).toEqual([])
   })
 
-  it('killAll kills every running PTY and empties the running set', () => {
+  it('drops a resize with a zero or negative dimension before it reaches the PTY', async () => {
     const { manager, port } = makeManager()
-    manager.spawn('Claude', CWD)
-    manager.spawn('Codex', 'C:\\work\\other')
+    const a = await manager.spawn('Claude', CWD)
+    manager.resize(a.id, 0, 30)
+    manager.resize(a.id, 100, -1)
+    manager.resize(a.id, 100, 30)
+    expect(port.handles[0].resizes).toEqual([[100, 30]])
+  })
+
+  it('killAll kills every running PTY and empties the running set', async () => {
+    const { manager, port } = makeManager()
+    await manager.spawn('Claude', CWD)
+    await manager.spawn('Codex', 'C:\\work\\other')
     manager.killAll()
     expect(port.handles.every((h) => h.killed)).toBe(true)
     // every session is now stopped (no live PTY)
@@ -340,63 +350,63 @@ describe('SessionManager', () => {
 
   // --- AM3: registry from config, default shell, ad-hoc, rename, duplicate, preview ---
 
-  it('resolves agents from config.agents, not an injected constant', () => {
+  it('resolves agents from config.agents, not an injected constant', async () => {
     const { manager, config } = makeManager()
     config.patch({ agents: [...SEEDED_AGENTS, { name: 'Custom', command: 'mytool', args: [] }] })
-    const view = manager.spawn('Custom', CWD)
+    const view = await manager.spawn('Custom', CWD)
     expect(view.agent).toBe('Custom')
   })
 
-  it('throws once an agent is removed from config.agents', () => {
+  it('throws once an agent is removed from config.agents', async () => {
     const { manager, config } = makeManager()
     config.patch({ agents: SEEDED_AGENTS.filter((a) => a.name !== 'Codex') })
-    expect(() => manager.spawn('Codex', CWD)).toThrow(/Unknown agent/)
+    await expect(manager.spawn('Codex', CWD)).rejects.toThrow(/Unknown agent/)
   })
 
-  it('builds the spawn plan with config.ui.defaultShell', () => {
+  it('builds the spawn plan with config.ui.defaultShell', async () => {
     const { manager, config, port } = makeManager()
     config.patch({ ui: { defaultShell: 'cmd' } })
-    manager.spawn('Claude', CWD)
+    await manager.spawn('Claude', CWD)
     expect(port.handles[0].plan.file).toBe('cmd.exe')
   })
 
-  it('ad-hoc spawn persists the command and runs it verbatim', () => {
+  it('ad-hoc spawn persists the command and runs it verbatim', async () => {
     const { manager, config, port } = makeManager()
-    const view = manager.spawn('Ad-hoc', CWD, 'npm run dev')
+    const view = await manager.spawn('Ad-hoc', CWD, 'npm run dev')
     expect(view.agent).toBe('Ad-hoc')
     expect(view.command).toBe('npm run dev')
     expect(config.get().sessions[0].command).toBe('npm run dev')
     expect(port.handles[0].plan.autoCommand).toBe('npm run dev')
   })
 
-  it('ad-hoc respawn re-runs the stored command', () => {
+  it('ad-hoc respawn re-runs the stored command', async () => {
     const { manager, port } = makeManager()
-    const view = manager.spawn('Ad-hoc', CWD, 'npm run dev')
+    const view = await manager.spawn('Ad-hoc', CWD, 'npm run dev')
     manager.stop(view.id)
-    manager.respawn(view.id)
+    await manager.respawn(view.id)
     expect(port.handles[1].plan.autoCommand).toBe('npm run dev')
   })
 
-  it('rename trims the new title and persists it', () => {
+  it('rename trims the new title and persists it', async () => {
     const { manager, config } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     const renamed = manager.rename(view.id, '  My session  ')
     expect(renamed.title).toBe('My session')
     expect(config.get().sessions[0].title).toBe('My session')
   })
 
-  it('rename with empty/whitespace input is a no-op (keeps prior title)', () => {
+  it('rename with empty/whitespace input is a no-op (keeps prior title)', async () => {
     const { manager } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     const before = view.title
     const renamed = manager.rename(view.id, '   ')
     expect(renamed.title).toBe(before)
   })
 
-  it('duplicate clones agent + cwd into a new independent running session', () => {
+  it('duplicate clones agent + cwd into a new independent running session', async () => {
     const { manager, port } = makeManager()
-    const view = manager.spawn('Claude', CWD)
-    const clone = manager.duplicate(view.id)
+    const view = await manager.spawn('Claude', CWD)
+    const clone = await manager.duplicate(view.id)
     expect(clone.id).not.toBe(view.id)
     expect(clone.agent).toBe('Claude')
     expect(clone.cwd).toBe(CWD)
@@ -405,20 +415,20 @@ describe('SessionManager', () => {
     expect(manager.list()).toHaveLength(2)
   })
 
-  it('exposes lastOutput (tail) once a session is stopped', () => {
+  it('exposes lastOutput (tail) once a session is stopped', async () => {
     const { manager, port } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     port.handles[0].emitData('alpha\nbravo')
     manager.stop(view.id)
     expect(manager.list()[0].lastOutput).toBe('alpha\nbravo')
   })
 
-  it('clears lastOutput on respawn and has none after restore', () => {
+  it('clears lastOutput on respawn and has none after restore', async () => {
     const { manager, port } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     port.handles[0].emitData('alpha\nbravo')
     manager.stop(view.id)
-    manager.respawn(view.id)
+    await manager.respawn(view.id)
     expect(manager.list()[0].lastOutput).toBeUndefined()
 
     // A session restored from disk (new manager, no retained buffer) has no preview.
@@ -434,7 +444,7 @@ describe('SessionManager', () => {
   it('stop finalizes at once but resolves only after the PTY has really exited', async () => {
     vi.useFakeTimers()
     const { manager, config, port } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     let settled = false
     const stopped = manager.stop(view.id).then(() => {
@@ -458,7 +468,7 @@ describe('SessionManager', () => {
     vi.useFakeTimers()
     expect(SESSION_EXIT_WAIT_MS).toBe(3000) // pin the literal, not the constant
     const { manager, port } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     let settled = false
     const stopped = manager.stop(view.id).then(() => {
@@ -477,8 +487,8 @@ describe('SessionManager', () => {
   it('killAll stays synchronous so quit never stalls on a PTY that never exits', async () => {
     vi.useFakeTimers()
     const { manager, config, port } = makeManager()
-    manager.spawn('Claude', CWD)
-    manager.spawn('Codex', 'C:\\work\\other')
+    await manager.spawn('Claude', CWD)
+    await manager.spawn('Codex', 'C:\\work\\other')
 
     // void, not a promise: awaiting it would add up to 3 s per session to quit.
     expect(manager.killAll()).toBeUndefined()
@@ -489,6 +499,183 @@ describe('SessionManager', () => {
 
     // Drain the two pending waits so nothing outlives the test.
     await vi.advanceTimersByTimeAsync(SESSION_EXIT_WAIT_MS)
+  })
+})
+
+describe('SessionManager rejected spawn (PTYH-14)', () => {
+  const HOST_ERROR = 'Cannot create process, error code: 267'
+  const rejectSpawns = (port: ReturnType<typeof fakePort>): void => {
+    port.spawn = () => Promise.reject(new Error(HOST_ERROR))
+  }
+
+  it('a rejected spawn rejects with the host error and persists nothing', async () => {
+    const { manager, config, port } = makeManager()
+    rejectSpawns(port)
+
+    await expect(manager.spawn('Claude', CWD)).rejects.toThrow(HOST_ERROR)
+
+    expect(config.get().sessions).toEqual([])
+    expect(manager.list()).toEqual([])
+  })
+
+  it('a rejected duplicate persists no copy', async () => {
+    const { manager, config, port } = makeManager()
+    const src = await manager.spawn('Claude', CWD)
+    rejectSpawns(port)
+
+    await expect(manager.duplicate(src.id)).rejects.toThrow(HOST_ERROR)
+
+    expect(config.get().sessions.map((s) => s.id)).toEqual([src.id])
+  })
+
+  it('a rejected respawn leaves the session stopped', async () => {
+    const { manager, config, port, emit } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+    port.handles[0].emitExit(0)
+    rejectSpawns(port)
+    emit.events.length = 0
+
+    await expect(manager.respawn(view.id)).rejects.toThrow(HOST_ERROR)
+
+    expect(manager.list()[0].status).toBe('stopped')
+    expect(config.get().sessions[0].status).toBe('stopped')
+    expect(emit.events.filter((e) => e.channel === 'session:status')).toEqual([])
+  })
+})
+
+describe('SessionManager async spawn window', () => {
+  /** Holds each spawn open until the test resolves it, like a host still creating the ConPTY. */
+  function deferSpawns(port: ReturnType<typeof fakePort>): {
+    calls: number
+    resolveNext(): FakeHandle
+  } {
+    const waiting: Array<{ plan: SpawnPlan; resolve: (h: PtyHandle) => void }> = []
+    const state = {
+      calls: 0,
+      resolveNext: (): FakeHandle => {
+        const next = waiting.shift()!
+        const h = makeFakeHandle(next.plan)
+        port.handles.push(h)
+        next.resolve(h)
+        return h
+      }
+    }
+    port.spawn = (plan) => {
+      state.calls++
+      return new Promise<PtyHandle>((resolve) => waiting.push({ plan, resolve }))
+    }
+    return state
+  }
+
+  it('revokes the registered activity token when the spawn rejects (PTYH-16)', async () => {
+    const { manager, port, hooks } = makeManager()
+    port.spawn = () => Promise.reject(new Error('Cannot create process, error code: 267'))
+
+    await expect(manager.spawn('Claude', CWD)).rejects.toThrow('Cannot create process')
+
+    expect(hooks.registered).toHaveLength(1)
+    expect(hooks.revoked).toEqual([hooks.registered[0].token])
+  })
+
+  it('forwards input to a running session while another spawn is pending (PTYH-03)', async () => {
+    const { manager, port } = makeManager()
+    const running = await manager.spawn('Claude', CWD)
+    const deferred = deferSpawns(port)
+
+    const pending = manager.spawn('Claude', CWD)
+    manager.input(running.id, 'typed while starting')
+
+    expect(port.handles[0].writes).toEqual(['typed while starting'])
+    expect(deferred.calls).toBe(1)
+    deferred.resolveNext()
+    await pending
+  })
+
+  it('streams the attached session on session:data while another spawn is pending (PTYH-04)', async () => {
+    const { manager, port, emit } = makeManager()
+    const running = await manager.spawn('Claude', CWD)
+    manager.attach(running.id)
+    const deferred = deferSpawns(port)
+
+    const pending = manager.spawn('Claude', CWD)
+    port.handles[0].emitData('output while starting')
+
+    const data = emit.events.filter((e) => e.channel === 'session:data')
+    expect(data.at(-1)?.payload).toEqual({ id: running.id, data: 'output while starting' })
+    deferred.resolveNext()
+    await pending
+  })
+
+  it('a second respawn while the first is still starting creates no second PTY (PTYH-28)', async () => {
+    const { manager, port } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+    port.handles[0].emitExit(0)
+    const deferred = deferSpawns(port)
+
+    const first = manager.respawn(view.id)
+    const second = manager.respawn(view.id)
+    deferred.resolveNext()
+    await Promise.all([first, second])
+
+    expect(deferred.calls).toBe(1)
+    expect(port.handles).toHaveLength(2) // the original run + exactly one respawn
+    expect(manager.list()[0].status).toBe('running')
+  })
+
+  it('kills a PTY whose spawn resolves after killAll and adds no running session (PTYH-19)', async () => {
+    const { manager, config, port } = makeManager()
+    const deferred = deferSpawns(port)
+
+    const pending = manager.spawn('Claude', CWD)
+    manager.killAll()
+    const late = deferred.resolveNext()
+
+    await expect(pending).rejects.toThrow()
+    expect(late.killed).toBe(true)
+    expect(manager.list()).toEqual([])
+    expect(config.get().sessions).toEqual([])
+  })
+
+  it('a respawn that resolves after killAll is killed and the session stays stopped (PTYH-19)', async () => {
+    const { manager, config, port } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+    port.handles[0].emitExit(0)
+    const deferred = deferSpawns(port)
+
+    const pending = manager.respawn(view.id)
+    manager.killAll()
+    const late = deferred.resolveNext()
+
+    await expect(pending).rejects.toThrow()
+    expect(late.killed).toBe(true)
+    expect(manager.list()[0].status).toBe('stopped')
+    expect(config.get().sessions[0].status).toBe('stopped')
+  })
+})
+
+describe('SessionManager PTY host exit (PTYH-22, PTYH-23)', () => {
+  const exits = (emit: EmitFnRecorder): unknown[] =>
+    emit.events.filter((e) => e.channel === 'session:exit').map((e) => e.payload)
+
+  it('a host exit stops the session and flags session:exit with hostExited', async () => {
+    const { manager, config, port, emit } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+
+    port.handles[0].emitExit(-1, true)
+
+    expect(manager.list()[0].status).toBe('stopped')
+    expect(config.get().sessions[0].status).toBe('stopped')
+    expect(exits(emit)).toEqual([{ id: view.id, exitCode: -1, hostExited: true }])
+  })
+
+  it('a normal exit emits session:exit without hostExited', async () => {
+    const { manager, port, emit } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+
+    port.handles[0].emitExit(0)
+
+    expect(exits(emit)).toEqual([{ id: view.id, exitCode: 0 }])
+    expect(exits(emit)[0]).not.toHaveProperty('hostExited')
   })
 })
 
@@ -517,55 +704,53 @@ describe('SessionManager lifecycle observer', () => {
     return { manager, calls, port }
   }
 
-  it('calls started once on spawn with the session meta (TIME-01)', () => {
+  it('calls started once on spawn with the session meta (TIME-01)', async () => {
     const { manager, calls } = withObserver(fakePort())
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     expect(calls).toEqual([`started:${view.id}:Claude:${CWD}`])
   })
 
-  it('calls started once on duplicate, for the new session (TIME-01)', () => {
+  it('calls started once on duplicate, for the new session (TIME-01)', async () => {
     const { manager, calls } = withObserver(fakePort())
-    const src = manager.spawn('Claude', CWD)
+    const src = await manager.spawn('Claude', CWD)
     calls.length = 0
-    const copy = manager.duplicate(src.id)
+    const copy = await manager.duplicate(src.id)
     expect(calls).toEqual([`started:${copy.id}:Claude:${CWD}`])
   })
 
   it('calls started once on respawn (TIME-01)', async () => {
     const { manager, calls, port } = withObserver(fakePort())
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     const stopping = manager.stop(view.id)
     port.handles[0].emitExit(0)
     await stopping
     calls.length = 0
-    manager.respawn(view.id)
+    await manager.respawn(view.id)
     expect(calls).toEqual([`started:${view.id}:Claude:${CWD}`])
   })
 
   it('calls ended once on stop, and not again when the PTY really exits (TIME-02)', async () => {
     const { manager, calls, port } = withObserver(fakePort())
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     const stopping = manager.stop(view.id)
     port.handles[0].emitExit(0)
     await stopping
     expect(calls.slice(1)).toEqual([`ended:${view.id}`])
   })
 
-  it('calls ended once when the PTY exits on its own (TIME-02)', () => {
+  it('calls ended once when the PTY exits on its own (TIME-02)', async () => {
     const { manager, calls, port } = withObserver(fakePort())
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     port.handles[0].emitExit(1)
     expect(calls.slice(1)).toEqual([`ended:${view.id}`])
   })
 
-  it('calls nothing when the spawn throws', () => {
+  it('calls nothing when the spawn throws', async () => {
     const failing: PtyPort = {
-      spawn: () => {
-        throw new Error('shell not found')
-      }
+      spawn: () => Promise.reject(new Error('shell not found'))
     }
     const { manager, calls } = withObserver(failing)
-    expect(() => manager.spawn('Claude', CWD)).toThrow(/shell not found/)
+    await expect(manager.spawn('Claude', CWD)).rejects.toThrow(/shell not found/)
     expect(calls).toEqual([])
   })
 })
@@ -607,28 +792,28 @@ describe('SessionManager task link', () => {
   const persisted = (config: ConfigStore, id: string): PersistedSession | undefined =>
     config.get().sessions.find((s) => s.id === id)
 
-  it('spawn with a task persists it and hands it to the tracker (HTSK-09, HTSK-17)', () => {
+  it('spawn with a task persists it and hands it to the tracker (HTSK-09, HTSK-17)', async () => {
     const { manager, config, started } = linked()
 
-    const view = manager.spawn('Claude', CWD, undefined, LINK)
+    const view = await manager.spawn('Claude', CWD, undefined, LINK)
 
     expect(persisted(config, view.id)?.task).toEqual(LINK)
     expect(view.task).toEqual(LINK)
     expect(started.map((m) => m.task)).toEqual([LINK])
   })
 
-  it('an ad-hoc spawn with a task persists it and hands it to the tracker (HTSK-09, HTSK-17)', () => {
+  it('an ad-hoc spawn with a task persists it and hands it to the tracker (HTSK-09, HTSK-17)', async () => {
     const { manager, config, started } = linked()
 
-    const view = manager.spawn('Ad-hoc', CWD, 'pwsh -NoLogo -NoProfile', LINK)
+    const view = await manager.spawn('Ad-hoc', CWD, 'pwsh -NoLogo -NoProfile', LINK)
 
     expect(persisted(config, view.id)?.task).toEqual(LINK)
     expect(started.map((m) => m.task)).toEqual([LINK])
   })
 
-  it('setTask persists the link, returns it on the view and tells the tracker (HTSK-12)', () => {
+  it('setTask persists the link, returns it on the view and tells the tracker (HTSK-12)', async () => {
     const { manager, config, changed } = linked()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     const updated = manager.setTask(view.id, LINK)
 
@@ -638,9 +823,9 @@ describe('SessionManager task link', () => {
     expect(changed).toEqual([[view.id, LINK]])
   })
 
-  it('setTask(id, null) removes the task key and tells the tracker (HTSK-13)', () => {
+  it('setTask(id, null) removes the task key and tells the tracker (HTSK-13)', async () => {
     const { manager, config, changed } = linked()
-    const view = manager.spawn('Claude', CWD, undefined, LINK)
+    const view = await manager.spawn('Claude', CWD, undefined, LINK)
 
     const updated = manager.setTask(view.id, null)
 
@@ -651,7 +836,7 @@ describe('SessionManager task link', () => {
 
   it('setTask on a stopped session persists the link and starts nothing (HTSK-16)', async () => {
     const { manager, config, port, started } = linked()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     const stopping = manager.stop(view.id)
     port.handles[0].emitExit(0)
     await stopping
@@ -665,9 +850,9 @@ describe('SessionManager task link', () => {
     expect(started).toEqual([])
   })
 
-  it('setTask announces the new link so the renderer shows it unasked (ATSK-06)', () => {
+  it('setTask announces the new link so the renderer shows it unasked (ATSK-06)', async () => {
     const { manager, emit } = linked()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     manager.setTask(view.id, LINK)
 
@@ -681,24 +866,24 @@ describe('SessionManager task link', () => {
     expect(() => manager.setTask('nope', LINK)).toThrow('Unknown session: nope')
   })
 
-  it('a restarted manager lists the link and respawn hands it to the tracker (HTSK-16, HTSK-17)', () => {
+  it('a restarted manager lists the link and respawn hands it to the tracker (HTSK-16, HTSK-17)', async () => {
     const first = linked()
-    const view = first.manager.spawn('Claude', CWD)
+    const view = await first.manager.spawn('Claude', CWD)
     first.manager.setTask(view.id, LINK)
 
     const second = linked(first.dir)
 
     expect(second.manager.list().find((s) => s.id === view.id)?.task).toEqual(LINK)
-    second.manager.respawn(view.id)
+    await second.manager.respawn(view.id)
     expect(second.started.map((m) => [m.id, m.task])).toEqual([[view.id, LINK]])
   })
 
-  it('duplicate of a linked session persists the copy with the same link (HTSK-22)', () => {
+  it('duplicate of a linked session persists the copy with the same link (HTSK-22)', async () => {
     const { manager, config, started } = linked()
-    const src = manager.spawn('Claude', CWD, undefined, LINK)
+    const src = await manager.spawn('Claude', CWD, undefined, LINK)
     started.length = 0
 
-    const copy = manager.duplicate(src.id)
+    const copy = await manager.duplicate(src.id)
 
     expect(copy.id).not.toBe(src.id)
     expect(persisted(config, copy.id)?.task).toEqual(LINK)
@@ -718,10 +903,10 @@ const nameEvents = (emit: EmitFnRecorder): unknown[] =>
   emit.events.filter((e) => e.channel === 'session:name').map((e) => e.payload)
 
 describe('SessionManager activity hooks', () => {
-  it('launches Claude with the hook settings and the session token (ACTV-01)', () => {
+  it('launches Claude with the hook settings and the session token (ACTV-01)', async () => {
     const { manager, port, hooks } = makeManager()
 
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     expect(port.handles[0].plan.autoCommand).toBe('claude --settings C:\\app\\hooks.json')
     const token = port.envs[0]?.[ACTIVITY_TOKEN_ENV]
@@ -729,62 +914,62 @@ describe('SessionManager activity hooks', () => {
     expect(hooks.registered).toEqual([{ token, sessionId: view.id }])
   })
 
-  it('leaves an ad-hoc session untouched (ACTV-02)', () => {
+  it('leaves an ad-hoc session untouched (ACTV-02)', async () => {
     const { manager, port, hooks } = makeManager()
 
-    manager.spawn('Ad-hoc', CWD, 'claude --resume')
+    await manager.spawn('Ad-hoc', CWD, 'claude --resume')
 
     expect(port.handles[0].plan.autoCommand).toBe('claude --resume')
     expect(port.envs[0]).toBeUndefined()
     expect(hooks.registered).toEqual([])
   })
 
-  it('leaves an agent that is not Claude Code untouched (ACTV-02)', () => {
+  it('leaves an agent that is not Claude Code untouched (ACTV-02)', async () => {
     const { manager, port, hooks } = makeManager()
 
-    manager.spawn('Codex', CWD)
+    await manager.spawn('Codex', CWD)
 
     expect(port.handles[0].plan.autoCommand).not.toContain('--settings')
     expect(port.envs[0]).toBeUndefined()
     expect(hooks.registered).toEqual([])
   })
 
-  it('still resolves Claude behind a full path and a .exe suffix (ACTV-01)', () => {
+  it('still resolves Claude behind a full path and a .exe suffix (ACTV-01)', async () => {
     const { manager, config, port } = makeManager()
     config.patch({
       agents: [{ name: 'Claude', command: 'C:\\Users\\dev\\bin\\CLAUDE.EXE', args: [] }]
     })
 
-    manager.spawn('Claude', CWD)
+    await manager.spawn('Claude', CWD)
 
     expect(port.handles[0].plan.autoCommand).toContain('--settings')
   })
 
-  it('injects nothing when the hook server never started (ACTV-29)', () => {
+  it('injects nothing when the hook server never started (ACTV-29)', async () => {
     const { manager, port, hooks } = makeManager({ hooks: fakeHooks(null) })
 
-    manager.spawn('Claude', CWD)
+    await manager.spawn('Claude', CWD)
 
     expect(port.handles[0].plan.autoCommand).not.toContain('--settings')
     expect(port.envs[0]).toBeUndefined()
     expect(hooks.registered).toEqual([])
   })
 
-  it('injects nothing when the agent already carries its own --settings', () => {
+  it('injects nothing when the agent already carries its own --settings', async () => {
     const { manager, config, port, hooks } = makeManager()
     config.patch({
       agents: [{ name: 'Claude', command: 'claude', args: ['--settings', 'C:\\mine.json'] }]
     })
 
-    manager.spawn('Claude', CWD)
+    await manager.spawn('Claude', CWD)
 
     expect(port.handles[0].plan.autoCommand).toBe('claude --settings C:\\mine.json')
     expect(hooks.registered).toEqual([])
   })
 
-  it('folds an event into the session view and pushes it once (ACTV-03, ACTV-05)', () => {
+  it('folds an event into the session view and pushes it once (ACTV-03, ACTV-05)', async () => {
     const { manager, emit } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     manager.handleHookEvent(view.id, hookEvent('SessionStart', { source: 'startup' }))
 
@@ -794,9 +979,9 @@ describe('SessionManager activity hooks', () => {
     ])
   })
 
-  it('pushes nothing when an event repeats the state the session holds (ACTV-06)', () => {
+  it('pushes nothing when an event repeats the state the session holds (ACTV-06)', async () => {
     const { manager, emit } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     manager.handleHookEvent(view.id, hookEvent('Stop'))
     manager.handleHookEvent(view.id, hookEvent('Stop'))
@@ -808,9 +993,9 @@ describe('SessionManager activity hooks', () => {
     expect(activityEvents(emit)).toHaveLength(1)
   })
 
-  it('ignores an event for a session that is not running (ACTV-31, ACTV-32)', () => {
+  it('ignores an event for a session that is not running (ACTV-31, ACTV-32)', async () => {
     const { manager, emit } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
     void manager.stop(view.id)
     emit.events.length = 0
@@ -824,7 +1009,7 @@ describe('SessionManager activity hooks', () => {
 
   it('revokes the token and drops the activity when the session stops (ACTV-08)', async () => {
     const { manager, port, hooks } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     const token = port.envs[0]?.[ACTIVITY_TOKEN_ENV]
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
 
@@ -837,11 +1022,11 @@ describe('SessionManager activity hooks', () => {
 
   it('issues a fresh token on respawn and starts with no activity (ACTV-13)', async () => {
     const { manager, port, hooks } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('Stop'))
     await manager.stop(view.id)
 
-    manager.respawn(view.id)
+    await manager.respawn(view.id)
 
     const tokens = hooks.registered.map((r) => r.token)
     expect(tokens).toHaveLength(2)
@@ -850,10 +1035,10 @@ describe('SessionManager activity hooks', () => {
     expect(manager.list()[0].activity).toBeUndefined()
   })
 
-  it('hands the task link url to a session that gets a token (ATSK-01)', () => {
+  it('hands the task link url to a session that gets a token (ATSK-01)', async () => {
     const { manager, port } = makeManager()
 
-    manager.spawn('Claude', CWD)
+    await manager.spawn('Claude', CWD)
 
     // Literal names: they are the published contract (README), not an internal constant.
     expect(port.envs[0]).toEqual({
@@ -864,10 +1049,10 @@ describe('SessionManager activity hooks', () => {
 
   it('hands the task link url again to a respawned run (ATSK-01)', async () => {
     const { manager, port } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     await manager.stop(view.id)
 
-    manager.respawn(view.id)
+    await manager.respawn(view.id)
 
     expect(port.envs[1]).toEqual({
       PLAYGROUND_ACTIVITY_TOKEN: expect.any(String),
@@ -875,9 +1060,9 @@ describe('SessionManager activity hooks', () => {
     })
   })
 
-  it('keeps a running session on the launch it started with when the registry changes (ACTV-30)', () => {
+  it('keeps a running session on the launch it started with when the registry changes (ACTV-30)', async () => {
     const { manager, config, port } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     config.patch({ agents: [{ name: 'Claude', command: 'other-cli', args: [] }] })
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
@@ -886,9 +1071,9 @@ describe('SessionManager activity hooks', () => {
     expect(manager.list()[0].activity).toEqual({ state: 'working', subagents: 0 })
   })
 
-  it('treats the keystroke that answers a permission dialog as work resuming (ACTV-12)', () => {
+  it('treats the keystroke that answers a permission dialog as work resuming (ACTV-12)', async () => {
     const { manager, port } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('PermissionRequest', { tool_name: 'Bash' }))
 
     manager.input(view.id, '1')
@@ -897,9 +1082,9 @@ describe('SessionManager activity hooks', () => {
     expect(port.handles[0].writes).toEqual(['1'])
   })
 
-  it('does not let a mouse report answer for the user (ACTV-33)', () => {
+  it('does not let a mouse report answer for the user (ACTV-33)', async () => {
     const { manager, port } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('PermissionRequest', { tool_name: 'Bash' }))
 
     manager.input(view.id, '\x1b[<0;10;20M')
@@ -908,9 +1093,9 @@ describe('SessionManager activity hooks', () => {
     expect(port.handles[0].writes).toEqual(['\x1b[<0;10;20M'])
   })
 
-  it('never writes activity to the config (ACTV-09)', () => {
+  it('never writes activity to the config (ACTV-09)', async () => {
     const { manager, config } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     manager.handleHookEvent(view.id, hookEvent('PreToolUse', { tool_name: 'Bash' }))
     manager.handleHookEvent(view.id, hookEvent('SubagentStart', { agent_id: 'a1' }))
@@ -931,10 +1116,10 @@ describe('SessionManager activity transitions', () => {
     return { changes, onActivityChange: (change) => changes.push(change) }
   }
 
-  it('reports the first state with no previous one', () => {
+  it('reports the first state with no previous one', async () => {
     const { changes, onActivityChange } = recording()
     const { manager } = makeManager({ onActivityChange })
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
 
@@ -952,10 +1137,10 @@ describe('SessionManager activity transitions', () => {
     ])
   })
 
-  it('reports the previous view as before on the next transition', () => {
+  it('reports the previous view as before on the next transition', async () => {
     const { changes, onActivityChange } = recording()
     const { manager } = makeManager({ onActivityChange })
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
     manager.handleHookEvent(view.id, hookEvent('PermissionRequest', { tool_name: 'Bash' }))
@@ -966,10 +1151,10 @@ describe('SessionManager activity transitions', () => {
     })
   })
 
-  it('reports whether the session is the attached one', () => {
+  it('reports whether the session is the attached one', async () => {
     const { changes, onActivityChange } = recording()
     const { manager } = makeManager({ onActivityChange })
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     manager.attach(view.id)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
@@ -979,10 +1164,10 @@ describe('SessionManager activity transitions', () => {
     expect(changes.map((c) => c.attached)).toEqual([true, false])
   })
 
-  it('reports the current title of a renamed session (NOTF-12)', () => {
+  it('reports the current title of a renamed session (NOTF-12)', async () => {
     const { changes, onActivityChange } = recording()
     const { manager } = makeManager({ onActivityChange })
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     manager.rename(view.id, 'Fix login redirect')
     manager.handleHookEvent(view.id, hookEvent('Stop'))
@@ -990,10 +1175,10 @@ describe('SessionManager activity transitions', () => {
     expect(changes[0].title).toBe('Fix login redirect')
   })
 
-  it('reports nothing when the view does not change (NOTF-22)', () => {
+  it('reports nothing when the view does not change (NOTF-22)', async () => {
     const { changes, onActivityChange } = recording()
     const { manager } = makeManager({ onActivityChange })
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     manager.handleHookEvent(view.id, hookEvent('Stop'))
     manager.handleHookEvent(view.id, hookEvent('Stop'))
@@ -1001,10 +1186,10 @@ describe('SessionManager activity transitions', () => {
     expect(changes).toHaveLength(1)
   })
 
-  it('reports nothing when the PTY stops while the session is blocked (NOTF-26)', () => {
+  it('reports nothing when the PTY stops while the session is blocked (NOTF-26)', async () => {
     const { changes, onActivityChange } = recording()
     const { manager, port } = makeManager({ onActivityChange })
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
     manager.handleHookEvent(view.id, hookEvent('PermissionRequest', { tool_name: 'Bash' }))
 
@@ -1014,13 +1199,13 @@ describe('SessionManager activity transitions', () => {
     expect(changes.map((c) => c.after?.state)).toEqual(['working', 'needs-approval'])
   })
 
-  it('still pushes the activity when the listener throws', () => {
+  it('still pushes the activity when the listener throws', async () => {
     const { manager, emit } = makeManager({
       onActivityChange: () => {
         throw new Error('notifier bug')
       }
     })
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     manager.handleHookEvent(view.id, hookEvent('Stop'))
@@ -1036,9 +1221,9 @@ describe('SessionManager activity transitions', () => {
 describe('SessionManager — session names (AD-040)', () => {
   const CLAUDE_ID = 'claude-side-id'
 
-  it('records the session_id of the first hook event and watches it (SNAME-08, SNAME-09)', () => {
+  it('records the session_id of the first hook event and watches it (SNAME-08, SNAME-09)', async () => {
     const { manager, names } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
 
@@ -1046,9 +1231,9 @@ describe('SessionManager — session names (AD-040)', () => {
     expect(names.nudged).toEqual([])
   })
 
-  it('nudges, without re-watching, while a known session is still unnamed (SNAME-09)', () => {
+  it('nudges, without re-watching, while a known session is still unnamed (SNAME-09)', async () => {
     const { manager, names } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
 
     manager.handleHookEvent(view.id, hookEvent('PreToolUse', { tool_name: 'Bash' }))
@@ -1057,9 +1242,9 @@ describe('SessionManager — session names (AD-040)', () => {
     expect(names.nudged).toEqual([view.id])
   })
 
-  it('re-watches with the new session_id after /clear or /resume (edge case)', () => {
+  it('re-watches with the new session_id after /clear or /resume (edge case)', async () => {
     const { manager, names } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
 
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit', { session_id: 'claude-new' }))
@@ -1071,9 +1256,9 @@ describe('SessionManager — session names (AD-040)', () => {
     expect(names.nudged).toEqual([])
   })
 
-  it('neither watches nor nudges once the session has its name', () => {
+  it('neither watches nor nudges once the session has its name', async () => {
     const { manager, names } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
     manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
 
@@ -1087,9 +1272,9 @@ describe('SessionManager — session names (AD-040)', () => {
     ['missing', { session_id: undefined }],
     ['not a string', { session_id: 42 }],
     ['empty', { session_id: '' }]
-  ])('ignores a payload whose session_id is %s (SNAME-08)', (_, extra) => {
+  ])('ignores a payload whose session_id is %s (SNAME-08)', async (_, extra) => {
     const { manager, names } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit', extra))
     manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
@@ -1099,9 +1284,9 @@ describe('SessionManager — session names (AD-040)', () => {
     expect(manager.list()[0].name).toBeUndefined()
   })
 
-  it('sets the name from the listing, pushes it once, and lists it (SNAME-01, SNAME-11)', () => {
+  it('sets the name from the listing, pushes it once, and lists it (SNAME-01, SNAME-11)', async () => {
     const { manager, emit } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
 
     manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
@@ -1110,9 +1295,9 @@ describe('SessionManager — session names (AD-040)', () => {
     expect(nameEvents(emit)).toEqual([{ id: view.id, name: 'alpha' }])
   })
 
-  it('pushes nothing when a listing repeats the name the session holds (SNAME-11)', () => {
+  it('pushes nothing when a listing repeats the name the session holds (SNAME-11)', async () => {
     const { manager, emit } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
     manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
 
@@ -1121,9 +1306,9 @@ describe('SessionManager — session names (AD-040)', () => {
     expect(nameEvents(emit)).toHaveLength(1)
   })
 
-  it('updates the name in place when a later listing renames the session (SNAME-02)', () => {
+  it('updates the name in place when a later listing renames the session (SNAME-02)', async () => {
     const { manager, emit } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
     manager.applyNames(new Map([[CLAUDE_ID, 'repos-a2']]))
 
@@ -1136,9 +1321,9 @@ describe('SessionManager — session names (AD-040)', () => {
     ])
   })
 
-  it('clears the name when a successful listing no longer carries the id (SNAME-11)', () => {
+  it('clears the name when a successful listing no longer carries the id (SNAME-11)', async () => {
     const { manager, emit } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
     manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
 
@@ -1151,10 +1336,10 @@ describe('SessionManager — session names (AD-040)', () => {
     ])
   })
 
-  it('names both app sessions that share one session_id (edge case)', () => {
+  it('names both app sessions that share one session_id (edge case)', async () => {
     const { manager } = makeManager()
-    const first = manager.spawn('Claude', CWD)
-    const second = manager.spawn('Claude', CWD)
+    const first = await manager.spawn('Claude', CWD)
+    const second = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(first.id, hookEvent('UserPromptSubmit'))
     manager.handleHookEvent(second.id, hookEvent('UserPromptSubmit'))
 
@@ -1163,9 +1348,9 @@ describe('SessionManager — session names (AD-040)', () => {
     expect(manager.list().map((s) => s.name)).toEqual(['alpha', 'alpha'])
   })
 
-  it('skips a running session that has reported no session_id yet (SNAME-03, SNAME-11)', () => {
+  it('skips a running session that has reported no session_id yet (SNAME-03, SNAME-11)', async () => {
     const { manager, emit } = makeManager()
-    manager.spawn('Claude', CWD)
+    await manager.spawn('Claude', CWD)
 
     manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
 
@@ -1175,7 +1360,7 @@ describe('SessionManager — session names (AD-040)', () => {
 
   it('drops the name and unwatches when the session stops (SNAME-04)', async () => {
     const { manager, emit, names } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
     manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
     emit.events.length = 0
@@ -1188,9 +1373,9 @@ describe('SessionManager — session names (AD-040)', () => {
     expect(nameEvents(emit)).toEqual([])
   })
 
-  it('drops the name and unwatches when the PTY exits on its own (SNAME-04)', () => {
+  it('drops the name and unwatches when the PTY exits on its own (SNAME-04)', async () => {
     const { manager, port, names } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
     manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
 
@@ -1202,21 +1387,21 @@ describe('SessionManager — session names (AD-040)', () => {
 
   it('starts a respawned session unnamed until its own hooks report an id (SNAME-03)', async () => {
     const { manager, names } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
     manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
     await manager.stop(view.id)
 
-    manager.respawn(view.id)
+    await manager.respawn(view.id)
     manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
 
     expect(manager.list()[0].name).toBeUndefined()
     expect(names.watched).toHaveLength(1)
   })
 
-  it('never writes the name to the config, and a restored session has none (SNAME-15)', () => {
+  it('never writes the name to the config, and a restored session has none (SNAME-15)', async () => {
     const { manager, config } = makeManager()
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
     manager.applyNames(new Map([[CLAUDE_ID, 'alpha']]))
 
@@ -1227,9 +1412,9 @@ describe('SessionManager — session names (AD-040)', () => {
     expect(restored.manager.list()[0].name).toBeUndefined()
   })
 
-  it('works without a names collaborator, as before the feature', () => {
+  it('works without a names collaborator, as before the feature', async () => {
     const { manager, emit } = makeManager({ names: null })
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
 
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
     manager.handleHookEvent(view.id, hookEvent('Stop'))
@@ -1241,10 +1426,10 @@ describe('SessionManager — session names (AD-040)', () => {
 })
 
 describe('SessionManager activity transitions of a linked session', () => {
-  it('reports the task set by setTask on the next transition (HTSK-21)', () => {
+  it('reports the task set by setTask on the next transition (HTSK-21)', async () => {
     const changes: ActivityChange[] = []
     const { manager } = makeManager({ onActivityChange: (change) => changes.push(change) })
-    const view = manager.spawn('Claude', CWD)
+    const view = await manager.spawn('Claude', CWD)
     manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
 
     manager.setTask(view.id, { id: 4821, title: 'Diagnose login loop' })
