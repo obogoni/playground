@@ -105,14 +105,14 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] Lists `*.md` (any case) regular files by name without extension; ignores subfolders and other extensions
-- [ ] Sorted case-insensitively ascending
-- [ ] Missing folder → `[]`
-- [ ] Empty → `{name, error: 'empty'}`; > 16 KiB → `{name, error: 'larger than 16 KiB'}`; unreadable → `error` starting `unreadable: `; other prompts still listed
-- [ ] Template text is normalised (BOM, CRLF, trim)
-- [ ] `ensurePromptsFolder` creates a missing nested folder and is a no-op when it exists
-- [ ] Temp dirs removed with async `rm` (non-ASCII profile path)
-- [ ] Gate check passes: `npx vitest run src/main/prompt-library.test.ts`
+- [x] Lists `*.md` (any case) regular files by name without extension; ignores subfolders and other extensions
+- [x] Sorted case-insensitively ascending
+- [x] Missing folder → `[]`
+- [x] Empty → `{name, error: 'empty'}`; > 16 KiB → `{name, error: 'larger than 16 KiB'}`; unreadable → `error` starting `unreadable: `; other prompts still listed
+- [x] Template text is normalised (BOM, CRLF, trim)
+- [x] `ensurePromptsFolder` creates a missing nested folder and is a no-op when it exists
+- [x] Temp dirs removed with async `rm` (non-ASCII profile path)
+- [x] Gate check passes: `npx vitest run src/main/prompt-library.test.ts`
 
 **Tests**: unit
 **Gate**: quick

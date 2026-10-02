@@ -209,14 +209,14 @@ resolved prompt (APR-26), file changed mid-dialog (APR-35), prompt switch after 
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| APR-01 | P1: Discover | Tasks | In Design |
-| APR-02 | P1: Discover | Tasks | In Design |
-| APR-03 | P1: Discover | Tasks | In Design |
+| APR-01 | P1: Discover | Tasks | Implementing |
+| APR-02 | P1: Discover | Tasks | Implementing |
+| APR-03 | P1: Discover | Tasks | Implementing |
 | APR-04 | P1: Discover | Tasks | Implementing |
-| APR-05 | P1: Discover | Tasks | In Design |
-| APR-06 | P1: Discover | Tasks | In Design |
+| APR-05 | P1: Discover | Tasks | Implementing |
+| APR-06 | P1: Discover | Tasks | Implementing |
 | APR-07 | P1: Discover | Tasks | In Design |
-| APR-08 | P1: Pick | Tasks | In Design |
+| APR-08 | P1: Pick | Tasks | Implementing |
 | APR-09 | P1: Pick | Tasks | In Design |
 | APR-10 | P1: Pick | Tasks | In Design |
 | APR-11 | P1: Pick | Tasks | In Design |
