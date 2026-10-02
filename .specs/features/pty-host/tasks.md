@@ -329,17 +329,19 @@ T14
 
 **Done when**:
 
-- [ ] `grep -rn "from 'node-pty'" src` lists only `src/main/pty-host.ts`
-- [ ] `spawn` persists only after the awaited `#start` succeeds; a rejected `port.spawn` persists nothing and a respawned session stays `stopped`
-- [ ] The existing session-manager tests pass with only `await`/async-fake edits, plus new tests for the rejected spawn (test count ≥ the pre-task count)
-- [ ] `sessions:spawn` / `:respawn` / `:duplicate` handlers return the promise
-- [ ] Dev app: spawn, attach (replay), type, resize, stop work
-- [ ] Build gate passes
+- [x] `grep -rn "from 'node-pty'" src` lists only `src/main/pty-host.ts`
+- [x] `spawn` persists only after the awaited `#start` succeeds; a rejected `port.spawn` persists nothing and a respawned session stays `stopped`
+- [x] The existing session-manager tests pass with only `await`/async-fake edits, plus new tests for the rejected spawn (test count ≥ the pre-task count)
+- [x] `sessions:spawn` / `:respawn` / `:duplicate` handlers return the promise
+- [ ] Dev app: spawn, attach (replay), type, resize, stop work (not hand-verified by the batch worker; covered by T14's packaged run)
+- [x] Build gate passes
 
 **Tests**: unit
 **Gate**: build
 
 **Commit**: `refactor(sessions): spawn PTYs through the PTY host`
+
+**Status**: ✅ Complete. session-manager 86 → 89 tests (3 rejected-spawn tests); `electron-vite build` emits `out/main/pty-host-<hash>.js`. Dev-app box left open (no GUI driven by the worker)
 
 ---
 

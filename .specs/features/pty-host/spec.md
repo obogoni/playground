@@ -194,11 +194,11 @@ sessions show the notice and turn `stopped`, the app stays up, and respawning on
 | PTYH-07 | P1: Parity | Design | Implementing |
 | PTYH-08 | P1: Parity | Design | Implementing |
 | PTYH-09 | P1: Parity | Design | Implementing |
-| PTYH-10 | P1: Parity | Design | Pending |
+| PTYH-10 | P1: Parity | Design | Implementing |
 | PTYH-11 | P1: Parity | Design | Implementing |
-| PTYH-12 | P1: Parity | Design | Pending |
+| PTYH-12 | P1: Parity | Design | Implementing |
 | PTYH-13 | P1: Failed spawn | Design | Implementing |
-| PTYH-14 | P1: Failed spawn | Design | Pending |
+| PTYH-14 | P1: Failed spawn | Design | Implementing |
 | PTYH-15 | P1: Failed spawn | Design | Implementing |
 | PTYH-16 | P1: Failed spawn | Design | Pending |
 | PTYH-17 | P1: Quit | Design | Implementing |

@@ -135,7 +135,12 @@ export class SessionManager {
     return this.deps.config.get().sessions.map((s) => this.#toView(s))
   }
 
-  spawn(agentName: string, cwd: string, adhocCommand?: string, task?: SessionTask): SessionView {
+  async spawn(
+    agentName: string,
+    cwd: string,
+    adhocCommand?: string,
+    task?: SessionTask
+  ): Promise<SessionView> {
     const leaf = basename(cwd) || cwd
     const meta: PersistedSession = adhocCommand
       ? {
@@ -155,7 +160,7 @@ export class SessionManager {
           status: 'running',
           ...(task ? { task } : {})
         }
-    this.#start(meta) // throws on a bad cwd/shell/agent before anything is persisted
+    await this.#start(meta) // rejects on a bad cwd/shell/agent before anything is persisted (PTYH-14)
     this.#persistUpsert(meta)
     return this.#toView(meta)
   }
@@ -191,7 +196,7 @@ export class SessionManager {
   }
 
   /** Clone a session's agent + cwd (+ ad-hoc command, + task link) into a new running one. */
-  duplicate(id: string): SessionView {
+  async duplicate(id: string): Promise<SessionView> {
     const src = this.deps.config.get().sessions.find((s) => s.id === id)
     if (!src) throw new Error(`Unknown session: ${id}`)
     const leaf = basename(src.cwd) || src.cwd
@@ -204,7 +209,7 @@ export class SessionManager {
       ...(src.command ? { command: src.command } : {}),
       ...(src.task ? { task: src.task } : {})
     }
-    this.#start(meta)
+    await this.#start(meta)
     this.#persistUpsert(meta)
     return this.#toView(meta)
   }
@@ -245,13 +250,13 @@ export class SessionManager {
     }
   }
 
-  respawn(id: string): SessionView {
+  async respawn(id: string): Promise<SessionView> {
     const meta = this.deps.config.get().sessions.find((s) => s.id === id)
     if (!meta) throw new Error(`Unknown session: ${id}`)
     if (this.#running.has(id)) return this.#toView(meta)
     this.#retained.delete(id) // fresh PTY → drop the stale preview buffer
     const live: PersistedSession = { ...meta, status: 'running' }
-    this.#start(live)
+    await this.#start(live) // a failed spawn persists nothing: the session stays stopped (PTYH-14)
     this.#persistUpsert(live)
     this.deps.emit('session:status', {
       id,
@@ -348,7 +353,7 @@ export class SessionManager {
   }
 
   /** Spawn the PTY for a meta and wire its streams; registers the Map entry. */
-  #start(meta: PersistedSession): void {
+  async #start(meta: PersistedSession): Promise<void> {
     const shell = this.deps.config.get().ui.defaultShell
     // Resolved here, once, so a registry edit mid-session cannot change how a
     // running session was launched (ACTV-30).
@@ -359,7 +364,7 @@ export class SessionManager {
       ? buildRawSpawnPlan(meta.command, meta.cwd, shell)
       : buildSpawnPlan(token === null ? agent! : this.#withHookSettings(agent!), meta.cwd, shell)
     const taskUrl = this.deps.hooks?.taskUrl
-    const handle = this.deps.port.spawn(
+    const handle = await this.deps.port.spawn(
       plan,
       token === null
         ? undefined

@@ -35,7 +35,8 @@ import { purgePasteDir } from './paste-temp'
 import { findOnPath } from './path-lookup'
 import { startLoopDelayLog } from './perf-monitor'
 import { withPostCreateHook } from './post-create-hook'
-import { PtyPort } from './pty-port'
+import { PtyHostClient } from './pty-host-client'
+import { forkPtyHost } from './pty-host-fork'
 import { resolvePostCreateCommand } from './repo-config'
 import { scrubAuthEnv } from './scrub-auth-env'
 import { SessionManager, type ActivityHooks, type EmitFn } from './session-manager'
@@ -222,6 +223,8 @@ let timeTracker: TimeTracker | null = null
 let stopHookServer: (() => Promise<void>) | null = null
 /** Kills the in-flight `claude agents --json` on quit (SNAME-14). */
 let namePoller: SessionNamePoller | null = null
+/** Owns every PTY, in a utility process so ConPTY creation never blocks main (PTYH-01). */
+let ptyHost: PtyHostClient | null = null
 
 function createWindow(): void {
   // Create the browser window.
@@ -277,6 +280,11 @@ app.whenReady().then(() => {
     enabled: process.env.PLAYGROUND_DEBUG_PERF === '1'
   })
   app.on('will-quit', stopLoopDelayLog)
+
+  // Forked now, before the first spawn, so opening a session does not also pay
+  // the host's start-up (spec Assumptions: PTY host start time).
+  ptyHost = new PtyHostClient({ fork: forkPtyHost, log: console.error })
+  ptyHost.start()
 
   // Set app user model id for windows. Derive it from the packaged identity so the
   // nightly build (a distinct app name) groups separately from stable on the taskbar.
@@ -631,7 +639,7 @@ app.whenReady().then(() => {
     log: (msg) => console.error(msg)
   })
   sessionManager = new SessionManager({
-    port: new PtyPort(),
+    port: ptyHost,
     config: configStore,
     emit: emitToWindow,
     fsExists: existsSync,
