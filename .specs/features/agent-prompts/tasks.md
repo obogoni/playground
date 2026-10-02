@@ -163,13 +163,13 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] With a prompt, the port gets the prompt plan (pwsh even when `defaultShell` is `cmd`) and env `PLAYGROUND_PROMPT` equal to the prompt
-- [ ] With hooks on, `--settings <file>` precedes `--` in `autoCommand`
-- [ ] Rejects (nothing persisted, no port spawn) for: prompt with ad-hoc, blank prompt, prompt over 8000 characters; exactly 8000 is accepted
-- [ ] Respawn and duplicate of a prompted session spawn with no `PLAYGROUND_PROMPT` and today's plan
-- [ ] Persisted session has no prompt text and no prompt name
-- [ ] Existing session-manager tests still pass unchanged
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` (phase end)
+- [x] With a prompt, the port gets the prompt plan (pwsh even when `defaultShell` is `cmd`) and env `PLAYGROUND_PROMPT` equal to the prompt
+- [x] With hooks on, `--settings <file>` precedes `--` in `autoCommand`
+- [x] Rejects (nothing persisted, no port spawn) for: prompt with ad-hoc, blank prompt, prompt over 8000 characters; exactly 8000 is accepted
+- [x] Respawn and duplicate of a prompted session spawn with no `PLAYGROUND_PROMPT` and today's plan
+- [x] Persisted session has no prompt text and no prompt name
+- [x] Existing session-manager tests still pass unchanged
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (phase end)
 
 **Tests**: unit
 **Gate**: build
