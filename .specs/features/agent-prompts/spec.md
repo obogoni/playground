@@ -215,35 +215,35 @@ resolved prompt (APR-26), file changed mid-dialog (APR-35), prompt switch after 
 | APR-04 | P1: Discover | Tasks | Implementing |
 | APR-05 | P1: Discover | Tasks | Implementing |
 | APR-06 | P1: Discover | Tasks | Implementing |
-| APR-07 | P1: Discover | Tasks | In Design |
+| APR-07 | P1: Discover | Tasks | Implementing |
 | APR-08 | P1: Pick | Tasks | Implementing |
-| APR-09 | P1: Pick | Tasks | In Design |
-| APR-10 | P1: Pick | Tasks | In Design |
-| APR-11 | P1: Pick | Tasks | In Design |
+| APR-09 | P1: Pick | Tasks | Implementing |
+| APR-10 | P1: Pick | Tasks | Implementing |
+| APR-11 | P1: Pick | Tasks | Implementing |
 | APR-12 | P1: Parsing | Tasks | Implementing |
 | APR-13 | P1: Parsing | Tasks | Implementing |
 | APR-14 | P1: Parsing | Tasks | Implementing |
 | APR-15 | P1: Parsing | Tasks | Implementing |
 | APR-16 | P1: Parsing | Tasks | Implementing |
-| APR-17 | P1: Variables form | Tasks | In Design |
-| APR-18 | P1: Variables form | Tasks | In Design |
+| APR-17 | P1: Variables form | Tasks | Implementing |
+| APR-18 | P1: Variables form | Tasks | Implementing |
 | APR-19 | P1: Variables form | Tasks | Implementing |
 | APR-20 | P1: Variables form | Tasks | Implementing |
 | APR-21 | P1: Variables form | Tasks | Implementing |
 | APR-22 | P1: Variables form | Tasks | Implementing |
 | APR-23 | P1: Variables form | Tasks | Implementing |
 | APR-24 | P1: Spawn | Tasks | Implementing |
-| APR-25 | P1: Variables form | Tasks | In Design |
+| APR-25 | P1: Variables form | Tasks | Implementing |
 | APR-26 | P1: Variables form | Tasks | Implementing |
 | APR-27 | P1: Variables form | Tasks | Implementing |
 | APR-28 | P1: Variables form | Tasks | Implementing |
-| APR-29 | P1: Variables form | Tasks | In Design |
+| APR-29 | P1: Variables form | Tasks | Implementing |
 | APR-30 | P1: Spawn | Tasks | Implementing |
 | APR-31 | P1: Spawn | Tasks | Implementing |
 | APR-32 | P1: Spawn | Tasks | Implementing |
 | APR-33 | P1: Spawn | Tasks | Implementing |
 | APR-34 | P1: Spawn | Tasks | Implementing |
-| APR-35 | P1: Spawn | Tasks | In Design |
+| APR-35 | P1: Spawn | Tasks | Implementing |
 | APR-36 | P1: Spawn | Tasks | Implementing |
 
 **Coverage:** 36 total, 0 mapped to tasks, 36 unmapped (pre-Tasks).

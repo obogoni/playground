@@ -273,10 +273,11 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] Prompt chips (None + entries; broken disabled with reason), hidden for Ad-hoc, Open prompts folder reloads on focus
-- [ ] Next/Spawn switch, step 2 fields + live Will run, Back keeps values, over-length notice
-- [ ] Spawn sends the previewed resolved text
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` (phase end before docs)
+- [x] Prompt chips (None + entries; broken disabled with reason), hidden for Ad-hoc, Open prompts folder reloads on focus
+- [x] Next/Spawn switch, step 2 fields + live Will run, Back keeps values, over-length notice
+- [x] Spawn sends the previewed resolved text
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (phase end before docs; the only failures are the known machine-local real-git/timeout tests: file-discard, git-sync, hook-shell, worktree-manager)
+- **gap:** the dialog is not hand-verified yet (renderer components carry no unit tests by convention; the app was not run in this worktree because node-pty is not built). UAT pending.
 
 **Tests**: none
 **Gate**: build

@@ -219,3 +219,97 @@
   top: auto;
   bottom: calc(100% + 6px);
 }
+
+/* Prompt field (APR-09): None + one chip per prompt file; a broken file is a
+   disabled chip with its reason (APR-07). Open prompts folder sits at the
+   label's right (APR-08). */
+.ns-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.ns-label-row .dialog-field-label {
+  margin-bottom: 0;
+}
+
+.ns-open-folder {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ns-open-folder:hover {
+  text-decoration: underline;
+}
+
+.ns-prompt-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.ns-prompt-chip {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border-radius: 9px;
+  padding: 6px 11px;
+  font-size: 12.5px;
+  font-weight: 600;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.ns-prompt-chip:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.ns-prompt-chip.selected {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
+.ns-prompt-chip:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.ns-prompt-error {
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+/* Variables step (APR-18): one mono `{{name}}` label + input per placeholder. */
+.ns-prompt-step {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ns-var-label {
+  font-family: var(--font-mono);
+}
+
+.dialog-footer .ns-back {
+  margin-right: auto;
+}
+
+/* The resolved prompt under the Will run line (APR-25), as the agent gets it. */
+.ns-prompt-preview {
+  margin: 8px 0 0;
+  max-height: 180px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}
