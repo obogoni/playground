@@ -271,16 +271,18 @@ T14
 
 **Done when**:
 
-- [ ] `killAll` is posted after every earlier message (FIFO)
-- [ ] Resolves when the transport exits; with fake timers, `kill()` is called at exactly 3000 ms when it does not
-- [ ] An exit during shutdown fires no `hostExited` finalize and no crash log
-- [ ] `shutdown` with no live host resolves immediately
-- [ ] Quick gate passes: `npx vitest run src/main/pty-host-client.test.ts`
+- [x] `killAll` is posted after every earlier message (FIFO)
+- [x] Resolves when the transport exits; with fake timers, `kill()` is called at exactly 3000 ms when it does not
+- [x] An exit during shutdown fires no `hostExited` finalize and no crash log
+- [x] `shutdown` with no live host resolves immediately
+- [x] Quick gate passes: `npx vitest run src/main/pty-host-client.test.ts`
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(pty-host): let the host kill every PTY before quit`
+
+**Status**: ✅ Complete
 
 ---
 

@@ -202,7 +202,7 @@ sessions show the notice and turn `stopped`, the app stays up, and respawning on
 | PTYH-15 | P1: Failed spawn | Design | Implementing |
 | PTYH-16 | P1: Failed spawn | Design | Pending |
 | PTYH-17 | P1: Quit | Design | Implementing |
-| PTYH-18 | P1: Quit | Design | Pending |
+| PTYH-18 | P1: Quit | Design | Implementing |
 | PTYH-19 | P1: Quit | Design | Implementing |
 | PTYH-20 | P1: Packaged build | Design | Pending |
 | PTYH-21 | P1: Packaged build | Design | Pending |

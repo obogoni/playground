@@ -45,6 +45,7 @@ export class PtyHostClient {
   #nextPtyId = 1
   readonly #pending = new Map<number, PendingSpawn>()
   readonly #handles = new Map<number, HandleState>()
+  #shutdown: { done: Promise<void>; finish: () => void } | null = null
 
   constructor(deps: PtyHostClientDeps) {
     this.#deps = deps
@@ -82,6 +83,40 @@ export class PtyHostClient {
     })
   }
 
+  /**
+   * Quit: let the host kill every PTY itself (node-pty's own kill path) and exit,
+   * or kill the host at the deadline (PTYH-17, PTYH-18). The host's exit here is
+   * not a crash: no `hostExited` finalize, no crash log.
+   */
+  shutdown(timeoutMs: number): Promise<void> {
+    if (this.#shutdown) return this.#shutdown.done
+    const transport = this.#transport
+    if (!transport) return Promise.resolve()
+    let resolve!: () => void
+    const done = new Promise<void>((r) => {
+      resolve = r
+    })
+    const timer = setTimeout(() => {
+      transport.kill()
+      finish()
+    }, timeoutMs)
+    const finish = (): void => {
+      clearTimeout(timer)
+      this.#shutdown = null
+      this.#transport = null
+      const pending = [...this.#pending.values()]
+      this.#pending.clear()
+      for (const p of pending) p.reject(new Error('PTY host shut down'))
+      for (const state of this.#handles.values()) state.exited = true
+      this.#handles.clear()
+      resolve()
+    }
+    this.#shutdown = { done, finish }
+    // FIFO: the host handles killAll after every message posted before it (PTYH-19).
+    transport.post({ type: 'killAll' })
+    return done
+  }
+
   #ensureTransport(): HostTransport {
     if (this.#transport) return this.#transport
     const transport = this.#deps.fork()
@@ -90,7 +125,9 @@ export class PtyHostClient {
       if (transport === this.#transport) this.#onMessage(transport, m)
     })
     transport.onExit((code) => {
-      if (transport === this.#transport) this.#onHostExit(code)
+      if (transport !== this.#transport) return
+      if (this.#shutdown) this.#shutdown.finish()
+      else this.#onHostExit(code)
     })
     return transport
   }

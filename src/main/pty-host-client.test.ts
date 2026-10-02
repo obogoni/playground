@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { FromHost, ToHost } from '../shared/pty-host-protocol'
 import { PtyHostClient, type HostTransport } from './pty-host-client'
 import type { PtyHandle } from './pty-port'
@@ -405,5 +405,111 @@ describe('PtyHostClient.start', () => {
     void client.spawn(PLAN)
     expect(calls).toBe(2)
     expect(client.alive).toBe(true)
+  })
+})
+
+describe('PtyHostClient.shutdown', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('posts killAll after every earlier message', async () => {
+    const h = setup()
+    const { handle, ptyId } = await spawned(h)
+    handle.write('exit\r')
+    handle.kill()
+    void h.client.shutdown(3000)
+
+    expect(h.t().posted.slice(1)).toEqual([
+      { type: 'write', ptyId, data: 'exit\r' },
+      { type: 'kill', ptyId },
+      { type: 'killAll' }
+    ])
+  })
+
+  it('resolves when the host exits, without killing it', async () => {
+    const h = setup()
+    h.client.start()
+    let done = false
+    const p = h.client.shutdown(3000).then(() => {
+      done = true
+    })
+    await Promise.resolve()
+    expect(done).toBe(false)
+    h.t().exit(0)
+    await p
+
+    expect(done).toBe(true)
+    expect(h.t().kills).toBe(0)
+    expect(h.client.alive).toBe(false)
+  })
+
+  it('kills the host at exactly 3000 ms when it has not exited, then resolves', async () => {
+    vi.useFakeTimers()
+    const h = setup()
+    h.client.start()
+    let done = false
+    const p = h.client.shutdown(3000).then(() => {
+      done = true
+    })
+
+    await vi.advanceTimersByTimeAsync(2999)
+    expect(h.t().kills).toBe(0)
+    expect(done).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(h.t().kills).toBe(1)
+    await p
+    expect(done).toBe(true)
+  })
+
+  it('treats an exit during shutdown as no crash: no hostExited finalize, no crash log', async () => {
+    const h = setup()
+    const { handle } = await spawned(h)
+    const exits: unknown[] = []
+    handle.onExit((e) => exits.push(e))
+    const p = h.client.shutdown(3000)
+    h.t().exit(0)
+    await p
+
+    expect(exits).toEqual([])
+    expect(h.logs).toEqual([])
+  })
+
+  it('does not kill the host after it exited before the deadline', async () => {
+    vi.useFakeTimers()
+    const h = setup()
+    h.client.start()
+    const p = h.client.shutdown(3000)
+    h.t().exit(0)
+    await p
+    await vi.advanceTimersByTimeAsync(5000)
+
+    expect(h.t().kills).toBe(0)
+  })
+
+  it('settles a spawn still pending when the host exits on shutdown', async () => {
+    const h = setup()
+    const pending = h.client.spawn(PLAN)
+    const p = h.client.shutdown(3000)
+    h.t().exit(0)
+    await p
+
+    await expect(pending).rejects.toThrow('PTY host shut down')
+  })
+
+  it('resolves immediately with no live host, without forking', async () => {
+    const h = setup()
+    await h.client.shutdown(3000)
+
+    expect(h.transports).toHaveLength(0)
+  })
+
+  it('resolves immediately after the host crashed', async () => {
+    const h = setup()
+    h.client.start()
+    h.t().exit(1)
+    await h.client.shutdown(3000)
+
+    expect(h.t().posted).toEqual([])
   })
 })
