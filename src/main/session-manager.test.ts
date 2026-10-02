@@ -568,6 +568,35 @@ describe('SessionManager async spawn window', () => {
     expect(hooks.revoked).toEqual([hooks.registered[0].token])
   })
 
+  it('forwards input to a running session while another spawn is pending (PTYH-03)', async () => {
+    const { manager, port } = makeManager()
+    const running = await manager.spawn('Claude', CWD)
+    const deferred = deferSpawns(port)
+
+    const pending = manager.spawn('Claude', CWD)
+    manager.input(running.id, 'typed while starting')
+
+    expect(port.handles[0].writes).toEqual(['typed while starting'])
+    expect(deferred.calls).toBe(1)
+    deferred.resolveNext()
+    await pending
+  })
+
+  it('streams the attached session on session:data while another spawn is pending (PTYH-04)', async () => {
+    const { manager, port, emit } = makeManager()
+    const running = await manager.spawn('Claude', CWD)
+    manager.attach(running.id)
+    const deferred = deferSpawns(port)
+
+    const pending = manager.spawn('Claude', CWD)
+    port.handles[0].emitData('output while starting')
+
+    const data = emit.events.filter((e) => e.channel === 'session:data')
+    expect(data.at(-1)?.payload).toEqual({ id: running.id, data: 'output while starting' })
+    deferred.resolveNext()
+    await pending
+  })
+
   it('a second respawn while the first is still starting creates no second PTY (PTYH-28)', async () => {
     const { manager, port } = makeManager()
     const view = await manager.spawn('Claude', CWD)

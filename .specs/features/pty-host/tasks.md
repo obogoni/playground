@@ -505,14 +505,16 @@ T14
 
 **Done when**:
 
-- [ ] Input sent while a spawn is pending reaches the running session's handle before the spawn resolves
-- [ ] Output of the attached session while a spawn is pending is emitted on `session:data`
-- [ ] Quick gate passes: `npx vitest run src/main/session-manager.test.ts`
+- [x] Input sent while a spawn is pending reaches the running session's handle before the spawn resolves
+- [x] Output of the attached session while a spawn is pending is emitted on `session:data`
+- [x] Quick gate passes: `npx vitest run src/main/session-manager.test.ts`
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `test(sessions): pin input and output forwarding while a spawn is pending`
+
+**Status**: ✅ Complete (97 session-manager tests)
 
 ---
 

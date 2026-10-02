@@ -190,8 +190,8 @@ sessions show the notice and turn `stopped`, the app stays up, and respawning on
 | -------------- | ----- | ----- | ------ |
 | PTYH-01 | P1: Never freezes | Design | Implementing |
 | PTYH-02 | P1: Never freezes | Design | Pending |
-| PTYH-03 | P1: Never freezes | Design | Pending |
-| PTYH-04 | P1: Never freezes | Design | Pending |
+| PTYH-03 | P1: Never freezes | Execute | Implementing |
+| PTYH-04 | P1: Never freezes | Execute | Implementing |
 | PTYH-05 | P1: Never freezes | Design | Implementing |
 | PTYH-06 | P1: Parity | Design | Implementing |
 | PTYH-07 | P1: Parity | Design | Implementing |
