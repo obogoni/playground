@@ -329,6 +329,15 @@ describe('SessionManager', () => {
     expect(port.handles[0].resizes).toEqual([])
   })
 
+  it('drops a resize with a zero or negative dimension before it reaches the PTY', async () => {
+    const { manager, port } = makeManager()
+    const a = await manager.spawn('Claude', CWD)
+    manager.resize(a.id, 0, 30)
+    manager.resize(a.id, 100, -1)
+    manager.resize(a.id, 100, 30)
+    expect(port.handles[0].resizes).toEqual([[100, 30]])
+  })
+
   it('killAll kills every running PTY and empties the running set', async () => {
     const { manager, port } = makeManager()
     await manager.spawn('Claude', CWD)
