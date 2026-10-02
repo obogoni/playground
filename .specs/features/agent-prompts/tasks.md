@@ -108,7 +108,7 @@ T7 → T8 → T9
 - [x] Lists `*.md` (any case) regular files by name without extension; ignores subfolders and other extensions
 - [x] Sorted case-insensitively ascending
 - [x] Missing folder → `[]`
-- [x] Empty → `{name, error: 'empty'}`; > 16 KiB → `{name, error: 'larger than 16 KiB'}`; unreadable → `error` starting `unreadable: `; other prompts still listed
+- [x] Empty → `{name, error: 'empty'}`; > 16 KiB → `{name, error: 'larger than 16 KiB'}`; unreadable → `error` starting `unreadable: `; other prompts still listed — **gap:** the `unreadable:` branch has no test (no portable way to make a regular-file read fail on Windows without admin; see T2 commit body)
 - [x] Template text is normalised (BOM, CRLF, trim)
 - [x] `ensurePromptsFolder` creates a missing nested folder and is a no-op when it exists
 - [x] Temp dirs removed with async `rm` (non-ASCII profile path)
