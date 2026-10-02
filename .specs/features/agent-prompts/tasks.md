@@ -220,8 +220,8 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] `spawnSession(agentName, cwd, adhocCommand?, task?, prompt?)` sends `prompt` in `sessions:spawn`
-- [ ] Gate check passes: `npm run typecheck && npm run lint`
+- [x] `spawnSession(agentName, cwd, adhocCommand?, task?, prompt?)` sends `prompt` in `sessions:spawn` (the `NewSessionDialog` `onSpawn` prop type gains `prompt?` too, so `App.tsx` can forward it)
+- [x] Gate check passes: `npm run typecheck && npm run lint`
 
 **Tests**: none
 **Gate**: build

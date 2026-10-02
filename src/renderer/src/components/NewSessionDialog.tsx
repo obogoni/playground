@@ -39,8 +39,17 @@ interface NewSessionDialogProps {
   source: NewSessionSource
   /** The pinned tasks, for the Task field's picker. */
   tasks: PinnedTaskView[]
-  /** `task` is the chosen link; absent = From branch (HTSK-09, HTSK-10). */
-  onSpawn: (agentName: string, cwd: string, adhocCommand?: string, task?: SessionTask) => void
+  /**
+   * `task` is the chosen link; absent = From branch (HTSK-09, HTSK-10).
+   * `prompt` is the resolved prompt shown in Will run (APR-35).
+   */
+  onSpawn: (
+    agentName: string,
+    cwd: string,
+    adhocCommand?: string,
+    task?: SessionTask,
+    prompt?: string
+  ) => void
   onClose: () => void
 }
 
