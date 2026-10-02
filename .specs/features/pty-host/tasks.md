@@ -149,17 +149,19 @@ T14
 
 **Done when**:
 
-- [ ] `spawn` calls the factory with file/args/cwd/env, `name: 'xterm-256color'`, `useConpty: true` and posts `spawned{ptyId, pid}`
-- [ ] A throwing factory posts `spawn-failed{ptyId, message}` with the error's message
-- [ ] `data`/`exit` are posted per `ptyId` in the factory's event order
-- [ ] `write`/`resize`/`kill` reach the right PTY; on an unknown or exited `ptyId` they are dropped without throwing
-- [ ] `killAll` kills every live PTY, then calls `exit(0)`; a `spawn` handled before `killAll` is killed by it
-- [ ] Quick gate passes: `npx vitest run src/main/pty-host-core.test.ts`
+- [x] `spawn` calls the factory with file/args/cwd/env, `name: 'xterm-256color'`, `useConpty: true` and posts `spawned{ptyId, pid}`
+- [x] A throwing factory posts `spawn-failed{ptyId, message}` with the error's message
+- [x] `data`/`exit` are posted per `ptyId` in the factory's event order
+- [x] `write`/`resize`/`kill` reach the right PTY; on an unknown or exited `ptyId` they are dropped without throwing
+- [x] `killAll` kills every live PTY, then calls `exit(0)`; a `spawn` handled before `killAll` is killed by it
+- [x] Quick gate passes: `npx vitest run src/main/pty-host-core.test.ts`
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(pty-host): handle host messages against node-pty`
+
+**Status**: ✅ Complete
 
 ---
 

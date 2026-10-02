@@ -190,20 +190,20 @@ sessions show the notice and turn `stopped`, the app stays up, and respawning on
 | PTYH-03 | P1: Never freezes | Design | Pending |
 | PTYH-04 | P1: Never freezes | Design | Pending |
 | PTYH-05 | P1: Never freezes | Design | Pending |
-| PTYH-06 | P1: Parity | Design | Pending |
-| PTYH-07 | P1: Parity | Design | Pending |
+| PTYH-06 | P1: Parity | Design | Implementing |
+| PTYH-07 | P1: Parity | Design | Implementing |
 | PTYH-08 | P1: Parity | Design | Implementing |
-| PTYH-09 | P1: Parity | Design | Pending |
+| PTYH-09 | P1: Parity | Design | Implementing |
 | PTYH-10 | P1: Parity | Design | Pending |
-| PTYH-11 | P1: Parity | Design | Pending |
+| PTYH-11 | P1: Parity | Design | Implementing |
 | PTYH-12 | P1: Parity | Design | Pending |
-| PTYH-13 | P1: Failed spawn | Design | Pending |
+| PTYH-13 | P1: Failed spawn | Design | Implementing |
 | PTYH-14 | P1: Failed spawn | Design | Pending |
 | PTYH-15 | P1: Failed spawn | Design | Pending |
 | PTYH-16 | P1: Failed spawn | Design | Pending |
-| PTYH-17 | P1: Quit | Design | Pending |
+| PTYH-17 | P1: Quit | Design | Implementing |
 | PTYH-18 | P1: Quit | Design | Pending |
-| PTYH-19 | P1: Quit | Design | Pending |
+| PTYH-19 | P1: Quit | Design | Implementing |
 | PTYH-20 | P1: Packaged build | Design | Pending |
 | PTYH-21 | P1: Packaged build | Design | Pending |
 | PTYH-22 | P2: Host crash | Design | Pending |
