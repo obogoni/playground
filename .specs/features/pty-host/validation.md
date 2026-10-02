@@ -154,3 +154,11 @@ Real-tree `git status --porcelain` before: empty; after cleanup: empty. Junction
 **Lessons recorded**: L-098 (spec_precision_gap), L-099 (ac_gap), L-100 (spec_deviation), all candidates.
 
 **Next steps**: amend PTYH-27's wording; add the resize-drop test as a small follow-up.
+
+---
+
+## Gaps resolved after the report
+
+- Gap 1 (PTYH-27 "exit reason"): spec now states the logged line and the exit code only (`abb64a9`).
+- Gap 2 (resize edge case untested): `session-manager.test.ts` "drops a resize with a zero or negative dimension before it reaches the PTY" (`cc890a8`); 98 session-manager tests pass.
+- Gaps 3–4 stay as noted: the `index.ts` constant is hand-verified wiring, and the packaged evidence is `build:unpack` plus the owner checks.
