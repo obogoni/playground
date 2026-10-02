@@ -564,6 +564,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: src/main/spawn-pacer.ts:27 (P8 mutant 2) (testing/schedulers)
 - last seen: 2026-10-01T22:23:16Z
 
+### L-098 - Word a child-process exit AC in the fields the platform exit event actually carries (Electron utilityProcess exit gives only a code), never an undefined exit reason
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `electron-process` · harmful: 0
+- features: pty-host
+- evidence: PTYH-27 (src/main/pty-host-client.test.ts:300) (electron-process)
+- last seen: 2026-10-02T17:30:39Z
+
+### L-099 - When a spec edge case restates existing behaviour as today, cite a test that already pins it or add one; unchanged code is not evidence
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: pty-host
+- evidence: Edge case resize zero dims (src/main/session-manager.ts:338) (testing)
+- last seen: 2026-10-02T17:30:44Z
+
+### L-100 - To cancel async work that was in flight at a reset, compare a generation counter captured at start instead of a sticky disposed flag, so work started after a non-terminal reset still runs
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `session-manager` · harmful: 0
+- features: pty-host
+- evidence: SPEC_DEVIATION src/main/session-manager.ts:126 (session-manager)
+- last seen: 2026-10-02T17:30:50Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
