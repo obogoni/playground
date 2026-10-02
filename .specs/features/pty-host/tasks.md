@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/pty-host/design.md`
-**Status**: Draft
+**Status**: In Progress
 
 ---
 
@@ -91,17 +91,19 @@ T14
 
 **Done when**:
 
-- [ ] Recorded: `node-pty` loads from the utility process in `dist/win-unpacked` (yes/no, error text if no)
-- [ ] Recorded: the host bundle path that `?modulePath` resolves to inside the package
-- [ ] Recorded: after `kill()` of a PTY running `node -e "setInterval(()=>{},1e3)"` as a grandchild, no `node`/`pwsh`/`OpenConsole` process from it remains (Task Manager / `Get-Process`)
-- [ ] Recorded: main-process time spent in `utilityProcess.fork` and the spawn round-trip
-- [ ] If any check fails, STOP and escalate to the owner before Phase 2 (design change)
-- [ ] Scratch worktree removed; real-tree `git status --porcelain` shows only `design.md`
+- [x] Recorded: `node-pty` loads from the utility process in `dist/win-unpacked` (yes/no, error text if no)
+- [x] Recorded: the host bundle path that `?modulePath` resolves to inside the package
+- [x] Recorded: after `kill()` of a PTY running `node -e "setInterval(()=>{},1e3)"` as a grandchild, no `node`/`pwsh`/`OpenConsole` process from it remains (Task Manager / `Get-Process`)
+- [x] Recorded: main-process time spent in `utilityProcess.fork` and the spawn round-trip
+- [x] If any check fails, STOP and escalate to the owner before Phase 2 (design change)
+- [x] Scratch worktree removed; real-tree `git status --porcelain` shows only `design.md`
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `docs(specs): record pty-host spike results`
+
+**Status**: ✅ Complete. No design change; see design.md §Spike Results
 
 ---
 

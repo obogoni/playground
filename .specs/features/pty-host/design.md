@@ -216,3 +216,22 @@ No persisted model changes.
 
 **Project-level decision:** AD-053, node-pty runs only in the PTY host utility process (recorded in
 `STATE.md` on approval).
+
+---
+
+## Spike Results
+
+Run 2026-10-02 (T1) from a scratch worktree, packaged with `electron-builder --dir`
+(`dist/win-unpacked/playground.exe`, `app.isPackaged === true`). Throwaway code, not committed.
+
+| Check | Result |
+| ----- | ------ |
+| `node-pty` loads in the utility process from the package | **Yes.** `require('node-pty')` resolves inside `app.asar`; the native binaries are smart-unpacked to `app.asar.unpacked/node_modules/node-pty/` with no `electron-builder.yml` change |
+| Host bundle path from `?modulePath` | `resources/app.asar/out/main/pty-spike-host-<hash>.js`. `utilityProcess.fork` runs it from inside the asar |
+| Main-process cost | `utilityProcess.fork` call 11.8 ms; host ready 541 ms after fork (off main). Spawn round trip 177 ms, of which 173 ms is `pty.spawn` in the host. **Main loop delay max during the spawn: 16.8 ms** (5 ms resolution), against 313–339 ms blocked today |
+| `kill()` of a PTY whose shell runs `node -e "setInterval(()=>{},1e3)"` | Grandchild `node.exe` and the shell are gone 4 s after `kill()`; exit code `-1073741510` (`0xC000013A`, as in-process) |
+| node-pty's console-list agent | Forks from the utility process but throws `AttachConsole failed`. **Same in-process**: plain Node running node-pty 1.1.0 prints the identical error, since `kill()` closes the pseudoconsole before the forked agent attaches. Closing the pseudoconsole is what kills the tree in both cases. Parity, not a regression |
+| Bad cwd | `pty.spawn` throws `Cannot create process, error code: 267` and the host reports it (PTYH-13 path works) |
+| Host exit | `process.exit(0)` in the host → `exit` event with code `0` in main |
+
+**Verdict:** no design change. Phase 2 proceeds as designed.
