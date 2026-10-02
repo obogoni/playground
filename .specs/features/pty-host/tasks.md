@@ -444,15 +444,17 @@ T14
 
 **Done when**:
 
-- [ ] Dev app: quit with 3 sessions running leaves no `pwsh`/`claude`/`OpenConsole` process from the app
-- [ ] Dev app: quit right after clicking New session leaves no process from that spawn
-- [ ] Each `will-quit` handler runs at most once per quit (re-entry flag)
-- [ ] Build gate passes
+- [x] Dev app: quit with 3 sessions running leaves no `pwsh`/`claude`/`OpenConsole` process from the app (built app via a CDP smoke: 3 ad-hoc sessions each running a marked `node` child, window closed, 0 marked processes 4 s later)
+- [ ] Dev app: quit right after clicking New session leaves no process from that spawn (FAILS intermittently: 1 of 12 quit-during-spawn runs left the marked `pwsh` + `node`; see Status)
+- [x] Each `will-quit` handler runs at most once per quit (re-entry flag)
+- [x] Build gate passes
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `fix(app): let the PTY host kill every PTY before quitting`
+
+**Status**: ⚠️ Partial. The index.ts wiring is done: `window-all-closed` awaits `shutdown(3000)` after `killAll()`; a will-quit guard registered before whenReady defers the quit while the host is alive, and the other will-quit handlers go through `onWillQuit`, which skips the deferred emission. Open defect, outside this task's files: the host's `killAll` (`pty-host-core.ts`, T3) calls `exit(0)` straight after `proc.kill()`, but node-pty's `WindowsTerminal.kill()` is deferred until the PTY's `ready_datapipe` (`node_modules/node-pty/lib/windowsTerminal.js:147-166`). So a PTY spawned just before quit is never killed and its shell can outlive the host (PTYH-19). Proposed fix task: in `killAll`, call `exit(0)` only after every killed PTY's `onExit` has fired, with main's 3 s force-kill as the backstop, plus a core unit test
 
 ---
 
