@@ -185,14 +185,14 @@ sessions show the notice and turn `stopped`, the app stays up, and respawning on
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| PTYH-01 | P1: Never freezes | Design | Pending |
+| PTYH-01 | P1: Never freezes | Design | Implementing |
 | PTYH-02 | P1: Never freezes | Design | Pending |
 | PTYH-03 | P1: Never freezes | Design | Pending |
 | PTYH-04 | P1: Never freezes | Design | Pending |
 | PTYH-05 | P1: Never freezes | Design | Pending |
 | PTYH-06 | P1: Parity | Design | Pending |
 | PTYH-07 | P1: Parity | Design | Pending |
-| PTYH-08 | P1: Parity | Design | Pending |
+| PTYH-08 | P1: Parity | Design | Implementing |
 | PTYH-09 | P1: Parity | Design | Pending |
 | PTYH-10 | P1: Parity | Design | Pending |
 | PTYH-11 | P1: Parity | Design | Pending |

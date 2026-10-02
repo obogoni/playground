@@ -122,13 +122,15 @@ T14
 
 **Done when**:
 
-- [ ] Both unions exported with the exact message shapes in `design.md` §Protocol
-- [ ] Build gate passes
+- [x] Both unions exported with the exact message shapes in `design.md` §Protocol
+- [x] Build gate passes
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `feat(pty-host): define the host message protocol`
+
+**Status**: ✅ Complete
 
 ---
 
