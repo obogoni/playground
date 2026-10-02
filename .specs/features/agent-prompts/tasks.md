@@ -301,8 +301,8 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] Section added under Embedded agent sessions
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Section added under Embedded agent sessions
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: build
