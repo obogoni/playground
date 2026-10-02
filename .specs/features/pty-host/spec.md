@@ -12,10 +12,10 @@ synchronous (issue #155).
 
 ## Goals
 
-- [ ] Opening, respawning or duplicating a session adds no main-process busy stretch over 50 ms,
-      measured with a main-process CPU profile on a packaged build (`build:win`)
-- [ ] While a session is being created, the other running sessions keep echoing input and
-      streaming output (no ~300 ms freeze)
+- [ ] Opening, respawning or duplicating a session spends no main-process time creating the PTY,
+      measured with a main-process CPU profile on a packaged build (PTYH-02). Other work on the
+      same path (the time tracker's `git rev-parse`, ~20–30 ms) is #151's scope
+- [ ] While a session is being created, the UI, IPC replies and activity-hook replies stay responsive, and the main process forwards input and output of the other sessions at once (inside the PTY host they may still wait up to the ConPTY creation time, ~170–280 ms; see Assumptions)
 - [ ] Sessions behave as before the move: spawn, replay on switch, resize, paste, Ctrl+C, exit
       codes, activity, time tracking
 - [ ] A crash of the process that hosts the PTYs stops the sessions but not the app
@@ -30,6 +30,7 @@ synchronous (issue #155).
 | Moving the scrollback ring buffer out of main | Chosen default (see Assumptions); append cost is already O(chunk) since #154 |
 | An in-process fallback (env var to keep node-pty in main) | Owner decision (2026-10-02): one code path; revert is the escape hatch |
 | Auto-respawning sessions after a PTY host crash | Owner decision (2026-10-02): risks a crash loop if a session caused it |
+| A PTY host per session (no cross-session stall during a spawn) | Owner decision (2026-10-02): follow-up issue; the single host already frees main |
 | Killing orphaned agent process trees after a PTY host crash (`taskkill /T`, Job Object) | Owner decision (2026-10-02): risk accepted for now; see Assumptions |
 | Fixing #103 (`write EAGAIN` closing an opencode session) | Not verified to share the cause; isolation may contain it, but it is not a goal |
 
@@ -43,6 +44,7 @@ synchronous (issue #155).
 | Spawn failure UX | Main awaits the host's spawn acknowledgement before answering the invoke; failure rejects the invoke → toast, nothing persisted (as today) | Owner decision (2026-10-02); keeps the "nothing persisted on a bad spawn" guarantee | y |
 | PTY host crash | Finalize every running session as `stopped`, print `[PTY host exited unexpectedly]` in each, recreate the host for the next spawn; no auto-respawn | Owner decision (2026-10-02) | y |
 | Agent processes after a PTY host crash | Rely on Windows closing the pseudoconsole: conhost sends `CTRL_CLOSE_EVENT` to every attached process. A process that detached from the console or ignores `CTRL_CLOSE` may survive as an orphan; main does not kill process trees | Owner accepted the risk (2026-10-02). node-pty's graceful `kill()` enumerates and kills the console process list (`windowsPtyAgent.js:133`, vscode#26807), but that JS does not run when the host dies. Same exposure as a main-process crash today | y |
+| Other terminals during a spawn | The PTY host handles one message at a time and `pty.spawn` blocks it for ~170–280 ms, so input to and output from the other sessions can wait that long inside the host. Main never waits (PTYH-03, PTYH-04 amended to main's side). A host per session is the follow-up | Owner decision (2026-10-02) after T14 showed the single-host design moves the stall from main into the host instead of removing it for terminal I/O | y |
 | In-process fallback | None | Owner decision (2026-10-02) | y |
 | Scrollback ring buffer location | Stays in main (`SessionRingBuffer`), fed by the proxy's `onData` | Smaller change; replay keeps riding `session:data` unchanged (no replay/live seam); append is O(chunk) since #154 | y |
 | PTY host start time | Started when the app is ready, before the first spawn | First spawn should not pay the host start-up on top of the ConPTY | y |
@@ -66,12 +68,13 @@ terminals and the UI to stay responsive, so that starting an agent never interru
 
 1. PTYH-01: The system SHALL create every session PTY (spawn, respawn, duplicate) in the PTY host, and the main process SHALL NOT load `node-pty`.
 2. PTYH-02: WHEN a session is spawned, respawned or duplicated THEN the main process SHALL show no busy stretch over 50 ms attributable to PTY creation in a CPU profile of a packaged build.
-3. PTYH-03: WHILE a session's PTY is being created, WHEN the user types in another running session THEN the system SHALL forward that input to the other session's PTY without waiting for the creation to finish.
-4. PTYH-04: WHILE a session's PTY is being created, the system SHALL keep delivering `session:data` for the attached running session.
+3. PTYH-03: WHILE a session's PTY is being created, WHEN the user types in another running session THEN the main process SHALL forward that input to the PTY host without waiting for the creation to finish.
+4. PTYH-04: WHILE a session's PTY is being created, WHEN the PTY host delivers output of the attached running session THEN the main process SHALL emit it on `session:data` without waiting for the creation to finish.
 5. PTYH-05: WHEN two sessions are spawned before either acknowledgement arrives THEN the system SHALL resolve both, each with its own running session.
 
-**Independent Test**: With one agent running and attached, start typing continuously and open a new
-session; the attached terminal keeps echoing, and the CPU profile of main shows no stretch over 50 ms.
+**Independent Test**: With one agent running, open a new session; a CPU profile of main shows no
+node-pty frame, and a `session:input` sent while the spawn is pending reaches the other session's
+handle before the spawn resolves (unit test).
 
 ---
 
@@ -220,6 +223,6 @@ sessions show the notice and turn `stopped`, the app stays up, and respawning on
 
 ## Success Criteria
 
-- [ ] CPU profile of main on a packaged build: opening a session shows no stretch over 50 ms (was 313–339 ms)
+- [ ] CPU profile of main on a packaged build: opening a session spends 0 ms in node-pty (was 246–281 ms in `WindowsPtyAgent`, 313–339 ms blocked)
 - [ ] Manual run with 3+ agents on the packaged build: spawn, switch with replay, resize, paste, Ctrl+C, exit — no regression
 - [ ] Killing the PTY host from Task Manager leaves the app running and the sessions respawnable

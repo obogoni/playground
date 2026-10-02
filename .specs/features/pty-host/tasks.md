@@ -63,7 +63,7 @@ T5 → T6 → T7 → T8
 ### Phase 4: Main integration
 
 ```
-T9 → T10 → T11 → T12 → T13 → T15
+T9 → T10 → T11 → T12 → T13 → T15 → T16
 ```
 
 ### Phase 5: Packaged validation
@@ -490,6 +490,32 @@ T14
 
 ---
 
+### T16: Pin main-side forwarding while a spawn is pending
+
+**What**: Unit tests that, with another session's spawn still pending, `SessionManager` writes input to the running session's handle and emits the attached session's output on `session:data` at once. Added when T14 showed the single PTY host can still delay other sessions' I/O inside the host; PTYH-03/04 were amended (2026-10-02) to main's side.
+**Where**: `src/main/session-manager.test.ts`
+**Depends on**: T15
+**Reuses**: `deferSpawns`, `makeManager`
+**Requirement**: PTYH-03, PTYH-04
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] Input sent while a spawn is pending reaches the running session's handle before the spawn resolves
+- [ ] Output of the attached session while a spawn is pending is emitted on `session:data`
+- [ ] Quick gate passes: `npx vitest run src/main/session-manager.test.ts`
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `test(sessions): pin input and output forwarding while a spawn is pending`
+
+---
+
 ### T14: Validate on the packaged build and record the profile
 
 **What**: Install the `npm run build:win` output and run the manual checks below; record results and the CPU-profile numbers in `design.md` under `## Packaged Validation`.
@@ -527,7 +553,7 @@ Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5
 Phase 1:  T1
 Phase 2:  T2 → T3 → T4
 Phase 3:  T5 → T6 → T7 → T8
-Phase 4:  T9 → T10 → T11 → T12 → T13 → T15
+Phase 4:  T9 → T10 → T11 → T12 → T13 → T15 → T16
 Phase 5:  T14
 ```
 
@@ -553,6 +579,7 @@ Phases run in order, so a phase's first task lists `None` and names the earlier-
 | T12: Exit notice | 1 component branch | ✅ Granular |
 | T13: Quit gate | 2 handlers in 1 file | ✅ Granular |
 | T15: Host waits for PTY exits | 1 function | ✅ Granular |
+| T16: Forwarding during a spawn | 2 tests in 1 file | ✅ Granular |
 | T14: Packaged validation | 1 manual run, 1 doc section | ✅ Granular |
 
 ## Diagram-Definition Cross-Check
@@ -573,7 +600,8 @@ Phases run in order, so a phase's first task lists `None` and names the earlier-
 | T12 | T11 | T11 → T12 | ✅ Match |
 | T13 | T12 | T12 → T13 | ✅ Match |
 | T15 | T13 | T13 → T15 | ✅ Match |
-| T14 | None (T15, Phase 4) | start of Phase 5 | ✅ Match |
+| T16 | T15 | T15 → T16 | ✅ Match |
+| T14 | None (T16, Phase 4) | start of Phase 5 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -593,4 +621,5 @@ Phases run in order, so a phase's first task lists `None` and names the earlier-
 | T12 | React component | none | none | ✅ OK |
 | T13 | `index.ts` wiring | none | none | ✅ OK |
 | T15 | Main-process logic | unit | unit | ✅ OK |
+| T16 | Main-process logic (tests) | unit | unit | ✅ OK |
 | T14 | Spec doc | none | none | ✅ OK |
