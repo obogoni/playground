@@ -136,10 +136,10 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] Plan is `pwsh.exe` with `['-NoExit', '-Command', autoCommand]` and the given cwd
-- [ ] `autoCommand` reads `PLAYGROUND_PROMPT` into a local, removes the env var, and calls `& <command> <args> -- $p`
-- [ ] A real `pwsh` run of the plan against a node argv-echo agent receives `['--', prompt]` byte-identical for a two-line prompt with the APR-24 character set, and the agent's own env no longer holds `PLAYGROUND_PROMPT`
-- [ ] Gate check passes: `npx vitest run src/main/spawn-plan.test.ts`
+- [x] Plan is `pwsh.exe` with `['-NoExit', '-Command', autoCommand]` and the given cwd
+- [x] `autoCommand` reads `PLAYGROUND_PROMPT` into a local, removes the env var, and calls `& <command> <args> -- $p`
+- [x] A real `pwsh` run of the plan against a node argv-echo agent receives `['--', prompt]` byte-identical for a two-line prompt with the APR-24 character set, and the agent's own env no longer holds `PLAYGROUND_PROMPT`
+- [x] Gate check passes: `npx vitest run src/main/spawn-plan.test.ts`
 
 **Tests**: unit
 **Gate**: quick
