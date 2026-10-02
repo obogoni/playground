@@ -301,14 +301,16 @@ T14
 
 **Done when**:
 
-- [ ] Implements `HostTransport` (`post`, `onMessage`, `onExit`, `kill`)
-- [ ] `electron-vite build` emits the host bundle under `out/main/`
-- [ ] Build gate passes
+- [x] Implements `HostTransport` (`post`, `onMessage`, `onExit`, `kill`)
+- [x] `electron-vite build` emits the host bundle under `out/main/`
+- [x] Build gate passes
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `feat(pty-host): fork the host as an Electron utility process`
+
+**Status**: ✅ Complete. Bundle check used a temporary, uncommitted `index.ts` import (wiring is T9): `out/main/pty-host-<hash>.js` emitted, `require("node-pty")` external
 
 ---
 
