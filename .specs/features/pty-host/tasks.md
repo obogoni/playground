@@ -180,14 +180,16 @@ T14
 
 **Done when**:
 
-- [ ] `parentPort.on('message', (e) => host.handle(e.data))`; `post` → `parentPort.postMessage`; `exit` → `process.exit`
-- [ ] It is the only file under `src/` that will import `node-pty` (verified with a grep once T9 lands)
-- [ ] Build gate passes
+- [x] `parentPort.on('message', (e) => host.handle(e.data))`; `post` → `parentPort.postMessage`; `exit` → `process.exit`
+- [x] It is the only file under `src/` that will import `node-pty` (verified with a grep once T9 lands)
+- [x] Build gate passes
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `feat(pty-host): add the utility process entry`
+
+**Status**: ✅ Complete
 
 ---
 
