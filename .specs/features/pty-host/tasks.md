@@ -63,7 +63,7 @@ T5 → T6 → T7 → T8
 ### Phase 4: Main integration
 
 ```
-T9 → T10 → T11 → T12 → T13
+T9 → T10 → T11 → T12 → T13 → T15
 ```
 
 ### Phase 5: Packaged validation
@@ -445,7 +445,7 @@ T14
 **Done when**:
 
 - [x] Dev app: quit with 3 sessions running leaves no `pwsh`/`claude`/`OpenConsole` process from the app (built app via a CDP smoke: 3 ad-hoc sessions each running a marked `node` child, window closed, 0 marked processes 4 s later)
-- [ ] Dev app: quit right after clicking New session leaves no process from that spawn (FAILS intermittently: 1 of 12 quit-during-spawn runs left the marked `pwsh` + `node`; see Status)
+- [x] Dev app: quit right after clicking New session leaves no process from that spawn (failed 1 in 12 runs until T15; 20/20 after T15 with `scripts/smoke-pty-host.mjs`)
 - [x] Each `will-quit` handler runs at most once per quit (re-entry flag)
 - [x] Build gate passes
 
@@ -454,7 +454,39 @@ T14
 
 **Commit**: `fix(app): let the PTY host kill every PTY before quitting`
 
-**Status**: ⚠️ Partial. The index.ts wiring is done: `window-all-closed` awaits `shutdown(3000)` after `killAll()`; a will-quit guard registered before whenReady defers the quit while the host is alive, and the other will-quit handlers go through `onWillQuit`, which skips the deferred emission. Open defect, outside this task's files: the host's `killAll` (`pty-host-core.ts`, T3) calls `exit(0)` straight after `proc.kill()`, but node-pty's `WindowsTerminal.kill()` is deferred until the PTY's `ready_datapipe` (`node_modules/node-pty/lib/windowsTerminal.js:147-166`). So a PTY spawned just before quit is never killed and its shell can outlive the host (PTYH-19). Proposed fix task: in `killAll`, call `exit(0)` only after every killed PTY's `onExit` has fired, with main's 3 s force-kill as the backstop, plus a core unit test
+**Status**: ✅ Complete (with T15). The index.ts wiring is done: `window-all-closed` awaits `shutdown(3000)` after `killAll()`; a will-quit guard registered before whenReady defers the quit while the host is alive, and the other will-quit handlers go through `onWillQuit`, which skips the deferred emission. The quit-during-spawn orphan it exposed was in the host core and is fixed by T15.
+
+---
+
+### T15: Fix — the host waits for killed PTYs before exiting
+
+**What**: `killAll` exits the host only after every killed PTY's `onExit` has fired, or at a 2500 ms grace deadline (below main's 3000 ms force-kill). Found by the T13 smoke: node-pty defers `kill()` until a starting PTY is ready (`windowsTerminal.js` `_deferNoArgs`), so exiting right after the kills orphaned it (PTYH-19). Replaces T3's "kill then `exit(0)` at once" behaviour, which contradicted PTYH-18.
+**Where**: `src/main/pty-host-core.ts` (+ `pty-host-core.test.ts`)
+**Depends on**: T13
+**Reuses**: the T3 `onExit` handler
+**Requirement**: PTYH-18, PTYH-19
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tdd`
+
+**Done when**:
+
+- [x] `killAll` with live PTYs does not exit until the last one has exited, then exits once with code 0
+- [x] `killAll` with no live PTY exits at once
+- [x] Every PTY `exit` message is posted before the host exits
+- [x] A PTY spawned just before `killAll` is waited for
+- [x] With fake timers, a PTY that never exits lets the host exit at exactly 2500 ms, and only once
+- [x] `RUN2_ONLY=1 RUN2_ITER=20 node scripts/smoke-pty-host.mjs`: 20/20 quit-during-spawn runs leave no process
+- [x] Quick gate passes: `npx vitest run src/main/pty-host-core.test.ts` (12 tests)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `fix(pty-host): wait for killed PTYs to exit before the host quits`
+
+**Status**: ✅ Complete
 
 ---
 
@@ -495,7 +527,7 @@ Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5
 Phase 1:  T1
 Phase 2:  T2 → T3 → T4
 Phase 3:  T5 → T6 → T7 → T8
-Phase 4:  T9 → T10 → T11 → T12 → T13
+Phase 4:  T9 → T10 → T11 → T12 → T13 → T15
 Phase 5:  T14
 ```
 
@@ -520,6 +552,7 @@ Phases run in order, so a phase's first task lists `None` and names the earlier-
 | T11: Host-exit flag | 1 field through 1 method (+ 2 type edits) | ✅ Granular |
 | T12: Exit notice | 1 component branch | ✅ Granular |
 | T13: Quit gate | 2 handlers in 1 file | ✅ Granular |
+| T15: Host waits for PTY exits | 1 function | ✅ Granular |
 | T14: Packaged validation | 1 manual run, 1 doc section | ✅ Granular |
 
 ## Diagram-Definition Cross-Check
@@ -539,7 +572,8 @@ Phases run in order, so a phase's first task lists `None` and names the earlier-
 | T11 | T10 | T10 → T11 | ✅ Match |
 | T12 | T11 | T11 → T12 | ✅ Match |
 | T13 | T12 | T12 → T13 | ✅ Match |
-| T14 | None (T13, Phase 4) | start of Phase 5 | ✅ Match |
+| T15 | T13 | T13 → T15 | ✅ Match |
+| T14 | None (T15, Phase 4) | start of Phase 5 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -558,4 +592,5 @@ Phases run in order, so a phase's first task lists `None` and names the earlier-
 | T11 | Main-process logic + shared types | unit (highest) | unit | ✅ OK |
 | T12 | React component | none | none | ✅ OK |
 | T13 | `index.ts` wiring | none | none | ✅ OK |
+| T15 | Main-process logic | unit | unit | ✅ OK |
 | T14 | Spec doc | none | none | ✅ OK |

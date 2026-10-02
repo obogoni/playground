@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FromHost, ToHost } from '../shared/pty-host-protocol'
 import { createPtyHost, type IPtyLike, type PtySpawnOptions } from './pty-host-core'
 
@@ -178,7 +178,7 @@ describe('createPtyHost', () => {
     expect(p.kills).toBe(0)
   })
 
-  it('killAll kills every live PTY, then exits with code 0', () => {
+  it('killAll kills every live PTY and exits with code 0 once the last one has exited', () => {
     const { host, factory, exits } = setup()
     host.handle(spawnMsg(1))
     host.handle(spawnMsg(2))
@@ -187,34 +187,77 @@ describe('createPtyHost', () => {
     host.handle({ type: 'killAll' })
 
     expect(factory.ptys.map((p) => p.kills)).toEqual([1, 0, 1])
+    expect(exits).toEqual([])
+    factory.ptys[0].emitExit(-1073741510)
+    expect(exits).toEqual([])
+    factory.ptys[2].emitExit(-1073741510)
     expect(exits).toEqual([0])
   })
 
-  it('killAll exits only after every kill', () => {
+  it('killAll exits at once when no PTY is live', () => {
+    const { host, exits } = setup()
+    host.handle({ type: 'killAll' })
+
+    expect(exits).toEqual([0])
+  })
+
+  it('killAll posts every PTY exit before the host exits', () => {
     const factory = fakeFactory()
     const events: string[] = []
     const host = createPtyHost({
-      spawn: (file, args, opts) => {
-        const p = factory.spawn(file, args, opts)
-        p.kill = () => events.push(`kill${p.pid}`)
-        return p
+      spawn: factory.spawn,
+      post: (m) => {
+        if (m.type === 'exit') events.push(`exit-msg${m.ptyId}`)
       },
-      post: () => {},
-      exit: (code) => events.push(`exit${code}`)
+      exit: (code) => events.push(`host-exit${code}`)
     })
     host.handle(spawnMsg(1))
     host.handle(spawnMsg(2))
     host.handle({ type: 'killAll' })
+    factory.ptys[0].emitExit(1)
+    factory.ptys[1].emitExit(1)
 
-    expect(events).toEqual(['kill1000', 'kill1001', 'exit0'])
+    expect(events).toEqual(['exit-msg1', 'exit-msg2', 'host-exit0'])
   })
 
-  it('kills a PTY spawned just before killAll', () => {
+  it('killAll waits for a PTY spawned just before it, whose kill node-pty defers', () => {
     const { host, factory, exits } = setup()
     host.handle(spawnMsg(4))
     host.handle({ type: 'killAll' })
 
     expect(factory.ptys[0].kills).toBe(1)
+    expect(exits).toEqual([])
+    factory.ptys[0].emitExit(-1073741510)
     expect(exits).toEqual([0])
+  })
+
+  describe('grace deadline', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('exits with code 0 at 2500 ms when a killed PTY never exits', () => {
+      const { host, exits } = setup()
+      host.handle(spawnMsg(1))
+      host.handle({ type: 'killAll' })
+
+      vi.advanceTimersByTime(2499)
+      expect(exits).toEqual([])
+      vi.advanceTimersByTime(1)
+      expect(exits).toEqual([0])
+    })
+
+    it('exits only once when the last PTY exits before the deadline', () => {
+      const { host, factory, exits } = setup()
+      host.handle(spawnMsg(1))
+      host.handle({ type: 'killAll' })
+      factory.ptys[0].emitExit(1)
+      vi.advanceTimersByTime(2500)
+
+      expect(exits).toEqual([0])
+    })
   })
 })
