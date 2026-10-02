@@ -227,16 +227,16 @@ resolved prompt (APR-26), file changed mid-dialog (APR-35), prompt switch after 
 | APR-16 | P1: Parsing | Tasks | Implementing |
 | APR-17 | P1: Variables form | Tasks | In Design |
 | APR-18 | P1: Variables form | Tasks | In Design |
-| APR-19 | P1: Variables form | Tasks | In Design |
-| APR-20 | P1: Variables form | Tasks | In Design |
-| APR-21 | P1: Variables form | Tasks | In Design |
-| APR-22 | P1: Variables form | Tasks | In Design |
-| APR-23 | P1: Variables form | Tasks | In Design |
+| APR-19 | P1: Variables form | Tasks | Implementing |
+| APR-20 | P1: Variables form | Tasks | Implementing |
+| APR-21 | P1: Variables form | Tasks | Implementing |
+| APR-22 | P1: Variables form | Tasks | Implementing |
+| APR-23 | P1: Variables form | Tasks | Implementing |
 | APR-24 | P1: Spawn | Tasks | Implementing |
 | APR-25 | P1: Variables form | Tasks | In Design |
 | APR-26 | P1: Variables form | Tasks | Implementing |
-| APR-27 | P1: Variables form | Tasks | In Design |
-| APR-28 | P1: Variables form | Tasks | In Design |
+| APR-27 | P1: Variables form | Tasks | Implementing |
+| APR-28 | P1: Variables form | Tasks | Implementing |
 | APR-29 | P1: Variables form | Tasks | In Design |
 | APR-30 | P1: Spawn | Tasks | Implementing |
 | APR-31 | P1: Spawn | Tasks | Implementing |

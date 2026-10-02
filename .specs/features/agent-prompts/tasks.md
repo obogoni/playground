@@ -245,11 +245,11 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] `branch` = chip branch, `worktree` = cwd; `taskId`/`taskTitle` from the hand-picked task, else the chip's derived id and the pin's title
-- [ ] Unknown context values and non-context names start `''`
-- [ ] `carryValues` keeps shared names' typed values, prefills new names, drops absent ones
-- [ ] `formBlockers` lists trimmed-empty fields and reports the length when over 8000
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/prompt-form.test.ts`
+- [x] `branch` = chip branch, `worktree` = cwd; `taskId`/`taskTitle` from the hand-picked task, else the chip's derived id and the pin's title
+- [x] Unknown context values and non-context names start `''`
+- [x] `carryValues` keeps shared names' typed values, prefills new names, drops absent ones
+- [x] `formBlockers` lists trimmed-empty fields and reports the length when over 8000
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/prompt-form.test.ts`
 
 **Tests**: unit
 **Gate**: quick
