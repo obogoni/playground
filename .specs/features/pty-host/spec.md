@@ -207,7 +207,7 @@ sessions show the notice and turn `stopped`, the app stays up, and respawning on
 | PTYH-20 | P1: Packaged build | Design | Pending |
 | PTYH-21 | P1: Packaged build | Design | Implementing |
 | PTYH-22 | P2: Host crash | Design | Implementing |
-| PTYH-23 | P2: Host crash | Design | Pending |
+| PTYH-23 | P2: Host crash | Design | Implementing |
 | PTYH-24 | P2: Host crash | Design | Implementing |
 | PTYH-25 | P2: Host crash | Design | Implementing |
 | PTYH-26 | P2: Host crash | Design | Implementing |

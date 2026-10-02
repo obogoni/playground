@@ -389,14 +389,16 @@ T14
 
 **Done when**:
 
-- [ ] A handle exit with `{exitCode: -1, hostExited: true}` finalizes the session as `stopped` and emits `session:exit` `{ id, exitCode: -1, hostExited: true }`
-- [ ] A normal exit emits `session:exit` without `hostExited`
-- [ ] Quick gate passes: `npx vitest run src/main/session-manager.test.ts`
+- [x] A handle exit with `{exitCode: -1, hostExited: true}` finalizes the session as `stopped` and emits `session:exit` `{ id, exitCode: -1, hostExited: true }`
+- [x] A normal exit emits `session:exit` without `hostExited`
+- [x] Quick gate passes: `npx vitest run src/main/session-manager.test.ts`
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(sessions): flag sessions stopped by a PTY host exit`
+
+**Status**: ✅ Complete. session-manager 93 → 95 tests; `PtyHandle.onExit` already carried `hostExited` (T6)
 
 ---
 

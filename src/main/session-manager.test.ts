@@ -24,12 +24,12 @@ interface FakeHandle extends PtyHandle {
   writes: string[]
   resizes: Array<[number, number]>
   emitData(data: string): void
-  emitExit(exitCode: number): void
+  emitExit(exitCode: number, hostExited?: true): void
 }
 
 function makeFakeHandle(plan: SpawnPlan): FakeHandle {
   let dataCb: ((d: string) => void) | undefined
-  let exitCb: ((e: { exitCode: number }) => void) | undefined
+  let exitCb: ((e: { exitCode: number; hostExited?: true }) => void) | undefined
   const h: FakeHandle = {
     plan,
     killed: false,
@@ -51,7 +51,8 @@ function makeFakeHandle(plan: SpawnPlan): FakeHandle {
       h.killed = true
     },
     emitData: (d) => dataCb?.(d),
-    emitExit: (code) => exitCb?.({ exitCode: code })
+    emitExit: (code, hostExited) =>
+      exitCb?.(hostExited ? { exitCode: code, hostExited } : { exitCode: code })
   }
   return h
 }
@@ -611,6 +612,32 @@ describe('SessionManager async spawn window', () => {
     expect(late.killed).toBe(true)
     expect(manager.list()[0].status).toBe('stopped')
     expect(config.get().sessions[0].status).toBe('stopped')
+  })
+})
+
+describe('SessionManager PTY host exit (PTYH-22, PTYH-23)', () => {
+  const exits = (emit: EmitFnRecorder): unknown[] =>
+    emit.events.filter((e) => e.channel === 'session:exit').map((e) => e.payload)
+
+  it('a host exit stops the session and flags session:exit with hostExited', async () => {
+    const { manager, config, port, emit } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+
+    port.handles[0].emitExit(-1, true)
+
+    expect(manager.list()[0].status).toBe('stopped')
+    expect(config.get().sessions[0].status).toBe('stopped')
+    expect(exits(emit)).toEqual([{ id: view.id, exitCode: -1, hostExited: true }])
+  })
+
+  it('a normal exit emits session:exit without hostExited', async () => {
+    const { manager, port, emit } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+
+    port.handles[0].emitExit(0)
+
+    expect(exits(emit)).toEqual([{ id: view.id, exitCode: 0 }])
+    expect(exits(emit)[0]).not.toHaveProperty('hostExited')
   })
 })
 

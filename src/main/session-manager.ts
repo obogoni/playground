@@ -405,9 +405,9 @@ export class SessionManager {
     const exited = new Promise<void>((resolve) => {
       markExited = resolve
     })
-    handle.onExit(({ exitCode }) => {
+    handle.onExit(({ exitCode, hostExited }) => {
       markExited()
-      this.#finalize(meta.id, exitCode)
+      this.#finalize(meta.id, exitCode, hostExited)
     })
     this.#running.set(meta.id, {
       meta: { ...meta, status: 'running' },
@@ -440,8 +440,12 @@ export class SessionManager {
     return { ...agent, args: [...agent.args, '--settings', this.deps.hooks!.settingsPath!] }
   }
 
-  /** Idempotent transition to stopped: drop the Map entry, persist, push status. */
-  #finalize(id: string, exitCode?: number): void {
+  /**
+   * Idempotent transition to stopped: drop the Map entry, persist, push status.
+   * `hostExited` marks a run the PTY host took down with it (PTYH-22), so the
+   * terminal can say so instead of printing an exit code (PTYH-23).
+   */
+  #finalize(id: string, exitCode?: number, hostExited?: true): void {
     // wasRunning is false when an explicit stop() already dropped the entry. We
     // still emit session:exit on the real onExit so listeners (TerminalPane's
     // "[shell exited with code …]") fire even after a stop() — only the
@@ -462,7 +466,9 @@ export class SessionManager {
     const wasRunning = this.#running.delete(id)
     if (wasRunning) this.#setStatus(id, 'stopped')
     if (wasRunning) this.deps.lifecycle?.ended(id)
-    if (exitCode !== undefined) this.deps.emit('session:exit', { id, exitCode })
+    if (exitCode !== undefined) {
+      this.deps.emit('session:exit', hostExited ? { id, exitCode, hostExited } : { id, exitCode })
+    }
   }
 
   /** Adopt a name and push it only when it changed (SNAME-11). */
