@@ -206,12 +206,12 @@ sessions show the notice and turn `stopped`, the app stays up, and respawning on
 | PTYH-19 | P1: Quit | Design | Implementing |
 | PTYH-20 | P1: Packaged build | Design | Pending |
 | PTYH-21 | P1: Packaged build | Design | Pending |
-| PTYH-22 | P2: Host crash | Design | Pending |
+| PTYH-22 | P2: Host crash | Design | Implementing |
 | PTYH-23 | P2: Host crash | Design | Pending |
-| PTYH-24 | P2: Host crash | Design | Pending |
-| PTYH-25 | P2: Host crash | Design | Pending |
-| PTYH-26 | P2: Host crash | Design | Pending |
-| PTYH-27 | P2: Host crash | Design | Pending |
+| PTYH-24 | P2: Host crash | Design | Implementing |
+| PTYH-25 | P2: Host crash | Design | Implementing |
+| PTYH-26 | P2: Host crash | Design | Implementing |
+| PTYH-27 | P2: Host crash | Design | Implementing |
 | PTYH-28 | P1: Parity | Design | Pending |
 
 **Coverage:** 28 total, 0 mapped to tasks, 28 unmapped (Tasks phase pending)

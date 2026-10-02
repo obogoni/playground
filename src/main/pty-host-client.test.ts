@@ -244,3 +244,166 @@ describe('PtyHostClient handle', () => {
     expect(h.t().posted).toHaveLength(before)
   })
 })
+
+describe('PtyHostClient host crash', () => {
+  it('fires every live handle onExit once with exitCode -1 and hostExited', async () => {
+    const h = setup()
+    const a = await spawned(h)
+    const b = await spawned(h)
+    const exitsA: unknown[] = []
+    const exitsB: unknown[] = []
+    a.handle.onExit((e) => exitsA.push(e))
+    b.handle.onExit((e) => exitsB.push(e))
+    h.t().exit(1)
+    h.t().exit(1)
+
+    expect(exitsA).toEqual([{ exitCode: -1, hostExited: true }])
+    expect(exitsB).toEqual([{ exitCode: -1, hostExited: true }])
+  })
+
+  it('delivers the host-exit after data already queued for the handle', async () => {
+    const h = setup()
+    const { handle, ptyId } = await spawned(h)
+    h.t().emit({ type: 'data', ptyId, data: 'tail' })
+    h.t().exit(1)
+    const seen: unknown[] = []
+    handle.onExit((e) => seen.push(e))
+    handle.onData((d) => seen.push(d))
+
+    expect(seen).toEqual(['tail', { exitCode: -1, hostExited: true }])
+  })
+
+  it('does not fire a host-exit for a handle whose PTY already exited', async () => {
+    const h = setup()
+    const { handle, ptyId } = await spawned(h)
+    const seen: unknown[] = []
+    handle.onExit((e) => seen.push(e))
+    h.t().emit({ type: 'exit', ptyId, exitCode: 0 })
+    h.t().exit(1)
+
+    expect(seen).toEqual([{ exitCode: 0 }])
+  })
+
+  it('rejects a pending spawn with "PTY host exited unexpectedly"', async () => {
+    const h = setup()
+    const p = h.client.spawn(PLAN)
+    h.t().exit(3221225477)
+
+    await expect(p).rejects.toThrow('PTY host exited unexpectedly')
+  })
+
+  it('logs the exit code of the host', () => {
+    const h = setup()
+    h.client.start()
+    h.t().exit(3221225477)
+
+    expect(h.logs.map((l) => l.line)).toEqual(['[pty-host] exited unexpectedly (code 3221225477)'])
+  })
+
+  it('drops write, resize and kill on a handle after the host exited', async () => {
+    const h = setup()
+    const { handle } = await spawned(h)
+    const crashed = h.t()
+    const before = crashed.posted.length
+    crashed.exit(1)
+    handle.write('x')
+    handle.resize(80, 24)
+    handle.kill()
+
+    expect(crashed.posted).toHaveLength(before)
+  })
+
+  it('forks a new host on the next spawn and spawns the session in it', async () => {
+    const h = setup()
+    await spawned(h)
+    h.transports[0].exit(1)
+
+    expect(h.transports).toHaveLength(1)
+    expect(h.client.alive).toBe(false)
+    const p = h.client.spawn(PLAN)
+    expect(h.transports).toHaveLength(2)
+    const ptyId = spawnIdOf(h.transports[1].posted[0])
+    h.transports[1].emit({ type: 'spawned', ptyId, pid: 7 })
+    await expect(p).resolves.toBeDefined()
+    expect(h.client.alive).toBe(true)
+  })
+
+  it('issues no spawn after a crash until one is requested (no auto-respawn)', async () => {
+    const h = setup()
+    await spawned(h)
+    await spawned(h)
+    h.transports[0].exit(1)
+
+    expect(h.transports).toHaveLength(1)
+    expect(h.transports[0].posted.filter((m) => m.type === 'spawn')).toHaveLength(2)
+  })
+
+  it('ignores messages and exits from a host that already crashed', async () => {
+    const h = setup()
+    const { handle, ptyId } = await spawned(h)
+    const seen: unknown[] = []
+    handle.onData((d) => seen.push(d))
+    h.transports[0].exit(1)
+    void h.client.spawn(PLAN)
+    h.transports[0].emit({ type: 'data', ptyId, data: 'ghost' })
+    h.transports[0].exit(1)
+
+    expect(seen).toEqual([])
+    expect(h.client.alive).toBe(true)
+    expect(h.logs).toHaveLength(1)
+  })
+
+  it('rejects the spawn when the fork throws, and the next spawn retries the fork', async () => {
+    let calls = 0
+    const transports: FakeTransport[] = []
+    const client = new PtyHostClient({
+      fork: () => {
+        calls++
+        if (calls === 1) throw new Error('fork failed')
+        const t = fakeTransport()
+        transports.push(t)
+        return t
+      },
+      log: () => {}
+    })
+
+    await expect(client.spawn(PLAN)).rejects.toThrow('fork failed')
+    expect(client.alive).toBe(false)
+    void client.spawn(PLAN)
+    expect(calls).toBe(2)
+    expect(transports[0].posted.map((m) => m.type)).toEqual(['spawn'])
+  })
+})
+
+describe('PtyHostClient.start', () => {
+  it('forks the host eagerly and reuses it for the first spawn', () => {
+    const h = setup()
+    expect(h.client.alive).toBe(false)
+    h.client.start()
+
+    expect(h.transports).toHaveLength(1)
+    expect(h.client.alive).toBe(true)
+    void h.client.spawn(PLAN)
+    expect(h.transports).toHaveLength(1)
+    expect(h.transports[0].posted.map((m) => m.type)).toEqual(['spawn'])
+  })
+
+  it('logs a fork that throws instead of throwing, and the next spawn retries the fork', () => {
+    let calls = 0
+    const logs: string[] = []
+    const client = new PtyHostClient({
+      fork: () => {
+        calls++
+        if (calls === 1) throw new Error('fork failed')
+        return fakeTransport()
+      },
+      log: (line) => logs.push(line)
+    })
+
+    expect(() => client.start()).not.toThrow()
+    expect(logs).toEqual(['[pty-host] failed to start'])
+    void client.spawn(PLAN)
+    expect(calls).toBe(2)
+    expect(client.alive).toBe(true)
+  })
+})

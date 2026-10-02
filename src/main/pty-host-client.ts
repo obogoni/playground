@@ -50,6 +50,21 @@ export class PtyHostClient {
     this.#deps = deps
   }
 
+  /** True while a host process is forked and has not exited. */
+  get alive(): boolean {
+    return this.#transport !== null
+  }
+
+  /** Fork the host eagerly (app ready), so the first spawn does not pay its start-up. */
+  start(): void {
+    try {
+      this.#ensureTransport()
+    } catch (err) {
+      // The next spawn retries the fork and surfaces the error in its toast.
+      this.#deps.log('[pty-host] failed to start', err)
+    }
+  }
+
   spawn(plan: SpawnPlan, env?: NodeJS.ProcessEnv): Promise<PtyHandle> {
     return new Promise<PtyHandle>((resolve, reject) => {
       const transport = this.#ensureTransport()
@@ -74,7 +89,30 @@ export class PtyHostClient {
     transport.onMessage((m) => {
       if (transport === this.#transport) this.#onMessage(transport, m)
     })
+    transport.onExit((code) => {
+      if (transport === this.#transport) this.#onHostExit(code)
+    })
     return transport
+  }
+
+  /**
+   * The host died outside a shutdown: every session it served is gone (PTYH-22),
+   * pending spawns fail (PTYH-26), and the next spawn forks a new host
+   * (PTYH-24). Nothing is respawned here (PTYH-25).
+   */
+  #onHostExit(code: number): void {
+    this.#transport = null
+    this.#deps.log(`[pty-host] exited unexpectedly (code ${code})`)
+    const pending = [...this.#pending.values()]
+    this.#pending.clear()
+    for (const p of pending) p.reject(new Error('PTY host exited unexpectedly'))
+    const handles = [...this.#handles.values()]
+    this.#handles.clear()
+    for (const state of handles) {
+      state.exited = true
+      state.queue.push({ kind: 'exit', e: { exitCode: -1, hostExited: true } })
+      flush(state)
+    }
   }
 
   #onMessage(transport: HostTransport, m: FromHost): void {

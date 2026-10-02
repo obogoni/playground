@@ -8,7 +8,8 @@ import { buildPtyEnv } from './terminal-env'
  */
 export interface PtyHandle {
   onData(cb: (data: string) => void): void
-  onExit(cb: (e: { exitCode: number }) => void): void
+  /** `hostExited` is set when the PTY host process died under the PTY (PTYH-22). */
+  onExit(cb: (e: { exitCode: number; hostExited?: true }) => void): void
   write(data: string): void
   resize(cols: number, rows: number): void
   kill(): void

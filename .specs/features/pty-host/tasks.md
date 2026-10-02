@@ -240,17 +240,19 @@ T14
 
 **Done when**:
 
-- [ ] Every live handle's `onExit` fires once with `{ exitCode: -1, hostExited: true }`
-- [ ] A pending spawn rejects with `PTY host exited unexpectedly`
-- [ ] The log has `[pty-host] exited unexpectedly (code N)` with the transport's code
-- [ ] The next `spawn` calls `fork()` again; no spawn is issued without a call (no auto-respawn)
-- [ ] A fork that throws rejects that `spawn`; the following `spawn` retries the fork
-- [ ] Quick gate passes: `npx vitest run src/main/pty-host-client.test.ts`
+- [x] Every live handle's `onExit` fires once with `{ exitCode: -1, hostExited: true }`
+- [x] A pending spawn rejects with `PTY host exited unexpectedly`
+- [x] The log has `[pty-host] exited unexpectedly (code N)` with the transport's code
+- [x] The next `spawn` calls `fork()` again; no spawn is issued without a call (no auto-respawn)
+- [x] A fork that throws rejects that `spawn`; the following `spawn` retries the fork
+- [x] Quick gate passes: `npx vitest run src/main/pty-host-client.test.ts`
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(pty-host): finalize sessions and recreate the host after a crash`
+
+**Status**: ✅ Complete
 
 ---
 
