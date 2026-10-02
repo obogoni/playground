@@ -169,7 +169,7 @@ sessions but not the app, so that I can respawn them and keep working.
 3. PTYH-24: WHEN a spawn or respawn is requested after the PTY host exited THEN the system SHALL start a new PTY host and spawn the session in it.
 4. PTYH-25: IF the PTY host exits THEN the system SHALL NOT respawn any session automatically.
 5. PTYH-26: IF the PTY host exits while a spawn is in flight THEN the system SHALL reject that spawn's invoke.
-6. PTYH-27: IF the PTY host exits unexpectedly THEN main SHALL log the host's exit reason and exit code.
+6. PTYH-27: IF the PTY host exits unexpectedly THEN main SHALL log `[pty-host] exited unexpectedly (code N)` with the host's exit code N (Electron's `exit` event reports only the code).
 
 **Independent Test**: With 2 agents running, kill the PTY host process from Task Manager; both
 sessions show the notice and turn `stopped`, the app stays up, and respawning one works.
