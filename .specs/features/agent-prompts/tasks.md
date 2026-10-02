@@ -77,11 +77,11 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] `parsePlaceholders` returns distinct valid names in first-appearance order; invalid `{{ x }}`, `{{1a}}`, `{{}}` yield none; `Branch`≠`branch`
-- [ ] `resolvePrompt` replaces every occurrence, keeps other text and line breaks, inserts a value containing `{{x}}` literally
-- [ ] `normalizePromptText` strips a leading BOM, turns `\r\n` into `\n`, trims
-- [ ] Constants pinned with literal assertions (8000, 16384, the four context names)
-- [ ] Gate check passes: `npx vitest run src/shared/prompt-template.test.ts`
+- [x] `parsePlaceholders` returns distinct valid names in first-appearance order; invalid `{{ x }}`, `{{1a}}`, `{{}}` yield none; `Branch`≠`branch`
+- [x] `resolvePrompt` replaces every occurrence, keeps other text and line breaks, inserts a value containing `{{x}}` literally
+- [x] `normalizePromptText` strips a leading BOM, turns `\r\n` into `\n`, trims
+- [x] Constants pinned with literal assertions (8000, 16384, the four context names)
+- [x] Gate check passes: `npx vitest run src/shared/prompt-template.test.ts`
 
 **Tests**: unit
 **Gate**: quick

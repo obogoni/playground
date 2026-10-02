@@ -212,7 +212,7 @@ resolved prompt (APR-26), file changed mid-dialog (APR-35), prompt switch after 
 | APR-01 | P1: Discover | Tasks | In Design |
 | APR-02 | P1: Discover | Tasks | In Design |
 | APR-03 | P1: Discover | Tasks | In Design |
-| APR-04 | P1: Discover | Tasks | In Design |
+| APR-04 | P1: Discover | Tasks | Implementing |
 | APR-05 | P1: Discover | Tasks | In Design |
 | APR-06 | P1: Discover | Tasks | In Design |
 | APR-07 | P1: Discover | Tasks | In Design |
@@ -220,11 +220,11 @@ resolved prompt (APR-26), file changed mid-dialog (APR-35), prompt switch after 
 | APR-09 | P1: Pick | Tasks | In Design |
 | APR-10 | P1: Pick | Tasks | In Design |
 | APR-11 | P1: Pick | Tasks | In Design |
-| APR-12 | P1: Parsing | Tasks | In Design |
-| APR-13 | P1: Parsing | Tasks | In Design |
-| APR-14 | P1: Parsing | Tasks | In Design |
-| APR-15 | P1: Parsing | Tasks | In Design |
-| APR-16 | P1: Parsing | Tasks | In Design |
+| APR-12 | P1: Parsing | Tasks | Implementing |
+| APR-13 | P1: Parsing | Tasks | Implementing |
+| APR-14 | P1: Parsing | Tasks | Implementing |
+| APR-15 | P1: Parsing | Tasks | Implementing |
+| APR-16 | P1: Parsing | Tasks | Implementing |
 | APR-17 | P1: Variables form | Tasks | In Design |
 | APR-18 | P1: Variables form | Tasks | In Design |
 | APR-19 | P1: Variables form | Tasks | In Design |
