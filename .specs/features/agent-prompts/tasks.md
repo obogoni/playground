@@ -193,10 +193,10 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] Contract entries typed with `PromptEntry`
-- [ ] `prompts:openFolder` runs `ensurePromptsFolder` then `shell.openPath(promptsRoot)`
-- [ ] `sessions:spawn` passes `prompt` to `sessions.spawn`
-- [ ] Gate check passes: `npm run typecheck && npm run lint`
+- [x] Contract entries typed with `PromptEntry`
+- [x] `prompts:openFolder` runs `ensurePromptsFolder` then `shell.openPath(promptsRoot)`
+- [x] `sessions:spawn` passes `prompt` to `sessions.spawn`
+- [x] Gate check passes: `npm run typecheck && npm run lint`
 
 **Tests**: none
 **Gate**: build
