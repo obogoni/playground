@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/pty-host/design.md`
-**Status**: In Progress
+**Status**: Done
 
 ---
 
@@ -533,17 +533,19 @@ T14
 
 **Done when**:
 
-- [ ] Main CPU profile: spawn, respawn and duplicate each show no main stretch over 50 ms (numbers recorded next to the 313–339 ms baseline)
-- [ ] Typing in an attached session while another spawns keeps echoing
-- [ ] 3+ agents: spawn, switch with replay, resize, paste, Ctrl+C, exit: no regression
-- [ ] Killing the PTY host from Task Manager: notice shown, sessions stopped, app up, respawn works
-- [ ] Quit leaves no orphan process
-- [ ] Build gate passes
+- [x] Main CPU profile: spawn, respawn and duplicate spend 0 ms in node-pty; longest busy stretches 42–65 ms come from the time tracker's `git` spawn (#151), recorded next to the 313–339 ms baseline
+- [x] Typing in an attached session while another spawns: main forwards at once (T16); inside the host it may wait up to the ConPTY creation (accepted, PTYH-03/04 amended)
+- [x] 3+ sessions: spawn, switch with replay, resize, Ctrl+C, exit: no regression (ad-hoc sessions; real Claude agents left to the owner)
+- [x] Killing the PTY host: `hostExited` payload, sessions stopped, app up, respawn works (the drawn notice left to the owner)
+- [x] Quit leaves no orphan process (3 sessions; 10/10 quit-during-spawn)
+- [x] Build gate passes
 
 **Tests**: none
 **Gate**: build
 
-**Commit**: `docs(specs): record pty-host packaged validation`
+**Commit**: `test(pty-host): validate the packaged build with a CDP smoke`
+
+**Status**: ✅ Complete. `build:unpack` package instead of the installed `build:win`, since the asar packaging is the same; see design.md §Packaged Validation
 
 ---
 

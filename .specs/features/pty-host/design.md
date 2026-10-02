@@ -235,3 +235,32 @@ Run 2026-10-02 (T1) from a scratch worktree, packaged with `electron-builder --d
 | Host exit | `process.exit(0)` in the host → `exit` event with code `0` in main |
 
 **Verdict:** no design change. Phase 2 proceeds as designed.
+
+---
+
+## Packaged Validation
+
+Run 2026-10-02 (T14) with `scripts/smoke-pty-host.mjs` against `npm run build:unpack`
+(`dist/win-unpacked/playground.exe`, asar-packed like the installer, built after T15):
+`SMOKE_EXE=dist/win-unpacked/playground.exe SMOKE_PERF=1 RUN2_ITER=10` → **39/39 checks passed**.
+
+| Check | Result |
+| ----- | ------ |
+| Spawn, attach with replay, typing, resize, Ctrl+C, stop, normal `session:exit` without `hostExited` | Pass |
+| Kill the PTY host (`taskkill /F`) | Both sessions get `session:exit {exitCode:-1, hostExited:true}`, turn `stopped`; app stays up; `[pty-host] exited unexpectedly (code …)` logged; respawn forks a new host and runs |
+| Quit with 3 sessions running (each with a `node` grandchild) | App exits 0; no marked process left; no unhandled rejection |
+| Quit right after requesting a spawn, 10 runs | 10/10 exit 0 with no process left (failed 1 in 12 before T15) |
+| Main CPU profile, 1 ms sampling (inspector) | Time in node-pty frames: **0.0 ms** for spawn, respawn and duplicate (was 246–281 ms in `WindowsPtyAgent`) |
+| Longest main busy stretch | idle 3.4 ms; spawn 64.9 ms, respawn 42.0 ms, duplicate 55.7 ms (was 313–339 ms). Hottest frame in each: `readGitAsync` → `execFile('git rev-parse')` from the time tracker's snapshot on `lifecycle.started` (25–40 ms of synchronous process creation). Pre-existing, #151's scope |
+
+**Earlier attempt, superseded:** the `PLAYGROUND_DEBUG_PERF` loop-delay log cannot measure PTYH-02
+on this machine, since an idle 10 s window already shows `max=49.8–60.2 ms`. The smoke uses the CPU
+profile instead.
+
+**Finding that changed the spec:** the PTY host handles one message at a time, so typing into or
+reading from another session waits inside the host while it creates a ConPTY. PTYH-03/04 were
+narrowed to main's side, and a host per session is a follow-up (spec Assumptions, 2026-10-02).
+
+**Not covered by the smoke (owner check):** the `[PTY host exited unexpectedly]` line as drawn by
+xterm (canvas; the payload is asserted), and a session with real Claude Code agents. The smoke uses
+ad-hoc `pwsh`/`node` sessions.
