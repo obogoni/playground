@@ -189,7 +189,7 @@ sessions show the notice and turn `stopped`, the app stays up, and respawning on
 | PTYH-02 | P1: Never freezes | Design | Pending |
 | PTYH-03 | P1: Never freezes | Design | Pending |
 | PTYH-04 | P1: Never freezes | Design | Pending |
-| PTYH-05 | P1: Never freezes | Design | Pending |
+| PTYH-05 | P1: Never freezes | Design | Implementing |
 | PTYH-06 | P1: Parity | Design | Implementing |
 | PTYH-07 | P1: Parity | Design | Implementing |
 | PTYH-08 | P1: Parity | Design | Implementing |
@@ -199,7 +199,7 @@ sessions show the notice and turn `stopped`, the app stays up, and respawning on
 | PTYH-12 | P1: Parity | Design | Pending |
 | PTYH-13 | P1: Failed spawn | Design | Implementing |
 | PTYH-14 | P1: Failed spawn | Design | Pending |
-| PTYH-15 | P1: Failed spawn | Design | Pending |
+| PTYH-15 | P1: Failed spawn | Design | Implementing |
 | PTYH-16 | P1: Failed spawn | Design | Pending |
 | PTYH-17 | P1: Quit | Design | Implementing |
 | PTYH-18 | P1: Quit | Design | Pending |

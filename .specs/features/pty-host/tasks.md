@@ -208,18 +208,20 @@ T14
 
 **Done when**:
 
-- [ ] `spawn` posts `{type:'spawn', ptyId, file, args, cwd, env: buildPtyEnv({...process.env, ...env})}` with a fresh `ptyId` per call
-- [ ] Resolves on `spawned`; two in-flight spawns resolve independently (PTYH-05)
-- [ ] Rejects on `spawn-failed` with the host's message, and logs `Failed to spawn PTY: file=… args=… cwd=…`
-- [ ] `data`/`exit` that arrive before `onData`/`onExit` are registered are delivered in order on registration
-- [ ] `exit` is delivered after every earlier `data` of the same `ptyId`
-- [ ] `write`/`resize`/`kill` post in call order; after `exit` they are dropped
-- [ ] Quick gate passes: `npx vitest run src/main/pty-host-client.test.ts`
+- [x] `spawn` posts `{type:'spawn', ptyId, file, args, cwd, env: buildPtyEnv({...process.env, ...env})}` with a fresh `ptyId` per call
+- [x] Resolves on `spawned`; two in-flight spawns resolve independently (PTYH-05)
+- [x] Rejects on `spawn-failed` with the host's message, and logs `Failed to spawn PTY: file=… args=… cwd=…`
+- [x] `data`/`exit` that arrive before `onData`/`onExit` are registered are delivered in order on registration
+- [x] `exit` is delivered after every earlier `data` of the same `ptyId`
+- [x] `write`/`resize`/`kill` post in call order; after `exit` they are dropped
+- [x] Quick gate passes: `npx vitest run src/main/pty-host-client.test.ts`
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(pty-host): proxy PTY handles over the host channel`
+
+**Status**: ✅ Complete
 
 ---
 
