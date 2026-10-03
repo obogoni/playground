@@ -11,6 +11,29 @@ for about 150 ms per call, N times on a wake. Separately, the session-name polle
 the listing never names keeps it running back to back, about one Claude process every 3 s. Upstream issue
 #151 is the owner-approved scope; it measures with the bench and baseline of #147 (`perf-diagnostics`).
 
+## Dependencies
+
+**Depends on #147.** This feature executes only after #147 (diagnostics log and bench, branch
+`feature/perf-diagnostics`) has executed. Its stop rule (MAGIT-30) and its target figures (MAGIT-29..35)
+are read with that bench, so no task here starts before it exists. Status on 2026-10-03: #147 is planned
+and not executed, so this feature is paused (owner's call).
+
+**Overlap with upstream PR #154** (merged 2026-10-01, after this plan was written on `d4a3da9`). Its body
+says "#151: partly covered. The period git read is async, and the binary lookup is cached and
+non-blocking. **Not covered:** the per-session backoff for an unnamed session's listing." To reconcile at
+T1, when this branch is rebased:
+
+| This spec | Covered by #154 | Left for this feature |
+| --------- | --------------- | --------------------- |
+| MAGIT-01..16, MAGIT-38..42, the period opens without waiting for git and gets the read's fields | PERF-21: `readGitAsync` (`time-snapshot.ts`) and `resolveSnapshotAsync` with `#reattribute` (`time-tracker.ts`); the period opens on the cached attribution and is patched when the read answers | T2 and T3 are dropped. **Owner's call 2026-10-03: keep #154's behaviour**, which differs from MAGIT-12 and MAGIT-14: a late answer also patches a period that already closed and was kept in the log (it is dropped only when the period was discarded). Rewrite those rows to #154's behaviour, no code change |
+| MAGIT-04, MAGIT-07, the read goes through `git()` and is counted | #147's reconciled plan moves `readGitAsync` onto `git()` (its T8) | Nothing, once #147 has executed |
+| MAGIT-05, no `execFileSync` left in `time-snapshot.ts` | Not covered: the synchronous `readGit` stays, with no caller since #154 (#147 leaves it untouched) | Delete it, or drop MAGIT-05; decide at T1 |
+| MAGIT-17..28, MAGIT-43..46, the per-session listing backoff | Not covered (#154 says so); `session-name-poller.ts` is unchanged since `d4a3da9` | All of it (T4, T5) |
+| MAGIT-29..35, the measurements | #147's bench, not executed yet | T1, T6, T7 re-read for the reduced scope: the `spawn`-row stall is no longer this feature's to fix; the listing count per minute is |
+
+At T1 the tasks for the covered rows are dropped or reduced, and the plan is re-validated against main and
+re-approved by the owner before T4.
+
 ## Goals
 
 - [ ] No synchronous git call is left in main's period-open path: `git.sync` reads 0 in every bench row
