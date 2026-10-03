@@ -3,6 +3,7 @@ import type { WorktreeNode } from '../shared/tree'
 import type {
   ChangedFile,
   ChangeStatus,
+  CreateStep,
   CreateWorktreeResult,
   RemoveWorktreeResult
 } from '../shared/worktrees'
@@ -74,6 +75,11 @@ export async function listWorktrees(repoPath: string): Promise<WorktreeNode[]> {
  * and the fast-forward each pass `refreshTimeoutMs` to the runner, and every
  * `git worktree add` passes `checkoutTimeoutMs`. The local reads (`rev-parse`,
  * `worktree list`, `branch -D`) run unbounded.
+ *
+ * `onStep` hears each step as it starts, in run order and each at most once
+ * (CRTO-11, CRTO-15): `refreshing-base` when the base refresh starts,
+ * `creating-worktree` when `git worktree add` starts. A create that ends early
+ * reports nothing after that point (CRTO-14).
  */
 export function createWorktreeWith(
   deps: CreateWorktreeDeps
@@ -83,11 +89,11 @@ export function createWorktreeWith(
   baseBranch?: string,
   worktreeTemplate?: string,
   updateBase?: boolean,
-  onExisting?: 'reuse' | 'recreate'
+  onExisting?: 'reuse' | 'recreate',
+  onStep?: (step: CreateStep) => void
 ) => Promise<CreateWorktreeResult> {
-  const ctx: CreateContext = { deps }
-  return (repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting) =>
-    create(ctx, repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting)
+  return (repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting, onStep) =>
+    create({ deps, onStep }, repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting)
 }
 
 /** How long the base fetch and the fast-forward may each run (CRTO-01). */
@@ -118,6 +124,8 @@ export const createWorktree = createWorktreeWith(REAL_CREATE_DEPS)
 /** What the create path's helpers share. */
 interface CreateContext {
   deps: CreateWorktreeDeps
+  /** Hears each step as it starts (CRTO-11); absent = nobody listens. */
+  onStep?: (step: CreateStep) => void
 }
 
 async function create(
@@ -230,6 +238,7 @@ async function addWorktree(
   args: string[],
   target: string
 ): Promise<CreateWorktreeResult> {
+  ctx.onStep?.('creating-worktree')
   try {
     await ctx.deps.run(repoPath, args, { timeoutMs: ctx.deps.checkoutTimeoutMs })
     return { ok: true, path: target }
@@ -253,6 +262,7 @@ async function refreshBaseFromRemote(
   repoPath: string,
   baseBranch: string
 ): Promise<CreateWorktreeResult> {
+  ctx.onStep?.('refreshing-base')
   const noUpstream: CreateWorktreeResult = {
     ok: false,
     error: `Base branch "${baseBranch}" has no remote upstream to refresh from. Uncheck "Update base branch from remote" to skip.`

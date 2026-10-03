@@ -306,10 +306,10 @@ T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] Tests over real git, recording the steps in order: refresh on → `['refreshing-base', 'creating-worktree']`; refresh off → `['creating-worktree']`; empty base → `['creating-worktree']`; reuse → `['creating-worktree']`; recreate with refresh → `['refreshing-base', 'creating-worktree']`; refresh failure (no upstream) → `['refreshing-base']`; branch-exists conflict → `[]`; target exists → `[]`; empty template name → `[]`
-- [ ] Test: a create without `onStep` behaves as before (existing tests pass unchanged)
-- [ ] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts` then `npm test`
-- [ ] Test count: T6 count + the new tests
+- [x] Tests over real git, recording the steps in order: refresh on → `['refreshing-base', 'creating-worktree']`; refresh off → `['creating-worktree']`; empty base → `['creating-worktree']`; reuse → `['creating-worktree']`; recreate with refresh → `['refreshing-base', 'creating-worktree']`; refresh failure (no upstream) → `['refreshing-base']`; branch-exists conflict → `[]`; target exists → `[]`; empty template name → `[]` (empty base and reuse run with the refresh ticked, so they show it is skipped)
+- [x] Test: a create without `onStep` behaves as before (existing tests pass unchanged)
+- [x] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts` then `npm test` (122 files, 2656 passed; lint 0 errors, 18 warnings; typecheck exit 0)
+- [x] Test count: T6 count + the new tests (+9; the six that expect a step failed on the pre-T7 code with `expected [] to deeply equal [...]`)
 
 **Tests**: unit
 **Gate**: quick

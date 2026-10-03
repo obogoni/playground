@@ -12,7 +12,12 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { sanitizeBranch, worktreeNameFor, worktreePathFor } from '../shared/worktrees'
+import {
+  sanitizeBranch,
+  worktreeNameFor,
+  worktreePathFor,
+  type CreateStep
+} from '../shared/worktrees'
 import type { DirRemovalResult } from './dir-remover'
 import { git as gitRunner, gitFailureLine, type GitRunner } from './git'
 import { withPostCreateHook, type HookShell } from './post-create-hook'
@@ -1537,6 +1542,184 @@ describe('createWorktree — a real fetch that waits for credentials (CRTO-02)',
     })
     expect(existsSync(join(root, 'repo-feature-waiting'))).toBe(false)
     expect(git(repo, 'worktree', 'list', '--porcelain')).not.toContain('feature/waiting')
+  })
+})
+
+describe('createWorktree — steps (CRTO-11, CRTO-12, CRTO-14, CRTO-15)', () => {
+  vi.setConfig({ testTimeout: 30000, hookTimeout: 30000 })
+
+  let root: string
+  let origin: string
+  let repo: string
+  let steps: CreateStep[]
+  const onStep = (step: CreateStep): void => {
+    steps.push(step)
+  }
+
+  beforeEach(() => {
+    steps = []
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-steps-')))
+    origin = join(root, 'origin')
+    repo = join(root, 'repo')
+    git(root, 'init', '--bare', '-b', 'main', origin)
+    git(root, 'clone', origin, 'repo')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+    git(repo, 'push', '-u', 'origin', 'main')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('reports the refresh, then the checkout, when the refresh is on', async () => {
+    const result = await createWorktree(
+      repo,
+      'feature/a',
+      'main',
+      undefined,
+      true,
+      undefined,
+      onStep
+    )
+
+    expect(result.ok).toBe(true)
+    expect(steps).toEqual(['refreshing-base', 'creating-worktree'])
+  })
+
+  it('reports only the checkout when the refresh is off (CRTO-12)', async () => {
+    const result = await createWorktree(
+      repo,
+      'feature/b',
+      'main',
+      undefined,
+      false,
+      undefined,
+      onStep
+    )
+
+    expect(result.ok).toBe(true)
+    expect(steps).toEqual(['creating-worktree'])
+  })
+
+  it('reports only the checkout for an existing branch with an empty base (CRTO-12)', async () => {
+    git(repo, 'branch', 'chore')
+
+    const result = await createWorktree(
+      repo,
+      'chore',
+      undefined,
+      undefined,
+      true,
+      undefined,
+      onStep
+    )
+
+    expect(result.ok).toBe(true)
+    expect(steps).toEqual(['creating-worktree'])
+  })
+
+  it('reports only the checkout for a reuse, even with the refresh on (CRTO-12)', async () => {
+    git(repo, 'branch', 'feature/reuse')
+
+    const result = await createWorktree(
+      repo,
+      'feature/reuse',
+      'main',
+      undefined,
+      true,
+      'reuse',
+      onStep
+    )
+
+    expect(result.ok).toBe(true)
+    expect(steps).toEqual(['creating-worktree'])
+  })
+
+  it('reports the refresh, then the checkout, for a recreate with the refresh on', async () => {
+    git(repo, 'branch', 'feature/re')
+
+    const result = await createWorktree(
+      repo,
+      'feature/re',
+      'main',
+      undefined,
+      true,
+      'recreate',
+      onStep
+    )
+
+    expect(result.ok).toBe(true)
+    expect(steps).toEqual(['refreshing-base', 'creating-worktree'])
+  })
+
+  it('reports nothing after a refresh that failed (CRTO-14)', async () => {
+    git(repo, 'branch', 'local-only')
+
+    const result = await createWorktree(
+      repo,
+      'feature/c',
+      'local-only',
+      undefined,
+      true,
+      undefined,
+      onStep
+    )
+
+    expect(result.ok).toBe(false)
+    expect(steps).toEqual(['refreshing-base'])
+  })
+
+  it('reports nothing for a branch-exists conflict (CRTO-14)', async () => {
+    git(repo, 'branch', 'feature/taken')
+
+    const result = await createWorktree(
+      repo,
+      'feature/taken',
+      'main',
+      undefined,
+      true,
+      undefined,
+      onStep
+    )
+
+    expect(result).toEqual({ ok: false, conflict: 'branch-exists' })
+    expect(steps).toEqual([])
+  })
+
+  it('reports nothing when the target folder exists (CRTO-14)', async () => {
+    mkdirSync(join(root, 'repo-feature-d'))
+
+    const result = await createWorktree(
+      repo,
+      'feature/d',
+      'main',
+      undefined,
+      true,
+      undefined,
+      onStep
+    )
+
+    expect(result.ok).toBe(false)
+    expect(steps).toEqual([])
+  })
+
+  it('reports nothing when the template renders an empty folder name (CRTO-14)', async () => {
+    const result = await createWorktree(
+      repo,
+      'chore/cleanup',
+      'main',
+      '{id}',
+      true,
+      undefined,
+      onStep
+    )
+
+    expect(result.ok).toBe(false)
+    expect(steps).toEqual([])
   })
 })
 
