@@ -377,18 +377,20 @@ titles as written.
 
 **Done when**:
 
-- [ ] Tests (`platform: 'win32'`, local `core.longpaths=false`): a ref path of 260 returns the ref message; no folder at `worktreePathFor`, `git branch --list` empty, `git worktree list` holds one entry (BSLG-25)
-- [ ] Test: the same call with `updateBase: true` on a base whose upstream remote points at a missing path returns the ref message, not a fetch error (no refresh ran)
-- [ ] Test: a ref path of 259 is created and its ref exists (BSLG-35, git accepts the boundary)
-- [ ] Test: with local `core.longpaths=true`, a ref path of 270 is created (BSLG-21 end to end)
-- [ ] Test: Recreate of an existing branch with a ref path of 270 (made and packed by the test with `git -c core.longpaths=true`, test-only) returns the AC 17 message and the branch still resolves under `git -c core.longpaths=true rev-parse --verify` (BSLG-38)
-- [ ] Test: Reuse, with `core.longpaths=false`, of an existing branch of M2's shape (ref path 259 or fewer, reflog folder 248 or more, made test-only as in T8) is not refused with a path message; measure first what `worktree add` then does and assert that outcome, recorded in design.md Measurements (BSLG-37)
-- [ ] Test (P2): default template, a folder path of 216 returns the folder message and creates nothing (BSLG-30)
-- [ ] Test: with the repository's `core.longpaths` set to `maybe`, `createWorktree` returns an error starting with `fatal: bad boolean config value` and creates nothing (BSLG-39, owner amended 2026-10-03)
-- [ ] Test: after each call, `git config --local --get core.longpaths` reads what the test set (BSLG-26); `grep -rn "longpaths" src/main --include=*.ts` outside tests finds only the read in `path-limits.ts`
-- [ ] The existing `createWorktree` and EXB tests pass unchanged
-- [ ] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts` then `npm test`
-- [ ] Test count: T8 count + the new tests
+- [x] Tests (`platform: 'win32'`, local `core.longpaths=false`): a ref path of 260 returns the ref message; no folder at `worktreePathFor`, `git branch --list` empty, `git worktree list` holds one entry (BSLG-25)
+- [x] Test: the same call with `updateBase: true` on a base whose upstream remote points at a missing path returns the ref message, not a fetch error (no refresh ran)
+- [x] Test: a ref path of 259 is created and its ref exists (BSLG-35, git accepts the boundary)
+- [x] Test: with local `core.longpaths=true`, a ref path of 270 is created (BSLG-21 end to end)
+- [x] Test: Recreate of an existing branch with a ref path of 270 (made and packed by the test with `git -c core.longpaths=true`, test-only) returns the AC 17 message and the branch still resolves under `git -c core.longpaths=true rev-parse --verify` (BSLG-38)
+- [x] Test: Reuse, with `core.longpaths=false`, of an existing branch of M2's shape (ref path 259 or fewer, reflog folder 248 or more, made test-only as in T8) is not refused with a path message; measure first what `worktree add` then does and assert that outcome, recorded in design.md Measurements (BSLG-37)
+- [x] Test (P2): default template, a folder path of 216 returns the folder message and creates nothing (BSLG-30)
+- [x] Test: with the repository's `core.longpaths` set to `maybe`, `createWorktree` returns an error starting with `fatal: bad boolean config value` and creates nothing (BSLG-39, owner amended 2026-10-03)
+- [x] Test: after each call, `git config --local --get core.longpaths` reads what the test set (BSLG-26); `grep -rn "longpaths" src/main --include=*.ts` outside tests finds only the read in `path-limits.ts`
+- [x] The existing `createWorktree` and EXB tests pass unchanged
+- [x] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts` then `npm test`
+- [x] Test count: T8 count + the new tests
+
+**Done** (T9): 8 new real-git tests in `src/main/worktree-manager.test.ts` (0.8–1.5 s each, against the 9.3 s baseline); suite 2599 → 2607 passed; typecheck 0; lint 0 errors, 18 warnings (baseline). The four refusals were seen failing before `createWorktree` called the check. Reuse of the M2-shaped branch was measured first: `worktree add` exits 0 and checks the branch out (design.md, Measurements), and the test asserts that. The refresh test first shows that a short name reaches the refresh and gets git's fetch error, so the refusal's lack of one means no refresh ran. `grep -rln longpaths src/main --include=*.ts` outside tests lists only `path-limits.ts`, whose one git call with it is the `config --type=bool --get` read.
 
 **Tests**: unit
 **Gate**: quick

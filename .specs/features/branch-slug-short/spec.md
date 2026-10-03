@@ -212,25 +212,25 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-18 | P1: check, AC 18 | Tasks | Done: T6 |
 | BSLG-19 | P1: check, AC 19 | Tasks | T6 done; T17 (smoke 2) pending |
 | BSLG-20 | P1: check, AC 20 | Tasks | Pending: T14, T15, T17 (smoke 1, 2), T18 (smoke 9) |
-| BSLG-21 | P1: check, AC 21 | Tasks | T6, T8 done; T17 (smoke 3) pending |
+| BSLG-21 | P1: check, AC 21 | Tasks | T6, T8, T9 done; T17 (smoke 3) pending |
 | BSLG-22 | P1: check, AC 22 | Tasks | Done: T8 |
 | BSLG-23 | P1: check, AC 23 | Tasks | Pending: T12, T13, T17 (smoke 2) |
 | BSLG-24 | P1: check, AC 24 | Tasks | Pending: T14, T15, T17 (smoke 1), T18 (smoke 9) |
-| BSLG-25 | P1: check, AC 25 | Tasks | Pending: T9, T17 (smoke 4) |
-| BSLG-26 | P1: check, AC 26 | Tasks | Pending: T9 |
+| BSLG-25 | P1: check, AC 25 | Tasks | T9 done; T17 (smoke 4) pending |
+| BSLG-26 | P1: check, AC 26 | Tasks | Done: T9 |
 | BSLG-27 | P2: folder, AC 27 | Tasks | T7 done; T17 (smoke 6) pending |
 | BSLG-28 | P2: folder, AC 28 | Tasks | Done: T7 |
 | BSLG-29 | P2: folder, AC 29 | Tasks | Done: T7 |
-| BSLG-30 | P2: folder, AC 30 | Tasks | Pending: T9, T17 (smoke 7) |
+| BSLG-30 | P2: folder, AC 30 | Tasks | T9 done; T17 (smoke 7) pending |
 | BSLG-31 | Edge: empty title | Tasks | Done: T2 |
 | BSLG-32 | Edge: 40-character word | Tasks | Done: T2 |
 | BSLG-33 | Edge: non-adjacent repeat | Tasks | Done: T2 |
 | BSLG-34 | Edge: no `/` | Tasks | Done: T6 |
-| BSLG-35 | Edge: ref path 259 / 260 | Tasks | T6 done; T9 pending |
+| BSLG-35 | Edge: ref path 259 / 260 | Tasks | Done: T6, T9 |
 | BSLG-36 | Edge: reflog folder 247 / 248 | Tasks | Done: T6 |
-| BSLG-37 | Edge: existing branch | Tasks | T8 done; T9 pending |
-| BSLG-38 | Edge: Recreate | Tasks | Pending: T9 |
-| BSLG-39 | Edge: non-boolean value | Tasks | T8 done; T9 pending |
+| BSLG-37 | Edge: existing branch | Tasks | Done: T8, T9 |
+| BSLG-38 | Edge: Recreate | Tasks | Done: T9 |
+| BSLG-39 | Edge: non-boolean value | Tasks | Done: T8, T9 |
 | BSLG-40 | Edge: repository value wins | Tasks | Done: T8 |
 | BSLG-41 | Edge: unreadable repository | Tasks | Done: T8 |
 | BSLG-42 | Edge: stale answer | Tasks | Pending: T12 |

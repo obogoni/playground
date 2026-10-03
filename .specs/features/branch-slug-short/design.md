@@ -86,6 +86,11 @@ Two more readings T5 and T9 rely on, same machine:
   no folder. So the check cannot read the common git dir and reports nothing (BSLG-41), and the
   create returns that `fatal:` line. No value is expected that git runs with but `--type=bool` refuses,
   since both reads go through git's boolean parser (inferred from the error text, not measured).
+- **Reuse of an existing M2-shaped branch, `core.longpaths=false`** (T9, BSLG-37): branches made
+  with `git -c core.longpaths=true branch` at reflog folders 247, 248 and 252 (ref paths 250, 251,
+  255), then `git worktree add <short folder> <branch>`: exit 0 each time, with
+  `Preparing worktree (checking out '…')` on stderr, and the new worktree's `HEAD` is the branch.
+  Checking out writes no ref and no branch reflog, so git accepts what the path check skips.
 - **Common git dir form**: in a temp repository reached through an 8.3 short name,
   `rev-parse --path-format=absolute --git-common-dir` returns the long form with `/`, the same
   path `realpathSync.native` gives (8.3 risk row).

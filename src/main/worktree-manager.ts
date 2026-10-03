@@ -9,6 +9,7 @@ import type {
 import { worktreeNameFor, worktreePathFor } from '../shared/worktrees'
 import { removeDirTree, type DirRemovalResult } from './dir-remover'
 import { git, gitFailureLine } from './git'
+import { checkCreatePaths, type PathCheckDeps } from './path-limits'
 
 /** Raised when git itself fails for a repo (not installed, not a repo, …); the detail is git's own line (BSLG-16). */
 export class GitError extends Error {
@@ -65,6 +66,10 @@ export async function listWorktrees(repoPath: string): Promise<WorktreeNode[]> {
  * refresh failure never destroys the branch (EXB-D8). A branch already checked
  * out in another worktree blocks both (EXB-04). Failures are returned (dialog
  * shows them inline), never thrown.
+ *
+ * Before any git write, the path check refuses a name that would pass a Windows
+ * or git path limit (BSLG-25): no base refresh, no branch delete, no add.
+ * `deps` stands in for the platform and git in tests.
  */
 export async function createWorktree(
   repoPath: string,
@@ -72,7 +77,8 @@ export async function createWorktree(
   baseBranch?: string,
   worktreeTemplate?: string,
   updateBase?: boolean,
-  onExisting?: 'reuse' | 'recreate'
+  onExisting?: 'reuse' | 'recreate',
+  deps?: PathCheckDeps
 ): Promise<CreateWorktreeResult> {
   if (worktreeNameFor(repoPath, branch, worktreeTemplate) === '') {
     return {
@@ -84,6 +90,11 @@ export async function createWorktree(
   if (existsSync(target)) {
     return { ok: false, error: `Target path already exists: ${target}` }
   }
+  const problem = await checkCreatePaths(
+    { repoPath, branch, baseBranch, worktreeTemplate, onExisting },
+    deps
+  )
+  if (problem) return { ok: false, error: problem }
   // Existing-branch handling only applies to the new-branch-from-base path; the
   // empty-base call already means "check out the existing branch" (EXB-D2).
   if (baseBranch && (await branchExists(repoPath, branch))) {
