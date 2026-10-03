@@ -1304,10 +1304,31 @@ quiet, as in T6 (other agent sessions and the owner's installed app running).
 
 **Done when**:
 
-- [ ] `## Measurements` holds an "After" part beside "Before": same machine, the commit, each summary verbatim, and the before / after table of the four Files figures
-- [ ] The three Files targets read PASS; any that does not is written with its numbers and reported to the owner before the Verifier runs
-- [ ] The floor run's `bench-wt-1` git count is written, so the build loop's 0 reads against it
-- [ ] Gate check passes: `npm run lint`
+- [x] `## Measurements` holds an "After" part beside "Before": same machine, the commit, each summary verbatim, and the before / after table of the four Files figures
+- [x] The three Files targets read PASS; any that does not is written with its numbers and reported to the owner before the Verifier runs (the edit target FAIL, already reported and accepted with #167, see T20)
+- [x] The floor run's `bench-wt-1` git count is written, so the build loop's 0 reads against it
+- [x] Gate check passes: `npm run lint`
+
+**Result (2026-10-03)**: the four runs on the built app at `ec5cb7f` (production code as at `aab6756`;
+only the spec files changed since), 3 minutes each, 305-306 s, all exit 0; written to
+`validation.md`, `## Measurements`, "After (T21, 2026-10-03)", beside "Before". The machine was the
+same and not quiet: the owner's installed app with its agent sessions ran throughout, as in T6.
+
+- Floor: 0 / 0 / 0 / 0 in every steady row, as before.
+- Build loop (100 ms): every steady row 0 `files:changed`, 0 git, 0 `cat-file`, 0 `worktree:status`
+  (before: 186 / 1,702 / 1,137 / 0 in the worst row). "ignored writes start no git 0 **PASS**"
+  (FWIG-37, FWIG-01). "build loop: 2187 writes, 0 skipped".
+- Edit loop (1,000 ms): 60 / 59 / 60 `files:changed`, 686 / 651 / 675 git, 506 / 474 / 495
+  `cat-file`. "untouched sections stay ... 8.24 **FAIL**" (1,475 / 179; before 10.22). This is the
+  owner-accepted exception: the neighbouring sections remount on every batch (#167, T20).
+- Touch loop (1,000 ms): 59 / 59 / 60 `files:changed`, 177 / 177 / 180 git, 0 `cat-file`, 0
+  `worktree:status` (before 60 / 60 / 59). "the view's reads leave the index alone 0 **PASS**"
+  (FWIG-39, FWIG-17).
+- #147's "no overlapping git on one worktree": build FAIL (4) → PASS (0), edit 4 → 4, touch 4 → 2.
+  Nothing #147 measures got worse. The loop p99 moved within a few ms in both directions, the floor
+  included (17.4 → 19.3 ms with no loop), which points at the machine's other load; #147's loop
+  target is `n/a` with no sessions.
+- Gate: `npm run lint` 0 errors, 18 warnings.
 
 **Tests**: manual
 **Gate**: manual

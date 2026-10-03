@@ -194,6 +194,187 @@ so only one section stayed mounted and re-read. The owner amended FWIG-34 on 202
 rewrites the seeded line in place with content of the same byte length, so the layout holds. The run
 above replaces it.
 
+### After (T21, 2026-10-03)
+
+**Verdict: two of the three Files targets read PASS after the change; the edit target reads FAIL,
+an exception the owner accepted (follow-up #167).** The build loop starts no git process and emits no
+`files:changed` on `bench-wt-1` in any steady row (1,702 git and 186 emits before). The touch loop's
+own reads emit no `worktree:status` (60 before). The edit loop reads 1475 `cat-file` /
+179 `files:changed` = 8.24, down from 10.22 but above the limit of 2.
+The neighbouring All changes sections remount on every batch, which is outside this feature's
+design (T20, #167).
+
+#### Machine and conditions
+
+- The same machine as "Before": a laptop with a 14-core Intel Core Ultra 5-class CPU (14 threads),
+  about 31 GB RAM, Windows 11; Electron 39.8.10, Node 24.19.0, git 2.55.0.windows.4.
+- Every run at `ec5cb7f`. Its production code is T18's `aab6756`, the whole change; the two commits
+  after it change only the spec files. Rebuilt with `npx electron-vite build` before the first run;
+  `git status --porcelain` was empty, so each header reads its commit.
+- The same settings as "Before" (`--minutes 3 --fps 20 --rows 30 --files 500`, CDP port 9334,
+  `--sessions 0 --files-view`), one after another, each with `--json` to a scratch folder outside
+  the repository. Each took 305-306 s and exited 0.
+- **Not a fully quiet machine**, as before: the owner's installed Playground app (4 processes) ran
+  throughout with its own agent sessions, among them the agent that drove these runs. No other app
+  build ran during them. Afterwards there was no electron process from this worktree and no
+  `pg-bench-` folder.
+- The loop p99 figures moved a little from "Before" in both directions (floor 17.4 → 19.3 ms with no
+  loop at all, edit 25.2 → 28.6, touch 25.0 → 25.9, build 24.8 → 24.1). No session ran, so #147's
+  loop target is `n/a` on every run. The floor's rise, with no Files activity, points at the
+  machine's other load rather than at this change.
+
+#### Summaries (verbatim)
+
+`node scripts/bench-sessions.mjs --sessions 0 --files-view --json floor.json`:
+
+```
+bench-sessions  sessions=0  fps=20  rows=30  files=500  index=off  minutes=3  commit=ec5cb7f  files-view  build=off  edit=off  touch=off
+phase         loop p50/p99/max ms  git n  wait  peak  wt peak  status/s  wt:status  recounts  chunks  KB/s  append mean/max ms  names
+startup      16.1 /  17.4 /  45.2      8  10.6     4        2         2          0         0       0   0.0       0.000 / 0.000      0
+spawn        16.2 /  17.5 /  33.6     20  22.6     4        4         1          0         0       0   0.0       0.000 / 0.000      0
+steady 1     16.1 /  17.1 /  19.9      0   0.0     0        0         0          0         0       0   0.0       0.000 / 0.000      0
+steady 2     16.2 /  17.3 /  26.0      0   0.0     0        0         0          0         0       0   0.0       0.000 / 0.000      0
+steady 3     16.5 /  19.3 /  31.6      0   0.0     0        0         0          0         0       0   0.0       0.000 / 0.000      0
+worst        16.5 /  19.3 /  31.6      0   0.0     0        0         0          0         0       0   0.0       0.000 / 0.000      0
+files       files:changed  git n  cat-file  wt:status
+startup                 0      3         0          0
+spawn                   0     20        10          0
+steady 1                0      0         0          0
+steady 2                0      0         0          0
+steady 3                0      0         0          0
+worst                   0      0         0          0
+spawn: no session opened
+targets
+  loop p99 < 30 ms with 6 sessions                              19.3   n/a
+  append mean < 0.1 ms per chunk                               0.000   n/a
+  git status <= 1 per worktree per s                               0   n/a
+  no overlapping git on one worktree                               0   PASS
+  ignored writes start no git                                      0   n/a
+  untouched sections stay: cat-file per files:changed <= 2      0.00   n/a
+  the view's reads leave the index alone                           0   n/a
+```
+
+`node scripts/bench-sessions.mjs --sessions 0 --files-view --build-interval 100 --json build.json`:
+
+```
+bench-sessions  sessions=0  fps=20  rows=30  files=500  index=off  minutes=3  commit=ec5cb7f  files-view  build=100ms  edit=off  touch=off
+phase         loop p50/p99/max ms  git n  wait  peak  wt peak  status/s  wt:status  recounts  chunks  KB/s  append mean/max ms  names
+startup      16.1 /  17.5 /  51.1      8  11.1     4        2         2          0         0       0   0.0       0.000 / 0.000      0
+spawn        16.1 /  21.6 /  28.3     25  27.4     4        4         1          0         0       0   0.0       0.000 / 0.000      0
+steady 1     16.2 /  21.5 /  26.7      0   0.0     0        0         0          0         0       0   0.0       0.000 / 0.000      0
+steady 2     16.4 /  23.1 /  25.9      0   0.0     0        0         0          0         0       0   0.0       0.000 / 0.000      0
+steady 3     16.6 /  24.1 /  33.6      0   0.0     0        0         0          0         0       0   0.0       0.000 / 0.000      0
+worst        16.6 /  24.1 /  33.6      0   0.0     0        0         0          0         0       0   0.0       0.000 / 0.000      0
+files       files:changed  git n  cat-file  wt:status
+startup                 0      3         0          0
+spawn                   0     25        14          0
+steady 1                0      0         0          0
+steady 2                0      0         0          0
+steady 3                0      0         0          0
+worst                   0      0         0          0
+spawn: no session opened
+targets
+  loop p99 < 30 ms with 6 sessions                              24.1   n/a
+  append mean < 0.1 ms per chunk                               0.000   n/a
+  git status <= 1 per worktree per s                               0   n/a
+  no overlapping git on one worktree                               0   PASS
+  ignored writes start no git                                      0   PASS
+  untouched sections stay: cat-file per files:changed <= 2      0.00   n/a
+  the view's reads leave the index alone                           0   n/a
+build loop: 2187 writes, 0 skipped
+```
+
+`node scripts/bench-sessions.mjs --sessions 0 --files-view --edit-interval 1000 --json edit.json`:
+
+```
+bench-sessions  sessions=0  fps=20  rows=30  files=500  index=off  minutes=3  commit=ec5cb7f  files-view  build=off  edit=1000ms  touch=off
+phase         loop p50/p99/max ms  git n  wait  peak  wt peak  status/s  wt:status  recounts  chunks  KB/s  append mean/max ms  names
+startup      16.1 /  22.7 /  56.4      8  10.2     4        2         2          0         0       0   0.0       0.000 / 0.000      0
+spawn        16.0 /  27.3 /  42.7    704  70.4     4        4         2          0         0       0   0.0       0.000 / 0.000      0
+steady 1     16.0 /  27.1 /  41.8    686  55.5     4        4         2          0         0       0   0.0       0.000 / 0.000      0
+steady 2     15.9 /  28.6 /  40.0    651  47.3     4        4         2          0         0       0   0.0       0.000 / 0.000      0
+steady 3     15.9 /  26.0 /  37.4    675  68.2     4        4         2          0         0       0   0.0       0.000 / 0.000      0
+worst        16.0 /  28.6 /  41.8    686  68.2     4        4         2          0         0       0   0.0       0.000 / 0.000      0
+files       files:changed  git n  cat-file  wt:status
+startup                 0      3         0          0
+spawn                  57    704       522          0
+steady 1               60    686       506          0
+steady 2               59    651       474          0
+steady 3               60    675       495          0
+worst                  60    686       506          0
+spawn: no session opened
+targets
+  loop p99 < 30 ms with 6 sessions                              28.6   n/a
+  append mean < 0.1 ms per chunk                               0.000   n/a
+  git status <= 1 per worktree per s                               2   n/a
+  no overlapping git on one worktree                               4   FAIL
+  ignored writes start no git                                    686   n/a
+  untouched sections stay: cat-file per files:changed <= 2      8.24   FAIL
+  the view's reads leave the index alone                           0   n/a
+edit loop: 237 writes, 0 skipped
+```
+
+`node scripts/bench-sessions.mjs --sessions 0 --files-view --touch-interval 1000 --json touch.json`:
+
+```
+bench-sessions  sessions=0  fps=20  rows=30  files=500  index=off  minutes=3  commit=ec5cb7f  files-view  build=off  edit=off  touch=1000ms
+phase         loop p50/p99/max ms  git n  wait  peak  wt peak  status/s  wt:status  recounts  chunks  KB/s  append mean/max ms  names
+startup      15.9 /  17.4 /  48.0      8  14.5     4        2         2          0         0       0   0.0       0.000 / 0.000      0
+spawn        16.0 /  25.4 /  40.0    192  37.1     4        4         2          0         0       0   0.0       0.000 / 0.000      0
+steady 1     16.1 /  25.1 /  33.9    177  32.4     2        2         2          0         0       0   0.0       0.000 / 0.000      0
+steady 2     16.1 /  25.5 /  34.4    177  33.1     2        2         2          0         0       0   0.0       0.000 / 0.000      0
+steady 3     16.1 /  25.9 /  45.0    180  44.3     2        2         2          0         0       0   0.0       0.000 / 0.000      0
+worst        16.1 /  25.9 /  45.0    180  44.3     2        2         2          0         0       0   0.0       0.000 / 0.000      0
+files       files:changed  git n  cat-file  wt:status
+startup                 0      3         0          0
+spawn                  57    192        10          0
+steady 1               59    177         0          0
+steady 2               59    177         0          0
+steady 3               60    180         0          0
+worst                  60    180         0          0
+spawn: no session opened
+targets
+  loop p99 < 30 ms with 6 sessions                              25.9   n/a
+  append mean < 0.1 ms per chunk                               0.000   n/a
+  git status <= 1 per worktree per s                               2   n/a
+  no overlapping git on one worktree                               2   FAIL
+  ignored writes start no git                                    180   n/a
+  untouched sections stay: cat-file per files:changed <= 2      0.00   n/a
+  the view's reads leave the index alone                           0   PASS
+touch loop: 236 writes, 0 skipped
+```
+
+#### The four Files figures per steady row (`bench-wt-1`), before → after
+
+| Run | Row | `files:changed` before → after | git before → after | `cat-file` before → after | `worktree:status` before → after |
+| --- | --- | ------------------------------ | ------------------ | ------------------------- | -------------------------------- |
+| floor | steady 1 | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 |
+| floor | steady 2 | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 |
+| floor | steady 3 | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 |
+| build | steady 1 | 186 → 0 | 1702 → 0 | 1137 → 0 | 0 → 0 |
+| build | steady 2 | 185 → 0 | 1670 → 0 | 1115 → 0 | 0 → 0 |
+| build | steady 3 | 185 → 0 | 1664 → 0 | 1109 → 0 | 0 → 0 |
+| edit | steady 1 | 59 → 60 | 780 → 686 | 603 → 506 | 0 → 0 |
+| edit | steady 2 | 59 → 59 | 776 → 651 | 594 → 474 | 0 → 0 |
+| edit | steady 3 | 60 → 60 | 801 → 675 | 622 → 495 | 0 → 0 |
+| touch | steady 1 | 119 → 59 | 1731 → 177 | 1074 → 0 | 60 → 0 |
+| touch | steady 2 | 118 → 59 | 1709 → 177 | 1059 → 0 | 60 → 0 |
+| touch | steady 3 | 119 → 60 | 1730 → 180 | 1074 → 0 | 59 → 0 |
+
+The floor run's `bench-wt-1` git count is 0 in every steady row, before and after, so the build
+run's 0 reads against a floor of 0.
+
+#### The Files targets after the change
+
+| Target | Run | Before | After | Limit | Verdict |
+| ------ | --- | ------ | ----- | ----- | ------- |
+| Ignored writes start no git (FWIG-37) | build | 1702 git, 186 `files:changed` (worst steady row) | 0 git, 0 `files:changed` in every steady row | 0 and 0 in every steady row | **PASS** |
+| Untouched sections stay (FWIG-38) | edit | 1819 / 178 = 10.22 | 1475 / 179 = 8.24 | at most 2 | **FAIL, owner-accepted (#167)** |
+| The view's reads leave the index alone (FWIG-39, FWIG-17) | touch | 60 `worktree:status` (worst steady row) | 0 in every steady row | 0 in every steady row | **PASS** |
+
+#147's "no overlapping git on one worktree", for reference: build FAIL (4) → PASS (0); edit
+4 → 4 (FAIL both); touch 4 → 2 (FAIL both). Nothing #147 measures got worse.
+
 ### Follow-ups
 
 - **FPOL-14, FPOL-16 and FPOL-18 fail on the Files diff smoke without this feature's change.** T5's
