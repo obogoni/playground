@@ -154,10 +154,35 @@ baseline, and measure whether a build-folder write loop starts git today.
 
 **Done when**:
 
-- [ ] Rebase done; baseline test count, file count, wall time and lint warning count written here
-- [ ] The stop-rule figures written here, per line
-- [ ] Verdict written: "build writes start git today: N processes, M `files:changed` per minute, proceed" or "stopped, owner told: ..." (FWIG-40)
-- [ ] Gate check passes: `npm run lint`
+- [x] Rebase done; baseline test count, file count, wall time and lint warning count written here
+- [x] The stop-rule figures written here, per line
+- [x] Verdict written: "build writes start git today: N processes, M `files:changed` per minute, proceed" or "stopped, owner told: ..." (FWIG-40)
+- [x] Gate check passes: `npm run lint`
+
+**Result (2026-10-03, at `318bdca`, git 2.55.0.windows.4, Node 24.19.0)**:
+
+- Test baseline: `npx vitest run` → **2,769 tests in 127 files, all passing, about 110-120 s wall**.
+  The first two runs after `npm ci` each had 1 failure that the next three runs (two with the JSON
+  reporter) did not repeat; the test was not identified. Treat a single unrepeatable failure as this
+  flake, and name it if it shows again. `npm run lint`: **0 errors, 18 warnings**.
+- #147's floor (`perf-diagnostics/validation.md`, `## Baseline`, N = 0): steady `git n` = **0** per row.
+- Stop-rule run: built app, throwaway user data with `PLAYGROUND_DEBUG_PERF=1` and the three flags; a
+  throwaway workspace whose repository has 500 tracked files and a committed `.gitignore` naming
+  `build-out/`, and a linked worktree `wt-1` with 50 files in `build-out/` and 12 tracked files changed;
+  the Files direction opened on `wt-1` through CDP, Uncommitted mode, 12 `.diff-section` elements
+  mounted; a loop writing `build-out/obj-<k mod 50>.bin` every 100 ms for 3 minutes (2,163 writes,
+  0 skipped). Per line, `wt-1` only:
+
+  | Line | git processes | by subcommand | `files:changed` | `worktree:status` |
+  | ---- | ------------- | ------------- | --------------- | ----------------- |
+  | 1 (startup + loop) | 1,541 | cat-file 1,020, status 171, diff 171, ls-files 170, other 9 | 169 | 0 |
+  | 2 | 1,648 | cat-file 1,098, status 184, diff 183, ls-files 183 | 183 | 0 |
+  | 3 | 1,649 | cat-file 1,099, ls-files 184, diff 183, status 183 | 183 | 0 |
+  | 4 | 1,652 | cat-file 1,101, diff 184, status 184, ls-files 183 | 184 | 0 |
+
+- **Verdict: build writes start git today: about 1,650 processes and 183 `files:changed` per minute,
+  every one from writes git ignores; proceed** (FWIG-40). About 6 `cat-file` per batch: the 12 mounted
+  sections' re-reads.
 
 **Tests**: manual
 **Gate**: manual
