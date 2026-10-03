@@ -594,6 +594,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: PDIAG-36/PDIAG-37 vs design.md:225-237 (specs)
 - last seen: 2026-10-03T14:19:26Z
 
+### L-103 - With a fake clock, a check that nothing more runs must advance past the earliest instant that run could start, re-derived whenever the timing rule changes; a window that ends before it cannot fail
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing/schedulers` · harmful: 0
+- features: git-recount-coalesce
+- evidence: src/main/recount-scheduler.test.ts:408 (V6) (testing/schedulers)
+- last seen: 2026-10-03T17:19:43Z
+
+### L-104 - When a rate target is measured at process start but enforced by a scheduler upstream of a shared spawn queue, count the spacing from the previous run's end, because queue waits shrink the gap between the real process starts
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `src/main/**, perf` · harmful: 0
+- features: git-recount-coalesce
+- evidence: RCNT-32 (tasks.md T11, A1 status/s 2) (src/main/**, perf)
+- last seen: 2026-10-03T17:19:43Z
+
+### L-105 - When a stop or quit criterion says open requests are answered with nothing, state whether a request already taken by an in-flight run counts as open
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: git-recount-coalesce
+- evidence: RCNT-12 (validation.md, spec-precision gap) (spec)
+- last seen: 2026-10-03T17:19:43Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
