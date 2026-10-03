@@ -333,10 +333,10 @@ T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] The forward-verbatim test (`post-create-hook.test.ts:292-306`) passes a step callback and asserts all seven arguments, the callback included
-- [ ] Tests: a fake create that reports `creating-worktree` and succeeds, with a declared command → `['creating-worktree', 'running-hook']`, and `running-hook` is recorded before the shell is called; no declared command → no `running-hook`; a failed create → no `running-hook`; a branch-exists conflict → no `running-hook`; no `onStep` → the hook still runs
-- [ ] Gate check passes: `npx vitest run src/main/post-create-hook.test.ts` then `npm test`
-- [ ] Test count: T7 count + the new tests
+- [x] The forward-verbatim test (`post-create-hook.test.ts:292-306`) passes a step callback and asserts all seven arguments, the callback included
+- [x] Tests: a fake create that reports `creating-worktree` and succeeds, with a declared command → `['creating-worktree', 'running-hook']`, and `running-hook` is recorded before the shell is called; no declared command → no `running-hook`; a failed create → no `running-hook`; a branch-exists conflict → no `running-hook`; no `onStep` → the hook still runs
+- [x] Gate check passes: `npx vitest run src/main/post-create-hook.test.ts` then `npm test` (122 files, 2661 passed; lint 0 errors, 18 warnings; typecheck exit 0)
+- [x] Test count: T7 count + the new tests (+5; on the pre-T8 decorator the extended forward test and the three tests that expect a step failed)
 
 **Tests**: unit
 **Gate**: quick
