@@ -6,6 +6,8 @@ import {
   DIAGNOSTICS_ENV,
   DIAGNOSTICS_LOG_FILE,
   FLUSH_INTERVAL_MS,
+  folderOf,
+  gitSubcommand,
   installDiagnostics,
   NOOP_DIAGNOSTICS,
   PER_SECOND_SPAN_MS,
@@ -325,5 +327,236 @@ describe('createDiagnostics: the minute line', () => {
     h.d.stop()
     expect(h.clock.cancels).toBe(1)
     expect(h.monitor.disables).toBe(1)
+  })
+})
+
+describe('gitSubcommand', () => {
+  it('takes the first non-option argument, skipping the value of -c and -C (PDIAG-10)', () => {
+    expect(gitSubcommand(['status', '--porcelain'])).toBe('status')
+    expect(gitSubcommand(['-C', 'x', '--no-optional-locks', 'status'])).toBe('status')
+    expect(gitSubcommand(['-c', 'core.quotepath=off', 'log'])).toBe('log')
+    expect(gitSubcommand(['--version'])).toBe('(none)')
+    expect(gitSubcommand([])).toBe('(none)')
+  })
+})
+
+describe('folderOf', () => {
+  it('names a worktree by the last segment of its path (PDIAG-05, PDIAG-47)', () => {
+    expect(folderOf('C:\\x\\bench-wt-1')).toBe('bench-wt-1')
+    expect(folderOf('/home/x/bench-wt-1')).toBe('bench-wt-1')
+    expect(folderOf('C:\\x\\bench-wt-1\\')).toBe('bench-wt-1')
+    expect(folderOf('/home/x/bench-wt-1/')).toBe('bench-wt-1')
+  })
+
+  it('gives (none) for a path with no segment (PDIAG-47)', () => {
+    expect(folderOf('C:\\')).toBe('(none)')
+    expect(folderOf('C:/')).toBe('(none)')
+    expect(folderOf('/')).toBe('(none)')
+    expect(folderOf('')).toBe('(none)')
+  })
+})
+
+describe('createDiagnostics: git processes', () => {
+  const WT1 = 'C:\\x\\bench-wt-1'
+  const WT2 = 'C:\\x\\bench-wt-2'
+
+  /** Requests and starts a call at the current fake time; returns its end. */
+  const startGit = (h: Harness, cwd: string, args: string[]): (() => void) =>
+    h.d.gitRequested(cwd, args)()
+
+  const flushed = async (h: Harness): Promise<DiagnosticsLine> => {
+    h.flush()
+    await settle()
+    return lines(h).at(-1) as DiagnosticsLine
+  }
+
+  it('adds each duration to the total and to its subcommand (PDIAG-10, PDIAG-11)', async () => {
+    const h = harness()
+    const a = startGit(h, WT1, ['status', '--porcelain'])
+    const b = startGit(h, WT1, ['status'])
+    const c = startGit(h, WT1, ['rev-parse', '--git-dir'])
+    h.clock.setNow(50)
+    c()
+    h.clock.setNow(100)
+    a()
+    h.clock.setNow(300)
+    b()
+    const line = await flushed(h)
+    expect(line.git.count).toBe(3)
+    expect(line.git.totalMs).toBe(450)
+    expect(line.git.maxMs).toBe(300)
+    expect(line.git.bySubcommand).toEqual({
+      status: { count: 2, totalMs: 400, maxMs: 300 },
+      'rev-parse': { count: 1, totalMs: 50, maxMs: 50 }
+    })
+  })
+
+  it('reports the most processes running at once, overall and per worktree (PDIAG-12)', async () => {
+    const h = harness()
+    const ends = [
+      startGit(h, WT1, ['status']),
+      startGit(h, WT1, ['status']),
+      startGit(h, WT1, ['status']),
+      startGit(h, WT2, ['status'])
+    ]
+    ends.forEach((end) => end())
+    const line = await flushed(h)
+    expect(line.git.peakConcurrent).toBe(4)
+    expect(line.git.byWorktree['bench-wt-1'].peakConcurrent).toBe(3)
+    expect(line.git.byWorktree['bench-wt-2'].peakConcurrent).toBe(1)
+    expect(line.git.byWorktree['bench-wt-1'].count).toBe(3)
+    expect(line.git.byWorktree['bench-wt-2'].count).toBe(1)
+  })
+
+  it('reads a peak of 1 for calls that run one after the other (PDIAG-12)', async () => {
+    const h = harness()
+    startGit(h, WT1, ['status'])()
+    startGit(h, WT1, ['status'])()
+    const line = await flushed(h)
+    expect(line.git.peakConcurrent).toBe(1)
+    expect(line.git.byWorktree['bench-wt-1'].peakConcurrent).toBe(1)
+  })
+
+  /** maxPerSecond of `status` on bench-wt-1 for starts at these times. */
+  const perSecond = async (startTimes: number[]): Promise<number> => {
+    const h = harness()
+    for (const t of startTimes) {
+      h.clock.setNow(t)
+      startGit(h, WT1, ['status'])()
+    }
+    const line = await flushed(h)
+    return line.git.byWorktree['bench-wt-1'].bySubcommand.status.maxPerSecond
+  }
+
+  it('counts the most starts inside any sliding 1,000 ms span (PDIAG-13)', async () => {
+    expect(await perSecond([0, 400, 900])).toBe(3)
+    expect(await perSecond([0, 600, 1200])).toBe(2)
+    // Two starts 100 ms apart across a second's edge: a fixed bucket would read 1.
+    expect(await perSecond([950, 1050])).toBe(2)
+    expect(await perSecond([0, 1000])).toBe(1)
+  })
+
+  it('reports count and maxPerSecond per worktree and subcommand (PDIAG-13)', async () => {
+    const h = harness()
+    startGit(h, WT1, ['status'])()
+    startGit(h, WT1, ['status'])()
+    startGit(h, WT1, ['rev-parse'])()
+    startGit(h, WT2, ['status'])()
+    const line = await flushed(h)
+    expect(line.git.byWorktree['bench-wt-1'].bySubcommand).toEqual({
+      status: { count: 2, maxPerSecond: 2 },
+      'rev-parse': { count: 1, maxPerSecond: 1 }
+    })
+    expect(line.git.byWorktree['bench-wt-2'].bySubcommand).toEqual({
+      status: { count: 1, maxPerSecond: 1 }
+    })
+  })
+
+  it('adds the queue wait at the start and ignores a call that never started (PDIAG-15)', async () => {
+    const h = harness()
+    const first = h.d.gitRequested(WT1, ['status'])
+    const second = h.d.gitRequested(WT1, ['status'])
+    h.d.gitRequested(WT1, ['status']) // queued, never started
+    h.clock.setNow(40)
+    first()
+    h.clock.setNow(100)
+    second()
+    const line = await flushed(h)
+    expect(line.git.wait).toEqual({ totalMs: 140, maxMs: 100 })
+    expect(line.git.count).toBe(2)
+    expect(line.git.peakConcurrent).toBe(2)
+    expect(line.git.byWorktree['bench-wt-1'].count).toBe(2)
+    expect(line.git.byWorktree['bench-wt-1'].peakConcurrent).toBe(2)
+  })
+
+  it('counts a start or an end reported twice once (PDIAG-16)', async () => {
+    const h = harness()
+    const start = h.d.gitRequested(WT1, ['status'])
+    const end = start()
+    start()
+    h.clock.setNow(30)
+    end()
+    end()
+    const line1 = await flushed(h)
+    expect(line1.git.count).toBe(1)
+    expect(line1.git.peakConcurrent).toBe(1)
+    expect(line1.git.totalMs).toBe(30)
+    expect(line1.git.bySubcommand.status).toEqual({ count: 1, totalMs: 30, maxMs: 30 })
+    const line2 = await flushed(h)
+    expect(line2.git.peakConcurrent).toBe(0)
+    expect(line2.git.byWorktree).toEqual({})
+  })
+
+  it('counts a process in the window it started and times it in the window it ended (PDIAG-06, PDIAG-45)', async () => {
+    const h = harness()
+    h.clock.setNow(59_800)
+    const end = startGit(h, WT1, ['status'])
+    h.clock.setNow(60_000)
+    const line1 = await flushed(h)
+    expect(line1.git).toEqual({
+      count: 1,
+      totalMs: 0,
+      maxMs: 0,
+      peakConcurrent: 1,
+      wait: { totalMs: 0, maxMs: 0 },
+      bySubcommand: { status: { count: 1, totalMs: 0, maxMs: 0 } },
+      byWorktree: {
+        'bench-wt-1': {
+          count: 1,
+          peakConcurrent: 1,
+          bySubcommand: { status: { count: 1, maxPerSecond: 1 } }
+        }
+      }
+    })
+    h.clock.setNow(60_300)
+    end()
+    h.clock.setNow(120_000)
+    const line2 = await flushed(h)
+    expect(line2.git).toEqual({
+      count: 0,
+      totalMs: 500,
+      maxMs: 500,
+      peakConcurrent: 1,
+      wait: { totalMs: 0, maxMs: 0 },
+      bySubcommand: { status: { count: 0, totalMs: 500, maxMs: 500 } },
+      byWorktree: { 'bench-wt-1': { count: 0, peakConcurrent: 1, bySubcommand: {} } }
+    })
+    const line3 = await flushed(h)
+    expect(line3.git.peakConcurrent).toBe(0)
+    expect(line3.git.bySubcommand).toEqual({})
+  })
+
+  it('writes no parent folder and no git argument but the subcommand (PDIAG-05)', async () => {
+    const h = harness()
+    startGit(h, 'C:\\Users\\someone\\secret-project\\bench-wt-1', [
+      '-c',
+      'credential.helper=store',
+      'log',
+      '--format=%H',
+      'refs/heads/private-branch'
+    ])()
+    startGit(h, '/home/someone/secret-project/bench-wt-2', ['-C', 'other-dir', 'status'])()
+    h.flush()
+    await settle()
+    const text = h.written[0]
+    expect(text).toContain('"bench-wt-1"')
+    expect(text).toContain('"bench-wt-2"')
+    expect(text).toContain('"log"')
+    expect(text).toContain('"status"')
+    for (const leak of [
+      'Users',
+      'someone',
+      'secret-project',
+      'home',
+      'credential',
+      'store',
+      '--format',
+      '%H',
+      'refs/heads',
+      'private-branch',
+      'other-dir'
+    ]) {
+      expect(text).not.toContain(leak)
+    }
   })
 })

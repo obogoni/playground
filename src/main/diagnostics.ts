@@ -98,6 +98,73 @@ const round3 = (ms: number): number => Math.round(ms * 1000) / 1000
 const nsToMs = (ns: number): number => round3(ns / 1e6)
 
 /**
+ * Git's subcommand (PDIAG-10): the first argument that does not start with `-`, skipping
+ * the value after `-c` or `-C`; `(none)` when no argument qualifies.
+ */
+export function gitSubcommand(args: readonly string[]): string {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]
+    if (arg === '-c' || arg === '-C') i++
+    else if (!arg.startsWith('-')) return arg
+  }
+  return '(none)'
+}
+
+/**
+ * A worktree's name in a line (PDIAG-05): the last non-empty segment of its path, split on
+ * `/` and `\`; `(none)` for a path with no segment, such as a drive root (PDIAG-47).
+ */
+export function folderOf(path: string): string {
+  const segments = path.split(/[\\/]/).filter((s) => s !== '' && !/^[A-Za-z]:$/.test(s))
+  return segments.at(-1) ?? '(none)'
+}
+
+interface Timing {
+  count: number
+  totalMs: number
+  maxMs: number
+}
+
+const timing = (): Timing => ({ count: 0, totalMs: 0, maxMs: 0 })
+
+const addDuration = (t: Timing, ms: number): void => {
+  t.totalMs += ms
+  t.maxMs = Math.max(t.maxMs, ms)
+}
+
+const roundTiming = (t: Timing): Timing => ({
+  count: t.count,
+  totalMs: round3(t.totalMs),
+  maxMs: round3(t.maxMs)
+})
+
+/** One worktree's git figures in the current window. */
+interface WorktreeGit {
+  count: number
+  peakConcurrent: number
+  /** Per subcommand: its count, its `maxPerSecond`, and its starts inside the last span. */
+  bySubcommand: Map<string, { count: number; maxPerSecond: number; starts: number[] }>
+}
+
+/** The git figures of the current window; replaced at every line (PDIAG-06). */
+interface GitWindow {
+  total: Timing
+  peakConcurrent: number
+  wait: { totalMs: number; maxMs: number }
+  bySubcommand: Map<string, Timing>
+  byWorktree: Map<string, WorktreeGit>
+}
+
+const getOr = <K, V>(map: Map<K, V>, key: K, make: () => V): V => {
+  let value = map.get(key)
+  if (value === undefined) {
+    value = make()
+    map.set(key, value)
+  }
+  return value
+}
+
+/**
  * The live module: one timer, one loop monitor, counters, and a line every `intervalMs`
  * appended through `writer`, one write at a time, in window order.
  */
@@ -125,6 +192,111 @@ export function createDiagnostics(deps: DiagnosticsDeps): Diagnostics {
       )
   }
 
+  // Processes running now, overall and per worktree; they outlive a window (PDIAG-06).
+  let running = 0
+  const runningByWorktree = new Map<string, number>()
+
+  const worktreeGit = (key: string): WorktreeGit =>
+    getOr(gitWindow.byWorktree, key, () => ({
+      count: 0,
+      peakConcurrent: 0,
+      bySubcommand: new Map()
+    }))
+
+  const newGitWindow = (): GitWindow => ({
+    total: timing(),
+    peakConcurrent: running,
+    wait: { totalMs: 0, maxMs: 0 },
+    bySubcommand: new Map(),
+    byWorktree: new Map()
+  })
+
+  let gitWindow = newGitWindow()
+
+  const gitRequested = (cwd: string, args: readonly string[]): (() => () => void) => {
+    if (stopped) return noopStart
+    const subcommand = gitSubcommand(args)
+    const worktree = folderOf(cwd)
+    const requestedAt = clock.now()
+    let started = false
+    return () => {
+      if (started || stopped) return noop
+      started = true
+      const startedAt = clock.now()
+      const waited = startedAt - requestedAt
+      gitWindow.wait.totalMs += waited
+      gitWindow.wait.maxMs = Math.max(gitWindow.wait.maxMs, waited)
+
+      gitWindow.total.count++
+      getOr(gitWindow.bySubcommand, subcommand, timing).count++
+      running++
+      gitWindow.peakConcurrent = Math.max(gitWindow.peakConcurrent, running)
+
+      const wt = worktreeGit(worktree)
+      wt.count++
+      const wtRunning = (runningByWorktree.get(worktree) ?? 0) + 1
+      runningByWorktree.set(worktree, wtRunning)
+      wt.peakConcurrent = Math.max(wt.peakConcurrent, wtRunning)
+
+      // Sliding span (PDIAG-13): starts a full span or more before this one fall out.
+      const sub = getOr(wt.bySubcommand, subcommand, () => ({
+        count: 0,
+        maxPerSecond: 0,
+        starts: [] as number[]
+      }))
+      sub.count++
+      sub.starts = sub.starts.filter((s) => startedAt - s < PER_SECOND_SPAN_MS)
+      sub.starts.push(startedAt)
+      sub.maxPerSecond = Math.max(sub.maxPerSecond, sub.starts.length)
+
+      let ended = false
+      return () => {
+        if (ended || stopped) return
+        ended = true
+        const ms = clock.now() - startedAt
+        running--
+        runningByWorktree.set(worktree, (runningByWorktree.get(worktree) ?? 1) - 1)
+        addDuration(gitWindow.total, ms)
+        addDuration(getOr(gitWindow.bySubcommand, subcommand, timing), ms)
+      }
+    }
+  }
+
+  const gitSection = (): DiagnosticsLine['git'] => {
+    const g = gitWindow
+    return {
+      ...roundTiming(g.total),
+      peakConcurrent: g.peakConcurrent,
+      wait: { totalMs: round3(g.wait.totalMs), maxMs: round3(g.wait.maxMs) },
+      bySubcommand: Object.fromEntries(
+        [...g.bySubcommand].map(([sub, t]) => [sub, roundTiming(t)])
+      ),
+      byWorktree: Object.fromEntries(
+        [...g.byWorktree].map(([key, wt]) => [
+          key,
+          {
+            count: wt.count,
+            peakConcurrent: wt.peakConcurrent,
+            bySubcommand: Object.fromEntries(
+              [...wt.bySubcommand].map(([sub, s]) => [
+                sub,
+                { count: s.count, maxPerSecond: s.maxPerSecond }
+              ])
+            )
+          }
+        ])
+      )
+    }
+  }
+
+  /** A new window starts its peaks from the processes still running (PDIAG-06). */
+  const resetGit = (): void => {
+    gitWindow = newGitWindow()
+    for (const [key, n] of runningByWorktree) {
+      if (n > 0) worktreeGit(key).peakConcurrent = n
+    }
+  }
+
   const loopSection = (): DiagnosticsLine['loop'] => {
     const empty = monitor.count === 0
     return {
@@ -145,21 +317,14 @@ export function createDiagnostics(deps: DiagnosticsDeps): Diagnostics {
       pid: meta.pid,
       version: meta.version,
       loop: loopSection(),
-      git: {
-        count: 0,
-        totalMs: 0,
-        maxMs: 0,
-        peakConcurrent: 0,
-        wait: { totalMs: 0, maxMs: 0 },
-        bySubcommand: {},
-        byWorktree: {}
-      },
+      git: gitSection(),
       pty: {},
       emits: { 'worktree:status': {}, 'files:changed': {} },
       recounts: {},
       names: { count: 0, totalMs: 0, maxMs: 0 }
     }
     windowStart = end
+    resetGit()
     monitor.reset()
     write(JSON.stringify(line) + '\n')
   }
@@ -168,7 +333,7 @@ export function createDiagnostics(deps: DiagnosticsDeps): Diagnostics {
 
   return {
     enabled: true,
-    gitRequested: () => noopStart,
+    gitRequested,
     measureAppend: (_sessionId, _chunk, append) => append(),
     emitted: noop,
     recountStarted: noop,

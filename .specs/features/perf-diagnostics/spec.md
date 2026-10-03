@@ -269,18 +269,18 @@ without asking.
 | PDIAG-02 | P1: log — AC 2 | T1, T5, T11 | In progress (T1) |
 | PDIAG-03 | P1: log — AC 3 | T2, T5 | In progress (T2) |
 | PDIAG-04 | P1: log — AC 4 | T2 | Done (T2) |
-| PDIAG-05 | P1: log — AC 5 | T3, T4 | Pending |
-| PDIAG-06 | P1: log — AC 6 | T2, T3 | In progress (T2) |
+| PDIAG-05 | P1: log — AC 5 | T3, T4 | In progress (T3) |
+| PDIAG-06 | P1: log — AC 6 | T2, T3 | Done (T2, T3) |
 | PDIAG-07 | P1: log — AC 7 | T2 | Done (T2) |
 | PDIAG-08 | P1: log — AC 8 | T2, T11 | In progress (T2) |
 | PDIAG-09 | P1: git — AC 9 | T6 | Pending |
-| PDIAG-10 | P1: git — AC 10 | T3 | Pending |
-| PDIAG-11 | P1: git — AC 11 | T3 | Pending |
-| PDIAG-12 | P1: git — AC 12 | T3 | Pending |
-| PDIAG-13 | P1: git — AC 13 | T3 | Pending |
+| PDIAG-10 | P1: git — AC 10 | T3 | Done (T3) |
+| PDIAG-11 | P1: git — AC 11 | T3 | Done (T3) |
+| PDIAG-12 | P1: git — AC 12 | T3 | Done (T3) |
+| PDIAG-13 | P1: git — AC 13 | T3 | Done (T3) |
 | PDIAG-14 | P1: git — AC 14 | T7, T8 | Pending |
-| PDIAG-15 | P1: git — AC 15 | T3, T6 | Pending |
-| PDIAG-16 | P1: git — AC 16 | T3 | Pending |
+| PDIAG-15 | P1: git — AC 15 | T3, T6 | In progress (T3) |
+| PDIAG-16 | P1: git — AC 16 | T3 | Done (T3) |
 | PDIAG-17 | P1: loop — AC 17 | T5, T16 | Pending |
 | PDIAG-18 | P1: loop — AC 18 | T2 | Done (T2) |
 | PDIAG-19 | P1: loop — AC 19 | T2 | Done (T2) |
@@ -309,9 +309,9 @@ without asking.
 | PDIAG-42 | P1: baseline — AC 42 | T17 | Pending |
 | PDIAG-43 | P1: baseline — AC 43 | T17 | Pending |
 | PDIAG-44 | P2: docs — AC 44 | T12 | Pending |
-| PDIAG-45 | Edge: a git process across a flush | T3 | Pending |
+| PDIAG-45 | Edge: a git process across a flush | T3 | Done (T3) |
 | PDIAG-46 | Edge: a session that exits mid-window | T4 | Pending |
-| PDIAG-47 | Edge: a path with no last segment | T3 | Pending |
+| PDIAG-47 | Edge: a path with no last segment | T3 | Done (T3) |
 | PDIAG-48 | Edge: Ctrl+C | T15 | Pending |
 | PDIAG-49 | Edge: the app does not exit | T15 | Pending |
 | PDIAG-50 | Edge: lines never arrive | T15 | Pending |

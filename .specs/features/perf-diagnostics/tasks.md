@@ -197,16 +197,16 @@ window rules.
 
 **Done when**:
 
-- [ ] Tests: `gitSubcommand` gives `status` for `['status', '--porcelain']`, `status` for `['-C', 'x', '--no-optional-locks', 'status']`, `log` for `['-c', 'core.quotepath=off', 'log']`, `(none)` for `['--version']` and for `[]`
-- [ ] Tests: `folderOf` gives `bench-wt-1` for a backslashed path, a forward-slashed path and one with a trailing separator; `(none)` for `'C:\'`-style roots and `''`
-- [ ] Tests: two `status` and one `rev-parse` ending after 100, 300 and 50 ms give `count: 3`, `totalMs: 450`, `maxMs: 300`, and the right per-subcommand figures
-- [ ] Tests: three overlapping calls on one worktree and one on another give `peakConcurrent: 4` overall and `3` / `1` per worktree; sequential calls give `1`
-- [ ] Tests: starts at 0, 400 and 900 ms give `maxPerSecond: 3`; starts at 0, 600 and 1,200 ms give `2` (sliding span, not a bucket); the exact edge, starts at 0 and 1,000 ms, gives `1` (L-042)
-- [ ] Tests: two calls requested at 0 ms and started at 40 and 100 ms give `wait: { totalMs: 140, maxMs: 100 }`; a call requested and never started counts in neither `count` nor `peakConcurrent`, and its `wait` is not added
-- [ ] Tests: a `start` or an `end` called twice counts once; a call started in window 1 and ended in window 2 is counted in window 1's `count` and timed in window 2's `totalMs`, and window 2's `peakConcurrent` starts at 1 while it runs
-- [ ] Tests: no line contains the parent folders of any path passed in, nor any argument other than the subcommand (assert on the serialized line)
-- [ ] Gate check passes: `npx vitest run src/main/diagnostics.test.ts`, then the full gate
-- [ ] Test count: T2 count + the new tests
+- [x] Tests: `gitSubcommand` gives `status` for `['status', '--porcelain']`, `status` for `['-C', 'x', '--no-optional-locks', 'status']`, `log` for `['-c', 'core.quotepath=off', 'log']`, `(none)` for `['--version']` and for `[]`
+- [x] Tests: `folderOf` gives `bench-wt-1` for a backslashed path, a forward-slashed path and one with a trailing separator; `(none)` for `'C:\'`-style roots and `''`
+- [x] Tests: two `status` and one `rev-parse` ending after 100, 300 and 50 ms give `count: 3`, `totalMs: 450`, `maxMs: 300`, and the right per-subcommand figures
+- [x] Tests: three overlapping calls on one worktree and one on another give `peakConcurrent: 4` overall and `3` / `1` per worktree; sequential calls give `1`
+- [x] Tests: starts at 0, 400 and 900 ms give `maxPerSecond: 3`; starts at 0, 600 and 1,200 ms give `2` (sliding span, not a bucket); the exact edge, starts at 0 and 1,000 ms, gives `1` (L-042); starts at 950 and 1,050 ms give `2`, which a fixed bucket would read as 1
+- [x] Tests: two calls requested at 0 ms and started at 40 and 100 ms give `wait: { totalMs: 140, maxMs: 100 }`; a call requested and never started counts in neither `count` nor `peakConcurrent`, and its `wait` is not added
+- [x] Tests: a `start` or an `end` called twice counts once; a call started in window 1 and ended in window 2 is counted in window 1's `count` and timed in window 2's `totalMs`, and window 2's `peakConcurrent` starts at 1 while it runs
+- [x] Tests: no line contains the parent folders of any path passed in, nor any argument other than the subcommand (assert on the serialized line)
+- [x] Gate check passes: `npx vitest run src/main/diagnostics.test.ts`, then the full gate
+- [x] Test count: T2 count + the new tests (2,523 + 12 = 2,535)
 
 **Tests**: unit
 **Gate**: quick
