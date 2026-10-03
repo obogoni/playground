@@ -507,9 +507,9 @@ diagnostics().stop())`; `startLoopDelayLog` reads `diagnosticsEnabled(process.en
 
 **Done when**:
 
-- [ ] The section names `PLAYGROUND_DEBUG_PERF=1`, that it also prints the `[perf] loop` line to the console every 10 s, how to set it for one launch from a terminal, the file `perf-diagnostics.jsonl` in the user data folder, one line a minute, that worktrees appear by folder name only, and `node scripts/bench-sessions.mjs` for developers
-- [ ] No absolute user path in the section (the user data folder is named, not spelled out)
-- [ ] Gate check passes: `npm run lint`
+- [x] The section names `PLAYGROUND_DEBUG_PERF=1`, that it also prints the `[perf] loop` line to the console every 10 s, how to set it for one launch from a terminal, the file `perf-diagnostics.jsonl` in the user data folder, one line a minute, that worktrees appear by folder name only, and `node scripts/bench-sessions.mjs` for developers
+- [x] No absolute user path in the section (the user data folder is named, not spelled out)
+- [x] Gate check passes: `npm run lint` (18 warnings; the full gate, 2,557 passed, and the phase-end `npx electron-vite build` also pass)
 
 **Tests**: none
 **Gate**: full

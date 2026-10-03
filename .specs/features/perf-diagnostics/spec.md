@@ -308,7 +308,7 @@ without asking.
 | PDIAG-41 | P1: baseline — AC 41 | T14, T16 | Pending |
 | PDIAG-42 | P1: baseline — AC 42 | T17 | Pending |
 | PDIAG-43 | P1: baseline — AC 43 | T17 | Pending |
-| PDIAG-44 | P2: docs — AC 44 | T12 | Pending |
+| PDIAG-44 | P2: docs — AC 44 | T12 | Done (T12) |
 | PDIAG-45 | Edge: a git process across a flush | T3 | Done (T3) |
 | PDIAG-46 | Edge: a session that exits mid-window | T4 | Done (T4) |
 | PDIAG-47 | Edge: a path with no last segment | T3 | Done (T3) |
