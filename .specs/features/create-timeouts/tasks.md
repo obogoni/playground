@@ -13,6 +13,15 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Branch**: `feature/create-timeouts`, cut from `origin/main` `60ff148`. Issue #153 runs after #145 (`feature/branch-slug-short`), which edits `git.ts`, `createWorktree`'s guards, both create dialogs, `worktree-manager.test.ts` and `smoke-start-work.mjs`. **Before T1**, once #145 has merged: `git fetch origin && git rebase origin/main`, then re-read the line numbers this plan cites. The PR body carries `Closes #153`.
 
+**Reconciled at Execute (2026-10-03)**: #145 had not merged (PR #161 open), so the branch is **stacked on `feature/branch-slug-short` `a2d6e1d`** (itself on `origin/main` `6d96ae4`); the PR says "depends on #161" and is rebased onto `origin/main` once #161 merges. Against that base:
+- **Spawn pacer (PERF-22, #154).** `git()` now returns `pace(() => run(...))`, so the promise it returns has no `child`. T2 ends stdin inside the pacer's start callback: `const p = run(...); p.child.stdin?.end(); return p`. The pacer runs at most 4 git processes at once, so a hung fetch or checkout holds one slot until its timeout (before this feature, forever).
+- **The create's seventh parameter is taken.** #145 added `deps?: PathCheckDeps` as `createWorktree`'s seventh parameter, used only by its path-check tests. Owner decision: it moves into the factory. `CreateWorktreeDeps` gains `pathCheck?: PathCheckDeps` (absent = the real platform and `git`), `createWorktreeWith(deps)` passes it to `checkCreatePaths`, and `createWorktree`'s seventh parameter becomes `onStep` as designed. The `createWorktree — path check (BSLG-25..39)` tests change their call shape only, from `createWorktree(…, win32)` to `createWorktreeWith({ ...REAL_CREATE_DEPS, pathCheck: win32 })(…)`; no assertion changes. This lands in T4.
+- **`smoke-start-work.mjs` already honours `SMOKE_CONFIG`** (#145, with a `--seed` / `--clean` mode); T15 reuses it instead of adding it.
+- **Line numbers moved**: the WBR clone setup is the `createWorktree — base refresh (WBR)` block (`worktree-manager.test.ts:862`); the `isTimeout` blocker is `git.test.ts:87-92`; the create handler is `index.ts:400-403`; `emitToWindow` is defined at `index.ts:493`; the forward-verbatim test is `post-create-hook.test.ts:292`.
+- **AD number**: `main` and the open PRs hold up to AD-057 (#162); T16 checks again before writing.
+
+**Baseline (2026-10-03, on `a2d6e1d` + the plan commits)**: `npx vitest run` 121 files, 2622 tests passed; `npm run typecheck` exit 0; `npm run lint` 0 errors, 18 warnings. Five slowest test files: recorded by T1.
+
 **Setup (before T1, no commit)**: the worktree has no `node_modules`. Run `npm ci --ignore-scripts` and `node node_modules/electron/install.js`, then record the **test baseline** here: `npx vitest run` count, `npm run typecheck`, `npm run lint` errors and warnings, and the five slowest test files of a full run (L-005).
 
 **Stop rule (T1)**: T1 must show today's code blocked on a fetch that waits for input. If git cannot be made to block that way on Windows, stop after T1 and report to the owner before any timeout or dialog work.
