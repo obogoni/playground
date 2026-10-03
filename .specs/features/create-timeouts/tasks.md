@@ -414,9 +414,9 @@ T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] The subscription is removed on unmount (the effect returns `api.on`'s unsubscribe)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: T10 count (no new tests)
+- [x] The subscription is removed on unmount (the effect returns `api.on`'s unsubscribe)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (typecheck exit 0; lint 0 errors, 18 warnings; 123 files, 2669 passed)
+- [x] Test count: T10 count (no new tests)
 
 **Tests**: none
 **Gate**: full
