@@ -126,15 +126,19 @@ T16 → T17
    all four here.
 3. The module skeleton with the `Diagnostics` interface from design.md.
 
+**Baseline (2026-10-03, `f1ed79f`, after `npm ci --ignore-scripts` and the Electron install)**:
+`npx vitest run` gives **2,508 tests in 119 files**, all passing, Vitest duration **103.7 s** (1 min 46 s
+wall); `npm run lint` exits 0 with **18 warnings** (0 errors).
+
 **Done when**:
 
-- [ ] Baseline test count, file count, suite wall time and lint warning count recorded here
-- [ ] Tests: `DIAGNOSTICS_ENV` is `'PLAYGROUND_DEBUG_PERF'`, `DIAGNOSTICS_LOG_FILE` `'perf-diagnostics.jsonl'`, `FLUSH_INTERVAL_MS` `60000`, `PER_SECOND_SPAN_MS` `1000`, each by literal (L-009); `LOOP_RESOLUTION_MS` is imported from `perf-monitor.ts`, whose test already pins it
-- [ ] Tests: `diagnosticsEnabled` is true for `'1'` only; false for unset, `''`, `'0'`, `'true'`, `' 1'`
-- [ ] Tests: `diagnostics()` answers `NOOP_DIAGNOSTICS` before any install; `installDiagnostics(fake)` makes it answer the fake; `installDiagnostics(null)` restores the no-op
-- [ ] Tests: `NOOP_DIAGNOSTICS.enabled` is false; its `measureAppend` calls `append` exactly once and returns; its `gitRequested` returns a `start` whose `end` does nothing, and its `nameListingStarted` returns a function that does nothing; `stop` can be called twice; the object is frozen
-- [ ] Gate check passes: `npx vitest run src/main/diagnostics.test.ts`, then the full gate
-- [ ] Test count: baseline + the new tests
+- [x] Baseline test count, file count, suite wall time and lint warning count recorded here
+- [x] Tests: `DIAGNOSTICS_ENV` is `'PLAYGROUND_DEBUG_PERF'`, `DIAGNOSTICS_LOG_FILE` `'perf-diagnostics.jsonl'`, `FLUSH_INTERVAL_MS` `60000`, `PER_SECOND_SPAN_MS` `1000`, each by literal (L-009); `LOOP_RESOLUTION_MS` is imported from `perf-monitor.ts`, whose test already pins it
+- [x] Tests: `diagnosticsEnabled` is true for `'1'` only; false for unset, `''`, `'0'`, `'true'`, `' 1'`
+- [x] Tests: `diagnostics()` answers `NOOP_DIAGNOSTICS` before any install; `installDiagnostics(fake)` makes it answer the fake; `installDiagnostics(null)` restores the no-op
+- [x] Tests: `NOOP_DIAGNOSTICS.enabled` is false; its `measureAppend` calls `append` exactly once and returns; its `gitRequested` returns a `start` whose `end` does nothing, and its `nameListingStarted` returns a function that does nothing; `stop` can be called twice; the object is frozen
+- [x] Gate check passes: `npx vitest run src/main/diagnostics.test.ts`, then the full gate
+- [x] Test count: baseline + the new tests (2,508 + 7 = 2,515)
 
 **Tests**: unit
 **Gate**: quick

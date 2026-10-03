@@ -266,7 +266,7 @@ without asking.
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | PDIAG-01 | P1: log — AC 1 | T2, T5, T11 | Pending |
-| PDIAG-02 | P1: log — AC 2 | T1, T5, T11 | Pending |
+| PDIAG-02 | P1: log — AC 2 | T1, T5, T11 | In progress (T1) |
 | PDIAG-03 | P1: log — AC 3 | T2, T5 | Pending |
 | PDIAG-04 | P1: log — AC 4 | T2 | Pending |
 | PDIAG-05 | P1: log — AC 5 | T3, T4 | Pending |
@@ -286,7 +286,7 @@ without asking.
 | PDIAG-19 | P1: loop — AC 19 | T2 | Pending |
 | PDIAG-20 | P1: pty — AC 20 | T4, T9 | Pending |
 | PDIAG-21 | P1: pty — AC 21 | T4, T9 | Pending |
-| PDIAG-22 | P1: pty — AC 22 | T1, T9 | Pending |
+| PDIAG-22 | P1: pty — AC 22 | T1, T9 | In progress (T1) |
 | PDIAG-23 | P1: pty — AC 23 | T4 | Pending |
 | PDIAG-24 | P1: activity — AC 24 | T4, T11 | Pending |
 | PDIAG-25 | P1: activity — AC 25 | T4, T11 | Pending |
