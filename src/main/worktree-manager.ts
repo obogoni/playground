@@ -8,7 +8,7 @@ import type {
 } from '../shared/worktrees'
 import { worktreeNameFor, worktreePathFor } from '../shared/worktrees'
 import { removeDirTree, type DirRemovalResult } from './dir-remover'
-import { git, gitFailureLine, type GitRunner } from './git'
+import { git, gitFailureLine, isTimeout, type GitRunner } from './git'
 import { checkCreatePaths, type PathCheckDeps } from './path-limits'
 
 /** Raised when git itself fails for a repo (not installed, not a repo, …); the detail is git's own line (BSLG-16). */
@@ -281,6 +281,9 @@ async function refreshBaseFromRemote(
       timeoutMs: ctx.deps.refreshTimeoutMs
     })
   } catch (err) {
+    if (isTimeout(err)) {
+      return { ok: false, error: fetchTimeoutText(upstream, ctx.deps.refreshTimeoutMs) }
+    }
     return { ok: false, error: gitFailureLine(err) }
   }
 
@@ -296,6 +299,12 @@ async function refreshBaseFromRemote(
       await ctx.deps.run(repoPath, ['fetch', remote, `${remoteBranch}:${baseBranch}`], bounded)
     }
   } catch (err) {
+    if (isTimeout(err)) {
+      return {
+        ok: false,
+        error: fastForwardTimeoutText(baseBranch, upstream, ctx.deps.refreshTimeoutMs)
+      }
+    }
     return { ok: false, error: ffFailureLine(err, baseBranch, upstream) }
   }
   return { ok: true }
@@ -314,6 +323,28 @@ async function worktreeHosting(
   } catch {
     return null
   }
+}
+
+/**
+ * A limit as the timeout texts write it: `10 min` for a whole number of minutes
+ * past one, else seconds (`60 s`, `2 s`). The spec's texts read `60 s` for the
+ * refresh and `10 min` for the checkout (CRTO-02, CRTO-03, CRTO-10).
+ */
+// SPEC_DEVIATION: design.md's limitText gives minutes for any whole number of minutes,
+// which would print "1 min" for 60000 ms. Reason: the spec's texts, owner-confirmed,
+// read "60 s"; minutes start past one minute so both literals hold.
+function limitText(ms: number): string {
+  return ms > 60_000 && ms % 60_000 === 0 ? `${ms / 60_000} min` : `${ms / 1000} s`
+}
+
+/** The base fetch was killed by its limit (CRTO-02). */
+function fetchTimeoutText(upstream: string, ms: number): string {
+  return `Fetching ${upstream} timed out after ${limitText(ms)}. Retry, or uncheck "Update base branch from remote" to skip.`
+}
+
+/** The fast-forward, either form, was killed by its limit (CRTO-03). */
+function fastForwardTimeoutText(baseBranch: string, upstream: string, ms: number): string {
+  return `Fast-forwarding "${baseBranch}" to ${upstream} timed out after ${limitText(ms)}. Retry, or uncheck "Update base branch from remote" to skip.`
 }
 
 /** A non-fast-forward reads better as "diverged"; anything else keeps git's own line. */

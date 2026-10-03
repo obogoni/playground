@@ -14,7 +14,12 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sanitizeBranch, worktreeNameFor, worktreePathFor } from '../shared/worktrees'
 import type { DirRemovalResult } from './dir-remover'
-import { git as gitRunner, type GitRunner } from './git'
+import { git as gitRunner, gitFailureLine, type GitRunner } from './git'
+import {
+  removeReleasedFolder,
+  startWaitingRemote,
+  trackWaitingRemote
+} from './waiting-remote.fixture'
 import {
   changedFilesOf,
   CHECKOUT_TIMEOUT_MS,
@@ -1204,6 +1209,228 @@ describe('createWorktree — bounded calls (CRTO-01, CRTO-09)', () => {
     expect(optsOf('branch', '-D', 'feature/re')?.timeoutMs).toBeUndefined()
     expect(optsOf('worktree', 'add')).toEqual({ timeoutMs: 600000 })
     expectLocalReadsUnbounded()
+  })
+})
+
+/** Rejects the way `git()` does when its timeout kills git: `killed: true`. */
+const killed = (): Error => Object.assign(new Error('Command failed: killed'), { killed: true })
+
+/** True when `args` is exactly `match`. */
+const sameArgs = (args: string[], match: string[]): boolean =>
+  args.length === match.length && match.every((arg, i) => args[i] === arg)
+
+/**
+ * A runner whose `match` call never settles on its own: it rejects with
+ * `killed: true` only when its `timeoutMs` elapses, like `execFile`'s kill.
+ * Every other call goes to the real git without a limit, since the tests' limits
+ * of a few milliseconds are meant for the hung call alone.
+ */
+const hangingOn =
+  (...match: string[]): GitRunner =>
+  (cwd, args, opts) => {
+    if (!sameArgs(args, match)) return gitRunner(cwd, args)
+    return new Promise((_resolve, reject) => {
+      if (opts?.timeoutMs !== undefined) setTimeout(() => reject(killed()), opts.timeoutMs)
+    })
+  }
+
+/** A runner whose `match` call is killed at once, whatever its limit. */
+const killedAtOnce =
+  (...match: string[]): GitRunner =>
+  (cwd, args, opts) =>
+    sameArgs(args, match) ? Promise.reject(killed()) : gitRunner(cwd, args, opts)
+
+describe('createWorktree — refresh timeout (CRTO-02..04)', () => {
+  const FETCH_TEXT =
+    'Fetching origin/main timed out after 60 s. Retry, or uncheck "Update base branch from remote" to skip.'
+  const FF_TEXT =
+    'Fast-forwarding "main" to origin/main timed out after 60 s. Retry, or uncheck "Update base branch from remote" to skip.'
+  /** Limits of 20 ms for the never-settling runner; the texts then read `0.02 s`. */
+  const FAKE_LIMITS = { refreshTimeoutMs: 20, checkoutTimeoutMs: 20 }
+
+  let root: string
+  let origin: string
+  let repo: string
+
+  beforeEach(() => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-refresh-timeout-')))
+    origin = join(root, 'origin')
+    repo = join(root, 'repo')
+    git(root, 'init', '--bare', '-b', 'main', origin)
+    git(root, 'clone', origin, 'repo')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+    git(repo, 'push', '-u', 'origin', 'main')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  const branchResolves = (branch: string): boolean => {
+    try {
+      git(repo, 'rev-parse', '--verify', '--quiet', `refs/heads/${branch}`)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  it('ends the create on a hung fetch with the fetch text and makes nothing (CRTO-02)', async () => {
+    const create = createWorktreeWith({
+      ...REAL_CREATE_DEPS,
+      ...FAKE_LIMITS,
+      run: hangingOn('fetch', 'origin', 'main')
+    })
+
+    const result = await create(repo, 'feature/hung', 'main', undefined, true)
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'Fetching origin/main timed out after 0.02 s. Retry, or uncheck "Update base branch from remote" to skip.'
+    })
+    expect(existsSync(join(root, 'repo-feature-hung'))).toBe(false)
+    expect(branchResolves('feature/hung')).toBe(false)
+  })
+
+  it('ends the create on a hung merge --ff-only with the fast-forward text (CRTO-03)', async () => {
+    const create = createWorktreeWith({
+      ...REAL_CREATE_DEPS,
+      ...FAKE_LIMITS,
+      run: hangingOn('merge', '--ff-only', 'origin/main')
+    })
+
+    const result = await create(repo, 'feature/hung', 'main', undefined, true)
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'Fast-forwarding "main" to origin/main timed out after 0.02 s. Retry, or uncheck "Update base branch from remote" to skip.'
+    })
+    expect(existsSync(join(root, 'repo-feature-hung'))).toBe(false)
+    expect(branchResolves('feature/hung')).toBe(false)
+  })
+
+  it('ends the create on a hung fetch into an unchecked base with the fast-forward text (CRTO-03)', async () => {
+    git(repo, 'checkout', '-b', 'release')
+    git(repo, 'push', '-u', 'origin', 'release')
+    git(repo, 'checkout', 'main')
+    const create = createWorktreeWith({
+      ...REAL_CREATE_DEPS,
+      ...FAKE_LIMITS,
+      run: hangingOn('fetch', 'origin', 'release:release')
+    })
+
+    const result = await create(repo, 'feature/hung', 'release', undefined, true)
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'Fast-forwarding "release" to origin/release timed out after 0.02 s. Retry, or uncheck "Update base branch from remote" to skip.'
+    })
+    expect(existsSync(join(root, 'repo-feature-hung'))).toBe(false)
+    expect(branchResolves('feature/hung')).toBe(false)
+  })
+
+  it('keeps the existing branch at its tip when a recreate fetch hangs (CRTO-04)', async () => {
+    git(repo, 'checkout', '-b', 'feature/re')
+    writeFileSync(join(repo, 'a.txt'), 'branch-work', 'utf8')
+    git(repo, 'commit', '-am', 'branch work')
+    git(repo, 'checkout', 'main')
+    const tipBefore = git(repo, 'rev-parse', 'feature/re').trim()
+    const create = createWorktreeWith({
+      ...REAL_CREATE_DEPS,
+      ...FAKE_LIMITS,
+      run: hangingOn('fetch', 'origin', 'main')
+    })
+
+    const result = await create(repo, 'feature/re', 'main', undefined, true, 'recreate')
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'Fetching origin/main timed out after 0.02 s. Retry, or uncheck "Update base branch from remote" to skip.'
+    })
+    expect(git(repo, 'rev-parse', 'feature/re').trim()).toBe(tipBefore)
+    expect(existsSync(join(root, 'repo-feature-re'))).toBe(false)
+  })
+
+  it('reads 60 s in the fetch text with the real limit (CRTO-02)', async () => {
+    const create = createWorktreeWith({
+      ...REAL_CREATE_DEPS,
+      run: killedAtOnce('fetch', 'origin', 'main')
+    })
+
+    const result = await create(repo, 'feature/t', 'main', undefined, true)
+
+    expect(result).toEqual({ ok: false, error: FETCH_TEXT })
+  })
+
+  it('reads 60 s in the fast-forward text with the real limit (CRTO-03)', async () => {
+    const create = createWorktreeWith({
+      ...REAL_CREATE_DEPS,
+      run: killedAtOnce('merge', '--ff-only', 'origin/main')
+    })
+
+    const result = await create(repo, 'feature/t', 'main', undefined, true)
+
+    expect(result).toEqual({ ok: false, error: FF_TEXT })
+  })
+
+  it("keeps git's own line for a fetch that fails without a kill (WBR-02)", async () => {
+    git(repo, 'remote', 'set-url', 'origin', join(root, 'missing-remote'))
+    const direct = await gitRunner(repo, ['fetch', 'origin', 'main']).then(
+      () => new Error('the fetch succeeded'),
+      (e: unknown) => e
+    )
+
+    const result = await createWorktree(repo, 'feature/gone', 'main', undefined, true)
+
+    expect(result).toEqual({ ok: false, error: gitFailureLine(direct) })
+    expect(result.error).toMatch(/^fatal: /)
+  })
+})
+
+describe('createWorktree — a real fetch that waits for credentials (CRTO-02)', () => {
+  let root: string
+  let repo: string
+  let remote: Awaited<ReturnType<typeof startWaitingRemote>>
+
+  beforeEach(async () => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-waiting-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+    remote = await startWaitingRemote()
+    trackWaitingRemote(repo, remote.url)
+  })
+
+  afterEach(async () => {
+    await remote.close()
+    await removeReleasedFolder(root)
+  })
+
+  it('ends the create at the refresh limit with the fetch text and no worktree', async () => {
+    const create = createWorktreeWith({ ...REAL_CREATE_DEPS, refreshTimeoutMs: 2000 })
+
+    const result = await create(repo, 'feature/waiting', 'main', undefined, true)
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'Fetching origin/main timed out after 2 s. Retry, or uncheck "Update base branch from remote" to skip.'
+    })
+    expect(existsSync(join(root, 'repo-feature-waiting'))).toBe(false)
+    expect(git(repo, 'worktree', 'list', '--porcelain')).not.toContain('feature/waiting')
   })
 })
 

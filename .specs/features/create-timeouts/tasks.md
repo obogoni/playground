@@ -247,12 +247,14 @@ T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] Tests, runner that never settles on its own (the matched call rejects with `killed: true` only when its `timeoutMs` elapses; other calls go to the real `git`), limits of 20 ms: a hung fetch ends the create with `ok: false`, the fetch text, no target folder and no new branch; a hung `merge --ff-only` and a hung `fetch origin main:main` each end it with the fast-forward text; a hung fetch on the recreate path leaves the existing branch at its previous tip
-- [ ] Tests with the real limits and a runner whose matched call rejects at once with `killed: true`: the exact texts `Fetching origin/main timed out after 60 s. Retry, or uncheck "Update base branch from remote" to skip.` and `Fast-forwarding "main" to origin/main timed out after 60 s. Retry, or uncheck "Update base branch from remote" to skip.`
-- [ ] Test over real git with T1's fixture and `refreshTimeoutMs: 2000`: the create returns `Fetching origin/main timed out after 2 s. …` and creates no worktree
-- [ ] Test: a fetch that fails without a kill (unreachable remote) still returns git's own line (WBR-02 unchanged)
-- [ ] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts` then `npm test`
-- [ ] Test count: T4 count + the new tests
+- [x] Tests, runner that never settles on its own (the matched call rejects with `killed: true` only when its `timeoutMs` elapses; other calls go to the real `git`, unbounded), limits of 20 ms: a hung fetch ends the create with `ok: false`, the fetch text, no target folder and no new branch; a hung `merge --ff-only` and a hung `fetch origin main:main` (tested as `fetch origin release:release`) each end it with the fast-forward text; a hung fetch on the recreate path leaves the existing branch at its previous tip
+- [x] Tests with the real limits and a runner whose matched call rejects at once with `killed: true`: the exact texts `Fetching origin/main timed out after 60 s. Retry, or uncheck "Update base branch from remote" to skip.` and `Fast-forwarding "main" to origin/main timed out after 60 s. Retry, or uncheck "Update base branch from remote" to skip.`
+- [x] Test over real git with T1's fixture and `refreshTimeoutMs: 2000`: the create returns `Fetching origin/main timed out after 2 s. …` and creates no worktree
+- [x] Test: a fetch that fails without a kill (unreachable remote) still returns git's own line (WBR-02 unchanged)
+- [x] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts` then `npm test` (122 files, 2641 passed; lint 0 errors, 18 warnings; typecheck exit 0)
+- [x] Test count: T4 count + the new tests (+8)
+
+**Notes**: `limitText` deviates from design.md (`SPEC_DEVIATION` marker in `worktree-manager.ts`): the design's rule (minutes for any whole number of minutes) prints `1 min` for 60000 ms, against the spec's `60 s`. Minutes start past one minute, so `60 s` and `10 min` both hold; 20 ms reads `0.02 s` and 2000 ms `2 s`.
 
 **Tests**: unit
 **Gate**: quick
