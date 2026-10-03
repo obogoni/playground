@@ -626,16 +626,61 @@ the seed, the launch, the sessions, the index loop, the wait, the shutdown, the 
 
 **Done when** (each a named run, its result written here):
 
-- [ ] Run A, no build: with `out/` renamed away, the bench exits 2 naming `npx electron-vite build` and starts no process (PDIAG-28)
-- [ ] Run B, `--sessions 1 --minutes 1 --json b.json`: prints `startup`, `spawn`, `steady 1`, `worst`, the spawn round trip and four target lines; `b.json` holds options, lines, rows, worst, targets and `spawnMs`; the run takes under 4 minutes (PDIAG-31, 35..38)
-- [ ] Run B, observed while it runs: the app's command line carries the throwaway `--user-data-dir` and the three flags; `Get-CimInstance Win32_Process` lists no `claude` process; the session's command line is `bench-tui.mjs` (PDIAG-29, 32)
-- [ ] Run B, the seed: `git worktree list` in the kept seed (`--keep` on a rerun) lists `bench-wt-1`; the throwaway `config.json` holds one workspace (PDIAG-30)
-- [ ] Run B, cleanup: no `pg-bench-` folder in the temp dir and no `electron` process left (PDIAG-39)
-- [ ] Run C, `--sessions 0 --minutes 1`: completes, the `spawn` row is printed, the append target reads `n/a`
-- [ ] Run D, `--sessions 1 --minutes 1 --index-interval 100`: the steady row's `status/s` and `wt:status` are above 0, where Run B's are 0; skipped writes printed (PDIAG-34)
-- [ ] Run E, Ctrl+C during the steady minute: the app's process tree is gone within 30 s and the temp folder is removed (PDIAG-48)
-- [ ] PDIAG-49 and 50 read against the code (the 30 s `taskkill`, the `minutes + 3` deadline exiting 1), since neither can be provoked without a broken build
-- [ ] Gate check passes: `npm run lint` and `npx electron-vite build`
+- [x] Run A, no build: with `out/` renamed away, the bench exits 2 naming `npx electron-vite build` and starts no process (PDIAG-28)
+- [x] Run B, `--sessions 1 --minutes 1 --json b.json`: prints `startup`, `spawn`, `steady 1`, `worst`, the spawn round trip and four target lines; `b.json` holds options, lines, rows, worst, targets and `spawnMs`; the run takes under 4 minutes (PDIAG-31, 35..38)
+- [x] Run B, observed while it runs: the app's command line carries the throwaway `--user-data-dir` and the three flags; `Get-CimInstance Win32_Process` lists no `claude` process; the session's command line is `bench-tui.mjs` (PDIAG-29, 32)
+- [x] Run B, the seed: `git worktree list` in the kept seed (`--keep` on a rerun) lists `bench-wt-1`; the throwaway `config.json` holds one workspace (PDIAG-30)
+- [x] Run B, cleanup: no `pg-bench-` folder in the temp dir and no `electron` process left (PDIAG-39)
+- [x] Run C, `--sessions 0 --minutes 1`: completes, the `spawn` row is printed, the append target reads `n/a`
+- [x] Run D, `--sessions 1 --minutes 1 --index-interval 100`: the steady row's `status/s` and `wt:status` are above 0, where Run B's are 0; skipped writes printed (PDIAG-34)
+- [x] Run E, Ctrl+C during the steady minute: the app's process tree is gone within 30 s and the temp folder is removed (PDIAG-48)
+- [x] PDIAG-49 and 50 read against the code (the 30 s `taskkill`, the `minutes + 3` deadline exiting 1), since neither can be provoked without a broken build
+- [x] Gate check passes: `npm run lint` and `npx electron-vite build`
+
+**Results (2026-10-03, built app at `a08c4c2` plus this task's script; scratch drivers for the
+observation, the leftover check and Run E, not repo files; the owner's installed Playground was running
+throughout and was never touched)**:
+
+- **Run A**: `out/` renamed to `out.away`; `bench-sessions: no built app (out/main/index.js). Run
+  \`npx electron-vite build\` first.`, exit 2; no `pg-bench-` folder created (the temp folder is made only
+  after the check) and no electron process from the worktree.
+- **Run B** (3 min 6 s wall): line 1 after 61 s; printed `startup`, `spawn`, `steady 1`, `worst`, `spawn:
+  longest sessions:spawn round trip 90 ms` and four target lines (loop 17.2 `n/a`, append 0.049 PASS,
+  status 0 `n/a`, overlap 0 PASS); steady 1: 1,310 chunks, 81.6 KB/s, `status/s` 0, `wt:status` 0.
+  `b.json` holds `options, lines (3), rows, worst, targets, spawnMs`. While it ran: the app's main command
+  line was `electron.exe . --user-data-dir=<temp>\pg-bench-…\user-data --remote-debugging-port=9334
+  --disable-renderer-backgrounding --disable-backgrounding-occluded-windows
+  --disable-background-timer-throttling`; the session was `pwsh.exe -NoExit -Command "& "<node>"
+  "<worktree>\scripts\bench-tui.mjs" --fps 20 --rows 30 --seed 1"` with its `node.exe … bench-tui.mjs`
+  child; the two `claude.exe` processes on the machine were both children of the owner's own
+  `playground.exe` (ancestry traced), none in the bench app's tree. Seed while running: `git worktree
+  list` showed `app [main]` and `bench-wt-1 [bench/1]`; `config.json` one workspace. Afterwards no
+  `pg-bench-` folder, no electron from the worktree, no `bench-tui` process.
+- **Run C** (`--sessions 0 --minutes 1 --keep`): completed, exit 0; the `spawn` row printed with zeros and
+  `spawn: no session opened`; append target `0.000 n/a`. The kept seed: `git worktree list` lists `app`
+  and `bench-wt-1`, 500 tracked files, `config.json` holds one workspace (`bench`) after the app ran;
+  `kept: <temp>\pg-bench-…` printed; deleted by hand after the check.
+- **Run D** (`--sessions 1 --minutes 1 --index-interval 100`, port 9335): steady 1 `status/s` 4,
+  `wt:status` 176, `recounts` 180, git 180, against Run B's 0 / 0 / 0 / 0; status target `4 FAIL`;
+  `index loop: 1073 writes, 0 skipped` printed.
+- **Run E**: the bench run in a real ConPTY (`node-pty`), `\x03` typed 90 s after line 1 (inside the
+  steady minute): `bench-sessions: interrupted, killing the app and cleaning up`, exit 130; every process
+  carrying the run's temp folder and the `bench-tui` process gone 3.9 s after the keystroke; the temp
+  folder removed.
+- **PDIAG-49, read**: after `window.close()` the bench races the exit against `EXIT_TIMEOUT_MS = 30_000`
+  (`scripts/bench-sessions.mjs:36`, `:362`) and on `timeout` runs `taskkill /pid <pid> /T /F` (`:367`)
+  before printing. **PDIAG-50, read**: the steady wait's deadline is `firstLineAt + (minutes + 3) *
+  MINUTE_MS` (`:343`); short of `minutes + 2` lines, the summary of the lines it has is printed, then
+  `fail(...)` exits 1 (`:389`) and the `exit` handler cleans up.
+- Gate: `npm run lint` exit 0, 18 warnings; `npx electron-vite build` passes.
+
+**Notes on the script against design.md**: the session line is `& "<node>" "<bench-tui.mjs>" ...`, with
+the call operator, since `pwsh -Command` only echoes a quoted string without it (`spawn-plan.ts`). Four
+harness guards design.md does not list: the bench refuses (exit 1) when its CDP port already answers, so
+it can never drive another app; line 1 has a 3-minute deadline from launch; a CDP call gives up after
+60 s; the header's commit carries `-dirty` when the tree has changes (a mutant run says so). The seed's
+git runs with `core.autocrlf=false`, so its 500 files raise no line-ending warnings. No DSR answer is
+needed: chunks flowed from the first session with nothing typed.
 
 **Tests**: manual
 **Gate**: manual

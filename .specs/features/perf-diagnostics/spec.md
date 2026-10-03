@@ -292,18 +292,18 @@ without asking.
 | PDIAG-25 | P1: activity — AC 25 | T4, T11 | Done (T4, T11) |
 | PDIAG-26 | P1: activity — AC 26 | T4, T11 | Done (T4, T11) |
 | PDIAG-27 | P1: activity — AC 27 | T4, T10 | Done (T4, T10) |
-| PDIAG-28 | P1: bench — AC 28 | T15 | Pending |
-| PDIAG-29 | P1: bench — AC 29 | T15 | Pending |
-| PDIAG-30 | P1: bench — AC 30 | T15 | Pending |
-| PDIAG-31 | P1: bench — AC 31 | T15 | Pending |
-| PDIAG-32 | P1: bench — AC 32 | T15 | Pending |
+| PDIAG-28 | P1: bench — AC 28 | T15 | Done (T15) |
+| PDIAG-29 | P1: bench — AC 29 | T15 | Done (T15) |
+| PDIAG-30 | P1: bench — AC 30 | T15 | Done (T15) |
+| PDIAG-31 | P1: bench — AC 31 | T15 | Done (T15) |
+| PDIAG-32 | P1: bench — AC 32 | T15 | Done (T15) |
 | PDIAG-33 | P1: bench — AC 33 | T13 | Done (T13) |
-| PDIAG-34 | P1: bench — AC 34 | T15, T16 | Pending |
-| PDIAG-35 | P1: bench — AC 35 | T15 | Pending |
+| PDIAG-34 | P1: bench — AC 34 | T15, T16 | In progress (T15) |
+| PDIAG-35 | P1: bench — AC 35 | T15 | Done (T15) |
 | PDIAG-36 | P1: bench — AC 36 | T14 | Done (T14) |
-| PDIAG-37 | P1: bench — AC 37 | T14, T15 | In progress (T14) |
-| PDIAG-38 | P1: bench — AC 38 | T15 | Pending |
-| PDIAG-39 | P1: bench — AC 39 | T15 | Pending |
+| PDIAG-37 | P1: bench — AC 37 | T14, T15 | Done (T14, T15) |
+| PDIAG-38 | P1: bench — AC 38 | T15 | Done (T15) |
+| PDIAG-39 | P1: bench — AC 39 | T15 | Done (T15) |
 | PDIAG-40 | P1: baseline — AC 40 | T17 | Pending |
 | PDIAG-41 | P1: baseline — AC 41 | T14, T16 | In progress (T14) |
 | PDIAG-42 | P1: baseline — AC 42 | T17 | Pending |
@@ -312,9 +312,9 @@ without asking.
 | PDIAG-45 | Edge: a git process across a flush | T3 | Done (T3) |
 | PDIAG-46 | Edge: a session that exits mid-window | T4 | Done (T4) |
 | PDIAG-47 | Edge: a path with no last segment | T3 | Done (T3) |
-| PDIAG-48 | Edge: Ctrl+C | T15 | Pending |
-| PDIAG-49 | Edge: the app does not exit | T15 | Pending |
-| PDIAG-50 | Edge: lines never arrive | T15 | Pending |
+| PDIAG-48 | Edge: Ctrl+C | T15 | Done (T15) |
+| PDIAG-49 | Edge: the app does not exit | T15 | Done (T15) |
+| PDIAG-50 | Edge: lines never arrive | T15 | Done (T15) |
 | PDIAG-51 | Edge: `--sessions 0` | T14, T17 | In progress (T14) |
 
 **Coverage:** 51 total, 51 mapped to tasks, 0 unmapped.
