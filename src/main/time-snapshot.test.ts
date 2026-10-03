@@ -102,7 +102,7 @@ describe('readGitAsync', () => {
     )
   })
 
-  it('answers nulls outside a repository, like readGit (TIME-12)', async () => {
+  it('answers nulls outside a repository (TIME-12)', async () => {
     await expect(readGitAsync(dir)).resolves.toEqual({ gitCommonDir: null, branch: null })
   })
 })

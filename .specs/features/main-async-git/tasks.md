@@ -134,12 +134,12 @@ before figures, and write the stop-rule verdict.
 
 **Done when**:
 
-- [ ] `grep -rn "readGit\b" src` finds no definition or call of the synchronous `readGit`
-- [ ] `grep -nE "execFileSync|spawnSync|execSync" src/main/time-snapshot.ts` finds nothing (MAGIT-05)
-- [ ] The doc comment of `readGitAsync` no longer points at `readGit`
-- [ ] `git diff` of `time-snapshot.test.ts` changes one test title and no `expect` line
-- [ ] Gate check passes: `npx vitest run src/main/time-snapshot.test.ts`, then the full gate
-- [ ] Test count: T1's 2769, unchanged
+- [x] `grep -rn "readGit\b" src` finds no definition or call of the synchronous `readGit`
+- [x] `grep -nE "execFileSync|spawnSync|execSync" src/main/time-snapshot.ts` finds nothing (MAGIT-05)
+- [x] The doc comment of `readGitAsync` no longer points at `readGit`
+- [x] `git diff` of `time-snapshot.test.ts` changes one test title and no `expect` line
+- [x] Gate check passes: `npx vitest run src/main/time-snapshot.test.ts`, then the full gate
+- [x] Test count: T1's 2769, unchanged
 
 **Tests**: none
 **Gate**: full

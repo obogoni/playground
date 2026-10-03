@@ -270,7 +270,7 @@ ships.
 | MAGIT-02 | P1: open — AC 2 | #154 | Delivered (PERF-21) |
 | MAGIT-03 | P1: open — AC 3 | #154 | Delivered (PERF-21) |
 | MAGIT-04 | P1: open — AC 4 | #154 | Delivered (PERF-21) |
-| MAGIT-05 | P1: open — AC 5 | T2 | Pending |
+| MAGIT-05 | P1: open — AC 5 | T2 | Done (T2) |
 | MAGIT-06 | P1: open — AC 6 | #154 | Delivered (PERF-21) |
 | MAGIT-07 | P1: open — AC 7 | #154 | Delivered (PERF-21) |
 | MAGIT-08 | P1: fields — AC 8 | #154 | Delivered (PERF-21) |
@@ -294,13 +294,13 @@ ships.
 | MAGIT-26 | P1: backoff — AC 26 | T4 | Pending |
 | MAGIT-27 | P1: backoff — AC 27 | T3 | Pending |
 | MAGIT-28 | P1: backoff — AC 28 | T4 | Pending |
-| MAGIT-29 | P1: measured — AC 29 | T1 | Pending |
-| MAGIT-30 | P1: measured — AC 30 | T1 | Pending |
+| MAGIT-29 | P1: measured — AC 29 | T1 | Done (T1) |
+| MAGIT-30 | P1: measured — AC 30 | T1 | Done (T1) |
 | MAGIT-31 | P1: measured — AC 31 | — | Dropped 2026-10-03 |
 | MAGIT-32 | P1: measured — AC 32 | — | Dropped 2026-10-03 |
 | MAGIT-33 | P1: measured — AC 33 | — | Dropped 2026-10-03 |
 | MAGIT-34 | P1: measured — AC 34 | — | Dropped 2026-10-03 |
-| MAGIT-35 | P1: measured — AC 35 | T1 | Pending |
+| MAGIT-35 | P1: measured — AC 35 | T1 | Done (T1) |
 | MAGIT-36 | P2: specs — AC 36 | T5 | Pending |
 | MAGIT-37 | P2: specs — AC 37 | T5 | Pending |
 | MAGIT-38 | Edge: open and close within 1 s | #154 | Delivered (PERF-21) |
