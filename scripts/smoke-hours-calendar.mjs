@@ -64,8 +64,11 @@
  *      hatched orange; on the seeded Sunday the first hatched task's bar,
  *      legend swatch and drawer swatch show 45° stripes of its hue, 2 px in
  *      every 6 px, over the hue mixed 20% with white, in both themes, and its
- *      solid twin shows none; both swatches are 14 × 14 px (HHAT-08, 17, 18,
- *      21, 28, 29)
+ *      solid twin shows none; both swatches are 14 × 14 px; pointing at or
+ *      focusing that hatched task's chip, drawer header or bar leaves only its
+ *      bars at full opacity, clicking its chip shows only the seeded Sunday
+ *      and its × every day again, and no bar changes its look throughout
+ *      (HHAT-08, 17, 18, 21, 24..26, 28, 29)
  *
  * NOT automatable here: keyboard focus showing the tooltip, and the two-theme
  * look. The ad-hoc sessions carry no task, so every task look is read on the
@@ -437,6 +440,49 @@ const before = await invoke('time:snapshot')
 const knownPeriods = new Set(before.periods.map((p) => p.id))
 const sessionIds = []
 const todayHeader = dayHeader(todayMidnight)
+
+// Probes for focusing a task (sections 12 and 16), evaluated in the page.
+const labelOf = (title) =>
+  evaluate(
+    `[...document.querySelectorAll('.hleg-label')].map(l => l.textContent).find(t => t.includes(${JSON.stringify(title)})) ?? null`
+  )
+const chipOf = (label) =>
+  `[...document.querySelectorAll('.hleg-chip')].find(c => c.querySelector('.hleg-label').textContent === ${JSON.stringify(label)})`
+const barOf = (label) =>
+  `[...document.querySelectorAll('.hcal-bar')].find(b => b.getAttribute('aria-label').startsWith(${JSON.stringify(`${label}, `)}))`
+const rowOf = (label) =>
+  `[...document.querySelectorAll('.hours-drawer .hours-group')].find(g => g.querySelector('.hours-group-label').textContent === ${JSON.stringify(label)})?.querySelector('.hours-group-head')`
+const bars = () =>
+  evaluate(
+    `(() => { ${LOOK_SIG}; return [...document.querySelectorAll('.hcal-bar')].map(b => ({ label: b.getAttribute('aria-label').split(', ')[0], look: sig(b), opacity: Number(getComputedStyle(b).opacity) })) })()`
+  )
+/** Only `label`'s bars at full opacity, every other of the fourteen at 30%. */
+const onlyFull = (list, label) =>
+  list.length === 14 &&
+  list.some((b) => b.label === label) &&
+  list.every((b) => (b.label === label ? b.opacity === 1 : Math.abs(b.opacity - 0.3) < 0.01))
+const pointAt = async (element) => {
+  const at = await evaluate(
+    `(() => { const e = ${element}; if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } })()`
+  )
+  if (at) await send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...at })
+  await sleep(400)
+  return at !== null
+}
+const pointAway = async () => {
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 2, y: 2 })
+  await sleep(400)
+}
+// A bar's look is its fill and its stripes (`LOOK_SIG`), so a pick or a fade
+// that strips a hatched bar's stripes changes it.
+const lookOf = (list) => new Map(list.map((b) => [b.label, b.look]))
+const sameLooks = (list, reference) =>
+  list.length > 0 && list.every((b) => reference.get(b.label) === b.look)
+const pressedChips = () =>
+  evaluate(
+    `[...document.querySelectorAll('.hleg-chip')].filter(c => c.querySelector('.hleg-pick').getAttribute('aria-pressed') === 'true').map(c => ({ label: c.querySelector('.hleg-label').textContent, total: c.querySelector('.hleg-total').textContent, swatch: [...c.querySelector('.hleg-swatch').classList].find(x => x.startsWith('role-')), clear: c.querySelector('.hleg-clear') !== null }))`
+  )
+const allFull = (list) => list.length === 14 && list.every((b) => b.opacity === 1)
 
 /** Sections 1 to 12, on the calendar the setup opened. */
 async function calendarSections() {
@@ -927,52 +973,11 @@ async function calendarSections() {
   )
 
   // 12. Hover and filter by task, in the seeded week (HTF-07..15).
-  const labelOf = (title) =>
-    evaluate(
-      `[...document.querySelectorAll('.hleg-label')].map(l => l.textContent).find(t => t.includes(${JSON.stringify(title)})) ?? null`
-    )
   const [taskA, taskB, taskC, taskD] = await Promise.all(
     SEED_TITLES.slice(0, 4).map((title) => labelOf(title))
   )
-  const chipOf = (label) =>
-    `[...document.querySelectorAll('.hleg-chip')].find(c => c.querySelector('.hleg-label').textContent === ${JSON.stringify(label)})`
-  const barOf = (label) =>
-    `[...document.querySelectorAll('.hcal-bar')].find(b => b.getAttribute('aria-label').startsWith(${JSON.stringify(`${label}, `)}))`
-  const rowOf = (label) =>
-    `[...document.querySelectorAll('.hours-drawer .hours-group')].find(g => g.querySelector('.hours-group-label').textContent === ${JSON.stringify(label)})?.querySelector('.hours-group-head')`
-  const bars = () =>
-    evaluate(
-      `(() => { ${LOOK_SIG}; return [...document.querySelectorAll('.hcal-bar')].map(b => ({ label: b.getAttribute('aria-label').split(', ')[0], look: sig(b), opacity: Number(getComputedStyle(b).opacity) })) })()`
-    )
-  /** Only `label`'s bars at full opacity, every other of the fourteen at 30%. */
-  const onlyFull = (list, label) =>
-    list.length === 14 &&
-    list.some((b) => b.label === label) &&
-    list.every((b) => (b.label === label ? b.opacity === 1 : Math.abs(b.opacity - 0.3) < 0.01))
   const opacities = (list) =>
     [...new Set(list.map((b) => `${b.label === taskA ? 'A' : '·'}${b.opacity}`))].join(' ')
-  const pointAt = async (element) => {
-    const at = await evaluate(
-      `(() => { const e = ${element}; if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } })()`
-    )
-    if (at) await send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...at })
-    await sleep(400)
-    return at !== null
-  }
-  const pointAway = async () => {
-    await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 2, y: 2 })
-    await sleep(400)
-  }
-  // A bar's look is its fill and its stripes (`LOOK_SIG`), so a pick or a fade
-  // that strips a hatched bar's stripes changes it.
-  const lookOf = (list) => new Map(list.map((b) => [b.label, b.look]))
-  const sameLooks = (list, reference) =>
-    list.length > 0 && list.every((b) => reference.get(b.label) === b.look)
-  const pressedChips = () =>
-    evaluate(
-      `[...document.querySelectorAll('.hleg-chip')].filter(c => c.querySelector('.hleg-pick').getAttribute('aria-pressed') === 'true').map(c => ({ label: c.querySelector('.hleg-label').textContent, total: c.querySelector('.hleg-total').textContent, swatch: [...c.querySelector('.hleg-swatch').classList].find(x => x.startsWith('role-')), clear: c.querySelector('.hleg-clear') !== null }))`
-    )
-  const allFull = (list) => list.length === 14 && list.every((b) => b.opacity === 1)
 
   await pointAway()
   const rest = await bars()
@@ -1567,7 +1572,7 @@ async function dialogSection() {
   )
 }
 
-/** 16. Spread looks and the hatch (HHAT-08, 17, 18, 21, 28, 29). */
+/** 16. Spread looks, the hatch, and focus on a hatched task (HHAT-08, 17, 18, 21, 24..26, 28, 29). */
 async function looksSection() {
   const seedStart = new Date(before.periods.find((p) => p.id === seedId(0)).start)
   const seedHeader = dayHeader(
@@ -1655,6 +1660,105 @@ async function looksSection() {
     'the legend and drawer swatches measure 14 × 14 px',
     sizes.every((p) => p && Math.abs(p.w - 14) < 0.01 && Math.abs(p.h - 14) < 0.01),
     sizes.map((p) => (p ? `${p.w}×${p.h}` : 'missing')).join(', ')
+  )
+
+  // Focus on the hatched task, as section 12 does for solid ones (HHAT-24..26).
+  const hatched = await labelOf(hatchedTitle)
+  const shown = (list) =>
+    [...new Set(list.map((b) => `${b.label === hatched ? 'H' : '·'}${b.opacity}`))].join(' ')
+  await pointAway()
+  const rest = await bars()
+  const looks = lookOf(rest)
+  const pointedChip = await pointAt(chipOf(hatched))
+  const chipHover = await bars()
+  await pointAway()
+  const chipLeft = await bars()
+  check(
+    "pointing at the hatched task's chip leaves only its bars at full opacity, and leaving restores them",
+    Boolean(hatched) &&
+      allFull(rest) &&
+      pointedChip &&
+      onlyFull(chipHover, hatched) &&
+      allFull(chipLeft),
+    `${hatched}: ${shown(chipHover)} / ${shown(chipLeft)}`
+  )
+  // The ninth of fourteen groups sits below the drawer's fold.
+  await evaluate(`${rowOf(hatched)}?.scrollIntoView({ block: 'center' }), true`)
+  await sleep(200)
+  const pointedRow = await pointAt(rowOf(hatched))
+  const rowHover = await bars()
+  await pointAway()
+  const rowLeft = await bars()
+  const pointedBar = await pointAt(barOf(hatched))
+  const barHover = await bars()
+  await pointAway()
+  const barLeft = await bars()
+  check(
+    "pointing at the hatched task's drawer header or bar does the same",
+    pointedRow &&
+      onlyFull(rowHover, hatched) &&
+      allFull(rowLeft) &&
+      pointedBar &&
+      onlyFull(barHover, hatched) &&
+      allFull(barLeft),
+    `row ${pointedRow} ${shown(rowHover)}, bar ${pointedBar} ${shown(barHover)}`
+  )
+  await evaluate(`${chipOf(hatched)}?.querySelector('.hleg-pick')?.focus(), true`)
+  await sleep(400)
+  const chipFocus = await bars()
+  await evaluate(`document.activeElement.blur(), true`)
+  await sleep(400)
+  const chipBlurred = await bars()
+  await evaluate(`${barOf(hatched)}?.focus(), true`)
+  await sleep(400)
+  const barFocus = await bars()
+  await evaluate(`document.activeElement.blur(), true`)
+  await sleep(400)
+  const barBlurred = await bars()
+  check(
+    "keyboard focus on the hatched task's chip or bar fades the other tasks, and leaving restores them",
+    onlyFull(chipFocus, hatched) &&
+      allFull(chipBlurred) &&
+      onlyFull(barFocus, hatched) &&
+      allFull(barBlurred),
+    `chip ${shown(chipFocus)}, bar ${shown(barFocus)}`
+  )
+  await evaluate(`${chipOf(hatched)}?.querySelector('.hleg-pick')?.click(), true`)
+  await sleep(400)
+  const pickedHeads = await headLabels()
+  const picked = await bars()
+  const pressed = await pressedChips()
+  check(
+    "clicking the hatched task's chip shows only the seeded Sunday, the chip selected with its ×",
+    pickedHeads.length === 1 &&
+      pickedHeads[0].startsWith(seedHeader) &&
+      pressed.length === 1 &&
+      pressed[0].label === hatched &&
+      pressed[0].clear &&
+      onlyFull(picked, hatched),
+    `${pickedHeads.map((l) => l.slice(0, 16)).join(' | ')}; ${JSON.stringify(pressed)}`
+  )
+  await evaluate(`${chipOf(hatched)}?.querySelector('.hleg-clear')?.click(), true`)
+  await sleep(400)
+  const clearedHeads = await headLabels()
+  const cleared = await bars()
+  const clearedPressed = await pressedChips()
+  check(
+    'its × shows every day again',
+    pickedHeads.length === 1 &&
+      clearedHeads.length === 6 &&
+      clearedPressed.length === 0 &&
+      allFull(cleared),
+    `${pickedHeads.length} day picked, ${clearedHeads.length} after ×`
+  )
+  check(
+    'no bar changes its look while the hatched task is pointed at, focused, picked or cleared',
+    [chipHover, rowHover, barHover, chipFocus, barFocus, picked, cleared].every((list) =>
+      sameLooks(list, looks)
+    ) &&
+      looks.size === 14 &&
+      new Set(looks.values()).size === 14,
+    `${looks.size} bars, ${new Set(looks.values()).size} looks`
   )
 }
 

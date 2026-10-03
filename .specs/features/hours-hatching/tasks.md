@@ -468,9 +468,9 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Seen failing first on a legend mutant that reports no hover for a hatched chip (`onHover(e.role.endsWith('-hatched') ? null : e.groupKey)`) and on one that ignores a click on it, each through the `.orig` script
-- [ ] The full drive passes on the seeded app, sections 1 to 16
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Seen failing first on a legend mutant that reports no hover for a hatched chip (`onHover(e.role.endsWith('-hatched') ? null : e.groupKey)`) and on one that ignores a click on it, each through the `.orig` script (2026-10-03, `SMOKE_ONLY=looks`, fresh seed and launch each: the hover mutant, on the chip's mouse enter and focus, failed only the chip-pointing and keyboard-focus checks; the click mutant failed only the pick check and the × check, which requires the pick first; the real build passed 12/12; `git status` unchanged after each. The first real run failed the drawer-header check because the ninth group sits below the drawer's fold; the check now scrolls it into view first)
+- [x] The full drive passes on the seeded app, sections 1 to 16 (85/85)
+- [x] Gate check passes: `npm run lint` (warning count unchanged) (0 errors, 18 warnings)
 
 **Tests**: manual
 **Gate**: manual
