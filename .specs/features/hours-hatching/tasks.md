@@ -340,7 +340,8 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Every superseded HTF item names its replacement; HTF-03, 05, 06 and 07..15 stay untouched
+- [x] Every superseded HTF item names its replacement; HTF-03, 05, 06 and 07..15 stay untouched (Out of Scope row, HTF-01 → HHAT-14, 15; HTF-02 → HHAT-03; HTF-04 → HHAT-12; HTF-16 → HHAT-27; all under AD-054)
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/hours-calendar.test.ts` then `npm test` (55 and 2522 passing)
 
 **Tests**: none
 **Gate**: quick

@@ -234,9 +234,9 @@ same search held 14.6 normal-vision with 7.8 CVD. The WARN band is legal with th
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| HHAT-01 | P1: neighbours, AC 1 | Execute | Implemented: T1, T3 |
+| HHAT-01 | P1: neighbours, AC 1 | Execute | Implemented: T1, T3, T10 |
 | HHAT-02 | P1: neighbours, AC 2 | Execute | Implemented: T2 |
-| HHAT-03 | P1: neighbours, AC 3 | Execute | Implemented: T2 |
+| HHAT-03 | P1: neighbours, AC 3 | Execute | Implemented: T2, T10 |
 | HHAT-04 | P1: neighbours, AC 4 | Execute | Implemented: T2 |
 | HHAT-05 | P1: neighbours, AC 5 | Execute | Implemented: T2 |
 | HHAT-06 | P1: neighbours, AC 6 | Execute | Implemented: T2 |
@@ -245,7 +245,7 @@ same search held 14.6 normal-vision with 7.8 CVD. The WARN band is legal with th
 | HHAT-09 | P1: own look, AC 9 | Execute | Implemented: T2 |
 | HHAT-10 | P1: own look, AC 10 | Execute | Implementing: T2 done; T12 |
 | HHAT-11 | P1: same day, AC 11 | Execute | Implemented: T2 |
-| HHAT-12 | P1: same day, AC 12 | Execute | Implemented: T2 |
+| HHAT-12 | P1: same day, AC 12 | Execute | Implemented: T2, T10 |
 | HHAT-13 | P1: same day, AC 13 | Execute | Implemented: T2 |
 | HHAT-14 | P1: colours, AC 14 | Execute | Implementing: T3 done; T12 |
 | HHAT-15 | P1: colours, AC 15 | Execute | Implementing: T3 done; T12 |
@@ -260,7 +260,7 @@ same search held 14.6 normal-vision with 7.8 CVD. The WARN band is legal with th
 | HHAT-24 | P2: nothing moves, AC 24 | Tasks | In Tasks (T15) |
 | HHAT-25 | P2: nothing moves, AC 25 | Tasks | In Tasks (T15) |
 | HHAT-26 | P2: nothing moves, AC 26 | Tasks | In Tasks (T13) |
-| HHAT-27 | P2: smoke, AC 27 | Tasks | In Tasks (T12) |
+| HHAT-27 | P2: smoke, AC 27 | Execute | Implementing: T10 done; T12 |
 | HHAT-28 | P2: smoke, AC 28 | Tasks | In Tasks (T11, T14) |
 | HHAT-29 | P2: smoke, AC 29 | Tasks | In Tasks (T14) |
 
