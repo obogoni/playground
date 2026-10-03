@@ -13,6 +13,27 @@ off about six git processes per event, at about 330 ms per `git status` and 150 
 on a large repository. A window focus also recounts every worktree of every workspace at once, with no
 limit. Upstream issue #149 is the owner-approved scope; it measures with #147's bench.
 
+## Dependencies
+
+**Depends on #147.** This feature executes only after #147 (diagnostics log and bench, branch
+`feature/perf-diagnostics`) has executed. Its stop points (RCNT-35, RCNT-36) and its target figures
+(RCNT-32..34) are read with that bench, so no task here starts before it exists. Status on 2026-10-03:
+#147 is planned and not executed, so this feature is paused.
+
+**Overlap with upstream PR #154** (merged 2026-10-01, after this plan was written on `d4a3da9`). It
+covers part of this spec and must be reconciled at T1, when this branch is rebased:
+
+| This spec | Covered by #154 | Left for this feature |
+| --------- | --------------- | --------------------- |
+| RCNT-19..21, the tree keeps its identity when a recount changes nothing | PERF-11 (`patchWorktreeStatus` returns the same tree) | Check the tests against AC 20 and 21; likely nothing |
+| RCNT-22..25, the status bar re-reads only for its own worktree | PERF-12, PERF-13, AD-052 (amends SCRF-03 with `treeRevision` and `onRecounted`) | SCRF-03 is already amended by AD-052, so this feature no longer supersedes it; reconcile with AD-052 |
+| RCNT-26, Files Commits list follows `tree:get` only | Not checked | Check against main at T1 |
+| RCNT-16, at most 3 recounts at once | PERF-22: every `git()` call is paced, at most 4 processes at once, across all callers | Decide whether the scheduler's pool of 3 stays on top of the global cap of 4 |
+| RCNT-01..15, RCNT-17, RCNT-18, the per-worktree scheduler | Not covered (#154 says so) | All of it |
+
+At T1 the tasks for the covered rows are dropped or reduced, and the plan is re-validated against main
+before T2.
+
 ## Goals
 
 - [ ] Under a continuous index rewrite, main starts at most one `git status` per worktree per second, and never two git processes on one worktree at once (bench, `--index-interval 100`)
