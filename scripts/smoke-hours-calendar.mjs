@@ -59,12 +59,19 @@
  *      #9201 chosen records 9201 with the flag on `feature/9202-seed` and sits
  *      under #9201; its strip's From branch records 9202 with no flag and moves
  *      it under #9202 (HTSK-07..11, 13, 36)
+ *  16. on the spread week, five weeks back, no two neighbouring legend chips
+ *      look alike and the chips read eight solids, then hatched blue and
+ *      hatched orange; on the seeded Sunday the first hatched task's bar,
+ *      legend swatch and drawer swatch show 45° stripes of its hue, 2 px in
+ *      every 6 px, over the hue mixed 20% with white, in both themes, and its
+ *      solid twin shows none; both swatches are 14 × 14 px (HHAT-08, 17, 18,
+ *      21, 28, 29)
  *
  * NOT automatable here: keyboard focus showing the tooltip, and the two-theme
- * look. The ad-hoc sessions carry no task, so every task colour is read on the
- * seeded Sunday.
+ * look. The ad-hoc sessions carry no task, so every task look is read on the
+ * seeded Sunday and the spread week.
  *
- * Verify by hand (sections 13 to 15 cannot reach these):
+ * Verify by hand (sections 13 to 16 cannot reach these):
  *   - the picker's typed lookup: a work item number shows one `{type} #{id}
  *     {title}` row, a bad one shows main's error text, and choosing the row
  *     pins nothing (HTSK-02..05); the smoke never types there, since it would
@@ -72,6 +79,7 @@
  *   - a linked session's notification names the linked task (HTSK-21)
  *   - a session's link survives a real app restart (HTSK-17)
  *   - the hand mark's look, in the light and the dark theme (HTSK-38)
+ *   - the stripes at 14 px and on a 6 px bar, in both themes (HHAT-17, HHAT-21)
  *
  * The sessions are ad-hoc `pwsh` in C:/Windows and C:/Windows/System32 — never a
  * registry agent, which on a machine with the CLI installed starts a real agent.
@@ -96,9 +104,9 @@
  *        period is in the app; on a pass it closes the app and deletes the
  *        directory, on a failure it leaves both and prints the directory
  *
- * SMOKE_ONLY=assign on step 3 runs sections 13 to 15 alone, from a fresh seed
- * and launch like any drive, for iterating on them; the full drive still runs
- * before a PR.
+ * SMOKE_ONLY=assign on step 3 runs sections 13 to 15 alone, and SMOKE_ONLY=looks
+ * section 16 alone, each from a fresh seed and launch like any drive, for
+ * iterating on them; the full drive still runs before a PR.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -1559,6 +1567,97 @@ async function dialogSection() {
   )
 }
 
+/** 16. Spread looks and the hatch (HHAT-08, 17, 18, 21, 28, 29). */
+async function looksSection() {
+  const seedStart = new Date(before.periods.find((p) => p.id === seedId(0)).start)
+  const seedHeader = dayHeader(
+    new Date(seedStart.getFullYear(), seedStart.getMonth(), seedStart.getDate())
+  )
+  await reloadInto('hours')
+  await waitFor(`document.querySelector('.hcal') !== null`, 'the calendar')
+  await sleep(300)
+
+  // The spread week: its chips in legend order, which is colouring order.
+  for (let i = 0; i < 5; i++) {
+    await nav('Previous week')
+    await sleep(300)
+  }
+  const chips = await evaluate(
+    `(() => { ${LOOK_SIG}; return [...document.querySelectorAll('.hleg-chip')].map(c => { const s = c.querySelector('.hleg-swatch'); return { label: c.querySelector('.hleg-label').textContent, look: [...s.classList].filter(x => x.startsWith('role-') || x === 'hatched').join(' '), sig: sig(s) } }) })()`
+  )
+  const shortLooks = chips.map((c) => c.look.replace('role-', '')).join(' | ')
+  check(
+    'no two neighbouring legend chips of the spread week look alike',
+    chips.length === 10 && chips.every((c, i) => i === 0 || c.sig !== chips[i - 1].sig),
+    `${chips.length} chips: ${shortLooks}`
+  )
+  const spreadLooks = [1, 2, 3, 4, 5, 6, 7, 8]
+    .map((n) => `role-slot${n}`)
+    .concat(['role-slot1 hatched', 'role-slot2 hatched'])
+  check(
+    "the spread week's chips, by week total, read eight solids then hatched blue and hatched orange",
+    chips.length === 10 &&
+      chips.every((c, i) => c.label.includes(SPREAD_TITLES[i]) && c.look === spreadLooks[i]),
+    chips.map((c) => `${c.label.slice(6, 10)} ${c.look.replace('role-', '')}`).join(' | ')
+  )
+
+  // The seeded Sunday: its first hatched task (slot 1 hatched) and its solid twin.
+  await nav('This week')
+  await sleep(300)
+  for (let i = 0; i < 8 && !(await headLabels()).some((l) => l.startsWith(seedHeader)); i++) {
+    await nav('Previous week')
+    await sleep(300)
+  }
+  await clickHead(seedHeader)
+  await sleep(400)
+  const [solidTitle, hatchedTitle] = [SEED_TITLES[0], SEED_TITLES[8]]
+  const themes = ['dark', 'light']
+  const shownTheme = await evaluate(`document.documentElement.dataset.theme`)
+  const worn = {}
+  for (const theme of themes) {
+    // The ground is compared with a probe's own computed color-mix of the hue.
+    worn[theme] = await evaluate(
+      `(() => { document.documentElement.dataset.theme = ${JSON.stringify(theme)}; const parts = t => [[...document.querySelectorAll('.hcal-col.selected .hcal-bar')].find(b => b.getAttribute('aria-label').split(', ')[0].includes(t)), [...document.querySelectorAll('.hleg-chip')].find(c => c.querySelector('.hleg-label').textContent.includes(t))?.querySelector('.hleg-swatch'), [...document.querySelectorAll('.hours-drawer .hours-group')].find(g => g.querySelector('.hours-group-label').textContent.includes(t))?.querySelector('.hours-group-swatch')]; const read = el => { if (!el) return null; const s = getComputedStyle(el); const r = el.getBoundingClientRect(); return { color: s.backgroundColor, image: s.backgroundImage, w: r.width, h: r.height } }; const probe = document.createElement('div'); probe.style.backgroundColor = 'color-mix(in oklab, ${rgb(PALETTE[theme][0])} 20%, #fff)'; document.body.append(probe); const ground = getComputedStyle(probe).backgroundColor; probe.remove(); return { hatched: parts(${JSON.stringify(hatchedTitle)}).map(read), solid: parts(${JSON.stringify(solidTitle)}).map(read), ground } })()`
+    )
+  }
+  await evaluate(`document.documentElement.dataset.theme = ${JSON.stringify(shownTheme)}, true`)
+  const stripes = (hex) =>
+    `repeating-linear-gradient(45deg, ${rgb(hex)} 0px, ${rgb(hex)} 2px, rgba(0, 0, 0, 0) 2px, rgba(0, 0, 0, 0) 6px)`
+  check(
+    "the first hatched task's bar, legend swatch and drawer swatch show 45° stripes of its hue, 2 px in every 6 px, in both themes",
+    themes.every((t) => worn[t].hatched.every((p) => p?.image === stripes(PALETTE[t][0]))),
+    themes.map((t) => `${t}: ${worn[t].hatched.map((p) => p?.image ?? 'missing')[0]}`).join(' / ')
+  )
+  check(
+    "the hatched task's stripes lie over its hue mixed 20% with white, in both themes",
+    themes.every(
+      (t) =>
+        worn[t].ground !== rgb(PALETTE[t][0]) &&
+        worn[t].hatched.every((p) => p?.color === worn[t].ground)
+    ),
+    themes
+      .map(
+        (t) => `${t} probe ${worn[t].ground}: ${worn[t].hatched.map((p) => p?.color).join(', ')}`
+      )
+      .join(' / ')
+  )
+  check(
+    "its solid twin's bar and swatches are filled with the hue and show no stripes, in both themes",
+    themes.every((t) =>
+      worn[t].solid.every((p) => p?.image === 'none' && p.color === rgb(PALETTE[t][0]))
+    ),
+    themes
+      .map((t) => `${t}: ${worn[t].solid.map((p) => `${p?.color} ${p?.image}`).join(', ')}`)
+      .join(' / ')
+  )
+  const sizes = [worn.dark.hatched, worn.dark.solid].flatMap(([, chip, row]) => [chip, row])
+  check(
+    'the legend and drawer swatches measure 14 × 14 px',
+    sizes.every((p) => p && Math.abs(p.w - 14) < 0.01 && Math.abs(p.h - 14) < 0.01),
+    sizes.map((p) => (p ? `${p.w}×${p.h}` : 'missing')).join(', ')
+  )
+}
+
 try {
   for (const cwd of FOLDERS) {
     const view = await invoke('sessions:spawn', {
@@ -1573,11 +1672,17 @@ try {
   await waitFor(`document.querySelector('.hcal') !== null`, 'the calendar')
   await sleep(500)
 
-  // SMOKE_ONLY=assign skips sections 1 to 12: nothing in 13 to 15 reads them.
-  if (ONLY !== 'assign') await calendarSections()
-  await periodSection()
-  await railSection()
-  await dialogSection()
+  // SMOKE_ONLY=assign skips sections 1 to 12 and 16: nothing in 13 to 15 reads
+  // them. SMOKE_ONLY=looks runs section 16 alone: it reads only the seed.
+  if (ONLY === 'looks') {
+    await looksSection()
+  } else {
+    if (ONLY !== 'assign') await calendarSections()
+    await periodSection()
+    await railSection()
+    await dialogSection()
+    if (ONLY !== 'assign') await looksSection()
+  }
 } finally {
   for (const id of sessionIds) {
     await invoke('sessions:stop', { id }).catch(() => {})
@@ -1598,7 +1703,7 @@ try {
 
 const failed = checks.filter((c) => !c.ok)
 console.log(
-  `\n${checks.length - failed.length}/${checks.length} checks passed${ONLY === 'assign' ? ' (sections 13 to 15 only)' : ''}`
+  `\n${checks.length - failed.length}/${checks.length} checks passed${ONLY === 'assign' ? ' (sections 13 to 15 only)' : ONLY === 'looks' ? ' (section 16 only)' : ''}`
 )
 if (failed.length > 0) {
   console.log(`Seeded data left in place for inspection: ${seededDir}`)

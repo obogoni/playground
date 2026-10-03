@@ -442,9 +442,9 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Seen failing first, each mutant through the `.orig` script: `assignColours` swapped for `origin/main`'s fails the adjacency check (five blue chips side by side); the `.hatched` rule deleted fails the stripe checks; the ground at 30% fails the ground check; the swatch back at 10 px fails the size check
-- [ ] `SMOKE_ONLY=looks` runs section 16 alone and the summary line says so
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Seen failing first, each mutant through the `.orig` script: `assignColours` swapped for `origin/main`'s fails the adjacency check (five blue chips side by side); the `.hatched` rule deleted fails the stripe checks; the ground at 30% fails the ground check; the swatch back at 10 px fails the size check (2026-10-03, `SMOKE_ONLY=looks`, fresh seed and launch each: the `assignColours` mutant failed the adjacency check (`slot1` five times, then `slot2` five times), the order check, and the stripe and ground checks, since its ninth Sunday task is Other; deleting `.hatched` failed only the stripe and ground checks (no image, the hue as fill); the 30% ground failed only the ground check; the legend swatch at 10 px failed only the size check (`10×10` on the two legend swatches); the real build passed 6/6; `git status` unchanged after each)
+- [x] `SMOKE_ONLY=looks` runs section 16 alone and the summary line says so (`6/6 checks passed (section 16 only)`)
+- [x] Gate check passes: `npm run lint` (warning count unchanged) (0 errors, 18 warnings)
 
 **Tests**: manual
 **Gate**: manual
