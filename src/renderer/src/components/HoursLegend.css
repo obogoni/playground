@@ -80,42 +80,12 @@
 
 .hleg-swatch {
   flex: none;
-  width: 10px;
-  height: 10px;
+  /* 14 px shows three to four stripes of a hatched look (HHAT-21). */
+  width: 14px;
+  height: 14px;
   box-sizing: border-box;
   border-radius: 3px;
-}
-
-.hleg-swatch.role-slot1 {
-  background: var(--hcal-slot1);
-}
-
-.hleg-swatch.role-slot2 {
-  background: var(--hcal-slot2);
-}
-
-.hleg-swatch.role-slot3 {
-  background: var(--hcal-slot3);
-}
-
-.hleg-swatch.role-slot4 {
-  background: var(--hcal-slot4);
-}
-
-.hleg-swatch.role-slot5 {
-  background: var(--hcal-slot5);
-}
-
-.hleg-swatch.role-slot6 {
-  background: var(--hcal-slot6);
-}
-
-.hleg-swatch.role-slot7 {
-  background: var(--hcal-slot7);
-}
-
-.hleg-swatch.role-slot8 {
-  background: var(--hcal-slot8);
+  background: var(--hcal-c);
 }
 
 .hleg-swatch.role-other {
