@@ -35,7 +35,7 @@ being too long. Scope is upstream issue #145, grilled and approved by the owner 
 This feature **amends** two merged specs: `start-work-from-task` STWK-01 AC 2 (the slug rule gains
 the filler, repeat and cap steps) and `status-bar`'s error-reporting row (the `fatal:`/`error:`
 preference moves from `git-sync.ts` into `gitFailureLine`, for every caller). Recorded at Execute as
-an AD in `.specs/STATE.md` (AD-055, recorded at T16).
+an AD in `.specs/STATE.md` (AD-056, recorded at T16).
 
 ---
 
@@ -192,7 +192,7 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| BSLG-01 | P1: slugs, AC 1 | Tasks | Done: T2; recorded in AD-055 (T16) |
+| BSLG-01 | P1: slugs, AC 1 | Tasks | Done: T2; recorded in AD-056 (T16) |
 | BSLG-02 | P1: slugs, AC 2 | Tasks | Done: T2 |
 | BSLG-03 | P1: slugs, AC 3 | Tasks | Done: T2 |
 | BSLG-04 | P1: slugs, AC 4 | Tasks | Done: T2 |
@@ -203,12 +203,12 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-09 | P1: slugs, AC 9 | Tasks | Done: T2 |
 | BSLG-10 | P1: slugs, AC 10 | Tasks | Done: T2 (the proof); T18 (smoke 8) written, optional, not run: `SMOKE_LONG_TASK_URL` unset |
 | BSLG-11 | P1: slugs, AC 11 | Tasks | Done: T2 |
-| BSLG-12 | P1: error, AC 12 | Tasks | Done: T3; recorded in AD-055 (T16) |
+| BSLG-12 | P1: error, AC 12 | Tasks | Done: T3; recorded in AD-056 (T16) |
 | BSLG-13 | P1: error, AC 13 | Tasks | Done: T3 |
 | BSLG-14 | P1: error, AC 14 | Tasks | Done: T5, T17 (smoke 5) |
 | BSLG-15 | P1: error, AC 15 | Tasks | Done: T3, T4 |
 | BSLG-16 | P1: error, AC 16 | Tasks | Done: T5 |
-| BSLG-17 | P1: check, AC 17 | Tasks | Done: T6, T8, T17 (smoke 1); recorded in AD-055 (T16) |
+| BSLG-17 | P1: check, AC 17 | Tasks | Done: T6, T8, T17 (smoke 1); recorded in AD-056 (T16) |
 | BSLG-18 | P1: check, AC 18 | Tasks | Done: T6 |
 | BSLG-19 | P1: check, AC 19 | Tasks | Done: T6, T17 (smoke 2) |
 | BSLG-20 | P1: check, AC 20 | Tasks | Done: T14, T15, T17 (smoke 1, 2); T18 (smoke 9) written, optional, not run: `SMOKE_LONG_TASK_URL` unset |

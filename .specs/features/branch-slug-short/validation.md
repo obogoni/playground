@@ -219,7 +219,7 @@ SM-A, SM-D in smoke). All six are in test code or smoke, none in production.
 | Spec-anchored outcome check | ✅ Messages, lengths and slugs are asserted as exact literals |
 | Per-layer coverage | ⚠️ Pure layers are 1:1. The hook and dialog wiring rely on smoke 1–7, which miss SM-A and SM-D |
 | Every test maps to a requirement | ✅ Test names carry BSLG IDs |
-| Documented guidelines | `.specs/STATE.md` decisions, AD-055 recorded at T16 |
+| Documented guidelines | `.specs/STATE.md` decisions, AD-056 recorded at T16 |
 
 ---
 

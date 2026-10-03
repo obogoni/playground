@@ -52,7 +52,7 @@ The app now has both halves of its headline loop — pinned ADO tasks and full w
 
 1. WHEN `branchNameFor` renders `{type}` THEN work item type Bug SHALL map to `bugfix` and every other type to `feature`
 2. WHEN `branchNameFor` renders `{slug}` THEN the title SHALL be lowercased, non-alphanumeric runs collapsed to single `-`, and leading/trailing `-` trimmed (e.g. "Add OAuth refresh-token rotation!" → `add-oauth-refresh-token-rotation`)
-   > **Amended by AD-055 (2026-10-03).** `branch-slug-short` adds three steps to the slug rule: it
+   > **Amended by AD-056 (2026-10-03).** `branch-slug-short` adds three steps to the slug rule: it
    > drops the filler words, collapses a word repeated back to back and cuts the slug to 40
    > characters at a word boundary, for `{slug}` and `{usSlug}` (BSLG-01..11).
 3. WHEN the template is rendered THEN `{id}` SHALL be the work item ID and unknown placeholders SHALL pass through literally; a missing/blank configured template SHALL fall back to `{type}/{id}-{slug}`
@@ -139,7 +139,7 @@ The app now has both halves of its headline loop — pinned ADO tasks and full w
 
 | Requirement ID | Story                                          | Phase | Status   |
 | -------------- | ---------------------------------------------- | ----- | -------- |
-| STWK-01        | P1: `branchNameFor` + `taskIdFromBranch`       | Done  | Verified — **AC 2 amended by AD-055** |
+| STWK-01        | P1: `branchNameFor` + `taskIdFromBranch`       | Done  | Verified — **AC 2 amended by AD-056** |
 | STWK-02        | P1: Start-work dialog (§3)                     | Done  | Verified |
 | STWK-03        | P1: Sidebar task tags (§1a)                    | Done  | Verified |
 | STWK-04        | P1: Task card footer (§1c)                     | Done  | Verified |

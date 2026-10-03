@@ -327,7 +327,7 @@ export interface PathCheckRequest {
 | Error preference | In `gitFailureLine` itself, not a second helper | The issue asks for every failure; `git-sync`'s extractor was the same rule kept local by a SPEC_DEVIATION |
 | Debounced ask, not blocking | Create stays enabled while an answer is pending | The create re-checks in main, so a fast click is refused with the same text |
 
-### AD-055 (recorded at T16; the text in `.specs/STATE.md` carries the owner's amendments of 2026-10-03)
+### AD-056 (recorded at T16; the text in `.specs/STATE.md` carries the owner's amendments of 2026-10-03)
 
 **Every git failure the app shows comes from `gitFailureLine`, which returns git's first stderr
 line starting with `fatal:` or `error:`, else its first non-empty line; and on Windows a worktree
