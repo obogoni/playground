@@ -269,7 +269,7 @@ without asking.
 | PDIAG-02 | P1: log — AC 2 | T1, T5, T11 | In progress (T1) |
 | PDIAG-03 | P1: log — AC 3 | T2, T5 | In progress (T2) |
 | PDIAG-04 | P1: log — AC 4 | T2 | Done (T2) |
-| PDIAG-05 | P1: log — AC 5 | T3, T4 | In progress (T3) |
+| PDIAG-05 | P1: log — AC 5 | T3, T4 | Done (T3, T4) |
 | PDIAG-06 | P1: log — AC 6 | T2, T3 | Done (T2, T3) |
 | PDIAG-07 | P1: log — AC 7 | T2 | Done (T2) |
 | PDIAG-08 | P1: log — AC 8 | T2, T11 | In progress (T2) |
@@ -284,14 +284,14 @@ without asking.
 | PDIAG-17 | P1: loop — AC 17 | T5, T16 | Pending |
 | PDIAG-18 | P1: loop — AC 18 | T2 | Done (T2) |
 | PDIAG-19 | P1: loop — AC 19 | T2 | Done (T2) |
-| PDIAG-20 | P1: pty — AC 20 | T4, T9 | Pending |
-| PDIAG-21 | P1: pty — AC 21 | T4, T9 | Pending |
+| PDIAG-20 | P1: pty — AC 20 | T4, T9 | In progress (T4) |
+| PDIAG-21 | P1: pty — AC 21 | T4, T9 | In progress (T4) |
 | PDIAG-22 | P1: pty — AC 22 | T1, T9 | In progress (T1) |
-| PDIAG-23 | P1: pty — AC 23 | T4 | Pending |
-| PDIAG-24 | P1: activity — AC 24 | T4, T11 | Pending |
-| PDIAG-25 | P1: activity — AC 25 | T4, T11 | Pending |
-| PDIAG-26 | P1: activity — AC 26 | T4, T11 | Pending |
-| PDIAG-27 | P1: activity — AC 27 | T4, T10 | Pending |
+| PDIAG-23 | P1: pty — AC 23 | T4 | Done (T4) |
+| PDIAG-24 | P1: activity — AC 24 | T4, T11 | In progress (T4) |
+| PDIAG-25 | P1: activity — AC 25 | T4, T11 | In progress (T4) |
+| PDIAG-26 | P1: activity — AC 26 | T4, T11 | In progress (T4) |
+| PDIAG-27 | P1: activity — AC 27 | T4, T10 | In progress (T4) |
 | PDIAG-28 | P1: bench — AC 28 | T15 | Pending |
 | PDIAG-29 | P1: bench — AC 29 | T15 | Pending |
 | PDIAG-30 | P1: bench — AC 30 | T15 | Pending |
@@ -310,7 +310,7 @@ without asking.
 | PDIAG-43 | P1: baseline — AC 43 | T17 | Pending |
 | PDIAG-44 | P2: docs — AC 44 | T12 | Pending |
 | PDIAG-45 | Edge: a git process across a flush | T3 | Done (T3) |
-| PDIAG-46 | Edge: a session that exits mid-window | T4 | Pending |
+| PDIAG-46 | Edge: a session that exits mid-window | T4 | Done (T4) |
 | PDIAG-47 | Edge: a path with no last segment | T3 | Done (T3) |
 | PDIAG-48 | Edge: Ctrl+C | T15 | Pending |
 | PDIAG-49 | Edge: the app does not exit | T15 | Pending |

@@ -560,3 +560,117 @@ describe('createDiagnostics: git processes', () => {
     }
   })
 })
+
+describe('createDiagnostics: output, recounts, emits and listings', () => {
+  const WT1 = 'C:\\x\\bench-wt-1'
+
+  const flushed = async (h: Harness): Promise<DiagnosticsLine> => {
+    h.flush()
+    await settle()
+    return lines(h).at(-1) as DiagnosticsLine
+  }
+
+  /** An append that takes `ms` on the fake clock. */
+  const taking = (h: Harness, ms: number, now: { t: number }): (() => void) => {
+    return () => {
+      now.t += ms
+      h.clock.setNow(now.t)
+    }
+  }
+
+  it('counts each chunk and its UTF-8 bytes per session, running the append once (PDIAG-20)', async () => {
+    const h = harness()
+    let appends = 0
+    h.d.measureAppend('s1', 'é\n', () => {
+      appends++
+    })
+    expect(appends).toBe(1)
+    const line = await flushed(h)
+    expect(line.pty).toEqual({ s1: { chunks: 1, bytes: 3, appendMs: 0, appendMaxMs: 0 } })
+  })
+
+  it('adds each append duration and keeps the longest, per session (PDIAG-21)', async () => {
+    const h = harness()
+    const now = { t: 0 }
+    h.d.measureAppend('s1', 'ab', taking(h, 2, now))
+    h.d.measureAppend('s1', 'cd', taking(h, 5, now))
+    h.d.measureAppend('s2', 'xyz', taking(h, 1.25, now))
+    const line = await flushed(h)
+    expect(line.pty).toEqual({
+      s1: { chunks: 2, bytes: 4, appendMs: 7, appendMaxMs: 5 },
+      s2: { chunks: 1, bytes: 3, appendMs: 1.25, appendMaxMs: 1.25 }
+    })
+  })
+
+  it('records a chunk whose append throws and passes the same error on (PDIAG-23)', async () => {
+    const h = harness()
+    const boom = new Error('append failed')
+    let caught: unknown
+    try {
+      h.d.measureAppend('s1', 'abc', () => {
+        h.clock.setNow(4)
+        throw boom
+      })
+    } catch (err) {
+      caught = err
+    }
+    expect(caught).toBe(boom)
+    const line = await flushed(h)
+    expect(line.pty).toEqual({ s1: { chunks: 1, bytes: 3, appendMs: 4, appendMaxMs: 4 } })
+  })
+
+  it('keeps a session in the window it printed in and drops it from later lines (PDIAG-46)', async () => {
+    const h = harness()
+    h.d.measureAppend('s1', 'abc', () => {})
+    const line1 = await flushed(h)
+    const line2 = await flushed(h)
+    expect(Object.keys(line1.pty)).toEqual(['s1'])
+    expect(line2.pty).toEqual({})
+  })
+
+  it('counts recounts and emits under the worktree folder (PDIAG-24, PDIAG-25, PDIAG-26)', async () => {
+    const h = harness()
+    h.d.recountStarted(WT1)
+    h.d.recountStarted(WT1)
+    h.d.emitted('worktree:status', WT1)
+    h.d.emitted('files:changed', '/home/x/bench-wt-2')
+    const line = await flushed(h)
+    expect(line.recounts).toEqual({ 'bench-wt-1': 2 })
+    expect(line.emits).toEqual({
+      'worktree:status': { 'bench-wt-1': 1 },
+      'files:changed': { 'bench-wt-2': 1 }
+    })
+    const line2 = await flushed(h)
+    expect(line2.recounts).toEqual({})
+    expect(line2.emits).toEqual({ 'worktree:status': {}, 'files:changed': {} })
+  })
+
+  it('counts each name listing and times it when it settles, once (PDIAG-27)', async () => {
+    const h = harness()
+    const first = h.d.nameListingStarted()
+    h.clock.setNow(1800)
+    first()
+    first()
+    const second = h.d.nameListingStarted()
+    h.clock.setNow(4000)
+    second()
+    const line = await flushed(h)
+    expect(line.names).toEqual({ count: 2, totalMs: 4000, maxMs: 2200 })
+  })
+
+  it('writes no terminal output and no parent folder (PDIAG-05)', async () => {
+    const h = harness()
+    h.d.measureAppend('s1', 'TOP-SECRET-OUTPUT\r\n', () => {})
+    h.d.recountStarted('C:\\Users\\someone\\secret-project\\bench-wt-1')
+    h.d.emitted('worktree:status', 'C:\\Users\\someone\\secret-project\\bench-wt-1')
+    h.d.emitted('files:changed', '/home/someone/secret-project/bench-wt-2')
+    h.flush()
+    await settle()
+    const text = h.written[0]
+    expect(text).toContain('"bench-wt-1"')
+    expect(text).toContain('"bench-wt-2"')
+    for (const leak of ['TOP-SECRET-OUTPUT', 'Users', 'someone', 'secret-project', 'home']) {
+      expect(text).not.toContain(leak)
+    }
+  })
+})

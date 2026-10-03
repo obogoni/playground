@@ -231,14 +231,14 @@ window rules.
 
 **Done when**:
 
-- [ ] Tests: `measureAppend('s1', 'é\n', fn)` runs `fn` once and records `chunks: 1`, `bytes: 3`; two chunks whose appends take 2 ms and 5 ms (fake `now`) give `appendMs: 7`, `appendMaxMs: 5`; a second session has its own entry
-- [ ] Tests: an `append` that throws still records the chunk and its duration, and the same error object reaches the caller
-- [ ] Tests: a session with chunks in window 1 and none in window 2 is in line 1 and absent from line 2
-- [ ] Tests: two `recountStarted` and one `emitted('worktree:status')` for the same worktree path give `recounts: { "bench-wt-1": 2 }` and `emits["worktree:status"]: { "bench-wt-1": 1 }`; `emitted('files:changed')` lands only under `files:changed`
-- [ ] Tests: two listings of 1,800 ms and 2,200 ms give `names: { count: 2, totalMs: 4000, maxMs: 2200 }`; an end called twice counts once
-- [ ] Tests: the serialized line holds no session output text and no parent folder of any worktree path
-- [ ] Gate check passes: `npx vitest run src/main/diagnostics.test.ts`, then the full gate
-- [ ] Test count: T3 count + the new tests
+- [x] Tests: `measureAppend('s1', 'é\n', fn)` runs `fn` once and records `chunks: 1`, `bytes: 3`; two chunks whose appends take 2 ms and 5 ms (fake `now`) give `appendMs: 7`, `appendMaxMs: 5`; a second session has its own entry
+- [x] Tests: an `append` that throws still records the chunk and its duration, and the same error object reaches the caller
+- [x] Tests: a session with chunks in window 1 and none in window 2 is in line 1 and absent from line 2
+- [x] Tests: two `recountStarted` and one `emitted('worktree:status')` for the same worktree path give `recounts: { "bench-wt-1": 2 }` and `emits["worktree:status"]: { "bench-wt-1": 1 }`; `emitted('files:changed')` lands only under `files:changed`
+- [x] Tests: two listings of 1,800 ms and 2,200 ms give `names: { count: 2, totalMs: 4000, maxMs: 2200 }`; an end called twice counts once
+- [x] Tests: the serialized line holds no session output text and no parent folder of any worktree path
+- [x] Gate check passes: `npx vitest run src/main/diagnostics.test.ts`, then the full gate
+- [x] Test count: T3 count + the new tests (2,535 + 7 = 2,542)
 
 **Tests**: unit
 **Gate**: quick

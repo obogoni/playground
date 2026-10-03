@@ -297,6 +297,53 @@ export function createDiagnostics(deps: DiagnosticsDeps): Diagnostics {
     }
   }
 
+  // Output, recounts, emits and listings of the current window; replaced at every line.
+  let pty = new Map<string, DiagnosticsLine['pty'][string]>()
+  let emits = {
+    'worktree:status': new Map<string, number>(),
+    'files:changed': new Map<string, number>()
+  }
+  let recounts = new Map<string, number>()
+  let names = timing()
+
+  const bump = (map: Map<string, number>, key: string): void => {
+    map.set(key, (map.get(key) ?? 0) + 1)
+  }
+
+  const measureAppend = (sessionId: string, chunk: string, append: () => void): void => {
+    if (stopped) return append()
+    const startedAt = clock.now()
+    try {
+      append()
+    } finally {
+      const ms = clock.now() - startedAt
+      const s = getOr(pty, sessionId, () => ({ chunks: 0, bytes: 0, appendMs: 0, appendMaxMs: 0 }))
+      s.chunks++
+      s.bytes += Buffer.byteLength(chunk, 'utf8')
+      s.appendMs += ms
+      s.appendMaxMs = Math.max(s.appendMaxMs, ms)
+    }
+  }
+
+  const nameListingStarted = (): (() => void) => {
+    if (stopped) return noop
+    names.count++
+    const startedAt = clock.now()
+    let ended = false
+    return () => {
+      if (ended || stopped) return
+      ended = true
+      addDuration(names, clock.now() - startedAt)
+    }
+  }
+
+  const resetActivity = (): void => {
+    pty = new Map()
+    emits = { 'worktree:status': new Map(), 'files:changed': new Map() }
+    recounts = new Map()
+    names = timing()
+  }
+
   const loopSection = (): DiagnosticsLine['loop'] => {
     const empty = monitor.count === 0
     return {
@@ -318,13 +365,22 @@ export function createDiagnostics(deps: DiagnosticsDeps): Diagnostics {
       version: meta.version,
       loop: loopSection(),
       git: gitSection(),
-      pty: {},
-      emits: { 'worktree:status': {}, 'files:changed': {} },
-      recounts: {},
-      names: { count: 0, totalMs: 0, maxMs: 0 }
+      pty: Object.fromEntries(
+        [...pty].map(([id, s]) => [
+          id,
+          { ...s, appendMs: round3(s.appendMs), appendMaxMs: round3(s.appendMaxMs) }
+        ])
+      ),
+      emits: {
+        'worktree:status': Object.fromEntries(emits['worktree:status']),
+        'files:changed': Object.fromEntries(emits['files:changed'])
+      },
+      recounts: Object.fromEntries(recounts),
+      names: roundTiming(names)
     }
     windowStart = end
     resetGit()
+    resetActivity()
     monitor.reset()
     write(JSON.stringify(line) + '\n')
   }
@@ -334,10 +390,14 @@ export function createDiagnostics(deps: DiagnosticsDeps): Diagnostics {
   return {
     enabled: true,
     gitRequested,
-    measureAppend: (_sessionId, _chunk, append) => append(),
-    emitted: noop,
-    recountStarted: noop,
-    nameListingStarted: () => noop,
+    measureAppend,
+    emitted: (channel, worktreePath) => {
+      if (!stopped) bump(emits[channel], folderOf(worktreePath))
+    },
+    recountStarted: (worktreePath) => {
+      if (!stopped) bump(recounts, folderOf(worktreePath))
+    },
+    nameListingStarted,
     stop: () => {
       if (stopped) return
       stopped = true
