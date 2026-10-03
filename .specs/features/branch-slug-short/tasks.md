@@ -344,14 +344,16 @@ titles as written.
 
 **Done when**:
 
-- [ ] Tests (real temp repos, `realpathSync.native`): `platform: 'linux'` returns null and a recording runner sees no call (BSLG-22)
-- [ ] Tests, `platform: 'win32'`, repository-local `core.longpaths=false`: a new branch with a ref path of 270 returns the ref message with 270, the expected length computed in the test from `realpathSync.native(repo)` and the branch, not from the code under test
-- [ ] Tests: local `core.longpaths` `true` → null and `yes` → null (BSLG-21); `maybe` → the message (BSLG-39); `GIT_CONFIG_GLOBAL` pointing at a temp file with `core.longpaths=true` while the repository holds `false` → the message (BSLG-40), the env restored in `afterEach`
-- [ ] Tests, existing branch git can still read (owner, 2026-10-03, after T1's finding): a branch of M2's shape, ref path 259 or fewer and reflog folder 248 or more, created by the test with `git -c core.longpaths=true branch` (test-only): no base → null; base + `reuse` → null; base + no `onExisting` → null; base + `recreate` → the reflog message, AC 18 (BSLG-37)
-- [ ] Test, existing branch git cannot read: a branch with a ref path of 270 made the same way is absent for git under `core.longpaths=false` (T1), so with no base the check returns the ref message, AC 17, with 270
-- [ ] Tests: a plain folder → null (BSLG-41)
-- [ ] Gate check passes: `npx vitest run src/main/path-limits.test.ts` then `npm test` (slowest test compared with T1's baseline, L-005)
-- [ ] Test count: T7 count + the new tests
+- [x] Tests (real temp repos, `realpathSync.native`): `platform: 'linux'` returns null and a recording runner sees no call (BSLG-22)
+- [x] Tests, `platform: 'win32'`, repository-local `core.longpaths=false`: a new branch with a ref path of 270 returns the ref message with 270, the expected length computed in the test from `realpathSync.native(repo)` and the branch, not from the code under test
+- [x] Tests: local `core.longpaths` `true` → null and `yes` → null (BSLG-21); `maybe` → `checkCreatePaths` returns null, and `createWorktree` (T9) returns an error starting with `fatal: bad boolean config value` (BSLG-39); `GIT_CONFIG_GLOBAL` pointing at a temp file with `core.longpaths=true` while the repository holds `false` → the message (BSLG-40), the env restored in `afterEach`
+- [x] Tests, existing branch git can still read (owner, 2026-10-03, after T1's finding): a branch of M2's shape, ref path 259 or fewer and reflog folder 248 or more, created by the test with `git -c core.longpaths=true branch` (test-only): no base → null; base + `reuse` → null; base + no `onExisting` → null; base + `recreate` → the reflog message, AC 18 (BSLG-37)
+- [x] Test, existing branch git cannot read: a branch with a ref path of 270 made the same way is absent for git under `core.longpaths=false` (T1), so with no base the check returns the ref message, AC 17, with 270
+- [x] Tests: a plain folder → null (BSLG-41)
+- [x] Gate check passes: `npx vitest run src/main/path-limits.test.ts` then `npm test` (slowest test compared with T1's baseline, L-005)
+- [x] Test count: T7 count + the new tests
+
+**Done** (T8): 13 new real-git tests in `src/main/path-limits.test.ts` (one repository for the block, about 5 s); suite 2586 → 2599 passed; typecheck 0; lint 0 errors, 18 warnings (baseline). BSLG-39 amended on the owner's decision of 2026-10-03: with `core.longpaths=maybe`, git refuses every command the check runs (design.md, Measurements), so the check returns null; T9 tests the create's `fatal:` line. The requests use a short literal worktree template (`wt`), so the default `{repo}-{branch}` folder rule cannot speak for these long names. An existing branch with a base and no `onExisting` writes no ref (rewritten Done-when; design.md brought in line).
 
 **Tests**: unit
 **Gate**: quick
@@ -366,7 +368,7 @@ titles as written.
 **Where**: `src/main/worktree-manager.ts`
 **Depends on**: T8
 **Reuses**: `removeWorktree`'s deps pattern; the create test setups
-**Requirement**: BSLG-25, BSLG-26, BSLG-30, BSLG-35, BSLG-37, BSLG-38
+**Requirement**: BSLG-25, BSLG-26, BSLG-30, BSLG-35, BSLG-37, BSLG-38, BSLG-39
 
 **Tools**:
 
@@ -382,6 +384,7 @@ titles as written.
 - [ ] Test: Recreate of an existing branch with a ref path of 270 (made and packed by the test with `git -c core.longpaths=true`, test-only) returns the AC 17 message and the branch still resolves under `git -c core.longpaths=true rev-parse --verify` (BSLG-38)
 - [ ] Test: Reuse, with `core.longpaths=false`, of an existing branch of M2's shape (ref path 259 or fewer, reflog folder 248 or more, made test-only as in T8) is not refused with a path message; measure first what `worktree add` then does and assert that outcome, recorded in design.md Measurements (BSLG-37)
 - [ ] Test (P2): default template, a folder path of 216 returns the folder message and creates nothing (BSLG-30)
+- [ ] Test: with the repository's `core.longpaths` set to `maybe`, `createWorktree` returns an error starting with `fatal: bad boolean config value` and creates nothing (BSLG-39, owner amended 2026-10-03)
 - [ ] Test: after each call, `git config --local --get core.longpaths` reads what the test set (BSLG-26); `grep -rn "longpaths" src/main --include=*.ts` outside tests finds only the read in `path-limits.ts`
 - [ ] The existing `createWorktree` and EXB tests pass unchanged
 - [ ] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts` then `npm test`
@@ -753,5 +756,6 @@ Every AC and edge case has its own unit test or numbered smoke check (L-021, L-0
 | BSLG-34, 35 | T6 unit; T9 unit (259 created) |
 | BSLG-37 | T8, T9 unit |
 | BSLG-38 | T9 unit |
-| BSLG-39, 40, 41 | T8 unit |
+| BSLG-39 | T8, T9 unit |
+| BSLG-40, 41 | T8 unit |
 | BSLG-42 | T12 unit |

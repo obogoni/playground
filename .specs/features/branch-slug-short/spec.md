@@ -64,7 +64,7 @@ an AD in `.specs/STATE.md` (design.md, AD-TBD).
 | Filler match | After the existing transliteration and lowercasing, so `à` and `às` count as `a` and `as` | The slug already transliterates; matching before it would keep `a` from `à` | owner confirmed 2026-10-01 |
 | Branch that already exists | The ref-path and reflog rules apply only when the create writes a new local ref: a new branch from a base, Recreate, or no base for a branch that has no local ref yet. Checking out an existing local branch (no base, or Reuse) skips them | Git does not write that ref then; refusing would block a branch git accepts | owner confirmed 2026-10-01 |
 | Recreate | The check runs before the branch is deleted | A refusal after `git branch -D` would lose the branch | owner confirmed 2026-10-01 |
-| `core.longpaths` value | Read as a boolean (`git config --type=bool --get core.longpaths`), so `yes`, `on` and `1` count as `true`; a value git cannot read as a boolean counts as not true | The issue says "effective core.longpaths is true"; git itself accepts every boolean spelling | owner confirmed 2026-10-01 |
+| `core.longpaths` value | Read as a boolean (`git config --type=bool --get core.longpaths`), so `yes`, `on` and `1` count as `true`. A value git cannot read as a boolean makes git refuse every command in the repository (measured 2026-10-03, design.md Measurements), so the check gives no message and git's own `fatal: bad boolean config value …` line reaches the dialog | The issue says "effective core.longpaths is true"; git itself accepts every boolean spelling | owner confirmed 2026-10-01; owner amended 2026-10-03 |
 | A check that cannot read the repository | Reports nothing; the create goes on and git reports its own error | The check guards one known failure; it must not invent a new one | owner confirmed 2026-10-01 |
 | Debounce | 250 ms after the last change to the branch, the repository or the worktree template | Short enough to feel live, long enough not to run git per keystroke | owner confirmed 2026-10-01 |
 | While a check is pending | Create stays enabled; only an answer for the current values disables it | `worktrees:create` runs the same check, so a fast click is still refused with the same message | owner confirmed 2026-10-01 |
@@ -179,7 +179,7 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 - **BSLG-36** WHEN the reflog folder is exactly 247 characters THEN the check SHALL pass, and at exactly 248 SHALL refuse
 - **BSLG-37** WHEN the branch exists locally and the create checks it out as it is (no base, or Reuse) THEN the ref path and reflog rules SHALL NOT refuse it
 - **BSLG-38** WHEN the user chooses Recreate for a name the ref path rule refuses THEN the create SHALL refuse with the AC 17 message and the existing branch SHALL still exist
-- **BSLG-39** IF the repository's `core.longpaths` holds a value git cannot read as a boolean THEN the check SHALL treat it as not true
+- **BSLG-39** IF the repository's `core.longpaths` holds a value git cannot read as a boolean THEN git refuses to run in the repository, the check SHALL report no message, and the create SHALL return git's `fatal: bad boolean config value …` line
 - **BSLG-40** WHEN `core.longpaths` is `true` in the global config and `false` in the repository's own config THEN the check SHALL refuse a ref path of 260 or more (the repository's value wins)
 - **BSLG-41** IF the path check cannot read the repository (not a git repository, git missing) THEN it SHALL report no message and the create SHALL return git's own error
 - **BSLG-42** WHEN an answer arrives for a name the dialog no longer shows THEN the dialog SHALL ignore it
@@ -208,12 +208,12 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-14 | P1: error, AC 14 | Tasks | T5 done; T17 (smoke 5) pending |
 | BSLG-15 | P1: error, AC 15 | Tasks | Done: T3, T4 |
 | BSLG-16 | P1: error, AC 16 | Tasks | Done: T5 |
-| BSLG-17 | P1: check, AC 17 | Tasks | T6 done; T8, T17 (smoke 1) pending |
+| BSLG-17 | P1: check, AC 17 | Tasks | T6, T8 done; T17 (smoke 1) pending |
 | BSLG-18 | P1: check, AC 18 | Tasks | Done: T6 |
 | BSLG-19 | P1: check, AC 19 | Tasks | T6 done; T17 (smoke 2) pending |
 | BSLG-20 | P1: check, AC 20 | Tasks | Pending: T14, T15, T17 (smoke 1, 2), T18 (smoke 9) |
-| BSLG-21 | P1: check, AC 21 | Tasks | T6 done; T8, T17 (smoke 3) pending |
-| BSLG-22 | P1: check, AC 22 | Tasks | Pending: T8 |
+| BSLG-21 | P1: check, AC 21 | Tasks | T6, T8 done; T17 (smoke 3) pending |
+| BSLG-22 | P1: check, AC 22 | Tasks | Done: T8 |
 | BSLG-23 | P1: check, AC 23 | Tasks | Pending: T12, T13, T17 (smoke 2) |
 | BSLG-24 | P1: check, AC 24 | Tasks | Pending: T14, T15, T17 (smoke 1), T18 (smoke 9) |
 | BSLG-25 | P1: check, AC 25 | Tasks | Pending: T9, T17 (smoke 4) |
@@ -228,11 +228,11 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-34 | Edge: no `/` | Tasks | Done: T6 |
 | BSLG-35 | Edge: ref path 259 / 260 | Tasks | T6 done; T9 pending |
 | BSLG-36 | Edge: reflog folder 247 / 248 | Tasks | Done: T6 |
-| BSLG-37 | Edge: existing branch | Tasks | Pending: T8, T9 |
+| BSLG-37 | Edge: existing branch | Tasks | T8 done; T9 pending |
 | BSLG-38 | Edge: Recreate | Tasks | Pending: T9 |
-| BSLG-39 | Edge: non-boolean value | Tasks | Pending: T8 |
-| BSLG-40 | Edge: repository value wins | Tasks | Pending: T8 |
-| BSLG-41 | Edge: unreadable repository | Tasks | Pending: T8 |
+| BSLG-39 | Edge: non-boolean value | Tasks | T8 done; T9 pending |
+| BSLG-40 | Edge: repository value wins | Tasks | Done: T8 |
+| BSLG-41 | Edge: unreadable repository | Tasks | Done: T8 |
 | BSLG-42 | Edge: stale answer | Tasks | Pending: T12 |
 | BSLG-43 | Edge: `error:` before `fatal:` | Tasks | Done: T3 |
 | BSLG-44 | Edge: `fatal:` inside a line | Tasks | Done: T3 |

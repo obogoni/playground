@@ -1,3 +1,7 @@
+import type { PathCheckRequest } from '../shared/worktrees'
+import { worktreePathFor } from '../shared/worktrees'
+import { git, type GitRunner } from './git'
+
 /**
  * Path limits a worktree create can pass on Windows (BSLG-17..30), checked
  * before git runs so the user reads the length and the way out instead of
@@ -64,4 +68,62 @@ export function pathLimitProblem(input: PathLimitInput): string | null {
     }
   }
   return null
+}
+
+/** How the check reaches the platform and git; injectable so a test can stand in for either. */
+export interface PathCheckDeps {
+  platform: NodeJS.Platform
+  git: GitRunner
+}
+
+const realDeps: PathCheckDeps = { platform: process.platform, git }
+
+/**
+ * The path check a create runs before any git write, and the dialog runs as the
+ * name changes. Windows only (BSLG-22). Reads, in the repository: the common git
+ * dir, the effective core.longpaths as a boolean, and whether the branch exists
+ * locally. A repository the check cannot read gives no message, so git reports
+ * its own error (BSLG-41); a non-boolean core.longpaths is one such case, since
+ * git then refuses every command (BSLG-39).
+ * Never writes core.longpaths (BSLG-26).
+ */
+export async function checkCreatePaths(
+  req: PathCheckRequest,
+  deps: PathCheckDeps = realDeps
+): Promise<string | null> {
+  if (deps.platform !== 'win32') return null
+  let commonDir: string
+  try {
+    const { stdout } = await deps.git(req.repoPath, [
+      'rev-parse',
+      '--path-format=absolute',
+      '--git-common-dir'
+    ])
+    commonDir = stdout.trim()
+  } catch {
+    return null
+  }
+  // Unset exits 1: off.
+  const longPaths = await deps
+    .git(req.repoPath, ['config', '--type=bool', '--get', 'core.longpaths'])
+    .then(
+      ({ stdout }) => stdout.trim() === 'true',
+      () => false
+    )
+  const exists = await deps
+    .git(req.repoPath, ['rev-parse', '--verify', '--quiet', `refs/heads/${req.branch}`])
+    .then(
+      () => true,
+      () => false
+    )
+  // An existing local branch is checked out as it is, which writes no ref, unless
+  // Recreate deletes it and cuts it again from the base (BSLG-37, BSLG-38).
+  const writesRef = !exists || (Boolean(req.baseBranch) && req.onExisting === 'recreate')
+  return pathLimitProblem({
+    commonDir,
+    branch: req.branch,
+    worktreePath: worktreePathFor(req.repoPath, req.branch, req.worktreeTemplate),
+    longPaths,
+    writesRef
+  })
 }

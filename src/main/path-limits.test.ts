@@ -1,8 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { execFileSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { git, type GitRunner } from './git'
 import {
   GIT_MAX_WORKTREE_FOLDER,
   WINDOWS_MAX_FILE_PATH,
   WINDOWS_MAX_FOLDER_PATH,
+  checkCreatePaths,
   pathLimitProblem,
   type PathLimitInput
 } from './path-limits'
@@ -230,5 +236,222 @@ describe('pathLimitProblem: order when several limits are passed (BSLG-29)', () 
     const name = worktreePath.slice(worktreePath.lastIndexOf('\\') + 1)
     expect(`${commonDir}\\worktrees\\${name}\\refs`.length).toBeGreaterThanOrEqual(248)
     expect(pathLimitProblem(input({ commonDir, worktreePath }))).toBe(folderMessage(216))
+  })
+})
+
+const run = (cwd: string, ...args: string[]): string =>
+  execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+
+/** Whether git, with the repository's own config, resolves the local branch. */
+function gitSeesBranch(repo: string, branch: string): boolean {
+  try {
+    run(repo, 'rev-parse', '--verify', '--quiet', `refs/heads/${branch}`)
+    return true
+  } catch {
+    return false
+  }
+}
+
+describe('checkCreatePaths (real repositories)', () => {
+  // A short worktree folder (`<root>\wt`), so only the ref rules can speak for these names.
+  const SHORT_TEMPLATE = 'wt'
+  const win32 = { platform: 'win32' as const, git }
+  let root: string
+  let repo: string
+  /** The common git dir as Windows counts it, from the OS's canonical path, not the code under test. */
+  let commonDir: string
+  const savedGlobal = process.env.GIT_CONFIG_GLOBAL
+
+  /** `user/dev/<tag>/bbb…`, whose ref path in `repo` is exactly `length` characters. */
+  function branchWithRefPath(tag: string, length: number): string {
+    const head = `user/dev/${tag}/`
+    const overhead = `${commonDir}\\refs\\heads\\`.length + '.lock'.length
+    return head + 'b'.repeat(length - overhead - head.length)
+  }
+  const refPathOf = (branch: string): number =>
+    `${commonDir}\\refs\\heads\\${branch.replaceAll('/', '\\')}.lock`.length
+
+  beforeAll(() => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'bss-pc-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    run(repo, 'init', '-b', 'main')
+    run(repo, 'config', 'core.autocrlf', 'false')
+    run(repo, 'config', 'core.longpaths', 'false')
+    run(repo, 'config', 'user.email', 'test@test.local')
+    run(repo, 'config', 'user.name', 'Test')
+    run(repo, 'commit', '--allow-empty', '-m', 'init')
+    commonDir = `${repo.replaceAll('/', '\\')}\\.git`
+  })
+
+  afterEach(() => {
+    if (savedGlobal === undefined) delete process.env.GIT_CONFIG_GLOBAL
+    else process.env.GIT_CONFIG_GLOBAL = savedGlobal
+    run(repo, 'config', 'core.longpaths', 'false')
+  })
+
+  afterAll(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('runs no git and reports nothing off Windows (BSLG-22)', async () => {
+    const calls: string[][] = []
+    const recording: GitRunner = async (_cwd, args) => {
+      calls.push(args)
+      return { stdout: '' }
+    }
+    const branch = branchWithRefPath('linux', 270)
+    const problem = await checkCreatePaths(
+      { repoPath: repo, worktreeTemplate: SHORT_TEMPLATE, branch },
+      {
+        platform: 'linux',
+        git: recording
+      }
+    )
+    expect(problem).toBeNull()
+    expect(calls).toEqual([])
+  })
+
+  it('refuses a new branch whose ref path is 270 with that length (BSLG-17)', async () => {
+    const branch = branchWithRefPath('new', 270)
+    expect(refPathOf(branch)).toBe(270)
+    expect(
+      await checkCreatePaths(
+        { repoPath: repo, worktreeTemplate: SHORT_TEMPLATE, branch, baseBranch: 'main' },
+        win32
+      )
+    ).toBe(refMessage(270))
+  })
+
+  it.each(['true', 'yes'])(
+    'reports nothing when the repository holds core.longpaths=%s (BSLG-21)',
+    async (value) => {
+      run(repo, 'config', 'core.longpaths', value)
+      const branch = branchWithRefPath('lifted', 270)
+      expect(
+        await checkCreatePaths(
+          { repoPath: repo, worktreeTemplate: SHORT_TEMPLATE, branch, baseBranch: 'main' },
+          win32
+        )
+      ).toBeNull()
+    }
+  )
+
+  it('reports nothing when core.longpaths is not a boolean, since git then refuses to run (BSLG-39)', async () => {
+    const configFile = join(repo, '.git', 'config')
+    run(repo, 'config', 'core.longpaths', 'maybe')
+    try {
+      expect(() => run(repo, 'rev-parse', '--path-format=absolute', '--git-common-dir')).toThrow(
+        /fatal: bad boolean config value 'maybe' for 'core.longpaths'/
+      )
+      const branch = branchWithRefPath('maybe', 270)
+      expect(
+        await checkCreatePaths(
+          { repoPath: repo, worktreeTemplate: SHORT_TEMPLATE, branch, baseBranch: 'main' },
+          win32
+        )
+      ).toBeNull()
+    } finally {
+      // git refuses to run inside the repository now, so the value is reset from outside it.
+      run(root, 'config', '--file', configFile, 'core.longpaths', 'false')
+    }
+  })
+
+  it("refuses when the global config holds true and the repository's own holds false (BSLG-40)", async () => {
+    const globalConfig = join(root, 'global.gitconfig')
+    writeFileSync(globalConfig, '[core]\n\tlongpaths = true\n', 'utf8')
+    process.env.GIT_CONFIG_GLOBAL = globalConfig
+    expect(run(root, 'config', '--global', '--type=bool', '--get', 'core.longpaths').trim()).toBe(
+      'true'
+    )
+    const branch = branchWithRefPath('global', 270)
+    expect(
+      await checkCreatePaths(
+        { repoPath: repo, worktreeTemplate: SHORT_TEMPLATE, branch, baseBranch: 'main' },
+        win32
+      )
+    ).toBe(refMessage(270))
+  })
+
+  describe('a branch that already exists and git can read (BSLG-37)', () => {
+    // M2's shape: a two-letter last segment, a reflog folder of 248 (past 247) and a ref path
+    // of 251 (within 259). Made with core.longpaths on, for the test only, since git cannot
+    // create that reflog folder without it.
+    let branch: string
+    let reflogFolder: number
+
+    beforeAll(() => {
+      const dirsLength = 248 - `${commonDir}\\logs\\refs\\heads\\`.length
+      const dirs = 'user/' + 'd'.repeat(dirsLength - 'user/'.length)
+      branch = `${dirs}/ab`
+      reflogFolder = `${commonDir}\\logs\\refs\\heads\\${dirs.replaceAll('/', '\\')}`.length
+      run(repo, '-c', 'core.longpaths=true', 'branch', branch, 'main')
+    })
+
+    it('is a branch of that shape that git resolves with core.longpaths off', () => {
+      expect(reflogFolder).toBe(248)
+      expect(refPathOf(branch)).toBe(251)
+      expect(gitSeesBranch(repo, branch)).toBe(true)
+    })
+
+    it('reports nothing for a checkout with no base', async () => {
+      expect(
+        await checkCreatePaths({ repoPath: repo, worktreeTemplate: SHORT_TEMPLATE, branch }, win32)
+      ).toBeNull()
+    })
+
+    it('reports nothing for Reuse', async () => {
+      const req = {
+        repoPath: repo,
+        worktreeTemplate: SHORT_TEMPLATE,
+        branch,
+        baseBranch: 'main',
+        onExisting: 'reuse' as const
+      }
+      expect(await checkCreatePaths(req, win32)).toBeNull()
+    })
+
+    it('reports nothing for a base with no choice yet (the dialog asks before the conflict prompt)', async () => {
+      expect(
+        await checkCreatePaths(
+          { repoPath: repo, worktreeTemplate: SHORT_TEMPLATE, branch, baseBranch: 'main' },
+          win32
+        )
+      ).toBe(null)
+    })
+
+    it('refuses Recreate with the reflog message (AC 18)', async () => {
+      const req = {
+        repoPath: repo,
+        worktreeTemplate: SHORT_TEMPLATE,
+        branch,
+        baseBranch: 'main',
+        onExisting: 'recreate' as const
+      }
+      expect(await checkCreatePaths(req, win32)).toBe(reflogMessage(248))
+    })
+  })
+
+  it('treats a branch git cannot read with core.longpaths off as new (AC 17)', async () => {
+    // T1: a ref path of 270 does not resolve under core.longpaths=false, so the checkout
+    // would write a new ref.
+    const branch = branchWithRefPath('unread', 270)
+    run(repo, '-c', 'core.longpaths=true', 'branch', branch, 'main')
+    expect(gitSeesBranch(repo, branch)).toBe(false)
+    expect(
+      await checkCreatePaths({ repoPath: repo, worktreeTemplate: SHORT_TEMPLATE, branch }, win32)
+    ).toBe(refMessage(270))
+  })
+
+  it('reports nothing for a folder that is not a repository (BSLG-41)', async () => {
+    const plain = join(root, 'plain')
+    mkdirSync(plain)
+    const branch = branchWithRefPath('plain', 270)
+    expect(
+      await checkCreatePaths(
+        { repoPath: plain, worktreeTemplate: SHORT_TEMPLATE, branch, baseBranch: 'main' },
+        win32
+      )
+    ).toBeNull()
   })
 })

@@ -77,6 +77,18 @@ Two more readings T5 and T9 rely on, same machine:
   for it. At a ref path of 259 both forms resolve and the checkout succeeds. So, with
   `core.longpaths=false`, the plain `rev-parse --verify` read that `branchExists` and the path check
   use reports such a branch as absent.
+- **Non-boolean `core.longpaths`** (T8, BSLG-39): with `core.longpaths maybe` in the repository's own
+  config, git for Windows refuses every command the check and the create run, not only the boolean
+  read (only a bare `rev-parse --git-common-dir`, which loads no config, still answers):
+  `git rev-parse --path-format=absolute --git-common-dir`, `git config --type=bool --get
+  core.longpaths`, `git config --unset core.longpaths` and `git worktree add <folder> -b x main` all
+  exit 128 with `fatal: bad boolean config value 'maybe' for 'core.longpaths'`, and the add leaves
+  no folder. So the check cannot read the common git dir and reports nothing (BSLG-41), and the
+  create returns that `fatal:` line. No value is expected that git runs with but `--type=bool` refuses,
+  since both reads go through git's boolean parser (inferred from the error text, not measured).
+- **Common git dir form**: in a temp repository reached through an 8.3 short name,
+  `rev-parse --path-format=absolute --git-common-dir` returns the long form with `/`, the same
+  path `realpathSync.native` gives (8.3 risk row).
 
 Reading of the rows:
 
@@ -170,10 +182,13 @@ today (BSLG-31).
   - `checkCreatePaths(req: PathCheckRequest, deps?: PathCheckDeps): Promise<string | null>` —
     `deps.platform !== 'win32'` → null with no git call (BSLG-22). Reads, in the repository:
     `git rev-parse --path-format=absolute --git-common-dir` (failure → null, BSLG-41);
-    `git config --type=bool --get core.longpaths` (`true` → on; unset, false or unreadable → off,
-    BSLG-39, BSLG-40); `git rev-parse --verify --quiet refs/heads/<branch>`. `writesRef` is false
-    only when the branch exists locally and the create checks it out as it is (no base, or
-    `onExisting: 'reuse'`) (BSLG-37). Then `pathLimitProblem` with
+    `git config --type=bool --get core.longpaths` (`true` → on; unset or false → off, BSLG-40;
+    a non-boolean value makes git refuse every command, so the first read already fails and the
+    check returns null, BSLG-39); `git rev-parse --verify --quiet refs/heads/<branch>`.
+    `writesRef` is true only when the create writes a local ref: the branch does not exist for
+    git, or it exists and the create is a Recreate from a base. An existing branch checked out
+    with no base, with Reuse, or with a base and no `onExisting` yet (the dialog's ask, before
+    the conflict prompt) writes no ref and is skipped (BSLG-37). Then `pathLimitProblem` with
     `worktreePathFor(repoPath, branch, worktreeTemplate)`.
 - **Dependencies**: `git.ts`, `shared/worktrees.ts`.
 - **Reuses**: the `branchExists` read; `GitRunner`.
@@ -274,7 +289,7 @@ export interface PathCheckRequest {
 | -------------- | -------- | ----------- |
 | A limit is passed | `pathLimitProblem` message | Dialog line under the preview, `Create worktree` disabled; a direct `worktrees:create` returns the same text |
 | The path check's git read fails | `checkCreatePaths` returns null | No message; the create goes on and git's own `fatal:` line shows (BSLG-41) |
-| `core.longpaths` holds a non-boolean | `git config --type=bool` exits non-zero → off | The check applies (BSLG-39) |
+| `core.longpaths` holds a non-boolean | Git refuses every command in the repository, so the check's first read fails → null | No message; the create returns git's `fatal: bad boolean config value …` line (BSLG-39) |
 | `worktrees:check-paths` invoke rejects | The hook stores no answer | No message; Create follows the other gates |
 | `git worktree add` fails for another reason | `gitFailureLine` | The dialog shows git's `fatal:`/`error:` line (BSLG-14) |
 | A failure line with no prefix (M4) | `gitFailureLine` falls back to the first line | The check refuses it first under P2; without P2 the user sees `Preparing worktree …` |
