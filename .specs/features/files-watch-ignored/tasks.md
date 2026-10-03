@@ -219,10 +219,15 @@ to the owner with the numbers.
 
 **Done when**:
 
-- [ ] The three probe results written into design.md's "Planning findings", with this machine's git version
-- [ ] The decision written into design.md's Tech Decisions: "A confirmed" or "stopped, owner told: ..."
-- [ ] No scratch file under the repository; `git status --porcelain` shows only design.md
-- [ ] Gate check passes: `npm run lint`
+- [x] The three probe results written into design.md's "Planning findings", with this machine's git version
+- [x] The decision written into design.md's Tech Decisions: "A confirmed" or "stopped, owner told: ..."
+- [x] No scratch file under the repository; `git status --porcelain` shows only design.md
+- [x] Gate check passes: `npm run lint`
+
+**Result (2026-10-03)**: A confirmed. 9-path median 87 ms, 2,000-path median 330 ms, every semantics
+row as planned; the index probe repeats the planning finding in fresh repositories (design.md,
+"Re-measured at Execute"). The status list also gained `tasks.md` and the AD note moved to AD-061
+(#151 claims AD-060).
 
 **Tests**: manual
 **Gate**: manual

@@ -112,6 +112,59 @@ not stop it: `-c diff.autoRefreshIndex=false` does.
   and `bin/Debug/net8.0/a1.dll` are (a leading path component is a folder by construction).
 - Exit code 0 when at least one path is ignored, 1 when none, 128 on `-z` without `--stdin`.
 
+### Re-measured at Execute (T2, 2026-10-03, git 2.55.0.windows.4, Node 24.19.0, same machine as #147's baseline)
+
+Scratch scripts in the session's scratch folder, throwaway repositories under the system temp folder,
+all deleted after the run.
+
+**Index rewrite**, one fresh repository per cell (50 tracked files, committed, then 1.5 s idle so the
+index is older than the write), one command, `.git/index` compared before and after:
+
+| Same-bytes write | `diff --numstat -z HEAD` | `--no-optional-locks` + it | `-c diff.autoRefreshIndex=false` + it | both flags + it |
+| ---------------- | ------------------------ | -------------------------- | ------------------------------------- | --------------- |
+| Every file rewritten, run at once | rewrote | **rewrote** | no | no |
+| Every file rewritten, run 1.5 s later | rewrote | **rewrote** | no | no |
+| Every mtime set 5 s ahead | rewrote | **rewrote** | no | no |
+| One file rewritten | rewrote | **rewrote** | no | no |
+| One content change, the rest same bytes | rewrote | **rewrote** | no | no |
+
+The planning finding holds: `--no-optional-locks` alone does not stop `git diff`'s refresh, and the
+config does. A first, sequential probe that reused one repository right after `git update-index
+--refresh` saw `--no-optional-locks` alone leave the index alone; that setup is unlike the app's (an
+index written long before a build rewrites files) and was not explained further. In that same probe,
+`status --porcelain` rewrote and `--no-optional-locks status --porcelain` did not; `diff-index`,
+`ls-files --others`, `ls-tree`, `cat-file -s`, `diff --cached --name-status` and `ls-files --others
+--ignored --directory` never did, as at planning.
+
+**`check-ignore --stdin -z` semantics** (root `.gitignore` = `bin/`, `*.log`; `src/.gitignore` = `gen/`;
+`.git/info/exclude` = `scratch/`; asked with `READ_ONLY_FLAGS`):
+
+- `bin`, `bin/Debug`, `bin/Debug/a.dll`, `src/x.log`, `src/gen`, `src/gen/a.ts`, `scratch`, `scratch/n.txt`
+  reported; `src/a.ts` not. Exit 0.
+- Only `src/a.ts` and `src` asked: nothing reported, exit 1.
+- `bin/a b.dll`, `bin/#h.dll`, `bin/!x.dll`, `bin/-lead.dll`, `bin/é.dll` come back exactly as sent;
+  `src/é.ts` not reported.
+- After `git add -f bin/keep.txt` and a commit: `bin` and `bin/keep.txt` not reported; `bin/Debug` and
+  `bin/Debug/a.dll` reported.
+- After `bin/` is deleted: `bin` not reported; `bin/Debug`, `bin/Debug/a.dll`, `bin/Debug/net8.0/a1.dll`
+  reported.
+- A folder that is not a repository: exit 128.
+
+Every row matches the planning findings above.
+
+**Cost**, a synthetic repository of 20,001 tracked files in 40 folders, each with untracked `bin/Debug/`
+and `obj/`, and an untracked `node_modules/` of 20,000 files:
+
+| Call | Median | Runs (ms) |
+| ---- | ------ | --------- |
+| 9-path `check-ignore` (folders, files, `node_modules`) | **87 ms** | 83 82 96 87 87 84 85 87 87 86 |
+| 2,000-path `check-ignore` | **330 ms** | 330 326 343 354 326 |
+| `ls-files --others --ignored --exclude-standard --directory` | 95 ms | 97 95 95 95 97 |
+| Process floor (`git --version`) | 73 ms | — |
+
+Against the decision rule: 87 ms ≤ 150 ms, 330 ms ≤ 1,000 ms, every semantics row matches. **A
+confirmed.**
+
 ---
 
 ## Code Reuse Analysis
@@ -412,7 +465,7 @@ interface WorktreeFiles {
 
 | Decision | Choice | Rationale |
 | -------- | ------ | --------- |
-| Ignore mechanism | `check-ignore --stdin -z`, one per batch, cached per watch | See the comparison above; it sees folders created after the view opened |
+| Ignore mechanism | `check-ignore --stdin -z`, one per batch, cached per watch. **A confirmed at T2** (9 paths 87 ms, 2,000 paths 330 ms, semantics unchanged) | See the comparison above; it sees folders created after the view opened |
 | Ancestors | Ask the unknown parent folders with the paths | One answer for `bin` covers every later path under it |
 | Forgetting | New selection, `.gitignore` named, git-state change | Tracking decides `check-ignore`'s answer, and the index moved |
 | Read flags | One constant, `READ_ONLY_FLAGS`, in front of every Files read | The probe showed `diff` needs the config, not only the lock flag; one constant keeps every read alike |
@@ -421,7 +474,8 @@ interface WorktreeFiles {
 | Gate scope | `files:changed` batches only | User actions must answer at once; batches are what pile up |
 
 > **AD-TBD (number chosen at Execute; at 2026-10-03 `main` holds up to AD-057, PR #164 holds AD-058 and
-> PR #165 AD-059, so AD-060 unless a sibling takes it first; re-check right before the push): the Files view's git reads never write
+> PR #165 AD-059, and #151 (`feature/main-async-git`, executing in a parallel session) claims AD-060, so
+AD-061 unless a sibling takes it first; re-check right before the push): the Files view's git reads never write
 > the index, and its watcher drops what git ignores.** Every git read the Files view runs to list, count,
 > diff or classify passes `READ_ONLY_FLAGS` (`--no-optional-locks -c diff.autoRefreshIndex=false`):
 > `--no-optional-locks` alone does not stop `git diff` from refreshing the index (measured with git
