@@ -25,6 +25,8 @@ export interface RecountSchedulerDeps {
 /** One worktree's waits and runs (RCNT-08). */
 interface Lane {
   path: string
+  /** A recount of this worktree is running (RCNT-05). */
+  running: boolean
   /** The pending git-state burst; both null when none. */
   firstEventAt: number | null
   lastEventAt: number | null
@@ -57,7 +59,20 @@ export class RecountScheduler {
     const now = this.deps.now()
     lane.firstEventAt ??= now
     lane.lastEventAt = now
-    this.arm(lane)
+    // While a recount runs, the burst waits for its end (RCNT-06).
+    if (!lane.running) this.arm(lane)
+  }
+
+  /** The watcher dropped this worktree: cancel its waiting git-state recount (RCNT-11). */
+  forget(worktreePath: string): void {
+    const lane = this.lanes.get(worktreePath)
+    if (!lane) return
+    lane.cancelTimer?.()
+    lane.cancelTimer = null
+    lane.firstEventAt = null
+    lane.lastEventAt = null
+    // An idle lane holds nothing more, so the map keeps only worktrees in use.
+    if (!lane.running) this.lanes.delete(worktreePath)
   }
 
   /** Quit: cancel everything waiting and emit nothing more (RCNT-12). */
@@ -74,7 +89,14 @@ export class RecountScheduler {
   private laneOf(path: string): Lane {
     let lane = this.lanes.get(path)
     if (!lane) {
-      lane = { path, firstEventAt: null, lastEventAt: null, lastStartAt: null, cancelTimer: null }
+      lane = {
+        path,
+        running: false,
+        firstEventAt: null,
+        lastEventAt: null,
+        lastStartAt: null,
+        cancelTimer: null
+      }
       this.lanes.set(path, lane)
     }
     return lane
@@ -109,10 +131,20 @@ export class RecountScheduler {
   }
 
   private async start(lane: Lane): Promise<void> {
+    lane.running = true
     lane.lastStartAt = this.deps.now()
     lane.firstEventAt = null
     lane.lastEventAt = null
-    const count = await this.deps.recount(lane.path)
+    let count: WorktreeCount | null
+    try {
+      count = await this.deps.recount(lane.path)
+    } catch {
+      // A runner that throws counts as no answer (RCNT-10).
+      count = null
+    }
     if (count !== null && !this.stopped) this.deps.onRecounted(lane.path, count)
+    lane.running = false
+    // Events that came during the run get one trailing recount (RCNT-06).
+    this.arm(lane)
   }
 }

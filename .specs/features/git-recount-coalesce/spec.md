@@ -245,12 +245,12 @@ with its commit, and each target figure reads FAIL before and PASS after.
 | RCNT-02 | P1: one at a time — AC 2 | T2 | Done |
 | RCNT-03 | P1: one at a time — AC 3 | T2 | Done |
 | RCNT-04 | P1: one at a time — AC 4 | T2, T4 | Pending |
-| RCNT-05 | P1: one at a time — AC 5 | T3 | Pending |
-| RCNT-06 | P1: one at a time — AC 6 | T3 | Pending |
+| RCNT-05 | P1: one at a time — AC 5 | T3 | Done |
+| RCNT-06 | P1: one at a time — AC 6 | T3 | Done |
 | RCNT-07 | P1: one at a time — AC 7 | T2 | Done |
 | RCNT-08 | P1: one at a time — AC 8 | T2 | Done |
 | RCNT-09 | P1: one at a time — AC 9 | T2, T4, T7 | Pending |
-| RCNT-10 | P1: one at a time — AC 10 | T3 | Pending |
+| RCNT-10 | P1: one at a time — AC 10 | T3 | Done |
 | RCNT-11 | P1: one at a time — AC 11 | T3, T7 | Pending |
 | RCNT-12 | P1: one at a time — AC 12 | T2, T4, T7 | Pending |
 | RCNT-13 | P1: shared lane — AC 13 | T4, T8 | Pending |

@@ -194,3 +194,145 @@ describe('RecountScheduler timing', () => {
     expect(h.recounted).toEqual([])
   })
 })
+
+describe('RecountScheduler single flight', () => {
+  /** Events every 100 ms from `from` to `to`, inclusive. */
+  async function eventsEvery100(
+    h: ReturnType<typeof harness>,
+    path: string,
+    from: number,
+    to: number
+  ): Promise<void> {
+    for (let at = from; at <= to; at += 100) {
+      await h.advanceTo(at)
+      h.scheduler.notify(path)
+    }
+  }
+
+  it('starts no second recount of a worktree while one runs (RCNT-05)', async () => {
+    const h = harness({ deferred: true, startAt: -250 })
+    h.scheduler.notify(A)
+    await h.advanceTo(0)
+    expect(h.startsOf(A)).toEqual([0])
+
+    await eventsEvery100(h, A, 100, 2900)
+    await h.advanceTo(3000)
+
+    expect(h.startsOf(A)).toEqual([0])
+  })
+
+  it('runs exactly one trailing recount, at the instant an overdue run ends (RCNT-06)', async () => {
+    const h = harness({ deferred: true, startAt: -250 })
+    h.scheduler.notify(A)
+    await h.advanceTo(0)
+    await eventsEvery100(h, A, 100, 2900)
+    await h.advanceTo(3000)
+
+    h.runs[0].resolve(COUNT)
+    await h.advanceTo(3000)
+    expect(h.startsOf(A)).toEqual([0, 3000])
+
+    h.runs[1].resolve(COUNT)
+    await h.advanceTo(6000)
+    expect(h.startsOf(A)).toEqual([0, 3000])
+    // One report per run: each served events.
+    expect(h.recounted).toEqual([
+      [A, COUNT],
+      [A, COUNT]
+    ])
+  })
+
+  it('spaces a trailing recount from the start of the run before it (RCNT-04, RCNT-06)', async () => {
+    const h = harness({ deferred: true, startAt: -250 })
+    h.scheduler.notify(A)
+    await h.advanceTo(0)
+
+    for (const at of [400, 450]) {
+      await h.advanceTo(at)
+      h.scheduler.notify(A)
+    }
+    await h.advanceTo(500)
+    h.runs[0].resolve(COUNT)
+
+    // Not at 700 ms, when the quiet period after 450 would allow it.
+    await h.advanceTo(999)
+    expect(h.startsOf(A)).toEqual([0])
+    await h.advanceTo(1000)
+    expect(h.startsOf(A)).toEqual([0, 1000])
+  })
+
+  it('runs nothing after a recount that saw no event (RCNT-06)', async () => {
+    const h = harness({ deferred: true, startAt: -250 })
+    h.scheduler.notify(A)
+    await h.advanceTo(0)
+
+    await h.advanceTo(500)
+    h.runs[0].resolve(COUNT)
+    await h.advanceTo(5000)
+
+    expect(h.startsOf(A)).toEqual([0])
+  })
+
+  it('reports nothing for a recount with no count, and runs the next one as usual (RCNT-10)', async () => {
+    const h = harness({ deferred: true })
+    h.scheduler.notify(A)
+    await h.advanceTo(250)
+    h.runs[0].resolve(null)
+    await h.advanceTo(260)
+    expect(h.recounted).toEqual([])
+
+    await h.advanceTo(300)
+    h.scheduler.notify(A)
+    await h.advanceTo(1250)
+    expect(h.startsOf(A)).toEqual([250, 1250])
+    h.runs[1].resolve({ dirty: false, changes: 0 })
+    await h.advanceTo(1260)
+    expect(h.recounted).toEqual([[A, { dirty: false, changes: 0 }]])
+  })
+
+  it('treats a runner that throws as no count, and throws nothing (RCNT-10)', async () => {
+    const h = harness({ deferred: true })
+    h.scheduler.notify(A)
+    await h.advanceTo(250)
+    h.runs[0].reject(new Error('fatal: not a git repository'))
+    await h.advanceTo(260)
+    expect(h.recounted).toEqual([])
+
+    await h.advanceTo(300)
+    h.scheduler.notify(A)
+    await h.advanceTo(1250)
+    expect(h.startsOf(A)).toEqual([250, 1250])
+    h.runs[1].resolve(COUNT)
+    await h.advanceTo(1260)
+    expect(h.recounted).toEqual([[A, COUNT]])
+  })
+
+  it('cancels a waiting recount on forget (RCNT-11)', async () => {
+    const h = harness()
+    h.scheduler.notify(A)
+    await h.advanceTo(100)
+
+    h.scheduler.forget(A)
+    await h.advanceTo(3000)
+
+    expect(h.runs).toEqual([])
+    expect(h.recounted).toEqual([])
+  })
+
+  it('lets a running recount finish on forget, with no trailing run (RCNT-11)', async () => {
+    const h = harness({ deferred: true })
+    h.scheduler.notify(A)
+    await h.advanceTo(250)
+    for (const at of [300, 400]) {
+      await h.advanceTo(at)
+      h.scheduler.notify(A)
+    }
+
+    h.scheduler.forget(A)
+    await h.advanceTo(500)
+    h.runs[0].resolve(COUNT)
+    await h.advanceTo(5000)
+
+    expect(h.startsOf(A)).toEqual([250])
+  })
+})

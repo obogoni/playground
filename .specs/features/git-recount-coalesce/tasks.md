@@ -213,19 +213,32 @@ event, and `stop` for waiting recounts.
 
 **Done when**:
 
-- [ ] Tests: a run started at 0 by events (one event at -250 ms, or a first run then a long-running second one) stays in flight while events arrive every 100 ms; no second run starts while it runs (RCNT-05)
-- [ ] Tests: when that run resolves after its trailing run's due time has passed, exactly one more run starts at the instant it resolves, and no third run follows (RCNT-06)
-- [ ] Tests: a run started at 0 that resolves at 500 ms, with events at 400 and 450 ms during it: the trailing run starts at exactly 1,000 ms (spacing), not at 700 ms (quiet)
-- [ ] Tests: a run with no event during it is followed by no run
-- [ ] Tests: a runner answering `null` calls no `onRecounted`, and an event after it runs as usual; a runner that rejects behaves the same and nothing throws (RCNT-10)
-- [ ] Tests: `forget` with a run waiting: no run starts; `forget` during a run: the run finishes and no trailing run starts for the events that came during it (RCNT-11)
-- [ ] Gate check passes: `npx vitest run src/main/recount-scheduler.test.ts`, then the full gate
-- [ ] Test count: T2 count + the new tests
+- [x] Tests: a run started at 0 by events (one event at -250 ms, or a first run then a long-running second one) stays in flight while events arrive every 100 ms; no second run starts while it runs (RCNT-05)
+- [x] Tests: when that run resolves after its trailing run's due time has passed, exactly one more run starts at the instant it resolves, and no third run follows (RCNT-06)
+- [x] Tests: a run started at 0 that resolves at 500 ms, with events at 400 and 450 ms during it: the trailing run starts at exactly 1,000 ms (spacing), not at 700 ms (quiet)
+- [x] Tests: a run with no event during it is followed by no run
+- [x] Tests: a runner answering `null` calls no `onRecounted`, and an event after it runs as usual; a runner that rejects behaves the same and nothing throws (RCNT-10)
+- [x] Tests: `forget` with a run waiting: no run starts; `forget` during a run: the run finishes and no trailing run starts for the events that came during it (RCNT-11)
+- [x] Gate check passes: `npx vitest run src/main/recount-scheduler.test.ts`, then the full gate
+- [x] Test count: T2 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(main): run one recount per worktree at a time`
+
+**Record (2026-10-03)**: ✅ Done.
+
+- `src/main/recount-scheduler.test.ts` gains 8 tests (`RecountScheduler single flight`): a run started
+  at 0 by an event at -250 stays alone while events arrive every 100 ms to 2,900; resolved at 3,000 it
+  is followed by exactly one run at 3,000 and no third; a run resolved at 500 with events at 400 and 450
+  is followed at 1,000, not 999 or 700; a run with no event during it is followed by nothing; a `null`
+  answer and a rejection each report nothing and the next event runs at 1,250 and reports; `forget`
+  cancels a waiting recount, and during a run lets it finish with no trailing run.
+- Quick gate 16/16. Full gate: typecheck exit 0, lint exit 0 with 18 warnings, **122 files, 2,594
+  tests** (2,586 + 8), all pass.
+- Mutants seen failing: no single-flight guard in `notify` (RCNT-05, 06), no re-arm after a run (RCNT-06
+  tests), no `catch` (the throw test), `forget` keeping the burst (the forget-during-run test).
 
 ---
 
