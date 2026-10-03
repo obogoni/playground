@@ -839,14 +839,32 @@ warnings, 107 s wall (T9: 102 s; each real-repository case costs about 0.45 s fo
 
 **Done when**:
 
-- [ ] Tests: a request while idle calls `run` synchronously, once (FWIG-18)
-- [ ] Tests: three requests while the first run is held open call `run` no more until it settles, then exactly once with the merged job (FWIG-19, 20)
-- [ ] Tests: the trailing run starts after a rejected run, and after a `run` that throws synchronously (FWIG-21)
-- [ ] Tests: a request during the trailing run waits for it, then runs once more (a third run, not two)
-- [ ] Tests: `dropWaiting` during a run leaves no trailing run (FWIG-23)
-- [ ] Tests: `mergeBatches` keeps first-seen order without duplicates, ORs `gitStateChanged` both ways, and takes the second batch's worktree
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/refresh-gate.test.ts`, then the full gate
-- [ ] Test count: T12 count + the new tests
+- [x] Tests: a request while idle calls `run` synchronously, once (FWIG-18)
+- [x] Tests: three requests while the first run is held open call `run` no more until it settles, then exactly once with the merged job (FWIG-19, 20)
+- [x] Tests: the trailing run starts after a rejected run, and after a `run` that throws synchronously (FWIG-21)
+- [x] Tests: a request during the trailing run waits for it, then runs once more (a third run, not two)
+- [x] Tests: `dropWaiting` during a run leaves no trailing run (FWIG-23)
+- [x] Tests: `mergeBatches` keeps first-seen order without duplicates, ORs `gitStateChanged` both ways, and takes the second batch's worktree
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/refresh-gate.test.ts`, then the full gate
+- [x] Test count: T12 count + the new tests
+
+**Result (2026-10-03)**: `src/renderer/src/lib/refresh-gate.test.ts` 12 tests, all passing; full gate
+2,848 tests in 129 files (2,836 + 12), typecheck clean, lint 0 errors and 18 warnings, 106 s wall.
+
+- Shape: `createRefreshGate(run, merge, log = console.error)` holds `running` and one `waiting` job.
+  `request` while idle calls `run` before it returns; while running it stores the job or merges it
+  into the waiting one. A run's promise settling either way releases the gate and starts the waiting
+  job; a `run` that throws is turned into a rejected promise, so it releases the same way. A failure
+  is logged, never rethrown. `mergeBatches` joins the paths through a `Set` (first-seen order), ORs
+  `gitStateChanged` and takes `b.worktreePath`.
+- The optional `log` parameter is the one addition to design.md's signature: a swallowed failure
+  would hide a broken `runBatch`, and the tests pass a recorder so a rejection prints nothing. It
+  adds no behaviour the spec names.
+- The runs are held open with hand-settled deferred promises; every assertion reads the jobs `run`
+  received, in order (`refresh-gate.test.ts:66`, `:77-85`, `:96`, `:102-113`, `:124-128`,
+  `:137-145`, `:156-160`). The sync-throw case also checks the gate is busy with the trailing run
+  afterwards (`:110`), not idle. The trailing-run case is a third run, not an overlap (`:141`).
+- Red first: the file failed on the missing module before `refresh-gate.ts` existed.
 
 **Tests**: unit
 **Gate**: quick

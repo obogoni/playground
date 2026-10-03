@@ -248,12 +248,12 @@ section alone; on the build before the change its first check fails.
 | FWIG-15 | P1: index — AC 15 | T7, T9, T11, T12 | Done (T7, T9, T11, T12) |
 | FWIG-16 | P1: index — AC 16 | T11 | Done (T11) |
 | FWIG-17 | P1: index — AC 17 | T20, T21 | Pending |
-| FWIG-18 | P1: gate — AC 18 | T13, T17 | Pending |
-| FWIG-19 | P1: gate — AC 19 | T13, T17 | Pending |
-| FWIG-20 | P1: gate — AC 20 | T13, T17 | Pending |
-| FWIG-21 | P1: gate — AC 21 | T13, T17 | Pending |
+| FWIG-18 | P1: gate — AC 18 | T13, T17 | In progress (T13) |
+| FWIG-19 | P1: gate — AC 19 | T13, T17 | In progress (T13) |
+| FWIG-20 | P1: gate — AC 20 | T13, T17 | In progress (T13) |
+| FWIG-21 | P1: gate — AC 21 | T13, T17 | In progress (T13) |
 | FWIG-22 | P1: gate — AC 22 | T17 | Pending |
-| FWIG-23 | P1: gate — AC 23 | T13, T17 | Pending |
+| FWIG-23 | P1: gate — AC 23 | T13, T17 | In progress (T13) |
 | FWIG-24 | P1: sections — AC 24 | T14, T16, T20, T21 | Pending |
 | FWIG-25 | P1: sections — AC 25 | T15, T16, T17 | Pending |
 | FWIG-26 | P1: sections — AC 26 | T14, T16 | Pending |
