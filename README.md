@@ -149,6 +149,27 @@ npm run build:win  # production build + Windows installer
 
 Pre-PR gate: `npm run typecheck && npm run lint && npm test`.
 
+## Diagnostics
+
+When the app slows down, an opt-in log records what main is doing. Set `PLAYGROUND_DEBUG_PERF=1` before
+the app starts; any other value, or none, leaves it off and costs nothing. To turn it on for one launch,
+set the variable in a terminal and start the app from that same terminal:
+
+```powershell
+$env:PLAYGROUND_DEBUG_PERF = '1'
+npm run dev   # or start the installed playground.exe from this terminal
+```
+
+With it on, the app appends one JSON line a minute to `perf-diagnostics.jsonl` in its user data folder,
+next to `config.json`: main's event-loop delay, git processes by subcommand and worktree, terminal output
+and scrollback append time per session, worktree recounts and status events, and session-name listings.
+Worktrees appear by folder name only; no full path, no git argument beyond the subcommand and no
+terminal content is written. The same switch also prints a `[perf] loop` line to the console every 10 s.
+The file grows across launches until you delete it.
+
+For developers, `node scripts/bench-sessions.mjs` runs the built app with N fake sessions and prints
+these figures against the performance targets (`npx electron-vite build` first).
+
 ## Project docs
 
 - [`CLAUDE.md`](CLAUDE.md) — architecture overview and working notes

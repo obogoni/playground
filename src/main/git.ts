@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { diagnostics } from './diagnostics'
 import { createSpawnPacer } from './spawn-pacer'
 
 const run = promisify(execFile)
@@ -25,8 +26,11 @@ export function git(
   // of hanging the main process on an un-answerable prompt (WBR-02 → blocks).
   // Paced: a tree refresh asks for many processes at once, and each spawn
   // blocks the main process, so they start one event-loop turn apart (PERF-22).
-  return pace(() =>
-    run('git', args, {
+  // Diagnostics counts the process when the queue starts it, and the wait before (PDIAG-09, -15).
+  const start = diagnostics().gitRequested(cwd, args)
+  return pace(() => {
+    const end = start()
+    return run('git', args, {
       cwd,
       windowsHide: true,
       env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
@@ -38,8 +42,8 @@ export function git(
       // caller is meant to rely on; the callers that need a real cap measure it
       // themselves, as file-diff does before reading a blob.
       maxBuffer: MAX_STDOUT_BYTES
-    })
-  )
+    }).finally(end)
+  })
 }
 
 /**

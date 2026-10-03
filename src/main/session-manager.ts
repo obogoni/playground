@@ -8,6 +8,7 @@ import { applyHookEvent, applyKeystroke, sameView, type MachineState } from './a
 import type { ActivityChange } from './activity-notification'
 import { ACTIVITY_TOKEN_ENV, TASK_URL_ENV } from './claude-hook-settings'
 import type { ConfigStore } from './config-store'
+import { diagnostics } from './diagnostics'
 import { isKeystroke } from './keystroke'
 import type { PtyHandle, PtyPort } from './pty-port'
 import { SessionRingBuffer } from './session-ring-buffer'
@@ -425,7 +426,7 @@ export class SessionManager {
     }
     const buffer = new SessionRingBuffer()
     handle.onData((data) => {
-      buffer.append(data)
+      diagnostics().measureAppend(meta.id, data, () => buffer.append(data))
       if (this.#activeId === meta.id) this.deps.emit('session:data', { id: meta.id, data })
     })
     let markExited = (): void => {}

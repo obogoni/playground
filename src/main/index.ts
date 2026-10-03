@@ -20,6 +20,12 @@ import { buildClaudeHookSettings } from './claude-hook-settings'
 import { readClipboardPaste } from './clipboard-reader'
 import { ConfigStore } from './config-store'
 import { commitFiles, listCommits, openCommit } from './commit-log'
+import {
+  createAppDiagnostics,
+  diagnostics,
+  diagnosticsEnabled,
+  installDiagnostics
+} from './diagnostics'
 import { diffStats, readDiffSides } from './file-diff'
 import { discardChanges } from './file-discard'
 import { readForView } from './file-reader'
@@ -83,19 +89,14 @@ const esbuildBin = app.isPackaged
     )
 
 /**
- * WF2 real `ctx.git.fetch` (WF2-07): a no-shell `git fetch`, mirroring the
- * worktree-manager `git` seam. `GIT_TERMINAL_PROMPT=0` fails fast instead of
- * hanging the main process on an un-answerable credential prompt; a non-zero
- * exit rejects (the promisified `execFile` throws), which `ctx.git.fetch`
- * propagates.
+ * WF2 real `ctx.git.fetch` (WF2-07): a no-shell `git fetch` through the git
+ * runner (PDIAG-14). `GIT_TERMINAL_PROMPT=0` fails fast instead of hanging the
+ * main process on an un-answerable credential prompt; a non-zero exit rejects,
+ * which `ctx.git.fetch` propagates.
  */
 async function gitFetch({ cwd, remote, branch }: GitFetchOptions): Promise<void> {
   const args = ['fetch', ...(remote ? [remote] : []), ...(branch ? [branch] : [])]
-  await execFileAsync('git', args, {
-    cwd,
-    windowsHide: true,
-    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
-  })
+  await git(cwd, args)
 }
 
 /**
@@ -106,12 +107,7 @@ async function gitFetch({ cwd, remote, branch }: GitFetchOptions): Promise<void>
  */
 async function readBranch(cwd: string): Promise<string | null> {
   try {
-    const { stdout } = await execFileAsync('git', ['symbolic-ref', '--short', 'HEAD'], {
-      cwd,
-      timeout: 2000,
-      windowsHide: true,
-      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
-    })
+    const { stdout } = await git(cwd, ['symbolic-ref', '--short', 'HEAD'], { timeoutMs: 2000 })
     return stdout.trim() || null
   } catch {
     return null
@@ -171,6 +167,7 @@ const timerScheduler: Scheduler = {
 async function recountWorktree(
   worktreePath: string
 ): Promise<{ dirty: boolean; changes: number } | null> {
+  diagnostics().recountStarted(worktreePath)
   const status = await worktreeStatus(worktreePath)
   if (status === null) console.warn('[git-state] could not recount', worktreePath)
   return status
@@ -313,9 +310,19 @@ app.on('will-quit', (event) => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // The opt-in performance log (PDIAG-01, PDIAG-02), installed before any handler can run git;
+  // without PLAYGROUND_DEBUG_PERF=1 it is the no-op. Quitting drops the partial minute (PDIAG-08).
+  installDiagnostics(
+    createAppDiagnostics({
+      env: process.env,
+      userDataPath: app.getPath('userData'),
+      version: app.getVersion()
+    })
+  )
+  onWillQuit(() => diagnostics().stop())
   // Debug-only event-loop delay log (PERF-16); nothing starts without the env flag (PERF-18).
   const stopLoopDelayLog = startLoopDelayLog({
-    enabled: process.env.PLAYGROUND_DEBUG_PERF === '1'
+    enabled: diagnosticsEnabled(process.env)
   })
   onWillQuit(stopLoopDelayLog)
 
@@ -369,6 +376,7 @@ app.whenReady().then(() => {
       void recountWorktree(worktreePath).then((status) => {
         if (status && mainWindow) {
           emit(mainWindow.webContents, 'worktree:status', { worktreePath, ...status })
+          diagnostics().emitted('worktree:status', worktreePath)
         }
       })
     }
@@ -420,7 +428,9 @@ app.whenReady().then(() => {
     resolveGitDir,
     schedule: timerScheduler,
     emit: (event) => {
-      if (mainWindow) emit(mainWindow.webContents, 'files:changed', event)
+      if (!mainWindow) return
+      emit(mainWindow.webContents, 'files:changed', event)
+      diagnostics().emitted('files:changed', event.worktreePath)
     }
   })
   handle('files:list-dir', ({ worktreePath, dir }) => listDir(worktreePath, dir))

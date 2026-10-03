@@ -2,6 +2,7 @@ import { mkdtempSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { installDiagnostics, NOOP_DIAGNOSTICS, type Diagnostics } from './diagnostics'
 import { git, gitFailureLine, isTimeout } from './git'
 
 /** The rejection `git()` produces, so the helpers are exercised against execFile's real error shape. */
@@ -126,5 +127,89 @@ describe('git', () => {
     // --sq-quote echoes its arguments back, single-quoted, exactly as git received them.
     const { stdout } = await git(tmpdir(), ['rev-parse', '--sq-quote', arg])
     expect(stdout.trim()).toBe(`'${arg}'`)
+  })
+})
+
+interface GitRecord {
+  requests: { cwd: string; args: string[] }[]
+  starts: { cwd: string; args: string[] }[]
+  readonly ends: number
+  readonly maxRunning: number
+}
+
+/** A diagnostics fake that records what the runner reports, and how many processes run at once. */
+function recordingGit(): GitRecord {
+  const requests: { cwd: string; args: string[] }[] = []
+  const starts: { cwd: string; args: string[] }[] = []
+  let ends = 0
+  let running = 0
+  let maxRunning = 0
+  const fake: Diagnostics = {
+    ...NOOP_DIAGNOSTICS,
+    enabled: true,
+    gitRequested: (cwd, args) => {
+      requests.push({ cwd, args: [...args] })
+      return () => {
+        starts.push({ cwd, args: [...args] })
+        running++
+        maxRunning = Math.max(maxRunning, running)
+        return () => {
+          ends++
+          running--
+        }
+      }
+    }
+  }
+  installDiagnostics(fake)
+  return {
+    requests,
+    starts,
+    get ends(): number {
+      return ends
+    },
+    get maxRunning(): number {
+      return maxRunning
+    }
+  }
+}
+
+describe('git reports to diagnostics (PDIAG-09, PDIAG-15)', () => {
+  afterEach(() => installDiagnostics(null))
+
+  it('reports one start with its cwd and args, and its end before the awaited call returns', async () => {
+    const rec = recordingGit()
+    const { stdout } = await git(tmpdir(), ['--version'])
+    expect(rec.ends).toBe(1)
+    expect(stdout).toMatch(/^git version/)
+    expect(rec.requests).toEqual([{ cwd: tmpdir(), args: ['--version'] }])
+    expect(rec.starts).toEqual([{ cwd: tmpdir(), args: ['--version'] }])
+  })
+
+  it("reports one start and one end for a failing call, which still rejects with git's error", async () => {
+    const rec = recordingGit()
+    const err = await rejectionOf(git(tmpdir(), ['rev-parse', '--verify', 'no-such-ref']))
+    expect(gitFailureLine(err)).toMatch(/^fatal: /)
+    expect(rec.starts).toEqual([{ cwd: tmpdir(), args: ['rev-parse', '--verify', 'no-such-ref'] }])
+    expect(rec.ends).toBe(1)
+  })
+
+  it('reports one start and one end for a timed-out call, which is still a timeout', async () => {
+    const rec = recordingGit()
+    const err = await rejectionOf(git(tmpdir(), ['hash-object', '--stdin'], { timeoutMs: 200 }))
+    expect(isTimeout(err)).toBe(true)
+    expect(rec.starts).toHaveLength(1)
+    expect(rec.ends).toBe(1)
+  })
+
+  it('reports six requests at once but starts at most 4 at a time, the paced start, and ends all six', async () => {
+    const rec = recordingGit()
+    const calls = Array.from({ length: 6 }, () => git(tmpdir(), ['--version']))
+    expect(rec.requests).toHaveLength(6)
+    expect(rec.starts).toHaveLength(0)
+    await Promise.all(calls)
+    expect(rec.starts).toHaveLength(6)
+    expect(rec.maxRunning).toBeGreaterThanOrEqual(1)
+    expect(rec.maxRunning).toBeLessThanOrEqual(4)
+    expect(rec.ends).toBe(6)
   })
 })

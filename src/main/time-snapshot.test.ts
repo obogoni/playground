@@ -4,6 +4,7 @@ import { rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { gitSubcommand, installDiagnostics, NOOP_DIAGNOSTICS } from './diagnostics'
 import { buildSnapshot, readGitAsync } from './time-snapshot'
 
 const base = {
@@ -103,5 +104,56 @@ describe('readGitAsync', () => {
 
   it('answers nulls outside a repository, like readGit (TIME-12)', async () => {
     await expect(readGitAsync(dir)).resolves.toEqual({ gitCommonDir: null, branch: null })
+  })
+})
+
+describe('readGitAsync through the git runner (PDIAG-14)', () => {
+  let dir = ''
+  const requests: string[][] = []
+  const starts: string[][] = []
+  let ends = 0
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'rga-'))
+    requests.length = 0
+    starts.length = 0
+    ends = 0
+    installDiagnostics({
+      ...NOOP_DIAGNOSTICS,
+      enabled: true,
+      gitRequested: (_cwd, args) => {
+        requests.push([...args])
+        return () => {
+          starts.push([...args])
+          return () => {
+            ends++
+          }
+        }
+      }
+    })
+  })
+  afterEach(async () => {
+    installDiagnostics(null)
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('reports one rev-parse request, start and end outside a repository, and still answers nulls', async () => {
+    await expect(readGitAsync(dir)).resolves.toEqual({ gitCommonDir: null, branch: null })
+    expect(requests.map(gitSubcommand)).toEqual(['rev-parse'])
+    expect(starts.map(gitSubcommand)).toEqual(['rev-parse'])
+    expect(ends).toBe(1)
+  })
+
+  it('reports one start and one end in a repository, and answers its branch', async () => {
+    execFileSync('git', ['init', '-q', '-b', 'feature/12345-login'], { cwd: dir })
+    execFileSync(
+      'git',
+      ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'init'],
+      { cwd: dir }
+    )
+    const { branch } = await readGitAsync(dir)
+    expect(branch).toBe('feature/12345-login')
+    expect(starts.map(gitSubcommand)).toEqual(['rev-parse'])
+    expect(ends).toBe(1)
   })
 })
