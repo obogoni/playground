@@ -365,9 +365,9 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] `--seed` prints 25 periods; the smoke refuses a seed from before this change with `not running on the seeded data`
-- [ ] Week -4 stays empty (section 9's `pastBusy` setup check still passes)
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] `--seed` prints 25 periods; the smoke refuses a seed from before this change with `not running on the seeded data` (2026-10-03: `Seeded 25 periods`; on a seed written by the previous script the smoke printed `not running on the seeded data — 10 seeded periods missing` and exited 1; on the new seed `SMOKE_ONLY=assign` passed 21/21)
+- [x] Week -4 stays empty (section 9's `pastBusy` setup check still passes) (the seed file holds nothing in week -4 by section 9's own overlap test; the ten spread periods sit Monday to Friday of week -5; section 9 itself runs in T15's full drive)
+- [x] Gate check passes: `npm run lint` (warning count unchanged) (0 errors, 18 warnings)
 
 **Tests**: manual
 **Gate**: manual

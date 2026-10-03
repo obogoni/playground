@@ -81,8 +81,11 @@
  *        writes a tall past Sunday into a new directory under %TEMP%, plus a
  *        git repo `ws/acme-widgets` on `develop` with a worktree
  *        `wt/acme-widgets-9202` on `feature/9202-seed`, a config registering
- *        `ws` and pinning acme/platform #9201 and #9202, and a closed 09:00 to
- *        12:00 period on `develop` two Wednesdays back; prints the next command
+ *        `ws` and pinning acme/platform #9201 and #9202, a closed 09:00 to
+ *        12:00 period on `develop` two Wednesdays back, and a spread week five
+ *        weeks back: ten tasks, #9301 to #9310, two a day Monday to Friday,
+ *        task k on weekday (k - 1) mod 5 for (11 - k) × 10 minutes; prints the
+ *        next command
  *   2. npm run dev -- -- "--user-data-dir=<that directory>" --remote-debugging-port=9222
  *        --disable-renderer-backgrounding --disable-backgrounding-occluded-windows
  *        --disable-background-timer-throttling
@@ -237,7 +240,8 @@ const overlapsDay = (snapshot, day) => {
 
 // --seed: a throwaway userData directory holding one tall day, the previous
 // week's Sunday (always past and complete, and outside every other step's
-// weeks). Fictitious tasks only: the repository is public.
+// weeks), and a spread week five weeks back, two tasks a day Monday to Friday
+// with falling week totals. Fictitious tasks only: the repository is public.
 const TEMP = realpathSync.native(tmpdir())
 const POINTER = join(TEMP, 'playground-smoke-hours.last')
 const SEED_TITLES = [
@@ -257,6 +261,21 @@ const SEED_TITLES = [
   'Fix the timezone offset'
 ]
 const seedId = (i) => `hours-smoke-seed-${String(i + 1).padStart(2, '0')}`
+// The spread week: task k (#9300 + k) on weekday (k - 1) mod 5, for (11 - k) × 10
+// minutes, so tasks k and k + 5 share a day and the week totals fall with k.
+const SPREAD_TITLES = [
+  'Tidy the release notes',
+  'Sort the export columns',
+  'Cap the retry backoff',
+  'Lint the email templates',
+  'Index the order lookups',
+  'Batch the push alerts',
+  'Hide the beta banner',
+  'Log the slow queries',
+  'Pin the font versions',
+  'Clean the temp uploads'
+]
+const spreadId = (i) => `hours-smoke-spread-${String(i + 1).padStart(2, '0')}`
 // The `develop` period sections 13 and 14 split and reassign, and the two pins they choose.
 const DEVELOP_ID = 'hours-smoke-develop'
 const PINS = [9201, 9202]
@@ -336,10 +355,31 @@ if (process.argv.includes('--seed')) {
       taskTitle: null
     })
   )
+  SPREAD_TITLES.forEach((title, i) => {
+    const day = weekDay(-5, i % 5)
+    const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), i < 5 ? 9 : 14)
+    const taskId = 9301 + i
+    lines.push(
+      JSON.stringify({
+        v: 1,
+        id: spreadId(i),
+        sessionId: 'hours-smoke-spread',
+        agent: 'Ad-hoc',
+        cwd: 'C:\\Windows',
+        start: start.toISOString(),
+        end: new Date(start.getTime() + (10 - i) * 10 * 60_000).toISOString(),
+        workspacePath: null,
+        repoName: 'acme-widgets',
+        branch: `feature/${taskId}-seed`,
+        taskId,
+        taskTitle: title
+      })
+    )
+  })
   writeFileSync(join(dir, 'time-log.jsonl'), lines.join('\n') + '\n')
   writeFileSync(POINTER, dir)
   console.log(
-    `Seeded ${lines.length} periods (${dayHeader(sunday)}, ${dayHeader(wednesday)}) in ${dir}`
+    `Seeded ${lines.length} periods (${dayHeader(sunday)}, ${dayHeader(wednesday)}, ${dayHeader(weekDay(-5, 0))} to ${dayHeader(weekDay(-5, 4))}) in ${dir}`
   )
   console.log(
     `Launch: npm run dev -- -- "--user-data-dir=${dir}" --remote-debugging-port=${PORT} --disable-renderer-backgrounding --disable-backgrounding-occluded-windows --disable-background-timer-throttling`
@@ -360,9 +400,11 @@ await waitFor(`typeof window.api !== 'undefined'`, 'the preload bridge')
 // Refuse anything but the seeded directory, before a session or a write.
 const seededDir = existsSync(POINTER) ? readFileSync(POINTER, 'utf8').trim() : null
 const snapshotIds = new Set((await invoke('time:snapshot')).periods.map((p) => p.id))
-const missingSeed = [...SEED_TITLES.map((_, i) => seedId(i)), DEVELOP_ID].filter(
-  (id) => !snapshotIds.has(id)
-)
+const missingSeed = [
+  ...SEED_TITLES.map((_, i) => seedId(i)),
+  DEVELOP_ID,
+  ...SPREAD_TITLES.map((_, i) => spreadId(i))
+].filter((id) => !snapshotIds.has(id))
 if (!seededDir || missingSeed.length > 0) {
   console.error(
     `not running on the seeded data — ${!seededDir ? `no ${POINTER}` : `${missingSeed.length} seeded periods missing`}; run with --seed first`
