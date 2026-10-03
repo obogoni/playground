@@ -1,5 +1,15 @@
+import { spawn } from 'node:child_process'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { buildRawSpawnPlan, buildSpawnPlan, type AgentDef } from './spawn-plan'
+import {
+  PROMPT_ENV,
+  buildPromptSpawnPlan,
+  buildRawSpawnPlan,
+  buildSpawnPlan,
+  type AgentDef
+} from './spawn-plan'
 
 const CLAUDE: AgentDef = { name: 'Claude', command: 'claude', args: [] }
 
@@ -104,3 +114,88 @@ describe('buildRawSpawnPlan', () => {
     expect(buildRawSpawnPlan(line, 'C:\\x', 'pwsh').autoCommand).toBe(line)
   })
 })
+
+describe('buildPromptSpawnPlan', () => {
+  const MOVE_PROMPT = '$p = $env:PLAYGROUND_PROMPT; Remove-Item Env:PLAYGROUND_PROMPT; '
+
+  it('names the prompt env var PLAYGROUND_PROMPT', () => {
+    expect(PROMPT_ENV).toBe('PLAYGROUND_PROMPT')
+  })
+
+  it('hosts the agent in pwsh with -NoExit and the given cwd (APR-32/36)', () => {
+    const cwd = 'C:\\Configuração de ambiente\\my repo'
+    const plan = buildPromptSpawnPlan(CLAUDE, cwd)
+    expect(plan.file).toBe('pwsh.exe')
+    expect(plan.args).toEqual(['-NoExit', '-Command', MOVE_PROMPT + '& claude -- $p'])
+    expect(plan.autoCommand).toBe(MOVE_PROMPT + '& claude -- $p')
+    expect(plan.cwd).toBe(cwd)
+  })
+
+  it('moves the env prompt into a local, removes it, then calls command args -- $p (APR-30)', () => {
+    const agent: AgentDef = { name: 'Claude', command: 'claude', args: ['--model', 'opus'] }
+    expect(buildPromptSpawnPlan(agent, 'C:\\x').autoCommand).toBe(
+      MOVE_PROMPT + '& claude --model opus -- $p'
+    )
+  })
+
+  it('quotes command and args with pwsh rules', () => {
+    const agent: AgentDef = {
+      name: 'Tool',
+      command: 'C:\\Program Files\\tool.exe',
+      args: ["it's", 'a b', '']
+    }
+    expect(buildPromptSpawnPlan(agent, 'C:\\x').autoCommand).toBe(
+      MOVE_PROMPT + "& 'C:\\Program Files\\tool.exe' 'it''s' 'a b' '' -- $p"
+    )
+  })
+
+  it(
+    'hands a real agent the prompt as one byte-identical argument after -- (APR-24)',
+    { timeout: 30000 },
+    async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'psp-'))
+      try {
+        const echo = join(dir, 'echo.js')
+        const out = join(dir, 'out.json')
+        await writeFile(
+          echo,
+          'require("fs").writeFileSync(process.env.PROBE_OUT, JSON.stringify({' +
+            ' argv: process.argv.slice(2), envPrompt: process.env.PLAYGROUND_PROMPT ?? null }))'
+        )
+        const prompt = [
+          ` it's $HOME & 100% "done" ` + '`tick`' + ` ^ | < > ( ) ; # @ { } ação `,
+          `%PATH% !bang!`
+        ].join('\n')
+        const plan = buildPromptSpawnPlan({ name: 'Echo', command: 'node', args: [echo] }, dir)
+        const child = spawn(plan.file, plan.args, {
+          cwd: plan.cwd,
+          env: { ...process.env, PLAYGROUND_PROMPT: prompt, PROBE_OUT: out },
+          stdio: ['pipe', 'ignore', 'ignore']
+        })
+        const exited = new Promise((resolve) => child.once('exit', resolve))
+        // -NoExit keeps pwsh reading stdin; EOF lets it exit, the kill is the fallback.
+        child.stdin.end()
+        try {
+          expect(await waitForJson(out)).toEqual({ argv: ['--', prompt], envPrompt: null })
+        } finally {
+          // pwsh holds the temp dir as its cwd until it is gone.
+          child.kill()
+          await exited
+        }
+      } finally {
+        await rm(dir, { recursive: true, force: true })
+      }
+    }
+  )
+})
+
+/** Polls until the echo agent has written its report. */
+async function waitForJson(path: string): Promise<unknown> {
+  for (;;) {
+    try {
+      return JSON.parse(await readFile(path, 'utf8'))
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+  }
+}
