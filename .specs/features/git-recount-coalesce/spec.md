@@ -267,12 +267,12 @@ with its commit, and each target figure reads FAIL before and PASS after.
 | RCNT-24 | P1: status bar — AC 24 | — | Delivered by #154 (PERF-13) |
 | RCNT-25 | P1: status bar — AC 25 | — | Delivered by #154 (AD-052) |
 | RCNT-26 | P1: status bar — AC 26 | T9 | Done |
-| RCNT-27 | P1: current — AC 27 | T10 | Done |
+| RCNT-27 | P1: current — AC 27 | T10, T13 | Done |
 | RCNT-28 | P1: current — AC 28 | — | Dropped (2026-10-03) |
 | RCNT-29 | P1: current — AC 29 | — | Dropped (2026-10-03) |
-| RCNT-30 | P1: current — AC 30 | T10 | Done |
+| RCNT-30 | P1: current — AC 30 | T10, T13 | Done |
 | RCNT-31 | P1: measured — AC 31 | — | Dropped (2026-10-03) |
-| RCNT-32 | P1: measured — AC 32 | T11, T13 | Pending |
+| RCNT-32 | P1: measured — AC 32 | T11, T13 | Done |
 | RCNT-33 | P1: measured — AC 33 | — | Dropped (2026-10-03) |
 | RCNT-34 | P1: measured — AC 34 | — | Dropped (2026-10-03) |
 | RCNT-35 | P1: measured — AC 35 | T1 | Done |

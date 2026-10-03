@@ -60,7 +60,7 @@ its task. RCNT-12, 13 and 17 have a wiring half in `index.ts`, read in T7 and T8
 | Quick | A task whose only tests are unit tests | `npx vitest run <the task's test file>` |
 | Full | Every code task, after its quick gate | `npm run typecheck && npm run lint && npm test` |
 | Build | T7, T8 and every phase end | `npx electron-vite build` |
-| Manual | T1, T9, T10, T11 | the run the task names |
+| Manual | T1, T9, T10, T11, T13 | the run the task names |
 
 **Lint is judged by exit code AND by warning count**: record the count at T1 and diff it at every gate.
 
@@ -95,7 +95,7 @@ T8 → T9 → T10 → T11
 ### Phase 4: Fix from T11
 
 ```
-T11 → T12
+T11 → T12 → T13
 ```
 
 ---
@@ -619,9 +619,9 @@ on a main mutant.
 **Done when**:
 
 - [x] A1, `--sessions 6 --index-interval 100 --minutes 3 --json a1.json`, run on the T10 commit, built, the machine of #147's baseline; summary written verbatim with its commit
-- [ ] The summary's targets block reads `git status <= 1 per worktree per s` PASS and `no overlapping git on one worktree` PASS (RCNT-32); every steady row's `status/s` and `wt peak` written beside #147's
+- [x] The summary's targets block reads `git status <= 1 per worktree per s` PASS and `no overlapping git on one worktree` PASS (RCNT-32); every steady row's `status/s` and `wt peak` written beside #147's (FAIL turned into T12; re-measured in T13)
 - [x] The startup row of A1 and of #147's run side by side, with a note on what it includes (the tree build's recounts now go through the scheduler)
-- [ ] Any FAIL: stop, write it here, and turn it into a fix task before the Verifier runs
+- [x] Any FAIL: stop, write it here, and turn it into a fix task before the Verifier runs (FAIL turned into T12; re-measured in T13)
 
 **Tests**: none
 **Gate**: manual
@@ -629,7 +629,8 @@ on a main mutant.
 **Commit**: `docs(specs): record the recount figures after coalescing (#149)`
 
 **Record (2026-10-03)**: ❌ Stopped: `git status <= 1 per worktree per s` reads **2, FAIL**. No fix
-made here; the FAIL waits for a fix task (the last two boxes stay open).
+made here; the FAIL waits for a fix task. **Closed**: the FAIL turned into T12 (spacing from the
+previous recount's end, owner 2026-10-03) and was re-measured in T13: 1, PASS.
 
 - Run on `584b994` (T10's commit), after `npx electron-vite build` (exit 0) with `git status
   --porcelain` empty, on the machine of #147's baseline, `--json` to a scratch folder outside the
@@ -782,6 +783,103 @@ answers later than its start moves to the new outcome; every other assertion sta
 
 ---
 
+### T13: The figures after the spacing fix
+
+**What**: Rerun T11's index run on T12's commit, write it beside #147's and A1, judge the target, and
+rerun the status bar smoke once as a freshness guard (spacing from the end can delay a turn-end recount).
+**Where**: `.specs/features/git-recount-coalesce/tasks.md`
+**Depends on**: T12
+**Reuses**: T11's run and table format; T10's smoke run
+**Requirement**: RCNT-32, RCNT-27, RCNT-30
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] A2, `--sessions 6 --index-interval 100 --minutes 3 --json a2.json`, run on T12's commit, built, the machine of #147's baseline; summary written verbatim with its commit
+- [x] The targets block reads `git status <= 1 per worktree per s` PASS and `no overlapping git on one worktree` PASS (RCNT-32); steady rows of #147, A1 and A2 side by side
+- [x] The startup rows of #147, A1 and A2 side by side
+- [x] The full `node scripts/smoke-status-bar.mjs`, unmutated, against the dev app: `counterRefresh()`'s checks pass (a terminal commit within 2 s, a focus, a second focus within 5 s, a turn end) (RCNT-27, RCNT-30); the total written here
+- [x] T11's open boxes closed with the note "FAIL turned into T12; re-measured in T13"
+
+**Tests**: none
+**Gate**: manual
+
+**Commit**: `docs(specs): record the recount figures after the spacing fix (#149)`
+
+**Record (2026-10-03)**: ✅ Done. `git status <= 1 per worktree per s` **1, PASS**; `no overlapping
+git on one worktree` **1, PASS**. RCNT-32 Done.
+
+- Run on `4511f3a` (T12's commit), after `npx electron-vite build` (exit 0) with `git status
+  --porcelain` empty, on the machine of #147's baseline, `--json` to a scratch folder outside the
+  repository; 310 s, exit 0. **Not a fully quiet machine**: the owner's installed app (4 processes)
+  was running throughout, as in #147's baseline and A1. Before and after: no electron process from
+  this worktree, no `bench-tui` process, no `pg-bench-` folder.
+- `node scripts/bench-sessions.mjs --sessions 6 --index-interval 100 --minutes 3 --json a2.json`,
+  summary verbatim:
+
+  ```
+  bench-sessions  sessions=6  fps=20  rows=30  files=500  index=100ms  minutes=3  commit=4511f3a
+  phase         loop p50/p99/max ms  git n   wait  peak  wt peak  status/s  wt:status  recounts  chunks   KB/s  append mean/max ms  names
+  startup      15.9 /  20.9 /  47.6     31  240.6     4        2         1          0        21       0    0.0       0.000 / 0.000      0
+  spawn        16.0 /  22.4 /  29.1     66  176.3     4        1         1         53        59    8159  477.4       0.022 / 0.499      0
+  steady 1     16.0 /  20.4 /  25.9     55    0.7     1        1         1         54        55    7813  489.4       0.027 / 0.182      0
+  steady 2     16.0 /  22.4 /  29.3     68  182.4     4        1         1         54        66    7850  489.3       0.024 / 0.659      0
+  steady 3     15.9 /  22.2 /  30.9     55    0.3     1        1         1         55        55    8119  489.3       0.022 / 0.108      0
+  worst        16.0 /  22.4 /  30.9     68  182.4     4        1         1         55        66    8119  489.4       0.024 / 0.659      0
+  spawn: longest sessions:spawn round trip 125 ms
+  targets
+    loop p99 < 30 ms with 6 sessions        22.4   PASS
+    append mean < 0.1 ms per chunk         0.024   PASS
+    git status <= 1 per worktree per s         1   PASS
+    no overlapping git on one worktree         1   PASS
+  index loop: 2177 writes, 0 skipped
+  ```
+
+- Steady rows, #147 (`dc57bf0`) / A1 (`584b994`, T11) / A2 (`4511f3a`, T13):
+
+  | Row | `status/s` | `wt peak` | `git n` | `wt:status` |
+  | --- | ---------- | --------- | ------- | ----------- |
+  | steady 1 | 4 / 2 / **1** | 1 / 1 / 1 | 179 / 62 / 55 | 178 / 55 / 54 |
+  | steady 2 | 4 / 1 / **1** | 1 / 1 / 1 | 179 / 57 / 68 | 177 / 57 / 54 |
+  | steady 3 | 4 / 1 / **1** | 1 / 1 / 1 | 179 / 56 / 55 | 178 / 56 / 55 |
+
+  Targets: `git status <= 1 per worktree per s` **4 FAIL → 2 FAIL → 1 PASS**; `no overlapping git on
+  one worktree` **1 PASS → 1 PASS → 1 PASS**.
+- The case T11 failed on happened again and held: A2's steady 2 holds two tree builds (`a2.json`
+  line 3: `worktree` 2 under `app`, two `status` under `app` and under each of `bench-wt-2..6`, `peak` 4,
+  `wait` max 182.4 ms), and `bench-wt-1`'s `status` `maxPerSecond` reads 1 there (54 starts). Every
+  worktree reads `maxPerSecond` 1 and `peakConcurrent` 1 in every steady row. The written worktree
+  recounts 54..55 times a minute (A1 55..57), about one per 1 s plus git's duration, as expected from
+  spacing counted from the end.
+- Startup rows:
+
+  | Run | loop p50/p99/max ms | `git n` | wait | peak | `wt peak` | `status/s` | `wt:status` | `recounts` |
+  | --- | ------------------- | ------- | ---- | ---- | --------- | ---------- | ----------- | ---------- |
+  | #147, `dc57bf0` | 16.1 / 17.6 / 46.4 | 23 | 480.3 | 4 | 2 | 2 | 0 | 0 |
+  | A1, `584b994` | 15.8 / 17.2 / 59.1 | 23 | 378.9 | 4 | 2 | 2 | 0 | 14 |
+  | A2, `4511f3a` | 15.9 / 20.9 / 47.6 | 31 | 240.6 | 4 | 2 | 1 | 0 | 21 |
+
+  A2's startup minute held three tree builds (`worktree` 3 under `app`, 21 `status`: 3 over the 7
+  worktrees) against A1's two, hence `git n` 31; its `wt peak` 2 is `app`'s, where a `worktree list`
+  and a `status` overlap (the `worktree list` call is Out of Scope). `status/s` reads 1 there too (A1
+  and #147: 2). `recounts` counts the tree build's per-worktree counts, as in A1.
+- **Status bar smoke, unmutated** (freshness guard): dev app on a throwaway userData in a scratch
+  folder outside the repository, CDP port 9333 (`SMOKE_PORT`), launched fresh with the three
+  anti-throttling flags; the script seeds its own fixture; no registry agent started. **59/59 PASS**,
+  runs to the end (T10: 59/59). `counterRefresh()`'s checks, assertions unchanged (printed 32..39):
+  the counter worktree starts at 3; **a terminal commit drops the counter within 2 s (SCRF-01): "1
+  after 546 ms"** (T10: 569 ms); edits alone leave it at 1; **a focus rebuilds the tree (SCRF-09): 1 →
+  3**; **a second focus within 5 s rebuilds nothing (SCRF-10): 3**; the fake agent gets its hook
+  token; a turn in progress leaves it at 3; **the turn end recounts (SCRF-07): 3 → 5**. The dev app's
+  processes were stopped by their throwaway userData path afterwards; the owner's installed app was
+  not touched.
+
+---
+
 ## Phase Execution Map
 
 ```
@@ -790,10 +888,10 @@ Phase 1 → Phase 2 → Phase 3 → Phase 4
 Phase 1:  T1
 Phase 2:  T1 ------→ T2 ------→ T3 ------→ T4 ------→ T5 ------→ T6 ------→ T7 ------→ T8
 Phase 3:  T8 ------→ T9 ------→ T10 -----→ T11
-Phase 4:  T11 -----→ T12
+Phase 4:  T11 -----→ T12 -----→ T13
 ```
 
-Twelve tasks. T1 runs in the orchestrator; then two batches: Phase 2 (seven tasks) and Phase 3 (three
+Thirteen tasks. T1 runs in the orchestrator; then two batches: Phase 2 (seven tasks) and Phase 3 (three
 tasks). T1 is a stop point. Phase 4 was added on 2026-10-03 for T11's FAIL (owner decision: spacing
 from the previous recount's end).
 
@@ -815,6 +913,7 @@ from the previous recount's end).
 | T10: smoke | 1 run + 2 mutants | ✅ Granular |
 | T11: figures after | 1 run, notes | ✅ Granular |
 | T12: spacing from the end | 1 rule + its spec notes, 1 file | ✅ Granular |
+| T13: figures after the fix | 1 run + 1 smoke run, notes | ✅ Granular |
 
 ## Diagram-Definition Cross-Check
 
@@ -832,6 +931,7 @@ from the previous recount's end).
 | T10 | T9 | T9 → T10 | ✅ Match |
 | T11 | T10 | T10 → T11 | ✅ Match |
 | T12 | T11 | T11 → T12 | ✅ Match |
+| T13 | T12 | T12 → T13 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -849,6 +949,7 @@ from the previous recount's end).
 | T10: smoke | end to end | manual | manual | ✅ OK |
 | T11: figures after | notes | none | none | ✅ OK |
 | T12: spacing from the end | recount scheduler | unit | unit | ✅ OK |
+| T13: figures after the fix | notes | none | none | ✅ OK |
 
 ## Requirement Coverage
 
@@ -856,9 +957,9 @@ from the previous recount's end).
 | ------- | ----------- | --------------------------- |
 | 01 | T7 | T10 (M1 path) |
 | 02 | T2 | — |
-| 03 | T2 | T11 A1 |
-| 04 | T2, T4, T12 | T11 A1 |
-| 05 | T3 | T11 A1 |
+| 03 | T2 | T11 A1, T13 A2 |
+| 04 | T2, T4, T12 | T11 A1, T13 A2 |
+| 05 | T3 | T11 A1, T13 A2 |
 | 06 | T3 | — |
 | 07 | T2 | — |
 | 08 | T2 | — |
@@ -871,9 +972,9 @@ from the previous recount's end).
 | 15 | T4 | — |
 | 17 | T5, T6 | T8 (read) |
 | 26 | — | T9 (smoke check 20) |
-| 27 | — | T10 (`counterRefresh`) |
-| 30 | — | T10 |
-| 32 | — | T11 A1 |
+| 27 | — | T10 (`counterRefresh`), T13 |
+| 30 | — | T10, T13 |
+| 32 | — | T11 A1 (FAIL), T13 A2 (PASS) |
 | 35 | — | T1 |
 | 37 | T2, T12 | — |
 | 38 | T4 | — |
