@@ -253,8 +253,8 @@ same search held 14.6 normal-vision with 7.8 CVD. The WARN band is legal with th
 | HHAT-17 | P1: one look, AC 17 | Execute | Implementing: T3 done; T14 |
 | HHAT-18 | P1: one look, AC 18 | Execute | Implementing: T3 done; T14 |
 | HHAT-19 | P1: one look, AC 19 | Execute | Implemented: T1, T3 |
-| HHAT-20 | P1: one look, AC 20 | Tasks | In Tasks (T4..T8, T12) |
-| HHAT-21 | P1: one look, AC 21 | Tasks | In Tasks (T4, T5, T14) |
+| HHAT-20 | P1: one look, AC 20 | Execute | Implementing: T4 done; T5..T8, T12 |
+| HHAT-21 | P1: one look, AC 21 | Execute | Implementing: T4 done; T5, T14 |
 | HHAT-22 | P1: one look, AC 22 | Execute | Implementing: T3 done; T9 |
 | HHAT-23 | P2: nothing moves, AC 23 | Execute | Implemented: T2 |
 | HHAT-24 | P2: nothing moves, AC 24 | Tasks | In Tasks (T15) |
