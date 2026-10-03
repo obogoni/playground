@@ -497,8 +497,10 @@ titles as written.
 
 **Done when**:
 
-- [ ] A null request returns null and schedules nothing; an unmount or key change clears the pending timer
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` (warning count unchanged, L-035)
+- [x] A null request returns null and schedules nothing; an unmount or key change clears the pending timer
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (warning count unchanged, L-035)
+
+**Done** (T13): `usePathCheck` in `src/renderer/src/lib/use-path-check.ts`. The effect depends on the four values, sets a 250 ms timer and stores `{ key, problem }` only from the invoke's callback (no `setState` in the effect body); its cleanup clears the timer and marks the call stale. A null request returns before scheduling. A rejected invoke is logged and stores nothing. Typecheck 0; lint 0 errors, 18 warnings (baseline); suite 2620 passed, unchanged.
 
 **Tests**: none
 **Gate**: full
