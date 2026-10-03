@@ -1104,8 +1104,27 @@ typecheck clean, lint 0 errors and 18 warnings, 102 s wall.
 
 **Done when**:
 
-- [ ] Diff-to-origin passes `undefined`; read here (FWIG-28)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+- [x] Diff-to-origin passes `undefined`; read here (FWIG-28)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+
+**Result (2026-10-03)**: full gate 2,863 tests in 129 files (unchanged), typecheck clean, lint 0
+errors and 18 warnings, 105 s wall; `npx electron-vite build` passes. Phase 3 ends here.
+
+- Shape: `FileTabs.tsx:471` passes `revisions={files.mode === 'uncommitted' ? files.diskRevisions :
+  undefined}` to the All changes stack.
+- Read (FWIG-28): in diff-to-origin mode `files.mode` is `since-base`, so the stack gets
+  `undefined`, every section's `revision` is 0, and only a key change (merge base, status, path) or
+  `refreshToken` re-reads a section. The stack is keyed `all-changes:${files.mode}`, so a mode
+  switch remounts it instead of carrying one mode's revisions into the other. `CommitTab` passes
+  none (T16).
+- Seen on the dev app from T17's check, hot-reloaded with this change, on the same throwaway seed:
+  - The uncommitted stack was scrolled so every section held an editor, and `untracked.txt` got 10
+    writes 50 ms apart.
+  - Its section showed the last write 863 ms after the first write.
+  - The other two text sections (`crlf.txt` and the long-named file) kept their lines unchanged.
+  - Before this change, the same burst left the section on its earlier content (T17).
+- The dev app's process tree was killed by its PID (found by its user-data folder), and the
+  throwaway folder was deleted.
 
 **Tests**: manual
 **Gate**: full

@@ -258,7 +258,7 @@ section alone; on the build before the change its first check fails.
 | FWIG-25 | P1: sections — AC 25 | T15, T16, T17 | Done (T15, T16, T17) |
 | FWIG-26 | P1: sections — AC 26 | T14, T16 | Done (T14, T16) |
 | FWIG-27 | P1: sections — AC 27 | T16, T19 | In progress (T16) |
-| FWIG-28 | P1: sections — AC 28 | T18 | Pending |
+| FWIG-28 | P1: sections — AC 28 | T18 | Done (T18) |
 | FWIG-29 | P1: sections — AC 29 | T16 | Done (T16) |
 | FWIG-30 | P1: live — AC 30 | T19 | Pending |
 | FWIG-31 | P1: live — AC 31 | T19 | Pending |
