@@ -45,7 +45,7 @@ an AD in `.specs/STATE.md` (design.md, AD-TBD).
 | --------------------- | -------------- | --------- | ---------- |
 | Scope | Upstream issue #145, as written | Grilled and approved by the owner | owner confirmed 2026-10-01 |
 | Slug rule | Drop filler words, collapse a word repeated back to back, cut to 40 characters at a word boundary | Issue #145, Solution 1 | owner confirmed 2026-10-01 |
-| Filler words | `a, o, os, as, de, do, da, dos, das, em, no, na, com, para, por, e, ou, um, uma, the, of, to, in, on, for, and, or, with`, fixed in code; numbers are kept | Issue #145, Implementation Decisions | owner confirmed 2026-10-01 |
+| Filler words | `a, o, os, as, de, do, da, dos, das, em, no, na, com, para, por, e, ou, um, uma, via, the, of, to, in, on, for, and, or, with`, fixed in code; numbers are kept | Issue #145, Implementation Decisions; `via` added by the owner on 2026-10-03, at Execute, because AC 3 and AC 4's titles need it dropped | owner confirmed 2026-10-01; `via` 2026-10-03 |
 | Cap | 40 characters per slug, cut at the last `-` at or before 40; a single word longer than 40 is cut at 40 | Issue #145 | owner confirmed 2026-10-01 |
 | Empty after dropping | Falls back to the full slug | Issue #145 | owner confirmed 2026-10-01 |
 | Where the rule applies | `{slug}` and `{usSlug}` only; the `{id}-` at the start of a segment is never cut | Issue #145; the task id is still read back from the branch | owner confirmed 2026-10-01 |
@@ -194,8 +194,8 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | -------------- | ----- | ----- | ------ |
 | BSLG-01 | P1: slugs, AC 1 | Tasks | Done: T2 |
 | BSLG-02 | P1: slugs, AC 2 | Tasks | Done: T2 |
-| BSLG-03 | P1: slugs, AC 3 | Tasks | Done: T2 (AC 3/4 titles deviate, see tasks.md T2) |
-| BSLG-04 | P1: slugs, AC 4 | Tasks | Done: T2 (AC 3/4 titles deviate, see tasks.md T2) |
+| BSLG-03 | P1: slugs, AC 3 | Tasks | Done: T2 |
+| BSLG-04 | P1: slugs, AC 4 | Tasks | Done: T2 |
 | BSLG-05 | P1: slugs, AC 5 | Tasks | Done: T2 |
 | BSLG-06 | P1: slugs, AC 6 | Tasks | Done: T2 |
 | BSLG-07 | P1: slugs, AC 7 | Tasks | Done: T2 |

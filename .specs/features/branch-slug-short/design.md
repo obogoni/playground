@@ -133,7 +133,7 @@ M1 and M2.
 
 - **Purpose**: Turn a title into a concise slug.
 - **Interfaces** (all module-private; tests go through `branchNameFor`):
-  - `FILLER_WORDS: ReadonlySet<string>` — the issue's 28 words.
+  - `FILLER_WORDS: ReadonlySet<string>` — the issue's 28 words plus `via` (owner, 2026-10-03).
   - `SLUG_MAX_LENGTH = 40`.
   - `slugOf(title: string): string` — transliterate and lowercase as today, split on runs of
     non-`[a-z0-9]`, drop empty words; keep the words not in `FILLER_WORDS`, or all words when that

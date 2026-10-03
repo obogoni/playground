@@ -141,6 +141,7 @@ describe('branchNameFor — concise slugs (BSLG-01..11, 31..33)', () => {
     'ou',
     'um',
     'uma',
+    'via',
     'the',
     'of',
     'to',
@@ -177,19 +178,14 @@ describe('branchNameFor — concise slugs (BSLG-01..11, 31..33)', () => {
     expect(slug('login fix login')).toBe('login-fix-login')
   })
 
-  // SPEC_DEVIATION: AC 3 and AC 4 give the titles "Revisar fluxo de pagamento recorrente via
-  // banco/bancos", but "via" is not in the 28-word filler list, so with those titles the slug is
-  // `revisar-fluxo-pagamento-recorrente-via` (38) in both cases. Reason: the AC's expected slugs
-  // (40 and 34 characters) are only reachable when the word before "banco" is dropped, so these
-  // tests use the filler "do" in its place and keep the AC's expected values. Owner to settle.
   it('keeps every remaining word when they join to exactly 40 characters (BSLG-04)', () => {
-    expect(slug('Revisar fluxo de pagamento recorrente do banco')).toBe(
+    expect(slug('Revisar fluxo de pagamento recorrente via banco')).toBe(
       'revisar-fluxo-pagamento-recorrente-banco'
     )
   })
 
   it('cuts at the last whole word when the words join to more than 40 (BSLG-03)', () => {
-    expect(slug('Revisar fluxo de pagamento recorrente do bancos')).toBe(
+    expect(slug('Revisar fluxo de pagamento recorrente via bancos')).toBe(
       'revisar-fluxo-pagamento-recorrente'
     )
     expect(slug(AC8_TITLE)).toBe('ajustar-validacao-campos-cadastro')

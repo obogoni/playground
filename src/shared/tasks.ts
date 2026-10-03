@@ -26,6 +26,7 @@ const FILLER_WORDS: ReadonlySet<string> = new Set([
   'ou',
   'um',
   'uma',
+  'via',
   'the',
   'of',
   'to',
