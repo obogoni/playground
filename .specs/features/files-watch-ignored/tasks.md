@@ -644,6 +644,9 @@ in 128 files (2,792 + 16), typecheck clean, lint 0 errors and 18 warnings (uncha
   runner's timeout"); `checkIgnored` adds no timer. The test's runner records the `timeoutMs` it
   receives (`[5000]`) and stands in for a hanging check with a real `git hash-object --stdin`
   killed at 200 ms, so the rejection has the runner's real timeout shape (`:259-269`).
+- That timeout case relies on stdin staying open without `input`. Once PR #165 (CRTO-06, stdin
+  ended on every call) merges, it moves to a sleeping alias (`-c alias.wait=!sleep 5 wait`), as
+  #165 did for its own cases.
 - Red first: 9 failures on the missing exports before the change.
 
 **Tests**: unit
@@ -669,20 +672,52 @@ design.md describes; `index.ts` passes the real `checkIgnored`.
 
 **Done when** (fake watch port and scheduler; a recording `checkIgnored` that wraps the real one over a real temp repository, as the issue asks):
 
-- [ ] Tests: a batch of `bin/a.dll` and `bin/b.dll` emits nothing; a batch of `bin/a.dll` and `src/a.ts` emits `{ paths: ['src/a.ts'] }` (FWIG-01, 02)
-- [ ] Tests: a tracked `bin/keep.txt` (force-added) is emitted when written (FWIG-03)
-- [ ] Tests: the second batch under `bin/` makes no `checkIgnored` call; the first made exactly one, holding `bin` (FWIG-04, 05)
-- [ ] Tests: a folder `out/` added to `.gitignore` after the watch started: its first batch makes one call and emits nothing, the next makes none (FWIG-46)
-- [ ] Tests: each forgetting trigger alone (L-087): a batch naming `src/.gitignore` asks again about a path answered before; a git-state batch asks nothing, emits every named path with `gitStateChanged: true`, and the next batch asks again; a reselection asks again (FWIG-07, 08, 09)
-- [ ] Tests: a `checkIgnored` answering null emits the batch unfiltered, and the next batch asks again (FWIG-10)
-- [ ] Tests: an unnamed event plus ignored paths emits `{ paths: [] }` (FWIG-11)
-- [ ] Tests: with a `checkIgnored` held open, a second batch's call starts only after the first settles, and the two emits leave in order (FWIG-12)
-- [ ] Tests: a selection change while the check is held open drops that batch (FWIG-13)
-- [ ] Tests: a deleted `bin/` batch (`bin`, `bin/Debug/a.dll`) emits at most `['bin']` (FWIG-47)
-- [ ] Every existing `file-watcher.test.ts` case passes unchanged
-- [ ] `index.ts` passes `checkIgnored`; `npm run typecheck` is clean
-- [ ] Gate check passes: `npx vitest run src/main/file-watcher.test.ts`, then the full gate
-- [ ] Test count: T9 count + the new tests
+- [x] Tests: a batch of `bin/a.dll` and `bin/b.dll` emits nothing; a batch of `bin/a.dll` and `src/a.ts` emits `{ paths: ['src/a.ts'] }` (FWIG-01, 02)
+- [x] Tests: a tracked `bin/keep.txt` (force-added) is emitted when written (FWIG-03)
+- [x] Tests: the second batch under `bin/` makes no `checkIgnored` call; the first made exactly one, holding `bin` (FWIG-04, 05)
+- [x] Tests: a folder `out/` added to `.gitignore` after the watch started: its first batch makes one call and emits nothing, the next makes none (FWIG-46)
+- [x] Tests: each forgetting trigger alone (L-087): a batch naming `src/.gitignore` asks again about a path answered before; a git-state batch asks nothing, emits every named path with `gitStateChanged: true`, and the next batch asks again; a reselection asks again (FWIG-07, 08, 09)
+- [x] Tests: a `checkIgnored` answering null emits the batch unfiltered, and the next batch asks again (FWIG-10)
+- [x] Tests: an unnamed event plus ignored paths emits `{ paths: [] }` (FWIG-11)
+- [x] Tests: with a `checkIgnored` held open, a second batch's call starts only after the first settles, and the two emits leave in order (FWIG-12)
+- [x] Tests: a selection change while the check is held open drops that batch (FWIG-13)
+- [x] Tests: a deleted `bin/` batch (`bin`, `bin/Debug/a.dll`) emits at most `['bin']` (FWIG-47)
+- [x] Every existing `file-watcher.test.ts` case passes ~~unchanged~~ with only `await h.flush()` added (amended by the owner 2026-10-03, see the SPEC_DEVIATION below)
+- [x] `index.ts` passes `checkIgnored`; `npm run typecheck` is clean
+- [x] Gate check passes: `npx vitest run src/main/file-watcher.test.ts`, then the full gate
+- [x] Test count: T9 count + the new tests
+
+**Result (2026-10-03)**: `src/main/file-watcher.test.ts` 23 tests (9 existing + 14 new), all
+passing; full gate 2,831 tests in 128 files (2,817 + 14), typecheck clean, lint 0 errors and 18
+warnings, 107 s wall (T9: 102 s; each real-repository case costs about 0.45 s for its fixture).
+
+- Shape, as design.md's "File watcher": `FileWatcherDeps.checkIgnored` is required (L-001), and
+  `index.ts` passes `(worktreePath, paths) => checkIgnored(worktreePath, paths)` to the Files
+  watcher only. The batch timer snapshots `paths`, `gitStateChanged` and the new `sawUnnamed`,
+  and appends `settle(batch, generation)` to the `classifying` chain. `classify` drops a stale
+  generation, emits a git-state batch whole after `forget()`, forgets on any `.gitignore`, asks
+  `questionsFor` once, re-checks the generation after the await, learns a set (nothing on null),
+  and emits the kept paths unless none is left and no event was unnamed. A rejected check is
+  logged and the batch emitted unfiltered. `select` (through `closeAll`) replaces the answers
+  and bumps the generation. The chain also catches a throwing `emit`, so one failure cannot stop
+  every later batch.
+- The new cases run the real `checkIgnored` over a fresh temp repository per case (`.gitignore`
+  `bin/`, `core.autocrlf` false), recorded by `recordingCheck`, which can hold a call open or
+  replace its answer; `drain()` waits until every started check, and the one it led to, settled.
+  Each forgetting trigger has its own case with a control (`file-watcher.test.ts:397`, `:412`,
+  `:435`); the throwing-check case (`:469`) covers design.md's Error Handling for FWIG-10.
+- Red first: against the watcher before the change, 13 of the 14 new cases failed; the
+  throwing-check case passes there too, because the old watcher never filtered.
+- **SPEC_DEVIATION** (owner-approved 2026-10-03): the line "every existing case passes unchanged"
+  cannot hold. A closed batch now goes through the async `classifying` chain, so the emit can no
+  longer happen inside the timer callback. The owner amended the line to "passes with only `await
+  h.flush()` added". The harness's `flush()` now returns a promise (it fires the callback and
+  then waits one macrotask), and the harness gains the required `checkIgnored` dep (default: git
+  ignores nothing) as an optional parameter. Exactly four cases changed, each by `await` alone,
+  with no assertion touched: "emits one change carrying every path of a batch" (`:110`), "drops
+  an event under the root's .git entry" (`:129`), "flags a git state change when the git dir's
+  index moves" (`:140`) and "flags a git state change when the git dir's HEAD moves" (`:150`).
+  Run unchanged against the new watcher, those four failed and the other five passed.
 
 **Tests**: unit
 **Gate**: quick

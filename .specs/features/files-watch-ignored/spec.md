@@ -231,19 +231,19 @@ section alone; on the build before the change its first check fails.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FWIG-01 | P1: ignored — AC 1 | T10, T5, T19, T21 | Pending |
-| FWIG-02 | P1: ignored — AC 2 | T10 | Pending |
-| FWIG-03 | P1: ignored — AC 3 | T9, T10 | In progress (T9) |
-| FWIG-04 | P1: ignored — AC 4 | T8, T10 | In progress (T8) |
-| FWIG-05 | P1: ignored — AC 5 | T8, T10 | In progress (T8) |
+| FWIG-01 | P1: ignored — AC 1 | T10, T5, T19, T21 | In progress (T10) |
+| FWIG-02 | P1: ignored — AC 2 | T10 | Done (T10) |
+| FWIG-03 | P1: ignored — AC 3 | T9, T10 | Done (T9, T10) |
+| FWIG-04 | P1: ignored — AC 4 | T8, T10 | Done (T8, T10) |
+| FWIG-05 | P1: ignored — AC 5 | T8, T10 | Done (T8, T10) |
 | FWIG-06 | P1: ignored — AC 6 | T8 | Done (T8) |
-| FWIG-07 | P1: ignored — AC 7 | T10 | Pending |
-| FWIG-08 | P1: ignored — AC 8 | T10 | Pending |
-| FWIG-09 | P1: ignored — AC 9 | T10 | Pending |
-| FWIG-10 | P1: ignored — AC 10 | T9, T10 | In progress (T9) |
-| FWIG-11 | P1: ignored — AC 11 | T10 | Pending |
-| FWIG-12 | P1: ignored — AC 12 | T10 | Pending |
-| FWIG-13 | P1: ignored — AC 13 | T10 | Pending |
+| FWIG-07 | P1: ignored — AC 7 | T10 | Done (T10) |
+| FWIG-08 | P1: ignored — AC 8 | T10 | Done (T10) |
+| FWIG-09 | P1: ignored — AC 9 | T10 | Done (T10) |
+| FWIG-10 | P1: ignored — AC 10 | T9, T10 | Done (T9, T10) |
+| FWIG-11 | P1: ignored — AC 11 | T10 | Done (T10) |
+| FWIG-12 | P1: ignored — AC 12 | T10 | Done (T10) |
+| FWIG-13 | P1: ignored — AC 13 | T10 | Done (T10) |
 | FWIG-14 | P1: ignored — AC 14 | T5, T19 | In progress (T5) |
 | FWIG-15 | P1: index — AC 15 | T7, T9, T11, T12 | In progress (T7, T9) |
 | FWIG-16 | P1: index — AC 16 | T11 | Pending |
@@ -276,8 +276,8 @@ section alone; on the build before the change its first check fails.
 | FWIG-43 | P1: smoke — AC 43 | T5, T19 | In progress (T5) |
 | FWIG-44 | P1: smoke — AC 44 | T5, T19 | In progress (T5) |
 | FWIG-45 | P1: smoke — AC 45 | T5, T19 | In progress (T5) |
-| FWIG-46 | Edge: an ignored folder created after the watch | T10 | Pending |
-| FWIG-47 | Edge: an ignored folder deleted | T9, T10 | In progress (T9) |
+| FWIG-46 | Edge: an ignored folder created after the watch | T10 | Done (T10) |
+| FWIG-47 | Edge: an ignored folder deleted | T9, T10 | Done (T9, T10) |
 | FWIG-48 | Edge: unusual characters in a path | T9 | Done (T9) |
 
 **Coverage:** 48 total, 48 mapped to tasks, 0 unmapped.
