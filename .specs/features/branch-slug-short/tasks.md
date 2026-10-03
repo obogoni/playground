@@ -252,11 +252,13 @@ not the AC's 40- and 34-character slugs. The tests keep the AC's expected slugs 
 
 **Done when**:
 
-- [ ] Test: `listWorktrees` on a plain folder rejects with a `GitError` whose message starts with `git failed in {folder}: fatal: not a git repository`
-- [ ] Test: in a repository with a branch `user`, `createWorktree(repo, 'user/x', 'main')` returns `ok: false` with an error that starts with `fatal: cannot lock ref 'refs/heads/user/x'` and does not contain `Preparing worktree`
-- [ ] Both tests seen failing with T3's change reverted in a scratch copy, then passing
-- [ ] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts` then `npm test`
-- [ ] Test count: T4 count + 2
+- [x] Test: `listWorktrees` on a plain folder rejects with a `GitError` whose message starts with `git failed in {folder}: fatal: not a git repository`
+- [x] Test: in a repository with a branch `user`, `createWorktree(repo, 'user/x', 'main')` returns `ok: false` with an error that starts with `fatal: cannot lock ref 'refs/heads/user/x'` and does not contain `Preparing worktree`
+- [x] Both tests seen failing with T3's change reverted in a scratch copy, then passing
+- [x] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts` then `npm test`
+- [x] Test count: T4 count + 2
+
+**Done** (T5): 2 new tests; suite 2558 → 2560 passed; typecheck 0; lint 0 errors, 18 warnings (baseline). Seen failing in a scratch worktree outside the repository: with T3's `git.ts` reverted and T5 not applied, both fail (`Command failed: git worktre…` and `Preparing worktree (new branch 'user/x')`); with T3 reverted and T5 applied, the create test still fails and the list test passes, since the old rule's first stderr line is already the `fatal:` line there.
 
 **Tests**: unit
 **Gate**: quick

@@ -205,9 +205,9 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-11 | P1: slugs, AC 11 | Tasks | Done: T2 |
 | BSLG-12 | P1: error, AC 12 | Tasks | Done: T3 |
 | BSLG-13 | P1: error, AC 13 | Tasks | Done: T3 |
-| BSLG-14 | P1: error, AC 14 | Tasks | Pending: T5, T17 (smoke 5) |
+| BSLG-14 | P1: error, AC 14 | Tasks | T5 done; T17 (smoke 5) pending |
 | BSLG-15 | P1: error, AC 15 | Tasks | Done: T3, T4 |
-| BSLG-16 | P1: error, AC 16 | Tasks | Pending: T5 |
+| BSLG-16 | P1: error, AC 16 | Tasks | Done: T5 |
 | BSLG-17 | P1: check, AC 17 | Tasks | Pending: T6, T8, T17 (smoke 1) |
 | BSLG-18 | P1: check, AC 18 | Tasks | Pending: T6 |
 | BSLG-19 | P1: check, AC 19 | Tasks | Pending: T6, T17 (smoke 2) |

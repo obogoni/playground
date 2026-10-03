@@ -117,6 +117,20 @@ describe('listWorktrees', () => {
 
     await expect(listWorktrees(plain)).rejects.toBeInstanceOf(GitError)
   })
+
+  it("puts git's own failure line in the GitError message (BSLG-16)", async () => {
+    const plain = join(root, 'not-a-repo')
+    mkdirSync(plain)
+
+    const err = await listWorktrees(plain).then(
+      () => null,
+      (e: unknown) => e
+    )
+
+    const prefix = `git failed in ${plain}: fatal: not a git repository`
+    expect(err).toBeInstanceOf(GitError)
+    expect((err as GitError).message.slice(0, prefix.length)).toBe(prefix)
+  })
 })
 
 describe('worktreeStatus (SCRF-06, SCRF-11)', () => {
@@ -495,6 +509,17 @@ describe('createWorktree', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error).toBeTruthy()
+  })
+
+  it("returns git's fatal: line, not its progress note, when worktree add fails (BSLG-14)", async () => {
+    git(repo, 'branch', 'user')
+
+    const result = await createWorktree(repo, 'user/x', 'main')
+
+    expect(result.ok).toBe(false)
+    const prefix = "fatal: cannot lock ref 'refs/heads/user/x'"
+    expect(result.error?.slice(0, prefix.length)).toBe(prefix)
+    expect(result.error).not.toContain('Preparing worktree')
   })
 })
 

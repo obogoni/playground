@@ -10,11 +10,10 @@ import { worktreeNameFor, worktreePathFor } from '../shared/worktrees'
 import { removeDirTree, type DirRemovalResult } from './dir-remover'
 import { git, gitFailureLine } from './git'
 
-/** Raised when git itself fails for a repo (not installed, not a repo, …). */
+/** Raised when git itself fails for a repo (not installed, not a repo, …); the detail is git's own line (BSLG-16). */
 export class GitError extends Error {
   constructor(repoPath: string, cause: unknown) {
-    const detail = cause instanceof Error ? cause.message : String(cause)
-    super(`git failed in ${repoPath}: ${detail.split('\n')[0]}`)
+    super(`git failed in ${repoPath}: ${gitFailureLine(cause)}`)
     this.name = 'GitError'
   }
 }
