@@ -242,7 +242,7 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (2522 tests; lint 0 errors, 18 warnings)
 
 **Tests**: none
 **Gate**: full
