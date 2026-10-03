@@ -323,9 +323,19 @@ it calls `start()` and chains the returned `end` with `finally`.
 
 **Done when**:
 
-- [ ] `grep -n "execFileAsync('git'" src/main/index.ts` finds nothing; `execFileAsync` is still used by `readFileDropList` and the `assoc` probe
-- [ ] Both calls read against the old ones: same arguments, `readBranch` keeps its 2 s timeout and its `null` on any failure, `gitFetch` keeps no timeout and still rejects on a non-zero exit; written here
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `grep -n "execFileAsync('git'" src/main/index.ts` finds nothing; `execFileAsync` is still used by `readFileDropList` and the `assoc` probe
+- [x] Both calls read against the old ones: same arguments, `readBranch` keeps its 2 s timeout and its `null` on any failure, `gitFetch` keeps no timeout and still rejects on a non-zero exit; written here
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Read against the old calls (2026-10-03)**: `gitFetch` passes the same `['fetch', remote?, branch?]` to
+`git(cwd, args)` with no options, so `timeout` stays `undefined` as before; a non-zero exit still rejects,
+since `git()` returns `execFile`'s rejection through the pacer untouched, and `await` propagates it.
+`readBranch` passes `['symbolic-ref', '--short', 'HEAD']` with `{ timeoutMs: 2000 }`, which `git()` maps to
+`execFile`'s `timeout: 2000`; its `try / catch` returning `null` and `stdout.trim() || null` are unchanged.
+`git()` sets the same `cwd`, `windowsHide: true` and `GIT_TERMINAL_PROMPT=0`; it adds only the 64 MiB
+`maxBuffer` and the spawn queue (design.md, "Probes at the call sites"). `execFileAsync` stays for
+`readFileDropList` (`powershell.exe`) and the `assoc` probe (`cmd.exe`). Full gate: 2,549 passed, 18 lint
+warnings.
 
 **Tests**: none
 **Gate**: full

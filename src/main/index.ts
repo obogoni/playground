@@ -81,19 +81,14 @@ const esbuildBin = app.isPackaged
     )
 
 /**
- * WF2 real `ctx.git.fetch` (WF2-07): a no-shell `git fetch`, mirroring the
- * worktree-manager `git` seam. `GIT_TERMINAL_PROMPT=0` fails fast instead of
- * hanging the main process on an un-answerable credential prompt; a non-zero
- * exit rejects (the promisified `execFile` throws), which `ctx.git.fetch`
- * propagates.
+ * WF2 real `ctx.git.fetch` (WF2-07): a no-shell `git fetch` through the git
+ * runner (PDIAG-14). `GIT_TERMINAL_PROMPT=0` fails fast instead of hanging the
+ * main process on an un-answerable credential prompt; a non-zero exit rejects,
+ * which `ctx.git.fetch` propagates.
  */
 async function gitFetch({ cwd, remote, branch }: GitFetchOptions): Promise<void> {
   const args = ['fetch', ...(remote ? [remote] : []), ...(branch ? [branch] : [])]
-  await execFileAsync('git', args, {
-    cwd,
-    windowsHide: true,
-    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
-  })
+  await git(cwd, args)
 }
 
 /**
@@ -104,12 +99,7 @@ async function gitFetch({ cwd, remote, branch }: GitFetchOptions): Promise<void>
  */
 async function readBranch(cwd: string): Promise<string | null> {
   try {
-    const { stdout } = await execFileAsync('git', ['symbolic-ref', '--short', 'HEAD'], {
-      cwd,
-      timeout: 2000,
-      windowsHide: true,
-      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
-    })
+    const { stdout } = await git(cwd, ['symbolic-ref', '--short', 'HEAD'], { timeoutMs: 2000 })
     return stdout.trim() || null
   } catch {
     return null
