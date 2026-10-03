@@ -7,9 +7,22 @@
   width: 100%;
   height: 100%;
   min-height: 0;
-  padding: 8px 10px;
+  /* Vertical spacing only: the horizontal 10px sits on the host below. */
+  padding: 8px 0;
   box-sizing: border-box;
   background: var(--bg);
+  overflow: hidden;
+}
+
+/* What xterm opens into (#146). No vertical padding, since the fit addon
+ * counts it as height and asks for a row that does not fit; the 10px sides
+ * stay here under border-box so the addon reads today's width and keeps
+ * today's columns. Its height comes from the pane, never from its content. */
+.terminal-host {
+  height: 100%;
+  min-height: 0;
+  padding: 0 10px;
+  box-sizing: border-box;
   overflow: hidden;
 }
 

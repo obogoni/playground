@@ -20,7 +20,14 @@ export interface UseSessions {
   setSelectedSessionId: Dispatch<SetStateAction<string | null>>
   refreshSessions: () => void
   /** `task` links the new session by hand (HTSK-09); absent = From branch. */
-  spawnSession: (agentName: string, cwd: string, adhocCommand?: string, task?: SessionTask) => void
+  /** `prompt` is the resolved initial prompt, registry agents only (APR-30). */
+  spawnSession: (
+    agentName: string,
+    cwd: string,
+    adhocCommand?: string,
+    task?: SessionTask,
+    prompt?: string
+  ) => void
   renameSession: (id: string, title: string) => void
   /** Links a session to a task, or back to its branch with null (HTSK-12, HTSK-13). */
   setSessionTask: (id: string, task: SessionTask | null) => void
@@ -76,10 +83,11 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
     agentName: string,
     cwd: string,
     adhocCommand?: string,
-    task?: SessionTask
+    task?: SessionTask,
+    prompt?: string
   ): void => {
     api
-      .invoke('sessions:spawn', { agentName, cwd, adhocCommand, task })
+      .invoke('sessions:spawn', { agentName, cwd, adhocCommand, task, prompt })
       .then((view) => {
         setSelectedSessionId(view.id)
         onSwitchToAgents()

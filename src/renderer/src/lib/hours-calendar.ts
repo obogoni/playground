@@ -137,18 +137,14 @@ export function layoutLanes(entries: { block: Block; groupKey: string }[]): Laid
   return laidOut
 }
 
-/** Which colour treatment a group's bars wear (HCAL-11, HTF-01). */
-export type ColourRole =
-  | 'slot1'
-  | 'slot2'
-  | 'slot3'
-  | 'slot4'
-  | 'slot5'
-  | 'slot6'
-  | 'slot7'
-  | 'slot8'
-  | 'other'
-  | 'no-task'
+/** One of the eight palette hues (HHAT-01). */
+export type Slot = 'slot1' | 'slot2' | 'slot3' | 'slot4' | 'slot5' | 'slot6' | 'slot7' | 'slot8'
+
+/**
+ * Which look a group's bars wear: a hue solid or hatched, Other, or No task
+ * (HCAL-11, HHAT-01, HHAT-19).
+ */
+export type ColourRole = Slot | `${Slot}-hatched` | 'other' | 'no-task'
 
 /** One legend line: a task or folder with its colour and week total (HCAL-21). */
 export interface LegendEntry {
@@ -158,7 +154,26 @@ export interface LegendEntry {
   totalMs: number
 }
 
-const SLOTS: ColourRole[] = ['slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6', 'slot7', 'slot8']
+const SLOTS: Slot[] = ['slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6', 'slot7', 'slot8']
+
+const HATCHED = '-hatched'
+
+/** Palette order, solid first: the last tie-break (HHAT-01, HHAT-07). */
+const LOOKS: ColourRole[] = [...SLOTS, ...SLOTS.map((slot) => `${slot}-hatched` as const)]
+
+const isHatched = (role: ColourRole): boolean => role.endsWith(HATCHED)
+
+/** A look's hue: `slot3` for both `slot3` and `slot3-hatched`. */
+const hueOf = (role: ColourRole): string =>
+  isHatched(role) ? role.slice(0, -HATCHED.length) : role
+
+/**
+ * A look's class names: `role-slot3` for a solid look, `role-slot3 hatched`
+ * for its hatched twin; Other and No task are never hatched (HHAT-01, HHAT-19).
+ */
+export function lookClass(role: ColourRole): string {
+  return isHatched(role) ? `role-${hueOf(role)} hatched` : `role-${role}`
+}
 
 /** Legend rank: every coloured task first, then Other, then folders (HCAL-21). */
 const legendRank = (role: ColourRole): number => (role === 'no-task' ? 2 : role === 'other' ? 1 : 0)
@@ -195,13 +210,18 @@ function weekGroups(report: WeekReport): WeekGroup[] {
 }
 
 /**
- * Tasks in order of week time each take the first slot no task sharing one of
- * its days holds yet; with all eight held, the task is Other. Task-less folders
- * are No task (HTF-02, HTF-04, HCAL-11).
+ * Tasks in order of week time each take one of the sixteen looks: never one a
+ * task sharing one of its days holds, never the previous task's. Among those,
+ * the look used least this week, then solid before hatched, then a hue no
+ * same-day task and not the previous task holds, then palette order. With none
+ * allowed the task is Other, and the previous task stays the last one given a
+ * look. Task-less folders are No task (HHAT-02..13, HCAL-11).
  */
 export function assignColours(report: WeekReport): Map<string, ColourRole> {
   const colours = new Map<string, ColourRole>()
+  const uses = new Map(LOOKS.map((look) => [look, 0]))
   const dayKeys = report.days.map((day) => day.groups.map((group) => group.key))
+  let previous: ColourRole | null = null
   for (const { groupKey } of weekGroups(report)) {
     if (isFolder(groupKey)) {
       colours.set(groupKey, 'no-task')
@@ -212,7 +232,26 @@ export function assignColours(report: WeekReport): Map<string, ColourRole> {
         .filter((keys) => keys.includes(groupKey))
         .flatMap((keys) => keys.map((k) => colours.get(k)))
     )
-    colours.set(groupKey, SLOTS.find((slot) => !held.has(slot)) ?? 'other')
+    const heldHues = new Set([...held].map((role) => role && hueOf(role)))
+    const avoided = (look: ColourRole): boolean =>
+      heldHues.has(hueOf(look)) || (previous !== null && hueOf(look) === hueOf(previous))
+    // Uses, then fill, then hue, compared in that order: each later term is
+    // smaller than one step of the term before it. The first lowest of the
+    // palette-ordered looks wins.
+    const rank = (look: ColourRole): number =>
+      (uses.get(look) ?? 0) * 4 + (isHatched(look) ? 2 : 0) + (avoided(look) ? 1 : 0)
+    let pick: ColourRole | null = null
+    for (const look of LOOKS) {
+      if (held.has(look) || look === previous) continue
+      if (pick === null || rank(look) < rank(pick)) pick = look
+    }
+    if (pick === null) {
+      colours.set(groupKey, 'other')
+      continue
+    }
+    colours.set(groupKey, pick)
+    uses.set(pick, (uses.get(pick) ?? 0) + 1)
+    previous = pick
   }
   return colours
 }

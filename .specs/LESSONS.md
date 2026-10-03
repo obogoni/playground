@@ -582,13 +582,79 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: SPEC_DEVIATION src/main/session-manager.ts:126 (session-manager)
 - last seen: 2026-10-02T17:30:50Z
 
-### L-101 - When a factory decides enabled-vs-no-op before touching real ports (timer, monitor, file), inject those ports with optional overrides so the disabled test can assert zero calls; checking only the returned no-op and an empty folder lets a leaked timer or monitor survive.
+### L-101 - When an error branch needs an I/O failure the OS cannot produce portably, fail the call through a mocked module or injected seam instead of leaving the branch untested
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: agent-prompts
+- evidence: M17 src/main/prompt-library.ts:39 (APR-06 unreadable) (testing)
+- last seen: 2026-10-03T12:22:13Z
+
+### L-102 - Lift every behavioural rule stated in the spec's assumptions table into a numbered acceptance criterion, or it ships unimplemented and untested
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: agent-prompts
+- evidence: spec.md Assumptions 'Value whitespace' vs NewSessionDialog.tsx:172-173 (spec)
+- last seen: 2026-10-03T12:22:14Z
+
+### L-103 - When main re-checks a rule the renderer already enforces, state the rejection message in the spec so the backstop test can assert it
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `main-backstop` · harmful: 0
+- features: agent-prompts
+- evidence: validation.md APR-26 backstop: src/main/session-manager.test.ts:1498 asserts only .rejects.toThrow() (main-backstop)
+- last seen: 2026-10-03T12:45:36Z
+
+### L-104 - State an edge-case tolerance against the same floored quantity the main criterion uses, or the tolerance cannot hold at fractional sizes
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer layout` · harmful: 0
+- features: terminal-last-row
+- evidence: validation.md Spec-Precision Gaps 1 (Edge case 1 vs P1 AC3) (renderer layout)
+- last seen: 2026-10-03T10:53:15Z
+
+### L-105 - When a layout criterion is measured against an inner element, also require that element to fill its container, or a frozen inner element satisfies it
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer layout` · harmful: 0
+- features: terminal-last-row
+- evidence: validation.md Spec-Precision Gaps 2 (P1 AC3/AC4, mutant V-S1) (renderer layout)
+- last seen: 2026-10-03T10:53:15Z
+
+### L-106 - When a pick is ranked by several tie-break keys, give each adjacent pair of keys a fixture where they disagree, or dropping or reordering a key still passes
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: hours-hatching
+- evidence: validation.md U4, U5 (src/renderer/src/lib/hours-calendar.ts:242) (testing)
+- last seen: 2026-10-03T11:13:28Z
+
+### L-107 - Test a guard's placement before a destructive step with a fixture the code path can see; a fixture the tool cannot read skips the step and the test passes for the wrong reason.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main tests` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md W3, W4 (src/main/worktree-manager.ts:93-94; src/main/worktree-manager.test.ts:759) (src/main tests)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-108 - When a measurement shows an edge case's state cannot occur, restate the edge case at the nearest state that still exercises the guard, not only its tests.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: branch-slug-short
+- evidence: BSLG-38 (validation.md edge cases; src/main/worktree-manager.test.ts:759) (specs)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-109 - When a spec applies a rule again on a fallback path, assert the rule on that path too.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/shared` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md S11 (src/shared/tasks.ts:57; BSLG-06) (src/shared)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-110 - Test a platform gate with at least two non-target platforms, or a gate keyed on the wrong platform survives.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md C1 (src/main/path-limits.ts:94; src/main/path-limits.test.ts:297) (src/main)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-111 - A test of a pure stale-answer helper does not prove the hook passes it the current key; give the hook wiring its own discriminating check.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer hooks` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md SM-A (src/renderer/src/lib/use-path-check.ts:68; BSLG-42) (renderer hooks)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-112 - When a factory decides enabled-vs-no-op before touching real ports (timer, monitor, file), inject those ports with optional overrides so the disabled test can assert zero calls; checking only the returned no-op and an empty folder lets a leaked timer or monitor survive.
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main/**` · harmful: 0
 - features: perf-diagnostics
 - evidence: src/main/diagnostics.ts:461 (M5/M6) (src/main/**)
 - last seen: 2026-10-03T14:19:26Z
 
-### L-102 - When design.md fixes a printed output's exact layout, re-read the spec ACs that describe that output against it (where each figure appears, every verdict value it can print) and align the wording before Execute.
+### L-113 - When design.md fixes a printed output's exact layout, re-read the spec ACs that describe that output against it (where each figure appears, every verdict value it can print) and align the wording before Execute.
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
 - features: perf-diagnostics
 - evidence: PDIAG-36/PDIAG-37 vs design.md:225-237 (specs)

@@ -7,10 +7,12 @@ import {
   dimmedGroups,
   layoutLanes,
   legendEntries,
+  lookClass,
   roleOf,
   timeAxis,
   visibleColumns,
   weekColumns,
+  type ColourRole,
   type LaidOutBlock
 } from './hours-calendar'
 
@@ -281,6 +283,54 @@ describe('assignColours and legendEntries', () => {
   const crowdedDay = (n: number, d: number): TimePeriod[] =>
     Array.from({ length: n }, (_, i) => work(i + 1, d, 8 + i, (10 - i) / 10))
 
+  /**
+   * Tasks given as [taskId, days], listed in falling week time: the k-th of n
+   * (from 0) has (n - k) × 12 minutes, split evenly over its days, from
+   * 6:00 + k × 20 minutes.
+   */
+  const week = (...tasks: [number, number[]][]): TimePeriod[] =>
+    tasks.flatMap(([taskId, days], k) =>
+      days.map((d) => {
+        const start = at(d, 6, k * 20)
+        return closed({
+          id: `${taskId}-${d}`,
+          sessionId: `s-${taskId}`,
+          taskId,
+          cwd: `D:\\acme\\app-${taskId}`,
+          start,
+          end: start + ((tasks.length - k) * 12 * MIN) / days.length
+        })
+      })
+    )
+
+  /** Tasks `from`..`to`, each on `days`. */
+  const range = (from: number, to: number, days: number[]): [number, number[]][] =>
+    Array.from({ length: to - from + 1 }, (_, i) => [from + i, days])
+
+  const looksOf = (colours: Map<string, ColourRole>, ids: number[]): (ColourRole | undefined)[] =>
+    ids.map((id) => colours.get(`task:${id}`))
+
+  const SOLIDS: ColourRole[] = [
+    'slot1',
+    'slot2',
+    'slot3',
+    'slot4',
+    'slot5',
+    'slot6',
+    'slot7',
+    'slot8'
+  ]
+  const HATCHES: ColourRole[] = [
+    'slot1-hatched',
+    'slot2-hatched',
+    'slot3-hatched',
+    'slot4-hatched',
+    'slot5-hatched',
+    'slot6-hatched',
+    'slot7-hatched',
+    'slot8-hatched'
+  ]
+
   it('gives three tasks on one day slots 1 to 3 in order of week time (HTF-02, HTF-03)', () => {
     const r = report({
       periods: [
@@ -297,11 +347,11 @@ describe('assignColours and legendEntries', () => {
     expect(colours.get('task:2')).toBe('slot3')
   })
 
-  it('gives two tasks on different days both slot 1 (HTF-02)', () => {
+  it('gives two tasks on different days different solids (HHAT-03, HHAT-04)', () => {
     const r = report({ periods: [work(1, 14, 9, 5), work(2, 15, 9, 1)] })
     const colours = assignColours(r)
     expect(colours.get('task:1')).toBe('slot1')
-    expect(colours.get('task:2')).toBe('slot1')
+    expect(colours.get('task:2')).toBe('slot2')
   })
 
   it('breaks a tie in week time by the earlier first start (HTF-02)', () => {
@@ -342,10 +392,10 @@ describe('assignColours and legendEntries', () => {
     ])
   })
 
-  it('makes a ninth task on one day Other (HTF-04)', () => {
+  it('gives a ninth task on one day hatched blue (HHAT-05, HHAT-07)', () => {
     const colours = assignColours(report({ periods: crowdedDay(9, 14) }))
     expect(colours.get('task:8')).toBe('slot8')
-    expect(colours.get('task:9')).toBe('other')
+    expect(colours.get('task:9')).toBe('slot1-hatched')
   })
 
   it('assigns no slot in a week of folders only (HTF edge case)', () => {
@@ -364,12 +414,13 @@ describe('assignColours and legendEntries', () => {
     expect([...colours.values()].filter((role) => role.startsWith('slot'))).toEqual(['slot1'])
   })
 
-  it('lists coloured tasks by week time, then Other tasks, then folders (HCAL-21)', () => {
+  it('lists coloured tasks in the order they were coloured, then folders (HCAL-21)', () => {
     const r = report({
       periods: [
         work(null, 16, 6, 8),
         ...crowdedDay(9, 14),
-        // Task 10 has the least time, alone on Tuesday, so it takes slot 1.
+        // Task 10 has the least time, alone on Tuesday: every solid and hatched
+        // blue are used, so it takes hatched orange.
         work(10, 15, 9, 0.05)
       ]
     })
@@ -383,12 +434,187 @@ describe('assignColours and legendEntries', () => {
       ['Task #6', 'slot6'],
       ['Task #7', 'slot7'],
       ['Task #8', 'slot8'],
-      ['Task #10', 'slot1'],
-      ['Task #9', 'other'],
+      ['Task #9', 'slot1-hatched'],
+      ['Task #10', 'slot2-hatched'],
       ['No task · scratch', 'no-task']
     ])
     expect(legend[0].totalMs).toBe(1 * HOUR)
     expect(legend[10].totalMs).toBe(8 * HOUR)
+  })
+
+  it('gives seven tasks alone on their own days seven solids (HHAT-04, HHAT-09)', () => {
+    const colours = assignColours(
+      report({
+        periods: week(...[1, 2, 3, 4, 5, 6, 7].map((id): [number, number[]] => [id, [13 + id]]))
+      })
+    )
+    expect(looksOf(colours, [1, 2, 3, 4, 5, 6, 7])).toEqual([
+      'slot1',
+      'slot2',
+      'slot3',
+      'slot4',
+      'slot5',
+      'slot6',
+      'slot7'
+    ])
+  })
+
+  it('spreads ten tasks over five days as eight solids then two hatched, neighbours apart (HHAT-05, HHAT-08)', () => {
+    // Task k on weekday (k - 1) mod 5: tasks 1 and 6 on Monday, 2 and 7 on Tuesday, …
+    const ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    const r = report({
+      periods: week(...ids.map((id): [number, number[]] => [id, [14 + ((id - 1) % 5)]]))
+    })
+    const legend = legendEntries(r, assignColours(r))
+    expect(legend.map((e) => [e.label, e.role])).toEqual([
+      ['Task #1', 'slot1'],
+      ['Task #2', 'slot2'],
+      ['Task #3', 'slot3'],
+      ['Task #4', 'slot4'],
+      ['Task #5', 'slot5'],
+      ['Task #6', 'slot6'],
+      ['Task #7', 'slot7'],
+      ['Task #8', 'slot8'],
+      ['Task #9', 'slot1-hatched'],
+      ['Task #10', 'slot2-hatched']
+    ])
+  })
+
+  it('takes a solid before a hatched look on a use tie, even one whose hue its day holds (HHAT-05)', () => {
+    // Tasks 1 to 15 on Monday, task 16 on Monday and Wednesday, tasks 17 to 23 on
+    // Tuesday, task 24 on Wednesday. Task 24 may take red or hatched blue to
+    // hatched violet, each used once; Wednesday holds hatched red, so only solid
+    // before hatched puts red ahead of hatched blue.
+    const colours = assignColours(
+      report({
+        periods: week(...range(1, 15, [14]), [16, [14, 16]], ...range(17, 23, [15]), [24, [16]])
+      })
+    )
+    expect(colours.get('task:16')).toBe('slot8-hatched')
+    expect(colours.get('task:23')).toBe('slot7')
+    expect(colours.get('task:24')).toBe('slot8')
+  })
+
+  it('gives sixteen tasks on one day the solids in palette order, then hatched 1 to 8 (HHAT-07, HHAT-10)', () => {
+    const colours = assignColours(report({ periods: week(...range(1, 16, [14])) }))
+    expect(
+      looksOf(
+        colours,
+        range(1, 16, []).map(([id]) => id)
+      )
+    ).toEqual([...SOLIDS, ...HATCHES])
+  })
+
+  it('makes a seventeenth task on one day Other (HHAT-12)', () => {
+    const colours = assignColours(report({ periods: week(...range(1, 17, [14])) }))
+    expect(colours.get('task:16')).toBe('slot8-hatched')
+    expect(colours.get('task:17')).toBe('other')
+  })
+
+  it('gives a hatched pick a hue no same-day task holds (HHAT-06)', () => {
+    // Task 1 on Monday and Tuesday, tasks 2 to 8 on Monday, task 9 on Tuesday.
+    const colours = assignColours(
+      report({ periods: week([1, [14, 15]], ...range(2, 8, [14]), [9, [15]]) })
+    )
+    expect(colours.get('task:1')).toBe('slot1')
+    expect(colours.get('task:8')).toBe('slot8')
+    expect(colours.get('task:9')).toBe('slot2-hatched')
+  })
+
+  it("never gives a hatched pick the previous task's hue (HHAT-06)", () => {
+    // Tasks 1 to 7 on Monday, task 8 alone on Tuesday, task 9 on Monday.
+    const colours = assignColours(
+      report({ periods: week(...range(1, 7, [14]), [8, [15]], [9, [14]]) })
+    )
+    expect(colours.get('task:8')).toBe('slot8')
+    expect(colours.get('task:9')).toBe('slot1-hatched')
+  })
+
+  it('gives a solid pick a hue its day does not hold, hatched or not (HHAT-06)', () => {
+    // Tasks 1 to 8 on Monday, task 9 alone on Tuesday, tasks 10 to 16 on Monday,
+    // task 17 on Tuesday: every look is used once, and hatched blue sits on Tuesday.
+    const colours = assignColours(
+      report({ periods: week(...range(1, 8, [14]), [9, [15]], ...range(10, 16, [14]), [17, [15]]) })
+    )
+    expect(colours.get('task:9')).toBe('slot1-hatched')
+    expect(colours.get('task:16')).toBe('slot8-hatched')
+    expect(colours.get('task:17')).toBe('slot2')
+  })
+
+  it("makes a task Other when its one free look is the previous task's (HHAT-13)", () => {
+    // Tasks 1 to 15 on Monday, task 16 alone on Tuesday, task 17 on Monday.
+    const colours = assignColours(
+      report({ periods: week(...range(1, 15, [14]), [16, [15]], [17, [14]]) })
+    )
+    expect(colours.get('task:15')).toBe('slot7-hatched')
+    expect(colours.get('task:16')).toBe('slot8-hatched')
+    expect(colours.get('task:17')).toBe('other')
+  })
+
+  it('keeps the last coloured task as the previous one past an Other (HHAT edge case)', () => {
+    // Tasks 1 to 15 on Monday and Wednesday, task 16 alone on Tuesday, task 17 on
+    // Monday and task 18 on Wednesday: each one's only free look is task 16's.
+    const colours = assignColours(
+      report({ periods: week(...range(1, 15, [14, 16]), [16, [15]], [17, [14]], [18, [16]]) })
+    )
+    expect(colours.get('task:16')).toBe('slot8-hatched')
+    expect(colours.get('task:17')).toBe('other')
+    expect(colours.get('task:18')).toBe('other')
+  })
+
+  it('uses every look exactly twice for thirty-two tasks dealt across the seven days (HHAT edge case)', () => {
+    const ids = Array.from({ length: 32 }, (_, i) => i + 1)
+    const colours = assignColours(
+      report({ periods: week(...ids.map((id): [number, number[]] => [id, [14 + ((id - 1) % 7)]])) })
+    )
+    const uses: Record<string, number> = {}
+    for (const look of looksOf(colours, ids)) uses[String(look)] = (uses[String(look)] ?? 0) + 1
+    expect(uses).toEqual(Object.fromEntries([...SOLIDS, ...HATCHES].map((look) => [look, 2])))
+  })
+
+  it('keeps neighbours, same-day tasks and small weeks apart in generated weeks (HHAT-08..11)', () => {
+    // A seeded generator (mulberry32), so a failure replays.
+    let seed = 152
+    const random = (): number => {
+      seed = (seed + 0x6d2b79f5) | 0
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+    }
+    for (let w = 0; w < 240; w++) {
+      const n = 1 + (w % 24)
+      const ids = Array.from({ length: n }, (_, i) => i + 1)
+      const plan = ids.map((id): [number, number[]] => {
+        const days = new Set<number>()
+        const count = 1 + Math.floor(random() * 3)
+        while (days.size < count) days.add(14 + Math.floor(random() * 7))
+        return [id, [...days]]
+      })
+      const r = report({ periods: week(...plan) })
+      const colours = assignColours(r)
+      const looks = looksOf(colours, ids)
+      const where = `week ${w}: ${JSON.stringify(plan)} → ${JSON.stringify(looks)}`
+
+      const chips = legendEntries(r, colours)
+        .map((e) => e.role)
+        .filter((role) => role !== 'other' && role !== 'no-task')
+      chips.slice(1).forEach((role, i) => expect(role, where).not.toBe(chips[i]))
+
+      for (const day of r.days) {
+        const dayLooks = day.groups
+          .map((g) => colours.get(g.key))
+          .filter((role) => role !== 'other')
+        expect(new Set(dayLooks).size, where).toBe(dayLooks.length)
+      }
+
+      if (n <= 16) expect(new Set(looks).size, where).toBe(n)
+      if (n <= 16) expect(looks, where).not.toContain('other')
+      if (n <= 8)
+        expect(
+          looks.every((look) => SOLIDS.includes(look as ColourRole)),
+          where
+        ).toBe(true)
+    }
   })
 
   it('keeps frozen colours while live time reorders tasks, new ones neutral (HCAL-24)', () => {
@@ -407,6 +633,22 @@ describe('assignColours and legendEntries', () => {
       ['task:6', 'other', 9 * HOUR],
       ['cwd:d:\\acme\\scratch', 'no-task', 1 * HOUR]
     ])
+  })
+})
+
+describe('lookClass', () => {
+  it('names a solid look by its slot alone (HHAT-01)', () => {
+    expect(lookClass('slot1')).toBe('role-slot1')
+    expect(lookClass('slot8')).toBe('role-slot8')
+  })
+
+  it('names a hatched look by its slot plus hatched (HHAT-01)', () => {
+    expect(lookClass('slot3-hatched')).toBe('role-slot3 hatched')
+  })
+
+  it('never hatches Other or No task (HHAT-19)', () => {
+    expect(lookClass('other')).toBe('role-other')
+    expect(lookClass('no-task')).toBe('role-no-task')
   })
 })
 

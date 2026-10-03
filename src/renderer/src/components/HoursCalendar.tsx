@@ -2,6 +2,7 @@ import type { CSSProperties, JSX } from 'react'
 import {
   barBox,
   layoutLanes,
+  lookClass,
   roleOf,
   type CalendarColumn,
   type ColourRole,
@@ -189,7 +190,7 @@ function Bar({
       type="button"
       className={[
         'hcal-bar',
-        `role-${role}`,
+        lookClass(role),
         box.ongoing && 'ongoing',
         focused && 'focused',
         dimmed && 'dimmed',

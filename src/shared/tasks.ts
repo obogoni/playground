@@ -5,15 +5,65 @@ function branchTypeOf(type: string): string {
   return type.toLowerCase() === 'bug' ? 'bugfix' : 'feature'
 }
 
-/** Title → slug: accented chars transliterated (NFD, diacritics stripped),
- * lowercased, non-alphanumeric runs collapse to '-', ends trimmed. */
+/** Words a slug leaves out (BSLG-01), matched after transliteration and lowercasing. */
+const FILLER_WORDS: ReadonlySet<string> = new Set([
+  'a',
+  'o',
+  'os',
+  'as',
+  'de',
+  'do',
+  'da',
+  'dos',
+  'das',
+  'em',
+  'no',
+  'na',
+  'com',
+  'para',
+  'por',
+  'e',
+  'ou',
+  'um',
+  'uma',
+  'via',
+  'the',
+  'of',
+  'to',
+  'in',
+  'on',
+  'for',
+  'and',
+  'or',
+  'with'
+])
+
+/** Longest slug `{slug}` and `{usSlug}` render (BSLG-03..05). */
+const SLUG_MAX_LENGTH = 40
+
+/** Title → concise slug: accented chars transliterated (NFD, diacritics
+ * stripped), lowercased, split on non-alphanumeric runs; filler words dropped
+ * (all words kept when that leaves none), a word equal to the one before it
+ * dropped, then joined with '-' word by word up to 40 characters, a first word
+ * longer than that cut at 40 (BSLG-01..07). */
 function slugOf(title: string): string {
-  return title
+  const words = title
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .split(/[^a-z0-9]+/)
+    .filter((word) => word !== '')
+  const meaningful = words.filter((word) => !FILLER_WORDS.has(word))
+  const kept = (meaningful.length > 0 ? meaningful : words).filter(
+    (word, index, list) => index === 0 || word !== list[index - 1]
+  )
+  if (kept.length === 0) return ''
+  let slug = kept[0].slice(0, SLUG_MAX_LENGTH)
+  for (const word of kept.slice(1)) {
+    if (slug.length + 1 + word.length > SLUG_MAX_LENGTH) break
+    slug = `${slug}-${word}`
+  }
+  return slug
 }
 
 /**

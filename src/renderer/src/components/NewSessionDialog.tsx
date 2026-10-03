@@ -1,11 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { JSX } from 'react'
 import type { AgentDef } from '../../../shared/agents'
+import {
+  PROMPT_MAX_CHARS,
+  parsePlaceholders,
+  type PromptEntry
+} from '../../../shared/prompt-template'
 import type { PinnedTaskView, SessionTask } from '../../../shared/tasks'
 import type { PeriodTaskChoice } from '../../../shared/time'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { api } from '../lib/api'
 import type { IsolationLevel } from '../lib/isolation-level'
+import { carryValues, formBlockers, promptContext, resolveForm } from '../lib/prompt-form'
 import {
   adoptBrowsed,
   cwdAfterLevelChange,
@@ -39,9 +45,26 @@ interface NewSessionDialogProps {
   source: NewSessionSource
   /** The pinned tasks, for the Task field's picker. */
   tasks: PinnedTaskView[]
-  /** `task` is the chosen link; absent = From branch (HTSK-09, HTSK-10). */
-  onSpawn: (agentName: string, cwd: string, adhocCommand?: string, task?: SessionTask) => void
+  /**
+   * `task` is the chosen link; absent = From branch (HTSK-09, HTSK-10).
+   * `prompt` is the resolved prompt shown in Will run (APR-35).
+   */
+  onSpawn: (
+    agentName: string,
+    cwd: string,
+    adhocCommand?: string,
+    task?: SessionTask,
+    prompt?: string
+  ) => void
   onClose: () => void
+}
+
+/** The prompt files; a failed listing reads as an empty folder. */
+function loadPrompts(): Promise<PromptEntry[]> {
+  return api.invoke('prompts:list').catch((err) => {
+    console.error(err)
+    return []
+  })
 }
 
 /** The level selector, in handoff order (ISO-05). */
@@ -70,6 +93,9 @@ function chipLines(o: LevelOption): [string, string] {
  * Ad-hoc runs a one-shot raw command, never saved to the registry (AGCF-03).
  * The Task field starts on `From branch`, or on the task card that opened the
  * dialog (HTSK-07, HTSK-08), and the spawn carries the chosen link (HTSK-09).
+ * A registry agent can start on a prompt file; one with placeholders adds a
+ * second step that fills them, and the spawn sends the text Will run shows
+ * (APR-09, APR-17, APR-35). With None picked the dialog is unchanged (APR-11).
  */
 export function NewSessionDialog({
   tree,
@@ -95,6 +121,29 @@ export function NewSessionDialog({
         }
   )
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [prompts, setPrompts] = useState<PromptEntry[]>([])
+  const [promptName, setPromptName] = useState<string | null>(null)
+  const [step, setStep] = useState<1 | 2>(1)
+  // Only what the developer typed; untouched context fields follow the current
+  // selection (APR-19..22), typed ones survive Back (APR-27).
+  const [typed, setTyped] = useState<Record<string, string>>({})
+  const [reloadOnFocus, setReloadOnFocus] = useState(false)
+
+  // Read the folder each time the dialog opens, like workflows (APR-01).
+  useEffect(() => {
+    loadPrompts().then(setPrompts)
+  }, [])
+
+  // After Open prompts folder, pick up the developer's edits on return.
+  useEffect(() => {
+    if (!reloadOnFocus) return
+    const onFocus = (): void => {
+      setReloadOnFocus(false)
+      loadPrompts().then(setPrompts)
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [reloadOnFocus])
 
   const isAdhoc = agentName === ADHOC
   const agent = agents.find((a) => a.name === agentName)
@@ -108,6 +157,39 @@ export function NewSessionDialog({
       : ''
   const commandReady = isAdhoc ? adhocCommand.trim() !== '' : agent !== undefined
   const canSpawn = cwd !== null && commandReady
+
+  // Ad-hoc never carries a prompt (APR-10); one that vanished or broke on a
+  // reload reads as None.
+  const chosen = isAdhoc
+    ? undefined
+    : prompts.find(
+        (p): p is { name: string; template: string } => p.name === promptName && 'template' in p
+      )
+  const names = chosen ? parsePlaceholders(chosen.template) : []
+  const needsStep2 = names.length > 0
+  const ctx = promptContext(task, options.find((o) => o.path === cwd) ?? null, cwd ?? '', tasks)
+  const values = carryValues(typed, names, ctx)
+  const resolved = chosen ? resolveForm(chosen.template, values) : ''
+  const blockers = formBlockers(values, names, resolved)
+  const promptReady = blockers.emptyFields.length === 0 && blockers.tooLong === null
+  const showStep2 = step === 2 && needsStep2
+
+  // A new prompt keeps the typed values of the names it shares (APR-28).
+  const choosePrompt = (name: string | null): void => {
+    setPromptName(name)
+    const next = prompts.find((p) => p.name === name)
+    const kept = next && 'template' in next ? parsePlaceholders(next.template) : []
+    setTyped((prev) =>
+      Object.fromEntries(kept.filter((n) => Object.hasOwn(prev, n)).map((n) => [n, prev[n]]))
+    )
+  }
+
+  const openPromptsFolder = (): void => {
+    api
+      .invoke('prompts:openFolder')
+      .then(() => setReloadOnFocus(true))
+      .catch(console.error)
+  }
 
   const browse = (): void => {
     api
@@ -139,25 +221,99 @@ export function NewSessionDialog({
     if (cwd === null || !commandReady) return
     const link = task ?? undefined
     if (isAdhoc) onSpawn(ADHOC, cwd, adhocCommand.trim(), link)
-    else if (agent) onSpawn(agent.name, cwd, undefined, link)
+    // The previewed text itself, so a file edited meanwhile changes nothing (APR-35).
+    else if (agent && chosen) {
+      if (promptReady) onSpawn(agent.name, cwd, undefined, link, resolved)
+    } else if (agent) onSpawn(agent.name, cwd, undefined, link)
+  }
+
+  const header = (
+    <header className="dialog-header">
+      <div className="dialog-kicker">New session</div>
+      {source.taskId !== undefined ? (
+        <div className="dialog-title-row">
+          <span className="dialog-task-id">#{source.taskId}</span>
+          <span className="dialog-task-title">Start an agent</span>
+        </div>
+      ) : (
+        <div className="dialog-title-row">
+          <span className="dialog-repo-title">Start an agent</span>
+        </div>
+      )}
+    </header>
+  )
+
+  // `command args --`, then the prompt the agent gets, live (APR-25, APR-29).
+  const willRunCard = willRun && (
+    <div className="dialog-path-preview">
+      <div className="dialog-path-label">Will run</div>
+      <div className="dialog-path-value">
+        {willRun}
+        {chosen ? ' --' : ''}
+        {cwd !== null ? `  ·  ${cwd}` : ''}
+      </div>
+      {chosen && (showStep2 || !needsStep2) && <pre className="ns-prompt-preview">{resolved}</pre>}
+    </div>
+  )
+
+  const tooLongNotice = blockers.tooLong !== null && (
+    <div className="dialog-error">
+      Prompt too long ({blockers.tooLong} / {PROMPT_MAX_CHARS} characters)
+    </div>
+  )
+
+  if (showStep2 && chosen) {
+    const firstEmpty = blockers.emptyFields[0]
+    return (
+      <div className="dialog-backdrop" onClick={onClose}>
+        <div className="dialog-panel" onClick={(event) => event.stopPropagation()}>
+          {header}
+          <div className="dialog-body">
+            <div className="ns-prompt-step">Prompt · {chosen.name}</div>
+            {names.map((name) => (
+              <div key={name}>
+                <div className="dialog-field-label ns-var-label">{`{{${name}}}`}</div>
+                <input
+                  className="dialog-input"
+                  value={values[name]}
+                  autoFocus={name === firstEmpty}
+                  spellCheck={false}
+                  onChange={(event) => {
+                    const value = event.target.value
+                    setTyped((prev) => ({ ...prev, [name]: value }))
+                  }}
+                />
+              </div>
+            ))}
+            {willRunCard}
+            {tooLongNotice}
+          </div>
+          <footer className="dialog-footer">
+            <button type="button" className="dialog-btn-ghost ns-back" onClick={() => setStep(1)}>
+              Back
+            </button>
+            <button type="button" className="dialog-btn-ghost" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="dialog-btn-primary"
+              disabled={!canSpawn || !promptReady}
+              onClick={spawn}
+            >
+              <Icon name="terminal" size={15} strokeWidth={2.2} />
+              Spawn
+            </button>
+          </footer>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="dialog-backdrop" onClick={onClose}>
       <div className="dialog-panel" onClick={(event) => event.stopPropagation()}>
-        <header className="dialog-header">
-          <div className="dialog-kicker">New session</div>
-          {source.taskId !== undefined ? (
-            <div className="dialog-title-row">
-              <span className="dialog-task-id">#{source.taskId}</span>
-              <span className="dialog-task-title">Start an agent</span>
-            </div>
-          ) : (
-            <div className="dialog-title-row">
-              <span className="dialog-repo-title">Start an agent</span>
-            </div>
-          )}
-        </header>
+        {header}
         <div className="dialog-body">
           <div>
             <div className="dialog-field-label">Agent</div>
@@ -271,24 +427,69 @@ export function NewSessionDialog({
             </div>
           </div>
 
-          {willRun && (
-            <div className="dialog-path-preview">
-              <div className="dialog-path-label">Will run</div>
-              <div className="dialog-path-value">
-                {willRun}
-                {cwd !== null ? `  ·  ${cwd}` : ''}
+          {!isAdhoc && (
+            <div>
+              <div className="ns-label-row">
+                <div className="dialog-field-label">Prompt</div>
+                <button type="button" className="ns-open-folder" onClick={openPromptsFolder}>
+                  Open prompts folder
+                </button>
+              </div>
+              <div className="ns-prompt-grid">
+                <button
+                  type="button"
+                  className={`ns-prompt-chip${chosen === undefined ? ' selected' : ''}`}
+                  onClick={() => choosePrompt(null)}
+                >
+                  None
+                </button>
+                {prompts.map((p) =>
+                  'error' in p ? (
+                    <button key={p.name} type="button" className="ns-prompt-chip" disabled>
+                      {p.name} <span className="ns-prompt-error">({p.error})</span>
+                    </button>
+                  ) : (
+                    <button
+                      key={p.name}
+                      type="button"
+                      className={`ns-prompt-chip${p.name === chosen?.name ? ' selected' : ''}`}
+                      onClick={() => choosePrompt(p.name)}
+                    >
+                      {p.name}
+                    </button>
+                  )
+                )}
               </div>
             </div>
           )}
+
+          {willRunCard}
+          {!needsStep2 && tooLongNotice}
         </div>
         <footer className="dialog-footer">
           <button type="button" className="dialog-btn-ghost" onClick={onClose}>
             Cancel
           </button>
-          <button type="button" className="dialog-btn-primary" disabled={!canSpawn} onClick={spawn}>
-            <Icon name="terminal" size={15} strokeWidth={2.2} />
-            Spawn
-          </button>
+          {needsStep2 ? (
+            <button
+              type="button"
+              className="dialog-btn-primary"
+              disabled={!canSpawn}
+              onClick={() => setStep(2)}
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="dialog-btn-primary"
+              disabled={!canSpawn || (chosen !== undefined && !promptReady)}
+              onClick={spawn}
+            >
+              <Icon name="terminal" size={15} strokeWidth={2.2} />
+              Spawn
+            </button>
+          )}
         </footer>
       </div>
     </div>
