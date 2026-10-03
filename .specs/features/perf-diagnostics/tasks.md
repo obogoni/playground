@@ -164,14 +164,14 @@ failing writer, and stop.
 
 **Done when**:
 
-- [ ] Tests (fake clock with `now`, `wallNow`, `every` it records and fires on demand; fake monitor; recording writer): `createDiagnostics` calls `startLoopMonitor` once and `clock.every` once with `60000` when no `intervalMs` is given
-- [ ] Tests: firing the timer writes one line that parses, ends in `\n`, and holds `v: 1`, `t` as the ISO string of `wallNow`, `windowMs` as the `now` difference since creation, `pid`, `version`, and all six sections with `git.wait` (empty values: zeros and `{}`)
-- [ ] Tests: the monitor answering 12,000,000 / 31,500,000 / 61,234,567 ns gives `p50Ms: 12`, `p99Ms: 31.5`, `maxMs: 61.235`, `resolutionMs: 10`; the monitor's `reset` runs once per line; a monitor with `count: 0` gives zeros
-- [ ] Tests: two flushes with a writer whose first promise resolves after the second is queued land in window order, and the second write starts only after the first settles
-- [ ] Tests: a rejecting writer drops the line and calls `log` once for two failing flushes in a row with the file name and the error code; a success ends the streak, so the next failure logs again; nothing throws
-- [ ] Tests: `stop` cancels the timer and disables the monitor; a flush is not attempted after it; a second `stop` changes nothing
-- [ ] Gate check passes: `npx vitest run src/main/diagnostics.test.ts`, then the full gate
-- [ ] Test count: T1 count + the new tests
+- [x] Tests (fake clock with `now`, `wallNow`, `every` it records and fires on demand; fake monitor; recording writer): `createDiagnostics` calls `startLoopMonitor` once and `clock.every` once with `60000` when no `intervalMs` is given
+- [x] Tests: firing the timer writes one line that parses, ends in `\n`, and holds `v: 1`, `t` as the ISO string of `wallNow`, `windowMs` as the `now` difference since creation, `pid`, `version`, and all six sections with `git.wait` (empty values: zeros and `{}`)
+- [x] Tests: the monitor answering 12,000,000 / 31,500,000 / 61,234,567 ns gives `p50Ms: 12`, `p99Ms: 31.5`, `maxMs: 61.235`, `resolutionMs: 10`; the monitor's `reset` runs once per line; a monitor with `count: 0` gives zeros
+- [x] Tests: two flushes with a writer whose first promise resolves after the second is queued land in window order, and the second write starts only after the first settles
+- [x] Tests: a rejecting writer drops the line and calls `log` once for two failing flushes in a row with the file name and the error code; a success ends the streak, so the next failure logs again; nothing throws
+- [x] Tests: `stop` cancels the timer and disables the monitor; a flush is not attempted after it; a second `stop` changes nothing
+- [x] Gate check passes: `npx vitest run src/main/diagnostics.test.ts`, then the full gate
+- [x] Test count: T1 count + the new tests (2,515 + 8 = 2,523)
 
 **Tests**: unit
 **Gate**: quick

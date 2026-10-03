@@ -265,14 +265,14 @@ without asking.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| PDIAG-01 | P1: log — AC 1 | T2, T5, T11 | Pending |
+| PDIAG-01 | P1: log — AC 1 | T2, T5, T11 | In progress (T2) |
 | PDIAG-02 | P1: log — AC 2 | T1, T5, T11 | In progress (T1) |
-| PDIAG-03 | P1: log — AC 3 | T2, T5 | Pending |
-| PDIAG-04 | P1: log — AC 4 | T2 | Pending |
+| PDIAG-03 | P1: log — AC 3 | T2, T5 | In progress (T2) |
+| PDIAG-04 | P1: log — AC 4 | T2 | Done (T2) |
 | PDIAG-05 | P1: log — AC 5 | T3, T4 | Pending |
-| PDIAG-06 | P1: log — AC 6 | T2, T3 | Pending |
-| PDIAG-07 | P1: log — AC 7 | T2 | Pending |
-| PDIAG-08 | P1: log — AC 8 | T2, T11 | Pending |
+| PDIAG-06 | P1: log — AC 6 | T2, T3 | In progress (T2) |
+| PDIAG-07 | P1: log — AC 7 | T2 | Done (T2) |
+| PDIAG-08 | P1: log — AC 8 | T2, T11 | In progress (T2) |
 | PDIAG-09 | P1: git — AC 9 | T6 | Pending |
 | PDIAG-10 | P1: git — AC 10 | T3 | Pending |
 | PDIAG-11 | P1: git — AC 11 | T3 | Pending |
@@ -282,8 +282,8 @@ without asking.
 | PDIAG-15 | P1: git — AC 15 | T3, T6 | Pending |
 | PDIAG-16 | P1: git — AC 16 | T3 | Pending |
 | PDIAG-17 | P1: loop — AC 17 | T5, T16 | Pending |
-| PDIAG-18 | P1: loop — AC 18 | T2 | Pending |
-| PDIAG-19 | P1: loop — AC 19 | T2 | Pending |
+| PDIAG-18 | P1: loop — AC 18 | T2 | Done (T2) |
+| PDIAG-19 | P1: loop — AC 19 | T2 | Done (T2) |
 | PDIAG-20 | P1: pty — AC 20 | T4, T9 | Pending |
 | PDIAG-21 | P1: pty — AC 21 | T4, T9 | Pending |
 | PDIAG-22 | P1: pty — AC 22 | T1, T9 | In progress (T1) |
