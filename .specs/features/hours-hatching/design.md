@@ -190,12 +190,16 @@ non-zero exit is the spec's stop rule.
 ## The Hatch
 
 ```css
-/* A hatched look: stripes of the hue over a light tint of it (AD-TBD). */
+/* A hatched look: stripes of the hue, half the pattern, over a light tint of it (AD-054). */
 :is(.hcal-bar, .hleg-swatch, .hours-group-swatch).hatched {
-  background-color: color-mix(in oklab, var(--hcal-c) 20%, #fff);
-  background-image: repeating-linear-gradient(45deg, var(--hcal-c) 0 2px, transparent 2px 6px);
+  background-color: color-mix(in oklab, var(--hcal-c) 5%, #fff);
+  background-image: repeating-linear-gradient(45deg, var(--hcal-c) 0 3px, transparent 3px 6px);
 }
 ```
+
+Owner decision 2026-10-03, after validation: the first recipe, 2 px of hue in every 6 px over a 20%
+tint, read as mostly white, so the stripes widened to half the pattern and the ground fell to 5% to
+keep the twin rule (H2) passing. The tables below are for this recipe.
 
 - The ground is `background-color` and the stripes are `background-image`, so a computed style tells
   a hatched look from its solid twin by either property, and a missing rule shows in both.
@@ -210,8 +214,9 @@ non-zero exit is the spec's stop rule.
 A hatched look must read as its hue and stay apart from its solid twin. With `dE` the dataviz
 validator's OKLab ΔE ×100 (`deltaE`, unsimulated):
 
-- `ground = mix_oklab(hue, #ffffff, 0.20)`, CSS `color-mix(in oklab, …)`
-- `mean = linear-RGB blend of hue and ground, stripe share 1/3`, what the eye averages on a small mark
+- `ground = mix_oklab(hue, #ffffff, 0.05)`, CSS `color-mix(in oklab, …)`, rounded to 8-bit hex as
+  painted
+- `mean = linear-RGB blend of hue and ground, stripe share 1/2`, what the eye averages on a small mark
 - **H1 stripes visible**: `dE(hue, ground) >= 15`, the normal-vision floor between stripe and ground
 - **H2 twin apart**: `dE(mean, hue) >= 15`, so a hatched look and its solid twin differ even where a
   6 px bar blurs the stripes
@@ -226,28 +231,36 @@ How the design checks it:
    validator's own `deltaE`, `lin` and OKLab functions; no script enters the repository.
 2. **In the smoke (T14)**: the running app must apply exactly that recipe. A hatched bar, its legend
    swatch and its drawer swatch must have `background-image` `repeating-linear-gradient(45deg, <hue>
-   0px, <hue> 2px, transparent 2px, transparent 6px)` and a `background-color` equal to a probe
-   element's computed `color-mix(in oklab, <hue> 20%, #fff)`; their solid twin must have
+   0px, <hue> 3px, transparent 3px, transparent 6px)` and a `background-color` equal to a probe
+   element's computed `color-mix(in oklab, <hue> 5%, #fff)`; their solid twin must have
    `background-image: none`.
 3. **By hand**: the header's verify-by-hand list gains "the stripes at 14 px and on a 6 px bar, in
    both themes".
 
-Measured at planning (2026-10-01), ground 20%, stripe share 1/3, all pass:
+Measured 2026-10-03 on the final hex values, ground 5%, stripe share 1/2, all pass:
 
 | Slot | Light: ground, mean, H1, H2, H3 | Dark: ground, mean, H1, H2, H3 |
 | ---- | ------------------------------- | ------------------------------ |
-| blue | `#d5e5fd` `#b3c9f6` 36.5 27.7 1.3° | `#d7e9f9` `#b5d1ef` 31.6 23.8 0.2° |
-| orange | `#ffe2d6` `#f9c4b4` 30.3 22.8 0.6° | `#f4dbd1` `#e2bbae` 38.6 29.9 0.8° |
-| aqua | `#daefe3` `#b7dcc7` 28.9 21.5 0.9° | `#d9eee6` `#b6dacd` 29.4 22.0 2.0° |
-| yellow | `#f8efdb` `#efdbb9` 21.8 16.0 1.5° | `#f2e8d5` `#e2cfb2` 28.9 21.7 0.2° |
-| magenta | `#fde7f0` `#f7cddf` 23.8 17.4 1.5° | `#fad6e5` `#ebb3cb` 40.2 31.3 0.0° |
-| green | `#d1e2d0` `#afc5ae` 43.8 34.5 0.1° | `#d3e4d3` `#b0c9b2` 41.1 32.1 1.3° |
-| violet | `#d7d7ef` `#b8b6da` 46.6 36.8 0.4° | `#e6e1ff` `#cec3fc` 35.0 26.3 1.1° |
-| red | `#fdd6d8` `#f0b3b8` 39.9 31.0 0.4° | `#ffdfe0` `#fbbfc3` 30.8 23.0 1.3° |
+| blue | `#f4f8ff` `#b6c5f4` 43.1 27.2 2.1° | `#f5fafe` `#b6ceed` 37.7 23.3 3.4° |
+| orange | `#fff8f5` `#f5c1b6` 36.1 22.3 1.7° | `#fcf6f3` `#ddbbb3` 45.8 29.9 4.7° |
+| aqua | `#f6fbf8` `#b7d9c5` 34.3 21.0 0.1° | `#f5fbf9` `#b5d7cb` 34.9 21.4 1.5° |
+| yellow | `#fdfbf6` `#edd8b8` 25.9 15.5 3.5° | `#fcf9f4` `#dfccb3` 34.2 21.2 2.6° |
+| magenta | `#fff9fb` `#f4cadc` 28.2 16.6 5.4° | `#fef5f8` `#e6b4c9` 47.7 31.4 3.9° |
+| green | `#f3f8f3` `#b3c3b3` 52.0 34.8 1.7° | `#f4f8f4` `#b4c6b5` 48.8 32.2 1.1° |
+| violet | `#f5f5fb` `#bbb8d6` 55.5 37.6 1.0° | `#f9f8ff` `#ccc1fa` 41.7 25.8 0.7° |
+| red | `#fff5f5` `#e9b4b9` 47.5 31.0 2.4° | `#fff7f7` `#fabdc1` 36.6 22.5 0.3° |
 
-Every ground's nearest slot hue is its own. Rejected at planning: a ground mixed toward the dark
-panel (`#221f1b`) fails H2 in every dark slot (9.1 to 15.3); a 30% white ground or a stripe share of
-0.4 or more fails H2 on light yellow and magenta.
+Every ground's nearest slot hue is its own. The worst slots are light yellow (H1 25.9, H2 15.5) and
+light magenta (H3 5.4°). The first recipe, ground 20% and stripe share 1/3, also passed every slot
+(worst H2 16.0, light yellow) but read as mostly white.
+
+Rejected at planning: a ground mixed toward the dark panel (`#221f1b`) fails H2 in every dark slot
+(9.1 to 15.3); a 30% white ground or a stripe share of 0.4 or more over a 20% ground fails H2 on light
+yellow and magenta. Rejected on 2026-10-03: the full inversion, stripes 4 px in every 6 px, fails H2
+whatever the ground (8 of 16 slots over a 20% ground, light yellow 9.2; light yellow 11.9 over pure
+white); stripes 3 px in every 6 px over a 20% ground fail H2 on light yellow (12.8) and light magenta
+(13.7); the same stripes over pure white pass H2 (light yellow 16.4) but the ground stops being a
+tint of the hue (H3).
 
 ---
 
@@ -289,14 +302,16 @@ panel (`#221f1b`) fails H2 in every dark slot (9.1 to 15.3); a 30% white ground 
 | Stripes as `background-image`, ground as `background-color` | Two longhands, not one shorthand gradient | The smoke tells hatched from solid by either property |
 | Swatch rules shared | One `role-slotN` block for three surfaces | The stripe is defined once and cannot drift between bars and swatches |
 
-### AD-TBD (number chosen at Execute; main holds up to AD-051)
+### AD-054 (planned as AD-TBD when main held up to AD-051; numbered at Execute)
 
 **The Hours calendar gives tasks sixteen looks, the eight hues solid and hatched, spread across the
 week, superseding AD-045's palette and assignment.** Light `#2f76e8 #eb6623 #28ae76 #dbab37 #e984b7
 #0f6f19 #4e3ca6 #d10b47`, dark `#2790da #b64906 #14a889 #bc8b03 #c90982 #117a2c #8c63f5 #f45468`, in
 the order blue, orange, aqua, yellow, magenta, green, violet, red. A hatched look is 45° stripes of
-the hue, 2 px in every 6 px, over `color-mix(in oklab, <hue> 20%, #fff)`. Per week, tasks in order of
-week total (ties by first start) each take, among the looks no same-day task holds and other than the
+the hue, 3 px in every 6 px, over `color-mix(in oklab, <hue> 5%, #fff)` (owner decision 2026-10-03,
+widened from 2 px over 20% after validation because the hatch read as mostly white). Per week, tasks
+in order of week total (ties by first start) each take, among the looks no same-day task holds and
+other than the
 previous task's, the one used least so far; then solid before hatched, then a hue no same-day task
 and not the previous task holds, then palette order. With none allowed the task is Other. Other and
 No task are never hatched. Looks stay frozen while the week is shown (HCAL-24) and the legend keeps
@@ -304,6 +319,7 @@ colouring order. Every other chart keeps AD-030. **Rationale:** issue #152: with
 left repeats side by side in the legend, and red/orange, aqua/green, magenta/red and blue/violet were
 hard to tell apart. With `--pairs all` on `#ffffff` / `#221f1b` both palettes exit 0: normal-vision
 worst 15.6 light, 15.2 dark; CVD worst 8.5 light, 6.4 dark (WARN, legal with the relief AD-045
-requires, which stays). The hatch legibility table (H1 to H3) passes every slot in both themes. The
-AD-018 / AD-029 pattern keeps `hours-task-focus`'s spec from describing the old rule. Spec / design /
-tasks: `.specs/features/hours-hatching/` (HHAT-01..29).
+requires, which stays). The hatch legibility table (H1 to H3) passes every slot in both themes
+(worst H1 25.9 and H2 15.5, light yellow; worst H3 5.4°, light magenta). The AD-018 / AD-029
+pattern keeps `hours-task-focus`'s spec from describing the old rule. Spec / design / tasks:
+`.specs/features/hours-hatching/` (HHAT-01..29).

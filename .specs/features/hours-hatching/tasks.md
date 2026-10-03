@@ -17,7 +17,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Baseline (2026-10-03, rebased on `origin/main` `6d96ae4`)**: `npx vitest run` 119 files, 2508 tests, all passing; `npm run typecheck` exit 0; `npm run lint` exit 0, 0 errors, 18 warnings.
 
-**Owner-confirmed rows** (spec Assumptions, `owner confirmed 2026-10-01`): the proposed hex values (T3, T9, T12), the hatch ground of 20% hue on white in both themes (T3, T9, T14), the hue-preference scope (T2), the only-previous-look-free rule (T2), the tooltip key (T3), all as the plan proposed them.
+**Owner-confirmed rows** (spec Assumptions, `owner confirmed 2026-10-01`): the proposed hex values (T3, T9, T12), the hatch ground of 20% hue on white in both themes (T3, T9, T14; 5% since the owner's 2026-10-03 change, see T3), the hue-preference scope (T2), the only-previous-look-free rule (T2), the tooltip key (T3), all as the plan proposed them.
 
 **Stop rule**: T3 starts by re-running the dataviz validator on the spec's exact values. A non-zero exit in either theme, or an owner rejection of the values, stops Execute before T3's edit; the palette goes back to the owner.
 
@@ -176,6 +176,11 @@ T10 → T11 → T12 → T13 → T14 → T15
 **Gate**: build
 
 **Commit**: `style(hours): retune the task palette and add the hatch`
+
+> **2026-10-03, after validation, owner decision:** the hatch recipe changed to stripes 3 px in every
+> 6 px over `color-mix(in oklab, <hue> 5%, #fff)`, because 2 px over a 20% tint read as mostly white
+> (spec AC 17, design "The Hatch"). The boxes above record the first recipe; the change is
+> `style(hours): widen the hatch stripes to half the pattern`.
 
 ---
 
@@ -450,6 +455,10 @@ T10 → T11 → T12 → T13 → T14 → T15
 **Gate**: manual
 
 **Commit**: `test(hours): check spread looks and the hatch in the running app`
+
+> **2026-10-03, after validation, owner decision:** section 16's stripe and ground checks now expect
+> the new recipe, `<hue> 0px, <hue> 3px, transparent 3px, transparent 6px` over a 5% ground, in the
+> same commit as the CSS change (T3's note). The boxes above record the first recipe.
 
 ---
 
