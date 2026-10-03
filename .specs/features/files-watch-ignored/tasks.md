@@ -309,7 +309,7 @@ and touch loops.
 
 - [x] Run A, `--sessions 0 --files-view --minutes 1 --keep`: the kept `bench-wt-1` holds the committed `.gitignore`, 50 files in `build-out/`, 12 changed tracked files; the config holds the Uncommitted mode; the app showed `.diff-section` elements (FWIG-32)
 - [x] Run B, `--sessions 0 --files-view --build-interval 100 --minutes 1`: the summary's `files` block is printed; `build-out/` file times moved during the run (read with `--keep`) (FWIG-33)
-- [x] Run C, `--edit-interval 1000` in place of the build loop: `src/f0000.ts` grew by about 60 lines in the kept copy (FWIG-34)
+- [x] Run C, `--edit-interval 1000` in place of the build loop: `src/f0000.ts` keeps its size and its seeded line's content moved in the kept copy (FWIG-34, amended 2026-10-03; first written as "grew by about 60 lines")
 - [x] Run D, `--touch-interval 1000`: `src/f0100.ts` has its committed bytes and a newer mtime (FWIG-35)
 - [x] Run E, `--files-view` with the Files segment renamed away by a throwaway mutant of the bench's selector: exit 1 naming the missing sections
 - [x] Gate check passes: `npm run lint` and `npx electron-vite build`
@@ -336,11 +336,17 @@ CDP port 9334, every kept folder deleted after it was read.
 - Run B (exit 0): the `files` block printed; steady 1 `files:changed` 183, git 1,651, `cat-file`
   1,101, `wt:status` 0; "ignored writes start no git 1651 FAIL"; "build loop: 1085 writes, 0
   skipped". All 50 `build-out/` files have mtimes 175 to 181 s after the seed's.
-- Run C (exit 0): `src/f0000.ts` has 139 lines: 20 committed, 1 seeded, **118** appended ("edit
-  loop: 118 writes"). The loop runs from the view's opening to the last line, which is the spawn
-  minute plus the steady minute, so about 120 at `--minutes 1`, not the 60 the step guessed.
-  Steady 1: `files:changed` 60, git 300, `cat-file` 120, `wt:status` 0; **"untouched sections
-  stay ... 2.00 PASS" on the build before the change** (see the note below).
+- Run C, first version (superseded): the loop appended a line each tick; `src/f0000.ts` grew by
+  118 lines and read "untouched sections stay ... 2.00 PASS" on the build before the change (see the
+  note below).
+- Run C, amended (2026-10-03, the owner's choice after T6): the seed's appended line now carries a
+  six-digit value (`export const seeded_<f> = 00000<f>`) and the edit loop rewrites that line of
+  `src/f0000.ts` in place, so the size and the stack's layout hold. Exit 0, "edit loop: 117 writes,
+  0 skipped"; the kept `src/f0000.ts` is 551 bytes (520 committed + the 31-byte seeded line), 21
+  lines, ending `export const seeded_0 = 000117`, `git diff --numstat` 1 / 0. Steady 1:
+  `files:changed` 59, git 796, `cat-file` 618, `wt:status` 0; "untouched sections stay ... 10.47
+  FAIL". A CDP probe during the run counted 12 `.diff-section` elements, 1 holding a diff editor
+  30 s after the view opened and 3 (`f0000`, `f0001`, `f0002`) at 90 s.
 - Run D (exit 0): `src/f0100.ts` equals `HEAD:src/f0100.ts` byte for byte and is not listed by
   `git status`; its mtime is 180 s after the seed's ("touch loop: 117 writes, 0 skipped"). Steady
   1: `files:changed` 119, git 1,724, `cat-file` 1,070, `wt:status` 59; "the view's reads leave the
@@ -352,8 +358,9 @@ CDP port 9334, every kept folder deleted after it was read.
 - Gate: `npm run lint` 0 errors, 18 warnings; `npx electron-vite build` passes.
 - **Note for T6 (the edit target)**: the stack re-reads only its *mounted* sections (expanded and
   near the viewport, `mountPlan`), not every open one, so at the bench's window size a list re-read
-  costs fewer `cat-file` than the spec's "about 20" estimate. In Run C it was exactly 2 per
-  `files:changed`, which is the target's limit. T6 measures it at the default 3 minutes.
+  costs fewer `cat-file` than the spec's "about 20" estimate. In the first Run C it was exactly 2
+  per `files:changed`, the target's limit, because the appended file grew over the viewport; the
+  amended loop keeps the layout (see Run C, amended).
 
 **Tests**: manual
 **Gate**: manual

@@ -151,9 +151,10 @@ view doesn't flicker or lose my scroll.
 28. WHILE in diff-to-origin mode, the view SHALL let no batch without a git-state change re-read a section <!-- state-driven -->
 29. The view SHALL let no batch re-read a commit tab's sections (FCMT-31, unchanged) <!-- ubiquitous -->
 
-**Independent Test**: With 12 sections mounted in Uncommitted mode, a loop appending to one listed file
-reads at most 2 `cat-file` per `files:changed` in the diagnostics line, where today every open section
-re-reads (about 20 with the first ten open).
+**Independent Test**: With 12 sections listed in Uncommitted mode, a loop rewriting one line of one
+listed file in place (same byte length) reads at most 2 `cat-file` per `files:changed` in the
+diagnostics line, where today every mounted section re-reads (10.5 per `files:changed` on the bench,
+T6).
 
 ---
 
@@ -185,7 +186,7 @@ shown to work rather than assumed.
 
 32. WHERE `--files-view` is given, the bench SHALL seed `bench-wt-1` with a committed `.gitignore` naming `build-out/`, a `build-out/` folder of 50 files and 12 tracked files changed and left uncommitted, and after the spawn SHALL open the Files direction on `bench-wt-1` in Uncommitted mode with All changes showing <!-- optional-feature -->
 33. WHERE `--build-interval <ms>` is given, the bench SHALL write one file under `bench-wt-1/build-out/` every that many ms, cycling 50 names, with new bytes each time <!-- optional-feature -->
-34. WHERE `--edit-interval <ms>` is given, the bench SHALL append one line to `bench-wt-1/src/f0000.ts` every that many ms <!-- optional-feature -->
+34. WHERE `--edit-interval <ms>` is given, the bench SHALL rewrite, every that many ms, the line the seed appended to `bench-wt-1/src/f0000.ts` in place with new content of the same byte length, so the file's size and the All changes stack's layout stay as they were <!-- optional-feature -->
 35. WHERE `--touch-interval <ms>` is given, the bench SHALL rewrite `bench-wt-1/src/f0100.ts` with its own bytes every that many ms <!-- optional-feature -->
 36. WHERE `--files-view` is given, the summary SHALL add four columns per row for `bench-wt-1`: `files:changed` emits, git processes, `cat-file` processes and `worktree:status` emits <!-- optional-feature -->
 37. WHERE the run has `--sessions 0`, `--files-view` and `--build-interval` as its only loop, the summary SHALL judge "ignored writes start no git": PASS only when every steady row has 0 git processes and 0 `files:changed` on `bench-wt-1`, and `n/a` for any other run <!-- optional-feature -->

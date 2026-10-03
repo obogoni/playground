@@ -16,8 +16,9 @@
  * tracked files changed, the Uncommitted mode in the config) and opens the
  * Files direction on it through CDP before the loops start. One write loop per
  * run: --build-interval writes build-out/obj-<k mod 50>.bin, --edit-interval
- * appends a line to src/f0000.ts, --touch-interval rewrites src/f0100.ts with
- * its own bytes.
+ * rewrites the line the seed appended to src/f0000.ts in place, with new
+ * content of the same byte length (so the stack's layout holds),
+ * --touch-interval rewrites src/f0100.ts with its own bytes.
  *
  * Run: npx electron-vite build
  *      node scripts/bench-sessions.mjs [--sessions 3] [--minutes 3] [--fps 20] [--rows 30]
@@ -126,6 +127,10 @@ const FILES_WORKTREE = 'bench-wt-1'
 const filesWt = join(ws, FILES_WORKTREE)
 const BUILD_FILES = 50
 const CHANGED_FILES = 12
+/** The seeded line's value is zero-padded, so the edit loop can rewrite it at the same length. */
+const SEEDED_DIGITS = 6
+const seededLine = (f, value) =>
+  `export const seeded_${f} = ${String(value).padStart(SEEDED_DIGITS, '0')}\n`
 
 let app = null
 let indexTimer = null
@@ -217,7 +222,7 @@ function seedFilesView() {
   mkdirSync(join(filesWt, 'build-out'), { recursive: true })
   for (let k = 0; k < BUILD_FILES; k++) writeFileSync(buildFile(k), `build seed ${k}\n`)
   for (let f = 0; f < CHANGED_FILES; f++) {
-    appendFileSync(join(filesWt, 'src', `${fileName(f)}.ts`), `export const seeded_${f} = ${f}\n`)
+    appendFileSync(join(filesWt, 'src', `${fileName(f)}.ts`), seededLine(f, f))
   }
   const listed = git(['worktree', 'list', '--porcelain'])
     .split('\n')
@@ -458,9 +463,14 @@ if (options.buildInterval > 0) {
   )
 }
 if (options.editInterval > 0) {
+  // FWIG-34: the seeded line, rewritten in place with new content of the same byte length
   const edited = join(filesWt, 'src', 'f0000.ts')
+  const seeded = readFileSync(edited, 'utf8')
+  const kept = seeded.slice(0, seeded.length - seededLine(0, 0).length)
+  if (kept + seededLine(0, 0) !== seeded)
+    fail('--edit-interval: src/f0000.ts does not end in its seeded line')
   startLoop('edit', options.editInterval, (k) =>
-    appendFileSync(edited, `export const edit_${k} = ${k}\n`)
+    writeFileSync(edited, kept + seededLine(0, (k + 1) % 10 ** SEEDED_DIGITS))
   )
 }
 if (options.touchInterval > 0) {

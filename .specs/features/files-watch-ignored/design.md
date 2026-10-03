@@ -378,12 +378,13 @@ confirmed.**
 | ---- | ------- | ------- |
 | `--files-view` | off | Seed the Files fixture in `bench-wt-1` and open the Files direction on it after the spawn (FWIG-32) |
 | `--build-interval <ms>` | 0 (off) | Write `build-out/obj-<k mod 50>.bin` in `bench-wt-1`, new bytes each time (FWIG-33) |
-| `--edit-interval <ms>` | 0 (off) | Append one line to `bench-wt-1/src/f0000.ts` (FWIG-34) |
+| `--edit-interval <ms>` | 0 (off) | Rewrite the seeded line of `bench-wt-1/src/f0000.ts` in place, same byte length (FWIG-34; amended 2026-10-03, see T4) |
 | `--touch-interval <ms>` | 0 (off) | Rewrite `bench-wt-1/src/f0100.ts` with its own bytes (FWIG-35) |
 
 - **Seed** (with `--files-view`): in `ws/app` before the worktrees are added, a committed `.gitignore`
   holding `build-out/`; in `bench-wt-1`, `build-out/obj-00.bin` to `obj-49.bin` and one appended line in
-  each of `src/f0000.ts` to `src/f0011.ts`, uncommitted. In the throwaway `config.json`,
+  each of `src/f0000.ts` to `src/f0011.ts`, uncommitted, its value zero-padded to six digits so the edit
+  loop can rewrite it at the same length. In the throwaway `config.json`,
   `ui.files["<bench-wt-1>"] = { mode: 'uncommitted' }`.
 - **Opening the view**: through CDP, as `scripts/smoke-files-diff.mjs:335-354` does: the `Tree` segment,
   the `bench/1` branch row, the `Files` segment; then wait until `.diff-section` elements exist. A missing
