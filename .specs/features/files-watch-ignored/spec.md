@@ -237,15 +237,15 @@ section alone; on the build before the change its first check fails.
 | FWIG-04 | P1: ignored — AC 4 | T8, T10 | Verified (T8, T10) |
 | FWIG-05 | P1: ignored — AC 5 | T8, T10 | Verified (T8, T10) |
 | FWIG-06 | P1: ignored — AC 6 | T8 | Verified (T8) |
-| FWIG-07 | P1: ignored — AC 7 | T10 | Verified (T10); test gap at the root `.gitignore`, see Follow-ups |
+| FWIG-07 | P1: ignored — AC 7 | T10 | Verified (T10); root `.gitignore` test added before the PR |
 | FWIG-08 | P1: ignored — AC 8 | T10 | Verified (T10) |
 | FWIG-09 | P1: ignored — AC 9 | T10 | Verified (T10) |
 | FWIG-10 | P1: ignored — AC 10 | T9, T10 | Verified (T9, T10); wording gap, see Follow-ups |
 | FWIG-11 | P1: ignored — AC 11 | T10 | Verified (T10) |
 | FWIG-12 | P1: ignored — AC 12 | T10 | Verified (T10) |
-| FWIG-13 | P1: ignored — AC 13 | T10 | Verified (T10); test gap on leave-and-return, see Follow-ups |
+| FWIG-13 | P1: ignored — AC 13 | T10 | Verified (T10); leave-and-return test added before the PR |
 | FWIG-14 | P1: ignored — AC 14 | T5, T19 | Verified (T5, T19) |
-| FWIG-15 | P1: index — AC 15 | T7, T9, T11, T12 | Verified (T7, T9, T11, T12); three reads unasserted, see Follow-ups |
+| FWIG-15 | P1: index — AC 15 | T7, T9, T11, T12 | Verified (T7, T9, T11, T12); `diffStats` reads asserted before the PR |
 | FWIG-16 | P1: index — AC 16 | T11 | Verified (T11) |
 | FWIG-17 | P1: index — AC 17 | T20, T21 | Verified (T20, T21) |
 | FWIG-18 | P1: gate — AC 18 | T13, T17 | Verified (T13, T17) |
@@ -297,10 +297,12 @@ section alone; on the build before the change its first check fails.
 The Verifier's report (`validation.md`, "Validation: files-watch-ignored") found no production defect
 and no AC without evidence. Under the owner's rule for this loop, these are follow-ups, not fix tasks:
 
-- FWIG-07: no test names a root-level `.gitignore` after an answer is cached (sensor U3 survived).
-- FWIG-13: no test leaves and returns to the same worktree while a check runs (sensor U7 survived).
+- ~~FWIG-07: no test names a root-level `.gitignore` after an answer is cached (sensor U3 survived).~~
+  Closed before the PR.
+- ~~FWIG-13: no test leaves and returns to the same worktree while a check runs (sensor U7 survived).~~
+  Closed before the PR.
 - FWIG-15: `diffStats`'s since-base reads and `untrackedStats`'s `ls-files` carry the flags but no
-  test records their args (sensor U9 survived).
+  test records their args (sensor U9 survived). Closed before the PR: `diffStats` takes an injectable runner.
 - FWIG-10: "emit the batch as it would without the filter" should say that answers learned before
   the failure still apply, as the code does.
 - FWIG-22, 27, 28 and 29 rest on code reading; no check fails if their wiring regresses.

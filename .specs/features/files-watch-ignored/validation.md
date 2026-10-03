@@ -402,17 +402,25 @@ run's 0 reads against a floor of 0.
   the whole suite: the forgetting case (`src/main/file-watcher.test.ts:397`) names `src/.gitignore`,
   and the FWIG-46 case names the root one only while nothing is cached yet. Production code is
   correct. Add a case that caches an answer, then names the root `.gitignore`, and expects a new ask.
+  **Closed before the PR (owner, 2026-10-03):** `src/main/file-watcher.test.ts:412` caches an answer, then
+  names the root `.gitignore` and expects a second ask; U3 re-run against it: killed.
 - **FWIG-13 has no test for leaving and coming back while a check runs** (Verifier sensor U7,
   survived). Reducing `isCurrent` (`src/main/file-watcher.ts:190`) to the selected-path comparison
   passes the whole suite, because the only case (`src/main/file-watcher.test.ts:518`) deselects with
   `select(null)` and never re-selects. Production code is correct. Add a case that holds a check,
   runs `select(null)` then `select(repo)`, releases it, and expects no emit and nothing learned.
+  **Closed before the PR (owner, 2026-10-03):** `src/main/file-watcher.test.ts:552` holds a check, leaves
+  and comes back to the same worktree, releases it and expects no emit; U7 re-run against it: killed.
 - **FWIG-15 is unasserted on three reads** (Verifier sensor U9, survived): `diffStats`'s since-base
   `merge-base` and `diff --numstat` (`src/main/file-diff.ts:197`, `:203`) and `untrackedStats`'s
   `ls-files --others` (`:284`). Each carries the prefix, read in the source, but `diffStats` and
   `untrackedStats` call `git` directly, so no recording runner sees their args; the uncommitted
   `diff --numstat` (`:219`) is covered only behaviourally by the index-bytes test. Give both
   functions the injectable runner `listDir` and `changedSince` have and assert the args.
+  **Closed before the PR (owner, 2026-10-03):** `diffStats` takes `run: GitRunner = git` and hands it to
+  `untrackedStats`; `src/main/file-diff.test.ts:178` records a since-base and an uncommitted read and
+  asserts the literal prefix on `merge-base`, both `diff` reads and `ls-files`. U9 (`ls-files` without the
+  flags) and the same fault on `merge-base` re-run against it: both killed.
 - **The watcher's catch around a throwing `emit` has no test** (`src/main/file-watcher.ts:141-143`).
   No AC names it directly; it keeps FWIG-12's later batches flowing after one failed emit. A case
   with an `emit` that throws once, then a second batch that must still arrive, would pin it.

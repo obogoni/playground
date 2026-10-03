@@ -409,6 +409,21 @@ describe('FileWatcher drops what git ignores (real repository)', () => {
       expect(rec.asked[1]).toContain('src/a.ts')
     })
 
+    it('asks again about an answered path when a batch names the root .gitignore', async () => {
+      const rec = recordingCheck()
+      const h = harness(rec.check)
+      await h.watcher.select(repo)
+      await batch(h, rec, 'src/a.ts')
+      // The control: without a .gitignore in the batch, the answer is kept.
+      await batch(h, rec, 'src/a.ts')
+      expect(rec.asked).toHaveLength(1)
+
+      await batch(h, rec, '.gitignore', 'src/a.ts')
+
+      expect(rec.asked).toHaveLength(2)
+      expect(rec.asked[1]).toContain('src/a.ts')
+    })
+
     it('emits a git-state batch whole without asking, and asks again on the next batch', async () => {
       const rec = recordingCheck()
       const h = harness(rec.check)
@@ -528,6 +543,27 @@ describe('FileWatcher drops what git ignores (real repository)', () => {
     expect(rec.asked).toHaveLength(1)
 
     await h.watcher.select(null)
+    held.resolve()
+    await rec.drain()
+
+    expect(h.emitted).toEqual([])
+  })
+
+  it('drops a batch whose check was running when the selection left and came back (FWIG-13)', async () => {
+    const held = deferred()
+    const rec = recordingCheck(async () => {
+      await held.promise
+      return undefined
+    })
+    const h = harness(rec.check)
+    await h.watcher.select(repo)
+    h.handleFor(repo).fire('src/a.ts')
+    await h.flush()
+    expect(rec.asked).toHaveLength(1)
+
+    // Back on the same worktree: only the watch generation tells the old batch apart.
+    await h.watcher.select(null)
+    await h.watcher.select(repo)
     held.resolve()
     await rec.drain()
 

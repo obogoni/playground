@@ -174,6 +174,37 @@ describe('diffStats', () => {
     writeFileSync(join(repo, 'a.txt'), 'one\nedited\n', 'utf8')
     expect(await diffStats(repo, 'full')).toEqual([])
   })
+
+  it('passes the read-only flags in front of every git read it runs (FWIG-15)', async () => {
+    const calls: string[][] = []
+    const recording: GitRunner = (cwd, args) => {
+      calls.push(args)
+      return runGit(cwd, args)
+    }
+    git(repo, 'checkout', '-b', 'feature')
+    writeFileSync(join(repo, 'b.txt'), 'alpha\n', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'work')
+    writeFileSync(join(repo, 'notes.md'), 'l1\n', 'utf8')
+
+    await diffStats(repo, 'since-base', 'main', recording)
+    await diffStats(repo, 'uncommitted', undefined, recording)
+
+    // merge-base and diff for the base, then diff and the untracked listing.
+    expect(calls.map((args) => args[READ_ONLY_FLAGS.length])).toEqual([
+      'merge-base',
+      'diff',
+      'diff',
+      'ls-files'
+    ])
+    for (const args of calls) {
+      expect(args.slice(0, READ_ONLY_FLAGS.length)).toEqual([
+        '--no-optional-locks',
+        '-c',
+        'diff.autoRefreshIndex=false'
+      ])
+    }
+  })
 })
 
 describe('diffStats leaves the index alone (FWIG-16)', () => {

@@ -188,18 +188,19 @@ async function readSide(
 export async function diffStats(
   worktreePath: string,
   mode: FilesMode,
-  base?: string
+  base?: string,
+  run: GitRunner = git
 ): Promise<FileStat[]> {
   if (mode === 'since-base') {
     if (base === undefined) return []
     try {
-      const { stdout: mergeBase } = await git(worktreePath, [
+      const { stdout: mergeBase } = await run(worktreePath, [
         ...READ_ONLY_FLAGS,
         'merge-base',
         'HEAD',
         base
       ])
-      const { stdout } = await git(worktreePath, [
+      const { stdout } = await run(worktreePath, [
         ...READ_ONLY_FLAGS,
         'diff',
         '--numstat',
@@ -215,7 +216,7 @@ export async function diffStats(
   if (mode === 'uncommitted') {
     let tracked: FileStat[]
     try {
-      const { stdout } = await git(worktreePath, [
+      const { stdout } = await run(worktreePath, [
         ...READ_ONLY_FLAGS,
         'diff',
         '--numstat',
@@ -226,7 +227,7 @@ export async function diffStats(
     } catch {
       return []
     }
-    return [...tracked, ...(await untrackedStats(worktreePath))]
+    return [...tracked, ...(await untrackedStats(worktreePath, run))]
   }
   return []
 }
@@ -277,10 +278,10 @@ export function parseNumstat(stdout: string): FileStat[] {
  * would count it once staged. Read through F1's reader, so the 1 MB cap and the
  * NUL sniff apply here too, and each reports which of the two it hit.
  */
-async function untrackedStats(worktreePath: string): Promise<FileStat[]> {
+async function untrackedStats(worktreePath: string, run: GitRunner): Promise<FileStat[]> {
   let paths: string[]
   try {
-    const { stdout } = await git(worktreePath, [
+    const { stdout } = await run(worktreePath, [
       ...READ_ONLY_FLAGS,
       'ls-files',
       '--others',
