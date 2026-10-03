@@ -524,9 +524,11 @@ titles as written.
 
 **Done when**:
 
-- [ ] The request carries `repoPath`, `branch`, `baseBranch.trim() || undefined` and `effectiveWorktreeTemplate`; null without a selected repository or with a blank branch
-- [ ] `grep -n "dialog-error\|dialog-btn-primary" scripts/smoke-start-work.mjs` selectors still match (L-053)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npx electron-vite build`
+- [x] The request carries `repoPath`, `branch`, `baseBranch.trim() || undefined` and `effectiveWorktreeTemplate`; null without a selected repository or with a blank branch
+- [x] `grep -n "dialog-error\|dialog-btn-primary" scripts/smoke-start-work.mjs` selectors still match (L-053)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npx electron-vite build`
+
+**Done** (T14): the path line renders right under the path preview, as `.dialog-error.dialog-path-limit` with the alert icon, and `canCreate` gains `&& pathProblem === null`. The smoke's `.dialog-btn-primary` (line 205) and `.dialog-error` (line 214) selectors still match. Typecheck 0; lint 0 errors, 18 warnings (baseline); `electron-vite build` exit 0.
 
 **Tests**: none
 **Gate**: build
