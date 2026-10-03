@@ -567,15 +567,31 @@ wall (T3: about 104 s; no drift, L-005).
 
 **Done when**:
 
-- [ ] Tests: `IGNORE_ASK_LIMIT` is `2000` by literal (L-009)
-- [ ] Tests: `parentFolders('a/b/c.ts')` is `['a', 'a/b']`; a root-level path gives `[]`
-- [ ] Tests: with nothing learned, `questionsFor(['bin/Debug/a.dll'])` is `['bin', 'bin/Debug', 'bin/Debug/a.dll']`, folders first, without duplicates across several paths
-- [ ] Tests: after `learn(['bin', ...], {'bin', ...})`, `isIgnored('bin/x/y.dll')` is true and `questionsFor` skips every path under `bin`; a kept answer is never asked again; a path asked and not listed is kept
-- [ ] Tests: a tracked-file case, `learn(['bin', 'bin/keep.txt', 'bin/Debug'], {'bin/Debug'})`, keeps `bin/keep.txt` and drops `bin/Debug/a.dll`
-- [ ] Tests: at the limit (2,000 questions) every question is asked; at 2,001 only the folders are; with 2,001 folders nothing is (L-042, L-050)
-- [ ] Tests: `forget` makes every path unknown again
-- [ ] Gate check passes: `npx vitest run src/main/ignore-check.test.ts`, then the full gate
-- [ ] Test count: T7 count + the new tests
+- [x] Tests: `IGNORE_ASK_LIMIT` is `2000` by literal (L-009)
+- [x] Tests: `parentFolders('a/b/c.ts')` is `['a', 'a/b']`; a root-level path gives `[]`
+- [x] Tests: with nothing learned, `questionsFor(['bin/Debug/a.dll'])` is `['bin', 'bin/Debug', 'bin/Debug/a.dll']`, folders first, without duplicates across several paths
+- [x] Tests: after `learn(['bin', ...], {'bin', ...})`, `isIgnored('bin/x/y.dll')` is true and `questionsFor` skips every path under `bin`; a kept answer is never asked again; a path asked and not listed is kept
+- [x] Tests: a tracked-file case, `learn(['bin', 'bin/keep.txt', 'bin/Debug'], {'bin/Debug'})`, keeps `bin/keep.txt` and drops `bin/Debug/a.dll`
+- [x] Tests: at the limit (2,000 questions) every question is asked; at 2,001 only the folders are; with 2,001 folders nothing is (L-042, L-050)
+- [x] Tests: `forget` makes every path unknown again
+- [x] Gate check passes: `npx vitest run src/main/ignore-check.test.ts`, then the full gate
+- [x] Test count: T7 count + the new tests
+
+**Result (2026-10-03)**: `src/main/ignore-check.test.ts` 16 tests, all passing; full gate 2,808 tests
+in 128 files (2,792 + 16), typecheck clean, lint 0 errors and 18 warnings (unchanged after
+`prettier --write` on the new test file), 102 s wall.
+
+- Shape: `IgnoreAnswers` holds two sets, `ignored` and `kept`; anything in neither is unknown.
+  `isIgnored` checks the path and each of its `parentFolders`, so `binary/a.ts` is not under an
+  ignored `bin` (`ignore-check.test.ts:63`). `questionsFor` drops paths already ignored, then lists
+  the unknown parent folders in first-seen order, then the unknown paths not already listed as a
+  folder; it returns `[]` when the folders exceed 2,000, the folders alone when folders plus paths
+  exceed 2,000, and everything otherwise.
+- The limit at both comparisons (L-042): 2,000 questions (1 folder + 1,999 paths) all asked
+  (`:88-92`); 2,001 (1 + 2,000) only the folder (`:96`); 2,000 folders + 2,000 paths only the
+  folders (`:99-103`); 2,001 folders nothing (`:107`). The paths left out are not remembered: after
+  learning the folder they are asked on the next call (`:110-117`).
+- Red first: the file failed on the missing module before `ignore-check.ts` existed.
 
 **Tests**: unit
 **Gate**: quick

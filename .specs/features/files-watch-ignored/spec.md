@@ -234,9 +234,9 @@ section alone; on the build before the change its first check fails.
 | FWIG-01 | P1: ignored — AC 1 | T10, T5, T19, T21 | Pending |
 | FWIG-02 | P1: ignored — AC 2 | T10 | Pending |
 | FWIG-03 | P1: ignored — AC 3 | T9, T10 | Pending |
-| FWIG-04 | P1: ignored — AC 4 | T8, T10 | Pending |
-| FWIG-05 | P1: ignored — AC 5 | T8, T10 | Pending |
-| FWIG-06 | P1: ignored — AC 6 | T8 | Pending |
+| FWIG-04 | P1: ignored — AC 4 | T8, T10 | In progress (T8) |
+| FWIG-05 | P1: ignored — AC 5 | T8, T10 | In progress (T8) |
+| FWIG-06 | P1: ignored — AC 6 | T8 | Done (T8) |
 | FWIG-07 | P1: ignored — AC 7 | T10 | Pending |
 | FWIG-08 | P1: ignored — AC 8 | T10 | Pending |
 | FWIG-09 | P1: ignored — AC 9 | T10 | Pending |
