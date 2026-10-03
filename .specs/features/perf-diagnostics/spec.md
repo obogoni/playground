@@ -10,6 +10,14 @@ cascade, the Files view watcher, synchronous git in main), each tracked in its o
 numbers, a fix cannot show it helped and the order of the fixes is a guess. Upstream issue #147 is the
 owner-approved scope; it is the base the four fix issues measure against.
 
+**Since this plan was written (reconciled 2026-10-03 on `6d96ae4`).** Upstream PR #154
+(`multi-agent-performance`) made the scrollback append O(chunk) and closed #148, read a period's git
+fields asynchronously (`readGitAsync`, PERF-21), paced every `git()` spawn through one queue of at most
+4 running (PERF-22), and added a console-only event-loop line behind `PLAYGROUND_DEBUG_PERF=1`
+(PERF-16). PR #157 moved node-pty into a utility process; PTY chunks still reach main and are appended
+there. #149, #150 and #151 are still open. The log below is still the only per-worktree, per-session
+record, and the bench is still the only repeatable load.
+
 ## Goals
 
 - [ ] One environment variable turns on a log that writes, once a minute, every figure the four fix issues name as their target
@@ -28,6 +36,8 @@ owner-approved scope; it is the base the four fix issues measure against.
 | Running the bench in CI | It needs a desktop session and a built app; like the smokes, it is run by hand |
 | A final partial line on quit | See the assumption below; the bench does not need it |
 | Driving the Files view from the bench (a build-folder write loop) | #150 adds it to this bench; this feature leaves the option table open for it |
+| The PTY host's own event loop | #157 moved node-pty out of main; the slowness reported is on main's loop, where chunks are still appended |
+| Removing the unused synchronous `readGit` | No caller since #154; deleting it is unrelated cleanup |
 
 ---
 
@@ -38,6 +48,7 @@ owner-approved scope; it is the base the four fix issues measure against.
 | What the log is and when it runs | Off by default; an environment variable turns it on; main appends one JSON line a minute to a file in the user data folder | Issue #147, Solution 1 and Implementation Decisions | owner confirmed 2026-10-01 |
 | What a line holds | Git processes by subcommand (count, total and max duration, peak concurrency); main's event-loop delay (p50, p99, max); PTY chunks and bytes per session; scrollback append time (total, max per chunk); `worktree:status` emits and recounts per worktree | Issue #147, Solution 1 | owner confirmed 2026-10-01 |
 | Where git is counted | In the single git runner; the spawns outside it are routed through it or counted at their call site | Issue #147, Implementation Decisions | owner confirmed 2026-10-01 |
+| When a git process counts, now that `git()` queues its spawns (PERF-22) | When the queue lets the process start: counts, peaks and durations are the real process's. The time each call waited in the queue goes to `git.wait` (total, max) | Counting at the request would put queue time into durations and show more running at once than the queue allows | owner confirmed 2026-10-03 |
 | Event-loop source | `perf_hooks.monitorEventLoopDelay` | Issue #147, Implementation Decisions | owner confirmed 2026-10-01 |
 | Module shape | One diagnostics module in main owns the counters and the minute flush; clock and writer are injected; disabled, it is a no-op that adds no timers | Issue #147, Implementation Decisions | owner confirmed 2026-10-01 |
 | Log format and privacy | JSON lines, appended asynchronously; worktrees by folder name only, no full repository path | Issue #147, Implementation Decisions | owner confirmed 2026-10-01 |
@@ -45,13 +56,13 @@ owner-approved scope; it is the base the four fix issues measure against.
 | Targets | Event-loop p99 under 30 ms with 6 sessions printing; scrollback append under 0.1 ms per chunk; at most one `git status` per worktree per second under continuous index writes; no two git processes overlapping on one worktree | Issue #147, Solution 3 | owner confirmed 2026-10-01 |
 | Tests | Unit tests on the module with a fake clock (counts and durations per subcommand, peak concurrency, minute flush, percentiles, no-op when disabled); a unit test that the git runner reports each call; the bench is a script, its figures go in the validation notes | Issue #147, Testing Decisions | owner confirmed 2026-10-01 |
 | Stop rule | If the baseline contradicts the suspects (a target is already met, e.g. the event loop is fine at 6 sessions), the owner is told before the fix issue for that target proceeds | Instruction for this plan | owner confirmed 2026-10-01 |
-| The variable's name and value | `PLAYGROUND_DIAGNOSTICS=1` turns it on; unset, empty, `0` or any other value leaves it off | Same shape as the existing `PLAYGROUND_FORCE_UPDATE=1`; one exact value cannot be turned on by accident | owner confirmed 2026-10-01 |
+| The variable's name and value | `PLAYGROUND_DEBUG_PERF=1` turns it on, the variable #154 already reads for its console loop line (PERF-16); unset, empty, `0` or any other value leaves both off. The console line stays as it is; the log keeps its own loop monitor | One switch for "performance debugging"; one exact value cannot be turned on by accident. Was `PLAYGROUND_DIAGNOSTICS=1` before #154 merged | owner confirmed 2026-10-03 |
 | Log file | `perf-diagnostics.jsonl` directly in the user data folder (`app.getPath('userData')`), appended across launches; every line carries `pid` and `version`, so two launches can be told apart | Next to `config.json`, where a user already looks; a pid per line separates runs without a header line | owner confirmed 2026-10-01 |
 | A partial minute on quit | Not written: the timer and the monitor stop, and the last partial window is dropped | Writing on quit would need a synchronous write on the quit path; the bench reads full minutes only | owner confirmed 2026-10-01 |
 | Event-loop resolution | 10 ms (Node's default); values are reported as the histogram gives them, with `resolutionMs: 10` in the line | Node's histogram records the whole interval between timer runs, so an idle loop reads about the resolution; the N = 0 run measures that floor (flagged as unverified in design.md) | owner confirmed 2026-10-01 |
 | Counters beyond the issue's list | The line also counts `files:changed` emits per worktree and `claude agents --json` runs (count, total, max) | #150 measures refreshes from the Files watcher and #151 measures the name poller's backoff; both are a counter at an existing call site | owner confirmed 2026-10-01 |
 | `git status` per second | `maxPerSecond` per worktree and subcommand: the most starts inside any 1,000 ms span, sliding | A fixed one-second bucket can read 1 when two starts sit 100 ms apart across a bucket edge | owner confirmed 2026-10-01 |
-| Synchronous git | The time tracker's `execFileSync` stays (making it async is #151) and is counted at its call site, in the totals and again under `git.sync` | #151 needs to see the synchronous calls apart from the rest | owner confirmed 2026-10-01 |
+| The time tracker's git read | `readGitAsync` (#154, PERF-21) runs through `git()` with its 2 s timeout and its nulls on any failure, so it is queued and counted like every other call. There is no `git.sync` section: the synchronous `readGit` has no caller | Same single-runner rule as the fetch and the branch read; superseded the 2026-10-01 row "count the `execFileSync` under `git.sync`" | owner confirmed 2026-10-03 |
 | Two worktrees with the same folder name | Their figures merge under one key | The issue allows folder names only; a hash would add a key nobody can read; the bench names its own worktrees uniquely | owner confirmed 2026-10-01 |
 | A session's key in `pty` | Its session id | An id is random and names nothing on disk | owner confirmed 2026-10-01 |
 | Bench seed | One repository with `--files` tracked files (default 500) and one linked worktree per session, `bench-wt-1` to `bench-wt-N`, registered as the only workspace | One session per worktree gives the per-worktree figures #149 reads; 500 files make `git status` cost something without a large checkout | owner confirmed 2026-10-01 |
@@ -61,6 +72,7 @@ owner-approved scope; it is the base the four fix issues measure against.
 | Index loop | `--index-interval <ms>` rewrites the first worktree's git-dir `index` with its own bytes every that many ms, from the moment the sessions open; write errors are counted and skipped | Same bytes keep the repository valid; the watcher reacts to the file event, not to its content | owner confirmed 2026-10-01 |
 | The bench never gates | A completed run exits 0 whatever the figures; only a harness failure exits non-zero | It measures; the fix issues judge their own target | owner confirmed 2026-10-01 |
 | Where the baseline lives | A `## Baseline` section in `.specs/features/perf-diagnostics/validation.md`, written by the baseline task; the Verifier adds its report and keeps the section | "The feature's validation notes" (issue #147); one file the four fix plans cite | owner confirmed 2026-10-01 |
+| A target whose issue is closed | The append target stays in the summary as a regression guard; the stop rule does not fire for it | #148 was closed by #154; there is no fix left to hold back | owner confirmed 2026-10-03 |
 | Calibration of the loop target | Kept at 30 ms when the N = 0 p99 is under 20 ms; otherwise the target becomes the N = 0 p99 plus 10 ms, and the owner is told | The target must sit above the floor the measurement itself adds | owner confirmed 2026-10-01 |
 | Telling users how to turn it on | A short "Diagnostics" section in `README.md`: the variable, the file, what it holds | User story 4 needs the user to find it; no UI is in scope | owner confirmed 2026-10-01 |
 
@@ -80,8 +92,8 @@ nothing day to day.
 
 **Acceptance Criteria**:
 
-1. WHERE `PLAYGROUND_DIAGNOSTICS` is `1` when the app starts, the app SHALL append one line to `perf-diagnostics.jsonl` in its user data folder every 60,000 ms <!-- optional-feature -->
-2. WHILE `PLAYGROUND_DIAGNOSTICS` is unset or holds any value other than `1`, the diagnostics module SHALL start no timer, create no event-loop monitor and write no file <!-- state-driven -->
+1. WHERE `PLAYGROUND_DEBUG_PERF` is `1` when the app starts, the app SHALL append one line to `perf-diagnostics.jsonl` in its user data folder every 60,000 ms <!-- optional-feature -->
+2. WHILE `PLAYGROUND_DEBUG_PERF` is unset or holds any value other than `1`, the diagnostics module SHALL start no timer, create no event-loop monitor and write no file <!-- state-driven -->
 3. The module SHALL append each line asynchronously as one complete JSON object followed by `\n`, and SHALL write lines in window order, one write at a time <!-- ubiquitous -->
 4. The module SHALL give every line `v: 1`, `t` (the window's end, ISO 8601 UTC), `windowMs` (the window's measured length), `pid`, `version`, and the sections `loop`, `git`, `pty`, `emits`, `recounts` and `names`, each present even when empty <!-- ubiquitous -->
 5. The module SHALL name a worktree by the last segment of its path only, and SHALL NOT write a full path, a git argument other than the subcommand, or any terminal content <!-- ubiquitous -->
@@ -89,7 +101,7 @@ nothing day to day.
 7. IF a write fails THEN the module SHALL drop that window's line, log one console error per failure streak naming the file and the error code, keep counting, and SHALL NOT throw <!-- unwanted-behavior -->
 8. WHEN the app quits THEN the module SHALL cancel its timer and disable its event-loop monitor, and SHALL NOT write a partial window <!-- event-driven -->
 
-**Independent Test**: Launch the built app with `PLAYGROUND_DIAGNOSTICS=1` on a throwaway user data
+**Independent Test**: Launch the built app with `PLAYGROUND_DEBUG_PERF=1` on a throwaway user data
 folder: after 65 s the file holds one line that parses, with all six sections. Launch it again without
 the variable: after 65 s no file exists.
 
@@ -104,13 +116,13 @@ starts and how long they take, so that I know which trigger to fix first.
 
 **Acceptance Criteria**:
 
-9. The git runner SHALL report every git process it starts to the diagnostics module, and SHALL report its end whether it succeeded, failed or timed out <!-- ubiquitous -->
+9. The git runner SHALL report every call to the diagnostics module when it is requested, its start when the spawn queue lets the process run, and its end whether it succeeded, failed or timed out <!-- ubiquitous -->
 10. WHEN a git process starts THEN the module SHALL count it under its subcommand: the first argument that does not start with `-`, skipping the value after `-c` or `-C`, and `(none)` when no argument qualifies <!-- event-driven -->
 11. WHEN a git process ends THEN the module SHALL add its duration to `totalMs` and raise `maxMs`, both for its subcommand and for the total <!-- event-driven -->
 12. The module SHALL report `peakConcurrent`, the most git processes running at once during the window, for the whole app and for each worktree <!-- ubiquitous -->
 13. The module SHALL report, for each worktree and subcommand, the count and `maxPerSecond`: the most starts that fell inside any 1,000 ms span of the window <!-- ubiquitous -->
-14. The workflow step's `git fetch` and the notification's branch read SHALL run through the git runner, with the arguments, timeout and environment they use today <!-- ubiquitous -->
-15. WHEN the time tracker reads a period's git fields synchronously THEN the module SHALL count that call as a git process and again under `git.sync`, with its duration <!-- event-driven -->
+14. The workflow step's `git fetch`, the notification's branch read and the time tracker's asynchronous git read SHALL run through the git runner, with the arguments and timeout they use today <!-- ubiquitous -->
+15. WHEN a git process starts THEN the module SHALL add the time since its call was requested to `git.wait.totalMs` and raise `git.wait.maxMs`; a call that has not started SHALL count in neither `count` nor `peakConcurrent` <!-- event-driven -->
 16. IF the end of one git process is reported twice THEN the module SHALL count it once <!-- unwanted-behavior -->
 
 **Independent Test**: With a recording fake installed, `git(dir, ['rev-parse', '--git-dir'])` in a
@@ -186,7 +198,7 @@ so that before and after figures compare the same load.
 **Acceptance Criteria**:
 
 28. IF `out/main/index.js` is missing THEN `node scripts/bench-sessions.mjs` SHALL exit 2 with a message naming `npx electron-vite build`, and SHALL start nothing <!-- unwanted-behavior -->
-29. The bench SHALL start the built app with a new temporary `--user-data-dir`, `PLAYGROUND_DIAGNOSTICS=1`, `--remote-debugging-port`, `--disable-renderer-backgrounding`, `--disable-backgrounding-occluded-windows` and `--disable-background-timer-throttling` <!-- ubiquitous -->
+29. The bench SHALL start the built app with a new temporary `--user-data-dir`, `PLAYGROUND_DEBUG_PERF=1`, `--remote-debugging-port`, `--disable-renderer-backgrounding`, `--disable-backgrounding-occluded-windows` and `--disable-background-timer-throttling` <!-- ubiquitous -->
 30. The bench SHALL seed its own repository with `--files` tracked files (default 500) and one linked worktree per session named `bench-wt-1` to `bench-wt-N`, registered as the only workspace of the temporary user data folder <!-- ubiquitous -->
 31. WHEN the first log line appears THEN the bench SHALL open `--sessions` (default 3) raw-command sessions through `sessions:spawn`, session i in `bench-wt-i`, each running `scripts/bench-tui.mjs`, and SHALL attach the first one <!-- event-driven -->
 32. The bench SHALL never spawn a registry agent, and SHALL need no account and no network <!-- ubiquitous -->
@@ -215,7 +227,7 @@ fix has a clear finish line.
 40. The validation notes SHALL record the bench summary for `--sessions` 0, 1, 3 and 6 at the default settings, and for `--sessions 6 --index-interval 100`, each with the commit it ran on <!-- ubiquitous -->
 41. The summary's target block SHALL judge: `loop.p99Ms` under 30 in every steady row with 6 sessions; mean append time (`appendMs` over `chunks`, all sessions, steady rows) under 0.1 ms; `maxPerSecond.status` at most 1 for every worktree in every steady row of an index run; `peakConcurrent` at most 1 for every worktree in every steady row <!-- ubiquitous -->
 42. IF the N = 0 run's worst steady `loop.p99Ms` is 20 ms or more THEN the baseline task SHALL set the loop target to that value plus 10 ms and tell the owner <!-- unwanted-behavior -->
-43. IF the baseline already meets a target THEN the baseline task SHALL stop and report to the owner before the fix issue that owns that target proceeds <!-- unwanted-behavior -->
+43. IF the baseline already meets a target owned by an open fix issue THEN the baseline task SHALL stop and report to the owner before that issue proceeds; a target whose issue is closed (append, #148) SHALL be recorded as a regression guard <!-- unwanted-behavior -->
 
 **Independent Test**: The `## Baseline` section of `validation.md` holds five summaries, the target
 values used, and the stop-rule verdict in writing.
@@ -231,7 +243,7 @@ without asking.
 
 **Acceptance Criteria**:
 
-44. The README SHALL have a "Diagnostics" section naming `PLAYGROUND_DIAGNOSTICS=1`, the file `perf-diagnostics.jsonl` in the user data folder, the one-line-a-minute cadence, and that worktrees appear by folder name only <!-- ubiquitous -->
+44. The README SHALL have a "Diagnostics" section naming `PLAYGROUND_DEBUG_PERF=1`, the file `perf-diagnostics.jsonl` in the user data folder, the one-line-a-minute cadence, and that worktrees appear by folder name only <!-- ubiquitous -->
 
 **Independent Test**: The section reads in under a minute and the variable it names turns the log on.
 
@@ -266,8 +278,8 @@ without asking.
 | PDIAG-11 | P1: git — AC 11 | T3 | Pending |
 | PDIAG-12 | P1: git — AC 12 | T3 | Pending |
 | PDIAG-13 | P1: git — AC 13 | T3 | Pending |
-| PDIAG-14 | P1: git — AC 14 | T7 | Pending |
-| PDIAG-15 | P1: git — AC 15 | T3, T8 | Pending |
+| PDIAG-14 | P1: git — AC 14 | T7, T8 | Pending |
+| PDIAG-15 | P1: git — AC 15 | T3, T6 | Pending |
 | PDIAG-16 | P1: git — AC 16 | T3 | Pending |
 | PDIAG-17 | P1: loop — AC 17 | T5, T16 | Pending |
 | PDIAG-18 | P1: loop — AC 18 | T2 | Pending |

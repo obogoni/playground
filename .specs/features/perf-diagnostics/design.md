@@ -1,7 +1,7 @@
 # Performance Diagnostics Design
 
 **Spec**: `.specs/features/perf-diagnostics/spec.md`
-**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01). T17's baseline can stop the fix issues (#148-#151) and send them back to the owner.
+**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01; reconciled with `main` `6d96ae4` and re-approved 2026-10-03: the switch is `PLAYGROUND_DEBUG_PERF`, git counts at the paced start with its queue wait, and the time tracker's async read goes through `git()`). T17's baseline can stop the fix issues (#148-#151) and send them back to the owner.
 
 ---
 
@@ -17,13 +17,13 @@ the harness that seeds, launches, drives and cleans up.
 
 ```mermaid
 graph TD
-    ENV[PLAYGROUND_DIAGNOSTICS=1] --> CAD[createAppDiagnostics]
+    ENV[PLAYGROUND_DEBUG_PERF=1] --> CAD[createAppDiagnostics]
     CAD -->|enabled| LIVE[live Diagnostics: counters, 60 s timer, loop monitor]
     CAD -->|disabled| NOOP[NOOP_DIAGNOSTICS: no timer, no monitor, no file]
     LIVE --> INST[installDiagnostics]
     INST --> ACC["diagnostics()"]
-    GIT[git.ts git] -->|gitStarted / end| ACC
-    SNAP[time-snapshot readGit] -->|gitStarted sync / end| ACC
+    GIT[git.ts git, paced] -->|gitRequested / start / end| ACC
+    SNAP[time-snapshot readGitAsync] -->|through git| GIT
     SM[SessionManager onData] -->|measureAppend| ACC
     NP[SessionNamePoller #call] -->|nameListingStarted / end| ACC
     IDX[index.ts recount, worktree:status, files:changed] -->|recountStarted / emitted| ACC
@@ -54,17 +54,18 @@ seam is an accessor):
 
 | Component | Location | How to Use |
 | --------- | -------- | ---------- |
-| The single git runner | `src/main/git.ts:17-38` (`git`) | Wraps its `run(...)` promise with `gitStarted` / end; nothing else changes (AD-023) |
+| The single git runner | `src/main/git.ts:19-43` (`git`, paced by `spawn-pacer.ts`, PERF-22) | `gitRequested` before `pace(...)`; inside the paced start, the returned `start()` and `run(...).finally(end)`; nothing else changes (AD-023) |
 | Git runner tests | `src/main/git.test.ts` | Real `git` in `tmpdir()`, as `isTimeout`'s tests already do; the reporting test sits beside them |
-| The workflow fetch and the branch read | `src/main/index.ts:85-92` (`gitFetch`), `:100-112` (`readBranch`) | Rewritten as `git(cwd, args)` and `git(cwd, args, { timeoutMs: 2000 })`; `git()` sets the same `windowsHide` and `GIT_TERMINAL_PROMPT=0` |
-| The synchronous snapshot read | `src/main/time-snapshot.ts:50-68` (`readGit`) | Keeps `execFileSync` (#151 makes it async); the call is wrapped with `gitStarted(cwd, args, { sync: true })` in a `try / finally` |
-| The PTY data path | `src/main/session-manager.ts:369-372` (`handle.onData`) | `buffer.append(data)` becomes `diagnostics().measureAppend(meta.id, data, () => buffer.append(data))` |
+| The workflow fetch and the branch read | `src/main/index.ts:90-97` (`gitFetch`), `:105-117` (`readBranch`) | Rewritten as `git(cwd, args)` and `git(cwd, args, { timeoutMs: 2000 })`; `git()` sets the same `windowsHide` and `GIT_TERMINAL_PROMPT=0` |
+| The time tracker's async read | `src/main/time-snapshot.ts:75-91` (`readGitAsync`, PERF-21) | Rewritten as `git(cwd, ARGS, { timeoutMs: 2000 })` with nulls on any rejection; the unused synchronous `readGit` stays untouched |
+| The PTY data path | `src/main/session-manager.ts:400-403` (`handle.onData`, fed by the PTY host since #157) | `buffer.append(data)` becomes `diagnostics().measureAppend(meta.id, data, () => buffer.append(data))` |
 | Session manager tests | `src/main/session-manager.test.ts:38`, `:59` (`fakePort`, its `onData`) | Drive a chunk through the fake handle and read what the recording fake got |
-| The name poller's one call | `src/main/session-name-poller.ts:106-160` (`#call`, `settle`) | `nameListingStarted()` after the spawn succeeds; its end inside `settle` |
+| The name poller's one call | `src/main/session-name-poller.ts:106-163` (`#call`, `settle`) | `nameListingStarted()` after the spawn succeeds; its end inside `settle` |
 | Name poller tests | `src/main/session-name-poller.test.ts` | Their fake spawn and fake child settle a call on demand |
-| Recount and emits | `src/main/index.ts:164-170` (`recountWorktree`), `:308-319` (git-state `onSettled`), `:360-366` (`fileWatcher` `emit`) | One probe line each |
-| Quit hooks | `src/main/index.ts:391`, `:747` (`will-quit`) | A third `will-quit` listener calls `diagnostics().stop()` |
-| The env opt-in precedent | `src/main/index.ts:756` (`PLAYGROUND_FORCE_UPDATE === '1'`) | Same shape: one exact value turns it on |
+| Recount and emits | `src/main/index.ts:169-175` (`recountWorktree`), `:366-371` (git-state `onSettled`), `:418-420` (`fileWatcher` `emit`) | One probe line each |
+| Quit hooks | `src/main/index.ts:287` (`onWillQuit`) | One more `onWillQuit(() => diagnostics().stop())` |
+| The env opt-in precedent | `src/main/index.ts:315-318` (`startLoopDelayLog({ enabled: process.env.PLAYGROUND_DEBUG_PERF === '1' })`, PERF-16) | The same variable and value; that call switches to `diagnosticsEnabled(process.env)` so both read one rule |
+| The loop resolution | `src/main/perf-monitor.ts` (`LOOP_RESOLUTION_MS = 10`, pinned by `perf-monitor.test.ts`) | Imported, not redefined |
 | Launching the built app | `scripts/smoke-quit.mjs:65-81` | `spawn(electron, ['.', --user-data-dir, --remote-debugging-port, three anti-throttling flags], { cwd: ROOT, env })` with `ELECTRON_RUN_AS_NODE` removed; `taskkill /T /F` on a hung exit (`:107-111`) |
 | CDP helpers | `scripts/smoke-quit.mjs:35-63` (`pageTarget`, `evaluate`) | Copied into the bench, as every smoke copies them |
 | Seeding a workspace into a config | `scripts/smoke-files-diff.mjs:205-211` | Writes `{ workspaces: [{ id, path, displayName }] }` into the throwaway `config.json` before launch |
@@ -75,10 +76,10 @@ seam is an accessor):
 
 | System | Integration Method |
 | ------ | ------------------ |
-| Every git process | `git.ts` (async) and `time-snapshot.ts` (sync) report to `diagnostics()` |
+| Every git process | `git.ts` reports to `diagnostics()`; every other git spawn in main is routed through it |
 | Main's event loop | `perf_hooks.monitorEventLoopDelay({ resolution: 10 })`, created only when enabled |
 | The user data folder | `app.getPath('userData')` joined with `perf-diagnostics.jsonl`; `fs/promises.appendFile` |
-| The bench and the app | Process env (`PLAYGROUND_DIAGNOSTICS=1`), CDP `Runtime.evaluate` over `window.api.invoke`, and the log file |
+| The bench and the app | Process env (`PLAYGROUND_DEBUG_PERF=1`), CDP `Runtime.evaluate` over `window.api.invoke`, and the log file |
 
 ---
 
@@ -89,18 +90,21 @@ seam is an accessor):
 - **Purpose**: count the work main does and write it as one JSON line a minute, or do nothing at all.
 - **Location**: `src/main/diagnostics.ts`, tested by `src/main/diagnostics.test.ts`
 - **Constants** (exported, each pinned by a literal assertion, L-009):
-  - `DIAGNOSTICS_ENV = 'PLAYGROUND_DIAGNOSTICS'`
+  - `DIAGNOSTICS_ENV = 'PLAYGROUND_DEBUG_PERF'`
   - `DIAGNOSTICS_LOG_FILE = 'perf-diagnostics.jsonl'`
   - `FLUSH_INTERVAL_MS = 60_000`
-  - `LOOP_RESOLUTION_MS = 10`
+  - `LOOP_RESOLUTION_MS` is imported from `./perf-monitor` (10), not redefined
   - `PER_SECOND_SPAN_MS = 1_000`
 - **The probe surface** (what the rest of main calls):
 
   ```typescript
   export interface Diagnostics {
     readonly enabled: boolean
-    /** A git process is starting; call the returned function once it has ended (any outcome). */
-    gitStarted(cwd: string, args: readonly string[], opts?: { sync?: boolean }): () => void
+    /**
+     * A git call was requested. Call the returned `start` when the spawn queue lets the process
+     * run; call the `end` that `start` returns once the process has ended (any outcome).
+     */
+    gitRequested(cwd: string, args: readonly string[]): () => () => void
     /** Runs `append`, timing it, and records the chunk for `sessionId`. Disabled: just runs `append`. */
     measureAppend(sessionId: string, chunk: string, append: () => void): void
     /** Main sent this event for this worktree. */
@@ -148,7 +152,7 @@ seam is an accessor):
     intervalMs?: number // default FLUSH_INTERVAL_MS; tests pass their own
   }
 
-  export const NOOP_DIAGNOSTICS: Diagnostics            // frozen; gitStarted/nameListingStarted return one shared no-op
+  export const NOOP_DIAGNOSTICS: Diagnostics            // frozen; gitRequested/nameListingStarted return shared no-ops
   export function diagnosticsEnabled(env: NodeJS.ProcessEnv): boolean  // env[DIAGNOSTICS_ENV] === '1'
   export function createDiagnostics(deps: DiagnosticsDeps): Diagnostics // always live; calls startLoopMonitor and clock.every once
   export function createAppDiagnostics(opts: {
@@ -167,7 +171,7 @@ seam is an accessor):
 - **Real ports** (in the same file, thin, hand-verified by T11 and T16; the writer is unit-tested in T5): `realClock` (`performance.now`, `Date.now`, `setInterval` / `clearInterval`); `nodeLoopMonitor()` (`monitorEventLoopDelay({ resolution: LOOP_RESOLUTION_MS })`, `enable()`); `appendWriter(path)` (`appendFile(path, line, 'utf8')`).
 - **Behaviour**:
   - `createDiagnostics` starts the monitor and one `clock.every(intervalMs, flush)`. Nothing else schedules work.
-  - `gitStarted`: subcommand and worktree key are computed at once; `count` of the total, the subcommand and the worktree go up at the start; in-flight counts (total, per worktree) go up and raise the peaks; the start time joins the worktree-and-subcommand list of starts inside the last `PER_SECOND_SPAN_MS`, whose length raises `maxPerSecond`. The returned end runs once: in-flight goes down, the duration (`clock.now()` difference) goes into `totalMs` and `maxMs` of the total, the subcommand and, when `sync`, `git.sync`. A second call does nothing (PDIAG-16).
+  - `gitRequested`: subcommand, worktree key and the request time are taken at once; nothing is counted yet. `start()` adds `clock.now()` minus the request time to `git.wait` (`totalMs`, `maxMs`); then `count` of the total, the subcommand and the worktree go up; in-flight counts (total, per worktree) go up and raise the peaks; the start time joins the worktree-and-subcommand list of starts inside the last `PER_SECOND_SPAN_MS`, whose length raises `maxPerSecond`. The returned end runs once: in-flight goes down, the duration (`clock.now()` difference) goes into `totalMs` and `maxMs` of the total, and the subcommand. A second call of `start` or `end` does nothing (PDIAG-16).
   - `measureAppend`: reads the clock, runs `append` in a `try / finally`, reads the clock again, and records `chunks + 1`, `bytes + Buffer.byteLength(chunk, 'utf8')`, `appendMs`, `appendMaxMs` for the session. An error thrown by `append` passes through.
   - `flush` (every `intervalMs`): builds the line (data model below), resets the counters, sets each peak to the current in-flight count, resets the monitor, queues the write. Writes run one after the other on one promise chain, so lines land in order. A rejected write is reported through `log` once per failure streak (`[diagnostics] could not write perf-diagnostics.jsonl: EACCES`), the line is dropped, and the next success ends the streak.
   - `stop`: cancels the timer, disables the monitor, marks the module stopped; probes after it are ignored. No partial line.
@@ -179,20 +183,21 @@ seam is an accessor):
 
 | File | Change |
 | ---- | ------ |
-| `src/main/git.ts` | `const end = diagnostics().gitStarted(cwd, args)`; returns `run(...).finally(end)` |
+| `src/main/git.ts` | `const start = diagnostics().gitRequested(cwd, args)`; `pace(() => { const end = start(); return run(...).finally(end) })` |
 | `src/main/index.ts` `gitFetch` | `await git(cwd, args)` in place of `execFileAsync('git', ...)` |
 | `src/main/index.ts` `readBranch` | `git(cwd, ['symbolic-ref', '--short', 'HEAD'], { timeoutMs: 2000 })`; the `catch` returning `null` stays |
-| `src/main/time-snapshot.ts` `readGit` | `const end = diagnostics().gitStarted(cwd, ARGS, { sync: true })` before `execFileSync`, `end()` in `finally` |
+| `src/main/time-snapshot.ts` `readGitAsync` | `git(cwd, ARGS, { timeoutMs: 2000 })`; split stdout as today; nulls on any rejection |
 | `src/main/session-manager.ts` `#start` | `diagnostics().measureAppend(meta.id, data, () => buffer.append(data))` |
 | `src/main/session-name-poller.ts` `#call` | `const end = diagnostics().nameListingStarted()` after a successful spawn; `end()` first thing in `settle` |
 | `src/main/index.ts` `recountWorktree` | `diagnostics().recountStarted(worktreePath)` before `worktreeStatus` |
 | `src/main/index.ts` git-state `onSettled` | `diagnostics().emitted('worktree:status', worktreePath)` next to the `emit` |
 | `src/main/index.ts` `fileWatcher` `emit` | `diagnostics().emitted('files:changed', event.worktreePath)` next to the `emit` |
 | `src/main/index.ts` start of `whenReady` | `installDiagnostics(createAppDiagnostics({ env: process.env, userDataPath: app.getPath('userData'), version: app.getVersion() }))`, before any handler can run git |
-| `src/main/index.ts` quit | `app.on('will-quit', () => diagnostics().stop())` |
+| `src/main/index.ts` quit | `onWillQuit(() => diagnostics().stop())` |
+| `src/main/index.ts` loop log | `startLoopDelayLog({ enabled: diagnosticsEnabled(process.env) })` |
 
 `gitFetch` and `readBranch` stop using `execFileAsync`; it stays for `readFileDropList` and the
-`assoc` probe. `git()` adds a 64 MiB `maxBuffer` the two did not have, which only raises a ceiling.
+`assoc` probe. `git()` adds a 64 MiB `maxBuffer` the three did not have, which only raises a ceiling, and `GIT_TERMINAL_PROMPT=0`, which `readGitAsync` did not set and which only stops a prompt `rev-parse` never shows. All three now wait in the spawn queue like every other git call.
 
 ### Fake TUI (`scripts/bench-tui.mjs`)
 
@@ -214,7 +219,7 @@ seam is an accessor):
 - **Interfaces**:
   - `parseLines(text: string): DiagnosticsLine[]`: one object per non-empty line; a line that does not parse throws with its line number.
   - `phaseRows(lines, { minutes }): Row[]`: line 1 is `startup`, line 2 `spawn`, lines 3 to `minutes + 2` are `steady 1` to `steady m`; later lines are ignored.
-  - `rowOf(line): Row`: `{ label, loopP50, loopP99, loopMax, gitCount, gitSyncCount, gitPeak, worktreePeak, statusMaxPerSecond, statusEmits, recounts, ptyChunks, ptyKBps, appendMeanMs, appendMaxMs, names }`. `worktreePeak` and `statusMaxPerSecond` are the largest over worktrees; `appendMeanMs` is the sum of `appendMs` over the sum of `chunks` (0 when no chunk); `ptyKBps` is bytes over `windowMs`.
+  - `rowOf(line): Row`: `{ label, loopP50, loopP99, loopMax, gitCount, gitWaitMaxMs, gitPeak, worktreePeak, statusMaxPerSecond, statusEmits, recounts, ptyChunks, ptyKBps, appendMeanMs, appendMaxMs, names }`. `worktreePeak` and `statusMaxPerSecond` are the largest over worktrees; `appendMeanMs` is the sum of `appendMs` over the sum of `chunks` (0 when no chunk); `ptyKBps` is bytes over `windowMs`.
   - `worstRow(rows): Row`: the largest value of every column over the steady rows (`appendMeanMs` from the totals of the steady rows, not the largest row mean).
   - `judgeTargets(rows, { sessions, indexIntervalMs, targets }): TargetResult[]`, with `DEFAULT_TARGETS = { loopP99Ms: 30, appendMeanMs: 0.1, statusPerSecond: 1, worktreePeak: 1 }`. Each result is `{ name, value, limit, verdict: 'PASS' | 'FAIL' | 'n/a' }`. The loop target is `n/a` unless `sessions` is 6; the status target is `n/a` without an index loop; the append target is `n/a` with no chunk.
   - `formatSummary(options, rows, worst, targets, spawnMs): string`: the text below.
@@ -222,7 +227,7 @@ seam is an accessor):
 
   ```
   bench-sessions  sessions=6  fps=20  rows=30  files=500  index=100ms  minutes=3  commit=<short sha>
-  phase      loop p50/p99/max ms   git n  sync  peak  wt peak  status/s  wt:status  recounts  chunks  KB/s  append mean/max ms  names
+  phase      loop p50/p99/max ms   git n  wait  peak  wt peak  status/s  wt:status  recounts  chunks  KB/s  append mean/max ms  names
   startup     10.1 /  12.0 /  40.2     14     0     3        1         1          0         0       0     0  0.000 / 0.000          0
   spawn       10.6 /  48.3 / 161.0     40     6     4        2         2          6         6   21000   340  1.210 / 3.400          0
   steady 1    ...
@@ -259,7 +264,7 @@ seam is an accessor):
 - **Flow**:
   1. Refuse with exit 2 if `out/main/index.js` is missing (PDIAG-28).
   2. `mkdtempSync(join(tmpdir(), 'pg-bench-'))` holds `user-data/` and `ws/`. Seed `ws/app`: `git init -b main`, `--files` files `src/f0000.ts`... of 20 lines each, one commit, then `git worktree add ../bench-wt-<i> -b bench/<i>` for i = 1..max(N, 1). Write `user-data/config.json` with the one workspace (`ws`).
-  3. Launch as `smoke-quit.mjs` does, with `env.PLAYGROUND_DIAGNOSTICS = '1'`; register SIGINT and exit cleanups first (PDIAG-48).
+  3. Launch as `smoke-quit.mjs` does, with `env.PLAYGROUND_DEBUG_PERF = '1'`; register SIGINT and exit cleanups first (PDIAG-48).
   4. Wait for the page target and `window.api`, then for line 1 of `user-data/perf-diagnostics.jsonl` (poll every 500 ms).
   5. Spawn N sessions: `sessions:spawn { agentName: 'Ad-hoc', cwd: <bench-wt-i>, adhocCommand: '"<process.execPath>" "<ROOT>/scripts/bench-tui.mjs" --fps <f> --rows <r> --seed <i>' }`, timing each round trip; then `sessions:attach` on the first. Start the index loop.
   6. Wait for line `minutes + 2`, with a deadline of `minutes + 3` minutes after line 1 (PDIAG-50).
@@ -287,7 +292,8 @@ interface DiagnosticsLine {
     totalMs: number
     maxMs: number
     peakConcurrent: number
-    sync: { count: number; totalMs: number; maxMs: number }
+    /** Time between a call's request and its start in the spawn queue (PERF-22). */
+    wait: { totalMs: number; maxMs: number }
     bySubcommand: Record<string, { count: number; totalMs: number; maxMs: number }>
     byWorktree: Record<
       string, // folderOf(cwd)
@@ -311,12 +317,12 @@ interface DiagnosticsLine {
 
 Every millisecond value is rounded to 3 decimals except `windowMs`. A count starts at the event's start;
 a duration lands in the window where the process ended. A worktree or subcommand with nothing in the
-window is absent from its record; the six sections and `git.sync` are always present.
+window is absent from its record; the six sections and `git.wait` are always present.
 
 Example (one worktree, abridged):
 
 ```json
-{"v":1,"t":"2026-10-01T12:01:00.000Z","windowMs":60000,"pid":4242,"version":"0.1.0","loop":{"p50Ms":10.12,"p99Ms":24.3,"maxMs":61.2,"resolutionMs":10},"git":{"count":64,"totalMs":2210.5,"maxMs":88.1,"peakConcurrent":3,"sync":{"count":0,"totalMs":0,"maxMs":0},"bySubcommand":{"status":{"count":60,"totalMs":2100.4,"maxMs":88.1},"rev-parse":{"count":4,"totalMs":110.1,"maxMs":31}},"byWorktree":{"bench-wt-1":{"count":64,"peakConcurrent":2,"bySubcommand":{"status":{"count":60,"maxPerSecond":4},"rev-parse":{"count":4,"maxPerSecond":2}}}}},"pty":{"6f1c...":{"chunks":1200,"bytes":4100000,"appendMs":1500.25,"appendMaxMs":3.2}},"emits":{"worktree:status":{"bench-wt-1":60},"files:changed":{}},"recounts":{"bench-wt-1":60},"names":{"count":0,"totalMs":0,"maxMs":0}}
+{"v":1,"t":"2026-10-01T12:01:00.000Z","windowMs":60000,"pid":4242,"version":"0.1.0","loop":{"p50Ms":10.12,"p99Ms":24.3,"maxMs":61.2,"resolutionMs":10},"git":{"count":64,"totalMs":2210.5,"maxMs":88.1,"peakConcurrent":3,"wait":{"totalMs":96.4,"maxMs":12.1},"bySubcommand":{"status":{"count":60,"totalMs":2100.4,"maxMs":88.1},"rev-parse":{"count":4,"totalMs":110.1,"maxMs":31}},"byWorktree":{"bench-wt-1":{"count":64,"peakConcurrent":2,"bySubcommand":{"status":{"count":60,"maxPerSecond":4},"rev-parse":{"count":4,"maxPerSecond":2}}}}},"pty":{"6f1c...":{"chunks":1200,"bytes":4100000,"appendMs":1500.25,"appendMaxMs":3.2}},"emits":{"worktree:status":{"bench-wt-1":60},"files:changed":{}},"recounts":{"bench-wt-1":60},"names":{"count":0,"totalMs":0,"maxMs":0}}
 ```
 
 ### Bench row
@@ -325,7 +331,7 @@ Example (one worktree, abridged):
 interface Row {
   label: string // 'startup' | 'spawn' | `steady ${n}` | 'worst'
   loopP50: number; loopP99: number; loopMax: number
-  gitCount: number; gitSyncCount: number; gitPeak: number
+  gitCount: number; gitWaitMaxMs: number; gitPeak: number
   worktreePeak: number; statusMaxPerSecond: number
   statusEmits: number; recounts: number
   ptyChunks: number; ptyKBps: number
@@ -340,10 +346,10 @@ interface Row {
 
 | Issue | Target | Where it reads it |
 | ----- | ------ | ----------------- |
-| #148 scrollback | append under 0.1 ms per chunk; loop p99 under 30 ms at 6 sessions | `pty.*.appendMs / chunks`, `pty.*.appendMaxMs`, `loop.p99Ms`; summary columns `append mean/max` and `loop` |
+| #148 scrollback (closed by #154; regression guard) | append under 0.1 ms per chunk; loop p99 under 30 ms at 6 sessions | `pty.*.appendMs / chunks`, `pty.*.appendMaxMs`, `loop.p99Ms`; summary columns `append mean/max` and `loop` |
 | #149 recount coalescing | at most one `git status` per worktree per second under continuous index writes; no two git processes overlapping on one worktree | `git.byWorktree.*.bySubcommand.status.maxPerSecond`, `git.byWorktree.*.peakConcurrent`, `recounts`, `emits["worktree:status"]`; run with `--index-interval 100` |
 | #150 Files watcher | no git process from writes to ignored folders; no overlapping refreshes | `git.byWorktree`, `emits["files:changed"]`; #150 adds a build-folder write loop to `OPTIONS` and opens the Files view through CDP |
-| #151 async git, name backoff | no main stall over 50 ms when 6 sessions open or the machine wakes; no back-to-back name listings | `loop.maxMs` and `git.sync` in the `spawn` row; `names.count` per minute |
+| #151 async git, name backoff (the async read shipped in #154) | no main stall over 50 ms when 6 sessions open or the machine wakes; no back-to-back name listings | `loop.maxMs` in the `spawn` row; `names.count` per minute |
 
 ---
 
@@ -370,8 +376,9 @@ interface Row {
 | `monitorEventLoopDelay` inside Electron's main process: Electron drives libuv from its own message loop | `src/main/diagnostics.ts` (new) | The monitor might not see a busy main | T16's falsification: a throwaway 2 ms busy-wait in `SessionRingBuffer.append` must raise `loop.p99Ms` and `appendMeanMs` |
 | A global accessor is mutable state shared by every test in a file | `src/main/diagnostics.ts` (new) | A test that forgets to restore leaks a fake into the next one | Every test file that installs a fake restores in `afterEach(() => installDiagnostics(null))`; Vitest isolates files in their own workers |
 | Real-git tests near the per-test timeout (L-005) | `src/main/git.test.ts`, `src/main/time-snapshot.test.ts` | The new real-process tests could push a slow suite over | The new tests run one fast git command each (`rev-parse` in a non-repo folder); T1 records the suite's duration; `vitest.config.ts` already allows 30 s |
-| `readBranch` and `gitFetch` moved onto `git()` | `src/main/index.ts:85-112` | A changed option could change behaviour | Same args, same timeout, same env; `git()` only adds `maxBuffer`. T7 reads both calls against the old ones line by line; the bench (T15) runs on the rewired build |
-| The time tracker's synchronous git blocks main by design today | `src/main/time-snapshot.ts:50-68` | Measured, not fixed here | Counted under `git.sync`; #151 fixes it |
+| `readBranch`, `gitFetch` and `readGitAsync` moved onto `git()` | `src/main/index.ts:90-117`, `src/main/time-snapshot.ts:75-91` | A changed option could change behaviour | Same args, same timeout, same env; `git()` only adds `maxBuffer`. T7 and T8 read the calls against the old ones line by line; each now waits in the spawn queue (at most 4 running), as PERF-22 intends; the bench (T15) runs on the rewired build |
+| Two loop monitors when the switch is on (PERF-16's and the log's) | `src/main/perf-monitor.ts`, `src/main/diagnostics.ts` (new) | Two 10 ms timers while debugging | Accepted: each resets on its own cadence (10 s, 60 s); sharing one histogram would make one window read the other's reset. Off by default |
+| Counting inside the paced start | `src/main/git.ts` | A call whose start never runs (app quitting) is never counted | Accepted: it never spawned a process |
 | Folder-name keys merge two worktrees with the same folder name | `src/main/diagnostics.ts` (new) | A false overlap on a real machine | Recorded as a limitation (spec assumptions); the bench names its worktrees uniquely |
 | ConPTY rewrites the fake TUI's output | `src/main/pty-port.ts:28-40` | Bytes and chunk sizes differ from the script's own | Accepted: the same happens to a real agent; the baseline records what main actually receives |
 | Rewriting `.git/index` while the app's `git status` holds the lock | `scripts/bench-sessions.mjs` (new) | A write fails now and then | Same bytes, so the repository stays valid; failures counted and printed |
@@ -394,10 +401,10 @@ interface Row {
 | Where the spawn timing comes from | The bench times each `sessions:spawn` round trip | "A new session takes long to start" is a renderer-to-main round trip; the log cannot see it |
 | The bench's steady window | Full minutes after a `startup` and a `spawn` minute | The fixed 60 s flush is aligned to app start, not to the bench |
 
-> **AD-TBD (number chosen at Execute; main holds up to AD-051): performance figures come from one
+> **AD-056 (main holds up to AD-053; PR #158 holds AD-054, PR #160 holds AD-055): performance figures come from one
 > opt-in diagnostics module.** `src/main/diagnostics.ts` owns every performance counter in main and is
-> reached through `diagnostics()`; it is live only when `PLAYGROUND_DIAGNOSTICS=1`, and otherwise a
+> reached through `diagnostics()`; it is live only when `PLAYGROUND_DEBUG_PERF=1`, and otherwise a
 > no-op that starts no timer and no monitor. Every git process main starts reports to it (the runner,
-> and any synchronous call at its site); a log line names worktrees by folder only and never carries a
+> counted when the spawn queue starts the process, with its queue wait); a log line names worktrees by folder only and never carries a
 > path, a git argument beyond the subcommand, or terminal content. Performance fixes measure with
 > `scripts/bench-sessions.mjs` and quote its summary before and after.

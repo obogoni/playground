@@ -10,18 +10,22 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Design**: `.specs/features/perf-diagnostics/design.md`. In one line: `src/main/diagnostics.ts` holds
 every counter and writes one JSON line a minute to `<userData>/perf-diagnostics.jsonl` when
-`PLAYGROUND_DIAGNOSTICS=1`, reached through `diagnostics()` from the git runner, the synchronous
-snapshot read, the PTY data path, the name poller and three lines in `index.ts`; `scripts/bench-sessions.mjs`
+`PLAYGROUND_DEBUG_PERF=1`, reached through `diagnostics()` from the paced git runner (which the
+time tracker's async read now goes through), the PTY data path, the name poller and three lines in `index.ts`; `scripts/bench-sessions.mjs`
 drives N fake TUI sessions on the built app and prints the figures against the targets.
-**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01).
+**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01). Reconciled 2026-10-03 with
+`main` after PRs #154 and #157, owner's answers: one switch `PLAYGROUND_DEBUG_PERF`, git counted at the
+paced start plus its queue wait (`git.wait`, no `git.sync`), `readGitAsync` through `git()`, batch
+workers for Execute.
 
-**Branch**: `feature/perf-diagnostics`, cut from `origin/main` `60ff148`. The four fix issues are
+**Branch**: `feature/perf-diagnostics`, cut from `origin/main` `60ff148`, rebased 2026-10-03 onto `6d96ae4`. The four fix issues are
 planned on branches stacked on this one. The future PR body carries `Closes #147`.
 
-**Stop rule (T17)**: T17 records the baseline and evaluates it in writing. If any target is already met
-at baseline (for example `loop.p99Ms` under 30 in every steady row with 6 sessions), or the N = 0 floor
+**Stop rule (T17)**: T17 records the baseline and evaluates it in writing. If any target owned by an
+open fix issue is already met at baseline (for example `loop.p99Ms` under 30 in every steady row with 6 sessions), or the N = 0 floor
 forces a recalibration, **stop after T17** and report to the owner before the fix issue that owns that
-target proceeds. The Verifier still runs on T1-T17.
+target proceeds. The append target belongs to #148, closed by #154: it is recorded as a regression
+guard and never fires the stop rule. The Verifier still runs on T1-T17.
 
 **Test baseline**: **re-measure** with `npx vitest run` as the first act of Execute, after T1's setup;
 record the test count, the suite's wall time and the lint warning count at the same time.
@@ -107,7 +111,7 @@ T16 → T17
 `NOOP_DIAGNOSTICS`, `installDiagnostics` and `diagnostics()`.
 **Where**: `src/main/diagnostics.ts`
 **Depends on**: None
-**Reuses**: the `PLAYGROUND_FORCE_UPDATE === '1'` precedent (`src/main/index.ts:756`)
+**Reuses**: the `PLAYGROUND_DEBUG_PERF === '1'` check (`src/main/index.ts:316`); `LOOP_RESOLUTION_MS` from `src/main/perf-monitor.ts`
 **Requirement**: PDIAG-02, PDIAG-22
 
 **Tools**:
@@ -125,10 +129,10 @@ T16 → T17
 **Done when**:
 
 - [ ] Baseline test count, file count, suite wall time and lint warning count recorded here
-- [ ] Tests: `DIAGNOSTICS_ENV` is `'PLAYGROUND_DIAGNOSTICS'`, `DIAGNOSTICS_LOG_FILE` `'perf-diagnostics.jsonl'`, `FLUSH_INTERVAL_MS` `60000`, `LOOP_RESOLUTION_MS` `10`, `PER_SECOND_SPAN_MS` `1000`, each by literal (L-009)
+- [ ] Tests: `DIAGNOSTICS_ENV` is `'PLAYGROUND_DEBUG_PERF'`, `DIAGNOSTICS_LOG_FILE` `'perf-diagnostics.jsonl'`, `FLUSH_INTERVAL_MS` `60000`, `PER_SECOND_SPAN_MS` `1000`, each by literal (L-009); `LOOP_RESOLUTION_MS` is imported from `perf-monitor.ts`, whose test already pins it
 - [ ] Tests: `diagnosticsEnabled` is true for `'1'` only; false for unset, `''`, `'0'`, `'true'`, `' 1'`
 - [ ] Tests: `diagnostics()` answers `NOOP_DIAGNOSTICS` before any install; `installDiagnostics(fake)` makes it answer the fake; `installDiagnostics(null)` restores the no-op
-- [ ] Tests: `NOOP_DIAGNOSTICS.enabled` is false; its `measureAppend` calls `append` exactly once and returns; its `gitStarted` and `nameListingStarted` return a function that does nothing; `stop` can be called twice; the object is frozen
+- [ ] Tests: `NOOP_DIAGNOSTICS.enabled` is false; its `measureAppend` calls `append` exactly once and returns; its `gitRequested` returns a `start` whose `end` does nothing, and its `nameListingStarted` returns a function that does nothing; `stop` can be called twice; the object is frozen
 - [ ] Gate check passes: `npx vitest run src/main/diagnostics.test.ts`, then the full gate
 - [ ] Test count: baseline + the new tests
 
@@ -157,7 +161,7 @@ failing writer, and stop.
 **Done when**:
 
 - [ ] Tests (fake clock with `now`, `wallNow`, `every` it records and fires on demand; fake monitor; recording writer): `createDiagnostics` calls `startLoopMonitor` once and `clock.every` once with `60000` when no `intervalMs` is given
-- [ ] Tests: firing the timer writes one line that parses, ends in `\n`, and holds `v: 1`, `t` as the ISO string of `wallNow`, `windowMs` as the `now` difference since creation, `pid`, `version`, and all six sections with `git.sync` (empty values: zeros and `{}`)
+- [ ] Tests: firing the timer writes one line that parses, ends in `\n`, and holds `v: 1`, `t` as the ISO string of `wallNow`, `windowMs` as the `now` difference since creation, `pid`, `version`, and all six sections with `git.wait` (empty values: zeros and `{}`)
 - [ ] Tests: the monitor answering 12,000,000 / 31,500,000 / 61,234,567 ns gives `p50Ms: 12`, `p99Ms: 31.5`, `maxMs: 61.235`, `resolutionMs: 10`; the monitor's `reset` runs once per line; a monitor with `count: 0` gives zeros
 - [ ] Tests: two flushes with a writer whose first promise resolves after the second is queued land in window order, and the second write starts only after the first settles
 - [ ] Tests: a rejecting writer drops the line and calls `log` once for two failing flushes in a row with the file name and the error code; a success ends the streak, so the next failure logs again; nothing throws
@@ -174,8 +178,9 @@ failing writer, and stop.
 
 ### T3: Git counters
 
-**What**: `gitSubcommand`, `folderOf` and `gitStarted` with its end: counts by subcommand and worktree,
-durations, peak concurrency overall and per worktree, `maxPerSecond`, `git.sync`, and the window rules.
+**What**: `gitSubcommand`, `folderOf` and `gitRequested` with its `start` and `end`: counts by subcommand
+and worktree, durations, queue wait, peak concurrency overall and per worktree, `maxPerSecond`, and the
+window rules.
 **Where**: `src/main/diagnostics.ts`
 **Depends on**: T2
 **Reuses**: T2's flush and fakes
@@ -193,8 +198,8 @@ durations, peak concurrency overall and per worktree, `maxPerSecond`, `git.sync`
 - [ ] Tests: two `status` and one `rev-parse` ending after 100, 300 and 50 ms give `count: 3`, `totalMs: 450`, `maxMs: 300`, and the right per-subcommand figures
 - [ ] Tests: three overlapping calls on one worktree and one on another give `peakConcurrent: 4` overall and `3` / `1` per worktree; sequential calls give `1`
 - [ ] Tests: starts at 0, 400 and 900 ms give `maxPerSecond: 3`; starts at 0, 600 and 1,200 ms give `2` (sliding span, not a bucket); the exact edge, starts at 0 and 1,000 ms, gives `1` (L-042)
-- [ ] Tests: a call with `{ sync: true }` counts in the totals and in `git.sync`; a call without it does not touch `git.sync`
-- [ ] Tests: an end called twice counts once; a call started in window 1 and ended in window 2 is counted in window 1's `count` and timed in window 2's `totalMs`, and window 2's `peakConcurrent` starts at 1 while it runs
+- [ ] Tests: two calls requested at 0 ms and started at 40 and 100 ms give `wait: { totalMs: 140, maxMs: 100 }`; a call requested and never started counts in neither `count` nor `peakConcurrent`, and its `wait` is not added
+- [ ] Tests: a `start` or an `end` called twice counts once; a call started in window 1 and ended in window 2 is counted in window 1's `count` and timed in window 2's `totalMs`, and window 2's `peakConcurrent` starts at 1 while it runs
 - [ ] Tests: no line contains the parent folders of any path passed in, nor any argument other than the subcommand (assert on the serialized line)
 - [ ] Gate check passes: `npx vitest run src/main/diagnostics.test.ts`, then the full gate
 - [ ] Test count: T2 count + the new tests
@@ -256,7 +261,7 @@ no-op when disabled before touching any port.
 
 - [ ] Tests (real temp dir): `appendWriter` creates the file on the first line and appends the second after it, both intact
 - [ ] Tests: `createAppDiagnostics({ env: {}, userDataPath: tmp, version })` returns `NOOP_DIAGNOSTICS`, and after 50 ms the temp dir holds no file
-- [ ] Tests: `createAppDiagnostics({ env: { PLAYGROUND_DIAGNOSTICS: '1' }, userDataPath: tmp, version: '9.9.9', intervalMs: 50 })` writes a line to `<tmp>/perf-diagnostics.jsonl` within 1 s with `version: '9.9.9'` and this process's `pid`; `stop()` is called in `finally`
+- [ ] Tests: `createAppDiagnostics({ env: { PLAYGROUND_DEBUG_PERF: '1' }, userDataPath: tmp, version: '9.9.9', intervalMs: 50 })` writes a line to `<tmp>/perf-diagnostics.jsonl` within 1 s with `version: '9.9.9'` and this process's `pid`; `stop()` is called in `finally`
 - [ ] `nodeLoopMonitor` uses `monitorEventLoopDelay({ resolution: LOOP_RESOLUTION_MS })` and calls `enable()` (read; its effect is observed in T16)
 - [ ] Gate check passes: `npx vitest run src/main/diagnostics.test.ts`, then the full gate
 - [ ] Test count: T4 count + the new tests
@@ -270,11 +275,12 @@ no-op when disabled before touching any port.
 
 ### T6: The git runner reports every call
 
-**What**: `git()` calls `diagnostics().gitStarted(cwd, args)` before `run` and its end in `finally`.
+**What**: `git()` calls `diagnostics().gitRequested(cwd, args)` before `pace(...)`; inside the paced start
+it calls `start()` and chains the returned `end` with `finally`.
 **Where**: `src/main/git.ts`
 **Depends on**: T5
 **Reuses**: `git.test.ts`'s `rejectionOf` and its real-git cases
-**Requirement**: PDIAG-09
+**Requirement**: PDIAG-09, PDIAG-15
 
 **Tools**:
 
@@ -286,6 +292,7 @@ no-op when disabled before touching any port.
 - [ ] Tests (recording fake installed, restored in `afterEach`): a successful `git(tmpdir(), ['--version'])` reports one start with that cwd and those args, and its end before the awaited call returns
 - [ ] Tests: a failing `git(tmpdir(), ['rev-parse', '--verify', 'no-such-ref'])` reports one start and one end, and still rejects with git's error
 - [ ] Tests: a timed-out `git(tmpdir(), ['hash-object', '--stdin'], { timeoutMs: 200 })` reports one start and one end, and `isTimeout` is still true
+- [ ] Tests: six `git(tmpdir(), ['--version'])` requested at once report six requests at once, but the fake never sees more than 4 started and not ended (the start is the paced one, not the request), and all six end
 - [ ] Gate check passes: `npx vitest run src/main/git.test.ts`, then the full gate (suite wall time compared with T1's, L-005)
 - [ ] Test count: T5 count + the new tests
 
@@ -323,14 +330,14 @@ no-op when disabled before touching any port.
 
 ---
 
-### T8: The synchronous snapshot read is counted
+### T8: The time tracker's async git read goes through the runner
 
-**What**: `readGit` reports its `execFileSync` with `gitStarted(cwd, args, { sync: true })` and ends it
-in `finally`; the call itself is unchanged.
+**What**: `readGitAsync` calls `git(cwd, ARGS, { timeoutMs: 2000 })` in place of `execFile`, splits stdout
+as today and answers both nulls on any rejection. The unused synchronous `readGit` is not touched.
 **Where**: `src/main/time-snapshot.ts`
 **Depends on**: T7
-**Reuses**: `time-snapshot.test.ts`
-**Requirement**: PDIAG-15
+**Reuses**: `time-snapshot.test.ts` (`readGitAsync` cases at `:76`)
+**Requirement**: PDIAG-14
 
 **Tools**:
 
@@ -339,15 +346,16 @@ in `finally`; the call itself is unchanged.
 
 **Done when**:
 
-- [ ] Tests (recording fake): `readGit` in a temp folder outside git reports one start with `{ sync: true }` and subcommand args beginning `rev-parse`, ends it once, and still answers both nulls
-- [ ] Tests: `readGit` in a temp repository (`git init`) reports one start and one end, and answers its git common dir and branch as before
+- [ ] Tests (recording fake): `readGitAsync` in a temp folder outside git reports one request and one start for subcommand `rev-parse`, ends it once, and still answers both nulls
+- [ ] Tests: `readGitAsync` in a temp repository (`git init`) reports one start and one end, and answers its git common dir and branch as before (the existing cases still pass unchanged)
+- [ ] The call read against the old one: same arguments, same 2 s timeout, nulls on any failure; written here
 - [ ] Gate check passes: `npx vitest run src/main/time-snapshot.test.ts`, then the full gate
 - [ ] Test count: T7 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
 
-**Commit**: `feat(diagnostics): count the time tracker's synchronous git read`
+**Commit**: `refactor(time): read a period's git fields through the git runner`
 
 ---
 
@@ -410,8 +418,8 @@ thing in `settle`.
 ### T11: Wire the module into main
 
 **What**: `installDiagnostics(createAppDiagnostics(...))` first thing in `whenReady`; probes in
-`recountWorktree`, the git-state `onSettled` emit and the `fileWatcher` emit; `diagnostics().stop()` on
-`will-quit`.
+`recountWorktree`, the git-state `onSettled` emit and the `fileWatcher` emit; `onWillQuit(() =>
+diagnostics().stop())`; `startLoopDelayLog` reads `diagnosticsEnabled(process.env)`.
 **Where**: `src/main/index.ts`
 **Depends on**: T10
 **Reuses**: design.md, "Probes at the call sites"
@@ -425,14 +433,14 @@ thing in `settle`.
 **Done when**:
 
 - [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
-- [ ] Manual, enabled: the built app on a fresh `--user-data-dir` with `PLAYGROUND_DIAGNOSTICS=1` and the three flags; after 65 s `perf-diagnostics.jsonl` holds one line that parses with all six sections and this build's version; the window closed, the process exits within 30 s; result written here
-- [ ] Manual, disabled: the same launch without the variable; after 65 s the user data folder holds no `perf-diagnostics.jsonl`; result written here
+- [ ] Manual, enabled: the built app on a fresh `--user-data-dir` with `PLAYGROUND_DEBUG_PERF=1` and the three flags; after 65 s `perf-diagnostics.jsonl` holds one line that parses with all six sections and this build's version, and the app's stdout still shows the `[perf] loop` line every 10 s; the window closed, the process exits within 30 s; result written here
+- [ ] Manual, disabled: the same launch without the variable; after 65 s the user data folder holds no `perf-diagnostics.jsonl` and stdout shows no `[perf] loop` line; result written here
 - [ ] Manual, the probes: on the enabled launch, a `git commit --allow-empty` in a registered worktree's terminal outside the app moves `recounts` and `emits["worktree:status"]` for that worktree's folder in the next line (seed with `scripts/bench-sessions.mjs`'s layout by hand, or any throwaway repo registered in the throwaway config); result written here
 
 **Tests**: manual
 **Gate**: build
 
-**Commit**: `feat(diagnostics): turn the log on from PLAYGROUND_DIAGNOSTICS`
+**Commit**: `feat(diagnostics): turn the log on from PLAYGROUND_DEBUG_PERF`
 
 ---
 
@@ -451,7 +459,7 @@ thing in `settle`.
 
 **Done when**:
 
-- [ ] The section names `PLAYGROUND_DIAGNOSTICS=1`, how to set it for one launch from a terminal, the file `perf-diagnostics.jsonl` in the user data folder, one line a minute, that worktrees appear by folder name only, and `node scripts/bench-sessions.mjs` for developers
+- [ ] The section names `PLAYGROUND_DEBUG_PERF=1`, that it also prints the `[perf] loop` line to the console every 10 s, how to set it for one launch from a terminal, the file `perf-diagnostics.jsonl` in the user data folder, one line a minute, that worktrees appear by folder name only, and `node scripts/bench-sessions.mjs` for developers
 - [ ] No absolute user path in the section (the user data folder is named, not spelled out)
 - [ ] Gate check passes: `npm run lint`
 
@@ -609,9 +617,10 @@ and evaluate the stop rule in writing.
 3. Calibration: if the N = 0 worst steady `loop p99` is 20 ms or more, the loop target becomes that
    value plus 10 ms (PDIAG-42); otherwise it stays 30 ms. The other three stay. Write the targets in force.
 4. Stop rule: for each target, write whether the baseline already meets it at the run it names (loop at
-   N = 6; append at N = 6; status and overlap at the index run). Any target already met, or a
-   recalibration, stops here: report to the owner, naming the fix issue it affects (#148 loop and
-   append, #149 status and overlap, #151 the spawn row's `loop max` and `git.sync`).
+   N = 6; append at N = 6; status and overlap at the index run). Any target owned by an open issue
+   already met, or a recalibration, stops here: report to the owner, naming the fix issue it affects
+   (#149 status and overlap, #151 loop p99 and the spawn row's `loop max`). The append target is
+   #148's, closed by #154: write its figure as a regression guard, never a stop.
 
 **Done when**:
 
@@ -656,7 +665,7 @@ owner has the baseline if the stop rule fired.
 | T5: real ports | 3 adapters + 1 factory, 1 file | ⚠️ Cohesive |
 | T6: git runner | 1 function | ✅ Granular |
 | T7: stray spawns | 2 functions, 1 file | ⚠️ Cohesive |
-| T8: sync read | 1 function | ✅ Granular |
+| T8: async read through the runner | 1 function | ✅ Granular |
 | T9: append timing | 1 call site | ✅ Granular |
 | T10: name listings | 1 method | ✅ Granular |
 | T11: wiring | 1 file | ✅ Granular |
@@ -700,7 +709,7 @@ owner has the baseline if the stop rule fired.
 | T5: real ports | real ports | unit (real temp dir) | unit | ✅ OK |
 | T6: git runner | probe site in a deep module | unit | unit | ✅ OK |
 | T7: stray spawns | `index.ts` wiring | none (hand-verified) | none | ✅ OK |
-| T8: sync read | probe site in a deep module | unit | unit | ✅ OK |
+| T8: async read through the runner | probe site in a deep module | unit | unit | ✅ OK |
 | T9: append timing | probe site in a deep module | unit | unit | ✅ OK |
 | T10: name listings | probe site in a deep module | unit | unit | ✅ OK |
 | T11: wiring | `index.ts` wiring | none (hand-verified) | manual | ✅ OK (stronger than required) |
@@ -728,8 +737,8 @@ owner has the baseline if the stop rule fired.
 | 11 | T3 | — |
 | 12 | T3 | — |
 | 13 | T3 | T15 run D |
-| 14 | — | T7 (read), T15 runs on the rewired build |
-| 15 | T3, T8 | — |
+| 14 | T8 | T7 (read), T8 (read), T15 runs on the rewired build |
+| 15 | T3, T6 | — |
 | 16 | T3 | — |
 | 17 | — | T5 (read), T16 mutant 1 |
 | 18 | T2 | — |
