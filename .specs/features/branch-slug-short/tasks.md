@@ -113,10 +113,24 @@ T15 → T16 → T17 → T18
 
 **Done when**:
 
-- [ ] `npm ci --ignore-scripts` and `node node_modules/electron/install.js` done; baseline recorded here: test count, typecheck, lint errors / warnings, slowest worktree-manager test
-- [ ] Every Measurements row has its `Execute machine` value, and M4 with `core.longpaths=true` has its own row
-- [ ] Every boundary matches, or the stop rule fired and the owner was told (no later task started)
-- [ ] The probe lives outside the repository; `git status --porcelain` shows only design.md and tasks.md
+- [x] `npm ci --ignore-scripts` and `node node_modules/electron/install.js` done; baseline recorded here: test count, typecheck, lint errors / warnings, slowest worktree-manager test
+- [x] Every Measurements row has its `Execute machine` value, and M4 with `core.longpaths=true` has its own row
+- [x] Every boundary matches, or the stop rule fired and the owner was told (no later task started)
+- [x] The probe lives outside the repository; `git status --porcelain` shows only design.md and tasks.md
+
+**Baseline** (2026-10-03, at `8d6666b`): `npx vitest run` 119 files, 2508 tests passed, 0 failed;
+`npm run typecheck` exit 0; `npm run lint` exit 0 with 0 errors and 18 warnings (all prettier, in
+`scripts/` and `src/shared/tasks.test.ts`); slowest test in `src/main/worktree-manager.test.ts`
+run alone: 9.3 s (`createWorktree — base refresh (WBR) fast-forwards a checked-out base and cuts the
+new branch from the remote tip`), against the 30 s `testTimeout`.
+
+**Result**: every boundary matches M1–M6 (design.md, `Execute machine` column); M4 is lifted by
+`core.longpaths=true` (row M4L); the `user` / `user/x` collision prints `Preparing worktree …`
+before its `fatal:` line. The stop rule did not fire. Probe base folder `D:\bss-probe`, removed.
+**Finding for T8 and T9**: with `core.longpaths=false`, an existing branch whose ref path is 260 or
+more does not resolve at all, packed or loose: `rev-parse --verify` exits 1 and
+`worktree add <folder> <branch>` fails with `fatal: invalid reference: <branch>` (design.md,
+Measurements). T8's existing-branch cases and T9's Reuse test must be read against that.
 
 **Tests**: none
 **Gate**: manual

@@ -46,14 +46,37 @@ short base folder, repository-local `core.longpaths=false` unless noted. Each ro
 between the last length git accepted and the first it refused, found by growing the branch one
 character at a time. T1 repeats these on the Execute machine before any fix (stop rule there).
 
-| # | Shape | Last created | First refused | Git's stderr at the first refused |
-| - | ----- | ------------ | ------------- | --------------------------------- |
-| M1 | `{repo}-{id}` folder, long last segment (`user/dev/1-x/2-bbb…`) | ref path 259 | ref path 260 | `Preparing worktree (new branch '…')`, then `fatal: cannot lock ref '…': Unable to create '…/2-bbb….lock': Filename too long` |
-| M2 | `{repo}-{id}` folder, two-letter last segment (`user/ddd…/ab`) | reflog folder 247 (ref path 250) | reflog folder 248 (ref path 251) | `Preparing worktree …`, then `fatal: cannot update the ref '…': unable to create directory for '.git/logs/refs/heads/user/ddd…': No such file or directory` |
-| M3 | `{repo}-{branch}`, repository folder `r` | worktree folder 215 (ref path 236) | worktree folder 216 (ref path 237) | `Preparing worktree …`, then `fatal: '$GIT_DIR' too big` |
-| M4 | `{repo}-{branch}`, a 21-character repository folder | worktree's git folder 247 (worktree folder 205) | worktree's git folder 248 (worktree folder 206) | `Preparing worktree …`, then `.git/worktrees/<name>/refs: Filename too long`, **no `fatal:` prefix** |
-| M5 | M1 and M2 with `core.longpaths=true` | ref paths past 300 | only when one path component passes 255 characters | not this feature's limit |
-| M6 | M3 with `core.longpaths=true` | worktree folder 215 | worktree folder 222 (step of 7) | `fatal: '$GIT_DIR' too big`: `core.longpaths` does not lift it |
+| # | Shape | Last created | First refused | Git's stderr at the first refused | Execute machine |
+| - | ----- | ------------ | ------------- | --------------------------------- | --------------- |
+| M1 | `{repo}-{id}` folder, long last segment (`user/dev/1-x/2-bbb…`) | ref path 259 | ref path 260 | `Preparing worktree (new branch '…')`, then `fatal: cannot lock ref '…': Unable to create '…/2-bbb….lock': Filename too long` | Matches: ref path 259 created, 260 refused (scanned 255–264); same two stderr lines |
+| M2 | `{repo}-{id}` folder, two-letter last segment (`user/ddd…/ab`) | reflog folder 247 (ref path 250) | reflog folder 248 (ref path 251) | `Preparing worktree …`, then `fatal: cannot update the ref '…': unable to create directory for '.git/logs/refs/heads/user/ddd…': No such file or directory` | Matches: reflog folder 247 (ref path 250) created, 248 (ref path 251) refused (scanned 243–252); same two stderr lines |
+| M3 | `{repo}-{branch}`, repository folder `r` | worktree folder 215 (ref path 236) | worktree folder 216 (ref path 237) | `Preparing worktree …`, then `fatal: '$GIT_DIR' too big` | Matches: worktree folder 215 (ref path 236) created, 216 (ref path 237) refused (scanned 212–221); same two stderr lines |
+| M4 | `{repo}-{branch}`, a 21-character repository folder | worktree's git folder 247 (worktree folder 205) | worktree's git folder 248 (worktree folder 206) | `Preparing worktree …`, then `.git/worktrees/<name>/refs: Filename too long`, **no `fatal:` prefix** | Matches: git folder 247 (worktree folder 205) created, 248 (worktree folder 206) refused (scanned 244–253); same two stderr lines, no prefix on the second |
+| M4L | M4 with `core.longpaths=true` | — | — | — | Lifted: every length scanned, git folder 244–253 (worktree folder 202–211), created |
+| M5 | M1 and M2 with `core.longpaths=true` | ref paths past 300 | only when one path component passes 255 characters | not this feature's limit | Matches: M1 shape ref path 259, 260, 270 and 300 created, 320 refused (last segment of 268 characters; `fatal: cannot lock ref '…': Unable to create '….lock': Invalid argument`); M2 shape reflog folder 247, 248, 260 and 300 created |
+| M6 | M3 with `core.longpaths=true` | worktree folder 215 | worktree folder 222 (step of 7) | `fatal: '$GIT_DIR' too big`: `core.longpaths` does not lift it | Matches at a step of 1: worktree folder 215 created, 216 refused (scanned 212–224); `fatal: '$GIT_DIR' too big` |
+
+**Execute machine** (T1, 2026-10-03): git 2.55.0.windows.4, Windows 11 Pro, NTFS; throwaway
+repositories under the base folder `D:\bss-probe` (deleted afterwards), one fresh repository per
+attempt, `core.longpaths` and `core.autocrlf` pinned in each repository's own config, no
+`core.longpaths` in the system or global config. Lengths are the measured paths, computed from
+`git rev-parse --path-format=absolute --git-common-dir`.
+
+Two more readings T5 and T9 rely on, same machine:
+
+- **Collision** (T5): a repository with a branch `user`, then `git worktree add <folder> -b user/x
+  main`, exits 255 with `Preparing worktree (new branch 'user/x')`, then
+  `fatal: cannot lock ref 'refs/heads/user/x': 'refs/heads/user' exists; cannot create
+  'refs/heads/user/x'`.
+- **Existing long branch, `core.longpaths=false`** (T9's Reuse test): a branch with a ref path of
+  270, made with `git -c core.longpaths=true branch` and packed with `git -c core.longpaths=true
+  pack-refs --all` (no loose ref left), does **not** resolve: `git rev-parse --verify --quiet
+  refs/heads/<branch>` exits 1 (0 with `-c core.longpaths=true`), and `git worktree add <folder>
+  <branch>` exits 128 with `fatal: invalid reference: <branch>` and leaves no folder. The loose
+  (unpacked) branch behaves the same, and `git branch --list` prints `warning: ignoring broken ref`
+  for it. At a ref path of 259 both forms resolve and the checkout succeeds. So, with
+  `core.longpaths=false`, the plain `rev-parse --verify` read that `branchExists` and the path check
+  use reports such a branch as absent.
 
 Reading of the rows:
 
@@ -71,7 +94,7 @@ Reading of the rows:
   it: the check is the only way the user learns why.
 - M2's message and the P2 rows were confirmed by the owner on 2026-10-01 (spec Assumptions).
 
-Not measured: M4 with `core.longpaths=true`. T1 measures it; the design assumes it is lifted, like
+M4 with `core.longpaths=true` was not measured at planning; T1 measured it (row M4L): lifted, like
 M1 and M2.
 
 ---
