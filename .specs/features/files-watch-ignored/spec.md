@@ -247,14 +247,14 @@ section alone; on the build before the change its first check fails.
 | FWIG-14 | P1: ignored — AC 14 | T5, T19 | Done (T5, T19) |
 | FWIG-15 | P1: index — AC 15 | T7, T9, T11, T12 | Done (T7, T9, T11, T12) |
 | FWIG-16 | P1: index — AC 16 | T11 | Done (T11) |
-| FWIG-17 | P1: index — AC 17 | T20, T21 | Pending |
+| FWIG-17 | P1: index — AC 17 | T20, T21 | In progress (T20) |
 | FWIG-18 | P1: gate — AC 18 | T13, T17 | Done (T13, T17) |
 | FWIG-19 | P1: gate — AC 19 | T13, T17 | Done (T13, T17) |
 | FWIG-20 | P1: gate — AC 20 | T13, T17 | Done (T13, T17) |
 | FWIG-21 | P1: gate — AC 21 | T13, T17 | Done (T13, T17) |
 | FWIG-22 | P1: gate — AC 22 | T17 | Done (T17) |
 | FWIG-23 | P1: gate — AC 23 | T13, T17 | Done (T13, T17) |
-| FWIG-24 | P1: sections — AC 24 | T14, T16, T20, T21 | In progress (T14, T16) |
+| FWIG-24 | P1: sections — AC 24 | T14, T16, T20, T21 | Blocked (T14, T16 done; T20 edit run FAIL) |
 | FWIG-25 | P1: sections — AC 25 | T15, T16, T17 | Done (T15, T16, T17) |
 | FWIG-26 | P1: sections — AC 26 | T14, T16 | Done (T14, T16) |
 | FWIG-27 | P1: sections — AC 27 | T16, T19 | Done (T16, T19) |
@@ -267,9 +267,9 @@ section alone; on the build before the change its first check fails.
 | FWIG-34 | P1: bench — AC 34 | T4 | Done (T4) |
 | FWIG-35 | P1: bench — AC 35 | T4 | Done (T4) |
 | FWIG-36 | P1: bench — AC 36 | T3 | Done (T3) |
-| FWIG-37 | P1: bench — AC 37 | T3, T20, T21 | In progress (T3) |
-| FWIG-38 | P1: bench — AC 38 | T3, T20, T21 | In progress (T3) |
-| FWIG-39 | P1: bench — AC 39 | T3, T20, T21 | In progress (T3) |
+| FWIG-37 | P1: bench — AC 37 | T3, T20, T21 | In progress (T3, T20) |
+| FWIG-38 | P1: bench — AC 38 | T3, T20, T21 | Blocked (T3 done; T20 edit run FAIL) |
+| FWIG-39 | P1: bench — AC 39 | T3, T20, T21 | In progress (T3, T20) |
 | FWIG-40 | P1: bench — AC 40 | T1 | Done (T1) |
 | FWIG-41 | P1: bench — AC 41 | T6, T21 | In progress (T6) |
 | FWIG-42 | P1: smoke — AC 42 | T19 | Done (T19) |

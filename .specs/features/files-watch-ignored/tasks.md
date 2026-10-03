@@ -1215,12 +1215,66 @@ process tree killed by PID after each drive and the folder deleted.
 
 **Done when** (each rebuilt, `--sessions 0 --files-view --minutes 1`, numbers written here):
 
-- [ ] Mutant 1, the watcher emits every named path: the build loop target reads FAIL
-- [ ] Mutant 2, `DiffSection`'s key replaced by the request object: the edit loop target reads FAIL with a ratio above 2
-- [ ] Mutant 3, `READ_ONLY_FLAGS` without `-c diff.autoRefreshIndex=false`: the touch loop target reads FAIL
-- [ ] The unmutated build reads PASS on all three runs
-- [ ] Each mutant restored from `.orig`; `git status --porcelain` equals the baseline; rebuilt
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Mutant 1, the watcher emits every named path: the build loop target reads FAIL
+- [x] Mutant 2, `DiffSection`'s key replaced by the request object: the edit loop target reads FAIL with a ratio above 2
+- [x] Mutant 3, `READ_ONLY_FLAGS` without `-c diff.autoRefreshIndex=false`: the touch loop target reads FAIL
+- [ ] The unmutated build reads PASS on all three runs (**BLOCKED**: the edit run reads FAIL, see the Result)
+- [x] Each mutant restored from `.orig`; `git status --porcelain` equals the baseline; rebuilt
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Result (2026-10-03, BLOCKED on the unmutated edit run)**: the built app at `870bfd9` (T19's commit),
+CDP port 9334, every run `--sessions 0 --files-view --minutes 1` with its one loop, 185 s, exit 0,
+`--json` to a scratch folder outside the repository. Each mutant went through a scratch script: copy to
+`.orig`, write, assert the mutant text present, `npx electron-vite build`, the run, then restore from
+`.orig` in `finally` and rebuild; `git status --porcelain` was empty after each. The machine was not
+quiet, as in T6 (other agent sessions and the owner's installed app running).
+
+| Run | Loop | steady 1 `files:changed` / git / `cat-file` / `wt:status` | Target line | Verdict |
+| --- | ---- | --------------------------------------------------------- | ----------- | ------- |
+| Mutant 1 | build 100 ms | 181 / 543 / 0 / 0 | ignored writes start no git: 543 | **FAIL** |
+| Mutant 2 | edit 1,000 ms | 60 / 894 / 715 / 0 | untouched sections stay: 11.92 | **FAIL** |
+| Mutant 3 | touch 1,000 ms | 116 / 1,070 / 359 / 60 | the view's reads leave the index alone: 60 | **FAIL** |
+| Unmutated | build 100 ms | 0 / 0 / 0 / 0 | ignored writes start no git: 0 | **PASS** |
+| Unmutated | edit 1,000 ms | 60 / 560 / 376 / 0 | untouched sections stay: 6.27 | **FAIL** |
+| Unmutated | touch 1,000 ms | 59 / 177 / 0 / 0 | the view's reads leave the index alone: 0 | **PASS** |
+
+- Mutant 1 (`src/main/file-watcher.ts`): `classify`'s `const kept = paths.filter((path) =>
+  !this.answers.isIgnored(path))` became `const kept = [...paths]`. Git is still asked, and every
+  named path still leaves.
+- Mutant 2 (`src/renderer/src/components/DiffSection.tsx`): `const key = requestKey(request)` became
+  `const key = request`, the request object itself. This puts the read effect's dependency back on
+  the object identity that T16 replaced: the stack builds a new object on every list re-read.
+- Mutant 3 (`src/main/git.ts`): `READ_ONLY_FLAGS` reduced to `['--no-optional-locks']`.
+- **Blocker, the edit target on the unmutated build**: 6.27 here (376 / 60). Three more one-minute edit
+  runs, made during the diagnosis below on the same build, read 8.32, 6.37 and 6.49, every one FAIL.
+  It is better than before the change (T6: 10.22; mutant 2: 11.92) but not at the limit of 2. Each
+  batch costs about 6 `cat-file`: three section reads of 2 each, where the target allows one.
+- **Diagnosis (read-only, no source changed)**: a CDP conditional breakpoint (logpoint) on the built
+  renderer's `DiffSection` read effect recorded each run of it during an unmutated edit run, with the
+  section's request and its `mounted` and `expanded` values.
+  - The edited `src/f0000.ts` runs its effect once per batch, mounted (its revision bump, FWIG-25), as
+    designed.
+  - About 220 ms later, when its new sides land, `src/f0001.ts` and `src/f0002.ts` run with `mounted`
+    false. About 220 ms after that they run again with `mounted` true, and each return reads its sides.
+    For example: `f0000` at 30,809 ms; `f0001` and `f0002` unmounted at 31,026 and mounted again at
+    31,245 and 31,249.
+  - Over 150 s, `f0001` ran 90 times unmounted and 90 mounted, and `f0002` 114 and 114; `f0003` flapped
+    11 times. Their requests were identical on every read, and `expanded` never changed.
+  - So FWIG-24's key holds: the untouched sections leave the mount plan and come back once per batch.
+    Their editors are rebuilt, and the read effect re-runs on `mounted`.
+  - Inference, not measured: the edited section's height changes for a moment while its new sides
+    compute, which pushes the next two past `NEAR_VIEWPORT` (600 px), and the `IntersectionObserver`
+    drops them. The mount plan (`AllChangesTab`, `mountPlan`) and the height reporting (`DiffViewer`'s
+    `onHeight`) are outside this feature's design, and T17 had already seen two sections inside the
+    margin mount only after a scroll.
+  - An attempt to instrument `DiffSection` with temporary `console.log` lines (copy, assert, restore in
+    `finally`, rebuild) made the bench fail to open the view twice (no `.diff-section` after 15 s, no
+    file tabs); it was restored and replaced by the logpoint above.
+- Stopped here, with no production change and no tuning: FWIG-38 and FWIG-24 cannot read PASS on the
+  bench without changing how the stack mounts or measures its sections. T21 was not run. The owner
+  decides.
+- Gate: `npm run typecheck && npm run lint && npm test`: typecheck clean, lint 0 errors and 18
+  warnings, 2,863 tests in 129 files passing.
 
 **Tests**: manual
 **Gate**: manual
