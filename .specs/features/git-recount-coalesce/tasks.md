@@ -467,14 +467,28 @@ unedited. Re-read the test file at T7 and name any other test that pins the batc
 
 **Done when**:
 
-- [ ] `grep -n "worktreeStatus\|recountWorktree" src/main/index.ts` shows `recountWorktree` only as the scheduler's runner and `worktreeStatus` only inside it; written here
-- [ ] `git:sync-state`, `git:commits` and `git:run` unchanged (owner 2026-10-03; Out of Scope); written here
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+- [x] `grep -n "worktreeStatus\|recountWorktree" src/main/index.ts` shows `recountWorktree` only as the scheduler's runner and `worktreeStatus` only inside it; written here
+- [x] `git:sync-state`, `git:commits` and `git:run` unchanged (owner 2026-10-03; Out of Scope); written here
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `feat(main): route turn-end and tree recounts through the scheduler`
+
+**Record (2026-10-03)**: ✅ Done.
+
+- `tree:get` builds with `buildTree(registry, { countChanges: (p) => recounts.request(p) })`;
+  `worktrees:status` answers `recounts.request(worktreePath)`.
+- `grep -n "worktreeStatus\|recountWorktree" src/main/index.ts`: `72` (the `worktreeStatus` import),
+  `166` (`async function recountWorktree(`), `170` (`const status = await worktreeStatus(worktreePath)`,
+  inside it), `372` (`recount: recountWorktree,` in the scheduler's construction). `recountWorktree` is
+  only the scheduler's runner and `worktreeStatus` is called only inside it.
+- `git:sync-state`, `git:commits` and `git:run` unchanged: `git diff 2dd4dc9 -- src/main/index.ts`
+  has no added or removed line naming them or `readSyncState` / `readCommits` / `runGitOp` (count 0);
+  they sit at 425-427 as before.
+- Gate: typecheck exit 0, lint exit 0 with 18 warnings, **122 files, 2,606 tests**, all pass;
+  `npx electron-vite build` exit 0 (Phase 2 end).
 
 ---
 

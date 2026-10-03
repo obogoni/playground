@@ -253,11 +253,11 @@ with its commit, and each target figure reads FAIL before and PASS after.
 | RCNT-10 | P1: one at a time — AC 10 | T3 | Done |
 | RCNT-11 | P1: one at a time — AC 11 | T3, T7 | Done |
 | RCNT-12 | P1: one at a time — AC 12 | T2, T4, T7 | Done |
-| RCNT-13 | P1: shared lane — AC 13 | T4, T8 | Pending |
+| RCNT-13 | P1: shared lane — AC 13 | T4, T8 | Done |
 | RCNT-14 | P1: shared lane — AC 14 | T4 | Done |
 | RCNT-15 | P1: shared lane — AC 15 | T4 | Done |
 | RCNT-16 | P1: shared lane — AC 16 | — | Dropped (PERF-22) |
-| RCNT-17 | P1: shared lane — AC 17 | T5, T6, T8 | Pending |
+| RCNT-17 | P1: shared lane — AC 17 | T5, T6, T8 | Done |
 | RCNT-18 | P1: shared lane — AC 18 | — | Dropped (owner 2026-10-03) |
 | RCNT-19 | P1: tree — AC 19 | — | Delivered by #154 (PERF-11) |
 | RCNT-20 | P1: tree — AC 20 | — | Delivered by #154 (PERF-11) |

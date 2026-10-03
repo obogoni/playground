@@ -387,7 +387,8 @@ app.whenReady().then(() => {
     onDropped: (worktreePath) => recounts.forget(worktreePath)
   })
   handle('tree:get', async () => {
-    const tree = await buildTree(registry)
+    // Each worktree's count waits its turn in the scheduler (RCNT-17).
+    const tree = await buildTree(registry, { countChanges: (p) => recounts.request(p) })
     void gitStateWatcher.sync(
       tree.flatMap((ws) => ws.repos.flatMap((repo) => repo.worktrees.map((wt) => wt.path)))
     )
@@ -419,7 +420,8 @@ app.whenReady().then(() => {
     removeWorktree(repoPath, worktreePath, { force })
   )
   handle('worktrees:changes', ({ worktreePath }) => changedFilesOf(worktreePath))
-  handle('worktrees:status', ({ worktreePath }) => recountWorktree(worktreePath))
+  // A turn end's recount skips the quiet period but keeps the single flight (RCNT-13).
+  handle('worktrees:status', ({ worktreePath }) => recounts.request(worktreePath))
   handle('git:sync-state', ({ worktreePath }) => readSyncState(worktreePath))
   handle('git:commits', ({ worktreePath }) => readCommits(worktreePath))
   handle('git:run', ({ worktreePath, op, remote }) => runGitOp(worktreePath, op, remote))
