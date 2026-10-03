@@ -978,9 +978,30 @@ section its value.
 
 **Done when**:
 
-- [ ] The read effect's dependencies are exactly `mounted`, `expanded`, the key, `revision`, `stat.uncountable`, `worktreePath` and `refreshToken`; no ref is read during render (lint clean, warning count unchanged)
-- [ ] `CommitTab` passes no `revisions`, so its sections read once per mount as before (FWIG-29)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] The read effect's dependencies are exactly `mounted`, `expanded`, the key, `revision`, `stat.uncountable`, `worktreePath` and `refreshToken`; no ref is read during render (lint clean, warning count unchanged)
+- [x] `CommitTab` passes no `revisions`, so its sections read once per mount as before (FWIG-29)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Result (2026-10-03)**: full gate 2,863 tests in 129 files (unchanged, no tests by convention),
+typecheck clean, lint 0 errors and 18 warnings (none in the two changed files), 106 s wall.
+
+- `DiffSection` takes `revision: number`. In render it computes `key = requestKey(request)` and
+  creates `requestRef`; an effect with no dependency list writes `requestRef.current = request`, and
+  it is declared before the read effect, so within one commit the ref already holds the new request
+  when the read effect runs. The read effect reads the request only from the ref and depends on
+  exactly `[mounted, expanded, key, revision, stat.uncountable, worktreePath, refreshToken]`
+  (`DiffSection.tsx:131`). Nothing reads a ref during render.
+- `AllChangesTab` takes `revisions?: Readonly<Record<string, number>>` and passes
+  `revision={revisions?.[file.path] ?? 0}`; its `requests` map is unchanged.
+- Read (FWIG-29): `CommitTab.tsx:50-64` passes no `revisions`, so each section's `revision` is 0;
+  `refreshToken` is pinned to 0 there; the commit stack's `requestFor` is memoized on the sha and
+  the parent, so its keys never change either. A commit section reads once per mount, as before.
+- Read (FWIG-26, FWIG-27): a base change moves the merge base, which changes every since-base key;
+  an index or `HEAD` move still bumps `refreshToken` in the hook (T17 keeps it), which re-reads every
+  mounted section. The scroll and fold handling lives in `DiffViewer`, which this task leaves alone:
+  a re-read still hands it new `sides` on the same mounted editor.
+- `FileTabs` passes no `revisions` until T18, so between T16 and T18 the uncommitted stack re-reads
+  a written file only through `refreshToken`. No release sits between the two commits.
 
 **Tests**: manual
 **Gate**: full

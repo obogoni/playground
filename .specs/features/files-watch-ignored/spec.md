@@ -254,12 +254,12 @@ section alone; on the build before the change its first check fails.
 | FWIG-21 | P1: gate — AC 21 | T13, T17 | In progress (T13) |
 | FWIG-22 | P1: gate — AC 22 | T17 | Pending |
 | FWIG-23 | P1: gate — AC 23 | T13, T17 | In progress (T13) |
-| FWIG-24 | P1: sections — AC 24 | T14, T16, T20, T21 | In progress (T14) |
-| FWIG-25 | P1: sections — AC 25 | T15, T16, T17 | In progress (T15) |
-| FWIG-26 | P1: sections — AC 26 | T14, T16 | In progress (T14) |
-| FWIG-27 | P1: sections — AC 27 | T16, T19 | Pending |
+| FWIG-24 | P1: sections — AC 24 | T14, T16, T20, T21 | In progress (T14, T16) |
+| FWIG-25 | P1: sections — AC 25 | T15, T16, T17 | In progress (T15, T16) |
+| FWIG-26 | P1: sections — AC 26 | T14, T16 | Done (T14, T16) |
+| FWIG-27 | P1: sections — AC 27 | T16, T19 | In progress (T16) |
 | FWIG-28 | P1: sections — AC 28 | T18 | Pending |
-| FWIG-29 | P1: sections — AC 29 | T16 | Pending |
+| FWIG-29 | P1: sections — AC 29 | T16 | Done (T16) |
 | FWIG-30 | P1: live — AC 30 | T19 | Pending |
 | FWIG-31 | P1: live — AC 31 | T19 | Pending |
 | FWIG-32 | P1: bench — AC 32 | T4 | Done (T4) |
