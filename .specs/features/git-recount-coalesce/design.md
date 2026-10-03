@@ -306,7 +306,7 @@ No new data. The IPC payloads keep their shape:
 | Tree identity for the Files list | `treeRevision` (#154's), not `tree` | FCMT-32's triggers are all `tree:get` results |
 | Clock | `performance.now()` | A wall clock can jump |
 
-> **AD-TBD (number chosen at T7, the next free one after every AD on `origin/main`, on open upstream
+> **AD-058 (chosen at T7, the next free one after every AD on `origin/main`, on open upstream
 > PRs and on sibling worktrees; #147 holds AD-057): main coalesces every worktree recount in one
 > scheduler.** `src/main/recount-scheduler.ts` owns every `git status` main runs to count a worktree:
 > git-state events wait for a 250 ms quiet period or 1,000 ms at most; turn-end and tree-build requests

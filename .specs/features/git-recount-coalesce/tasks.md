@@ -404,7 +404,7 @@ unedited. Re-read the test file at T7 and name any other test that pins the batc
 - [x] `grep -n "BATCH_MS\|schedule" src/main/git-state-watcher.ts` finds nothing
 - [x] `index.ts` read against design.md "Main wiring" for the scheduler, the watcher, the emit and the quit; written here
 - [x] `.specs/features/status-changes-refresh/spec.md`: SCRF-02 and the "Bursts" assumption row carry the note "Mechanism revised by RCNT-01..07 (AD-NNN), delivered <date> in `git-recount-coalesce` T7: the scheduler's quiet period replaces the watcher's 250 ms batch; the criterion still holds"
-- [x] `.specs/STATE.md` gains the AD from design.md. Its number is chosen right before the commit as the next free one after every AD on `origin/main`, on every open upstream PR, and on the local branches of every sibling worktree under `D:/playground-wt/` (parallel sessions take numbers; AD-057 is #147's). The note above names it
+- [x] `.specs/STATE.md` gains the AD from design.md. Its number is chosen right before the commit as the next free one after every AD on `origin/main`, on every open upstream PR, and on the local branches of every sibling worktree (parallel sessions take numbers; AD-057 is #147's). The note above names it
 - [x] Gate check passes: `npx vitest run src/main/git-state-watcher.test.ts`, then the full gate and `npx electron-vite build`
 - [x] Test count: T6 count + the new tests (rewrites counted as unchanged)
 
