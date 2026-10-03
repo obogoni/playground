@@ -235,18 +235,18 @@ same search held 14.6 normal-vision with 7.8 CVD. The WARN band is legal with th
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | HHAT-01 | P1: neighbours, AC 1 | Execute | Implementing: T1 done; T3 |
-| HHAT-02 | P1: neighbours, AC 2 | Tasks | In Tasks (T2) |
-| HHAT-03 | P1: neighbours, AC 3 | Tasks | In Tasks (T2) |
-| HHAT-04 | P1: neighbours, AC 4 | Tasks | In Tasks (T2) |
-| HHAT-05 | P1: neighbours, AC 5 | Tasks | In Tasks (T2) |
-| HHAT-06 | P1: neighbours, AC 6 | Tasks | In Tasks (T2) |
-| HHAT-07 | P1: neighbours, AC 7 | Tasks | In Tasks (T2) |
-| HHAT-08 | P1: neighbours, AC 8 | Tasks | In Tasks (T2, T14) |
-| HHAT-09 | P1: own look, AC 9 | Tasks | In Tasks (T2) |
-| HHAT-10 | P1: own look, AC 10 | Tasks | In Tasks (T2, T12) |
-| HHAT-11 | P1: same day, AC 11 | Tasks | In Tasks (T2) |
-| HHAT-12 | P1: same day, AC 12 | Tasks | In Tasks (T2) |
-| HHAT-13 | P1: same day, AC 13 | Tasks | In Tasks (T2) |
+| HHAT-02 | P1: neighbours, AC 2 | Execute | Implemented: T2 |
+| HHAT-03 | P1: neighbours, AC 3 | Execute | Implemented: T2 |
+| HHAT-04 | P1: neighbours, AC 4 | Execute | Implemented: T2 |
+| HHAT-05 | P1: neighbours, AC 5 | Execute | Implemented: T2 |
+| HHAT-06 | P1: neighbours, AC 6 | Execute | Implemented: T2 |
+| HHAT-07 | P1: neighbours, AC 7 | Execute | Implemented: T2 |
+| HHAT-08 | P1: neighbours, AC 8 | Execute | Implementing: T2 done; T14 |
+| HHAT-09 | P1: own look, AC 9 | Execute | Implemented: T2 |
+| HHAT-10 | P1: own look, AC 10 | Execute | Implementing: T2 done; T12 |
+| HHAT-11 | P1: same day, AC 11 | Execute | Implemented: T2 |
+| HHAT-12 | P1: same day, AC 12 | Execute | Implemented: T2 |
+| HHAT-13 | P1: same day, AC 13 | Execute | Implemented: T2 |
 | HHAT-14 | P1: colours, AC 14 | Tasks | In Tasks (T3, T12) |
 | HHAT-15 | P1: colours, AC 15 | Tasks | In Tasks (T3, T12) |
 | HHAT-16 | P1: colours, AC 16 | Tasks | In Tasks (T3, T9) |
@@ -256,7 +256,7 @@ same search held 14.6 normal-vision with 7.8 CVD. The WARN band is legal with th
 | HHAT-20 | P1: one look, AC 20 | Tasks | In Tasks (T4..T8, T12) |
 | HHAT-21 | P1: one look, AC 21 | Tasks | In Tasks (T4, T5, T14) |
 | HHAT-22 | P1: one look, AC 22 | Tasks | In Tasks (T3, T9) |
-| HHAT-23 | P2: nothing moves, AC 23 | Tasks | In Tasks (T2) |
+| HHAT-23 | P2: nothing moves, AC 23 | Execute | Implemented: T2 |
 | HHAT-24 | P2: nothing moves, AC 24 | Tasks | In Tasks (T15) |
 | HHAT-25 | P2: nothing moves, AC 25 | Tasks | In Tasks (T15) |
 | HHAT-26 | P2: nothing moves, AC 26 | Tasks | In Tasks (T13) |

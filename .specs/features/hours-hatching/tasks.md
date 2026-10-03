@@ -129,7 +129,7 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Tests, each asserting literal looks:
+- [x] Tests, each asserting literal looks:
   - seven tasks, each alone on its own day Monday to Sunday, take `slot1`..`slot7` solid (HHAT-04, 09)
   - the spread week (ten tasks, task *k* on weekday `(k - 1) mod 5`, totals falling) gives `slot1`..`slot8` then `slot1-hatched`, `slot2-hatched`, in that legend order, no two neighbours alike (HHAT-05, 08)
   - sixteen tasks on one day take sixteen different looks, the solids in palette order then hatched 1 to 8 (HHAT-07, 10)
@@ -140,10 +140,11 @@ T10 → T11 → T12 → T13 → T14 → T15
   - tasks 1 to 15 on Monday, task 16 alone on Tuesday, task 17 on Monday: task 17 is Other, its one free look being the previous task's (HHAT-13, owner confirmed 2026-10-01)
   - thirty-two tasks dealt one by one across the seven days use every look exactly twice (edge case)
   - a property run over generated weeks of 1 to 24 tasks finds no two neighbouring legend entries alike, no two same-day tasks alike, every task its own solid up to eight and its own look up to sixteen (HHAT-08, 09, 10, 11)
-- [ ] Three tests pinning the old rule are rewritten, each named in the commit body: "gives two tasks on different days both slot 1" (now `slot1`, `slot2`), "makes a ninth task on one day Other" (now `slot1-hatched`), the HCAL-21 legend-order test (task 9 `slot1-hatched`, task 10 `slot2-hatched`); the spec supersedes the rule they pinned
-- [ ] The HCAL-24 freeze test still passes unchanged (HHAT-23)
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/hours-calendar.test.ts` then `npm test`
-- [ ] Test count: T1 count + the new tests (rewrites counted once)
+  - added for the spec edge case "IF a task is Other THEN it SHALL not count as the previous chip": tasks 1 to 15 on Monday and Wednesday, task 16 alone on Tuesday, task 17 on Monday, task 18 on Wednesday: tasks 17 and 18 are both Other
+- [x] Three tests pinning the old rule are rewritten, each named in the commit body: "gives two tasks on different days both slot 1" (now `slot1`, `slot2`), "makes a ninth task on one day Other" (now `slot1-hatched`), the HCAL-21 legend-order test (task 9 `slot1-hatched`, task 10 `slot2-hatched`); the spec supersedes the rule they pinned
+- [x] The HCAL-24 freeze test still passes unchanged (HHAT-23)
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/hours-calendar.test.ts` then `npm test`
+- [x] Test count: T1 count + the new tests (rewrites counted once): 2511 + 11 = 2522
 
 **Tests**: unit
 **Gate**: quick
