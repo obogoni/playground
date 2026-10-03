@@ -580,8 +580,10 @@ titles as written.
 
 **Done when**:
 
-- [ ] The AD number is checked free and named in the commit body
-- [ ] Both sibling rows point at this feature and the AD; nothing else in them changes
+- [x] The AD number is checked free and named in the commit body
+- [x] Both sibling rows point at this feature and the AD; nothing else in them changes
+
+**Done** (T16): **AD-055**. Checked on 2026-10-03: this branch and `origin/main` (fetched) hold up to AD-053; local `feature/hours-hatching` and `feature/terminal-last-row` (and the fork's `terminal-last-row`) each claim AD-054; no branch or worktree mentions AD-055 or higher. The AD carries the owner's amendments: 29 filler words with `via`, BSLG-39 as amended, and T1's finding that git cannot see an existing branch with a ref path of 260 or more without `core.longpaths`. `start-work-from-task` gains a note under STWK-01 AC 2 and its traceability row; `status-bar`'s error-reporting row gains one sentence. design.md's AD-TBD heading and spec.md's AD-TBD pointer now name AD-055.
 
 **Tests**: none
 **Gate**: quick
