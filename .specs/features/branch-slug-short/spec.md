@@ -192,17 +192,17 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| BSLG-01 | P1: slugs, AC 1 | Tasks | Pending: T2 |
-| BSLG-02 | P1: slugs, AC 2 | Tasks | Pending: T2 |
-| BSLG-03 | P1: slugs, AC 3 | Tasks | Pending: T2 |
-| BSLG-04 | P1: slugs, AC 4 | Tasks | Pending: T2 |
-| BSLG-05 | P1: slugs, AC 5 | Tasks | Pending: T2 |
-| BSLG-06 | P1: slugs, AC 6 | Tasks | Pending: T2 |
-| BSLG-07 | P1: slugs, AC 7 | Tasks | Pending: T2 |
-| BSLG-08 | P1: slugs, AC 8 | Tasks | Pending: T2, T18 (smoke 8) |
-| BSLG-09 | P1: slugs, AC 9 | Tasks | Pending: T2 |
-| BSLG-10 | P1: slugs, AC 10 | Tasks | Pending: T2, T18 (smoke 8) |
-| BSLG-11 | P1: slugs, AC 11 | Tasks | Pending: T2 |
+| BSLG-01 | P1: slugs, AC 1 | Tasks | Done: T2 |
+| BSLG-02 | P1: slugs, AC 2 | Tasks | Done: T2 |
+| BSLG-03 | P1: slugs, AC 3 | Tasks | Done: T2 (AC 3/4 titles deviate, see tasks.md T2) |
+| BSLG-04 | P1: slugs, AC 4 | Tasks | Done: T2 (AC 3/4 titles deviate, see tasks.md T2) |
+| BSLG-05 | P1: slugs, AC 5 | Tasks | Done: T2 |
+| BSLG-06 | P1: slugs, AC 6 | Tasks | Done: T2 |
+| BSLG-07 | P1: slugs, AC 7 | Tasks | Done: T2 |
+| BSLG-08 | P1: slugs, AC 8 | Tasks | T2 done; T18 (smoke 8) pending |
+| BSLG-09 | P1: slugs, AC 9 | Tasks | Done: T2 |
+| BSLG-10 | P1: slugs, AC 10 | Tasks | T2 done; T18 (smoke 8) pending |
+| BSLG-11 | P1: slugs, AC 11 | Tasks | Done: T2 |
 | BSLG-12 | P1: error, AC 12 | Tasks | Pending: T3 |
 | BSLG-13 | P1: error, AC 13 | Tasks | Pending: T3 |
 | BSLG-14 | P1: error, AC 14 | Tasks | Pending: T5, T17 (smoke 5) |
@@ -222,9 +222,9 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-28 | P2: folder, AC 28 | Tasks | Pending: T7 |
 | BSLG-29 | P2: folder, AC 29 | Tasks | Pending: T7 |
 | BSLG-30 | P2: folder, AC 30 | Tasks | Pending: T9, T17 (smoke 7) |
-| BSLG-31 | Edge: empty title | Tasks | Pending: T2 |
-| BSLG-32 | Edge: 40-character word | Tasks | Pending: T2 |
-| BSLG-33 | Edge: non-adjacent repeat | Tasks | Pending: T2 |
+| BSLG-31 | Edge: empty title | Tasks | Done: T2 |
+| BSLG-32 | Edge: 40-character word | Tasks | Done: T2 |
+| BSLG-33 | Edge: non-adjacent repeat | Tasks | Done: T2 |
 | BSLG-34 | Edge: no `/` | Tasks | Pending: T6 |
 | BSLG-35 | Edge: ref path 259 / 260 | Tasks | Pending: T6, T9 |
 | BSLG-36 | Edge: reflog folder 247 / 248 | Tasks | Pending: T6 |

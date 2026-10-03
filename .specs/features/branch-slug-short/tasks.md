@@ -154,16 +154,22 @@ Measurements). T8's existing-branch cases and T9's Reuse test must be read again
 
 **Done when**:
 
-- [ ] Tests, fillers: an `it.each` over all 28 filler words, `Fix {word} login` → `feature/7-fix-login` each; `Fix À login` and `Fix DE login` → `fix-login`; near misses kept: `Fix an at by nas pela login` → `fix-an-at-by-nas-pela-login`
-- [ ] Tests, repeats: `Fix fix FIX login` → `fix-login`; `Validação de validação` → `validacao`; `login fix login` → `login-fix-login` (BSLG-33)
-- [ ] Tests, cap: `Revisar fluxo de pagamento recorrente via banco` → `revisar-fluxo-pagamento-recorrente-banco` (40) and `… via bancos` → `revisar-fluxo-pagamento-recorrente` (34); a 40-letter word kept whole and a 41-letter word cut to its first 40 (BSLG-32); `Supercalifragilisticexpialidociousextraordinarily long` → `supercalifragilisticexpialidociousextrao`
-- [ ] Tests, fallback and numbers: `De a para` → `de-a-para`; `Para por para com para de dos das para em no na e ou um uma` → `para-por-para-com-para-de-dos-das-para` (38); `Migrar para v2 em 3 etapas` → `migrar-v2-3-etapas`; `!!!` still gives `feature/4821` (BSLG-31)
-- [ ] Tests, AC 8 and the nested template: task and parent both titled with the AC 8 title → `user/dev/10001-ajustar-validacao-campos-cadastro/10002-ajustar-validacao-campos-cadastro`
-- [ ] Tests, AC 9: template `de/{id}-{slug}` keeps `de/`; alias `of` renders `user/of/…`; `{usId}` and `{id}` digits untouched
-- [ ] Tests, AC 10 and 11: the APIN-04 title list gains the AC 8 title, `De a para` and the 49-letter word, and every combination still returns 4821; `taskIdFromBranch` and `taskIdFromTemplate('{type}/{id}-{slug}', …)` return 4821 for `feature/4821-configuracao-de-ambiente`
-- [ ] No assertion other than the three named values is edited
-- [ ] Gate check passes: `npx vitest run src/shared/tasks.test.ts` then `npm test`
-- [ ] Test count: baseline + the new tests
+- [x] Tests, fillers: an `it.each` over all 28 filler words, `Fix {word} login` → `feature/7-fix-login` each; `Fix À login` and `Fix DE login` → `fix-login`; near misses kept: `Fix an at by nas pela login` → `fix-an-at-by-nas-pela-login`
+- [x] Tests, repeats: `Fix fix FIX login` → `fix-login`; `Validação de validação` → `validacao`; `login fix login` → `login-fix-login` (BSLG-33)
+- [x] Tests, cap: `Revisar fluxo de pagamento recorrente via banco` → `revisar-fluxo-pagamento-recorrente-banco` (40) and `… via bancos` → `revisar-fluxo-pagamento-recorrente` (34) (**deviation**: run with `do` in place of `via`, see below); a 40-letter word kept whole and a 41-letter word cut to its first 40 (BSLG-32); `Supercalifragilisticexpialidociousextraordinarily long` → `supercalifragilisticexpialidociousextrao`
+- [x] Tests, fallback and numbers: `De a para` → `de-a-para`; `Para por para com para de dos das para em no na e ou um uma` → `para-por-para-com-para-de-dos-das-para` (38); `Migrar para v2 em 3 etapas` → `migrar-v2-3-etapas`; `!!!` still gives `feature/4821` (BSLG-31)
+- [x] Tests, AC 8 and the nested template: task and parent both titled with the AC 8 title → `user/dev/10001-ajustar-validacao-campos-cadastro/10002-ajustar-validacao-campos-cadastro`
+- [x] Tests, AC 9: template `de/{id}-{slug}` keeps `de/`; alias `of` renders `user/of/…`; `{usId}` and `{id}` digits untouched
+- [x] Tests, AC 10 and 11: the APIN-04 title list gains the AC 8 title, `De a para` and the 49-letter word, and every combination still returns 4821; `taskIdFromBranch` and `taskIdFromTemplate('{type}/{id}-{slug}', …)` return 4821 for `feature/4821-configuracao-de-ambiente`
+- [x] No assertion other than the three named values is edited
+- [x] Gate check passes: `npx vitest run src/shared/tasks.test.ts` then `npm test`
+- [x] Test count: baseline + the new tests
+
+**Done** (T2): 43 new tests in `src/shared/tasks.test.ts`; suite 2508 → 2551 passed. **Spec deviation, owner to
+settle:** AC 3 and AC 4 name the titles `Revisar fluxo de pagamento recorrente via banco` / `… via bancos`, but `via`
+is not one of the 28 filler words, so those titles give `revisar-fluxo-pagamento-recorrente-via` (38) both times,
+not the AC's 40- and 34-character slugs. The tests keep the AC's expected slugs and use the filler `do` in place of
+`via` (`SPEC_DEVIATION` comment in the test). Either the AC titles change to `do`, or `via` joins the filler list.
 
 **Tests**: unit
 **Gate**: quick
