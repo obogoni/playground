@@ -9,6 +9,21 @@ export const NAME_INTERVAL_MS = 30000
 /** 10× the measured ~2 s of a call: bounds a hung binary without turning a
  *  slow machine into a failure streak (SNAME-12). */
 export const NAME_TIMEOUT_MS = 20000
+/** A session the listing did not name waits this long after that listing, doubling per
+ *  miss up to the ceiling, before a nudge or a tick may list again for it (#151). */
+export const NAME_BACKOFF_BASE_MS = 5000
+export const NAME_BACKOFF_FACTOR = 2
+export const NAME_BACKOFF_MAX_MS = 300000
+
+interface Watched {
+  claudeId: string
+  /** The last successful listing had an entry for `claudeId`. */
+  named: boolean
+  /** Listings since the last reset that did not name it; a failed one counts while not named. */
+  misses: number
+  /** Epoch ms from which it may be listed again; meaningful only while `misses > 0`. */
+  dueAt: number
+}
 
 export interface SessionNamePollerDeps {
   spawn: AgentSpawn
@@ -33,14 +48,22 @@ export interface SessionNamePollerDeps {
  * a single rerun once the child closes, so a `/rename` during a slow call is
  * not lost for a whole interval. A failed call keeps every current name and
  * logs once per failure streak (SNAME-12).
+ *
+ * A session the listing does not name backs off: each miss pushes its next
+ * listing further out (`NAME_BACKOFF_*`), and a watch, nudge or tick starts a
+ * call only when a session that asked for it — any watched one, for a tick —
+ * is eligible: 0 misses, or due. A new Claude id or a name resets it.
  */
 export class SessionNamePoller {
-  readonly #watched = new Map<string, string>()
+  readonly #watched = new Map<string, Watched>()
+  /** Sessions whose watch or nudge waits for a call. */
+  readonly #asked = new Set<string>()
+  /** A tick waits for a call. */
+  #tickAsked = false
   readonly #listeners: Array<(names: Map<string, string>) => void> = []
   #debounce: ReturnType<typeof setTimeout> | null = null
   #interval: ReturnType<typeof setInterval> | null = null
   #inFlight: AgentChild | null = null
-  #pendingRerun = false
   /** The resolved binary, kept until a spawn fails so a moved binary heals. */
   #bin: string | null = null
   #failing = false
@@ -50,19 +73,28 @@ export class SessionNamePoller {
 
   watch(id: string, claudeSessionId: string): void {
     if (this.#disposed) return
-    this.#watched.set(id, claudeSessionId)
-    if (this.#interval === null) {
-      this.#interval = setInterval(() => this.#run(), this.deps.intervalMs ?? NAME_INTERVAL_MS)
+    if (this.#watched.get(id)?.claudeId !== claudeSessionId) {
+      this.#watched.set(id, { claudeId: claudeSessionId, named: false, misses: 0, dueAt: 0 })
     }
+    if (this.#interval === null) {
+      this.#interval = setInterval(() => {
+        this.#tickAsked = true
+        this.#run()
+      }, this.deps.intervalMs ?? NAME_INTERVAL_MS)
+    }
+    this.#asked.add(id)
     this.#schedule()
   }
 
   nudge(id: string): void {
-    if (this.#watched.has(id)) this.#schedule()
+    if (!this.#watched.has(id)) return
+    this.#asked.add(id)
+    this.#schedule()
   }
 
   unwatch(id: string): void {
     this.#watched.delete(id)
+    this.#asked.delete(id)
     if (this.#watched.size === 0) this.#stopTimers()
   }
 
@@ -84,7 +116,8 @@ export class SessionNamePoller {
     this.#interval = null
     if (this.#debounce !== null) clearTimeout(this.#debounce)
     this.#debounce = null
-    this.#pendingRerun = false
+    this.#asked.clear()
+    this.#tickAsked = false
   }
 
   #schedule(): void {
@@ -95,13 +128,18 @@ export class SessionNamePoller {
     }, this.deps.debounceMs ?? NAME_DEBOUNCE_MS)
   }
 
+  /** Starts a call when an ask is for an eligible session; a call in flight keeps the asks for its end. */
   #run(): void {
-    if (this.#disposed) return
-    if (this.#inFlight !== null) {
-      this.#pendingRerun = true
-      return
-    }
-    this.#call()
+    if (this.#disposed || this.#inFlight !== null) return
+    const now = Date.now()
+    const eligible = (s: Watched | undefined): boolean =>
+      s !== undefined && (s.misses === 0 || now >= s.dueAt)
+    const wanted =
+      [...this.#asked].some((id) => eligible(this.#watched.get(id))) ||
+      (this.#tickAsked && [...this.#watched.values()].some(eligible))
+    this.#asked.clear()
+    this.#tickAsked = false
+    if (wanted) this.#call()
   }
 
   #call(): void {
@@ -143,8 +181,7 @@ export class SessionNamePoller {
       this.#inFlight = null
       if (this.#disposed) return
       outcome()
-      if (this.#pendingRerun && this.#watched.size > 0) this.#schedule()
-      this.#pendingRerun = false
+      if ((this.#asked.size > 0 || this.#tickAsked) && this.#watched.size > 0) this.#schedule()
     }
 
     child.onStdout((chunk) => (stdout += chunk))
@@ -167,6 +204,8 @@ export class SessionNamePoller {
   }
 
   #fail(reason: string, stderr = ''): void {
+    const now = Date.now()
+    for (const s of this.#watched.values()) if (!s.named) this.#miss(s, now)
     if (this.#failing) return
     this.#failing = true
     const detail = stderr.trim() === '' ? '' : ` — ${stderr.slice(0, 200)}`
@@ -174,11 +213,24 @@ export class SessionNamePoller {
   }
 
   #succeed(names: Map<string, string>): void {
+    const now = Date.now()
+    for (const s of this.#watched.values()) {
+      s.named = names.has(s.claudeId)
+      if (s.named) s.misses = 0
+      else this.#miss(s, now)
+    }
     if (this.#failing) {
       this.#failing = false
       this.deps.log('[session-name] listing recovered')
     }
     for (const listener of this.#listeners) listener(names)
+  }
+
+  #miss(s: Watched, now: number): void {
+    s.misses += 1
+    s.dueAt =
+      now +
+      Math.min(NAME_BACKOFF_BASE_MS * NAME_BACKOFF_FACTOR ** (s.misses - 1), NAME_BACKOFF_MAX_MS)
   }
 }
 
