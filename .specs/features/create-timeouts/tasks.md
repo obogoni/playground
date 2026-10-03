@@ -387,10 +387,10 @@ T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] Tests by literal (L-009): `progressLabel(null) === 'Preparing…'`, `progressLabel('refreshing-base') === 'Updating base branch from remote…'`, `progressLabel('creating-worktree') === 'Creating worktree…'`, `progressLabel('running-hook') === 'Running post-create command…'`, `BUSY_CANCEL_TITLE === 'Wait for the create to finish'`
-- [ ] Tests: `acceptsStep('a', { requestId: 'a' })` is true; `acceptsStep('a', { requestId: 'b' })` and `acceptsStep(null, { requestId: 'a' })` are false
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/create-progress.test.ts` then `npm test`
-- [ ] Test count: T9 count + the new tests
+- [x] Tests by literal (L-009): `progressLabel(null) === 'Preparing…'`, `progressLabel('refreshing-base') === 'Updating base branch from remote…'`, `progressLabel('creating-worktree') === 'Creating worktree…'`, `progressLabel('running-hook') === 'Running post-create command…'`, `BUSY_CANCEL_TITLE === 'Wait for the create to finish'`
+- [x] Tests: `acceptsStep('a', { requestId: 'a' })` is true; `acceptsStep('a', { requestId: 'b' })` and `acceptsStep(null, { requestId: 'a' })` are false
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/create-progress.test.ts` then `npm test` (123 files, 2669 passed; lint 0 errors, 18 warnings; typecheck exit 0)
+- [x] Test count: T9 count + the new tests (+8; against a stub returning `''` and always `true`, seven failed and the accept test passed, as an always-`true` stub should)
 
 **Tests**: unit
 **Gate**: quick
