@@ -209,7 +209,7 @@ again, so that the fix cannot regress unseen.
 
 **Acceptance Criteria**:
 
-42. The Files diff smoke SHALL pass in full on the changed build, its icon section still last, except FPOL-14, FPOL-16 and FPOL-18, which fail the same way on `origin/main` (amended 2026-10-03, recorded as pre-existing) <!-- ubiquitous -->
+42. The Files diff smoke SHALL pass in full on the changed build, its watch section run right before the icon checks and the order after them unchanged, except FPOL-14, FPOL-16 and FPOL-18, which fail the same way on `origin/main` (amended 2026-10-03, recorded as pre-existing) <!-- ubiquitous -->
 43. WHEN the smoke writes 20 files under an ignored folder 100 ms apart THEN it SHALL read no `files:changed` for the worktree within 1,500 ms of the last write <!-- event-driven -->
 44. WHEN the smoke then writes one file outside the ignored folder THEN it SHALL read a `files:changed` naming that file within 2,000 ms <!-- event-driven -->
 45. WHILE the ignored folder holds files, the smoke SHALL find it in neither the Folder tree nor the Uncommitted list <!-- state-driven -->

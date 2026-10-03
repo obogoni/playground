@@ -880,7 +880,7 @@ section its value.
 
 - [ ] `SMOKE_ONLY=watch`: 15a, 15b and 15c pass
 - [ ] 15a seen failing on a main mutant that emits every named path unfiltered (relaunched), restored from `.orig`
-- [ ] The full drive passes, FDIF-30 (at or under 1,000 ms, the time written here), FDIF-31 and the fold section included, except FPOL-14, FPOL-16 and FPOL-18 (FWIG-42, amended 2026-10-03); the icon checks ran last
+- [ ] The full drive passes, FDIF-30 (at or under 1,000 ms, the time written here), FDIF-31 and the fold section included, except FPOL-14, FPOL-16 and FPOL-18 (FWIG-42, amended 2026-10-03); the watch section ran right before the icon checks, the order after them unchanged
 - [ ] The same full drive on `origin/main` (`fc19a3c`): a throwaway `git worktree add` under the temp folder, its own `npm ci --ignore-scripts` and `node node_modules/electron/install.js`, its dev app on its own throwaway user data and seed; the two drives compared check by check and written here (FPOL-14, 16 and 18 failing on both, nothing else failing on this branch alone); the throwaway worktree removed (`git worktree remove`, `git worktree prune`) afterwards
 - [ ] `SMOKE_ONLY=fold` passes on its own seed
 - [ ] `git status --porcelain` equals the baseline after the mutant
