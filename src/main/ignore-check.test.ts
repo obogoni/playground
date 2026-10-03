@@ -260,10 +260,12 @@ describe('checkIgnored (real repository)', () => {
     const timeouts: number[] = []
     // Stands in for a check-ignore that hangs: a real git whose `!` alias sleeps past the limit,
     // killed by the runner's timeout, so the rejection has the runner's real timeout shape. Not
-    // a read waiting on stdin: CRTO-06 (#153) ends stdin on every call.
-    const hanging: IgnoreRunner = (cwd, _args, opts) => {
+    // a read waiting on stdin: CRTO-06 (#153) ends stdin on every call. It runs in the system temp
+    // folder: on Windows killing git leaves the sleep running, and in the repo it would hold the
+    // folder afterEach deletes (EBUSY).
+    const hanging: IgnoreRunner = (_cwd, _args, opts) => {
       timeouts.push(opts.timeoutMs)
-      return runGit(cwd, ['-c', 'alias.wait=!sleep 5', 'wait'], { timeoutMs: 200 })
+      return runGit(tmpdir(), ['-c', 'alias.wait=!sleep 5', 'wait'], { timeoutMs: 200 })
     }
 
     expect(await checkIgnored(repo, ['bin', 'bin/a.dll'], hanging)).toBeNull()
