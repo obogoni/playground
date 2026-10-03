@@ -189,10 +189,10 @@
   --hcal-c: var(--hcal-slot8);
 }
 
-/* A hatched look: stripes of the hue over a light tint of it (AD-054). */
+/* A hatched look: stripes of the hue, half the pattern, over a light tint of it (AD-054). */
 :is(.hcal-bar, .hleg-swatch, .hours-group-swatch).hatched {
-  background-color: color-mix(in oklab, var(--hcal-c) 20%, #fff);
-  background-image: repeating-linear-gradient(45deg, var(--hcal-c) 0 2px, transparent 2px 6px);
+  background-color: color-mix(in oklab, var(--hcal-c) 5%, #fff);
+  background-image: repeating-linear-gradient(45deg, var(--hcal-c) 0 3px, transparent 3px 6px);
 }
 
 .hcal-bar.role-other {

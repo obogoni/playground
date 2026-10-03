@@ -62,8 +62,8 @@
  *  16. on the spread week, five weeks back, no two neighbouring legend chips
  *      look alike and the chips read eight solids, then hatched blue and
  *      hatched orange; on the seeded Sunday the first hatched task's bar,
- *      legend swatch and drawer swatch show 45° stripes of its hue, 2 px in
- *      every 6 px, over the hue mixed 20% with white, in both themes, and its
+ *      legend swatch and drawer swatch show 45° stripes of its hue, 3 px in
+ *      every 6 px, over the hue mixed 5% with white, in both themes, and its
  *      solid twin shows none; both swatches are 14 × 14 px; pointing at or
  *      focusing that hatched task's chip, drawer header or bar leaves only its
  *      bars at full opacity, clicking its chip shows only the seeded Sunday
@@ -1622,19 +1622,19 @@ async function looksSection() {
   for (const theme of themes) {
     // The ground is compared with a probe's own computed color-mix of the hue.
     worn[theme] = await evaluate(
-      `(() => { document.documentElement.dataset.theme = ${JSON.stringify(theme)}; const parts = t => [[...document.querySelectorAll('.hcal-col.selected .hcal-bar')].find(b => b.getAttribute('aria-label').split(', ')[0].includes(t)), [...document.querySelectorAll('.hleg-chip')].find(c => c.querySelector('.hleg-label').textContent.includes(t))?.querySelector('.hleg-swatch'), [...document.querySelectorAll('.hours-drawer .hours-group')].find(g => g.querySelector('.hours-group-label').textContent.includes(t))?.querySelector('.hours-group-swatch')]; const read = el => { if (!el) return null; const s = getComputedStyle(el); const r = el.getBoundingClientRect(); return { color: s.backgroundColor, image: s.backgroundImage, w: r.width, h: r.height } }; const probe = document.createElement('div'); probe.style.backgroundColor = 'color-mix(in oklab, ${rgb(PALETTE[theme][0])} 20%, #fff)'; document.body.append(probe); const ground = getComputedStyle(probe).backgroundColor; probe.remove(); return { hatched: parts(${JSON.stringify(hatchedTitle)}).map(read), solid: parts(${JSON.stringify(solidTitle)}).map(read), ground } })()`
+      `(() => { document.documentElement.dataset.theme = ${JSON.stringify(theme)}; const parts = t => [[...document.querySelectorAll('.hcal-col.selected .hcal-bar')].find(b => b.getAttribute('aria-label').split(', ')[0].includes(t)), [...document.querySelectorAll('.hleg-chip')].find(c => c.querySelector('.hleg-label').textContent.includes(t))?.querySelector('.hleg-swatch'), [...document.querySelectorAll('.hours-drawer .hours-group')].find(g => g.querySelector('.hours-group-label').textContent.includes(t))?.querySelector('.hours-group-swatch')]; const read = el => { if (!el) return null; const s = getComputedStyle(el); const r = el.getBoundingClientRect(); return { color: s.backgroundColor, image: s.backgroundImage, w: r.width, h: r.height } }; const probe = document.createElement('div'); probe.style.backgroundColor = 'color-mix(in oklab, ${rgb(PALETTE[theme][0])} 5%, #fff)'; document.body.append(probe); const ground = getComputedStyle(probe).backgroundColor; probe.remove(); return { hatched: parts(${JSON.stringify(hatchedTitle)}).map(read), solid: parts(${JSON.stringify(solidTitle)}).map(read), ground } })()`
     )
   }
   await evaluate(`document.documentElement.dataset.theme = ${JSON.stringify(shownTheme)}, true`)
   const stripes = (hex) =>
-    `repeating-linear-gradient(45deg, ${rgb(hex)} 0px, ${rgb(hex)} 2px, rgba(0, 0, 0, 0) 2px, rgba(0, 0, 0, 0) 6px)`
+    `repeating-linear-gradient(45deg, ${rgb(hex)} 0px, ${rgb(hex)} 3px, rgba(0, 0, 0, 0) 3px, rgba(0, 0, 0, 0) 6px)`
   check(
-    "the first hatched task's bar, legend swatch and drawer swatch show 45° stripes of its hue, 2 px in every 6 px, in both themes",
+    "the first hatched task's bar, legend swatch and drawer swatch show 45° stripes of its hue, 3 px in every 6 px, in both themes",
     themes.every((t) => worn[t].hatched.every((p) => p?.image === stripes(PALETTE[t][0]))),
     themes.map((t) => `${t}: ${worn[t].hatched.map((p) => p?.image ?? 'missing')[0]}`).join(' / ')
   )
   check(
-    "the hatched task's stripes lie over its hue mixed 20% with white, in both themes",
+    "the hatched task's stripes lie over its hue mixed 5% with white, in both themes",
     themes.every(
       (t) =>
         worn[t].ground !== rgb(PALETTE[t][0]) &&
