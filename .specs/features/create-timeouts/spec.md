@@ -173,29 +173,29 @@ the owner on 2026-10-01.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| CRTO-01 | P1: refresh — AC 1 | Tasks | Planned: T4 |
-| CRTO-02 | P1: refresh — AC 2 | Tasks | Planned: T1, T5 |
-| CRTO-03 | P1: refresh — AC 3 | Tasks | Planned: T5 |
-| CRTO-04 | P1: refresh — AC 4 | Tasks | Planned: T5 |
-| CRTO-05 | P1: refresh — AC 5 | Tasks | Planned: T12, T13, T14 |
-| CRTO-06 | P1: stdin — AC 6 | Tasks | Planned: T2 |
-| CRTO-07 | P1: stdin — AC 7 | Tasks | Planned: T3 |
-| CRTO-08 | P1: stdin — AC 8 | Tasks | Planned: T3 |
-| CRTO-09 | P2: steps — AC 9 | Tasks | Planned: T4 |
-| CRTO-10 | P2: steps — AC 10 | Tasks | Planned: T6 |
-| CRTO-11 | P2: steps — AC 11 | Tasks | Planned: T7, T8, T9, T14, T15 |
-| CRTO-12 | P2: steps — AC 12 | Tasks | Planned: T7 |
-| CRTO-13 | P2: steps — AC 13 | Tasks | Planned: T8 |
-| CRTO-14 | P2: steps — AC 14 | Tasks | Planned: T7 |
-| CRTO-15 | P2: steps — AC 15 | Tasks | Planned: T7, T8 |
-| CRTO-16 | P2: steps — AC 16 | Tasks | Planned: T10, T11, T12, T13, T14, T15 |
-| CRTO-17 | P2: steps — AC 17 | Tasks | Planned: T10, T11, T12, T13 |
-| CRTO-18 | P2: steps — AC 18 | Tasks | Planned: T9 |
-| CRTO-19 | P2: outcome — AC 19 | Tasks | Planned: T12, T13, T14, T15 |
-| CRTO-20 | P2: outcome — AC 20 | Tasks | Planned: T10, T12, T13, T14, T15 |
-| CRTO-21 | P2: outcome — AC 21 | Tasks | Planned: T12, T13 |
+| CRTO-01 | P1: refresh — AC 1 | Tasks | Implemented: T4 |
+| CRTO-02 | P1: refresh — AC 2 | Tasks | Implemented: T1, T5; recorded in AD-059 (T16) |
+| CRTO-03 | P1: refresh — AC 3 | Tasks | Implemented: T5 |
+| CRTO-04 | P1: refresh — AC 4 | Tasks | Implemented: T5 |
+| CRTO-05 | P1: refresh — AC 5 | Tasks | Implemented: T12, T13, T14 |
+| CRTO-06 | P1: stdin — AC 6 | Tasks | Implemented: T2 |
+| CRTO-07 | P1: stdin — AC 7 | Tasks | Implemented: T3; recorded in AD-059 (T16) |
+| CRTO-08 | P1: stdin — AC 8 | Tasks | Implemented: T3 |
+| CRTO-09 | P2: steps — AC 9 | Tasks | Implemented: T4 |
+| CRTO-10 | P2: steps — AC 10 | Tasks | Implemented: T6 |
+| CRTO-11 | P2: steps — AC 11 | Tasks | Implemented: T7, T8, T9, T14, T15 |
+| CRTO-12 | P2: steps — AC 12 | Tasks | Implemented: T7 |
+| CRTO-13 | P2: steps — AC 13 | Tasks | Implemented: T8 |
+| CRTO-14 | P2: steps — AC 14 | Tasks | Implemented: T7 |
+| CRTO-15 | P2: steps — AC 15 | Tasks | Implemented: T7, T8 |
+| CRTO-16 | P2: steps — AC 16 | Tasks | Implemented: T10, T11, T12, T13, T14, T15 |
+| CRTO-17 | P2: steps — AC 17 | Tasks | Implemented: T10, T11, T12, T13 |
+| CRTO-18 | P2: steps — AC 18 | Tasks | Implemented: T9 |
+| CRTO-19 | P2: outcome — AC 19 | Tasks | Implemented: T12, T13, T14, T15 |
+| CRTO-20 | P2: outcome — AC 20 | Tasks | Implemented: T10, T12, T13, T14, T15 |
+| CRTO-21 | P2: outcome — AC 21 | Tasks | Implemented: T12, T13 |
 
-**Coverage:** 21 total, 21 mapped to tasks, 0 unmapped.
+**Coverage:** 21 total, 21 implemented (tasks.md, Requirement → Evidence Map), 0 unmapped.
 
 ---
 

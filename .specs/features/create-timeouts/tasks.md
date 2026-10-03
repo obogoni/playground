@@ -568,9 +568,11 @@ It then removes the worktree through `worktrees:remove` and deletes the branch, 
 
 **Done when**:
 
-- [ ] The AD number is unused on `main` and on the open branches named in `STATE.md`
-- [ ] `python <skill-dir>/scripts/validate_spec.py .specs/features/create-timeouts/spec.md` exits 0
-- [ ] Gate check passes: `npm run lint && npm test`
+- [x] The AD number is unused on `main` and on the open branches named in `STATE.md`
+- [x] `python <skill-dir>/scripts/validate_spec.py .specs/features/create-timeouts/spec.md` exits 0
+- [x] Gate check passes: `npm run lint && npm test` (lint 0 errors, 18 warnings; 123 files, 2669 passed; typecheck exit 0)
+
+**Notes** (2026-10-03): the decision is **AD-059**. After `git fetch origin`, `origin/main` holds up to AD-057 (#162, merged); `obogoni/playground` has no open PR; among the local branches and sibling worktrees the highest is AD-058 (`git-recount-coalesce`, local), and none holds AD-059. #161 (`feature/branch-slug-short`, this branch's base) merged on 2026-10-03, so the rebase onto `origin/main` the plan calls for is now due. The entry follows design.md's AD-TBD with the reconciliation: `pathCheck` in the factory, the stdin end inside the pacer, the limit's wording (`limitText`). Traceability rows read `Implemented`; CRTO-02 and CRTO-07 also point to AD-059.
 
 **Tests**: none
 **Gate**: full
