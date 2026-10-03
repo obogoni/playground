@@ -741,11 +741,38 @@ warnings, 107 s wall (T9: 102 s; each real-repository case costs about 0.45 s fo
 
 **Done when**:
 
-- [ ] Tests (real repository): every tracked file's mtime touched with its bytes unchanged, then `diffStats(repo, 'uncommitted')`: `.git/index` bytes equal before and after; the same test fails when the config flag is removed from the call (seen once, written here) (FWIG-16)
-- [ ] Tests: the recorded args of a `readDiffSides` against the disk and of a since-base one start with `READ_ONLY_FLAGS`; `:288` asserts the prefix and then `cat-file`, not `args[0]`
-- [ ] Tests: the counts `diffStats` returns are unchanged by the flags (the existing cases)
-- [ ] Gate check passes: `npx vitest run src/main/file-diff.test.ts`, then the full gate
-- [ ] Test count: T10 count + the new tests
+- [x] Tests (real repository): every tracked file's mtime touched with its bytes unchanged, then `diffStats(repo, 'uncommitted')`: `.git/index` bytes equal before and after; the same test fails when the config flag is removed from the call (seen once, written here) (FWIG-16)
+- [x] Tests: the recorded args of a `readDiffSides` against the disk and of a since-base one start with `READ_ONLY_FLAGS`; `:288` asserts the prefix and then `cat-file`, not `args[0]`
+- [x] Tests: the counts `diffStats` returns are unchanged by the flags (the existing cases)
+- [x] Gate check passes: `npx vitest run src/main/file-diff.test.ts`, then the full gate
+- [x] Test count: T10 count + the new tests
+
+**Result (2026-10-03)**: `src/main/file-diff.test.ts` 26 tests (23 + 3 new), all passing; full gate
+2,834 tests in 128 files (2,831 + 3), typecheck clean, lint 0 errors and 18 warnings, 107 s wall
+(T10: 106 s; no drift, L-005).
+
+- Shape: `...READ_ONLY_FLAGS` in front of all six reads: `cat-file -s`, `cat-file --filters` and
+  `show` in `readSide`; `merge-base` and both `diff --numstat` calls in `diffStats`; `ls-files
+  --others` in `untrackedStats`. Nothing else changed.
+- FWIG-16 (`file-diff.test.ts:204-211`): a fresh repository per run, 20 tracked files committed
+  with `core.autocrlf` false, then 1.5 s idle so the index is older than the write, as in T2.
+  Every file is rewritten with its own bytes, `.git/index` is read, `diffStats(repo,
+  'uncommitted')` answers `[]`, and the index bytes are unchanged.
+- **Seen failing**:
+  - Before the change, the test failed: the index was rewritten.
+  - With only `-c diff.autoRefreshIndex=false` removed from the uncommitted `diff --numstat`
+    call, it failed twice in a row (`expected false to be true`, the index rewritten). That call
+    kept `--no-optional-locks`, through a scratch copy-mutate-restore.
+  - `file-diff.ts` was restored from `.orig` and the test passes again. This repeats T2's
+    finding: `--no-optional-locks` alone does not stop `git diff` from refreshing the index.
+- The recorded args (L-020): an uncommitted `readDiffSides` (HEAD against the disk) runs exactly
+  `[...READ_ONLY_FLAGS, 'cat-file', '-s', 'HEAD:a.txt']` and `[...READ_ONLY_FLAGS, 'cat-file',
+  '--filters', 'HEAD:a.txt']` (`:331`). A since-base one runs `cat-file -s` and `show` for each
+  side, each prefixed (`:346`).
+- The former `:288` (now `:325-328`) asserts the three prefix arguments by literal, then
+  `cat-file` at index 3. That is the planned, stronger update; no other existing test changed,
+  and the existing count cases (`diffStats` since-base against `git diff --shortstat`, the
+  untracked count, the empty modes) pass unchanged.
 
 **Tests**: unit
 **Gate**: quick

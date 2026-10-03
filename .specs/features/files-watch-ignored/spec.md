@@ -245,8 +245,8 @@ section alone; on the build before the change its first check fails.
 | FWIG-12 | P1: ignored — AC 12 | T10 | Done (T10) |
 | FWIG-13 | P1: ignored — AC 13 | T10 | Done (T10) |
 | FWIG-14 | P1: ignored — AC 14 | T5, T19 | In progress (T5) |
-| FWIG-15 | P1: index — AC 15 | T7, T9, T11, T12 | In progress (T7, T9) |
-| FWIG-16 | P1: index — AC 16 | T11 | Pending |
+| FWIG-15 | P1: index — AC 15 | T7, T9, T11, T12 | In progress (T7, T9, T11) |
+| FWIG-16 | P1: index — AC 16 | T11 | Done (T11) |
 | FWIG-17 | P1: index — AC 17 | T20, T21 | Pending |
 | FWIG-18 | P1: gate — AC 18 | T13, T17 | Pending |
 | FWIG-19 | P1: gate — AC 19 | T13, T17 | Pending |
