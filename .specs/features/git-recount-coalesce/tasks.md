@@ -612,15 +612,77 @@ on a main mutant.
 
 **Done when**:
 
-- [ ] A1, `--sessions 6 --index-interval 100 --minutes 3 --json a1.json`, run on the T10 commit, built, the machine of #147's baseline; summary written verbatim with its commit
+- [x] A1, `--sessions 6 --index-interval 100 --minutes 3 --json a1.json`, run on the T10 commit, built, the machine of #147's baseline; summary written verbatim with its commit
 - [ ] The summary's targets block reads `git status <= 1 per worktree per s` PASS and `no overlapping git on one worktree` PASS (RCNT-32); every steady row's `status/s` and `wt peak` written beside #147's
-- [ ] The startup row of A1 and of #147's run side by side, with a note on what it includes (the tree build's recounts now go through the scheduler)
+- [x] The startup row of A1 and of #147's run side by side, with a note on what it includes (the tree build's recounts now go through the scheduler)
 - [ ] Any FAIL: stop, write it here, and turn it into a fix task before the Verifier runs
 
 **Tests**: none
 **Gate**: manual
 
 **Commit**: `docs(specs): record the recount figures after coalescing (#149)`
+
+**Record (2026-10-03)**: ❌ Stopped: `git status <= 1 per worktree per s` reads **2, FAIL**. No fix
+made here; the FAIL waits for a fix task (the last two boxes stay open).
+
+- Run on `584b994` (T10's commit), after `npx electron-vite build` (exit 0) with `git status
+  --porcelain` empty, on the machine of #147's baseline, `--json` to a scratch folder outside the
+  repository; 313 s, exit 0. **Not a fully quiet machine**: the owner's installed app (4 processes)
+  was running throughout, as in #147's baseline. Before and after: no electron process from this
+  worktree, no `bench-tui` process, no `pg-bench-` folder.
+- `node scripts/bench-sessions.mjs --sessions 6 --index-interval 100 --minutes 3 --json a1.json`,
+  summary verbatim:
+
+  ```
+  bench-sessions  sessions=6  fps=20  rows=30  files=500  index=100ms  minutes=3  commit=584b994
+  phase         loop p50/p99/max ms  git n   wait  peak  wt peak  status/s  wt:status  recounts  chunks   KB/s  append mean/max ms  names
+  startup      15.8 /  17.2 /  59.1     23  378.9     4        2         2          0        14       0    0.0       0.000 / 0.000      0
+  spawn        15.8 /  21.9 /  41.3     60    7.9     2        1         1         53        54    7381  474.2       0.024 / 0.460      0
+  steady 1     15.8 /  22.4 /  70.7     62  312.2     4        1         2         55        61    7404  489.3       0.023 / 0.433      0
+  steady 2     16.0 /  23.6 /  27.3     57    0.7     1        1         1         57        57    7570  489.1       0.026 / 0.189      0
+  steady 3     16.1 /  24.2 /  27.3     56    0.7     1        1         1         56        56    7663  489.4       0.032 / 0.324      0
+  worst        16.1 /  24.2 /  70.7     62  312.2     4        1         2         57        61    7663  489.4       0.027 / 0.433      0
+  spawn: longest sessions:spawn round trip 135 ms
+  targets
+    loop p99 < 30 ms with 6 sessions        24.2   PASS
+    append mean < 0.1 ms per chunk         0.027   PASS
+    git status <= 1 per worktree per s         2   FAIL
+    no overlapping git on one worktree         1   PASS
+  index loop: 2200 writes, 0 skipped
+  ```
+
+- Steady rows beside #147's (`dc57bf0`):
+
+  | Row | `git n` before / after | `status/s` before / after | `wt peak` before / after | `wt:status` before / after |
+  | --- | ---------------------- | ------------------------- | ------------------------ | -------------------------- |
+  | steady 1 | 179 / 62 | 4 / **2** | 1 / 1 | 178 / 55 |
+  | steady 2 | 179 / 57 | 4 / 1 | 1 / 1 | 177 / 57 |
+  | steady 3 | 179 / 56 | 4 / 1 | 1 / 1 | 178 / 56 |
+
+  Targets: `git status <= 1 per worktree per s` **4 FAIL → 2 FAIL**; `no overlapping git on one
+  worktree` **1 PASS → 1 PASS**. The written worktree's `git status` count per minute fell from 179
+  to 55..57.
+- Where the 2 comes from (`a1.json`, line 2 = steady 1): that minute holds a tree build, which no
+  steady row of #147's held: one `worktree list` under `app` and one `status` under `app` and under
+  each of `bench-wt-2..6`, `recounts` 61 against 55 emits, `peak` 4, `wait` max 312.2 ms. The `2` is
+  `bench-wt-1`'s `status` `maxPerSecond`. `maxPerSecond` counts git process starts, stamped after
+  `git()`'s pacer (PERF-22) lets a call run, while the scheduler spaces the starts of its recounts
+  (RCNT-04). A recount the scheduler starts while the tree build fills the pacer's 4 slots waits up to
+  ~312 ms for its process; the next recount, 1,000 ms after the first by the scheduler, gets its
+  process at once, so the two processes start less than 1,000 ms apart. The startup row shows the same
+  (`bench-wt-1`, `-4`, `-5`, `-6` read `maxPerSecond` 2 there). The steady rows with no tree build
+  (2 and 3) read 1. What set off the tree build in steady 1 is not in the log (no per-call trace).
+- Startup rows side by side:
+
+  | Run | loop p50/p99/max ms | `git n` | wait | peak | `wt peak` | `status/s` | `wt:status` | `recounts` |
+  | --- | ------------------- | ------- | ---- | ---- | --------- | ---------- | ----------- | ---------- |
+  | #147, `dc57bf0` | 16.1 / 17.6 / 46.4 | 23 | 480.3 | 4 | 2 | 2 | 0 | 0 |
+  | A1, `584b994` | 15.8 / 17.2 / 59.1 | 23 | 378.9 | 4 | 2 | 2 | 0 | 14 |
+
+  The startup row now counts the tree build's per-worktree counts under `recounts` (14: two tree
+  builds over 7 worktrees, `app` and `bench-wt-1..6`, 2 each), since they go through the scheduler and
+  its runner carries #147's `recountStarted` probe; #147's tree build called `worktreeStatus` directly
+  and counted 0. The git work itself is the same (`git n` 23 both).
 
 ---
 
