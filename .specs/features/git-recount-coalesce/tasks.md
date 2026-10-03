@@ -258,21 +258,38 @@ after it, merged with a pending burst; `forget` keeps waiting requests; `stop` a
 
 **Done when**:
 
-- [ ] Tests: a request on an idle worktree starts a run at the same instant and resolves with its count (RCNT-13)
-- [ ] Tests: requests on five idle worktrees at 0 start five runs at 0 (no pool of its own; PERF-22's cap of 4 git processes sits below, in `git()`)
-- [ ] Tests: after a run started at 0 and resolved at 100 ms, a request at 200 ms starts its run at exactly 1,000 ms (RCNT-04 for requests)
-- [ ] Tests: a request during a run whose runner answers `changes: 1` is answered `changes: 2` by the trailing run, never `1` (RCNT-14, RCNT-38)
-- [ ] Tests: a request while a burst waits starts one run, which resolves the request and calls `onRecounted` once (RCNT-15)
-- [ ] Tests: a run that served only a request calls no `onRecounted` (RCNT-09)
-- [ ] Tests: `forget` with a request waiting still answers it (RCNT-41)
-- [ ] Tests: `stop` answers a waiting request with `null`; a request after `stop` resolves `null` and starts no run (RCNT-12)
-- [ ] Gate check passes: `npx vitest run src/main/recount-scheduler.test.ts`, then the full gate
-- [ ] Test count: T3 count + the new tests
+- [x] Tests: a request on an idle worktree starts a run at the same instant and resolves with its count (RCNT-13)
+- [x] Tests: requests on five idle worktrees at 0 start five runs at 0 (no pool of its own; PERF-22's cap of 4 git processes sits below, in `git()`)
+- [x] Tests: after a run started at 0 and resolved at 100 ms, a request at 200 ms starts its run at exactly 1,000 ms (RCNT-04 for requests)
+- [x] Tests: a request during a run whose runner answers `changes: 1` is answered `changes: 2` by the trailing run, never `1` (RCNT-14, RCNT-38)
+- [x] Tests: a request while a burst waits starts one run, which resolves the request and calls `onRecounted` once (RCNT-15)
+- [x] Tests: a run that served only a request calls no `onRecounted` (RCNT-09)
+- [x] Tests: `forget` with a request waiting still answers it (RCNT-41)
+- [x] Tests: `stop` answers a waiting request with `null`; a request after `stop` resolves `null` and starts no run (RCNT-12)
+- [x] Gate check passes: `npx vitest run src/main/recount-scheduler.test.ts`, then the full gate
+- [x] Test count: T3 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(main): answer recount requests from the scheduler`
+
+**Record (2026-10-03)**: ✅ Done.
+
+- `src/main/recount-scheduler.test.ts` gains 8 tests (`RecountScheduler requests`): a request on an idle
+  worktree starts at that instant and resolves `{ dirty: true, changes: 3 }`; five idle worktrees
+  requested at 0 start five runs at 0; after a run at 0 resolved at 100, a request at 200 starts at
+  1,000, not 999; a request during a run still in flight at 1,500 starts nothing until that run
+  resolves, then the trailing run starts at 1,500 and answers `changes: 2`, not the running one's 1; a
+  request with a burst waiting starts one run that answers it and reports once; a run that served only
+  a request reports nothing; `forget` drops the burst but the waiting request is answered at 1,000; `stop`
+  answers a waiting request `null`, and a later request `null` with no run.
+- Quick gate 24/24. Full gate: typecheck exit 0, lint exit 0 with 18 warnings, **122 files, 2,602
+  tests** (2,594 + 8), all pass.
+- Mutants seen failing: `onRecounted` for a request-only run (RCNT-09, RCNT-41 tests); `request`
+  arming during a run (the RCNT-14 test, after it was made to hold the run past the spacing: the first
+  version let this mutant live); `forget` not re-arming for waiters (RCNT-41); `stop` not answering
+  waiters, and `request` after `stop` (RCNT-12); a request waiting 250 ms (every request test).
 
 ---
 

@@ -22,6 +22,8 @@ export interface RecountSchedulerDeps {
   schedule: Scheduler
 }
 
+type Waiter = (count: WorktreeCount | null) => void
+
 /** One worktree's waits and runs (RCNT-08). */
 interface Lane {
   path: string
@@ -30,6 +32,8 @@ interface Lane {
   /** The pending git-state burst; both null when none. */
   firstEventAt: number | null
   lastEventAt: number | null
+  /** Requests waiting for the next recount to start (RCNT-14). */
+  waiters: Waiter[]
   /** When this worktree's last recount started; null before the first. */
   lastStartAt: number | null
   /** The armed timer's cancel, if any. */
@@ -37,11 +41,12 @@ interface Lane {
 }
 
 /**
- * Decides when each worktree's `git status` runs (RCNT-02..12). Git-state
- * events wait for a quiet period, or the maximum wait under steady writes,
- * and two recounts of one worktree start at least `RECOUNT_MIN_INTERVAL_MS`
- * apart. How many git processes run across worktrees is `git()`'s pacer's
- * business (PERF-22), not this class's.
+ * Decides when each worktree's `git status` runs (RCNT-02..15). Git-state
+ * events wait for a quiet period, or the maximum wait under steady writes;
+ * requests (a turn end, the tree build) skip the wait. A worktree runs one
+ * recount at a time, and two of its recounts start at least
+ * `RECOUNT_MIN_INTERVAL_MS` apart. How many git processes run across
+ * worktrees is `git()`'s pacer's business (PERF-22), not this class's.
  */
 export class RecountScheduler {
   private readonly deps: RecountSchedulerDeps
@@ -63,7 +68,23 @@ export class RecountScheduler {
     if (!lane.running) this.arm(lane)
   }
 
-  /** The watcher dropped this worktree: cancel its waiting git-state recount (RCNT-11). */
+  /**
+   * Count this worktree with no quiet period, answered by the first recount
+   * that starts after the call (RCNT-13..15); `null` once stopped (RCNT-12).
+   */
+  request(worktreePath: string): Promise<WorktreeCount | null> {
+    if (this.stopped) return Promise.resolve(null)
+    const lane = this.laneOf(worktreePath)
+    return new Promise((resolve) => {
+      lane.waiters.push(resolve)
+      if (!lane.running) this.arm(lane)
+    })
+  }
+
+  /**
+   * The watcher dropped this worktree: cancel its waiting git-state recount
+   * (RCNT-11). Waiting requests are still answered (RCNT-41).
+   */
   forget(worktreePath: string): void {
     const lane = this.lanes.get(worktreePath)
     if (!lane) return
@@ -71,11 +92,13 @@ export class RecountScheduler {
     lane.cancelTimer = null
     lane.firstEventAt = null
     lane.lastEventAt = null
+    if (lane.running) return
+    if (lane.waiters.length > 0) this.arm(lane)
     // An idle lane holds nothing more, so the map keeps only worktrees in use.
-    if (!lane.running) this.lanes.delete(worktreePath)
+    else this.lanes.delete(worktreePath)
   }
 
-  /** Quit: cancel everything waiting and emit nothing more (RCNT-12). */
+  /** Quit: cancel everything waiting, answer requests with null, emit nothing more (RCNT-12). */
   stop(): void {
     this.stopped = true
     for (const lane of this.lanes.values()) {
@@ -83,6 +106,9 @@ export class RecountScheduler {
       lane.cancelTimer = null
       lane.firstEventAt = null
       lane.lastEventAt = null
+      const waiters = lane.waiters
+      lane.waiters = []
+      for (const answer of waiters) answer(null)
     }
   }
 
@@ -94,12 +120,28 @@ export class RecountScheduler {
         running: false,
         firstEventAt: null,
         lastEventAt: null,
+        waiters: [],
         lastStartAt: null,
         cancelTimer: null
       }
       this.lanes.set(path, lane)
     }
     return lane
+  }
+
+  /** When the lane's pending work may start, or `null` with nothing pending. */
+  private dueOf(lane: Lane, now: number): number | null {
+    let wanted: number
+    if (lane.waiters.length > 0) wanted = now
+    else if (lane.firstEventAt !== null && lane.lastEventAt !== null) {
+      wanted = Math.min(
+        lane.lastEventAt + RECOUNT_QUIET_MS,
+        lane.firstEventAt + RECOUNT_MAX_WAIT_MS
+      )
+    } else return null
+    return lane.lastStartAt === null
+      ? wanted
+      : Math.max(wanted, lane.lastStartAt + RECOUNT_MIN_INTERVAL_MS)
   }
 
   /**
@@ -110,16 +152,10 @@ export class RecountScheduler {
   private arm(lane: Lane): void {
     lane.cancelTimer?.()
     lane.cancelTimer = null
-    if (this.stopped || lane.firstEventAt === null || lane.lastEventAt === null) return
+    if (this.stopped) return
     const now = this.deps.now()
-    const wanted = Math.min(
-      lane.lastEventAt + RECOUNT_QUIET_MS,
-      lane.firstEventAt + RECOUNT_MAX_WAIT_MS
-    )
-    const due =
-      lane.lastStartAt === null
-        ? wanted
-        : Math.max(wanted, lane.lastStartAt + RECOUNT_MIN_INTERVAL_MS)
+    const due = this.dueOf(lane, now)
+    if (due === null) return
     if (due <= now) {
       void this.start(lane)
       return
@@ -133,8 +169,11 @@ export class RecountScheduler {
   private async start(lane: Lane): Promise<void> {
     lane.running = true
     lane.lastStartAt = this.deps.now()
+    const servedEvent = lane.firstEventAt !== null
     lane.firstEventAt = null
     lane.lastEventAt = null
+    const waiters = lane.waiters
+    lane.waiters = []
     let count: WorktreeCount | null
     try {
       count = await this.deps.recount(lane.path)
@@ -142,9 +181,10 @@ export class RecountScheduler {
       // A runner that throws counts as no answer (RCNT-10).
       count = null
     }
-    if (count !== null && !this.stopped) this.deps.onRecounted(lane.path, count)
+    for (const answer of waiters) answer(count)
+    if (servedEvent && count !== null && !this.stopped) this.deps.onRecounted(lane.path, count)
     lane.running = false
-    // Events that came during the run get one trailing recount (RCNT-06).
+    // What came during the run gets one trailing recount (RCNT-06, RCNT-14).
     this.arm(lane)
   }
 }

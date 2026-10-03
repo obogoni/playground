@@ -336,3 +336,139 @@ describe('RecountScheduler single flight', () => {
     expect(h.startsOf(A)).toEqual([250])
   })
 })
+
+describe('RecountScheduler requests', () => {
+  /** Records a request's answer as it lands; `pending` until then. */
+  function track(p: Promise<WorktreeCount | null>): { value: WorktreeCount | null | 'pending' } {
+    const box: { value: WorktreeCount | null | 'pending' } = { value: 'pending' }
+    void p.then((v) => {
+      box.value = v
+    })
+    return box
+  }
+
+  it('starts a requested recount at once and answers with its count (RCNT-13)', async () => {
+    const h = harness({ deferred: true })
+    await h.advanceTo(100)
+
+    const answer = track(h.scheduler.request(A))
+    expect(h.startsOf(A)).toEqual([100])
+
+    h.runs[0].resolve({ dirty: true, changes: 3 })
+    await h.advanceTo(100)
+    expect(answer.value).toEqual({ dirty: true, changes: 3 })
+  })
+
+  it('starts requests on five idle worktrees together, with no pool of its own', async () => {
+    const h = harness({ deferred: true })
+    const paths = [1, 2, 3, 4, 5].map((i) => `C:\\work\\repo-${i}`)
+
+    for (const path of paths) void h.scheduler.request(path)
+
+    expect(h.runs.map((r) => [r.path, r.at])).toEqual(paths.map((p) => [p, 0]))
+  })
+
+  it('spaces a request from the previous start (RCNT-04)', async () => {
+    const h = harness({ deferred: true })
+    void h.scheduler.request(A)
+    await h.advanceTo(100)
+    h.runs[0].resolve(COUNT)
+
+    await h.advanceTo(200)
+    const answer = track(h.scheduler.request(A))
+    await h.advanceTo(999)
+    expect(h.startsOf(A)).toEqual([0])
+    await h.advanceTo(1000)
+    expect(h.startsOf(A)).toEqual([0, 1000])
+
+    h.runs[1].resolve(COUNT)
+    await h.advanceTo(1000)
+    expect(answer.value).toEqual(COUNT)
+  })
+
+  it('answers a request made during a run with the run after it (RCNT-14, RCNT-38)', async () => {
+    const h = harness({ deferred: true })
+    const first = track(h.scheduler.request(A))
+    await h.advanceTo(100)
+    const second = track(h.scheduler.request(A))
+
+    // Past the spacing, the run still in flight holds the next one back (RCNT-05).
+    await h.advanceTo(1500)
+    expect(h.startsOf(A)).toEqual([0])
+    h.runs[0].resolve({ dirty: true, changes: 1 })
+    await h.advanceTo(1500)
+    expect(first.value).toEqual({ dirty: true, changes: 1 })
+    expect(second.value).toBe('pending')
+    expect(h.startsOf(A)).toEqual([0, 1500])
+
+    h.runs[1].resolve({ dirty: true, changes: 2 })
+    await h.advanceTo(1500)
+    expect(second.value).toEqual({ dirty: true, changes: 2 })
+  })
+
+  it('serves a request and a waiting burst with one recount (RCNT-15)', async () => {
+    const h = harness()
+    h.scheduler.notify(A)
+    await h.advanceTo(100)
+
+    const answer = track(h.scheduler.request(A))
+    await h.advanceTo(100)
+    expect(h.startsOf(A)).toEqual([100])
+    expect(answer.value).toEqual(COUNT)
+    expect(h.recounted).toEqual([[A, COUNT]])
+
+    await h.advanceTo(3000)
+    expect(h.startsOf(A)).toEqual([100])
+    expect(h.recounted).toEqual([[A, COUNT]])
+  })
+
+  it('reports nothing for a recount that served only a request (RCNT-09)', async () => {
+    const h = harness()
+
+    const answer = track(h.scheduler.request(A))
+    await h.advanceTo(3000)
+
+    expect(answer.value).toEqual(COUNT)
+    expect(h.recounted).toEqual([])
+  })
+
+  it('still answers a waiting request after forget (RCNT-41)', async () => {
+    const h = harness({ deferred: true })
+    void h.scheduler.request(A)
+    await h.advanceTo(100)
+    h.runs[0].resolve(COUNT)
+    await h.advanceTo(150)
+    h.scheduler.notify(A)
+    await h.advanceTo(200)
+    const answer = track(h.scheduler.request(A))
+
+    await h.advanceTo(300)
+    h.scheduler.forget(A)
+    await h.advanceTo(1000)
+    expect(h.startsOf(A)).toEqual([0, 1000])
+    h.runs[1].resolve({ dirty: false, changes: 0 })
+    await h.advanceTo(1000)
+
+    expect(answer.value).toEqual({ dirty: false, changes: 0 })
+    // The burst went with forget: the run served the request alone.
+    expect(h.recounted).toEqual([])
+  })
+
+  it('answers waiting and later requests with null after stop, starting nothing (RCNT-12)', async () => {
+    const h = harness({ deferred: true })
+    void h.scheduler.request(A)
+    await h.advanceTo(100)
+    h.runs[0].resolve(COUNT)
+    await h.advanceTo(200)
+    const waiting = track(h.scheduler.request(A))
+
+    h.scheduler.stop()
+    await h.advanceTo(200)
+    expect(waiting.value).toBeNull()
+
+    const later = track(h.scheduler.request(B))
+    await h.advanceTo(3000)
+    expect(later.value).toBeNull()
+    expect(h.runs.map((r) => r.path)).toEqual([A])
+  })
+})
