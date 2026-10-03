@@ -311,6 +311,67 @@ T7 → T8 → T9
 
 ---
 
+### Phase 3: Verifier fixes (iteration 1)
+
+```
+T10
+```
+
+```
+T11
+```
+
+### T10: Test the unreadable prompt reason
+
+**What**: `listPrompts(root, fs?)` takes an injectable `PromptFs` so a failed read is testable without `vi.mock`; test the `unreadable: <message>` entry (Verifier gap 1, surviving mutant M17).
+**Where**: `src/main/prompt-library.ts` (+ `src/main/prompt-library.test.ts`)
+**Depends on**: None
+**Reuses**: injected-fake pattern (TESTING.md)
+**Requirement**: APR-06
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] An injected failing `readFile` yields `{ name, error: 'unreadable: <message>' }` and the other prompts are still listed
+- [x] Gate check passes: `npx vitest run src/main/prompt-library.test.ts` (11 passed)
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `test(prompts): cover the unreadable prompt reason`
+
+---
+
+### T11: Trim variable values before resolving
+
+**What**: `resolveForm(template, values)` in `prompt-form.ts` trims each value before `resolvePrompt`; the dialog resolves through it (Verifier gap 2, spec Assumption "Value whitespace", now APR-37).
+**Where**: `src/renderer/src/lib/prompt-form.ts` (+ test; one-line call site in `NewSessionDialog.tsx`)
+**Depends on**: None
+**Reuses**: `resolvePrompt`
+**Requirement**: APR-37
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] Values with surrounding whitespace resolve trimmed; inner whitespace kept
+- [ ] The dialog's preview and spawned text use `resolveForm`
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Tests**: unit
+**Gate**: build
+
+**Commit**: `fix(prompts): trim variable values before resolving the prompt`
+
+---
+
 ## Phase Execution Map
 
 ```

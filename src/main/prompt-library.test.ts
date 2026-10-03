@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -75,6 +75,21 @@ describe('listPrompts', () => {
   it('decodes the file as UTF-8 (APR-04)', async () => {
     await writeFile(join(dir, 'pt.md'), 'Configuração de ação', 'utf8')
     expect(await listPrompts(dir)).toEqual([{ name: 'pt', template: 'Configuração de ação' }])
+  })
+
+  it('lists a file it cannot read as unreadable with the error message and keeps the others (APR-06)', async () => {
+    await writeFile(join(dir, 'locked.md'), 'Never read.')
+    await writeFile(join(dir, 'ok.md'), 'Go.')
+    // Windows offers no portable way to make a regular-file read fail, so the
+    // failure is injected; readdir and stat stay real.
+    const failingRead = async (path: string, encoding: 'utf8'): Promise<string> => {
+      if (path.endsWith('locked.md')) throw new Error('EACCES: permission denied')
+      return readFile(path, encoding)
+    }
+    expect(await listPrompts(dir, { readdir, stat, readFile: failingRead })).toEqual([
+      { name: 'locked', error: 'unreadable: EACCES: permission denied' },
+      { name: 'ok', template: 'Go.' }
+    ])
   })
 })
 
