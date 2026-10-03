@@ -45,6 +45,7 @@ import type {
 } from './workflows'
 import type {
   ChangedFile,
+  CreateStep,
   CreateWorktreeResult,
   PathCheckRequest,
   RemoveWorktreeResult
@@ -92,6 +93,8 @@ export interface IpcContract {
        * as-is; `recreate` = force-delete and recut from base.
        */
       onExisting?: 'reuse' | 'recreate'
+      /** Pushes `worktrees:create-step` for this id while the create runs; absent = no steps (CRTO-11, CRTO-18). */
+      requestId?: string
     }
     res: CreateWorktreeResult
   }
@@ -307,6 +310,8 @@ export interface IpcEvents {
   'worktree:status': { worktreePath: string; dirty: boolean; changes: number }
   /** An auto-pin pass after `tree:get` pinned tasks derived from worktree branches (APIN-06). */
   'tasks:changed': { snapshot: TasksSnapshot }
+  /** The step a `worktrees:create` call with this `requestId` has reached (CRTO-11). */
+  'worktrees:create-step': { requestId: string; step: CreateStep }
 }
 
 export interface IpcSends {

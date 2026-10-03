@@ -25,7 +25,7 @@
  * repository pins core.autocrlf and core.longpaths in its own config. --clean
  * removes those folders, unregisters the workspaces, and removes SMOKE_BASE when
  * it is left empty. Re-seed and relaunch before every drive: checks 4, 5 and 7
- * call worktrees:create.
+ * call worktrees:create. The progress section alone cleans up after itself.
  *
  * The typed names are sized from each repository's common git dir, read with
  * `git rev-parse`, so every check hits its boundary on any SMOKE_BASE.
@@ -39,6 +39,15 @@
  *              section prints a skip notice and counts as neither pass nor fail.
  *              Never write the URL or the title into the repository; the slug
  *              rule's proof is its unit tests.
+ *   progress   checks 10-13 on the seed, offline (CRTO, issue #153): Start Work's
+ *              progress line and busy dialog. It writes bss-default\.app\config.json
+ *              with postCreateCommands { app: a 5-second ping } (restoring any file
+ *              there afterwards), opens Start Work for a task that is not pinned and
+ *              has no details (through the Tasks pane's own onStartWork: the card's
+ *              button needs live Azure DevOps details), creates chore/progress on
+ *              app with the base refresh unticked, then removes the worktree and
+ *              deletes the branch, so it reruns on the same seed. Hand-verify list:
+ *              scripts/smoke-create.mjs.
  *   stwk       the legacy STWK checks below, which need SMOKE_TASK_URL.
  * With no SMOKE_ONLY and the seed present under SMOKE_BASE, every seed section
  * runs and the legacy checks print a skip notice (they assume their own config,
@@ -598,6 +607,226 @@ async function slugSection(ws) {
   )
 }
 
+/* ------------------------------------------- progress and busy dialog (CRTO) -- */
+
+const PROGRESS_BRANCH = 'chore/progress'
+/** About five seconds of post-create command, long enough to look at the busy dialog. */
+const HOOK_COMMAND = 'ping -n 6 127.0.0.1 > NUL'
+const HOOK_LABEL = 'Running post-create command…'
+const BUSY_TITLE = 'Wait for the create to finish'
+
+/**
+ * Refreshes the tree and selects a worktree other than chore/progress, so the
+ * last check sees the create's own selection, not one left by an earlier run.
+ */
+const selectOtherWorktree = `(async () => {
+  document.querySelector('.topbar-icon-btn[title="Refresh"]')?.click()
+  const branchOf = (row) => row.querySelector('.sidebar-worktree-branch')?.textContent
+  for (let i = 0; i < 25; i++) {
+    await new Promise((r) => setTimeout(r, 200))
+    const rows = [...document.querySelectorAll('.sidebar-worktree')]
+    if (rows.length === 0 || rows.some((row) => branchOf(row) === ${JSON.stringify(PROGRESS_BRANCH)})) continue
+    rows[0].click()
+    break
+  }
+  await new Promise((r) => setTimeout(r, 200))
+  return document.querySelector('.sidebar-worktree.selected .sidebar-worktree-branch')?.textContent ?? null
+})()`
+/** A placeholder task: never pinned, no details, so the dialog asks Azure DevOps nothing. */
+const OFFLINE_TASK = { id: 4821, org: 'acme', project: 'platform', url: '', details: null }
+
+/**
+ * Opens Start Work for OFFLINE_TASK through the Tasks pane's own `onStartWork`
+ * prop, read from its React fiber. The card's Start work button stays disabled
+ * without live work item details, and this section runs with no Azure DevOps.
+ */
+const openStartWorkOffline = `(async () => {
+  for (let i = 0; i < 50 && !document.querySelector('.tasks-pane'); i++) {
+    await new Promise((r) => setTimeout(r, 200))
+  }
+  const pane = document.querySelector('.tasks-pane')
+  const key = pane ? Object.keys(pane).find((k) => k.startsWith('__reactFiber$')) : undefined
+  let fiber = key ? pane[key] : null
+  while (fiber && !(typeof fiber.memoizedProps?.onStartWork === 'function' && fiber.memoizedProps?.snapshot)) {
+    fiber = fiber.return
+  }
+  if (!fiber) return false
+  fiber.memoizedProps.onStartWork(${JSON.stringify(OFFLINE_TASK)})
+  for (let i = 0; i < 25; i++) {
+    if (document.querySelector('.dialog-panel .dialog-kicker')?.textContent === 'Start work') return true
+    await new Promise((r) => setTimeout(r, 200))
+  }
+  return false
+})()`
+
+/** The busy dialog as the user sees it: the progress line, Cancel, the panel. */
+const busyState = `(() => {
+  const cancel = document.querySelector('footer.dialog-footer .dialog-btn-ghost')
+  return {
+    open: document.querySelector('.dialog-panel') !== null,
+    progress: document.querySelector('.dialog-body .dialog-progress[role="status"]')?.textContent.trim() ?? null,
+    spinner: document.querySelector('.dialog-progress .dialog-progress-loader') !== null,
+    cancelDisabled: cancel?.disabled ?? null,
+    cancelTitle: cancel?.getAttribute('title') ?? null,
+    selectedBranch: document.querySelector('.sidebar-worktree.selected .sidebar-worktree-branch')?.textContent ?? null
+  }
+})()`
+
+/**
+ * Removes chore/progress through the app's own guarded IPC, then deletes the
+ * branch. Retries while the post-create command may still hold the folder: a
+ * mutant that lets the dialog close early leaves the create running.
+ */
+async function removeProgressWorktree(ws, repoPath, worktreePath) {
+  const norm = (path) => path.replaceAll('\\', '/').toLowerCase()
+  const listed = () =>
+    git(['worktree', 'list', '--porcelain'], repoPath)
+      .split('\n')
+      .some((line) => norm(line) === `worktree ${norm(worktreePath)}`)
+  for (let i = 0; i < 40 && listed(); i++) {
+    const removed = await evaluate(
+      ws,
+      `window.api.invoke('worktrees:remove', ${JSON.stringify({ repoPath, worktreePath })})`
+    )
+    if (removed.ok) break
+    await sleep(500)
+  }
+  if (git(['branch', '--list', PROGRESS_BRANCH], repoPath) !== '') {
+    git(['branch', '-D', PROGRESS_BRANCH], repoPath)
+  }
+  return { listed: listed(), branch: git(['branch', '--list', PROGRESS_BRANCH], repoPath) }
+}
+
+async function progressSection(ws) {
+  const repos = await seededRepos(ws)
+  if (!repos) throw new Error(`The seed under ${BASE} is not in the app's tree; run --seed first`)
+  const { app } = repos
+  const worktreePath = `${app.path}-chore-progress`
+  const appDir = join(DEFAULT_WS, '.app')
+  const configFile = join(appDir, 'config.json')
+  const backup = existsSync(configFile) ? readFileSync(configFile, 'utf8') : null
+  const madeAppDir = !existsSync(appDir)
+
+  // A run that was cut short may have left the worktree or the branch behind.
+  await removeProgressWorktree(ws, app.path, worktreePath)
+  const selectedBefore = await evaluate(ws, selectOtherWorktree)
+  if (selectedBefore === null || selectedBefore === PROGRESS_BRANCH) {
+    throw new Error(`No other worktree could be selected first: ${selectedBefore}`)
+  }
+  mkdirSync(appDir, { recursive: true })
+  writeFileSync(
+    configFile,
+    JSON.stringify(
+      { ...(backup === null ? {} : JSON.parse(backup)), postCreateCommands: { app: HOOK_COMMAND } },
+      null,
+      2
+    ) + '\n'
+  )
+  try {
+    if (!(await evaluate(ws, openStartWorkOffline))) throw new Error('Start Work did not open')
+    await evaluate(ws, clickChip('app'))
+    await evaluate(ws, setBranch(PROGRESS_BRANCH))
+    const ready = await evaluate(
+      ws,
+      `(() => {
+         const box = document.querySelector('.dialog-check input[type="checkbox"]')
+         if (box?.checked) box.click()
+         return {
+           kicker: document.querySelector('.dialog-kicker')?.textContent ?? null,
+           repo: document.querySelector('.dialog-repo-chip.selected .dialog-repo-chip-name')?.textContent ?? null,
+           base: document.querySelectorAll('.dialog-input')[0]?.value ?? null,
+           refresh: document.querySelector('.dialog-check input[type="checkbox"]')?.checked ?? null,
+           createDisabled: document.querySelector('.dialog-btn-primary')?.disabled ?? null
+         }
+       })()`
+    )
+    if (
+      ready.kicker !== 'Start work' ||
+      ready.repo !== 'app' ||
+      ready.base !== 'main' ||
+      ready.refresh !== false ||
+      ready.createDisabled !== false
+    ) {
+      throw new Error(`Start Work is not ready to create: ${JSON.stringify(ready)}`)
+    }
+
+    await evaluate(ws, `document.querySelector('.dialog-btn-primary').click()`)
+    const clickedAt = Date.now()
+
+    // 10: the line names the post-create command while it runs.
+    const seen = []
+    let state = await evaluate(ws, busyState)
+    while (state.progress !== HOOK_LABEL && Date.now() - clickedAt < 4000) {
+      if (seen[seen.length - 1] !== state.progress) seen.push(state.progress)
+      await sleep(100)
+      state = await evaluate(ws, busyState)
+    }
+    if (seen[seen.length - 1] !== state.progress) seen.push(state.progress)
+    check(
+      '10. Start Work: while the post-create command runs, the progress line reads "Running post-create command…" (CRTO-11, CRTO-16)',
+      state.open && state.progress === HOOK_LABEL && state.spinner,
+      JSON.stringify({ atMs: Date.now() - clickedAt, seen, spinner: state.spinner })
+    )
+
+    // 11: Cancel is disabled with the tooltip while busy.
+    check(
+      '11. Start Work: Cancel is disabled with the title "Wait for the create to finish" (CRTO-20)',
+      state.open && state.cancelDisabled === true && state.cancelTitle === BUSY_TITLE,
+      JSON.stringify({ disabled: state.cancelDisabled, title: state.cancelTitle })
+    )
+
+    // 12: a backdrop click leaves the dialog open.
+    await evaluate(ws, `document.querySelector('.dialog-backdrop')?.click()`)
+    await sleep(300)
+    const afterBackdrop = await evaluate(ws, busyState)
+    check(
+      '12. Start Work: a backdrop click while busy leaves the dialog open (CRTO-19)',
+      state.open && afterBackdrop.open === true,
+      JSON.stringify({ open: afterBackdrop.open, progress: afterBackdrop.progress })
+    )
+
+    // 13: the dialog closes on success and selects the new worktree.
+    let settled = afterBackdrop
+    while (
+      (settled.open || settled.selectedBranch !== PROGRESS_BRANCH) &&
+      Date.now() - clickedAt < 15000
+    ) {
+      await sleep(200)
+      settled = await evaluate(ws, busyState)
+    }
+    check(
+      '13. Start Work: within 15 s the dialog closes, chore/progress is selected and no progress line is left (CRTO-17, CRTO-21)',
+      afterBackdrop.open === true &&
+        settled.open === false &&
+        settled.selectedBranch === PROGRESS_BRANCH &&
+        settled.progress === null &&
+        existsSync(worktreePath),
+      JSON.stringify({
+        atMs: Date.now() - clickedAt,
+        open: settled.open,
+        selected: settled.selectedBranch,
+        progress: settled.progress
+      })
+    )
+  } finally {
+    // A dialog left open by a failed run would block the next one.
+    await evaluate(
+      ws,
+      `(() => {
+         const cancel = document.querySelector('footer.dialog-footer .dialog-btn-ghost')
+         if (cancel && !cancel.disabled) cancel.click()
+       })()`
+    ).catch(() => {})
+    const left = await removeProgressWorktree(ws, app.path, worktreePath)
+    if (backup === null) rmSync(configFile, { force: true })
+    else writeFileSync(configFile, backup)
+    if (madeAppDir) rmTree(appDir)
+    if (left.listed || left.branch !== '') {
+      console.log(`WARN  chore/progress cleanup incomplete: ${JSON.stringify(left)}`)
+    }
+  }
+}
+
 /* --------------------------------------------------------- legacy (STWK) -- */
 
 async function legacySection(ws) {
@@ -860,8 +1089,8 @@ async function legacySection(ws) {
 /* ----------------------------------------------------------------- drive -- */
 
 async function drive() {
-  if (ONLY !== null && !['longpath', 'slug', 'stwk'].includes(ONLY)) {
-    console.error(`Unknown SMOKE_ONLY=${ONLY}; expected longpath, slug or stwk`)
+  if (ONLY !== null && !['longpath', 'slug', 'progress', 'stwk'].includes(ONLY)) {
+    console.error(`Unknown SMOKE_ONLY=${ONLY}; expected longpath, slug, progress or stwk`)
     process.exit(1)
   }
   const target = await pageTarget()
@@ -874,6 +1103,7 @@ async function drive() {
   const seeded = existsSync(join(IDS_WS, 'api')) && existsSync(join(DEFAULT_WS, 'app'))
   if (ONLY === 'longpath' || (ONLY === null && seeded)) await longpathSection(ws)
   if (ONLY === 'slug' || (ONLY === null && seeded)) await slugSection(ws)
+  if (ONLY === 'progress' || (ONLY === null && seeded)) await progressSection(ws)
   if (ONLY === 'stwk' || (ONLY === null && !seeded)) await legacySection(ws)
   if (ONLY === null && seeded) {
     console.log(

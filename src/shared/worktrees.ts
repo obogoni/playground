@@ -102,6 +102,9 @@ export interface CreateWorktreeResult {
   conflict?: 'branch-exists'
 }
 
+/** A step of a worktree create, pushed while it runs (CRTO-11). */
+export type CreateStep = 'refreshing-base' | 'creating-worktree' | 'running-hook'
+
 /**
  * What a deletion that gave up left behind (WRFT-04 AC 3). Its presence means
  * the worktree is still registered with git, so the removal can simply be

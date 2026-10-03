@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 114,
+  "next_id": 116,
   "lessons": [
     {
       "id": "L-001",
@@ -1957,6 +1957,42 @@
       ],
       "created": "2026-10-03T14:19:26Z",
       "last_seen": "2026-10-03T14:19:26Z"
+    },
+    {
+      "id": "L-114",
+      "key": "spec_precision_gap::when an ac names a dialog control list every state that renders its own copy of that control footer sub panels so the ac has one meaning",
+      "text": "When an AC names a dialog control, list every state that renders its own copy of that control (footer, sub-panels) so the AC has one meaning",
+      "signal": "spec_precision_gap",
+      "scope": "renderer-dialogs",
+      "status": "candidate",
+      "features": [
+        "create-timeouts"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CRTO-20 / BranchExistsChoice.tsx:40 (validation.md G1) (renderer-dialogs)"
+      ],
+      "created": "2026-10-03T17:43:45Z",
+      "last_seen": "2026-10-03T17:43:45Z"
+    },
+    {
+      "id": "L-115",
+      "key": "spec_deviation::derive a formatter s unit boundary from the spec s literal texts and pin each literal with the real constant not from the design s general rule",
+      "text": "Derive a formatter's unit boundary from the spec's literal texts and pin each literal with the real constant, not from the design's general rule",
+      "signal": "spec_deviation",
+      "scope": "main",
+      "status": "candidate",
+      "features": [
+        "create-timeouts"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "SPEC_DEVIATION limitText, worktree-manager.ts (validation.md Deviations) (main)"
+      ],
+      "created": "2026-10-03T17:43:45Z",
+      "last_seen": "2026-10-03T17:43:45Z"
     }
   ]
 }
