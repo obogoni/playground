@@ -1,11 +1,12 @@
 # Files Watch Ignored Design
 
 **Spec**: `.specs/features/files-watch-ignored/spec.md`
-**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01). Executes after #147 (`feature/perf-diagnostics`); T1 can stop the
-feature and send it back to the owner, and so can T2.
+**Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01). Reconciled 2026-10-03 against
+`origin/main` `fc19a3c`, which holds #147; T1 can stop the feature and send it back to the owner, and so
+can T2.
 
-Line numbers below are from this branch at `d4a3da9` (the #147 plan on `origin/main` `60ff148`), before
-#147 is executed. #147 changes `git.ts` and `index.ts`; re-read both before editing them.
+Line numbers below are from `fc19a3c`. #147 and #154 changed `git.ts` and `index.ts` after planning; the
+Files files did not change.
 
 ---
 
@@ -119,11 +120,11 @@ not stop it: `-c diff.autoRefreshIndex=false` does.
 
 | Component | Location | How to Use |
 | --------- | -------- | ---------- |
-| The single git runner | `src/main/git.ts:15-35` (`git`) | Gains `input`; every new call goes through it (AD-023). After #147 it also reports to `diagnostics()`, so `check-ignore` is counted with no extra probe |
+| The single git runner | `src/main/git.ts:20-46` (`git`) | Gains `input`; every new call goes through it (AD-023). It reports to `diagnostics()` (AD-057) and starts through the spawn pacer (PERF-22), so `check-ignore` is counted and queued with no extra code |
 | The real-git runner tests | `src/main/git.test.ts:36` | Its timeout case relies on stdin staying open when no `input` is given; the new option leaves that path alone |
 | The watcher and its fake-port harness | `src/main/file-watcher.ts:43-125`, `src/main/file-watcher.test.ts:18-87` | The batch timer, the selection guards and the handles stay; the emit becomes a classification step |
 | The real `fs.watch` port | `src/main/watch-port.ts:14-26` | Unchanged; it already names paths relative to the root |
-| Wiring | `src/main/index.ts:360-366` (`fileWatcher`), `:147-150` (`resolveGitDir`) | One more dep, `checkIgnored` |
+| Wiring | `src/main/index.ts:426-435` (`fileWatcher`), `:150` (`resolveGitDir`) | One more dep, `checkIgnored` |
 | Files reads | `src/main/file-diff.ts:134-168` (`readSide`), `:183-215` (`diffStats`), `:263-284` (`untrackedStats`); `src/main/file-tree.ts:38-85` (`listDir`), `:207-221` (`changedSince`) | Each `git` / `run` call gets `...READ_ONLY_FLAGS` in front of its arguments |
 | The recording runner in the diff tests | `src/main/file-diff.test.ts:183-188`, `:288` | `:288` reads `args[0]` as the subcommand; it is updated to assert the prefix and then the subcommand |
 | The hook's batch reaction | `src/renderer/src/lib/use-files.ts:498-529` | Moves into a `runBatch` that returns a promise; the subscription only filters and calls the gate |
@@ -167,10 +168,12 @@ not stop it: `-c diff.autoRefreshIndex=false` does.
   ): Promise<{ stdout: string }>
   ```
 
-- **Behaviour**: with `input`, the child's stdin receives it and is closed (`pending.child.stdin?.end(input)`
-  on the promise `promisify(execFile)` returns, before `.finally`). Without it, nothing changes: stdin stays
-  open, which `git.test.ts:36` relies on.
-- **Reuses**: AD-023's runner; #147's `diagnostics().gitStarted` wrapper stays around the call.
+- **Behaviour**: with `input`, the child's stdin receives it and is closed (`started.child.stdin?.end(input)`
+  on the promise `promisify(execFile)` returns, inside the pacer callback, before `.finally(end)`). Without
+  it, nothing changes on `main`: stdin stays open, which `git.test.ts`'s timeout cases rely on. #165
+  (CRTO-06, open) ends stdin on every call; when it merges, the two become one `end(opts.input)`.
+- **Reuses**: AD-023's runner; #147's `diagnostics().gitRequested` wrapper and the PERF-22 pacer stay
+  around the call.
 
 ### Ignore answers (`src/main/ignore-check.ts`)
 
@@ -391,7 +394,8 @@ interface WorktreeFiles {
 
 | Concern | Location (file:line) | Impact | Mitigation |
 | ------- | -------------------- | ------ | ---------- |
-| #147, #149 and #151 are planned on sibling branches stacked on #147 and touch `git.ts` and `index.ts` | `src/main/git.ts:15-35`, `src/main/index.ts:360-366` | Rebase conflicts | T1 rebases onto executed #147 first; the runner change is additive (`input`), and the probe line stays |
+| Open PRs #164 (#149) and #165 (#153) touch `index.ts`, and #165 touches `git()` | `src/main/git.ts:20-46`, `src/main/index.ts:426-435` | Rebase conflicts | The runner change is additive (`input`) and the wiring is one dep line; whichever merges first, the other rebases |
+| `check-ignore` waits in the spawn pacer's queue (PERF-22, 4 at once) | `src/main/spawn-pacer.ts` | During a tree refresh a batch's check can start late; the 5,000 ms timeout counts from the spawn | The batch is late, never wrong; the smoke's 2,000 ms bound and FDIF-30's 1,000 ms catch a slow path |
 | `git diff --numstat` no longer refreshes stat-dirty entries | `src/main/file-diff.ts:207` | Files rewritten with their own bytes are re-hashed on each refresh until another git command refreshes the index | Accepted (spec assumption); hashing is far cheaper than the recount and full re-read it replaces |
 | The first batch after a selection pays one `check-ignore` (about 50 ms) | `src/main/file-watcher.ts` (new step) | FXPL-21/22's 1 s bound loses about 50 ms on the first write of each folder | Measured by the smoke's FDIF-30 check, which must stay at or under 1,000 ms |
 | A path cached as kept when it was a deleted folder, then recreated | `src/main/ignore-check.ts` (new) | The recreated folder's own path passes once per rebuild | Recorded edge case; paths under it are still asked and dropped |
@@ -416,7 +420,8 @@ interface WorktreeFiles {
 | Disk revisions | Per path, Uncommitted mode only | FDIF-30 is an Uncommitted requirement; diff-to-origin compares two commits |
 | Gate scope | `files:changed` batches only | User actions must answer at once; batches are what pile up |
 
-> **AD-TBD (number chosen at Execute; main holds up to AD-051): the Files view's git reads never write
+> **AD-TBD (number chosen at Execute; at 2026-10-03 `main` holds up to AD-057, PR #164 holds AD-058 and
+> PR #165 AD-059, so AD-060 unless a sibling takes it first; re-check right before the push): the Files view's git reads never write
 > the index, and its watcher drops what git ignores.** Every git read the Files view runs to list, count,
 > diff or classify passes `READ_ONLY_FLAGS` (`--no-optional-locks -c diff.autoRefreshIndex=false`):
 > `--no-optional-locks` alone does not stop `git diff` from refreshing the index (measured with git

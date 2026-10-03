@@ -15,10 +15,27 @@ batch refreshes through a `RefreshGate` with one merged trailing run; an All cha
 only on a content key, a per-path disk revision or the git-state token.
 **Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01).
 
-**Branch**: `feature/files-watch-ignored`, stacked on `feature/perf-diagnostics` (plan commit `d4a3da9`).
-**Execute only after #147 has executed** (its bench, summary and baseline exist). T1 rebases this branch
-onto the executed `feature/perf-diagnostics` first. The future PR body carries `Closes #150` and
-"depends on" the #147 PR.
+**Branch**: `feature/files-watch-ignored`, rebased 2026-10-03 onto `origin/main` `fc19a3c`, which holds
+#147 (PR #162, merged): its bench, summary and baseline exist. The future PR body carries `Closes #150`
+and depends on no open PR.
+
+**Reconciled 2026-10-03 against `fc19a3c`** (no Files file changed on `main` since planning; line numbers
+for `file-diff.ts`, `file-tree.ts`, `file-watcher.ts`, `use-files.ts`, the components and
+`smoke-files-diff.mjs` still hold):
+
+- The diagnostics switch is `PLAYGROUND_DEBUG_PERF=1` (AD-057), not `PLAYGROUND_DIAGNOSTICS`.
+- `git()` starts every process through the spawn pacer (PERF-22, at most 4 at once). `input` is written
+  inside the pacer callback, on the `execFile` promise's child. A `check-ignore` can wait behind other
+  git work; its 5,000 ms timeout counts from the spawn, not from the request.
+- `diagnostics().gitSubcommand` skips `-c <value>` and leading flags, so a `READ_ONLY_FLAGS` read is
+  still counted as `cat-file`, `diff` and so on. `files:changed` emits are already counted at
+  `src/main/index.ts:433`.
+- The bench's `rowOf(line, label)` takes the label as its second argument; the Files columns come from
+  the options instead (T3 picks the exact shape). `--sessions 0` still seeds `bench-wt-1`.
+- Open sibling PRs: #164 (#149) changes `index.ts` and the git-state watcher; #165 (#153) changes
+  `git()` to end stdin on every call (CRTO-06) and moves `git.test.ts`'s timeout cases to a sleeping
+  alias. This branch stays on `main`; whichever merges first, the other rebases. T7 writes stdin only
+  when `input` is given, so after #165 the two lines fold into one `end(opts.input)`.
 
 **Stop rules**: T1 stops the feature if a build-folder write loop starts no git process today (FWIG-40).
 T2 stops it if the ignore mechanism fails its measurement rule. Either way, report to the owner before
@@ -124,13 +141,12 @@ baseline, and measure whether a build-folder write loop starts git today.
 
 **Steps**:
 
-1. `git rebase` onto the executed `feature/perf-diagnostics`; stop and report on any conflict outside
-   `.specs/`.
+1. Rebase: done before T1, onto `origin/main` `fc19a3c` with no conflict (see the header).
 2. `npm ci --ignore-scripts`, then `node node_modules/electron/install.js`.
 3. `npx vitest run` (test count, files, wall time) and `npm run lint` (warning count).
 4. Read #147's `## Baseline`: copy the N = 0 run's steady `git` count here as the floor.
 5. The stop-rule run, on the unchanged built app: a throwaway user data folder with
-   `PLAYGROUND_DIAGNOSTICS=1` and the three flags; a throwaway repository (500 tracked files, a committed
+   `PLAYGROUND_DEBUG_PERF=1` and the three flags; a throwaway repository (500 tracked files, a committed
    `.gitignore` naming `build-out/`, a `build-out/` of 50 files, 12 tracked files changed) registered as
    the only workspace; open the Files direction on it by hand in Uncommitted mode; from a terminal, a
    loop writing `build-out/obj-<k mod 50>.bin` every 100 ms for 3 minutes; read the last two full lines'
@@ -330,9 +346,10 @@ section and the icon checks.
 
 - [ ] Tests: `READ_ONLY_FLAGS` equals `['--no-optional-locks', '-c', 'diff.autoRefreshIndex=false']` by literal (L-009)
 - [ ] Tests: `git(tmpdir(), ['hash-object', '--stdin'], { input: 'abc' })` answers git's own hash of `abc` (observed from the child, L-020)
-- [ ] Tests: the existing timeout case (`hash-object --stdin` with no input, 200 ms) still times out, so stdin stays open without `input`
+- [ ] Tests: the existing timeout case (`hash-object --stdin` with no input, 200 ms) still times out, so stdin stays open without `input` (on `main`; if #165 merges first, its sleeping-alias cases replace this one and `input` folds into its `end()`)
+- [ ] Tests: an `input` call goes through the pacer and diagnostics: the existing `recordingGit` harness sees one start and one end for it
 - [ ] Tests: a `READ_ONLY_FLAGS`-prefixed `rev-parse --git-dir` in a temp repository answers as the plain one does
-- [ ] #147's diagnostics probe still wraps the call (read against #147's T6)
+- [ ] #147's diagnostics probe still wraps the call (`src/main/git.ts:30-33` at `fc19a3c`)
 - [ ] Gate check passes: `npx vitest run src/main/git.test.ts`, then the full gate (suite wall time compared with T1's, L-005)
 - [ ] Test count: T3 count + the new tests
 
