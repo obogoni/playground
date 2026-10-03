@@ -360,10 +360,10 @@ T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] The handler passes `undefined` for `onStep` when the request has no `requestId` (read in review; exercised by the T14 smoke)
-- [ ] `workflow-ctx.ts` is unchanged and still typechecks
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: T8 count (no new tests)
+- [x] The handler passes `undefined` for `onStep` when the request has no `requestId` (read in review: `requestId === undefined ? undefined : (step) => emitToWindow(…)`; exercised by the T14 smoke)
+- [x] `workflow-ctx.ts` is unchanged and still typechecks
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` (typecheck exit 0; lint 0 errors, 18 warnings; 122 files, 2661 passed)
+- [x] Test count: T8 count (no new tests)
 
 **Tests**: none
 **Gate**: full
