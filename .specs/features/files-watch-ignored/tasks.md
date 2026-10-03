@@ -307,12 +307,53 @@ and touch loops.
 
 **Done when** (each a named run on the built app, results written here):
 
-- [ ] Run A, `--sessions 0 --files-view --minutes 1 --keep`: the kept `bench-wt-1` holds the committed `.gitignore`, 50 files in `build-out/`, 12 changed tracked files; the config holds the Uncommitted mode; the app showed `.diff-section` elements (FWIG-32)
-- [ ] Run B, `--sessions 0 --files-view --build-interval 100 --minutes 1`: the summary's `files` block is printed; `build-out/` file times moved during the run (read with `--keep`) (FWIG-33)
-- [ ] Run C, `--edit-interval 1000` in place of the build loop: `src/f0000.ts` grew by about 60 lines in the kept copy (FWIG-34)
-- [ ] Run D, `--touch-interval 1000`: `src/f0100.ts` has its committed bytes and a newer mtime (FWIG-35)
-- [ ] Run E, `--files-view` with the Files segment renamed away by a throwaway mutant of the bench's selector: exit 1 naming the missing sections
-- [ ] Gate check passes: `npm run lint` and `npx electron-vite build`
+- [x] Run A, `--sessions 0 --files-view --minutes 1 --keep`: the kept `bench-wt-1` holds the committed `.gitignore`, 50 files in `build-out/`, 12 changed tracked files; the config holds the Uncommitted mode; the app showed `.diff-section` elements (FWIG-32)
+- [x] Run B, `--sessions 0 --files-view --build-interval 100 --minutes 1`: the summary's `files` block is printed; `build-out/` file times moved during the run (read with `--keep`) (FWIG-33)
+- [x] Run C, `--edit-interval 1000` in place of the build loop: `src/f0000.ts` grew by about 60 lines in the kept copy (FWIG-34)
+- [x] Run D, `--touch-interval 1000`: `src/f0100.ts` has its committed bytes and a newer mtime (FWIG-35)
+- [x] Run E, `--files-view` with the Files segment renamed away by a throwaway mutant of the bench's selector: exit 1 naming the missing sections
+- [x] Gate check passes: `npm run lint` and `npx electron-vite build`
+
+**Result (2026-10-03)**: built app at T3's commit plus this change (headers read `commit=77a5079-dirty`),
+CDP port 9334, every kept folder deleted after it was read.
+
+- Shape: four `OPTIONS` rows (`--files-view`, `--build-interval`, `--edit-interval`,
+  `--touch-interval`, each off by default). With `--files-view` the seed commits `.gitignore` =
+  `build-out/` with the source files, then in `bench-wt-1` writes `build-out/obj-00.bin` to
+  `obj-49.bin` and appends one line to `src/f0000.ts` to `src/f0011.ts`; the config's
+  `ui.files` holds `{ mode: 'uncommitted' }` under `bench-wt-1`'s path as the app keys it (git's
+  porcelain path with every `/` turned into `\`, as `parsePorcelainBlocks` does; the first try,
+  keyed with git's forward slashes, opened the folder mode and failed on its 15 s wait, which is
+  how the key was found). After the sessions open, `openFilesView` clicks Tree, the `bench/1` row,
+  Files and All changes, and waits up to 15 s for a `.diff-section`. The loops start after that,
+  stop with the index loop, and each prints `<name> loop: N writes, M skipped`. The summary reads
+  `bench-wt-1` through `phaseRows(..., { filesWorktree })` and passes the run shape to
+  `judgeTargets`.
+- Run A (exit 0): "Files view open on bench-wt-1, 12 sections"; the kept `bench-wt-1` has
+  `.gitignore` tracked and committed (`build-out/`), 50 files in `build-out/` (`check-ignore`
+  names them), 12 modified tracked files (`src/f0000.ts` to `src/f0011.ts`, uncommitted); the config
+  holds `ui.files[<bench-wt-1>] = { mode: 'uncommitted' }`. Files block steady 1: 0 / 0 / 0 / 0.
+- Run B (exit 0): the `files` block printed; steady 1 `files:changed` 183, git 1,651, `cat-file`
+  1,101, `wt:status` 0; "ignored writes start no git 1651 FAIL"; "build loop: 1085 writes, 0
+  skipped". All 50 `build-out/` files have mtimes 175 to 181 s after the seed's.
+- Run C (exit 0): `src/f0000.ts` has 139 lines: 20 committed, 1 seeded, **118** appended ("edit
+  loop: 118 writes"). The loop runs from the view's opening to the last line, which is the spawn
+  minute plus the steady minute, so about 120 at `--minutes 1`, not the 60 the step guessed.
+  Steady 1: `files:changed` 60, git 300, `cat-file` 120, `wt:status` 0; **"untouched sections
+  stay ... 2.00 PASS" on the build before the change** (see the note below).
+- Run D (exit 0): `src/f0100.ts` equals `HEAD:src/f0100.ts` byte for byte and is not listed by
+  `git status`; its mtime is 180 s after the seed's ("touch loop: 117 writes, 0 skipped"). Steady
+  1: `files:changed` 119, git 1,724, `cat-file` 1,070, `wt:status` 59; "the view's reads leave the
+  index alone 59 FAIL".
+- Run E (exit 1, a scratch copy-mutate-restore of the bench's `'Files'` segment click to
+  `'Filez'`): "bench-sessions: --files-view: no All changes sections (.diff-section) in the Files
+  view of bench-wt-1 after 15 s; file tabs []". Restored from `.orig`; no electron process and no
+  `pg-bench-` folder left.
+- Gate: `npm run lint` 0 errors, 18 warnings; `npx electron-vite build` passes.
+- **Note for T6 (the edit target)**: the stack re-reads only its *mounted* sections (expanded and
+  near the viewport, `mountPlan`), not every open one, so at the bench's window size a list re-read
+  costs fewer `cat-file` than the spec's "about 20" estimate. In Run C it was exactly 2 per
+  `files:changed`, which is the target's limit. T6 measures it at the default 3 minutes.
 
 **Tests**: manual
 **Gate**: manual

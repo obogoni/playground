@@ -261,10 +261,10 @@ section alone; on the build before the change its first check fails.
 | FWIG-29 | P1: sections — AC 29 | T16 | Pending |
 | FWIG-30 | P1: live — AC 30 | T19 | Pending |
 | FWIG-31 | P1: live — AC 31 | T19 | Pending |
-| FWIG-32 | P1: bench — AC 32 | T4 | Pending |
-| FWIG-33 | P1: bench — AC 33 | T4 | Pending |
-| FWIG-34 | P1: bench — AC 34 | T4 | Pending |
-| FWIG-35 | P1: bench — AC 35 | T4 | Pending |
+| FWIG-32 | P1: bench — AC 32 | T4 | Done (T4) |
+| FWIG-33 | P1: bench — AC 33 | T4 | Done (T4) |
+| FWIG-34 | P1: bench — AC 34 | T4 | Done (T4) |
+| FWIG-35 | P1: bench — AC 35 | T4 | Done (T4) |
 | FWIG-36 | P1: bench — AC 36 | T3 | Done (T3) |
 | FWIG-37 | P1: bench — AC 37 | T3, T20, T21 | In progress (T3) |
 | FWIG-38 | P1: bench — AC 38 | T3, T20, T21 | In progress (T3) |
