@@ -1,10 +1,14 @@
 # Git Recount Coalescing Verification
 
-## Validation: git-recount-coalesce - FAIL
+## Validation: git-recount-coalesce - PASS ✅
 
-One surviving unit mutant on in-scope behaviour (V6, RCNT-11: `forget` during a running recount). The
-production code is correct; the test that should pin it became vacuous when T12 moved the spacing to
-the run's end. Fix is test-only (Fix 1 below).
+Current verdict, from round 2 (fix diff `2322c2e..75448b8`, T14; see "Round 2" at the end): Fix 1
+closed round 1's only gap, V6 is now killed, F2 is closed by the clarified AC 12, and all four round-2
+mutants were killed. Round 1 is kept below as history.
+
+**Round 1 verdict (history)**: ❌ FAIL. One surviving unit mutant on in-scope behaviour (V6, RCNT-11:
+`forget` during a running recount). The production code is correct; the test that should pin it
+became vacuous when T12 moved the spacing to the run's end. Fix is test-only (Fix 1 below).
 
 **Date**: 2026-10-03
 **Spec**: `.specs/features/git-recount-coalesce/spec.md` (AC 4 / RCNT-37 as amended 2026-10-03)
@@ -234,3 +238,81 @@ quit; the watcher's reporting and drops; the listing's null-as-clean; the wiring
 **Issues found**: Fix 1 (settle the run at its resolve instant in three tests).
 
 **Next steps**: route Fix 1 to an implementer, then re-verify (round 2 of 3).
+
+---
+
+## Round 2 (fix diff 2322c2e..75448b8)
+
+**Verdict**: ✅ PASS (round 2 of 3)
+**Date**: 2026-10-03
+**Scope**: the fix diff only (owner rule for later rounds): `src/main/recount-scheduler.test.ts`
+(+23, -0), `.specs/features/git-recount-coalesce/spec.md` (AC 12, traceability rows),
+`.specs/features/git-recount-coalesce/tasks.md` (T14). No production file changed.
+**Verifier**: independent sub-agent (author ≠ verifier), not the author of T14
+
+### Gate Check (at `75448b8`)
+
+- **typecheck**: `npm run typecheck`, exit 0
+- **lint**: `npm run lint`, exit 0, 18 warnings, 0 errors (unchanged)
+- **scheduler**: `npx vitest run src/main/recount-scheduler.test.ts`, 1 file, **28 passed** (27 + 1 new)
+- **tests**: `npm test`, exit 0, **122 files, 2,610 tests passed**, 0 failed (2,609 + 1; 140.7 s)
+
+### Fix diff check
+
+| Item | Spec-defined outcome | `file:line` + assertion | Result |
+| ---- | -------------------- | ----------------------- | ------ |
+| RCNT-11 running half (Fix 1, V6) | forget during a run cancels the burst that arrived in it: no trailing run | `src/main/recount-scheduler.test.ts:412` settles the run at its resolve instant (500), so a wrong trailing run would be due at 1,500, inside the window; `:415` `startsOf(A)).toEqual([250])` | ✅ PASS |
+| RCNT-06 "no third run" | events during a run give exactly one more run, then nothing | `src/main/recount-scheduler.test.ts:243` settles the trailing run at 4,500 (a third run would be due at 5,500, inside the 8,000 window); `:245` `startsOf(A)).toEqual([0, 4000])`; `:247-250` two reports | ✅ PASS |
+| RCNT-06 "nothing after a run that saw no event" | a run with no event during it books nothing | `src/main/recount-scheduler.test.ts:345` settles at 500 (a wrong run would be due at 1,500); `:348` `startsOf(A)).toEqual([0])` | ✅ PASS |
+| RCNT-12 (clarified, F2) | quit answers open and later requests `null` and emits nothing; a request a running recount already took gets that recount's result | new test `src/main/recount-scheduler.test.ts:569` `startsOf(A)).toEqual([100])` (the run took the request), `:573` `taken.value).toBe('pending')` after `stop()`, `:577` `taken.value).toEqual({ dirty: true, changes: 7 })` when the run settles, `:579` `recounted).toEqual([])` (the run served an event, nothing emitted). Spec: `.specs/features/git-recount-coalesce/spec.md:110`. Code: `src/main/recount-scheduler.ts:107-118` (`stop()` answers only queued waiters), `:179-191` (taken waiters answered with the run's count; `onRecounted` guarded by `!this.stopped`). Round 1's null-answer checks unchanged (`:555` `waiting.value).toBeNull()`, `:559` `later.value).toBeNull()`, `:560` no run) | ✅ PASS |
+
+**Not weakened**: the test diff is additions only (23 lines added, 0 removed): three
+`await h.advanceTo(<resolve instant>)` settles (`:243`, `:345`, `:412`), one comment and the new test.
+Every assertion of the three rewritten tests is byte-identical to `2322c2e`, and its expected value is
+the one the spec's outcome gives (AC 6: exactly one trailing run; AC 11: none after forget).
+
+**spec.md / tasks.md**: AC 12's added sentence agrees with the code and with design.md's `stop()`
+(design.md:179-180, "resolves every waiter with `null`. A recount already running finishes, but emits
+nothing"), which implies but does not say outright that a taken request gets the running count; the AC
+now says it. Traceability rows RCNT-06, 11, 12 add T14. T14's record (V6 and S1 killed, 2,610 tests,
+18 warnings) matches what this round measured.
+
+### Discrimination Sensor (round 2)
+
+Four unit mutants (owner cap), in a temporary detached `git worktree` of `75448b8` in a scratch folder
+outside the repository with its own `npm ci --ignore-scripts`. A script asserted each anchor matched
+once, ran the scheduler test file, restored the file and checked the restore. Each mutant was also run
+against the round-1 test file (`2322c2e`) to show what the fix changed.
+
+| # | Where | Mutation | New tests (`75448b8`) | Round-1 tests (`2322c2e`) |
+| - | ----- | -------- | --------------------- | ------------------------- |
+| R2-a (V6) | `src/main/recount-scheduler.ts:95` | `forget` returns early on a running lane (`if (lane.running) return` after `if (!lane) return`), keeping the burst | ✅ Killed (1 fail): `:415` "expected [ 250, 1500 ] to deeply equal [ 250 ]" | survived (27/27) |
+| R2-b | `src/main/recount-scheduler.ts:177-178` | only a lane's first run clears the burst, so a trailing run keeps it and books a third run | ✅ Killed (1 fail): `:245` "expected [ 0, 4000, 5500 ] to deeply equal [ 0, 4000 ]" | survived (27/27) |
+| R2-c | `src/main/recount-scheduler.ts:190` | a run settling after `stop` answers its waiters `null` | ✅ Killed (1 fail): `:577` "expected null to deeply equal { dirty: true, changes: 7 }" | survived (27/27) |
+| R2-d | `src/main/recount-scheduler.ts:192` | a run that served events always books one more run, with no event during it | ✅ Killed (7 fail): `:115`, `:132`, `:164`, `:245`, `:348`, `:415`, `:506` | killed (4 fail; none of the three rewritten tests) |
+
+**Killed**: 4/4. R2-a, R2-b and R2-c each survive the round-1 tests and are killed by exactly the test
+T14 changed or added; R2-d adds the three settled tests to its killers. No smoke mutants (out of
+scope for this round).
+
+**Isolation**: real tree `git status --porcelain` empty before and after (equal); the scratch
+worktree was removed and pruned (`git worktree list` no longer shows it).
+
+### Follow-ups still open
+
+- **F1 (smoke, RCNT-26)**: still open, unchanged: no smoke check discriminates "a recount patch does not
+  reload the Commits list". Not a FAIL under the owner's rules.
+- **F2 (spec wording, RCNT-12)**: ✅ closed by `.specs/features/git-recount-coalesce/spec.md:110` and
+  pinned by the new test (`src/main/recount-scheduler.test.ts:577`, R2-c).
+- Round 1's code observations (a lane forgotten while running stays in the map; a re-added worktree
+  within a second is not spaced) stay observations, not gaps.
+
+### Requirement Traceability Update (round 2)
+
+| Requirement | Previous Status | New Status |
+| ----------- | --------------- | ---------- |
+| RCNT-11 | ❌ Needs Fix (test, Fix 1) | ✅ Verified |
+| RCNT-06, RCNT-12 | ✅ Verified | ✅ Verified (vacuous tails fixed; AC 12 clarified) |
+
+**Overall**: ✅ Ready. 24/24 in-scope ACs matched; gate 2,610 passed; sensor 4/4 this round (11/12
+across both rounds, the one survivor V6 now killed).

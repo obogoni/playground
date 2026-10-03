@@ -294,7 +294,20 @@ AD-052 (#154), so this feature no longer touches them.
 
 ## Success Criteria
 
-- [ ] The bench's `git status <= 1 per worktree per s` target reads FAIL at #147's baseline and PASS
-  after (T11), with `no overlapping git on one worktree` still PASS
-- [ ] The status bar smoke's #107 counter checks pass, and fail on a main mutant (T10)
-- [ ] The Files Commits smoke's FCMT-32 check passes with the list on `tree:get` results (T9)
+- [x] The bench's `git status <= 1 per worktree per s` target reads FAIL at #147's baseline and PASS
+  after, with `no overlapping git on one worktree` still PASS (T11 read 2, FAIL; after the T12 fix,
+  T13 reads 1, PASS)
+- [x] The status bar smoke's #107 counter checks pass, and fail on a main mutant (T10, T13)
+- [x] The Files Commits smoke's FCMT-32 check passes with the list on `tree:get` results (T9)
+
+## Follow-ups
+
+Recorded after verification (validation.md); none blocks the feature.
+
+- **F1 (RCNT-26):** no smoke check shows that a recount patch leaves the Files Commits list alone;
+  `smoke-files-commits.mjs` check 20 also passes when the list follows tree identity. The code was
+  read correct (`use-tree.ts` patches the tree without bumping `treeRevision`). A check would edit a
+  file in another worktree while the Commits list is open and count `git:commits` calls.
+- **Status bar reads beside a recount:** the bench selects no worktree, so `git:sync-state` and
+  `git:commits` reads of the selected worktree are not in the overlap figure (dropped RCNT-18, owner
+  2026-10-03). Revisit if a selected-worktree run ever shows overlap.
