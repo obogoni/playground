@@ -775,11 +775,17 @@ and evaluate the stop rule in writing.
 
 **Done when**:
 
-- [ ] Five summaries in `## Baseline`, each with its commit and options
-- [ ] The targets in force written, with the calibration reasoning
-- [ ] The stop-rule verdict written: "no target met at baseline, the fixes proceed" or "stopped, owner told: ..."
-- [ ] A note at the top of the section: the Verifier keeps this section and adds its report below it
-- [ ] Gate check passes: `npm run lint`
+- [x] Five summaries in `## Baseline`, each with its commit and options
+- [x] The targets in force written, with the calibration reasoning
+- [x] The stop-rule verdict written: "no target met at baseline, the fixes proceed" or "stopped, owner told: ..."
+- [x] A note at the top of the section: the Verifier keeps this section and adds its report below it
+- [x] Gate check passes: `npm run lint`
+
+**Result (2026-10-03, at `dc57bf0`)**: five runs, all exit 0, 305-311 s each, in `validation.md` `##
+Baseline`. N = 0 loop p99 17.3 ms, so the loop target stays 30 ms. **The stop rule fired**: #151's loop
+p99 at N = 6 (17.2 ms) and its spawn-row `loop max` (31.7 ms, under 50) and #149's overlap at the index
+run (`wt peak` 1) are already met; #149's status rate is not (4 per s); append 0.038 ms is the regression
+guard. The fix issues wait for the owner. `npm run lint`: exit 0, 18 warnings.
 
 **Tests**: manual
 **Gate**: manual

@@ -304,10 +304,10 @@ without asking.
 | PDIAG-37 | P1: bench — AC 37 | T14, T15 | Done (T14, T15) |
 | PDIAG-38 | P1: bench — AC 38 | T15 | Done (T15) |
 | PDIAG-39 | P1: bench — AC 39 | T15 | Done (T15) |
-| PDIAG-40 | P1: baseline — AC 40 | T17 | Pending |
+| PDIAG-40 | P1: baseline — AC 40 | T17 | Done (T17) |
 | PDIAG-41 | P1: baseline — AC 41 | T14, T16 | Done (T14, T16) |
-| PDIAG-42 | P1: baseline — AC 42 | T17 | Pending |
-| PDIAG-43 | P1: baseline — AC 43 | T17 | Pending |
+| PDIAG-42 | P1: baseline — AC 42 | T17 | Done (T17) |
+| PDIAG-43 | P1: baseline — AC 43 | T17 | Done (T17) |
 | PDIAG-44 | P2: docs — AC 44 | T12 | Done (T12) |
 | PDIAG-45 | Edge: a git process across a flush | T3 | Done (T3) |
 | PDIAG-46 | Edge: a session that exits mid-window | T4 | Done (T4) |
@@ -315,7 +315,7 @@ without asking.
 | PDIAG-48 | Edge: Ctrl+C | T15 | Done (T15) |
 | PDIAG-49 | Edge: the app does not exit | T15 | Done (T15) |
 | PDIAG-50 | Edge: lines never arrive | T15 | Done (T15) |
-| PDIAG-51 | Edge: `--sessions 0` | T14, T17 | In progress (T14) |
+| PDIAG-51 | Edge: `--sessions 0` | T14, T17 | Done (T14, T17) |
 
 **Coverage:** 51 total, 51 mapped to tasks, 0 unmapped.
 
