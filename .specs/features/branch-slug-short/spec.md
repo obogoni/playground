@@ -178,7 +178,7 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 - **BSLG-35** WHEN the ref path is exactly 259 characters THEN the check SHALL pass, and at exactly 260 SHALL refuse
 - **BSLG-36** WHEN the reflog folder is exactly 247 characters THEN the check SHALL pass, and at exactly 248 SHALL refuse
 - **BSLG-37** WHEN the branch exists locally and the create checks it out as it is (no base, or Reuse) THEN the ref path and reflog rules SHALL NOT refuse it
-- **BSLG-38** WHEN the user chooses Recreate for a name the ref path rule refuses THEN the create SHALL refuse with the AC 17 message and the existing branch SHALL still exist
+- **BSLG-38** WHEN the user chooses Recreate for a name the ref path rule or the reflog folder rule refuses THEN the create SHALL refuse with that rule's message (AC 17 or AC 18) and the existing branch SHALL still exist. Restated on 2026-10-03 after validation: a branch past the ref path rule is invisible to git with `core.longpaths` off, so only the reflog folder shape reaches Recreate's `branch -D`
 - **BSLG-39** IF the repository's `core.longpaths` holds a value git cannot read as a boolean THEN git refuses the commands the check and the create run, the check SHALL report no message, and the create SHALL return git's `fatal: bad boolean config value …` line
 - **BSLG-40** WHEN `core.longpaths` is `true` in the global config and `false` in the repository's own config THEN the check SHALL refuse a ref path of 260 or more (the repository's value wins)
 - **BSLG-41** IF the path check cannot read the repository (not a git repository, git missing) THEN it SHALL report no message and the create SHALL return git's own error
@@ -197,7 +197,7 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-03 | P1: slugs, AC 3 | Tasks | Done: T2 |
 | BSLG-04 | P1: slugs, AC 4 | Tasks | Done: T2 |
 | BSLG-05 | P1: slugs, AC 5 | Tasks | Done: T2 |
-| BSLG-06 | P1: slugs, AC 6 | Tasks | Done: T2 |
+| BSLG-06 | P1: slugs, AC 6 | Tasks | Done: T2, follow-up 2 |
 | BSLG-07 | P1: slugs, AC 7 | Tasks | Done: T2 |
 | BSLG-08 | P1: slugs, AC 8 | Tasks | Done: T2 (the proof); T18 (smoke 8) written, optional, not run: `SMOKE_LONG_TASK_URL` unset |
 | BSLG-09 | P1: slugs, AC 9 | Tasks | Done: T2 |
@@ -213,10 +213,10 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-19 | P1: check, AC 19 | Tasks | Done: T6, T17 (smoke 2) |
 | BSLG-20 | P1: check, AC 20 | Tasks | Done: T14, T15, T17 (smoke 1, 2); T18 (smoke 9) written, optional, not run: `SMOKE_LONG_TASK_URL` unset |
 | BSLG-21 | P1: check, AC 21 | Tasks | Done: T6, T8, T9, T17 (smoke 3) |
-| BSLG-22 | P1: check, AC 22 | Tasks | Done: T8 |
+| BSLG-22 | P1: check, AC 22 | Tasks | Done: T8, follow-up 3 |
 | BSLG-23 | P1: check, AC 23 | Tasks | Done: T10, T11, T12, T13, T17 (smoke 2) |
 | BSLG-24 | P1: check, AC 24 | Tasks | Done: T11, T14, T15, T17 (smoke 1); T18 (smoke 9) written, optional, not run: `SMOKE_LONG_TASK_URL` unset |
-| BSLG-25 | P1: check, AC 25 | Tasks | Done: T9, T17 (smoke 4) |
+| BSLG-25 | P1: check, AC 25 | Tasks | Done: T9, T17 (smoke 4), follow-up 1 |
 | BSLG-26 | P1: check, AC 26 | Tasks | Done: T9 |
 | BSLG-27 | P2: folder, AC 27 | Tasks | Done: T7, T17 (smoke 6) |
 | BSLG-28 | P2: folder, AC 28 | Tasks | Done: T7 |
@@ -229,7 +229,7 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-35 | Edge: ref path 259 / 260 | Tasks | Done: T6, T9 |
 | BSLG-36 | Edge: reflog folder 247 / 248 | Tasks | Done: T6 |
 | BSLG-37 | Edge: existing branch | Tasks | Done: T8, T9 |
-| BSLG-38 | Edge: Recreate | Tasks | Done: T9 |
+| BSLG-38 | Edge: Recreate | Tasks | Done: T9, follow-up 1 |
 | BSLG-39 | Edge: non-boolean value | Tasks | Done: T8, T9 |
 | BSLG-40 | Edge: repository value wins | Tasks | Done: T8 |
 | BSLG-41 | Edge: unreadable repository | Tasks | Done: T8 |
@@ -253,12 +253,12 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 
 Recorded by the Verifier on 2026-10-03 (validation.md: PASS; production code correct, gaps in tests and smoke only):
 
-1. BSLG-25 ("no branch delete") and BSLG-38: test a Recreate of a branch git can see (reflog folder 248, ref
+1. **Closed 2026-10-03** (owner asked for 1–3 before the PR). BSLG-25 ("no branch delete") and BSLG-38: test a Recreate of a branch git can see (reflog folder 248, ref
    path 251) through `createWorktree`, expecting the reflog message and an unchanged tip. Restate BSLG-38 at that
    shape: git cannot see a branch with a ref path of 260 or more under `core.longpaths=false`, so today's case
    never reaches Recreate's `branch -D`.
-2. BSLG-06: assert repeat collapse inside the filler-only fallback (`De de para` → `de-para`).
-3. BSLG-22: test the platform gate on `darwin` as well as `linux`.
+2. **Closed 2026-10-03.** BSLG-06: assert repeat collapse inside the filler-only fallback (`De de para` → `de-para`).
+3. **Closed 2026-10-03.** BSLG-22: test the platform gate on `darwin` as well as `linux`.
 4. BSLG-23 / BSLG-42: smoke a repository change from an accepted to a refusing repository, and a template change.
    Prove the hook's stale-answer guard with a hook-level test or a smoke race.
 5. BSLG-08/10/20/24: owner run of T18 checks 8–9 with `SMOKE_LONG_TASK_URL` set (optional by owner decision).

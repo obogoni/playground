@@ -205,6 +205,7 @@ describe('branchNameFor — concise slugs (BSLG-01..11, 31..33)', () => {
 
   it('falls back to all the words when only filler words remain, still capped (BSLG-06)', () => {
     expect(slug('De a para')).toBe('de-a-para')
+    expect(slug('De de para')).toBe('de-para')
     expect(slug('Para por para com para de dos das para em no na e ou um uma')).toBe(
       'para-por-para-com-para-de-dos-das-para'
     )

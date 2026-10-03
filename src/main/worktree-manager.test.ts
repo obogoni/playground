@@ -647,6 +647,8 @@ describe('createWorktree — existing branch (EXB)', () => {
 describe('createWorktree — path check (BSLG-25..39)', () => {
   const refMessage = (n: number): string =>
     `The branch's ref path is ${n} characters, over Windows' limit of 259. Shorten the name, or enable core.longpaths in the repository.`
+  const reflogMessage = (n: number): string =>
+    `The branch's reflog folder path is ${n} characters, over Windows' limit of 247 for a folder. Shorten the name, or enable core.longpaths in the repository.`
   const folderMessage = (n: number): string =>
     `The worktree folder path is ${n} characters, over the 215 git accepts. Shorten the name, or use a shorter worktree template such as {repo}-{id}.`
   /** The owner's template: the folder never grows with the branch. */
@@ -786,6 +788,34 @@ describe('createWorktree — path check (BSLG-25..39)', () => {
 
     expect(result).toEqual({ ok: true, path: join(root, 'reuse-wt') })
     expect(git(result.path!, 'rev-parse', '--abbrev-ref', 'HEAD').trim()).toBe(branch)
+    expectLongPaths('false')
+  })
+
+  it('refuses Recreate of an M2-shaped branch git can see before deleting it (BSLG-25, BSLG-38)', async () => {
+    // Reflog folder 248 and ref path 251: git resolves the branch with core.longpaths off, so the
+    // create reaches the Recreate fork, and only the check placed before it keeps `branch -D` away.
+    const dirs = 'user/' + 'r'.repeat(248 - `${commonDir}\\logs\\refs\\heads\\`.length - 5)
+    const branch = `${dirs}/ab`
+    expect(`${commonDir}\\logs\\refs\\heads\\${dirs.replaceAll('/', '\\')}`).toHaveLength(248)
+    expect(refPathOf(branch)).toBe(251)
+    git(repo, '-c', 'core.longpaths=true', 'branch', branch, 'main')
+    expect(resolves(branch)).toBe(true)
+    const tip = git(repo, 'rev-parse', `refs/heads/${branch}`).trim()
+
+    const result = await createWorktree(
+      repo,
+      branch,
+      'main',
+      'recreate-wt',
+      false,
+      'recreate',
+      win32
+    )
+
+    expect(result).toEqual({ ok: false, error: reflogMessage(248) })
+    expect(existsSync(join(root, 'recreate-wt'))).toBe(false)
+    expect(git(repo, 'rev-parse', `refs/heads/${branch}`).trim()).toBe(tip)
+    expect(worktreeCount()).toBe(1)
     expectLongPaths('false')
   })
 

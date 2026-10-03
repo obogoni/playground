@@ -264,3 +264,18 @@ SM-A, SM-D in smoke). All six are in test code or smoke, none in production.
 
 Every BSLG-01..44 is implemented and has evidence. The statuses in spec.md stay "Done". The follow-ups above are
 recorded in spec.md under `## Follow-ups`.
+
+## Follow-ups 1–3 closed (2026-10-03, before the PR)
+
+The owner asked for follow-ups 1–3 before the PR; the orchestrator added three tests and saw each kill its
+surviving mutant, run in the real tree through a script that restored the file in `finally`:
+
+| Follow-up | Test | Mutant | Result |
+| --------- | ---- | ------ | ------ |
+| 1 (BSLG-25, BSLG-38) | `src/main/worktree-manager.test.ts`, "refuses Recreate of an M2-shaped branch git can see before deleting it": `toEqual({ ok: false, error: reflogMessage(248) })`, tip unchanged, one worktree, no folder | W4 (`onExisting` not passed) | killed |
+| 2 (BSLG-06) | `src/shared/tasks.test.ts`, BSLG-06 case: `slug('De de para')` → `'de-para'` | S11 (no repeat collapse in the fallback) | killed |
+| 3 (BSLG-22) | `src/main/path-limits.test.ts`, "runs no git and reports nothing on macOS either": `null`, `calls` `toEqual([])` | C1 (gate keyed on `linux`) | killed |
+
+W3 (check moved below the existing-branch fork) fails the same Recreate test: the create would delete the branch
+before the check, so the tip assertion fails, as the Verifier's probe showed. BSLG-38 is restated in spec.md
+at the reflog folder shape. Follow-ups 4–6 stay open.

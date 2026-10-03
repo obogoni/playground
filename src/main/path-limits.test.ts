@@ -312,6 +312,24 @@ describe('checkCreatePaths (real repositories)', () => {
     expect(calls).toEqual([])
   })
 
+  it('runs no git and reports nothing on macOS either (BSLG-22)', async () => {
+    const calls: string[][] = []
+    const recording: GitRunner = async (_cwd, args) => {
+      calls.push(args)
+      return { stdout: '' }
+    }
+    const branch = branchWithRefPath('darwin', 270)
+    const problem = await checkCreatePaths(
+      { repoPath: repo, worktreeTemplate: SHORT_TEMPLATE, branch },
+      {
+        platform: 'darwin',
+        git: recording
+      }
+    )
+    expect(problem).toBeNull()
+    expect(calls).toEqual([])
+  })
+
   it('refuses a new branch whose ref path is 270 with that length (BSLG-17)', async () => {
     const branch = branchWithRefPath('new', 270)
     expect(refPathOf(branch)).toBe(270)
