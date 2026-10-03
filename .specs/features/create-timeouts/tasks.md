@@ -468,9 +468,9 @@ T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] Backdrop while the hook advisory shows still continues the flow (WPC-14), read in review
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npx electron-vite build`
-- [ ] Test count: T12 count (no new tests)
+- [x] Backdrop while the hook advisory shows still continues the flow (WPC-14), read in review: the same `busy ? undefined : hookFailure ? … : onClose` guard as T12, and `setHookFailure` runs beside `setBusy(false)`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npx electron-vite build` (typecheck exit 0; lint 0 errors, 18 warnings; build exit 0; `npm test` 123 files, 2669 passed)
+- [x] Test count: T12 count (no new tests)
 
 **Tests**: none
 **Gate**: build
