@@ -521,14 +521,28 @@ each, all exit 0; written to `validation.md`, `## Measurements`, "Before (T6, 20
 
 **Done when**:
 
-- [ ] Tests: `READ_ONLY_FLAGS` equals `['--no-optional-locks', '-c', 'diff.autoRefreshIndex=false']` by literal (L-009)
-- [ ] Tests: `git(tmpdir(), ['hash-object', '--stdin'], { input: 'abc' })` answers git's own hash of `abc` (observed from the child, L-020)
-- [ ] Tests: the existing timeout case (`hash-object --stdin` with no input, 200 ms) still times out, so stdin stays open without `input` (on `main`; if #165 merges first, its sleeping-alias cases replace this one and `input` folds into its `end()`)
-- [ ] Tests: an `input` call goes through the pacer and diagnostics: the existing `recordingGit` harness sees one start and one end for it
-- [ ] Tests: a `READ_ONLY_FLAGS`-prefixed `rev-parse --git-dir` in a temp repository answers as the plain one does
-- [ ] #147's diagnostics probe still wraps the call (`src/main/git.ts:30-33` at `fc19a3c`)
-- [ ] Gate check passes: `npx vitest run src/main/git.test.ts`, then the full gate (suite wall time compared with T1's, L-005)
-- [ ] Test count: T3 count + the new tests
+- [x] Tests: `READ_ONLY_FLAGS` equals `['--no-optional-locks', '-c', 'diff.autoRefreshIndex=false']` by literal (L-009)
+- [x] Tests: `git(tmpdir(), ['hash-object', '--stdin'], { input: 'abc' })` answers git's own hash of `abc` (observed from the child, L-020)
+- [x] Tests: the existing timeout case (`hash-object --stdin` with no input, 200 ms) still times out, so stdin stays open without `input` (on `main`; if #165 merges first, its sleeping-alias cases replace this one and `input` folds into its `end()`)
+- [x] Tests: an `input` call goes through the pacer and diagnostics: the existing `recordingGit` harness sees one start and one end for it
+- [x] Tests: a `READ_ONLY_FLAGS`-prefixed `rev-parse --git-dir` in a temp repository answers as the plain one does
+- [x] #147's diagnostics probe still wraps the call (`src/main/git.ts:30-33` at `fc19a3c`)
+- [x] Gate check passes: `npx vitest run src/main/git.test.ts`, then the full gate (suite wall time compared with T1's, L-005)
+- [x] Test count: T3 count + the new tests
+
+**Result (2026-10-03)**: `src/main/git.test.ts` 23 tests (19 + 4 new), all passing; full gate 2,792
+tests in 127 files (2,788 + 4), typecheck clean, lint 0 errors and 18 warnings (unchanged), 100 s
+wall (T3: about 104 s; no drift, L-005).
+
+- Shape: `git()` takes `input` and, inside the pacer callback, calls `started.child.stdin?.end(input)`
+  on the `execFile` promise only when `input` is given (`src/main/git.ts:48`); `.finally(end)` and
+  `diagnostics().gitRequested` (`:32`) wrap the call as before. `READ_ONLY_FLAGS` is exported beside it.
+- Red first: the three `input` tests timed out at 30 s and the constant test failed on the missing
+  export before the change.
+- The expected hash `f2ba8f84...` is `printf abc | git hash-object --stdin` on this machine: the child
+  read exactly `abc` and saw stdin close (L-020).
+- The no-input timeout cases (`git.test.ts:91`, `:198`) still time out at 200 ms: stdin stays open
+  without `input`.
 
 **Tests**: unit
 **Gate**: quick

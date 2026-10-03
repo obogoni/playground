@@ -15,12 +15,14 @@ const MAX_STDOUT_BYTES = 64 * 1024 * 1024
  * The single way this app runs git (AD-023, STBR-27): `execFile`, so no shell
  * ever parses the arguments, a hidden window, and `GIT_TERMINAL_PROMPT=0`.
  * `timeoutMs` maps to `execFile`'s `timeout`: the process is killed once it
- * elapses, and the rejection satisfies `isTimeout` (STBR-24).
+ * elapses, and the rejection satisfies `isTimeout` (STBR-24). `input` is
+ * written to the child's stdin, which is then closed; without it stdin stays
+ * open as before.
  */
 export function git(
   cwd: string,
   args: string[],
-  opts: { timeoutMs?: number } = {}
+  opts: { timeoutMs?: number; input?: string } = {}
 ): Promise<{ stdout: string }> {
   // GIT_TERMINAL_PROMPT=0: a fetch with no cached credentials fails fast instead
   // of hanging the main process on an un-answerable prompt (WBR-02 → blocks).
@@ -30,7 +32,7 @@ export function git(
   const start = diagnostics().gitRequested(cwd, args)
   return pace(() => {
     const end = start()
-    return run('git', args, {
+    const started = run('git', args, {
       cwd,
       windowsHide: true,
       env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
@@ -42,9 +44,21 @@ export function git(
       // caller is meant to rely on; the callers that need a real cap measure it
       // themselves, as file-diff does before reading a blob.
       maxBuffer: MAX_STDOUT_BYTES
-    }).finally(end)
+    })
+    if (opts.input !== undefined) started.child.stdin?.end(opts.input)
+    return started.finally(end)
   })
 }
+
+/**
+ * Prefix for every read that must not write the index (FWIG-15). `--no-optional-locks` stops
+ * `status`'s refresh; `diff.autoRefreshIndex=false` stops `diff`'s, which the first does not.
+ */
+export const READ_ONLY_FLAGS: readonly string[] = [
+  '--no-optional-locks',
+  '-c',
+  'diff.autoRefreshIndex=false'
+]
 
 /**
  * How a module runs git when a test needs to stand in for it. Injectable so a
