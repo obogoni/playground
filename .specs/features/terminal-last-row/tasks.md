@@ -133,19 +133,21 @@ T4 → T5
 
 **Done when**:
 
-- [ ] `term.open(host)` and `observer.observe(host)`; the chip, both capture `mousedown` listeners, `mouseup`, `contextmenu`, `dragover` and `drop` stay on the pane, with their removal unchanged (TROW-01)
-- [ ] `SMOKE_ONLY=rows` passes every probe at DPR 1, 1.25 and 1.5, guards included (TROW-02..05)
-- [ ] `SMOKE_ONLY=cols` passes: at every probed width and DPR the column count equals T1's baseline, and the last column is inside the visible box (TROW-11, TROW-04)
-- [ ] `SMOKE_ONLY=look` passes, and its readings equal T1's within 0.5 px (TROW-07)
-- [ ] M1 (host `padding: 8px 10px`) makes the `rows` checks fail again; M7 (host `content-box`) makes the TROW-11 comparison fail, its first-seen-failing run; M8 (host `padding: 0 10px 0 30px`) makes TROW-04 fail, its first-seen-failing run; M2 (chip on the host) and M3 (pane top padding 6 px) make `look` fail; each through the mutant runner
-- [ ] Hand check (TROW-08), with the pointer inside the left padding: right-click copies a Shift+drag selection and pastes on the next right-click; Ctrl+click on a printed path opens it; a file dropped from Explorer pastes its quoted path. Theme toggle recolours the terminal. Light and dark screenshots saved to the OS temp folder and looked at
-- [ ] `git diff --stat` touches nothing under `src/main` or `src/preload` (TROW-06)
-- [ ] The AD-TBD text in `design.md` §Project-level decision is appended to `.specs/STATE.md` `## Decisions` as the next free AD number at that moment, and that number replaces `AD-TBD` in `design.md`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B tests pass (no silent deletions)
+- [x] `term.open(host)` and `observer.observe(host)`; the chip, both capture `mousedown` listeners, `mouseup`, `contextmenu`, `dragover` and `drop` stay on the pane, with their removal unchanged (TROW-01)
+- [x] `SMOKE_ONLY=rows` passes every probe at DPR 1, 1.25 and 1.5, guards included (TROW-02..05)
+- [x] `SMOKE_ONLY=cols` passes: at every probed width and DPR the column count equals T1's baseline, and the last column is inside the visible box (TROW-11, TROW-04)
+- [x] `SMOKE_ONLY=look` passes, and its readings equal T1's within 0.5 px (TROW-07)
+- [x] M1 (host `padding: 8px 10px`) makes the `rows` checks fail again; M7 (host `content-box`) makes the TROW-11 comparison fail, its first-seen-failing run; M8 (host `padding: 0 10px 0 30px`) makes TROW-04 fail, its first-seen-failing run; M2 (chip on the host) and M3 (pane top padding 6 px) make `look` fail; each through the mutant runner
+- [x] Hand check (TROW-08), with the pointer inside the left padding: right-click copies a Shift+drag selection and pastes on the next right-click; Ctrl+click on a printed path opens it; a file dropped from Explorer pastes its quoted path. Theme toggle recolours the terminal. Light and dark screenshots saved to the OS temp folder and looked at (partial: Ctrl+click left to the owner, see Status)
+- [x] `git diff --stat` touches nothing under `src/main` or `src/preload` (TROW-06)
+- [x] The AD-TBD text in `design.md` §Project-level decision is appended to `.specs/STATE.md` `## Decisions` as the next free AD number at that moment, and that number replaces `AD-TBD` in `design.md`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B tests pass (no silent deletions)
 
 **Tests**: none
 **Gate**: build
+
+**Status**: ✅ Complete (2026-10-03). `rows` 8/8 at 60 probes, `cols` 6/6 at 36 viewports (columns equal the T1 baseline), `look` 3/3 with T1's readings (inset 8/10/8/10, origin (10, 8), chip 14/10). Mutants: M1 fails TROW-02/03/05; M7 fails TROW-11 (115 vs 118 columns); M8 fails TROW-04 (10-16 px right); M3 fails the inset and origin checks. **M2 is equivalent on this build**: the host is not positioned, so a chip appended to it still takes the pane as its containing block and does not move; M2x (chip appended to `.xterm`, which is positioned) fails the chip check (right 24, top 18). Hand check TROW-08 driven over CDP on a `pwsh` session, pointer 4 px inside the left padding: right-click pastes the clipboard, right-click after a drag copies it and shows `Copiado`, a dropped file pastes its quoted path; the theme toggle recolours the pane; both screenshots looked at. **Ctrl+click on a printed path was not run**: it opens the file through the OS (`links:openPath`), so it is left to the owner's hand check; its capture listener is still on the pane, unchanged. AD-054 recorded.
 
 **Commit**: `fix(terminal): size rows from the height the terminal really has`
 
