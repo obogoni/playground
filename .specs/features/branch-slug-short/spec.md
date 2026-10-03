@@ -205,23 +205,23 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-11 | P1: slugs, AC 11 | Tasks | Done: T2 |
 | BSLG-12 | P1: error, AC 12 | Tasks | Done: T3; recorded in AD-055 (T16) |
 | BSLG-13 | P1: error, AC 13 | Tasks | Done: T3 |
-| BSLG-14 | P1: error, AC 14 | Tasks | T5 done; T17 (smoke 5) pending |
+| BSLG-14 | P1: error, AC 14 | Tasks | Done: T5, T17 (smoke 5) |
 | BSLG-15 | P1: error, AC 15 | Tasks | Done: T3, T4 |
 | BSLG-16 | P1: error, AC 16 | Tasks | Done: T5 |
-| BSLG-17 | P1: check, AC 17 | Tasks | T6, T8 done; recorded in AD-055 (T16); T17 (smoke 1) pending |
+| BSLG-17 | P1: check, AC 17 | Tasks | Done: T6, T8, T17 (smoke 1); recorded in AD-055 (T16) |
 | BSLG-18 | P1: check, AC 18 | Tasks | Done: T6 |
-| BSLG-19 | P1: check, AC 19 | Tasks | T6 done; T17 (smoke 2) pending |
-| BSLG-20 | P1: check, AC 20 | Tasks | T14, T15 done; T17 (smoke 1, 2), T18 (smoke 9) pending |
-| BSLG-21 | P1: check, AC 21 | Tasks | T6, T8, T9 done; T17 (smoke 3) pending |
+| BSLG-19 | P1: check, AC 19 | Tasks | Done: T6, T17 (smoke 2) |
+| BSLG-20 | P1: check, AC 20 | Tasks | T14, T15, T17 (smoke 1, 2) done; T18 (smoke 9) pending |
+| BSLG-21 | P1: check, AC 21 | Tasks | Done: T6, T8, T9, T17 (smoke 3) |
 | BSLG-22 | P1: check, AC 22 | Tasks | Done: T8 |
-| BSLG-23 | P1: check, AC 23 | Tasks | T10, T11, T12, T13 done; T17 (smoke 2) pending |
-| BSLG-24 | P1: check, AC 24 | Tasks | T11, T14, T15 done; T17 (smoke 1), T18 (smoke 9) pending |
-| BSLG-25 | P1: check, AC 25 | Tasks | T9 done; T17 (smoke 4) pending |
+| BSLG-23 | P1: check, AC 23 | Tasks | Done: T10, T11, T12, T13, T17 (smoke 2) |
+| BSLG-24 | P1: check, AC 24 | Tasks | T11, T14, T15, T17 (smoke 1) done; T18 (smoke 9) pending |
+| BSLG-25 | P1: check, AC 25 | Tasks | Done: T9, T17 (smoke 4) |
 | BSLG-26 | P1: check, AC 26 | Tasks | Done: T9 |
-| BSLG-27 | P2: folder, AC 27 | Tasks | T7 done; T17 (smoke 6) pending |
+| BSLG-27 | P2: folder, AC 27 | Tasks | Done: T7, T17 (smoke 6) |
 | BSLG-28 | P2: folder, AC 28 | Tasks | Done: T7 |
 | BSLG-29 | P2: folder, AC 29 | Tasks | Done: T7 |
-| BSLG-30 | P2: folder, AC 30 | Tasks | T9 done; T17 (smoke 7) pending |
+| BSLG-30 | P2: folder, AC 30 | Tasks | Done: T9, T17 (smoke 7) |
 | BSLG-31 | Edge: empty title | Tasks | Done: T2 |
 | BSLG-32 | Edge: 40-character word | Tasks | Done: T2 |
 | BSLG-33 | Edge: non-adjacent repeat | Tasks | Done: T2 |

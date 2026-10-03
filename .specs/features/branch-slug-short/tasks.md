@@ -614,10 +614,12 @@ titles as written.
 
 **Done when**:
 
-- [ ] Each check seen failing on its mutant, then passing: `canCreate` ignoring the problem (1, 2); `pathLimitProblem` returning null, relaunched (1); the ref limit compared with `>=` 259, relaunched (2); the `core.longpaths` read ignored, relaunched (3); `createWorktree` without the check, relaunched (4); `gitFailureLine` back to the first line, relaunched (5); rule 3 removed, relaunched (6, 7)
-- [ ] `SMOKE_ONLY=longpath` passes twice in a row on a fresh seed and launch; `--clean` leaves no seed folder
-- [ ] The legacy STWK checks still run when `SMOKE_TASK_URL` is set, reading `SMOKE_CONFIG`
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Each check seen failing on its mutant, then passing: `canCreate` ignoring the problem (1, 2); `pathLimitProblem` returning null, relaunched (1); the ref limit compared with `>=` 259, relaunched (2); the `core.longpaths` read ignored, relaunched (3); `createWorktree` without the check, relaunched (4); `gitFailureLine` back to the first line, relaunched (5); rule 3 removed, relaunched (6, 7)
+- [x] `SMOKE_ONLY=longpath` passes twice in a row on a fresh seed and launch; `--clean` leaves no seed folder
+- [x] The legacy STWK checks still run when `SMOKE_TASK_URL` is set, reading `SMOKE_CONFIG`
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Done** (T17): `SMOKE_ONLY=longpath` 7/7 twice, each on a fresh seed under a short base folder and a fresh dev-app launch (throwaway `--user-data-dir`, CDP port 9333, the three anti-throttling flags); `--clean` removed the base folder both times. Every mutant ran on a fresh seed and a relaunched app, applied by a script that kept an `.orig`, asserted the anchor once and restored it in `finally`; `git status --porcelain` showed only the smoke script afterwards. Checks failed per mutant: `canCreate` 1, 2 and 6 (6 drives the same dialog gate); `pathLimitProblem` null 1, 2, 3, 4, 6, 7 (3 through its precondition that api refuses the name first); `>=` 259 only 2; `core.longpaths` ignored only 3; no check in `createWorktree` 4 and 7 (7 is a direct create too); first stderr line only 5; rule 3 removed 6 and 7. Check 5 creates `user/77-x`, not `user/x`: under `{repo}-{id}` a branch with no id renders the folder `api`, the repository itself, and the create stops at `Target path already exists` before git runs. The legacy STWK checks moved unchanged into `legacySection`; they read `SMOKE_CONFIG` (default `%APPDATA%\playground\config.json`) and run with `SMOKE_ONLY=stwk`, or with no `SMOKE_ONLY` when the seed is absent, as before. `SMOKE_TASK_URL` is not set in this session, so they were not run live. Lint 0 errors, 18 warnings (baseline).
 
 **Tests**: manual
 **Gate**: manual
