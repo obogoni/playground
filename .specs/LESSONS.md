@@ -660,6 +660,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: PDIAG-36/PDIAG-37 vs design.md:225-237 (specs)
 - last seen: 2026-10-03T14:19:26Z
 
+### L-114 - When an AC names a dialog control, list every state that renders its own copy of that control (footer, sub-panels) so the AC has one meaning
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer-dialogs` · harmful: 0
+- features: create-timeouts
+- evidence: CRTO-20 / BranchExistsChoice.tsx:40 (validation.md G1) (renderer-dialogs)
+- last seen: 2026-10-03T17:43:45Z
+
+### L-115 - Derive a formatter's unit boundary from the spec's literal texts and pin each literal with the real constant, not from the design's general rule
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `main` · harmful: 0
+- features: create-timeouts
+- evidence: SPEC_DEVIATION limitText, worktree-manager.ts (validation.md Deviations) (main)
+- last seen: 2026-10-03T17:43:45Z
+
+### L-116 - To pin a backoff reset, assert what the reset changes later (the next miss waits the base interval again), not a call triggered at or after the due instant, which passes with or without the reset.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `tests/backoff` · harmful: 0
+- features: main-async-git
+- evidence: src/main/session-name-poller.test.ts:536 (M1, MAGIT-19) (tests/backoff)
+- last seen: 2026-10-03T18:13:46Z
+
 ### L-117 - When a rule matches a file name at any depth, test the root-level name as well as a nested one; a match on '/name' alone misses the root and still passes a nested-only test.
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `main-watcher` · harmful: 0
 - features: files-watch-ignored

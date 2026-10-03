@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AgentChild, AgentSpawn } from './agent-step-runner'
 import { installDiagnostics, NOOP_DIAGNOSTICS } from './diagnostics'
 import {
+  NAME_BACKOFF_BASE_MS,
+  NAME_BACKOFF_FACTOR,
+  NAME_BACKOFF_MAX_MS,
   NAME_DEBOUNCE_MS,
   NAME_INTERVAL_MS,
   NAME_TIMEOUT_MS,
@@ -464,5 +467,348 @@ describe('SessionNamePoller — reports each listing to diagnostics (PDIAG-27)',
     expect(t.logs[0]).toContain('spawn EACCES')
     expect(starts).toBe(0)
     expect(ends).toBe(0)
+  })
+})
+
+/** Closes a child with a successful listing that names no session. */
+function answerEmpty(child: ChildController): void {
+  child.stdout('[]')
+  child.close(0)
+}
+
+/**
+ * Watches `s1` (`sid-1`) and lets `misses` listings answer `[]`, each started
+ * the instant `s1` is due again (a nudge one debounce before). Returns the
+ * clock at the end of the last listing.
+ */
+function unnamedWithMisses(
+  misses: number,
+  dueAfter: (k: number) => number
+): ReturnType<typeof makePoller> & { lastEnd: number } {
+  const t = makePoller()
+  t.poller.watch('s1', 'sid-1')
+  vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+  answerEmpty(t.children[0])
+  let lastEnd = Date.now()
+  for (let k = 1; k < misses; k++) {
+    vi.advanceTimersByTime(dueAfter(k) - NAME_DEBOUNCE_MS)
+    t.poller.nudge('s1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+    answerEmpty(t.children[k])
+    lastEnd = Date.now()
+  }
+  expect(t.calls).toHaveLength(misses)
+  return Object.assign(t, { lastEnd })
+}
+
+/** The wait after the k-th miss, as MAGIT-18 states it: 5 s, doubling, capped at 300 s. */
+const SPEC_BACKOFF_MS = [5000, 10000, 20000, 40000, 80000, 160000, 300000, 300000]
+const specDue = (k: number): number => SPEC_BACKOFF_MS[k - 1]
+
+/** Nudges `s1` so that the debounce elapses exactly `at` ms after `from`. */
+function nudgeElapsingAt(t: ReturnType<typeof makePoller>, from: number, at: number): void {
+  vi.advanceTimersByTime(from + at - NAME_DEBOUNCE_MS - Date.now())
+  t.poller.nudge('s1')
+  vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+}
+
+describe('SessionNamePoller — backs off for a session the listing does not name (MAGIT)', () => {
+  it('fixes the backoff the spec names: 5 s base, factor 2, 300 s ceiling (MAGIT-17)', () => {
+    // Literal on purpose (L-009, L-019).
+    expect(NAME_BACKOFF_BASE_MS).toBe(5000)
+    expect(NAME_BACKOFF_FACTOR).toBe(2)
+    expect(NAME_BACKOFF_MAX_MS).toBe(300000)
+  })
+
+  it.each([1, 2, 3, 4, 5, 6, 7, 8])(
+    'after miss %i, a debounced nudge 1 ms before the due time starts no call, and one at the due time does (MAGIT-18, MAGIT-22, MAGIT-23, MAGIT-43)',
+    (k) => {
+      const early = unnamedWithMisses(k, specDue)
+      nudgeElapsingAt(early, early.lastEnd, specDue(k) - 1)
+      expect(early.calls).toHaveLength(k)
+
+      const onTime = unnamedWithMisses(k, specDue)
+      nudgeElapsingAt(onTime, onTime.lastEnd, specDue(k))
+      expect(onTime.calls).toHaveLength(k + 1)
+    }
+  )
+
+  it('resets the misses when a listing names the session (MAGIT-19)', () => {
+    const t = unnamedWithMisses(3, specDue)
+    nudgeElapsingAt(t, t.lastEnd, specDue(3))
+    t.children[3].stdout(LISTING)
+    t.children[3].close(0)
+
+    t.poller.nudge('s1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+
+    expect(t.calls).toHaveLength(5)
+  })
+
+  type Failure = 'exit 1' | 'timeout' | 'not a JSON array' | 'resolver throws' | 'spawn throws'
+
+  /** A poller whose next call can be made to fail each way SNAME-12 lists. */
+  function failingPoller(): ReturnType<typeof makePoller> & {
+    attempts: () => number
+    failNext: (failure: Failure) => void
+    complete: (child: ChildController) => void
+  } {
+    const fake = makeFakeSpawn()
+    let pending: Failure | null = null
+    let attempts = 0
+    const t = makePoller({
+      resolveBin: () => {
+        if (pending === 'resolver throws') {
+          pending = null
+          attempts++
+          throw new Error('agent binary not found')
+        }
+        return 'C:\\bin\\claude.exe'
+      },
+      spawn: (bin, argv, opts) => {
+        attempts++
+        if (pending === 'spawn throws') {
+          pending = null
+          throw new Error('spawn EACCES')
+        }
+        return fake.spawn(bin, argv, opts)
+      }
+    })
+    const complete = (child: ChildController): void => {
+      const failure = pending
+      pending = null
+      if (failure === 'exit 1') child.close(1)
+      if (failure === 'timeout') {
+        vi.advanceTimersByTime(NAME_TIMEOUT_MS)
+        child.close(null)
+      }
+      if (failure === 'not a JSON array') {
+        child.stdout('Usage: claude agents')
+        child.close(0)
+      }
+    }
+    return Object.assign(t, {
+      children: fake.children,
+      attempts: () => attempts,
+      failNext: (failure: Failure) => (pending = failure),
+      complete
+    })
+  }
+
+  const FAILURES: Failure[] = [
+    'exit 1',
+    'timeout',
+    'not a JSON array',
+    'resolver throws',
+    'spawn throws'
+  ]
+
+  it.each(FAILURES)(
+    'counts a failed listing (%s) as a miss for an unnamed session (MAGIT-20)',
+    (failure) => {
+      const t = failingPoller()
+      t.failNext(failure)
+      t.poller.watch('s1', 'sid-1')
+      vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+      if (t.children.length > 0) t.complete(t.children[0])
+      expect(t.attempts()).toBe(1)
+
+      t.poller.nudge('s1') // its debounce elapses 1 s after the failure, before 5 s
+      vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+
+      expect(t.attempts()).toBe(1)
+    }
+  )
+
+  it.each(FAILURES)(
+    'leaves a named session callable after a failed listing (%s) (MAGIT-20)',
+    (failure) => {
+      const t = failingPoller()
+      t.poller.watch('s1', 'sid-1')
+      vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+      t.children[0].stdout(LISTING)
+      t.children[0].close(0)
+      if (failure === 'resolver throws') {
+        // The resolved binary is cached after a success; only a failed spawn
+        // clears it, so the resolver runs (and can throw) again.
+        t.failNext('spawn throws')
+        t.poller.nudge('s1')
+        vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+      }
+      const before = t.attempts()
+
+      t.failNext(failure)
+      t.poller.nudge('s1')
+      vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+      t.complete(t.children[t.children.length - 1])
+      expect(t.attempts()).toBe(before + 1)
+
+      t.poller.nudge('s1')
+      vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+
+      expect(t.attempts()).toBe(before + 2)
+    }
+  )
+
+  it('resets the misses when watch brings a new Claude id (MAGIT-21, MAGIT-45)', () => {
+    const t = unnamedWithMisses(3, specDue)
+
+    t.poller.watch('s1', 'sid-1-cleared')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS - 1)
+    expect(t.calls).toHaveLength(3)
+    vi.advanceTimersByTime(1)
+
+    expect(t.calls).toHaveLength(4)
+  })
+
+  it('keeps the misses when watch repeats the same Claude id (MAGIT-21)', () => {
+    const t = unnamedWithMisses(3, specDue)
+
+    t.poller.watch('s1', 'sid-1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+
+    expect(t.calls).toHaveLength(3)
+  })
+
+  it.each([
+    [4999, 2],
+    [5000, 3]
+  ])(
+    'a named session missing from a successful listing is due 5 s after it: a debounce elapsing at %i ms gives %i calls (MAGIT-44)',
+    (at, calls) => {
+      const t = watchedAndListed()
+      t.poller.nudge('s1')
+      vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+      answerEmpty(t.children[1])
+      const end = Date.now()
+
+      nudgeElapsingAt(t, end, at)
+
+      expect(t.calls).toHaveLength(calls)
+    }
+  )
+
+  it('drops the misses on unwatch, so a later watch starts from zero (MAGIT-27)', () => {
+    const t = unnamedWithMisses(3, specDue)
+
+    t.poller.unwatch('s1')
+    t.poller.watch('s1', 'sid-1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+
+    expect(t.calls).toHaveLength(4)
+  })
+})
+
+describe('SessionNamePoller — the tick and the rerun follow the backoff (MAGIT)', () => {
+  it('skips a tick while the only session backs off, and lists on the first tick after it is due (MAGIT-24)', () => {
+    const t0 = Date.now()
+    const t = unnamedWithMisses(3, specDue) // listings at 1 s, 6 s, 16 s; due at 36 s
+
+    vi.advanceTimersByTime(t0 + 30000 - Date.now())
+    expect(t.calls).toHaveLength(3)
+    vi.advanceTimersByTime(29999)
+    expect(t.calls).toHaveLength(3)
+    vi.advanceTimersByTime(1)
+
+    expect(t.calls).toHaveLength(4)
+  })
+
+  it('lists on every tick while a named session is watched next to a backing-off one (MAGIT-24, MAGIT-26)', () => {
+    const t = makePoller()
+    t.poller.watch('s1', 'sid-1')
+    t.poller.watch('s2', 'sid-never')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+    t.children[0].stdout(LISTING)
+    t.children[0].close(0)
+
+    for (let tick = 1; tick <= 10; tick++) {
+      vi.advanceTimersByTime(tick === 1 ? NAME_INTERVAL_MS - NAME_DEBOUNCE_MS : NAME_INTERVAL_MS)
+      expect(t.calls).toHaveLength(1 + tick)
+      t.children[tick].stdout(LISTING)
+      t.children[tick].close(0)
+    }
+
+    expect(t.calls).toHaveLength(11)
+  })
+
+  it('drops the rerun a nudge asked for when the call it waited on misses the session (MAGIT-25)', () => {
+    const t = makePoller()
+    t.poller.watch('s1', 'sid-1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS) // call in flight
+    vi.advanceTimersByTime(100)
+    t.poller.nudge('s1')
+    answerEmpty(t.children[0])
+
+    vi.advanceTimersByTime(4999)
+
+    expect(t.calls).toHaveLength(1)
+  })
+
+  it('drops a tick coalesced during a call when only a backing-off session is watched (MAGIT-25)', () => {
+    const t0 = Date.now()
+    const t = makePoller()
+    t.poller.watch('s1', 'sid-1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+    answerEmpty(t.children[0]) // due at 6 s
+    vi.advanceTimersByTime(t0 + 28500 - Date.now())
+    t.poller.nudge('s1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS) // second call at 29.5 s, in flight over the 30 s tick
+    expect(t.calls).toHaveLength(2)
+    vi.advanceTimersByTime(1000)
+    answerEmpty(t.children[1]) // at 30.5 s: due at 40.5 s
+
+    vi.advanceTimersByTime(9999)
+
+    expect(t.calls).toHaveLength(2)
+  })
+
+  it('reruns once for a tick coalesced during a call when a named session is watched (MAGIT-25)', () => {
+    const t0 = Date.now()
+    const t = watchedAndListed()
+    vi.advanceTimersByTime(t0 + 28500 - Date.now())
+    t.poller.nudge('s1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS) // call at 29.5 s, in flight over the 30 s tick
+    expect(t.calls).toHaveLength(2)
+    vi.advanceTimersByTime(1000)
+    t.children[1].stdout(LISTING)
+    t.children[1].close(0)
+
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+    expect(t.calls).toHaveLength(3)
+    t.children[2].stdout(LISTING)
+    t.children[2].close(0)
+    vi.advanceTimersByTime(t0 + 59999 - Date.now())
+
+    expect(t.calls).toHaveLength(3)
+  })
+
+  it('lists a never-named session nudged every second at 1, 6, 16, 36, 76, 156 and 316 s only (MAGIT-28)', () => {
+    const t0 = Date.now()
+    const t = makePoller()
+    const startedAt: number[] = []
+    t.poller.watch('s1', 'sid-1')
+
+    for (let second = 1; second <= 600; second++) {
+      vi.advanceTimersByTime(1000)
+      while (startedAt.length < t.calls.length) {
+        startedAt.push(Date.now() - t0)
+        answerEmpty(t.children[startedAt.length - 1])
+      }
+      t.poller.nudge('s1')
+    }
+
+    expect(startedAt).toEqual([1000, 6000, 16000, 36000, 76000, 156000, 316000])
+  })
+
+  it('starts no call after dispose while a session backs off (MAGIT-46)', () => {
+    const t = unnamedWithMisses(1, specDue)
+
+    t.poller.dispose()
+    for (let second = 1; second <= 600; second++) {
+      t.poller.nudge('s1')
+      vi.advanceTimersByTime(1000)
+    }
+
+    expect(t.calls).toHaveLength(1)
   })
 })

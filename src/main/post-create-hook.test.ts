@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { CreateWorktreeResult } from '../shared/worktrees'
+import type { CreateStep, CreateWorktreeResult } from '../shared/worktrees'
 import { runHookShell } from './hook-shell'
 import type { CreateWorktreeFn, HookShell, HookShellResult } from './post-create-hook'
 import {
@@ -292,6 +292,7 @@ describe('withPostCreateHook', () => {
   it('forwards every create argument verbatim', async () => {
     const { create, args } = fakeCreate({ ok: true, path: 'M:\\src\\Code-feature-x' })
     const { shell } = fakeShell({ code: 0 })
+    const onStep = (): void => {}
 
     await withPostCreateHook(create, { readCommand: () => null, shell })(
       'M:\\src\\Code',
@@ -299,10 +300,20 @@ describe('withPostCreateHook', () => {
       'main',
       '{repo}-{id}',
       true,
-      'reuse'
+      'reuse',
+      onStep
     )
 
-    expect(args[0]).toEqual(['M:\\src\\Code', 'feature/x', 'main', '{repo}-{id}', true, 'reuse'])
+    expect(args[0]).toEqual([
+      'M:\\src\\Code',
+      'feature/x',
+      'main',
+      '{repo}-{id}',
+      true,
+      'reuse',
+      onStep
+    ])
+    expect(args[0][6]).toBe(onStep)
   })
 
   it('keeps concurrent creates isolated from each other', async () => {
@@ -332,6 +343,118 @@ describe('withPostCreateHook', () => {
     expect(slow.hook?.output).toBe('ran in M:\\src\\Code-slow')
     expect(fast.hook?.command).toBe('Fast.cmd')
     expect(fast.hook?.output).toBe('ran in M:\\src\\Code-fast')
+  })
+})
+
+describe('withPostCreateHook — steps (CRTO-11, CRTO-13, CRTO-15)', () => {
+  /**
+   * A fake create that, like the real one, reports `creating-worktree` through its
+   * seventh argument when it reaches the checkout (`reaches`), then settles.
+   */
+  const steppingCreate =
+    (result: CreateWorktreeResult, reaches: boolean): CreateWorktreeFn =>
+    (...called) => {
+      if (reaches) called[6]?.('creating-worktree')
+      return Promise.resolve(result)
+    }
+
+  let steps: CreateStep[]
+  const onStep = (step: CreateStep): void => {
+    steps.push(step)
+  }
+  beforeEach(() => {
+    steps = []
+  })
+
+  it('reports running-hook after the create, right before the shell runs', async () => {
+    const stepsAtShell: CreateStep[][] = []
+    const shell: HookShell = () => {
+      stepsAtShell.push([...steps])
+      return Promise.resolve({ code: 0, stdout: '', stderr: '' })
+    }
+    const create = steppingCreate({ ok: true, path: 'M:\\src\\Code-feature-x' }, true)
+
+    const result = await withPostCreateHook(create, { readCommand: () => 'Init.cmd', shell })(
+      'M:\\src\\Code',
+      'feature/x',
+      'main',
+      undefined,
+      false,
+      undefined,
+      onStep
+    )
+
+    expect(result.hook?.ok).toBe(true)
+    expect(steps).toEqual(['creating-worktree', 'running-hook'])
+    expect(stepsAtShell).toEqual([['creating-worktree', 'running-hook']])
+  })
+
+  it('reports no running-hook when the repo declares no command', async () => {
+    const { shell, calls } = fakeShell({ code: 0 })
+    const create = steppingCreate({ ok: true, path: 'M:\\src\\Code-feature-x' }, true)
+
+    await withPostCreateHook(create, { readCommand: () => null, shell })(
+      'M:\\src\\Code',
+      'feature/x',
+      'main',
+      undefined,
+      false,
+      undefined,
+      onStep
+    )
+
+    expect(calls).toHaveLength(0)
+    expect(steps).toEqual(['creating-worktree'])
+  })
+
+  it('reports no running-hook when the create failed', async () => {
+    const { shell, calls } = fakeShell({ code: 0 })
+    const create = steppingCreate({ ok: false, error: 'fatal: invalid reference: main' }, true)
+
+    await withPostCreateHook(create, { readCommand: () => 'Init.cmd', shell })(
+      'M:\\src\\Code',
+      'feature/x',
+      'main',
+      undefined,
+      false,
+      undefined,
+      onStep
+    )
+
+    expect(calls).toHaveLength(0)
+    expect(steps).toEqual(['creating-worktree'])
+  })
+
+  it('reports no running-hook for a branch-exists conflict', async () => {
+    const { shell, calls } = fakeShell({ code: 0 })
+    const create = steppingCreate({ ok: false, conflict: 'branch-exists' }, false)
+
+    await withPostCreateHook(create, { readCommand: () => 'Init.cmd', shell })(
+      'M:\\src\\Code',
+      'feature/x',
+      'main',
+      undefined,
+      false,
+      undefined,
+      onStep
+    )
+
+    expect(calls).toHaveLength(0)
+    expect(steps).toEqual([])
+  })
+
+  it('still runs the command when nobody listens for steps', async () => {
+    const { shell, calls } = fakeShell({ code: 0 })
+    const create = steppingCreate({ ok: true, path: 'M:\\src\\Code-feature-x' }, true)
+
+    const result = await withPostCreateHook(create, { readCommand: () => 'Init.cmd', shell })(
+      'M:\\src\\Code',
+      'feature/x',
+      'main'
+    )
+
+    expect(calls).toHaveLength(1)
+    expect(result.hook?.ok).toBe(true)
   })
 })
 
