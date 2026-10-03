@@ -2,6 +2,10 @@
 
 ## Validation: hours-hatching — PASS
 
+**Latest round**: round 2 (2026-10-03, `ee17201..4ec1a17`) passed; F1 resolved, hatch recipe
+changed by the owner and re-verified. See "Round 2" at the end; the round 1 rows for HHAT-17, 22 and
+29 below describe the first recipe and are superseded there.
+
 **Date**: 2026-10-03
 **Spec**: `.specs/features/hours-hatching/spec.md` (HHAT-01..29 + 5 edge cases)
 **Diff range**: `6d96ae4..18f1970` (`6d96ae4` = `origin/main`); plan commits `6482061`, `292b596`;
@@ -254,3 +258,167 @@ legend and drawer swatches; focus and filter on a hatched task behave as on a so
 
 **Lessons**: L-101 recorded (`surviving_mutant`, scope `testing`) from U4 and U5. F2 and F3 are thin
 smoke evidence, not a surviving mutant or a precision gap, so they record no lesson.
+
+---
+
+## Round 2 (2026-10-03, ee17201..HEAD)
+
+**Verdict**: PASS ✅. **Diff range**: `ee17201..4ec1a17` (`6920b08` test, `3a66c23` docs, `4ec1a17`
+CSS and smoke). **Verifier**: independent sub-agent (author ≠ verifier), fresh context. Scope, by the
+owner's loop rule: only this diff; a gap outside it is a follow-up unless it is a production defect.
+No production defect and no AC in the diff without evidence.
+
+Owner decisions under check (2026-10-03): add F1's unit test; change the hatch to stripes 3 px in
+every 6 px over `color-mix(in oklab, <hue> 5%, #fff)` (the 2 px over 20% recipe read as mostly
+white; the 4 px in every 6 px inversion was rejected because it fails H2).
+
+### F1: resolved
+
+New test `src/renderer/src/lib/hours-calendar.test.ts:483-496` ("takes a solid before a hatched look
+on a use tie, even one whose hue its day holds (HHAT-05)"). Re-derived by hand from the spec rule
+(fewest uses, then solid before hatched, then hue preference, then palette order; never a same-day
+look nor the previous look), with `week` listing tasks in falling week total:
+
+- Tasks 1–8 on Monday take `slot1`..`slot8`; tasks 9–15 take `slot1-hatched`..`slot7-hatched`;
+  task 16 (Monday and Wednesday) finds only `slot8-hatched` free on Monday:
+  `:493` `expect(colours.get('task:16')).toBe('slot8-hatched')`.
+- Every look now has one use. Task 17 (Tuesday, previous `slot8-hatched`) ranks the solids `slot1`..`slot7`
+  lowest (one use, solid, hue not avoided) and takes `slot1`; tasks 18–23 follow to `slot7`:
+  `:494` `expect(colours.get('task:23')).toBe('slot7')`.
+- Task 24 (Wednesday, which holds `slot8-hatched`; previous `slot7`): `slot1`..`slot7` have two
+  uses; at one use the allowed looks are `slot8` (solid, hue avoided: held on Wednesday) and
+  `slot1-hatched`..`slot7-hatched` (hatched; `slot7-hatched` also avoided as the previous hue).
+  Solid before hatched outranks the hue preference, so `slot8`:
+  `:495` `expect(colours.get('task:24')).toBe('slot8')`. The spec's literal outcome.
+
+Discrimination, in a temporary `git worktree` of `HEAD` (detached, `node_modules` junctioned, removed
+afterwards), mutating `hours-calendar.ts:242` through a `.orig` copy (refused unless the search string
+occurred once, asserted applied, restored in `finally`); `npx vitest run
+src/renderer/src/lib/hours-calendar.test.ts`:
+
+| # | Mutation of the rank at `hours-calendar.ts:242` | Run | Killed? | By |
+| - | ----------------------------------------------- | --- | ------- | -- |
+| — | none (baseline) | 56/56 pass | — | — |
+| U4 | `uses × 4 + avoided` (solid-before-hatched dropped) | 1 failed / 55 | ✅ Killed | `test.ts:495`: expected `'slot8'`, received `'slot1-hatched'` |
+| U5 | `uses × 4 + hatched × 1 + avoided × 2` (fill and hue swapped) | 1 failed / 55 | ✅ Killed | `test.ts:495`: expected `'slot8'`, received `'slot1-hatched'` |
+
+Both mutants change exactly the outcome the hand derivation predicts. F1 is closed; HHAT-05's
+"solid before hatched" now has discriminating evidence.
+
+### Hatch recipe: consistent
+
+The same recipe, stripes of the hue 3 px in every 6 px at 45° over the hue mixed 5% with white in
+OKLab, in every place that states it:
+
+| Where | Statement |
+| ----- | --------- |
+| CSS `src/renderer/src/components/HoursCalendar.css:193-196` | `background-color: color-mix(in oklab, var(--hcal-c) 5%, #fff)`; `background-image: repeating-linear-gradient(45deg, var(--hcal-c) 0 3px, transparent 3px 6px)`; comment `:192` "half the pattern" (AD-054) |
+| Spec AC 17 (`spec.md:182`) and Assumptions "The hatch", "Hatch ground", "Stripe geometry" (`spec.md:42`, `:52`, `:53`) | 3 px in every 6 px, 5% with white in OKLab, owner confirmed 2026-10-03 |
+| Design "The Hatch" and "Hatch legibility" (`design.md:190-265`) and its AD-054 copy (`design.md:305-325`) | same CSS block; ground 5%, stripe share 1/2; smoke expectation `<hue> 0px, <hue> 3px, transparent 3px, transparent 6px` |
+| AD-054 (`.specs/STATE.md:64`) | 3 px in every 6 px over `color-mix(in oklab, <hue> 5%, #fff)`, owner decision 2026-10-03 |
+| Smoke section 16 (`scripts/smoke-hours-calendar.mjs:62-67` header, `:1625` probe `5%`, `:1629-1630` `stripes()` with `3px`, checks `:1631`, `:1636`) | expects the same gradient string and a ground equal to a probe's computed `color-mix(in oklab, <hue> 5%, #fff)` |
+| `tasks.md` T3 and T14 notes (`:180-183`, `:459-461`) | record the change and say the boxes above them describe the first recipe |
+
+No stale claim of the hatch as 2 px or 20%. Every remaining "2 px" / "20%" about the hatch is
+history or a rejected alternative: spec `:42`, `:52`, `:53`, `:182` ("first shipped as 2 px over
+20%"), design `:200`, `:254-265`, `:312`, AD-054's rationale, `tasks.md:20` (with "5% since the
+owner's 2026-10-03 change") and T14's original What (`tasks.md:437`, followed by its dated note).
+Other "2px" hits in the CSS and spec are unrelated (bar gap, outline, the tooltip's 12 × 2 px key).
+
+### Hatch legibility (H1 to H3), re-measured on the new recipe
+
+Measured by a Verifier scratch script written for this round (not the author's), with the dataviz
+validator's own `hex2srgb`, `s2lin`, `lin2s`, `lin`, `oklabFromLin`, `okhue` and `deltaE` copied
+verbatim, plus Ottosson's OKLab-to-linear-sRGB inverse (the validator has none). Ground = OKLab mix
+5% hue / 95% white, rounded to 8-bit hex; mean = linear-RGB blend 50/50 of hue and ground, rounded to
+8-bit; H1 = `dE(hue, ground)` ≥ 15; H2 = `dE(mean, hue)` ≥ 15; H3 = OKLab hue angle distance between
+ground and hue ≤ 12°, and the ground's nearest slot hue is its own.
+
+| Slot | Light ground | Light mean | H1 | H2 | H3 | Dark ground | Dark mean | H1 | H2 | H3 |
+| ---- | ------------ | ---------- | -- | -- | -- | ----------- | --------- | -- | -- | -- |
+| blue | `#f4f8ff` | `#b6c5f4` | 43.1 | 27.2 | 2.1° | `#f5fafe` | `#b6ceed` | 37.7 | 23.3 | 3.4° |
+| orange | `#fff8f5` | `#f5c1b6` | 36.1 | 22.3 | 1.7° | `#fcf6f3` | `#ddbbb3` | 45.8 | 29.9 | 4.7° |
+| aqua | `#f6fbf8` | `#b7d9c5` | 34.3 | 21.0 | 0.1° | `#f5fbf9` | `#b5d7cb` | 34.9 | 21.4 | 1.5° |
+| yellow | `#fdfbf6` | `#edd8b8` | 25.9 | 15.5 | 3.5° | `#fcf9f4` | `#dfccb3` | 34.2 | 21.2 | 2.6° |
+| magenta | `#fff9fb` | `#f4cadc` | 28.2 | 16.6 | 5.4° | `#fef5f8` | `#e6b4c9` | 47.7 | 31.4 | 3.9° |
+| green | `#f3f8f3` | `#b3c3b3` | 52.0 | 34.8 | 1.7° | `#f4f8f4` | `#b4c6b5` | 48.8 | 32.2 | 1.1° |
+| violet | `#f5f5fb` | `#bbb8d6` | 55.5 | 37.6 | 1.0° | `#f9f8ff` | `#ccc1fa` | 41.7 | 25.8 | 0.7° |
+| red | `#fff5f5` | `#e9b4b9` | 47.5 | 31.0 | 2.4° | `#fff7f7` | `#fabdc1` | 36.6 | 22.5 | 0.3° |
+
+All 16 slots pass; every ground's nearest slot hue is its own. Worst: H1 25.9 (light yellow), H2 15.5
+(light yellow, the thinnest margin, 0.5 above the floor), H3 5.4° (light magenta). Identical to the
+design table and AD-054 to the decimal, grounds and means to the hex digit. With the mean left
+unrounded H2 moves by at most 0.1 (light magenta 16.5); no verdict changes.
+
+The rejected alternatives cited in spec, design and AD-054 reproduce: stripes 3 in 6 over a 20%
+ground fail H2 on light yellow (12.8) and light magenta (13.7); stripes 4 in 6 over 20% fail H2 in 8
+of 16 slots (light yellow 9.2) and on light yellow over pure white (11.9); pure white with 3 in 6
+passes H2 (light yellow 16.4) but its ground has no hue, so H3 fails in 14 of 16 slots. The first
+recipe (20%, share 1/3) reproduces round 1's table (worst H2 16.0, light yellow).
+
+### Smoke
+
+Runs on the real tree through a Verifier runner: fresh `--seed` per run, the dev app launched only on
+that throwaway `--user-data-dir` with `--remote-debugging-port=9231` (`SMOKE_PORT=9231`) and the
+three anti-throttling flags, `SMOKE_ONLY=looks`; the app's process tree killed, the seeded directory
+and pointer deleted after each run. Mutants were applied to `HoursCalendar.css` before the launch
+through a `.orig` copy (refused unless the search string occurred once, asserted applied, restored in
+`finally` after the app was killed; the runner confirmed the restored file byte-identical).
+
+Real build: **12/12** (section 16), checks `:1631` stripes `repeating-linear-gradient(45deg, rgb(47,
+118, 232) 0px, rgb(47, 118, 232) 3px, rgba(0, 0, 0, 0) 3px, rgba(0, 0, 0, 0) 6px)` light / `rgb(39,
+144, 218)` dark; `:1636` ground `oklab(0.979228 -0.00162829 -0.0091724)` light /
+`oklab(0.981548 -0.00298951 -0.00650836)` dark on bar, legend swatch and drawer swatch, equal to the
+probe.
+
+| # | Mutation at `HoursCalendar.css:194-195` | Result | Killed? | Failing check |
+| - | ---------------------------------------- | ------ | ------- | ------------- |
+| R1 | stripes back to `0 2px, transparent 2px 6px` (first recipe) | 11/12 | ✅ Killed | `smoke.mjs:1631` stripes (`… 2px, rgba(0, 0, 0, 0) 2px …`) |
+| R2 | stripes `0 4px, transparent 4px 6px` (the rejected inversion) | 11/12 | ✅ Killed | `smoke.mjs:1631` stripes |
+| R3 | ground back to `20%` (first recipe) | 11/12 | ✅ Killed | `smoke.mjs:1636` ground (`oklab(0.92621 …)` against the probe's `oklab(0.981548 …)`, dark) |
+| R4 | ground `4%`, one point off | 11/12 | ✅ Killed | `smoke.mjs:1636` ground (`oklab(0.985237 …)` against `oklab(0.981548 …)`) |
+| R5 | stripes of `color-mix(in oklab, <hue> 80%, #fff)`, a paler stripe | 11/12 | ✅ Killed | `smoke.mjs:1631` stripes (`oklab(0.704859 …)` instead of the hue) |
+
+5/5 killed, each on its first run; no rerun was needed. R1 and R3 show that the smoke now rejects
+each half of the old recipe, and R4 that the ground check resolves a single percentage point.
+
+### Gates
+
+- **Unit**: `npm test` — 119 files, **2523 passed**, 0 failed, 0 skipped (round 1 2522; +1, F1's test)
+- **Typecheck**: `npm run typecheck` — exit 0
+- **Lint**: `npm run lint` — exit 0, **0 errors / 18 warnings** (unchanged)
+- **Build**: `npx electron-vite build` — exit 0
+
+Isolation: `git status --porcelain` empty before and after; no `.orig` left; the scratch worktree is
+removed; no process on port 9231 or holding a seeded profile is left; the process on 9333 was not
+touched.
+
+### Code quality (diff only)
+
+| Check | Status |
+| ----- | ------ |
+| Minimum, surgical | ✅ Two CSS values and a comment; three strings in smoke section 16 (header, probe, `stripes()`, two check names); one unit test |
+| Test maps to the spec | ✅ The new test names HHAT-05; its fixture comment states the decision it pins |
+| Docs record the decision | ✅ Spec Assumptions and AC 17 dated owner confirmed 2026-10-03; design keeps the first recipe and the rejected alternatives with their numbers; AD-054 updated in place, as the AD-018 / AD-029 pattern does |
+
+### Follow-ups
+
+- **F1**: resolved (above).
+- **F2** (from round 1, unchanged, thin evidence): section 16 reads the exact recipe on slot 1 only.
+  The rule is still one shared selector, so a slot-specific drift is not possible in the CSS as written.
+- **F3** (from round 1, unchanged, thin evidence): the neutral kept-chip swatch is exercised with a
+  solid task only.
+- **F4** (new, cosmetic): in `design.md`'s AD-054 copy the rewrap left a short line ("other than the",
+  `design.md:314`). Text is correct; only the wrap is uneven.
+
+### Requirement traceability (round 2)
+
+| Requirement | Previous | New |
+| ----------- | -------- | --- |
+| HHAT-05 | Verified (F1 open) | ✅ Verified; F1 resolved, `test.ts:483-496`, U4 and U5 killed |
+| HHAT-17 | Verified (2 px over 20%) | ✅ Verified on 3 px in every 6 px over 5% (`HoursCalendar.css:193-196`, `smoke.mjs:1631`, `:1636`; R1–R5 killed) |
+| HHAT-22 | Verified (first recipe) | ✅ Verified on the new recipe (table above; worst H2 15.5, light yellow) |
+| HHAT-29 | Verified (first recipe) | ✅ Verified on the new recipe (`smoke.mjs:1631`, `:1636`, `:1649`; 12/12 on the real build) |
+
+**Lessons**: none recorded. F1 was a surviving mutant in round 1 and already produced L-101; this
+round found no surviving mutant, no spec-precision gap and no failed AC.

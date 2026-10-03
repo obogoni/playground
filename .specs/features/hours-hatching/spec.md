@@ -239,7 +239,7 @@ same search held 14.6 normal-vision with 7.8 CVD. The WARN band is legal with th
 | HHAT-02 | P1: neighbours, AC 2 | Execute | Verified (validation.md, 2026-10-03): T2 |
 | HHAT-03 | P1: neighbours, AC 3 | Execute | Verified (validation.md, 2026-10-03): T2, T10 |
 | HHAT-04 | P1: neighbours, AC 4 | Execute | Verified (validation.md, 2026-10-03): T2 |
-| HHAT-05 | P1: neighbours, AC 5 | Execute | Verified (validation.md, 2026-10-03): T2 (follow-up F1: the solid-before-hatched tie is not pinned by a unit test; mutants U4, U5 survived) |
+| HHAT-05 | P1: neighbours, AC 5 | Execute | Verified (validation.md, 2026-10-03): T2; F1 resolved in round 2: the solid-before-hatched tie is pinned by a unit test, mutants U4 and U5 killed |
 | HHAT-06 | P1: neighbours, AC 6 | Execute | Verified (validation.md, 2026-10-03): T2 |
 | HHAT-07 | P1: neighbours, AC 7 | Execute | Verified (validation.md, 2026-10-03): T2 |
 | HHAT-08 | P1: neighbours, AC 8 | Execute | Verified (validation.md, 2026-10-03): T2, T14 |
@@ -251,21 +251,21 @@ same search held 14.6 normal-vision with 7.8 CVD. The WARN band is legal with th
 | HHAT-14 | P1: colours, AC 14 | Execute | Verified (validation.md, 2026-10-03): T3, T12 |
 | HHAT-15 | P1: colours, AC 15 | Execute | Verified (validation.md, 2026-10-03): T3, T12 |
 | HHAT-16 | P1: colours, AC 16 | Execute | Verified (validation.md, 2026-10-03): T3, T9 |
-| HHAT-17 | P1: one look, AC 17 | Execute | Verified (validation.md, 2026-10-03): T3, T14 (follow-up F2: exact recipe smoke-read on slot 1 only) |
+| HHAT-17 | P1: one look, AC 17 | Execute | Verified (validation.md, 2026-10-03): T3, T14; re-verified in round 2 on 3 px in every 6 px over a 5% ground (follow-up F2: exact recipe smoke-read on slot 1 only) |
 | HHAT-18 | P1: one look, AC 18 | Execute | Verified (validation.md, 2026-10-03): T3, T14 |
 | HHAT-19 | P1: one look, AC 19 | Execute | Verified (validation.md, 2026-10-03): T1, T3 |
 | HHAT-20 | P1: one look, AC 20 | Execute | Verified (validation.md, 2026-10-03): T4..T8, T12 |
 | HHAT-21 | P1: one look, AC 21 | Execute | Verified (validation.md, 2026-10-03): T4, T5, T14 |
-| HHAT-22 | P1: one look, AC 22 | Execute | Verified (validation.md, 2026-10-03): T3, T9 |
+| HHAT-22 | P1: one look, AC 22 | Execute | Verified (validation.md, 2026-10-03): T3, T9; re-measured in round 2 on the 3 px over 5% recipe, every slot passes (worst H2 15.5, light yellow) |
 | HHAT-23 | P2: nothing moves, AC 23 | Execute | Verified (validation.md, 2026-10-03): T2 |
 | HHAT-24 | P2: nothing moves, AC 24 | Execute | Verified (validation.md, 2026-10-03): T15 |
 | HHAT-25 | P2: nothing moves, AC 25 | Execute | Verified (validation.md, 2026-10-03): T15 |
 | HHAT-26 | P2: nothing moves, AC 26 | Execute | Verified (validation.md, 2026-10-03): T13, T15 |
 | HHAT-27 | P2: smoke, AC 27 | Execute | Verified (validation.md, 2026-10-03): T10, T12 |
 | HHAT-28 | P2: smoke, AC 28 | Execute | Verified (validation.md, 2026-10-03): T11, T14 |
-| HHAT-29 | P2: smoke, AC 29 | Execute | Verified (validation.md, 2026-10-03): T14 (follow-up F2: exact recipe smoke-read on slot 1 only) |
+| HHAT-29 | P2: smoke, AC 29 | Execute | Verified (validation.md, 2026-10-03): T14; re-verified in round 2 on the 3 px over 5% recipe (follow-up F2: exact recipe smoke-read on slot 1 only) |
 
-**Coverage:** 29 total, 29 mapped to tasks, 0 unmapped; 29 verified (`validation.md`, PASS, follow-ups F1 to F3).
+**Coverage:** 29 total, 29 mapped to tasks, 0 unmapped; 29 verified (`validation.md`, PASS in rounds 1 and 2; F1 resolved, follow-ups F2 to F4 open).
 
 ---
 
