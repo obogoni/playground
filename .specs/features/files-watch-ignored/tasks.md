@@ -476,7 +476,7 @@ each, all exit 0; written to `validation.md`, `## Measurements`, "Before (T6, 20
 - Touch loop (1,000 ms): 119 / 118 / 119 `files:changed`, 1,731 / 1,709 / 1,730 git, 1,074 /
   1,059 / 1,074 `cat-file`, 60 / 60 / 59 `worktree:status`. "the view's reads leave the index alone
   60 **FAIL**".
-- **Exception, stop rule: the edit target (FWIG-38) already reads PASS before the change**, at 358
+- **Superseded (first edit run): the edit target (FWIG-38) read PASS before the change**, at 358
   `cat-file` / 179 `files:changed` = 2.00, its limit. Each edit batch reads one HEAD side (2
   `cat-file`), so one All changes section re-reads; the build loop's batches read 6 (three sections).
   The stack re-reads only its mounted sections (expanded and near the viewport), and the appended
@@ -484,8 +484,20 @@ each, all exit 0; written to `validation.md`, `## Measurements`, "Before (T6, 20
   counts, leaves itself the only one mounted (the spawn row, while it is still short, reads 3.8 per
   batch). The edit run as specified cannot show the change. **Stopped here: the owner decides**
   between keeping the run as it is (FWIG-38 shown by unit tests only) and changing the edit loop so
-  the written file does not crowd the viewport, then re-running this run. validation.md lists both.
-  No production change was made.
+  the written file does not crowd the viewport, then re-running this run. No production change was
+  made.
+- **Re-recorded (2026-10-03, the owner chose to rewrite the line in place, FWIG-34 amended)**: the
+  edit run at `b9297d3` (no production change; only the bench script and the spec files differ from
+  `e941982`), rebuilt first, 306 s, exit 0: steady rows 59 / 59 / 60 `files:changed`, 780 / 776 /
+  801 git, 603 / 594 / 622 `cat-file`, 0 `worktree:status`; per batch one `status`, one `diff`, one
+  `ls-files` and about 10 `cat-file`. "untouched sections stay ... **10.22 FAIL**" (1,819 / 178).
+  "edit loop: 235 writes, 1 skipped". A CDP probe during the run counted 12 `.diff-section`
+  elements, 3 of them holding a diff editor (`f0000`, `f0001`, `f0002`) 90 s after the view
+  opened; a second sample at 180 s found none (single sample, not explained). validation.md's
+  "Before" holds this run and keeps the first one as a superseded note. All three Files targets now
+  read FAIL before the change.
+- FPOL-14, 16 and 18 (T5's full drive) are recorded as pre-existing by the owner: FWIG-42 and T19
+  amended, and a follow-up written in validation.md.
 
 **Tests**: manual
 **Gate**: manual
@@ -868,7 +880,8 @@ section its value.
 
 - [ ] `SMOKE_ONLY=watch`: 15a, 15b and 15c pass
 - [ ] 15a seen failing on a main mutant that emits every named path unfiltered (relaunched), restored from `.orig`
-- [ ] The full drive passes, FDIF-30 (at or under 1,000 ms, the time written here), FDIF-31 and the fold section included; the icon checks ran last
+- [ ] The full drive passes, FDIF-30 (at or under 1,000 ms, the time written here), FDIF-31 and the fold section included, except FPOL-14, FPOL-16 and FPOL-18 (FWIG-42, amended 2026-10-03); the icon checks ran last
+- [ ] The same full drive on `origin/main` (`fc19a3c`): a throwaway `git worktree add` under the temp folder, its own `npm ci --ignore-scripts` and `node node_modules/electron/install.js`, its dev app on its own throwaway user data and seed; the two drives compared check by check and written here (FPOL-14, 16 and 18 failing on both, nothing else failing on this branch alone); the throwaway worktree removed (`git worktree remove`, `git worktree prune`) afterwards
 - [ ] `SMOKE_ONLY=fold` passes on its own seed
 - [ ] `git status --porcelain` equals the baseline after the mutant
 - [ ] Gate check passes: `npm run lint`

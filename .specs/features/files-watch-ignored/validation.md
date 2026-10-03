@@ -6,20 +6,21 @@
 
 ### Before (T6, 2026-10-03)
 
-**Verdict: two of the three Files targets read FAIL before the change; the edit target already reads
-PASS (2.00), so the stop rule applies and the owner is told before any production change.** The build
-loop starts about 1,700 git processes and 185 `files:changed` per minute on `bench-wt-1`, every one
-from writes git ignores; the touch loop makes the view's own reads emit 60 `worktree:status` per
-minute. The edit loop reads exactly 2 `cat-file` per `files:changed` today (see "The edit target"
-below).
+**Verdict: all three Files targets read FAIL before the change.** The build loop starts about 1,700
+git processes and 185 `files:changed` per minute on `bench-wt-1`, every one from writes git ignores;
+the edit loop reads 10.22 `cat-file` per `files:changed` against a limit of 2; the touch
+loop makes the view's own reads emit 60 `worktree:status` per minute. The edit run was re-recorded
+after the owner amended FWIG-34 (see "The first edit run, superseded" below).
 
 #### Machine and conditions
 
 - A laptop with a 14-core Intel Core Ultra 5-class CPU (14 threads), about 31 GB RAM, Windows 11.
   Electron 39.8.10 (the app), Node 24.19.0 (the bench), git 2.55.0.windows.4. The same machine as
   #147's baseline.
-- Commit `e941982` (T5's): the built app is that commit's source, with no production change from this
-  feature; `git status --porcelain` was empty, so every header reads `commit=e941982`.
+- No production change from this feature in any run. The floor, build and touch runs are at
+  `e941982` (T5's commit); the edit run is at `b9297d3`, which differs from it only in the bench
+  script (the in-place edit loop) and the spec files. Each built app is its commit's source and
+  `git status --porcelain` was empty, so each header reads its commit.
 - Every run at the default settings (`--minutes 3 --fps 20 --rows 30 --files 500`, CDP port 9334,
   `--sessions 0 --files-view`), one after another, each with `--json` to a scratch folder outside the
   repository. Each took 306 s and exited 0.
@@ -92,31 +93,31 @@ build loop: 2201 writes, 0 skipped
 `node scripts/bench-sessions.mjs --sessions 0 --files-view --edit-interval 1000 --json edit.json`:
 
 ```
-bench-sessions  sessions=0  fps=20  rows=30  files=500  index=off  minutes=3  commit=e941982  files-view  build=off  edit=1000ms  touch=off
-phase         loop p50/p99/max ms  git n  wait  peak  wt peak  status/s  wt:status  recounts  chunks  KB/s  append mean/max ms  names
-startup      16.1 /  17.3 /  59.1      8   8.8     4        2         2          0         0       0   0.0       0.000 / 0.000      0
-spawn        16.0 /  24.2 /  35.8    399  32.8     4        4         2          0         0       0   0.0       0.000 / 0.000      0
-steady 1     16.0 /  24.0 /  34.1    300  21.8     2        2         2          0         0       0   0.0       0.000 / 0.000      0
-steady 2     16.0 /  24.6 /  56.9    295  24.3     2        2         2          0         0       0   0.0       0.000 / 0.000      0
-steady 3     16.1 /  23.8 /  31.3    300  23.4     2        2         2          0         0       0   0.0       0.000 / 0.000      0
-worst        16.1 /  24.6 /  56.9    300  24.3     2        2         2          0         0       0   0.0       0.000 / 0.000      0
+bench-sessions  sessions=0  fps=20  rows=30  files=500  index=off  minutes=3  commit=b9297d3  files-view  build=off  edit=1000ms  touch=off
+phase         loop p50/p99/max ms  git n   wait  peak  wt peak  status/s  wt:status  recounts  chunks  KB/s  append mean/max ms  names
+startup      16.2 /  17.3 /  46.4      8   10.9     4        2         2          0         0       0   0.0       0.000 / 0.000      0
+spawn        15.9 /  24.8 /  68.7    818   26.7     4        4         2          0         0       0   0.0       0.000 / 0.000      0
+steady 1     15.9 /  25.2 /  35.8    780   17.4     4        4         2          0         0       0   0.0       0.000 / 0.000      0
+steady 2     15.8 /  24.7 /  30.6    778  481.0     4        4         2          0         0       0   0.0       0.000 / 0.000      0
+steady 3     15.8 /  24.6 /  30.1    801  205.1     4        4         2          0         0       0   0.0       0.000 / 0.000      0
+worst        15.9 /  25.2 /  35.8    801  481.0     4        4         2          0         0       0   0.0       0.000 / 0.000      0
 files       files:changed  git n  cat-file  wt:status
 startup                 0      3         0          0
-spawn                  57    399       218          0
-steady 1               60    300       120          0
-steady 2               59    295       118          0
-steady 3               60    300       120          0
-worst                  60    300       120          0
+spawn                  57    818       637          0
+steady 1               59    780       603          0
+steady 2               59    776       594          0
+steady 3               60    801       622          0
+worst                  60    801       622          0
 spawn: no session opened
 targets
-  loop p99 < 30 ms with 6 sessions                              24.6   n/a
+  loop p99 < 30 ms with 6 sessions                              25.2   n/a
   append mean < 0.1 ms per chunk                               0.000   n/a
   git status <= 1 per worktree per s                               2   n/a
-  no overlapping git on one worktree                               2   FAIL
-  ignored writes start no git                                    300   n/a
-  untouched sections stay: cat-file per files:changed <= 2      2.00   PASS
+  no overlapping git on one worktree                               4   FAIL
+  ignored writes start no git                                    801   n/a
+  untouched sections stay: cat-file per files:changed <= 2     10.22   FAIL
   the view's reads leave the index alone                           0   n/a
-edit loop: 236 writes, 0 skipped
+edit loop: 235 writes, 1 skipped
 ```
 
 `node scripts/bench-sessions.mjs --sessions 0 --files-view --touch-interval 1000 --json touch.json`:
@@ -159,9 +160,9 @@ touch loop: 236 writes, 0 skipped
 | build | steady 1 | 186 | 1702 | 1137 | 0 |
 | build | steady 2 | 185 | 1670 | 1115 | 0 |
 | build | steady 3 | 185 | 1664 | 1109 | 0 |
-| edit | steady 1 | 60 | 300 | 120 | 0 |
-| edit | steady 2 | 59 | 295 | 118 | 0 |
-| edit | steady 3 | 60 | 300 | 120 | 0 |
+| edit | steady 1 | 59 | 780 | 603 | 0 |
+| edit | steady 2 | 59 | 776 | 594 | 0 |
+| edit | steady 3 | 60 | 801 | 622 | 0 |
 | touch | steady 1 | 119 | 1731 | 1074 | 60 |
 | touch | steady 2 | 118 | 1709 | 1059 | 60 |
 | touch | steady 3 | 119 | 1730 | 1074 | 59 |
@@ -171,32 +172,33 @@ touch loop: 236 writes, 0 skipped
 | Target | Run | Read before | Limit | Verdict |
 | ------ | --- | ----------- | ----- | ------- |
 | Ignored writes start no git (FWIG-37) | build | 1702 git, 186 `files:changed` in the worst steady row | 0 and 0 in every steady row | **FAIL** |
-| Untouched sections stay (FWIG-38) | edit | 358 `cat-file` / 179 `files:changed` = 2.00 | at most 2 | **PASS** (exception, below) |
+| Untouched sections stay (FWIG-38) | edit | 1819 `cat-file` / 178 `files:changed` = 10.22 | at most 2 | **FAIL** |
 | The view's reads leave the index alone (FWIG-39) | touch | 60 `worktree:status` in the worst steady row | 0 in every steady row | **FAIL** |
 
 For reference, the same ratio on the other two runs: build 3361 / 556 = 6.04; touch
-3207 / 356 = 9.01 (the touch loop emits two batches per write: the file, then the
-index the view's own `git diff` rewrote).
+3207 / 356 = 9.01.
 
-#### The edit target: already at its limit before the change
+**Mounted sections, observed.** During the edit run a second CDP client read the page: 12
+`.diff-section` elements, 3 of them holding a diff editor (`src/f0000.ts`, `src/f0001.ts`,
+`src/f0002.ts`) 90 s after the view opened; at 180 s the same read found none holding one, a single
+sample not explained further (the edit run's steady rows hold steady at about 10 `cat-file` per
+`files:changed` throughout). The window was 1266 x 715. A one-minute check run before it read 1 at
+30 s and the same 3 at 90 s.
 
-The edit run's steady rows read exactly one `status`, one `diff`, one `ls-files` and two `cat-file`
-per `files:changed`: one HEAD side read (`cat-file -s`, then `--filters`), so one All changes section
-re-reads per batch. The build run, whose batches name no listed file, reads six `cat-file` per
-`files:changed`: three sections. The stack re-reads only its *mounted* sections, the expanded ones near
-the viewport (`mountPlan`), not every open one. The likely reason the edit run mounts only one: the
-loop appends to `src/f0000.ts`, the stack's first section, which grows by 60 lines a minute and
-pushes the other sections out of the viewport. The spawn row agrees: 218 `cat-file` for 57
-`files:changed` (3.8 each) while the file is still short. This is an inference from the counts; no
-DOM count of the mounted editors was taken during the run.
+#### The first edit run, superseded
 
-So the edit run as specified cannot show the change: the figure FWIG-38 judges is at its limit today,
-and the spec's "about 20 with the first ten open" does not hold at the bench's window size. Per T6 and
-the batch's stop rule, the owner decides before any production change. Options for the owner, none
-applied here:
+The first T6 edit run appended a line to `src/f0000.ts` each second, as FWIG-34 first said. It read
+358 `cat-file` / 179 `files:changed` = 2.00, a PASS before the change: the appended
+file is the stack's first section, and as it grew it pushed the other sections out of the viewport,
+so only one section stayed mounted and re-read. The owner amended FWIG-34 on 2026-10-03: the loop now
+rewrites the seeded line in place with content of the same byte length, so the layout holds. The run
+above replaces it.
 
-1. Keep the run as it is and accept that FWIG-38 shows no movement on this bench (the unit tests of
-   T14 and T16's key carry the behaviour).
-2. Change the edit loop so the written file does not crowd the viewport, for example rewriting one
-   line of `src/f0000.ts` with new content instead of appending, or appending to the last listed file
-   (`src/f0011.ts`); then re-run T6's edit run.
+### Follow-ups
+
+- **FPOL-14, FPOL-16 and FPOL-18 fail on the Files diff smoke without this feature's change.** T5's
+  full drive failed "Expand all opens every listed section" (0 -> 0 of 50), "only the ones near the
+  viewport hold an editor" (9 diff editors for 0 open sections) and a commit tab's "Expand all and
+  Collapse all" (0 -> 0 -> 0 of 45), and a second drive with the watch section removed failed the same
+  three. The owner recorded them as pre-existing (FWIG-42 amended); T19 is to drive the full smoke on
+  `origin/main` (`fc19a3c`) too and compare the two drives check by check. Investigate them upstream, outside #150.
