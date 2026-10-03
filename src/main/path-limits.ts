@@ -50,5 +50,18 @@ export function pathLimitProblem(input: PathLimitInput): string | null {
       }
     }
   }
+  // git hands `<worktree>\.git` to the new worktree as $GIT_DIR and refuses one past 220,
+  // with or without core.longpaths (M3, M6).
+  const worktreePath = windowsPath(input.worktreePath)
+  if (worktreePath.length > GIT_MAX_WORKTREE_FOLDER) {
+    return `The worktree folder path is ${worktreePath.length} characters, over the ${GIT_MAX_WORKTREE_FOLDER} git accepts. Shorten the name, or use a shorter worktree template such as {repo}-{id}.`
+  }
+  if (!input.longPaths) {
+    const name = worktreePath.slice(worktreePath.lastIndexOf('\\') + 1)
+    const gitFolder = `${commonDir}\\worktrees\\${name}\\refs`
+    if (gitFolder.length > WINDOWS_MAX_FOLDER_PATH) {
+      return `The worktree's git folder path is ${gitFolder.length} characters, over Windows' limit of ${WINDOWS_MAX_FOLDER_PATH} for a folder. Shorten the name, use a shorter worktree template, or enable core.longpaths in the repository.`
+    }
+  }
   return null
 }

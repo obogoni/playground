@@ -313,12 +313,14 @@ titles as written.
 
 **Done when**:
 
-- [ ] Tests, folder: worktreePath of 215 → null and 216 → `The worktree folder path is 216 characters, over the 215 git accepts. Shorten the name, or use a shorter worktree template such as {repo}-{id}.`; still refused with `longPaths: true` and with `writesRef: false`
-- [ ] Tests, git folder: `{commonDir}\worktrees\{name}\refs` of 247 → null and 248 → `The worktree's git folder path is 248 characters, over Windows' limit of 247 for a folder. Shorten the name, use a shorter worktree template, or enable core.longpaths in the repository.`; null with `longPaths: true`
-- [ ] Tests, order (BSLG-29): ref and folder both passed → ref message; reflog and folder → reflog message; folder and git folder → folder message
-- [ ] T6's tests pass unchanged
-- [ ] Gate check passes: `npx vitest run src/main/path-limits.test.ts` then `npm test`
-- [ ] Test count: T6 count + the new tests
+- [x] Tests, folder: worktreePath of 215 → null and 216 → `The worktree folder path is 216 characters, over the 215 git accepts. Shorten the name, or use a shorter worktree template such as {repo}-{id}.`; still refused with `longPaths: true` and with `writesRef: false`
+- [x] Tests, git folder: `{commonDir}\worktrees\{name}\refs` of 247 → null and 248 → `The worktree's git folder path is 248 characters, over Windows' limit of 247 for a folder. Shorten the name, use a shorter worktree template, or enable core.longpaths in the repository.`; null with `longPaths: true`
+- [x] Tests, order (BSLG-29): ref and folder both passed → ref message; reflog and folder → reflog message; folder and git folder → folder message
+- [x] T6's tests pass unchanged
+- [x] Gate check passes: `npx vitest run src/main/path-limits.test.ts` then `npm test`
+- [x] Test count: T6 count + the new tests
+
+**Done** (T7): 11 new tests; suite 2575 → 2586 passed; T6's 14 unchanged; typecheck 0; lint 0 errors, 18 warnings (baseline). Six of them seen failing before rules 3 and 4 existed. The git folder rule is also tested with `writesRef: false` (AC 28 has no ref condition), and the git folder cases use a 40-character repository folder so the worktree folder stays at 215 or fewer, as in M4.
 
 **Tests**: unit
 **Gate**: quick

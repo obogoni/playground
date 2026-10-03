@@ -218,9 +218,9 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-24 | P1: check, AC 24 | Tasks | Pending: T14, T15, T17 (smoke 1), T18 (smoke 9) |
 | BSLG-25 | P1: check, AC 25 | Tasks | Pending: T9, T17 (smoke 4) |
 | BSLG-26 | P1: check, AC 26 | Tasks | Pending: T9 |
-| BSLG-27 | P2: folder, AC 27 | Tasks | Pending: T7, T17 (smoke 6) |
-| BSLG-28 | P2: folder, AC 28 | Tasks | Pending: T7 |
-| BSLG-29 | P2: folder, AC 29 | Tasks | Pending: T7 |
+| BSLG-27 | P2: folder, AC 27 | Tasks | T7 done; T17 (smoke 6) pending |
+| BSLG-28 | P2: folder, AC 28 | Tasks | Done: T7 |
+| BSLG-29 | P2: folder, AC 29 | Tasks | Done: T7 |
 | BSLG-30 | P2: folder, AC 30 | Tasks | Pending: T9, T17 (smoke 7) |
 | BSLG-31 | Edge: empty title | Tasks | Done: T2 |
 | BSLG-32 | Edge: 40-character word | Tasks | Done: T2 |

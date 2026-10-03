@@ -131,3 +131,104 @@ describe('pathLimitProblem: separators', () => {
     }
   )
 })
+
+const folderMessage = (n: number): string =>
+  `The worktree folder path is ${n} characters, over the 215 git accepts. Shorten the name, or use a shorter worktree template such as {repo}-{id}.`
+const gitFolderMessage = (n: number): string =>
+  `The worktree's git folder path is ${n} characters, over Windows' limit of 247 for a folder. Shorten the name, use a shorter worktree template, or enable core.longpaths in the repository.`
+
+/** A worktree folder `C:\r-www…` of exactly `length` characters. */
+function worktreeOf(length: number): string {
+  return 'C:\\r-' + 'w'.repeat(length - 'C:\\r-'.length)
+}
+
+describe('pathLimitProblem: worktree folder (BSLG-27)', () => {
+  it('passes a worktree folder of exactly 215', () => {
+    expect(worktreeOf(215)).toHaveLength(215)
+    expect(pathLimitProblem(input({ worktreePath: worktreeOf(215), longPaths: true }))).toBeNull()
+  })
+
+  it('refuses a worktree folder of exactly 216 with its length', () => {
+    expect(pathLimitProblem(input({ worktreePath: worktreeOf(216), longPaths: true }))).toBe(
+      folderMessage(216)
+    )
+  })
+
+  it('refuses it whatever core.longpaths holds and whether or not a ref is written', () => {
+    const worktreePath = worktreeOf(216)
+    expect(pathLimitProblem(input({ worktreePath, longPaths: true, writesRef: false }))).toBe(
+      folderMessage(216)
+    )
+    expect(pathLimitProblem(input({ worktreePath, longPaths: false, writesRef: true }))).toBe(
+      folderMessage(216)
+    )
+  })
+
+  it('measures a worktree folder written with / and a trailing separator as Windows does', () => {
+    const worktreePath = worktreeOf(216).replaceAll('\\', '/') + '/'
+    expect(pathLimitProblem(input({ worktreePath, longPaths: true }))).toBe(folderMessage(216))
+  })
+})
+
+describe("pathLimitProblem: the worktree's git folder (BSLG-28)", () => {
+  // A 40-character repository folder under C:\src, as in M4: the worktree folder stays short
+  // while `.git\worktrees\<name>\refs` grows by the repository name.
+  const repoDir = 'C:\\src\\' + 'r'.repeat(40)
+  const commonDir = `${repoDir}\\.git`
+  /** `C:\src\<name>` whose git folder `{commonDir}\worktrees\<name>\refs` is exactly `length`. */
+  function worktreeWithGitFolder(length: number): string {
+    const overhead = commonDir.length + '\\worktrees\\'.length + '\\refs'.length
+    return 'C:\\src\\' + 'n'.repeat(length - overhead)
+  }
+
+  it('passes a git folder of exactly 247', () => {
+    const worktreePath = worktreeWithGitFolder(247)
+    const name = worktreePath.slice(worktreePath.lastIndexOf('\\') + 1)
+    expect(`${commonDir}\\worktrees\\${name}\\refs`).toHaveLength(247)
+    expect(worktreePath.length).toBeLessThanOrEqual(215)
+    expect(pathLimitProblem(input({ commonDir, worktreePath }))).toBeNull()
+  })
+
+  it('refuses a git folder of exactly 248 with its length', () => {
+    const worktreePath = worktreeWithGitFolder(248)
+    expect(worktreePath.length).toBeLessThanOrEqual(215)
+    expect(pathLimitProblem(input({ commonDir, worktreePath }))).toBe(gitFolderMessage(248))
+  })
+
+  it('refuses it when the create writes no ref', () => {
+    const worktreePath = worktreeWithGitFolder(248)
+    expect(pathLimitProblem(input({ commonDir, worktreePath, writesRef: false }))).toBe(
+      gitFolderMessage(248)
+    )
+  })
+
+  it('passes it when core.longpaths is on', () => {
+    const worktreePath = worktreeWithGitFolder(248)
+    expect(pathLimitProblem(input({ commonDir, worktreePath, longPaths: true }))).toBeNull()
+  })
+})
+
+describe('pathLimitProblem: order when several limits are passed (BSLG-29)', () => {
+  it('returns the ref message when the ref path and the worktree folder are both past', () => {
+    const problem = pathLimitProblem(
+      input({ branch: branchWithRefPath(260), worktreePath: worktreeOf(216) })
+    )
+    expect(problem).toBe(refMessage(260))
+  })
+
+  it('returns the reflog message when the reflog folder and the worktree folder are both past', () => {
+    const problem = pathLimitProblem(
+      input({ branch: branchWithReflogFolder(248), worktreePath: worktreeOf(216) })
+    )
+    expect(problem).toBe(reflogMessage(248))
+  })
+
+  it("returns the folder message when the worktree folder and the worktree's git folder are both past", () => {
+    // A longer common dir pushes the git folder past 247 as well.
+    const commonDir = 'C:\\src\\' + 'r'.repeat(40) + '\\.git'
+    const worktreePath = worktreeOf(216)
+    const name = worktreePath.slice(worktreePath.lastIndexOf('\\') + 1)
+    expect(`${commonDir}\\worktrees\\${name}\\refs`.length).toBeGreaterThanOrEqual(248)
+    expect(pathLimitProblem(input({ commonDir, worktreePath }))).toBe(folderMessage(216))
+  })
+})
