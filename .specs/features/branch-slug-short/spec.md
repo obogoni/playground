@@ -206,7 +206,7 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-12 | P1: error, AC 12 | Tasks | Done: T3 |
 | BSLG-13 | P1: error, AC 13 | Tasks | Done: T3 |
 | BSLG-14 | P1: error, AC 14 | Tasks | Pending: T5, T17 (smoke 5) |
-| BSLG-15 | P1: error, AC 15 | Tasks | T3 done; T4 pending |
+| BSLG-15 | P1: error, AC 15 | Tasks | Done: T3, T4 |
 | BSLG-16 | P1: error, AC 16 | Tasks | Pending: T5 |
 | BSLG-17 | P1: check, AC 17 | Tasks | Pending: T6, T8, T17 (smoke 1) |
 | BSLG-18 | P1: check, AC 18 | Tasks | Pending: T6 |

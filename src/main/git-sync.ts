@@ -67,23 +67,10 @@ export async function runGitOp(
   } catch (err) {
     return isTimeout(err)
       ? { ok: false, timedOut: true, error: `Timed out after ${timeoutMs / 1000} s.` }
-      : { ok: false, error: errorLine(err) }
+      : { ok: false, error: gitFailureLine(err) }
   } finally {
     running.delete(worktreePath)
   }
-}
-
-/**
- * Git's first `fatal:`/`error:` stderr line, else `gitFailureLine`.
- * SPEC_DEVIATION: the design names `gitFailureLine` for every failure.
- * Reason: `pull` and `push` write progress (`From …`, `To …`) and `hint:`
- * lines to stderr before the error, so the first line is not git's error
- * line that STBR-18 requires (measured with git 2.55 on a diverged pull).
- */
-function errorLine(err: unknown): string {
-  const stderr = (err as { stderr?: string }).stderr ?? ''
-  const line = stderr.split(/\r?\n/).find((l) => /^(fatal|error):/.test(l.trim()))
-  return line?.trim() ?? gitFailureLine(err)
 }
 
 async function currentBranch(worktreePath: string): Promise<string> {

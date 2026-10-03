@@ -223,10 +223,12 @@ not the AC's 40- and 34-character slugs. The tests keep the AC's expected slugs 
 
 **Done when**:
 
-- [ ] The existing `git-sync.test.ts` tests (STBR-18 pull and push error lines) pass unchanged
-- [ ] `grep -rn "errorLine\|(fatal|error)" src/main --include=*.ts` finds only `git.ts` and its test
-- [ ] Gate check passes: `npx vitest run src/main/git-sync.test.ts` then `npm test`
-- [ ] Test count: T3 count, unchanged
+- [x] The existing `git-sync.test.ts` tests (STBR-18 pull and push error lines) pass unchanged
+- [x] `grep -rn "errorLine\|(fatal|error)" src/main --include=*.ts` finds only `git.ts` and its test
+- [x] Gate check passes: `npx vitest run src/main/git-sync.test.ts` then `npm test`
+- [x] Test count: T3 count, unchanged
+
+**Done** (T4): `git-sync.test.ts` 30 passed unchanged; suite 2558 passed, unchanged.
 
 **Tests**: unit
 **Gate**: quick
