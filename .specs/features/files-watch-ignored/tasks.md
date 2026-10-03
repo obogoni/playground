@@ -1148,13 +1148,50 @@ errors and 18 warnings, 105 s wall; `npx electron-vite build` passes. Phase 3 en
 
 **Done when** (dev app on a throwaway user data folder, freshly seeded before each drive):
 
-- [ ] `SMOKE_ONLY=watch`: 15a, 15b and 15c pass
-- [ ] 15a seen failing on a main mutant that emits every named path unfiltered (relaunched), restored from `.orig`
-- [ ] The full drive passes, FDIF-30 (at or under 1,000 ms, the time written here), FDIF-31 and the fold section included, except FPOL-14, FPOL-16 and FPOL-18 (FWIG-42, amended 2026-10-03); the watch section ran right before the icon checks, the order after them unchanged
-- [ ] The same full drive on `origin/main` (`fc19a3c`): a throwaway `git worktree add` under the temp folder, its own `npm ci --ignore-scripts` and `node node_modules/electron/install.js`, its dev app on its own throwaway user data and seed; the two drives compared check by check and written here (FPOL-14, 16 and 18 failing on both, nothing else failing on this branch alone); the throwaway worktree removed (`git worktree remove`, `git worktree prune`) afterwards
-- [ ] `SMOKE_ONLY=fold` passes on its own seed
-- [ ] `git status --porcelain` equals the baseline after the mutant
-- [ ] Gate check passes: `npm run lint`
+- [x] `SMOKE_ONLY=watch`: 15a, 15b and 15c pass
+- [x] 15a seen failing on a main mutant that emits every named path unfiltered (relaunched), restored from `.orig`
+- [x] The full drive passes, FDIF-30 (at or under 1,000 ms, the time written here), FDIF-31 and the fold section included, except FPOL-14, FPOL-16 and FPOL-18 (FWIG-42, amended 2026-10-03); the watch section ran right before the icon checks, the order after them unchanged
+- [x] The same full drive on `origin/main` (`fc19a3c`): a throwaway `git worktree add` under the temp folder, its own `npm ci --ignore-scripts` and `node node_modules/electron/install.js`, its dev app on its own throwaway user data and seed; the two drives compared check by check and written here (FPOL-14, 16 and 18 failing on both, nothing else failing on this branch alone); the throwaway worktree removed (`git worktree remove`, `git worktree prune`) afterwards
+- [x] `SMOKE_ONLY=fold` passes on its own seed
+- [x] `git status --porcelain` equals the baseline after the mutant
+- [x] Gate check passes: `npm run lint`
+
+**Result (2026-10-03)**: the dev app at `aab6756` (T18's commit, the whole change), each drive on a
+fresh seed and a fresh launch: a throwaway folder under the system temp folder holding the seed and
+the user data (`SMOKE_BASE`, `SMOKE_CONFIG`), CDP port 9241 (`SMOKE_PORT`), the three flags; the app's
+process tree killed by PID after each drive and the folder deleted.
+
+- `SMOKE_ONLY=watch`: **15a PASS** ("0 events, 0 paths"), 15b PASS (after about 443 ms), 15c PASS
+  (control listed in both, no `fwig-build` row). 3/3, exit 0. Before the change (T5) 15a read 7
+  events and 27 paths.
+- 15a on a main mutant: in `src/main/file-watcher.ts`, `classify`'s
+  `const kept = paths.filter((path) => !this.answers.isIgnored(path))` replaced by
+  `const kept = [...paths]`, so every named path leaves unfiltered (git is still asked). Copied to
+  `.orig`, the mutant text asserted present, the dev app launched after the write: **15a FAIL**, "7
+  events, 27 paths", every one under `fwig-build`, as before the change; 15b and 15c PASS. Restored
+  from `.orig` in `finally`; `git status --porcelain` empty afterwards, as before the mutant.
+- Full drive, relaunched on the restored source: **111/114**, exit 1. The three failures are FPOL-14
+  ("0 -> 0 of 50"), FPOL-16 ("9 diff editors (27 Monaco editors) for 0 open sections") and FPOL-18
+  ("opened true: 0 -> 0 -> 0 of 45"), the owner's pre-existing three. FDIF-30 (check 18) **arrived in
+  732 ms**, under 1,000 ms; FDIF-31 (check 19) PASS ("5 sections -> 4"); every fold check of section
+  14 in the drive passes, FOLD-09's scroll half (check 102) included. Order: the discard checks end
+  at 56, the watch section is 57 to 59 (all PASS), the icon checks follow at 60 to 69, then the rest
+  as on `main`.
+- `SMOKE_ONLY=fold` on its own seed: **19/19**, exit 0.
+- `origin/main` `fc19a3c`: a detached `git worktree add` under the system temp folder, `npm ci
+  --ignore-scripts` and `node node_modules/electron/install.js` there, the same driver and flags. The
+  first launch from the temp folder's 8.3 short path died before CDP answered on libuv's
+  `Assertion failed: !_wcsnicmp(filename, dir, dirlen), file src\win\fs-event.c` (a watch on a
+  short-name path; the branch drives run from a long-name path and never hit it). Launched from the
+  same folder's long path, the drive ran: **108/111**, exit 1, FDIF-30 in 676 ms.
+- Check by check, matched by title (the numbering shifts by the watch section): the 111 checks the
+  two drives share run in the same order and every one has the same verdict on both. The only
+  failures on either are FPOL-14, FPOL-16 and FPOL-18, with the same detail text on both. The branch
+  adds 15a, 15b and 15c, all PASS. **No check fails on this branch alone.**
+- The throwaway worktree removed (`git worktree remove --force`, `git worktree prune`); its folder is
+  gone and `git worktree list` no longer names it. No electron process from these drives and no
+  throwaway folder left.
+- Gate: `npm run lint` 0 errors, 18 warnings.
 
 **Tests**: manual
 **Gate**: manual
