@@ -888,11 +888,32 @@ warnings, 107 s wall (T9: 102 s; each real-repository case costs about 0.45 s fo
 
 **Done when**:
 
-- [ ] Tests: two `diffRequestFor` results for the same change and merge base, built separately, have equal keys (FWIG-24)
-- [ ] Tests: the key changes with the status (modified to deleted, untracked to added), the path, the old path of a rename, and the merge base (FWIG-26)
-- [ ] Tests: `requestKey(null)` differs from every non-null key; a disk side and a `HEAD` side of the same path differ
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`, then the full gate
-- [ ] Test count: T13 count + the new tests
+- [x] Tests: two `diffRequestFor` results for the same change and merge base, built separately, have equal keys (FWIG-24)
+- [x] Tests: the key changes with the status when the sides change (modified to deleted, added to modified), the path, the old path of a rename, and the merge base (FWIG-26) (amended 2026-10-03, first written as "modified to deleted, untracked to added"; see the Result)
+- [x] Tests: `untracked` and `added` for the same path give equal keys (FWIG-24, added 2026-10-03)
+- [x] Tests: `requestKey(null)` differs from every non-null key; a disk side and a `HEAD` side of the same path differ
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`, then the full gate
+- [x] Test count: T13 count + the new tests
+
+**Result (2026-10-03)**: `src/renderer/src/lib/diff-view.test.ts` 87 tests (77 + 10 new), all
+passing; full gate 2,858 tests in 129 files (2,848 + 10), typecheck clean, lint 0 errors and 18
+warnings, 108 s wall.
+
+- Shape: `requestKey` returns `-` for null, otherwise the two sides joined by NUL, each `none`,
+  `disk:<path>` or `rev:<rev>:<path>`, as design.md defines it.
+- **Planning correction** (decided by the coordinator from the spec, 2026-10-03): the first Done-when
+  line named "untracked to added" as a status change that changes the key. It cannot: `diffRequestFor`
+  builds the same request for both (no original side, the disk as the modified side), and FWIG-24
+  says a section whose sides name the same revisions and paths SHALL NOT re-read. FWIG-26 re-reads on
+  a status change only when the sides change. The line now names "added to modified" (the original
+  side goes from none to the merge base), and a new test pins the equal keys
+  (`diff-view.test.ts:129`). Nothing is lost: the `git add` behind that transition moves the index,
+  so the batch carries a git-state change and `refreshToken` re-reads every section (FWIG-27).
+- Assertions: equal keys `:115` (since-base), `:122` (uncommitted), `:129` (untracked = added);
+  changed keys `:136` (modified to deleted), `:143` (added to modified), `:150` (path), `:166-167`
+  (a rename's old path, and a rename against a plain modify), `:174` (merge base); `requestKey(null)`
+  against four non-null keys `:186`; disk against `HEAD` `:193`.
+- Red first: the ten new cases failed on the missing export before the change.
 
 **Tests**: unit
 **Gate**: quick
