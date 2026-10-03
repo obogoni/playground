@@ -193,11 +193,13 @@ not the AC's 40- and 34-character slugs. The tests keep the AC's expected slugs 
 
 **Done when**:
 
-- [ ] Tests, synthetic: `Preparing worktree (new branch 'x')` then `fatal: cannot lock ref …` → the `fatal:` line; `hint: a` then `error: b` → `error: b`; `error: a` then `fatal: b` → `error: a` (BSLG-43); `hint: fatal: x` alone → `hint: fatal: x`, and followed by `fatal: y` → `fatal: y` (BSLG-44); `   fatal: z  ` → `fatal: z`
-- [ ] Tests, real (L-024): a real `fatal:` failure (`rev-parse --verify no-such-ref` in a temp repo) and a real `error:` failure (`checkout no-such-path` in a temp repo) each return their prefixed line
-- [ ] The three existing `gitFailureLine` tests pass unchanged
-- [ ] Gate check passes: `npx vitest run src/main/git.test.ts` then `npm test`
-- [ ] Test count: T2 count + the new tests
+- [x] Tests, synthetic: `Preparing worktree (new branch 'x')` then `fatal: cannot lock ref …` → the `fatal:` line; `hint: a` then `error: b` → `error: b`; `error: a` then `fatal: b` → `error: a` (BSLG-43); `hint: fatal: x` alone → `hint: fatal: x`, and followed by `fatal: y` → `fatal: y` (BSLG-44); `   fatal: z  ` → `fatal: z`
+- [x] Tests, real (L-024): a real `fatal:` failure (`rev-parse --verify no-such-ref` in a temp repo) and a real `error:` failure (`checkout no-such-path` in a temp repo) each return their prefixed line
+- [x] The three existing `gitFailureLine` tests pass unchanged
+- [x] Gate check passes: `npx vitest run src/main/git.test.ts` then `npm test`
+- [x] Test count: T2 count + the new tests
+
+**Done** (T3): 7 new tests in `src/main/git.test.ts`; suite 2551 → 2558 passed.
 
 **Tests**: unit
 **Gate**: quick

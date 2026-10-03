@@ -203,10 +203,10 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-09 | P1: slugs, AC 9 | Tasks | Done: T2 |
 | BSLG-10 | P1: slugs, AC 10 | Tasks | T2 done; T18 (smoke 8) pending |
 | BSLG-11 | P1: slugs, AC 11 | Tasks | Done: T2 |
-| BSLG-12 | P1: error, AC 12 | Tasks | Pending: T3 |
-| BSLG-13 | P1: error, AC 13 | Tasks | Pending: T3 |
+| BSLG-12 | P1: error, AC 12 | Tasks | Done: T3 |
+| BSLG-13 | P1: error, AC 13 | Tasks | Done: T3 |
 | BSLG-14 | P1: error, AC 14 | Tasks | Pending: T5, T17 (smoke 5) |
-| BSLG-15 | P1: error, AC 15 | Tasks | Pending: T3, T4 |
+| BSLG-15 | P1: error, AC 15 | Tasks | T3 done; T4 pending |
 | BSLG-16 | P1: error, AC 16 | Tasks | Pending: T5 |
 | BSLG-17 | P1: check, AC 17 | Tasks | Pending: T6, T8, T17 (smoke 1) |
 | BSLG-18 | P1: check, AC 18 | Tasks | Pending: T6 |
@@ -234,8 +234,8 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-40 | Edge: repository value wins | Tasks | Pending: T8 |
 | BSLG-41 | Edge: unreadable repository | Tasks | Pending: T8 |
 | BSLG-42 | Edge: stale answer | Tasks | Pending: T12 |
-| BSLG-43 | Edge: `error:` before `fatal:` | Tasks | Pending: T3 |
-| BSLG-44 | Edge: `fatal:` inside a line | Tasks | Pending: T3 |
+| BSLG-43 | Edge: `error:` before `fatal:` | Tasks | Done: T3 |
+| BSLG-44 | Edge: `fatal:` inside a line | Tasks | Done: T3 |
 
 **Coverage:** 44 total, 44 mapped to tasks (tasks.md, Requirement → Evidence Map), 0 unmapped.
 
