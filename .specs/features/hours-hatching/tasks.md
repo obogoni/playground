@@ -168,9 +168,9 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Before the edit: `node <dataviz-skill-dir>/scripts/validate_palette.js "<light>" --mode light --surface "#ffffff" --pairs all` and the dark twin (`--surface "#221f1b"`) both exit 0 on the spec's exact values, outputs kept for T9 (stop rule otherwise)
-- [ ] `.hcal-tip-key` unchanged (tooltip key row, owner confirmed 2026-10-01)
-- [ ] Gate check passes: `npm run lint && npx electron-vite build`
+- [x] Before the edit: `node <dataviz-skill-dir>/scripts/validate_palette.js "<light>" --mode light --surface "#ffffff" --pairs all` and the dark twin (`--surface "#221f1b"`) both exit 0 on the spec's exact values, outputs kept for T9 (stop rule otherwise) (re-run 2026-10-03 before the edit: light and dark both exit 0, outputs identical to the spec's "Validator output")
+- [x] `.hcal-tip-key` unchanged (tooltip key row, owner confirmed 2026-10-01)
+- [x] Gate check passes: `npm run lint && npx electron-vite build` (lint 0 errors, 18 warnings)
 
 **Tests**: none
 **Gate**: build
