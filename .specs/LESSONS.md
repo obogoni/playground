@@ -660,31 +660,31 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: PDIAG-36/PDIAG-37 vs design.md:225-237 (specs)
 - last seen: 2026-10-03T14:19:26Z
 
-### L-114 - When a rule matches a file name at any depth, test the root-level name as well as a nested one; a match on '/name' alone misses the root and still passes a nested-only test.
+### L-117 - When a rule matches a file name at any depth, test the root-level name as well as a nested one; a match on '/name' alone misses the root and still passes a nested-only test.
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `main-watcher` · harmful: 0
 - features: files-watch-ignored
 - evidence: U3 src/main/file-watcher.ts:174 (FWIG-07) (main-watcher)
 - last seen: 2026-10-03T23:00:08Z
 
-### L-115 - When stale async results are dropped by a generation counter, test leaving and returning to the same target while the async step is held; a plain deselect is caught by the target check and leaves the counter untested.
+### L-118 - When stale async results are dropped by a generation counter, test leaving and returning to the same target while the async step is held; a plain deselect is caught by the target check and leaves the counter untested.
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `main-watcher` · harmful: 0
 - features: files-watch-ignored
 - evidence: U7 src/main/file-watcher.ts:190 (FWIG-13) (main-watcher)
 - last seen: 2026-10-03T23:00:08Z
 
-### L-116 - When an AC requires the same flags on every git call of a module, route each call through an injectable runner and assert its args; calls made straight to the git helper stay unasserted.
+### L-119 - When an AC requires the same flags on every git call of a module, route each call through an injectable runner and assert its args; calls made straight to the git helper stay unasserted.
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `git-reads` · harmful: 0
 - features: files-watch-ignored
 - evidence: U9 src/main/file-diff.ts:284 (FWIG-15) (git-reads)
 - last seen: 2026-10-03T23:00:09Z
 
-### L-117 - When a fallback AC says a batch passes as it would without a filter, state whether answers cached before the failure still apply, and pin that reading with a test that starts from a non-empty cache.
+### L-120 - When a fallback AC says a batch passes as it would without a filter, state whether answers cached before the failure still apply, and pin that reading with a test that starts from a non-empty cache.
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
 - features: files-watch-ignored
 - evidence: FWIG-10 vs src/main/file-watcher.ts:182-184 (specs)
 - last seen: 2026-10-03T23:00:09Z
 
-### L-118 - A code read is not evidence for an AC: give each AC a test, a numbered smoke check or a named run, and list any AC left to reading as a gap in the plan's evidence split.
+### L-121 - A code read is not evidence for an AC: give each AC a test, a numbered smoke check or a named run, and list any AC left to reading as a gap in the plan's evidence split.
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
 - features: files-watch-ignored
 - evidence: FWIG-22, FWIG-28, FWIG-29 (read only) (specs)

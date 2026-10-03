@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 119,
+  "next_id": 122,
   "lessons": [
     {
       "id": "L-001",
@@ -1959,7 +1959,7 @@
       "last_seen": "2026-10-03T14:19:26Z"
     },
     {
-      "id": "L-114",
+      "id": "L-117",
       "key": "surviving_mutant::when a rule matches a file name at any depth test the root level name as well as a nested one a match on name alone misses the root and still passes a nested only test",
       "text": "When a rule matches a file name at any depth, test the root-level name as well as a nested one; a match on '/name' alone misses the root and still passes a nested-only test.",
       "signal": "surviving_mutant",
@@ -1977,7 +1977,7 @@
       "last_seen": "2026-10-03T23:00:08Z"
     },
     {
-      "id": "L-115",
+      "id": "L-118",
       "key": "surviving_mutant::when stale async results are dropped by a generation counter test leaving and returning to the same target while the async step is held a plain deselect is caught by the target check and leaves the counter untested",
       "text": "When stale async results are dropped by a generation counter, test leaving and returning to the same target while the async step is held; a plain deselect is caught by the target check and leaves the counter untested.",
       "signal": "surviving_mutant",
@@ -1995,7 +1995,7 @@
       "last_seen": "2026-10-03T23:00:08Z"
     },
     {
-      "id": "L-116",
+      "id": "L-119",
       "key": "surviving_mutant::when an ac requires the same flags on every git call of a module route each call through an injectable runner and assert its args calls made straight to the git helper stay unasserted",
       "text": "When an AC requires the same flags on every git call of a module, route each call through an injectable runner and assert its args; calls made straight to the git helper stay unasserted.",
       "signal": "surviving_mutant",
@@ -2013,7 +2013,7 @@
       "last_seen": "2026-10-03T23:00:09Z"
     },
     {
-      "id": "L-117",
+      "id": "L-120",
       "key": "spec_precision_gap::when a fallback ac says a batch passes as it would without a filter state whether answers cached before the failure still apply and pin that reading with a test that starts from a non empty cache",
       "text": "When a fallback AC says a batch passes as it would without a filter, state whether answers cached before the failure still apply, and pin that reading with a test that starts from a non-empty cache.",
       "signal": "spec_precision_gap",
@@ -2031,7 +2031,7 @@
       "last_seen": "2026-10-03T23:00:09Z"
     },
     {
-      "id": "L-118",
+      "id": "L-121",
       "key": "ac_gap::a code read is not evidence for an ac give each ac a test a numbered smoke check or a named run and list any ac left to reading as a gap in the plan s evidence split",
       "text": "A code read is not evidence for an AC: give each AC a test, a numbered smoke check or a named run, and list any AC left to reading as a gap in the plan's evidence split.",
       "signal": "ac_gap",

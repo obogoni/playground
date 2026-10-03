@@ -474,9 +474,8 @@ interface WorktreeFiles {
 | Disk revisions | Per path, Uncommitted mode only | FDIF-30 is an Uncommitted requirement; diff-to-origin compares two commits |
 | Gate scope | `files:changed` batches only | User actions must answer at once; batches are what pile up |
 
-> **AD-TBD (number chosen at Execute; at 2026-10-03 `main` holds up to AD-057, PR #164 holds AD-058 and
-> PR #165 AD-059, and #151 (`feature/main-async-git`, executing in a parallel session) claims AD-060, so
-AD-061 unless a sibling takes it first; re-check right before the push): the Files view's git reads never write
+> **AD-061 (numbered 2026-10-03: `main` holds up to AD-057, PR #164 holds AD-058, PR #165 AD-059
+> and PR #166 AD-060): the Files view's git reads never write
 > the index, and its watcher drops what git ignores.** Every git read the Files view runs to list, count,
 > diff or classify passes `READ_ONLY_FLAGS` (`--no-optional-locks -c diff.autoRefreshIndex=false`):
 > `--no-optional-locks` alone does not stop `git diff` from refreshing the index (measured with git
