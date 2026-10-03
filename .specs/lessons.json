@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 101,
+  "next_id": 106,
   "lessons": [
     {
       "id": "L-001",
@@ -468,17 +468,19 @@
       "text": "A smoke check for a state change must start from a different state, or it cannot fail",
       "signal": "ac_gap",
       "scope": "smoke-scripts",
-      "status": "candidate",
+      "status": "confirmed",
       "features": [
-        "session-idle-notifications"
+        "session-idle-notifications",
+        "branch-slug-short"
       ],
-      "recurrence": 1,
+      "recurrence": 2,
       "harmful": 0,
       "evidence": [
-        "NOTF-05 direction half (scripts/smoke-notifications.mjs:492; src/renderer/src/App.tsx:172) (smoke-scripts)"
+        "NOTF-05 direction half (scripts/smoke-notifications.mjs:492; src/renderer/src/App.tsx:172) (smoke-scripts)",
+        "validation.md SM-D (src/renderer/src/lib/use-path-check.ts:66; scripts/smoke-start-work.mjs:376-396; BSLG-23) (smoke-scripts)"
       ],
       "created": "2026-09-17T00:29:17Z",
-      "last_seen": "2026-09-17T00:29:17Z"
+      "last_seen": "2026-10-03T12:50:23Z"
     },
     {
       "id": "L-032",
@@ -1723,6 +1725,96 @@
       ],
       "created": "2026-10-02T17:30:50Z",
       "last_seen": "2026-10-02T17:30:50Z"
+    },
+    {
+      "id": "L-101",
+      "key": "surviving_mutant::test a guard s placement before a destructive step with a fixture the code path can see a fixture the tool cannot read skips the step and the test passes for the wrong reason",
+      "text": "Test a guard's placement before a destructive step with a fixture the code path can see; a fixture the tool cannot read skips the step and the test passes for the wrong reason.",
+      "signal": "surviving_mutant",
+      "scope": "src/main tests",
+      "status": "candidate",
+      "features": [
+        "branch-slug-short"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md W3, W4 (src/main/worktree-manager.ts:93-94; src/main/worktree-manager.test.ts:759) (src/main tests)"
+      ],
+      "created": "2026-10-03T12:50:22Z",
+      "last_seen": "2026-10-03T12:50:22Z"
+    },
+    {
+      "id": "L-102",
+      "key": "spec_precision_gap::when a measurement shows an edge case s state cannot occur restate the edge case at the nearest state that still exercises the guard not only its tests",
+      "text": "When a measurement shows an edge case's state cannot occur, restate the edge case at the nearest state that still exercises the guard, not only its tests.",
+      "signal": "spec_precision_gap",
+      "scope": "specs",
+      "status": "candidate",
+      "features": [
+        "branch-slug-short"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "BSLG-38 (validation.md edge cases; src/main/worktree-manager.test.ts:759) (specs)"
+      ],
+      "created": "2026-10-03T12:50:22Z",
+      "last_seen": "2026-10-03T12:50:22Z"
+    },
+    {
+      "id": "L-103",
+      "key": "surviving_mutant::when a spec applies a rule again on a fallback path assert the rule on that path too",
+      "text": "When a spec applies a rule again on a fallback path, assert the rule on that path too.",
+      "signal": "surviving_mutant",
+      "scope": "src/shared",
+      "status": "candidate",
+      "features": [
+        "branch-slug-short"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md S11 (src/shared/tasks.ts:57; BSLG-06) (src/shared)"
+      ],
+      "created": "2026-10-03T12:50:22Z",
+      "last_seen": "2026-10-03T12:50:22Z"
+    },
+    {
+      "id": "L-104",
+      "key": "surviving_mutant::test a platform gate with at least two non target platforms or a gate keyed on the wrong platform survives",
+      "text": "Test a platform gate with at least two non-target platforms, or a gate keyed on the wrong platform survives.",
+      "signal": "surviving_mutant",
+      "scope": "src/main",
+      "status": "candidate",
+      "features": [
+        "branch-slug-short"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md C1 (src/main/path-limits.ts:94; src/main/path-limits.test.ts:297) (src/main)"
+      ],
+      "created": "2026-10-03T12:50:22Z",
+      "last_seen": "2026-10-03T12:50:22Z"
+    },
+    {
+      "id": "L-105",
+      "key": "surviving_mutant::a test of a pure stale answer helper does not prove the hook passes it the current key give the hook wiring its own discriminating check",
+      "text": "A test of a pure stale-answer helper does not prove the hook passes it the current key; give the hook wiring its own discriminating check.",
+      "signal": "surviving_mutant",
+      "scope": "renderer hooks",
+      "status": "candidate",
+      "features": [
+        "branch-slug-short"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md SM-A (src/renderer/src/lib/use-path-check.ts:68; BSLG-42) (renderer hooks)"
+      ],
+      "created": "2026-10-03T12:50:22Z",
+      "last_seen": "2026-10-03T12:50:22Z"
     }
   ]
 }

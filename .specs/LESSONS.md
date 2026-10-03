@@ -26,6 +26,12 @@ Corroborated across multiple features. Safe to apply as guidance.
 - evidence: src/renderer/src/lib/pane-layout.test.ts:41 (renderer/lib) (+1 more)
 - last seen: 2026-09-28T22:09:36Z
 
+### L-031 - A smoke check for a state change must start from a different state, or it cannot fail
+- signal: `ac_gap` · recurrence: 2 feature(s) · scope: `smoke-scripts` · harmful: 0
+- features: session-idle-notifications, branch-slug-short
+- evidence: NOTF-05 direction half (scripts/smoke-notifications.mjs:492; src/renderer/src/App.tsx:172) (smoke-scripts) (+1 more)
+- last seen: 2026-10-03T12:50:23Z
+
 ## Candidates (under observation - do NOT load as guidance yet)
 
 Seen once or not yet corroborated. Tracked, not trusted.
@@ -161,12 +167,6 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: session-idle-notifications
 - evidence: NOTF-23, NOTF-06, NOTF-21 (validation.md AC table; src/main/index.ts:237,256; src/renderer/src/App.tsx:174) (smoke-scripts) (+1 more)
 - last seen: 2026-09-17T01:30:15Z
-
-### L-031 - A smoke check for a state change must start from a different state, or it cannot fail
-- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `smoke-scripts` · harmful: 0
-- features: session-idle-notifications
-- evidence: NOTF-05 direction half (scripts/smoke-notifications.mjs:492; src/renderer/src/App.tsx:172) (smoke-scripts)
-- last seen: 2026-09-17T00:29:17Z
 
 ### L-032 - When the spec leaves user-facing wording open, fix the exact wording in the spec before tests pin it
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `notifications` · harmful: 0
@@ -581,6 +581,36 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: pty-host
 - evidence: SPEC_DEVIATION src/main/session-manager.ts:126 (session-manager)
 - last seen: 2026-10-02T17:30:50Z
+
+### L-101 - Test a guard's placement before a destructive step with a fixture the code path can see; a fixture the tool cannot read skips the step and the test passes for the wrong reason.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main tests` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md W3, W4 (src/main/worktree-manager.ts:93-94; src/main/worktree-manager.test.ts:759) (src/main tests)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-102 - When a measurement shows an edge case's state cannot occur, restate the edge case at the nearest state that still exercises the guard, not only its tests.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: branch-slug-short
+- evidence: BSLG-38 (validation.md edge cases; src/main/worktree-manager.test.ts:759) (specs)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-103 - When a spec applies a rule again on a fallback path, assert the rule on that path too.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/shared` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md S11 (src/shared/tasks.ts:57; BSLG-06) (src/shared)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-104 - Test a platform gate with at least two non-target platforms, or a gate keyed on the wrong platform survives.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md C1 (src/main/path-limits.ts:94; src/main/path-limits.test.ts:297) (src/main)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-105 - A test of a pure stale-answer helper does not prove the hook passes it the current key; give the hook wiring its own discriminating check.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer hooks` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md SM-A (src/renderer/src/lib/use-path-check.ts:68; BSLG-42) (renderer hooks)
+- last seen: 2026-10-03T12:50:22Z
 
 ## Quarantined (failed when applied - ignore)
 

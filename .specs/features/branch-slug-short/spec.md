@@ -246,3 +246,20 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 - [ ] Start Work on a task and a parent with 80-character titles, nested template, creates the worktree on Windows with `core.longpaths` off
 - [ ] No dialog shows `Preparing worktree …` as a failure reason
 - [ ] A hand-typed name that would fail on the ref path never reaches `git worktree add`
+
+---
+
+## Follow-ups
+
+Recorded by the Verifier on 2026-10-03 (validation.md: PASS; production code correct, gaps in tests and smoke only):
+
+1. BSLG-25 ("no branch delete") and BSLG-38: test a Recreate of a branch git can see (reflog folder 248, ref
+   path 251) through `createWorktree`, expecting the reflog message and an unchanged tip. Restate BSLG-38 at that
+   shape: git cannot see a branch with a ref path of 260 or more under `core.longpaths=false`, so today's case
+   never reaches Recreate's `branch -D`.
+2. BSLG-06: assert repeat collapse inside the filler-only fallback (`De de para` → `de-para`).
+3. BSLG-22: test the platform gate on `darwin` as well as `linux`.
+4. BSLG-23 / BSLG-42: smoke a repository change from an accepted to a refusing repository, and a template change.
+   Prove the hook's stale-answer guard with a hook-level test or a smoke race.
+5. BSLG-08/10/20/24: owner run of T18 checks 8–9 with `SMOKE_LONG_TASK_URL` set (optional by owner decision).
+6. BSLG-41: test the "git missing" arm (a rejecting `git` stub returns `null`).
