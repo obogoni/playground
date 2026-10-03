@@ -19,7 +19,7 @@ baseline and can stop the feature.
 
 One new deep module in main, `src/main/recount-scheduler.ts`, owns every `git status` main runs to
 count a worktree. It keeps one **lane** per worktree path: the lane holds the pending burst, the
-waiting requests, the last start time and whether a recount is running. Two inputs feed it: `notify` (a
+waiting requests, the last recount's end time and whether a recount is running. Two inputs feed it: `notify` (a
 git-state event from the watcher) and `request` (a turn end or the tree build, answered with a count).
 One output leaves it: `onRecounted`, called after a recount that served a git-state event, which
 `index.ts` turns into `worktree:status`.
@@ -142,8 +142,8 @@ All three deliver the same scope; the recommendation leads.
     lastEventAt: number | null
     /** Requests waiting for the next recount to start. */
     waiters: Array<(count: WorktreeCount | null) => void>
-    /** When this worktree's last recount started; null before the first. */
-    lastStartAt: number | null
+    /** When this worktree's last recount ended (its runner settled); null before the first. */
+    lastEndAt: number | null
     /** The armed timer's cancel, if any. */
     cancelTimer: (() => void) | null
   }
@@ -155,7 +155,7 @@ All three deliver the same scope; the recommendation leads.
   wanted = waiters.length > 0
              ? now
              : min(lastEventAt + RECOUNT_QUIET_MS, firstEventAt + RECOUNT_MAX_WAIT_MS)
-  due    = max(wanted, lastStartAt + RECOUNT_MIN_INTERVAL_MS)   // lastStartAt null → wanted
+  due    = max(wanted, lastEndAt + RECOUNT_MIN_INTERVAL_MS)     // lastEndAt null → wanted
   ```
 
 - **Behaviour**:
@@ -167,9 +167,10 @@ All three deliver the same scope; the recommendation leads.
   - `arm(lane)`: cancels the armed timer; computes `due`; if `due <= now` the recount starts at once;
     otherwise `schedule.after(due - now, () => arm(lane))`. Re-computing on fire, rather than trusting
     the earlier figure, lets a later event push the quiet period out (RCNT-02) without a second timer.
-  - **Start** (RCNT-05, 07, 09): `running = true`, `lastStartAt = now`; takes the burst
+  - **Start** (RCNT-05, 07, 09): `running = true`; takes the burst
     (`servedEvent = firstEventAt !== null`) and the waiters, clears both; calls `recount(path)`. A
-    throw counts as `null` (RCNT-10). When it settles: every taken waiter gets the count; if
+    throw counts as `null` (RCNT-10). When it settles, success, `null` or throw: `lastEndAt = now`
+    (RCNT-04, amended after T11), then every taken waiter gets the count; if
     `servedEvent` and the count is not `null` and the scheduler is not stopped, `onRecounted(path,
     count)`. Then `running = false`, and the lane is re-armed if anything is pending.
   - `forget(path)`: cancels the timer and drops the burst; waiters stay and are served (RCNT-41), so a
@@ -258,9 +259,9 @@ No new data. The IPC payloads keep their shape:
 | Situation | Events | Recount starts |
 | --------- | ------ | -------------- |
 | One commit, worktree idle for a while | `index` at 0, 40, 90 ms | 340 ms (quiet) |
-| Continuous writes every 100 ms | 0, 100, 200, ... | 1,000 ms (max wait), then at least 1,000 ms after each start |
-| A short recount, then a short burst | run 1 at 0 ms ends at 50; events at 60, 90 | 1,000 ms (spacing), not 340 |
-| A turn end right after a git-state run started at 0 | request at 200 ms | 1,000 ms; the request is answered by that run |
+| Continuous writes every 100 ms | 0, 100, 200, ... | 1,000 ms (max wait), then at least 1,000 ms after each recount ended |
+| A short recount, then a short burst | run 1 at 0 ms ends at 50; events at 60, 90 | 1,050 ms (spacing from the end), not 340 |
+| A turn end right after a git-state run that started at 0 and ended at 50 | request at 200 ms | 1,050 ms; the request is answered by that run |
 | A focus with 7 worktrees, all idle | 7 requests at 0 | 7 at 0; `git()` runs 4 processes at once, the rest wait in its queue (PERF-22) |
 
 ---
@@ -300,7 +301,7 @@ No new data. The IPC payloads keep their shape:
 | -------- | ------ | --------- |
 | Who coalesces | The scheduler alone; the watcher's batch goes | Two coalescers add their delays (250 + 250 ms before any run) |
 | Re-arm on fire | The timer re-computes the due time when it fires | One timer per lane, and a later event moves the quiet period without bookkeeping |
-| The spacing | A third constant, 1,000 ms between starts | Makes "at most one per second" true by construction, whatever the event pattern |
+| The spacing | A third constant, 1,000 ms from a recount's end to the next start of that worktree (amended 2026-10-03, owner, after T11; was between starts) | Makes "at most one per second" true by construction, whatever the event pattern; counted from the end, it holds for git process starts too, even when a recount waits in `git()`'s queue (PERF-22) |
 | No pool of its own | `git()`'s pacer (PERF-22) is the only concurrency bound | A second cap of 3 above a global cap of 4 adds a queue and no protection |
 | Event shape | Unchanged; the event is the git-state signal | Today only the watcher emits; no contract churn |
 | Tree identity for the Files list | `treeRevision` (#154's), not `tree` | FCMT-32's triggers are all `tree:get` results |
@@ -311,7 +312,8 @@ No new data. The IPC payloads keep their shape:
 > scheduler.** `src/main/recount-scheduler.ts` owns every `git status` main runs to count a worktree:
 > git-state events wait for a 250 ms quiet period or 1,000 ms at most; turn-end and tree-build requests
 > skip the quiet period; a worktree runs one recount at a time, one trailing recount serves what
-> arrived during it, and starts are at least 1,000 ms apart per worktree. How many run across worktrees
+> arrived during it, and a recount starts at least 1,000 ms after the previous one of that worktree
+> ended (amended 2026-10-03 after T11, was "starts are at least 1,000 ms apart"). How many run across worktrees
 > is left to `git()`'s pacer (PERF-22). `worktree:status` is sent only after a recount that served a
 > git-state event. The Files Commits list follows `tree:get` results (`treeRevision`), not tree
 > identity. **Revises** SCRF-02 (the watcher's 250 ms batch moves into the scheduler; the criterion

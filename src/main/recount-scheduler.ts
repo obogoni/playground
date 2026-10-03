@@ -4,7 +4,11 @@ import type { Scheduler } from './file-watcher'
 export const RECOUNT_QUIET_MS = 250
 /** A burst that never goes quiet is recounted this long after its first event (RCNT-03). */
 export const RECOUNT_MAX_WAIT_MS = 1_000
-/** Two recounts of one worktree start at least this far apart (RCNT-04). */
+/**
+ * A worktree's recount starts at least this long after its previous one ended
+ * (RCNT-04). Counted from the end, so a run that waited for its git process
+ * still leaves this gap before the next one starts.
+ */
 export const RECOUNT_MIN_INTERVAL_MS = 1_000
 
 export interface WorktreeCount {
@@ -34,8 +38,8 @@ interface Lane {
   lastEventAt: number | null
   /** Requests waiting for the next recount to start (RCNT-14). */
   waiters: Waiter[]
-  /** When this worktree's last recount started; null before the first. */
-  lastStartAt: number | null
+  /** When this worktree's last recount ended (its runner settled); null before the first. */
+  lastEndAt: number | null
   /** The armed timer's cancel, if any. */
   cancelTimer: (() => void) | null
 }
@@ -44,9 +48,10 @@ interface Lane {
  * Decides when each worktree's `git status` runs (RCNT-02..15). Git-state
  * events wait for a quiet period, or the maximum wait under steady writes;
  * requests (a turn end, the tree build) skip the wait. A worktree runs one
- * recount at a time, and two of its recounts start at least
- * `RECOUNT_MIN_INTERVAL_MS` apart. How many git processes run across
- * worktrees is `git()`'s pacer's business (PERF-22), not this class's.
+ * recount at a time, and starts the next one at least
+ * `RECOUNT_MIN_INTERVAL_MS` after the previous one ended. How many git
+ * processes run across worktrees is `git()`'s pacer's business (PERF-22), not
+ * this class's.
  */
 export class RecountScheduler {
   private readonly deps: RecountSchedulerDeps
@@ -121,7 +126,7 @@ export class RecountScheduler {
         firstEventAt: null,
         lastEventAt: null,
         waiters: [],
-        lastStartAt: null,
+        lastEndAt: null,
         cancelTimer: null
       }
       this.lanes.set(path, lane)
@@ -139,9 +144,9 @@ export class RecountScheduler {
         lane.firstEventAt + RECOUNT_MAX_WAIT_MS
       )
     } else return null
-    return lane.lastStartAt === null
+    return lane.lastEndAt === null
       ? wanted
-      : Math.max(wanted, lane.lastStartAt + RECOUNT_MIN_INTERVAL_MS)
+      : Math.max(wanted, lane.lastEndAt + RECOUNT_MIN_INTERVAL_MS)
   }
 
   /**
@@ -168,7 +173,6 @@ export class RecountScheduler {
 
   private async start(lane: Lane): Promise<void> {
     lane.running = true
-    lane.lastStartAt = this.deps.now()
     const servedEvent = lane.firstEventAt !== null
     lane.firstEventAt = null
     lane.lastEventAt = null
@@ -181,6 +185,8 @@ export class RecountScheduler {
       // A runner that throws counts as no answer (RCNT-10).
       count = null
     }
+    // Success, null or throw: the spacing counts from here (RCNT-04).
+    lane.lastEndAt = this.deps.now()
     for (const answer of waiters) answer(count)
     if (servedEvent && count !== null && !this.stopped) this.deps.onRecounted(lane.path, count)
     lane.running = false

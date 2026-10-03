@@ -70,7 +70,7 @@ with #147's baseline, owner's answers the same day. The first plan's 18 tasks be
 | Stop rule | If #147's baseline already meets the git-status rate and the overlap target under `--index-interval 100`, execution stops and the owner is told | Instruction for this plan; same rule as PDIAG-43 | owner confirmed 2026-10-01 |
 | Quiet period | 250 ms (`RECOUNT_QUIET_MS`) after the burst's last event | The window #107 already uses (`BATCH_MS`); one commit's index writes land well inside it (SCRF T1) | owner confirmed 2026-10-01 |
 | Maximum wait | 1,000 ms (`RECOUNT_MAX_WAIT_MS`) after the burst's first event | Under continuous writes the quiet period never elapses; one second is the target's own unit | owner confirmed 2026-10-01 |
-| Spacing between starts | A recount of a worktree never starts less than 1,000 ms (`RECOUNT_MIN_INTERVAL_MS`) after the previous one of that worktree started | The target is "at most one per second"; quiet period and maximum wait alone allow two starts 350 ms apart when a short recount is followed by a short burst, and the bench's index loop skips writes that collide with git's lock, which makes such gaps | owner confirmed 2026-10-01 |
+| Spacing between starts | A recount of a worktree never starts less than 1,000 ms (`RECOUNT_MIN_INTERVAL_MS`) after the previous one of that worktree ended (amended 2026-10-03, owner, after T11; was "started") | The target is "at most one per second"; quiet period and maximum wait alone allow two starts 350 ms apart when a short recount is followed by a short burst, and the bench's index loop skips writes that collide with git's lock, which makes such gaps. **Counted from the end since T11**: counted from the start, a recount that waited ~300 ms for its process in `git()`'s queue (PERF-22, filled by a tree build) was followed on schedule by the next one, so two git processes of one worktree started under 1,000 ms apart and the bench read 2 a second. A process starts before it ends, so from the end the next process starts at least 1,000 ms after the previous one started, whatever the queue. Cost: under continuous writes a worktree recounts about every 1 s plus git's duration; an isolated commit still shows after the 250 ms quiet period | owner confirmed 2026-10-01; amended by the owner 2026-10-03 |
 | Pool size and reach | 3 (`RECOUNT_POOL_SIZE`), across all worktrees, for every recount: git-state, turn end and tree build | The issue's example value; one pool for every `git status` main counts with keeps the bound true whatever set the recounts off | owner confirmed 2026-10-01 |
 | Event payload | Unchanged `{ worktreePath, dirty, changes }`. Main sends it only after a recount that served at least one git-state event, as today; the event itself is the git-state signal and a count change is read by comparing with the tree | No contract change, no second channel; today's emitter is already the watcher alone | owner confirmed 2026-10-01 |
 | A failed recount after a git-state event | No event (SCRF-06 keeps the last count), so the status bar does not re-read for it; the next event, a `tree:get` or a focus does | A failure gives no count to patch and nothing to signal | owner confirmed 2026-10-01 |
@@ -99,7 +99,7 @@ start a burst of git processes for each of their commands, so that my machine st
 1. WHEN `index` or `HEAD` changes in a watched worktree's git dir THEN the git-state watcher SHALL pass that event to the recount scheduler at once, with no batch window of its own <!-- event-driven -->
 2. WHEN a git-state event arrives for a worktree whose recount is neither waiting nor running THEN the scheduler SHALL make that worktree's recount due 250 ms after the burst's last event, a burst ending at the first 250 ms with no event for that worktree <!-- event-driven -->
 3. WHILE git-state events for one worktree keep arriving less than 250 ms apart, the scheduler SHALL make its recount due 1,000 ms after the burst's first event <!-- state-driven -->
-4. The scheduler SHALL NOT start a recount of a worktree less than 1,000 ms after the previous recount of that worktree started <!-- ubiquitous -->
+4. The scheduler SHALL NOT start a recount of a worktree less than 1,000 ms after the previous recount of that worktree ended (amended 2026-10-03, owner, after T11; was "started") <!-- ubiquitous -->
 5. WHILE a recount of a worktree is running, the scheduler SHALL NOT start another recount of that worktree <!-- state-driven -->
 6. WHEN git-state events arrive for a worktree while its recount runs THEN the scheduler SHALL run exactly one more recount after it, due by AC 2 and 3 with the burst starting at the first of those events <!-- event-driven -->
 7. The scheduler SHALL start a due recount at the first instant AC 4 and AC 5 allow (AC 16 dropped 2026-10-03) <!-- ubiquitous -->
@@ -229,7 +229,7 @@ with its commit, and each target figure reads FAIL before and PASS after.
 
 ## Edge Cases
 
-- WHEN a recount becomes due exactly 1,000 ms after the previous start of that worktree THEN the scheduler SHALL start it at that instant (AC 4 is inclusive)
+- WHEN a recount becomes due exactly 1,000 ms after the previous end of that worktree THEN the scheduler SHALL start it at that instant (AC 4 is inclusive) (amended 2026-10-03, owner, after T11; was "previous start")
 - WHEN a request arrives while a recount of that worktree runs THEN the scheduler SHALL answer it with the trailing recount, not the running one
 - IF a `git:sync-state` or `git:commits` read throws THEN its caller SHALL get that error, and the worktree SHALL be free for its next recount
 - WHEN the described worktree changes while a `worktree:status` for the previous one is on its way THEN the bar SHALL re-read nothing for the previous one
@@ -244,7 +244,7 @@ with its commit, and each target figure reads FAIL before and PASS after.
 | RCNT-01 | P1: one at a time — AC 1 | T7 | Done |
 | RCNT-02 | P1: one at a time — AC 2 | T2 | Done |
 | RCNT-03 | P1: one at a time — AC 3 | T2 | Done |
-| RCNT-04 | P1: one at a time — AC 4 | T2, T4 | Done |
+| RCNT-04 | P1: one at a time — AC 4 | T2, T4, T12 | Done |
 | RCNT-05 | P1: one at a time — AC 5 | T3 | Done |
 | RCNT-06 | P1: one at a time — AC 6 | T3 | Done |
 | RCNT-07 | P1: one at a time — AC 7 | T2 | Done |
@@ -272,12 +272,12 @@ with its commit, and each target figure reads FAIL before and PASS after.
 | RCNT-29 | P1: current — AC 29 | — | Dropped (2026-10-03) |
 | RCNT-30 | P1: current — AC 30 | T10 | Done |
 | RCNT-31 | P1: measured — AC 31 | — | Dropped (2026-10-03) |
-| RCNT-32 | P1: measured — AC 32 | T11 | Pending |
+| RCNT-32 | P1: measured — AC 32 | T11, T13 | Pending |
 | RCNT-33 | P1: measured — AC 33 | — | Dropped (2026-10-03) |
 | RCNT-34 | P1: measured — AC 34 | — | Dropped (2026-10-03) |
 | RCNT-35 | P1: measured — AC 35 | T1 | Done |
 | RCNT-36 | P1: measured — AC 36 | — | Dropped (2026-10-03) |
-| RCNT-37 | Edge: due exactly at the spacing | T2 | Done |
+| RCNT-37 | Edge: due exactly at the spacing | T2, T12 | Done |
 | RCNT-38 | Edge: request during a run | T4 | Done |
 | RCNT-39 | Edge: a read that throws | — | Dropped (owner 2026-10-03) |
 | RCNT-40 | Edge: the described worktree changes | — | Delivered by #154 (AD-052) |

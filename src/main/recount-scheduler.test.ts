@@ -81,7 +81,7 @@ function harness(opts: { deferred?: boolean; startAt?: number } = {}): {
 }
 
 describe('RecountScheduler timing', () => {
-  it('waits 250 ms of quiet, 1,000 ms at most, and starts 1,000 ms apart (RCNT-02/03/04)', () => {
+  it('waits 250 ms of quiet, 1,000 ms at most, and 1,000 ms after the previous end (RCNT-02/03/04)', () => {
     // The spec's values, as numbers: a change to a constant must show here.
     expect(RECOUNT_QUIET_MS).toBe(250)
     expect(RECOUNT_MAX_WAIT_MS).toBe(1000)
@@ -132,9 +132,10 @@ describe('RecountScheduler timing', () => {
     expect(h.startsOf(A)).toEqual([1000])
   })
 
-  it('starts the next recount exactly 1,000 ms after the previous start (RCNT-04, RCNT-37)', async () => {
+  it('starts the next recount exactly 1,000 ms after the previous one ended (RCNT-04, RCNT-37)', async () => {
     const h = harness()
     h.scheduler.notify(A)
+    // The runner answers at once: this run starts and ends at 250 ms.
     await h.advanceTo(250)
     expect(h.startsOf(A)).toEqual([250])
 
@@ -221,20 +222,26 @@ describe('RecountScheduler single flight', () => {
     expect(h.startsOf(A)).toEqual([0])
   })
 
-  it('runs exactly one trailing recount, at the instant an overdue run ends (RCNT-06)', async () => {
+  it('runs exactly one trailing recount, 1,000 ms after an overdue run ends (RCNT-06, RCNT-04)', async () => {
     const h = harness({ deferred: true, startAt: -250 })
     h.scheduler.notify(A)
     await h.advanceTo(0)
     await eventsEvery100(h, A, 100, 2900)
     await h.advanceTo(3000)
 
+    // Settled at 3,000 ms: the trailing run waits for the spacing from that end.
     h.runs[0].resolve(COUNT)
     await h.advanceTo(3000)
-    expect(h.startsOf(A)).toEqual([0, 3000])
+    expect(h.startsOf(A)).toEqual([0])
+    await h.advanceTo(3999)
+    expect(h.startsOf(A)).toEqual([0])
+    await h.advanceTo(4000)
+    expect(h.startsOf(A)).toEqual([0, 4000])
 
+    await h.advanceTo(4500)
     h.runs[1].resolve(COUNT)
-    await h.advanceTo(6000)
-    expect(h.startsOf(A)).toEqual([0, 3000])
+    await h.advanceTo(8000)
+    expect(h.startsOf(A)).toEqual([0, 4000])
     // One report per run: each served events.
     expect(h.recounted).toEqual([
       [A, COUNT],
@@ -242,7 +249,7 @@ describe('RecountScheduler single flight', () => {
     ])
   })
 
-  it('spaces a trailing recount from the start of the run before it (RCNT-04, RCNT-06)', async () => {
+  it('spaces a trailing recount from the end of the run before it (RCNT-04, RCNT-06)', async () => {
     const h = harness({ deferred: true, startAt: -250 })
     h.scheduler.notify(A)
     await h.advanceTo(0)
@@ -253,12 +260,78 @@ describe('RecountScheduler single flight', () => {
     }
     await h.advanceTo(500)
     h.runs[0].resolve(COUNT)
+    await h.advanceTo(500)
 
-    // Not at 700 ms, when the quiet period after 450 would allow it.
-    await h.advanceTo(999)
+    // Not at 700 ms (the quiet period after 450), nor at 1,000 ms (1,000 after the start).
+    await h.advanceTo(1499)
     expect(h.startsOf(A)).toEqual([0])
+    await h.advanceTo(1500)
+    expect(h.startsOf(A)).toEqual([0, 1500])
+  })
+
+  it('spaces the next recount from the end, not the start, of a slow run (RCNT-04)', async () => {
+    // The T11 bench case in miniature: a run that waited for its git process.
+    const h = harness({ deferred: true, startAt: -250 })
+    h.scheduler.notify(A)
+    await h.advanceTo(0)
+    await h.advanceTo(600)
+    h.runs[0].resolve(COUNT)
+    await h.advanceTo(600)
+
+    for (const at of [700, 800]) {
+      await h.advanceTo(at)
+      h.scheduler.notify(A)
+    }
     await h.advanceTo(1000)
-    expect(h.startsOf(A)).toEqual([0, 1000])
+    expect(h.startsOf(A)).toEqual([0])
+    await h.advanceTo(1599)
+    expect(h.startsOf(A)).toEqual([0])
+    await h.advanceTo(1600)
+    expect(h.startsOf(A)).toEqual([0, 1600])
+  })
+
+  it('starts a request made exactly 1,000 ms after the previous end at that instant (RCNT-37)', async () => {
+    const h = harness({ deferred: true })
+    void h.scheduler.request(A)
+    void h.scheduler.request(B)
+    await h.advanceTo(300)
+    h.runs[0].resolve(COUNT)
+    h.runs[1].resolve(COUNT)
+    await h.advanceTo(300)
+
+    // A at 1,299 ms waits one millisecond; B at exactly 1,300 ms does not wait.
+    await h.advanceTo(1299)
+    void h.scheduler.request(A)
+    expect(h.startsOf(A)).toEqual([0])
+    await h.advanceTo(1300)
+    expect(h.startsOf(A)).toEqual([0, 1300])
+    void h.scheduler.request(B)
+    expect(h.startsOf(B)).toEqual([0, 1300])
+  })
+
+  it('spaces the next recount from the end of a run that answered null or threw (RCNT-04, RCNT-10)', async () => {
+    const h = harness({ deferred: true, startAt: -250 })
+    h.scheduler.notify(A)
+    h.scheduler.notify(B)
+    await h.advanceTo(0)
+    expect(h.runs.map((r) => [r.path, r.at])).toEqual([
+      [A, 0],
+      [B, 0]
+    ])
+    await h.advanceTo(600)
+    h.runs[0].reject(new Error('fatal: not a git repository'))
+    h.runs[1].resolve(null)
+    await h.advanceTo(600)
+
+    await h.advanceTo(700)
+    h.scheduler.notify(A)
+    h.scheduler.notify(B)
+    await h.advanceTo(1599)
+    expect(h.startsOf(A)).toEqual([0])
+    expect(h.startsOf(B)).toEqual([0])
+    await h.advanceTo(1600)
+    expect(h.startsOf(A)).toEqual([0, 1600])
+    expect(h.startsOf(B)).toEqual([0, 1600])
   })
 
   it('runs nothing after a recount that saw no event (RCNT-06)', async () => {
@@ -278,6 +351,7 @@ describe('RecountScheduler single flight', () => {
     h.scheduler.notify(A)
     await h.advanceTo(250)
     h.runs[0].resolve(null)
+    await h.advanceTo(250)
     await h.advanceTo(260)
     expect(h.recounted).toEqual([])
 
@@ -295,6 +369,7 @@ describe('RecountScheduler single flight', () => {
     h.scheduler.notify(A)
     await h.advanceTo(250)
     h.runs[0].reject(new Error('fatal: not a git repository'))
+    await h.advanceTo(250)
     await h.advanceTo(260)
     expect(h.recounted).toEqual([])
 
@@ -368,21 +443,23 @@ describe('RecountScheduler requests', () => {
     expect(h.runs.map((r) => [r.path, r.at])).toEqual(paths.map((p) => [p, 0]))
   })
 
-  it('spaces a request from the previous start (RCNT-04)', async () => {
+  it('spaces a request from the previous end (RCNT-04)', async () => {
     const h = harness({ deferred: true })
     void h.scheduler.request(A)
     await h.advanceTo(100)
     h.runs[0].resolve(COUNT)
+    await h.advanceTo(100)
 
     await h.advanceTo(200)
     const answer = track(h.scheduler.request(A))
-    await h.advanceTo(999)
+    // Not at 1,000 ms, 1,000 after the start.
+    await h.advanceTo(1099)
     expect(h.startsOf(A)).toEqual([0])
-    await h.advanceTo(1000)
-    expect(h.startsOf(A)).toEqual([0, 1000])
+    await h.advanceTo(1100)
+    expect(h.startsOf(A)).toEqual([0, 1100])
 
     h.runs[1].resolve(COUNT)
-    await h.advanceTo(1000)
+    await h.advanceTo(1100)
     expect(answer.value).toEqual(COUNT)
   })
 
@@ -399,10 +476,14 @@ describe('RecountScheduler requests', () => {
     await h.advanceTo(1500)
     expect(first.value).toEqual({ dirty: true, changes: 1 })
     expect(second.value).toBe('pending')
-    expect(h.startsOf(A)).toEqual([0, 1500])
+    // The trailing run keeps the spacing from that end.
+    await h.advanceTo(2499)
+    expect(h.startsOf(A)).toEqual([0])
+    await h.advanceTo(2500)
+    expect(h.startsOf(A)).toEqual([0, 2500])
 
     h.runs[1].resolve({ dirty: true, changes: 2 })
-    await h.advanceTo(1500)
+    await h.advanceTo(2500)
     expect(second.value).toEqual({ dirty: true, changes: 2 })
   })
 
@@ -437,6 +518,7 @@ describe('RecountScheduler requests', () => {
     void h.scheduler.request(A)
     await h.advanceTo(100)
     h.runs[0].resolve(COUNT)
+    await h.advanceTo(100)
     await h.advanceTo(150)
     h.scheduler.notify(A)
     await h.advanceTo(200)
@@ -444,10 +526,12 @@ describe('RecountScheduler requests', () => {
 
     await h.advanceTo(300)
     h.scheduler.forget(A)
-    await h.advanceTo(1000)
-    expect(h.startsOf(A)).toEqual([0, 1000])
+    await h.advanceTo(1099)
+    expect(h.startsOf(A)).toEqual([0])
+    await h.advanceTo(1100)
+    expect(h.startsOf(A)).toEqual([0, 1100])
     h.runs[1].resolve({ dirty: false, changes: 0 })
-    await h.advanceTo(1000)
+    await h.advanceTo(1100)
 
     expect(answer.value).toEqual({ dirty: false, changes: 0 })
     // The burst went with forget: the run served the request alone.

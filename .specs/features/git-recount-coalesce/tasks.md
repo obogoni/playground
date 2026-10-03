@@ -9,8 +9,8 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/git-recount-coalesce/design.md`. In one line: `src/main/recount-scheduler.ts`
-keeps one lane per worktree (250 ms quiet period, 1,000 ms maximum wait, starts at least 1,000 ms
-apart, one recount at a time, one trailing run) and every `git status` main runs to count a worktree
+keeps one lane per worktree (250 ms quiet period, 1,000 ms maximum wait, a start at least 1,000 ms
+after the previous recount ended (T12), one recount at a time, one trailing run) and every `git status` main runs to count a worktree
 goes through it: git-state events, turn ends and the tree build. The Files Commits list follows
 `tree:get` results instead of tree identity.
 **Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01). **Reconciled 2026-10-03**
@@ -90,6 +90,12 @@ T1 → T2 → T3 → T4 → T5 → T6 → T7 → T8
 
 ```
 T8 → T9 → T10 → T11
+```
+
+### Phase 4: Fix from T11
+
+```
+T11 → T12
 ```
 
 ---
@@ -686,18 +692,110 @@ made here; the FAIL waits for a fix task (the last two boxes stay open).
 
 ---
 
+### T12: Space recounts from the previous one's end
+
+**What**: The scheduler counts its 1,000 ms spacing from the end of the worktree's previous recount
+(its runner settled: a count, `null` or a throw), not from its start, so a recount that waited in
+`git()`'s queue (PERF-22) still leaves 1,000 ms before the next git process of that worktree starts.
+Owner decision 2026-10-03, after T11's FAIL: AC 4, the RCNT-37 edge, the spacing assumption row,
+design.md and AD-058 amended in the same commit.
+**Where**: `src/main/recount-scheduler.ts`
+**Depends on**: T11
+**Reuses**: T2..T4's fakes and harness
+**Requirement**: RCNT-04, RCNT-37
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Tests rewritten for an owner-approved spec change** (AC 4 now counts from the end; named so the
+rewrite is visible). Any test whose instants followed from start-based spacing with a runner that
+answers later than its start moves to the new outcome; every other assertion stays.
+
+**Done when**:
+
+- [x] spec.md AC 4, the RCNT-37 edge case and the "Spacing between starts" row read "ended" / "previous end", marked "(amended 2026-10-03, owner, after T11)"; AC 6 and AC 7 re-read and still hold; RCNT-04 and RCNT-37 trace to T12
+- [x] design.md: the lane's `lastEndAt`, the due formula, the Start bullet, the timing walk-through rows, the spacing decision and the AD-058 block; `.specs/STATE.md` AD-058 in place
+- [x] `RecountScheduler` records `lastEndAt` when the runner settles (before re-arming) and computes the spacing from it; the constant's and the class's comments say so
+- [x] Tests: a run started at 0 that resolves at 600, events at 700 and 800: the next run starts at exactly 1,600 ms, not at 1,000 nor at 1,599 (T11's case in miniature)
+- [x] Tests: the boundary at exactly `end + 1,000` (a request there starts at that instant; one a millisecond earlier waits)
+- [x] Tests: a runner that rejects, and one that answers `null`, also set the end (next run at end + 1,000)
+- [x] Tests: a request after a run that ended at 100 ms starts at exactly 1,100
+- [x] Every rewritten test named below with its old and new instant
+- [x] Gate check passes: `npx vitest run src/main/recount-scheduler.test.ts`, then the full gate (18 lint warnings) and `npx electron-vite build`
+- [x] Mutants seen failing: spacing from the start, no `+ RECOUNT_MIN_INTERVAL_MS`, end not set on a throw
+
+**Tests**: unit
+**Gate**: build
+
+**Commit**: `fix(main): space a worktree's recounts from the previous one's end`
+
+**Record (2026-10-03)**: ✅ Done.
+
+- `Lane.lastStartAt` became `lastEndAt`, set by `start` right after the runner settles (a count,
+  `null` or a caught throw) and before the waiters are answered and the lane re-armed; `dueOf` reads
+  `max(wanted, lastEndAt + RECOUNT_MIN_INTERVAL_MS)`. The constant's and the class's comments say the
+  spacing counts from the previous end.
+- Harness note: the fake runner's continuation runs on the next `await`, so a test that settles a run
+  now advances to that same instant before moving the clock (`resolve(...)` then `advanceTo(<same
+  instant>)`); otherwise the end would land at the next target.
+- Tests rewritten (old name → new name, old instant → new instant):
+  - "runs exactly one trailing recount, at the instant an overdue run ends (RCNT-06)" → "runs exactly
+    one trailing recount, 1,000 ms after an overdue run ends (RCNT-06, RCNT-04)": run at 0 ends at
+    3,000, trailing run **3,000 → 4,000** (and none at 3,999), still exactly one.
+  - "spaces a trailing recount from the start of the run before it (RCNT-04, RCNT-06)" → "spaces a
+    trailing recount from the end of the run before it (RCNT-04, RCNT-06)": run at 0 ends at 500,
+    events 400/450, trailing run **1,000 → 1,500** (not 1,499, not 700).
+  - "spaces a request from the previous start (RCNT-04)" → "spaces a request from the previous end
+    (RCNT-04)": run at 0 ends at 100, request at 200, **1,000 → 1,100** (not 1,099). This is the
+    Done-when's "ended at 100 ms starts at exactly 1,100".
+  - "answers a request made during a run with the run after it (RCNT-14, RCNT-38)", name kept: the run
+    at 0 ends at 1,500, trailing run **1,500 → 2,500** (none at 2,499); it still answers `changes: 2`.
+  - "still answers a waiting request after forget (RCNT-41)", name kept: run at 0 ends at 100, the
+    request's run **1,000 → 1,100** (none at 1,099); still answered, still no report.
+  - Renamed only, instants unchanged (their runner answers at its start, so start and end coincide):
+    "starts the next recount exactly 1,000 ms after the previous start (RCNT-04, RCNT-37)" → "...after
+    the previous one ended (RCNT-04, RCNT-37)", 250 → 1,250; the constants test "... and starts 1,000
+    ms apart (RCNT-02/03/04)" → "... and 1,000 ms after the previous end (RCNT-02/03/04)", literals
+    unchanged.
+  - Settled at the resolve instant, names and instants unchanged: "reports nothing for a recount with
+    no count, and runs the next one as usual (RCNT-10)" and "treats a runner that throws as no count,
+    and throws nothing (RCNT-10)" (the run ends at 250, not at the 260 the clock moves to next; the
+    next run stays at 1,250).
+- New tests (3): "spaces the next recount from the end, not the start, of a slow run (RCNT-04)" (run
+  at 0 ends at 600, events 700/800: none at 1,000 or 1,599, one at **1,600**); "starts a request made
+  exactly 1,000 ms after the previous end at that instant (RCNT-37)" (both runs end at 300: A
+  requested at 1,299 starts at **1,300**, B requested at 1,300 starts at **1,300** at once); "spaces
+  the next recount from the end of a run that answered null or threw (RCNT-04, RCNT-10)" (A throws and
+  B answers `null` at 600, events at 700: both start at **1,600**, not 1,599).
+- spec.md AC 6 ("exactly one more recount after it, due by AC 2 and 3") and AC 7 ("at the first
+  instant AC 4 and AC 5 allow") read unchanged against the amended AC 4; P1's Independent Test ("no
+  sooner than 2,000 ms") still holds.
+- Quick gate 27/27. Full gate: typecheck exit 0, lint exit 0 with 18 warnings (unchanged), **122
+  files, 2,609 tests** (2,606 + 3), all pass. `npx electron-vite build` exit 0.
+- Mutants (script through `.orig`, mutant asserted applied, restored in `finally`, `git status
+  --porcelain` equal before and after): spacing from the start (the old code) **8 tests fail**, among
+  them all three new ones and the five rewrites with new instants; no `+ RECOUNT_MIN_INTERVAL_MS`
+  **12 fail**; end set only on success (not on a throw) **2 fail** (the null-or-threw test and the
+  RCNT-10 throw test).
+
+---
+
 ## Phase Execution Map
 
 ```
-Phase 1 → Phase 2 → Phase 3
+Phase 1 → Phase 2 → Phase 3 → Phase 4
 
 Phase 1:  T1
 Phase 2:  T1 ------→ T2 ------→ T3 ------→ T4 ------→ T5 ------→ T6 ------→ T7 ------→ T8
 Phase 3:  T8 ------→ T9 ------→ T10 -----→ T11
+Phase 4:  T11 -----→ T12
 ```
 
-Eleven tasks. T1 runs in the orchestrator; then two batches: Phase 2 (seven tasks) and Phase 3 (three
-tasks). T1 is a stop point.
+Twelve tasks. T1 runs in the orchestrator; then two batches: Phase 2 (seven tasks) and Phase 3 (three
+tasks). T1 is a stop point. Phase 4 was added on 2026-10-03 for T11's FAIL (owner decision: spacing
+from the previous recount's end).
 
 ---
 
@@ -716,6 +814,7 @@ tasks). T1 is a stop point.
 | T9: Commits list | 1 prop | ✅ Granular |
 | T10: smoke | 1 run + 2 mutants | ✅ Granular |
 | T11: figures after | 1 run, notes | ✅ Granular |
+| T12: spacing from the end | 1 rule + its spec notes, 1 file | ✅ Granular |
 
 ## Diagram-Definition Cross-Check
 
@@ -732,6 +831,7 @@ tasks). T1 is a stop point.
 | T9 | T8 | T8 → T9 | ✅ Match |
 | T10 | T9 | T9 → T10 | ✅ Match |
 | T11 | T10 | T10 → T11 | ✅ Match |
+| T12 | T11 | T11 → T12 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -748,6 +848,7 @@ tasks). T1 is a stop point.
 | T9: Commits list | `App` (component) | none | manual | ✅ OK (stronger than required) |
 | T10: smoke | end to end | manual | manual | ✅ OK |
 | T11: figures after | notes | none | none | ✅ OK |
+| T12: spacing from the end | recount scheduler | unit | unit | ✅ OK |
 
 ## Requirement Coverage
 
@@ -756,7 +857,7 @@ tasks). T1 is a stop point.
 | 01 | T7 | T10 (M1 path) |
 | 02 | T2 | — |
 | 03 | T2 | T11 A1 |
-| 04 | T2, T4 | T11 A1 |
+| 04 | T2, T4, T12 | T11 A1 |
 | 05 | T3 | T11 A1 |
 | 06 | T3 | — |
 | 07 | T2 | — |
@@ -774,7 +875,7 @@ tasks). T1 is a stop point.
 | 30 | — | T10 |
 | 32 | — | T11 A1 |
 | 35 | — | T1 |
-| 37 | T2 | — |
+| 37 | T2, T12 | — |
 | 38 | T4 | — |
 | 41 | T4 | — |
 
