@@ -405,10 +405,22 @@ app.whenReady().then(() => {
     readCommand: resolvePostCreateCommand,
     shell: runHookShell
   })
+  // CRTO-11, CRTO-18: steps are pushed only for a request that names itself.
+  // `emitToWindow` is defined further down this block and read only when a create runs.
   handle(
     'worktrees:create',
-    ({ repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting }) =>
-      createWorktreeWithHook(repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting)
+    ({ repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting, requestId }) =>
+      createWorktreeWithHook(
+        repoPath,
+        branch,
+        baseBranch,
+        worktreeTemplate,
+        updateBase,
+        onExisting,
+        requestId === undefined
+          ? undefined
+          : (step) => emitToWindow('worktrees:create-step', { requestId, step })
+      )
   )
   // BSLG-23: the dialogs ask the create's own path check as the name changes.
   handle('worktrees:check-paths', (req) => checkCreatePaths(req).then((problem) => ({ problem })))

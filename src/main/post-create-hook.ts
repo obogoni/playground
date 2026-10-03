@@ -1,4 +1,4 @@
-import type { CreateWorktreeResult, PostCreateHookResult } from '../shared/worktrees'
+import type { CreateStep, CreateWorktreeResult, PostCreateHookResult } from '../shared/worktrees'
 
 /** How long a repo's init command may run before it is killed (WPC-05). */
 export const HOOK_TIMEOUT_MS = 120000
@@ -87,7 +87,9 @@ export type CreateWorktreeFn = (
   baseBranch?: string,
   worktreeTemplate?: string,
   updateBase?: boolean,
-  onExisting?: 'reuse' | 'recreate'
+  onExisting?: 'reuse' | 'recreate',
+  /** Hears each step as it starts (CRTO-11); absent = nobody listens. */
+  onStep?: (step: CreateStep) => void
 ) => Promise<CreateWorktreeResult>
 
 export interface PostCreateHookDeps {
@@ -113,23 +115,28 @@ export interface PostCreateHookDeps {
  * all**, keeping the pre-feature result shape byte-identical (WPC-06). A hook
  * that fails never invalidates the create: `ok` and `path` pass through and the
  * failure rides along in `hook` (WPC-03) — nothing here removes a worktree.
+ *
+ * `onStep` goes to the create as is, and hears `running-hook` right before the
+ * command runs, so only when one runs (CRTO-13).
  */
 export function withPostCreateHook(
   create: CreateWorktreeFn,
   deps: PostCreateHookDeps
 ): CreateWorktreeFn {
-  return async (repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting) => {
+  return async (repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting, onStep) => {
     const result = await create(
       repoPath,
       branch,
       baseBranch,
       worktreeTemplate,
       updateBase,
-      onExisting
+      onExisting,
+      onStep
     )
     if (!result.ok || typeof result.path !== 'string') return result
     const command = deps.readCommand(repoPath)
     if (command === null) return result
+    onStep?.('running-hook')
     const hook = await runPostCreateHook(
       command,
       { worktreePath: result.path, repoPath, branch },

@@ -3,12 +3,13 @@ import type { WorktreeNode } from '../shared/tree'
 import type {
   ChangedFile,
   ChangeStatus,
+  CreateStep,
   CreateWorktreeResult,
   RemoveWorktreeResult
 } from '../shared/worktrees'
 import { worktreeNameFor, worktreePathFor } from '../shared/worktrees'
 import { removeDirTree, type DirRemovalResult } from './dir-remover'
-import { git, gitFailureLine } from './git'
+import { git, gitFailureLine, isTimeout, type GitRunner } from './git'
 import { checkCreatePaths, type PathCheckDeps } from './path-limits'
 
 /** Raised when git itself fails for a repo (not installed, not a repo, …); the detail is git's own line (BSLG-16). */
@@ -69,16 +70,72 @@ export async function listWorktrees(repoPath: string): Promise<WorktreeNode[]> {
  *
  * Before any git write, the path check refuses a name that would pass a Windows
  * or git path limit (BSLG-25): no base refresh, no branch delete, no add.
- * `deps` stands in for the platform and git in tests.
+ *
+ * The network and checkout steps are bounded (CRTO-01, CRTO-09): the base fetch
+ * and the fast-forward each pass `refreshTimeoutMs` to the runner, and every
+ * `git worktree add` passes `checkoutTimeoutMs`. The local reads (`rev-parse`,
+ * `worktree list`, `branch -D`) run unbounded.
+ *
+ * `onStep` hears each step as it starts, in run order and each at most once
+ * (CRTO-11, CRTO-15): `refreshing-base` when the base refresh starts,
+ * `creating-worktree` when `git worktree add` starts. A create that ends early
+ * reports nothing after that point (CRTO-14).
  */
-export async function createWorktree(
+export function createWorktreeWith(
+  deps: CreateWorktreeDeps
+): (
   repoPath: string,
   branch: string,
   baseBranch?: string,
   worktreeTemplate?: string,
   updateBase?: boolean,
   onExisting?: 'reuse' | 'recreate',
-  deps?: PathCheckDeps
+  onStep?: (step: CreateStep) => void
+) => Promise<CreateWorktreeResult> {
+  return (repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting, onStep) =>
+    create({ deps, onStep }, repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting)
+}
+
+/** How long the base fetch and the fast-forward may each run (CRTO-01). */
+export const REFRESH_TIMEOUT_MS = 60_000
+
+/** How long a `git worktree add` may run (CRTO-09). */
+export const CHECKOUT_TIMEOUT_MS = 600_000
+
+/** What a create runs git with, and its limits; tests stand in for each. */
+export interface CreateWorktreeDeps {
+  run: GitRunner
+  refreshTimeoutMs: number
+  checkoutTimeoutMs: number
+  /** The platform and git the path check reads; absent = the real ones (BSLG-25). */
+  pathCheck?: PathCheckDeps
+}
+
+/** The real runner and limits. */
+export const REAL_CREATE_DEPS: CreateWorktreeDeps = {
+  run: git,
+  refreshTimeoutMs: REFRESH_TIMEOUT_MS,
+  checkoutTimeoutMs: CHECKOUT_TIMEOUT_MS
+}
+
+/** The create every caller uses: `createWorktreeWith` over the real deps. */
+export const createWorktree = createWorktreeWith(REAL_CREATE_DEPS)
+
+/** What the create path's helpers share. */
+interface CreateContext {
+  deps: CreateWorktreeDeps
+  /** Hears each step as it starts (CRTO-11); absent = nobody listens. */
+  onStep?: (step: CreateStep) => void
+}
+
+async function create(
+  ctx: CreateContext,
+  repoPath: string,
+  branch: string,
+  baseBranch?: string,
+  worktreeTemplate?: string,
+  updateBase?: boolean,
+  onExisting?: 'reuse' | 'recreate'
 ): Promise<CreateWorktreeResult> {
   if (worktreeNameFor(repoPath, branch, worktreeTemplate) === '') {
     return {
@@ -92,13 +149,13 @@ export async function createWorktree(
   }
   const problem = await checkCreatePaths(
     { repoPath, branch, baseBranch, worktreeTemplate, onExisting },
-    deps
+    ctx.deps.pathCheck
   )
   if (problem) return { ok: false, error: problem }
   // Existing-branch handling only applies to the new-branch-from-base path; the
   // empty-base call already means "check out the existing branch" (EXB-D2).
-  if (baseBranch && (await branchExists(repoPath, branch))) {
-    const conflict = await resolveExistingBranch(repoPath, branch, baseBranch, target, {
+  if (baseBranch && (await branchExists(ctx, repoPath, branch))) {
+    const conflict = await resolveExistingBranch(ctx, repoPath, branch, baseBranch, target, {
       updateBase,
       onExisting
     })
@@ -108,13 +165,13 @@ export async function createWorktree(
   // meaningful on the new-branch-from-base path; the existing-branch checkout
   // (empty base) has nothing to refresh (WBR-D4).
   if (updateBase && baseBranch) {
-    const refreshed = await refreshBaseFromRemote(repoPath, baseBranch)
+    const refreshed = await refreshBaseFromRemote(ctx, repoPath, baseBranch)
     if (!refreshed.ok) return refreshed
   }
   const args = baseBranch
     ? ['worktree', 'add', target, '-b', branch, baseBranch]
     : ['worktree', 'add', target, branch]
-  return addWorktree(repoPath, args, target)
+  return addWorktree(ctx, repoPath, args, target)
 }
 
 /**
@@ -125,6 +182,7 @@ export async function createWorktree(
  * this path, kept as the "not my concern" signal for readability).
  */
 async function resolveExistingBranch(
+  ctx: CreateContext,
   repoPath: string,
   branch: string,
   baseBranch: string,
@@ -133,7 +191,7 @@ async function resolveExistingBranch(
 ): Promise<CreateWorktreeResult | null> {
   // Neither reuse nor recreate can run while the branch is live in another
   // worktree — git refuses the checkout and the delete alike (EXB-04).
-  const hosting = await worktreeHosting(repoPath, branch)
+  const hosting = await worktreeHosting(ctx, repoPath, branch)
   if (hosting) {
     return { ok: false, error: `Branch "${branch}" is already checked out at ${hosting}.` }
   }
@@ -143,26 +201,30 @@ async function resolveExistingBranch(
   }
   if (opts.onExisting === 'reuse') {
     // Check the existing branch out at its current tip; base/updateBase ignored (EXB-02).
-    return addWorktree(repoPath, ['worktree', 'add', target, branch], target)
+    return addWorktree(ctx, repoPath, ['worktree', 'add', target, branch], target)
   }
   // recreate: refresh the base first so a refresh failure can't orphan the
   // branch we are about to delete (EXB-03/EXB-D8), then force-delete and recut.
   if (opts.updateBase) {
-    const refreshed = await refreshBaseFromRemote(repoPath, baseBranch)
+    const refreshed = await refreshBaseFromRemote(ctx, repoPath, baseBranch)
     if (!refreshed.ok) return refreshed
   }
   try {
-    await git(repoPath, ['branch', '-D', branch])
+    await ctx.deps.run(repoPath, ['branch', '-D', branch])
   } catch (err) {
     return { ok: false, error: gitFailureLine(err) }
   }
-  return addWorktree(repoPath, ['worktree', 'add', target, '-b', branch, baseBranch], target)
+  return addWorktree(ctx, repoPath, ['worktree', 'add', target, '-b', branch, baseBranch], target)
 }
 
 /** Whether a local branch of this name exists (`rev-parse --verify` exits 0). */
-async function branchExists(repoPath: string, branch: string): Promise<boolean> {
+async function branchExists(
+  ctx: CreateContext,
+  repoPath: string,
+  branch: string
+): Promise<boolean> {
   try {
-    await git(repoPath, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`])
+    await ctx.deps.run(repoPath, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`])
     return true
   } catch {
     return false
@@ -171,14 +233,19 @@ async function branchExists(repoPath: string, branch: string): Promise<boolean> 
 
 /** Run `git worktree add` and shape the result; the one place the add is issued. */
 async function addWorktree(
+  ctx: CreateContext,
   repoPath: string,
   args: string[],
   target: string
 ): Promise<CreateWorktreeResult> {
+  ctx.onStep?.('creating-worktree')
   try {
-    await git(repoPath, args)
+    await ctx.deps.run(repoPath, args, { timeoutMs: ctx.deps.checkoutTimeoutMs })
     return { ok: true, path: target }
   } catch (err) {
+    if (isTimeout(err)) {
+      return { ok: false, error: checkoutTimeoutText(target, ctx.deps.checkoutTimeoutMs) }
+    }
     return { ok: false, error: gitFailureLine(err) }
   }
 }
@@ -191,9 +258,11 @@ async function addWorktree(
  * stale base. Side-effect-free when the caller doesn't opt in.
  */
 async function refreshBaseFromRemote(
+  ctx: CreateContext,
   repoPath: string,
   baseBranch: string
 ): Promise<CreateWorktreeResult> {
+  ctx.onStep?.('refreshing-base')
   const noUpstream: CreateWorktreeResult = {
     ok: false,
     error: `Base branch "${baseBranch}" has no remote upstream to refresh from. Uncheck "Update base branch from remote" to skip.`
@@ -201,7 +270,7 @@ async function refreshBaseFromRemote(
   // 1. Resolve the base branch's upstream (e.g. "origin/main").
   let upstream: string
   try {
-    const { stdout } = await git(repoPath, [
+    const { stdout } = await ctx.deps.run(repoPath, [
       'rev-parse',
       '--abbrev-ref',
       `${baseBranch}@{upstream}`
@@ -221,36 +290,82 @@ async function refreshBaseFromRemote(
 
   // 2. Update the remote-tracking ref (credential prompts suppressed; failure blocks).
   try {
-    await git(repoPath, ['fetch', remote, remoteBranch])
+    await ctx.deps.run(repoPath, ['fetch', remote, remoteBranch], {
+      timeoutMs: ctx.deps.refreshTimeoutMs
+    })
   } catch (err) {
+    if (isTimeout(err)) {
+      return { ok: false, error: fetchTimeoutText(upstream, ctx.deps.refreshTimeoutMs) }
+    }
     return { ok: false, error: gitFailureLine(err) }
   }
 
   // 3. Fast-forward the local base to the fetched upstream tip.
-  const hosting = await worktreeHosting(repoPath, baseBranch)
+  const hosting = await worktreeHosting(ctx, repoPath, baseBranch)
+  const bounded = { timeoutMs: ctx.deps.refreshTimeoutMs }
   try {
     if (hosting) {
       // Base is checked out (the normal case): ff-merge in place — aborts if dirty.
-      await git(hosting, ['merge', '--ff-only', upstream])
+      await ctx.deps.run(hosting, ['merge', '--ff-only', upstream], bounded)
     } else {
       // Base not checked out anywhere: fast-forward the ref directly (ff-only by default).
-      await git(repoPath, ['fetch', remote, `${remoteBranch}:${baseBranch}`])
+      await ctx.deps.run(repoPath, ['fetch', remote, `${remoteBranch}:${baseBranch}`], bounded)
     }
   } catch (err) {
+    if (isTimeout(err)) {
+      return {
+        ok: false,
+        error: fastForwardTimeoutText(baseBranch, upstream, ctx.deps.refreshTimeoutMs)
+      }
+    }
     return { ok: false, error: ffFailureLine(err, baseBranch, upstream) }
   }
   return { ok: true }
 }
 
 /** Path of the worktree that has `branch` checked out, or null if none does. */
-async function worktreeHosting(repoPath: string, branch: string): Promise<string | null> {
+async function worktreeHosting(
+  ctx: CreateContext,
+  repoPath: string,
+  branch: string
+): Promise<string | null> {
   try {
-    const { stdout } = await git(repoPath, ['worktree', 'list', '--porcelain'])
+    const { stdout } = await ctx.deps.run(repoPath, ['worktree', 'list', '--porcelain'])
     const block = parsePorcelainBlocks(stdout).find((b) => b.branch === branch)
     return block ? block.path : null
   } catch {
     return null
   }
+}
+
+/**
+ * A limit as the timeout texts write it: `10 min` for a whole number of minutes
+ * past one, else seconds (`60 s`, `2 s`). The spec's texts read `60 s` for the
+ * refresh and `10 min` for the checkout (CRTO-02, CRTO-03, CRTO-10).
+ */
+// SPEC_DEVIATION: design.md's limitText gives minutes for any whole number of minutes,
+// which would print "1 min" for 60000 ms. Reason: the spec's texts, owner-confirmed,
+// read "60 s"; minutes start past one minute so both literals hold.
+function limitText(ms: number): string {
+  return ms > 60_000 && ms % 60_000 === 0 ? `${ms / 60_000} min` : `${ms / 1000} s`
+}
+
+/** The base fetch was killed by its limit (CRTO-02). */
+function fetchTimeoutText(upstream: string, ms: number): string {
+  return `Fetching ${upstream} timed out after ${limitText(ms)}. Retry, or uncheck "Update base branch from remote" to skip.`
+}
+
+/** The fast-forward, either form, was killed by its limit (CRTO-03). */
+function fastForwardTimeoutText(baseBranch: string, upstream: string, ms: number): string {
+  return `Fast-forwarding "${baseBranch}" to ${upstream} timed out after ${limitText(ms)}. Retry, or uncheck "Update base branch from remote" to skip.`
+}
+
+/**
+ * The checkout was killed by its limit (CRTO-10). Killing `git worktree add` does
+ * not kill the checkout it started, so the folder may remain; the text names it.
+ */
+function checkoutTimeoutText(target: string, ms: number): string {
+  return `Creating the worktree timed out after ${limitText(ms)} and git was stopped. Part of it may remain at ${target}; remove it before retrying.`
 }
 
 /** A non-fast-forward reads better as "diverged"; anything else keeps git's own line. */
