@@ -414,8 +414,10 @@ titles as written.
 
 **Done when**:
 
-- [ ] `req` is `Omit<PathCheckRequest, 'onExisting'>`, `res` is `{ problem: string | null }`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `req` is `Omit<PathCheckRequest, 'onExisting'>`, `res` is `{ problem: string | null }`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Done** (T10): typecheck 0; lint 0 errors, 18 warnings (baseline); suite 2607 passed, unchanged.
 
 **Tests**: none
 **Gate**: full

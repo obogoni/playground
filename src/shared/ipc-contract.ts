@@ -42,7 +42,12 @@ import type {
   StepEvent,
   WorkflowDef
 } from './workflows'
-import type { ChangedFile, CreateWorktreeResult, RemoveWorktreeResult } from './worktrees'
+import type {
+  ChangedFile,
+  CreateWorktreeResult,
+  PathCheckRequest,
+  RemoveWorktreeResult
+} from './worktrees'
 
 /**
  * Single request/response channel map shared by main, preload, and renderer.
@@ -88,6 +93,11 @@ export interface IpcContract {
       onExisting?: 'reuse' | 'recreate'
     }
     res: CreateWorktreeResult
+  }
+  /** The create's path check, asked by the dialogs as the name changes; null = no limit passed (BSLG-23). */
+  'worktrees:check-paths': {
+    req: Omit<PathCheckRequest, 'onExisting'>
+    res: { problem: string | null }
   }
   /**
    * Delete-first worktree removal (WRFT-01): the app deletes the directory, then
