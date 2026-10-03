@@ -4,6 +4,7 @@ import type { ChangedPath } from '../../../shared/files'
 import { ALL_CHANGES_KEY, tabKeyOf, type TabRef } from './diff-view'
 import {
   buildTree,
+  bumpRevisions,
   fileType,
   filesStateFor,
   formatSize,
@@ -171,6 +172,39 @@ describe('tabsAffected', () => {
   it('compares paths regardless of separator', () => {
     expect(tabsAffected(['src/a.ts'], ['src\\a.ts'])).toEqual(['src/a.ts'])
     expect(tabsAffected(['src\\a.ts'], ['src/a.ts'])).toEqual(['src\\a.ts'])
+  })
+})
+
+describe('bumpRevisions (FWIG-25)', () => {
+  it('bumps each named path by one, from nothing to 1 and from 1 to 2', () => {
+    const prev = { 'src/b.ts': 1 }
+
+    expect(bumpRevisions(prev, ['src/a.ts', 'src/b.ts'])).toEqual({ 'src/a.ts': 1, 'src/b.ts': 2 })
+  })
+
+  it('keeps the value of a path the batch does not name', () => {
+    const next = bumpRevisions({ 'src/a.ts': 3, 'src/c.ts': 5 }, ['src/a.ts'])
+
+    expect(next).toEqual({ 'src/a.ts': 4, 'src/c.ts': 5 })
+  })
+
+  it('returns a new object and leaves prev as it was', () => {
+    const prev = { 'src/a.ts': 1 }
+
+    const next = bumpRevisions(prev, ['src/a.ts'])
+
+    expect(next).not.toBe(prev)
+    expect(prev).toEqual({ 'src/a.ts': 1 })
+  })
+
+  it('bumps a path named twice in one batch once', () => {
+    expect(bumpRevisions({}, ['src/a.ts', 'src/a.ts'])).toEqual({ 'src/a.ts': 1 })
+  })
+
+  it('returns prev itself for an empty list, so nothing re-renders', () => {
+    const prev = { 'src/a.ts': 2 }
+
+    expect(bumpRevisions(prev, [])).toBe(prev)
   })
 })
 

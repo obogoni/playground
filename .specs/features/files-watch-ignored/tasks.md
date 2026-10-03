@@ -937,10 +937,22 @@ warnings, 108 s wall.
 
 **Done when**:
 
-- [ ] Tests: two paths bump to 1 from nothing and to 2 from 1; another path keeps its value; `prev` is not mutated
-- [ ] Tests: a duplicated path bumps once; an empty list returns `prev` itself (same reference)
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/files-view.test.ts`, then the full gate
-- [ ] Test count: T14 count + the new tests
+- [x] Tests: two paths bump to 1 from nothing and to 2 from 1; another path keeps its value; `prev` is not mutated
+- [x] Tests: a duplicated path bumps once; an empty list returns `prev` itself (same reference)
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/files-view.test.ts`, then the full gate
+- [x] Test count: T14 count + the new tests
+
+**Result (2026-10-03)**: `src/renderer/src/lib/files-view.test.ts` 55 tests (50 + 5 new), all
+passing; full gate 2,863 tests in 129 files (2,858 + 5), typecheck clean, lint 0 errors and 18
+warnings, 105 s wall.
+
+- Shape: `bumpRevisions(prev, paths)` returns `prev` when `paths` is empty; otherwise it copies
+  `prev` and adds one to each distinct path (a `Set`), from 0 when absent. The hook applies
+  `tabsAffected` first (T17), so the paths it passes are already the listed spelling.
+- Assertions: 1 from nothing and 2 from 1 `files-view.test.ts:182`; an unnamed path keeps its value
+  `:188`; a new object and `prev` unchanged `:196-197`; a duplicate bumps once `:201`; the empty list
+  returns `prev` itself (`toBe`) `:207`.
+- Red first: the five cases failed on the missing export before the change.
 
 **Tests**: unit
 **Gate**: quick
