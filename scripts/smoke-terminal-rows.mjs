@@ -14,7 +14,9 @@
  *         right and 10 px from the top (TROW-07)
  *   dpr   at 8 fixed heights, the display scale steps 1 → 1.25 → 1.5 → 2 → 1
  *         with the CSS height unchanged: after the first change and after every
- *         later one, the rows checks hold with the new cell (TROW-09, TROW-10)
+ *         later one, the rows checks hold with the new cell (TROW-09, TROW-10);
+ *         then, after switching to a second session and back three times, one
+ *         more change still refits, with no error in the renderer console
  *
  * The terminal draws on the WebGL renderer (design.md §Renderer Amendment), so
  * nothing about its rows is in the DOM. The cell is measured the way xterm
@@ -30,8 +32,9 @@
  * NOT automatable here: right-click, Ctrl+click and file drop inside the
  * padding (TROW-08), and the look in both themes; those are hand checks.
  *
- * The only session is an Ad-hoc `node` running the fill script, never a
- * registry agent. It runs only on its own throwaway data:
+ * The sessions are two Ad-hoc `node` processes, the fill script and an idle
+ * one to switch to, never a registry agent. It runs only on its own throwaway
+ * data:
  *   1. node scripts/smoke-terminal-rows.mjs --seed
  *        writes a new directory under %TEMP% with a config registering one
  *        fictional workspace `rows-smoke` and the fill script; prints the
@@ -66,6 +69,7 @@ const POINTER = join(TEMP, 'playground-smoke-rows.last')
 const BASELINE = join(TEMP, 'playground-smoke-rows-cols.json')
 const WORKSPACE = 'rows-smoke'
 const TITLE = 'rows-smoke fill'
+const OTHER_TITLE = 'rows-smoke idle'
 // TerminalPane's font, pinned: a change there must fail the geometry guard,
 // not be followed silently.
 const FONT = "13px 'Cascadia Mono', Consolas, 'JetBrains Mono', monospace"
@@ -641,7 +645,71 @@ async function dprSection() {
     (p) => !holds(p),
     describe
   )
+
+  // Edge case: panes switched away from must leave no scale listener behind.
+  // A leaked one would refit a disposed terminal, which xterm reports as an
+  // error, and the selected pane must still refit.
+  const errors = []
+  const onEvent = (event) => {
+    const msg = JSON.parse(event.data)
+    if (msg.method === 'Runtime.exceptionThrown')
+      errors.push(msg.params.exceptionDetails?.exception?.description ?? 'exception')
+    if (msg.method === 'Runtime.consoleAPICalled' && msg.params.type === 'error')
+      errors.push(msg.params.args.map((a) => a.value ?? a.description).join(' '))
+  }
+  ws.addEventListener('message', onEvent)
+  await probe(ROWS_WIDTH, 611, 1)
+  for (let i = 0; i < 3; i++) {
+    await selectRow(OTHER_TITLE)
+    await sleep(400)
+    await selectRow(TITLE)
+    await sleep(400)
+  }
+  const before = await probe(ROWS_WIDTH, 611, 1)
+  // Counts the refits scheduled for the scale change. Each mounted pane
+  // schedules its own (`requestAnimationFrame(sendResize)`), so a pane that
+  // unmounted without removing its listener adds one (P2 AC 3: no refit runs
+  // after unmount). The dev build keeps function names.
+  await evaluate(`(() => {
+    const raf = window.requestAnimationFrame.bind(window)
+    window.__rowsSmoke.refits = 0
+    window.__rowsSmoke.raf = window.requestAnimationFrame
+    window.requestAnimationFrame = (cb) => {
+      if (cb?.name === 'sendResize') window.__rowsSmoke.refits++
+      return raf(cb)
+    }
+    return true
+  })()`)
+  const after = await probe(ROWS_WIDTH, 611, 1.5)
+  const refits = await evaluate(`(() => {
+    window.requestAnimationFrame = window.__rowsSmoke.raf
+    return window.__rowsSmoke.refits
+  })()`)
+  ws.removeEventListener('message', onEvent)
+  console.log(
+    `  after 3 switches: dpr 1 rows ${before.rows} (fit ${fitRows(before)}), dpr 1.5 rows ${after.rows} (fit ${fitRows(after)}), program ${after.ptyRows}`
+  )
+  check(
+    'TROW-10: after switching sessions three times, a scale change still refits the selected pane',
+    holds(before) && holds(after) && fitRows(before) !== fitRows(after),
+    `rows ${before.rows} → ${after.rows}, fit ${fitRows(before)} → ${fitRows(after)}`
+  )
+  check(
+    'TROW-10: the scale change schedules exactly one refit, from the selected pane',
+    refits === 1,
+    `${refits} refits`
+  )
+  check(
+    'TROW-10: no error in the renderer console across the switches and the scale change',
+    errors.length === 0,
+    errors.slice(0, 3).join(' | ')
+  )
 }
+
+const selectRow = (title) =>
+  evaluate(
+    `([...document.querySelectorAll('.rail-row')].find((r) => (r.title || '').startsWith(${JSON.stringify(title)})).click(), true)`
+  )
 
 const target = await pageTarget()
 ws = new WebSocket(target.webSocketDebuggerUrl)
@@ -669,6 +737,7 @@ if (
 }
 
 let sessionId = null
+let otherId = null
 try {
   const view = await invoke('sessions:spawn', {
     agentName: 'Ad-hoc',
@@ -677,6 +746,13 @@ try {
   })
   sessionId = view.id
   await invoke('sessions:rename', { id: sessionId, title: TITLE })
+  const other = await invoke('sessions:spawn', {
+    agentName: 'Ad-hoc',
+    cwd: join(seededDir, WORKSPACE),
+    adhocCommand: `node -e 'setInterval(() => {}, 1000)'`
+  })
+  otherId = other.id
+  await invoke('sessions:rename', { id: otherId, title: OTHER_TITLE })
   // A session spawned over IPC reaches the rail on the next list; a reload
   // lists it. It reloads into Tree, so no pane attaches before the capture.
   await invoke('config:patch', { ui: { direction: 'tree' } })
@@ -716,9 +792,10 @@ try {
   if (ONLY === null || ONLY === 'dpr') await dprSection()
 } finally {
   await send('Emulation.clearDeviceMetricsOverride').catch(() => {})
-  if (sessionId !== null) {
-    await invoke('sessions:stop', { id: sessionId }).catch(() => {})
-    await invoke('sessions:remove', { id: sessionId }).catch(() => {})
+  for (const id of [sessionId, otherId]) {
+    if (id === null) continue
+    await invoke('sessions:stop', { id }).catch(() => {})
+    await invoke('sessions:remove', { id }).catch(() => {})
   }
 }
 

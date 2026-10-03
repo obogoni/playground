@@ -147,17 +147,17 @@ Every ambiguity is resolved or recorded here. Rows marked `owner confirmed 2026-
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| TROW-01 | P1: Last row visible (AC 1-2, host split) | Tasks | In Tasks |
-| TROW-02 | P1: Last row visible (AC 3, rows that fit; Edge Cases 1-3) | Tasks | In Tasks |
-| TROW-03 | P1: Last row visible (AC 4, last row inside the visible box) | Tasks | In Tasks |
-| TROW-04 | P1: Last row visible (AC 5, last column inside the visible box) | Tasks | In Tasks |
-| TROW-05 | P1: Real size (AC 1-2, PTY gets the size) | Tasks | In Tasks |
-| TROW-06 | P1: Real size (AC 3, main unchanged) | Tasks | In Tasks |
-| TROW-07 | P1: Same look (AC 1-3, offsets) | Tasks | In Tasks |
-| TROW-08 | P1: Same look (AC 4, gestures in the padding) | Tasks | In Tasks |
-| TROW-09 | P2: Display scale (AC 1, 4, refit after re-measure) | Tasks | In Tasks |
-| TROW-10 | P2: Display scale (AC 2-3, re-arm and dispose; Edge Cases 4-6) | Tasks | In Tasks |
-| TROW-11 | P1: Last row visible (AC 6, columns equal the current build's at the same viewport) | Tasks | In Tasks |
+| TROW-01 | P1: Last row visible (AC 1-2, host split) | Execute | Done (T2) |
+| TROW-02 | P1: Last row visible (AC 3, rows that fit; Edge Cases 1-3) | Execute | Done (T1, T2) |
+| TROW-03 | P1: Last row visible (AC 4, last row inside the visible box) | Execute | Done (T1, T2) |
+| TROW-04 | P1: Last row visible (AC 5, last column inside the visible box) | Execute | Done (T1, T2) |
+| TROW-05 | P1: Real size (AC 1-2, PTY gets the size) | Execute | Done (T1, T2) |
+| TROW-06 | P1: Real size (AC 3, main unchanged) | Execute | Done (T2) |
+| TROW-07 | P1: Same look (AC 1-3, offsets) | Execute | Done (T1, T2) |
+| TROW-08 | P1: Same look (AC 4, gestures in the padding) | Execute | Done (T2 (Ctrl+click: owner hand check)) |
+| TROW-09 | P2: Display scale (AC 1, 4, refit after re-measure) | Execute | Done (T3, T4, T5) |
+| TROW-10 | P2: Display scale (AC 2-3, re-arm and dispose; Edge Cases 4-6) | Execute | Done (T3, T4, T5) |
+| TROW-11 | P1: Last row visible (AC 6, columns equal the current build's at the same viewport) | Execute | Done (T1, T2) |
 
 **ID format:** `TROW-NN`.
 

@@ -6,6 +6,7 @@ import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal, type IBufferRange, type ITheme } from '@xterm/xterm'
 import { PASTE_GAP_MS, planPaste } from '../../../shared/paste'
 import { api } from '../lib/api'
+import { watchDevicePixelRatio } from '../lib/device-pixel-ratio'
 import {
   activeBufferOf,
   bufferPositionForMouseEvent,
@@ -474,6 +475,14 @@ export function TerminalPane({
     sendResize()
     const observer = new ResizeObserver(sendResize)
     observer.observe(host)
+    // A display scale change resizes the cell, not the host, so the observer
+    // never sees it. The refit waits one frame, so xterm has re-measured its
+    // cell for the new ratio first (TROW-09); a pending frame is replaced.
+    let dprFrame = 0
+    const stopDpr = watchDevicePixelRatio(window, () => {
+      cancelAnimationFrame(dprFrame)
+      dprFrame = requestAnimationFrame(sendResize)
+    })
 
     // Recolor the terminal live when the app theme toggles (handoff: re-emit
     // the theme on toggle). data-theme flips on <html>.
@@ -599,6 +608,8 @@ export function TerminalPane({
       selectionSub.dispose()
       for (const handler of probeHandlers) handler.dispose()
       observer.disconnect()
+      stopDpr()
+      cancelAnimationFrame(dprFrame)
       themeObserver.disconnect()
       offData()
       offExit()

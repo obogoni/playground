@@ -232,16 +232,18 @@ T4 → T5
 
 **Done when**:
 
-- [ ] Wiring and cleanup per `design.md` §TerminalPane (TROW-09, TROW-10 dispose)
-- [ ] **Route A**: `SMOKE_ONLY=dpr` passes every step at every height, the second and later steps included. M4 (no-op watcher call) makes it fail; M5 makes a step after the first fail
-- [ ] **Route B**: with the fill session selected, change the Windows display scale 100% → 125% → 150% → 100% (Settings, Display, Scale). After each change, `SMOKE_ONLY=probe` passes and the `ROWS=<n> COLS=<m> LAST` line is fully visible. With M4 applied, the probe fails after at least one change
-- [ ] Switch to another session and back three times, then change the scale (Route A: one `dpr` step; Route B: one Windows change). The renderer console shows no error and the probe passes
-- [ ] Full smoke once, on a fresh seed and launch with no `SMOKE_ONLY`: every section passes, exit code 0; the summary line is written under this task
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B + ≥5 tests pass (no silent deletions)
+- [x] Wiring and cleanup per `design.md` §TerminalPane (TROW-09, TROW-10 dispose)
+- [x] **Route A**: `SMOKE_ONLY=dpr` passes every step at every height, the second and later steps included. M4 (no-op watcher call) makes it fail; M5 makes a step after the first fail
+- [ ] ~~**Route B**~~ not taken (T3 Route A): with the fill session selected, change the Windows display scale 100% → 125% → 150% → 100% (Settings, Display, Scale). After each change, `SMOKE_ONLY=probe` passes and the `ROWS=<n> COLS=<m> LAST` line is fully visible. With M4 applied, the probe fails after at least one change
+- [x] Switch to another session and back three times, then change the scale (Route A: one `dpr` step; Route B: one Windows change). The renderer console shows no error and the probe passes
+- [x] Full smoke once, on a fresh seed and launch with no `SMOKE_ONLY`: every section passes, exit code 0; the summary line is written under this task
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B + ≥5 tests pass (no silent deletions)
 
 **Tests**: none
 **Gate**: build
+
+**Status**: ✅ Complete (2026-10-03). Route A: `dpr` passes every step at every height. M4 (no-op watcher call) fails TROW-09 8/8 and TROW-10 14/24; M5 (no re-arm) fails TROW-09 8/8 and TROW-10 6/24. The session-switch item is part of the `dpr` section: after three switches a scale change refits the selected pane, schedules exactly one refit (M9, the pane not disposing its watcher, schedules 14) and logs no console error (M10, a `console.error` in the scale callback, fails it). Full smoke on a fresh seed and launch: `26/26 checks passed`, exit 0, app closed and seed deleted.
 
 **Commit**: `fix(terminal): refit when the display scale changes`
 
