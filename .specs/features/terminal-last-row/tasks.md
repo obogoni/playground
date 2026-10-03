@@ -97,20 +97,22 @@ T4 → T5
 
 **Done when**:
 
-- [ ] Setup: in the worktree, `npm ci --ignore-scripts`, then `node node_modules/electron/install.js`; `npm test` run once and its count written as **B** in this file's header
-- [ ] The script follows `design.md` §`scripts/smoke-terminal-rows.mjs`: `--seed` writes the throwaway userData, the fictional `rows-smoke` workspace and the fill script; the drive refuses any other data, spawns only the Ad-hoc fill session, and stops, removes and clears the override in `finally`
-- [ ] On the current build, `SMOKE_ONLY=rows` probes max(20, ⌈h⌉ + 3) consecutive heights at DPR 1 and 20 each at 1.25 and 1.5. The full table is appended to `design.md` under `## Measured (T1)`, including today's columns, the last column's right edge against the 14 px scrollbar lane, and `parent`, `addonModel` and `clipModel` per probe
-- [ ] Stop rule (`design.md` §Predicted Model) evaluated and its verdict written under the table. If any condition holds: STOP, report the table to the owner, and do not start T2
-- [ ] First seen failing, on the natural broken build (padding on the host): the rows-fit check fails at every probe with ⌊c⌋ mod h ≥ h − 16; the last-row check fails at every probe whose `clipModel` exceeds 0.5 px (1-8 px remainders at h = 17), and only there; the PTY check fails wherever the rows check does. A check that does not fail where the model says is a stop-rule finding
-- [ ] Column baseline recorded on the current build: `SMOKE_ONLY=cols SMOKE_BASELINE=write` writes `playground-smoke-rows-cols.json` to the OS temp folder (per `design.md` §Modes 4), and the counts are copied under `## Measured (T1)`. The last-column check (TROW-04) passes at every `rows` and `cols` probe; a probe where it fails is a stop-rule finding. The `cols` comparison (TROW-11) and TROW-04 cannot fail on the build that defines the baseline, so they are first seen failing in T2, under M7 and M8. The cols-changes guard passes at each DPR
-- [ ] Guards pass: remainder coverage 0..⌈h⌉−1 at DPR 1, 1 px steps, rows changes across the sweep and the marker follows it
-- [ ] `SMOKE_ONLY=look` passes on the current build (inset 8/10/8/10, origin (10, 8), chip right 14 / top 10, within 0.5 px), and fails under M2 (chip appended to `.xterm`) and M3 (pane padding `6px 10px`), each through the mutant runner (anchor count 1, `.orig` restored, porcelain unchanged)
-- [ ] `Browser.setWindowBounds` tried for 3 heights: if Electron accepts it, the readings match the emulated ones within 0.5 px; if it rejects it, the error is recorded under the table and emulation stands
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B tests pass (no silent deletions)
+- [x] Setup: in the worktree, `npm ci --ignore-scripts`, then `node node_modules/electron/install.js`; `npm test` run once and its count written as **B** in this file's header
+- [x] The script follows `design.md` §`scripts/smoke-terminal-rows.mjs`: `--seed` writes the throwaway userData, the fictional `rows-smoke` workspace and the fill script; the drive refuses any other data, spawns only the Ad-hoc fill session, and stops, removes and clears the override in `finally`
+- [x] On the current build, `SMOKE_ONLY=rows` probes max(20, ⌈h⌉ + 3) consecutive heights at DPR 1 and 20 each at 1.25 and 1.5. The full table is appended to `design.md` under `## Measured (T1)`, including today's columns, the last column's right edge against the 14 px scrollbar lane, and `parent`, `addonModel` and `clipModel` per probe
+- [x] Stop rule (`design.md` §Predicted Model) evaluated and its verdict written under the table. If any condition holds: STOP, report the table to the owner, and do not start T2
+- [x] First seen failing, on the natural broken build (padding on the host): the rows-fit check fails at every probe with ⌊c⌋ mod h ≥ h − 16; the last-row check fails at every probe whose `clipModel` exceeds 0.5 px (1-8 px remainders at h = 17), and only there; the PTY check fails wherever the rows check does. A check that does not fail where the model says is a stop-rule finding
+- [x] Column baseline recorded on the current build: `SMOKE_ONLY=cols SMOKE_BASELINE=write` writes `playground-smoke-rows-cols.json` to the OS temp folder (per `design.md` §Modes 4), and the counts are copied under `## Measured (T1)`. The last-column check (TROW-04) passes at every `rows` and `cols` probe; a probe where it fails is a stop-rule finding. The `cols` comparison (TROW-11) and TROW-04 cannot fail on the build that defines the baseline, so they are first seen failing in T2, under M7 and M8. The cols-changes guard passes at each DPR
+- [x] Guards pass: remainder coverage 0..⌈h⌉−1 at DPR 1, 1 px steps, rows changes across the sweep and the marker follows it
+- [x] `SMOKE_ONLY=look` passes on the current build (inset 8/10/8/10, origin (10, 8), chip right 14 / top 10, within 0.5 px), and fails under M2 (chip appended to `.xterm`) and M3 (pane padding `6px 10px`), each through the mutant runner (anchor count 1, `.orig` restored, porcelain unchanged)
+- [x] `Browser.setWindowBounds` tried for 3 heights: if Electron accepts it, the readings match the emulated ones within 0.5 px; if it rejects it, the error is recorded under the table and emulation stands
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B tests pass (no silent deletions)
 
 **Tests**: manual only
 **Gate**: build
+
+**Status**: ✅ Complete (2026-10-03). Stop rule: no condition holds (`design.md` §Measured (T1)). `Browser.setWindowBounds` cannot run under Electron (`Browser.getWindowForTarget` not found). The fill script reads the console size with `_refreshSize()`.
 
 **Commit**: `test(smoke): measure terminal rows against the pane height`
 

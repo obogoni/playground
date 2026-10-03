@@ -89,6 +89,148 @@ This refines the issue's wording ("whenever the leftover height is 1-8 px the fi
 
 T1 appends the measured table to this file under `## Measured (T1)`.
 
+## Measured (T1)
+
+Run on 2026-10-03 on the build before the fix (`origin/main` `6d96ae4` plus the plan commits), WebGL renderer, on this machine (real display scale 150%), with `SMOKE_ONLY=rows SMOKE_REPORT=1` and `SMOKE_ONLY=cols SMOKE_BASELINE=write`. Viewport width 1200 px for `rows`; height 640 px for `cols`. CDP hands the page a float32 of the ratio asked for, so "DPR 1" is 1.0000000298 in the page, and xterm sizes its cell from it: the device cell height is `ceil(15 × 1.0000000298)` = 16, not 15. The probes are labelled with the ratio asked for.
+
+### Rows
+
+| DPR | vh | c | ⌊c⌋ mod h | h | rows | fit | program rows | cols | last row bottom − visible bottom | last column right − visible right | parent | addon model | clip model | clip |
+| --- | -- | - | --------- | - | ---- | --- | ------------ | ---- | -------------------------------- | --------------------------------- | ------ | ----------- | ---------- | ---- |
+| 1 | 600 | 399.3 | 15 | 16.000 | 25 | 24 | 25 | 120 | -7.3 | -6.0 | terminal-pane | 25 | 0.0 | 0.0 |
+| 1 | 601 | 400.7 | 0 | 16.000 | 26 | 25 | 26 | 120 | 7.3 | -6.0 | terminal-pane | 26 | 7.3 | 7.3 |
+| 1 | 602 | 401.3 | 1 | 16.000 | 26 | 25 | 26 | 120 | 6.7 | -6.0 | terminal-pane | 26 | 6.7 | 6.7 |
+| 1 | 603 | 402.7 | 2 | 16.000 | 26 | 25 | 26 | 120 | 5.3 | -6.0 | terminal-pane | 26 | 5.3 | 5.3 |
+| 1 | 604 | 403.3 | 3 | 16.000 | 26 | 25 | 26 | 120 | 4.7 | -6.0 | terminal-pane | 26 | 4.7 | 4.7 |
+| 1 | 605 | 404.7 | 4 | 16.000 | 26 | 25 | 26 | 120 | 3.3 | -6.0 | terminal-pane | 26 | 3.3 | 3.3 |
+| 1 | 606 | 405.3 | 5 | 16.000 | 26 | 25 | 26 | 120 | 2.7 | -6.0 | terminal-pane | 26 | 2.7 | 2.7 |
+| 1 | 607 | 406.7 | 6 | 16.000 | 26 | 25 | 26 | 120 | 1.3 | -6.0 | terminal-pane | 26 | 1.3 | 1.3 |
+| 1 | 608 | 407.3 | 7 | 16.000 | 26 | 25 | 26 | 120 | 0.7 | -6.0 | terminal-pane | 26 | 0.7 | 0.7 |
+| 1 | 609 | 408.7 | 8 | 16.000 | 26 | 25 | 26 | 120 | -0.7 | -6.0 | terminal-pane | 26 | 0.0 | 0.0 |
+| 1 | 610 | 409.3 | 9 | 16.000 | 26 | 25 | 26 | 120 | -1.3 | -6.0 | terminal-pane | 26 | 0.0 | 0.0 |
+| 1 | 611 | 410.7 | 10 | 16.000 | 26 | 25 | 26 | 120 | -2.7 | -6.0 | terminal-pane | 26 | 0.0 | 0.0 |
+| 1 | 612 | 411.3 | 11 | 16.000 | 26 | 25 | 26 | 120 | -3.3 | -6.0 | terminal-pane | 26 | 0.0 | 0.0 |
+| 1 | 613 | 412.7 | 12 | 16.000 | 26 | 25 | 26 | 120 | -4.7 | -6.0 | terminal-pane | 26 | 0.0 | 0.0 |
+| 1 | 614 | 413.3 | 13 | 16.000 | 26 | 25 | 26 | 120 | -5.3 | -6.0 | terminal-pane | 26 | 0.0 | 0.0 |
+| 1 | 615 | 414.7 | 14 | 16.000 | 26 | 25 | 26 | 120 | -6.7 | -6.0 | terminal-pane | 26 | 0.0 | 0.0 |
+| 1 | 616 | 415.3 | 15 | 16.000 | 26 | 25 | 26 | 120 | -7.3 | -6.0 | terminal-pane | 26 | 0.0 | 0.0 |
+| 1 | 617 | 416.7 | 0 | 16.000 | 27 | 26 | 27 | 120 | 7.3 | -6.0 | terminal-pane | 27 | 7.3 | 7.3 |
+| 1 | 618 | 417.3 | 1 | 16.000 | 27 | 26 | 27 | 120 | 6.7 | -6.0 | terminal-pane | 27 | 6.7 | 6.7 |
+| 1 | 619 | 418.7 | 2 | 16.000 | 27 | 26 | 27 | 120 | 5.3 | -6.0 | terminal-pane | 27 | 5.3 | 5.3 |
+| 1.25 | 600 | 399.3 | 15 | 15.200 | 27 | 26 | 27 | 116 | 3.1 | -10.8 | terminal-pane | 27 | 3.1 | 3.1 |
+| 1.25 | 601 | 400.7 | 0 | 15.200 | 27 | 26 | 27 | 116 | 1.7 | -10.8 | terminal-pane | 27 | 1.7 | 1.7 |
+| 1.25 | 602 | 401.3 | 1 | 15.200 | 27 | 26 | 27 | 116 | 1.1 | -10.8 | terminal-pane | 27 | 1.1 | 1.1 |
+| 1.25 | 603 | 402.7 | 2 | 15.200 | 27 | 26 | 27 | 116 | -0.3 | -10.8 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.25 | 604 | 403.3 | 3 | 15.200 | 27 | 26 | 27 | 116 | -0.9 | -10.8 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.25 | 605 | 404.7 | 4 | 15.200 | 27 | 26 | 27 | 116 | -2.3 | -10.8 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.25 | 606 | 405.3 | 5 | 15.200 | 27 | 26 | 27 | 116 | -2.9 | -10.8 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.25 | 607 | 406.7 | 6 | 15.200 | 27 | 26 | 27 | 116 | -4.3 | -10.8 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.25 | 608 | 407.3 | 7 | 15.200 | 27 | 26 | 27 | 116 | -4.9 | -10.8 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.25 | 609 | 408.7 | 8 | 15.200 | 27 | 26 | 27 | 116 | -6.3 | -10.8 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.25 | 610 | 409.3 | 9 | 15.200 | 27 | 26 | 27 | 116 | -6.9 | -10.8 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.25 | 611 | 410.7 | 10 | 15.200 | 28 | 26 | 28 | 116 | 6.9 | -10.8 | terminal-pane | 28 | 6.9 | 6.9 |
+| 1.25 | 612 | 411.3 | 11 | 15.200 | 28 | 27 | 28 | 116 | 6.3 | -10.8 | terminal-pane | 28 | 6.3 | 6.3 |
+| 1.25 | 613 | 412.7 | 12 | 15.200 | 28 | 27 | 28 | 116 | 4.9 | -10.8 | terminal-pane | 28 | 4.9 | 4.9 |
+| 1.25 | 614 | 413.3 | 13 | 15.200 | 28 | 27 | 28 | 116 | 4.3 | -10.8 | terminal-pane | 28 | 4.3 | 4.3 |
+| 1.25 | 615 | 414.7 | 14 | 15.200 | 28 | 27 | 28 | 116 | 2.9 | -10.8 | terminal-pane | 28 | 2.9 | 2.9 |
+| 1.25 | 616 | 415.3 | 15 | 15.200 | 28 | 27 | 28 | 116 | 2.3 | -10.8 | terminal-pane | 28 | 2.3 | 2.3 |
+| 1.25 | 617 | 416.7 | 0 | 15.200 | 28 | 27 | 28 | 116 | 0.9 | -10.8 | terminal-pane | 28 | 0.9 | 0.9 |
+| 1.25 | 618 | 417.3 | 1 | 15.200 | 28 | 27 | 28 | 116 | 0.3 | -10.8 | terminal-pane | 28 | 0.3 | 0.3 |
+| 1.25 | 619 | 418.7 | 2 | 15.200 | 28 | 27 | 28 | 116 | -1.1 | -10.8 | terminal-pane | 28 | 0.0 | 0.0 |
+| 1.5 | 600 | 399.3 | 15 | 15.333 | 27 | 26 | 27 | 114 | 6.7 | -10.0 | terminal-pane | 27 | 6.7 | 6.7 |
+| 1.5 | 601 | 400.7 | 0 | 15.333 | 27 | 26 | 27 | 114 | 5.3 | -10.0 | terminal-pane | 27 | 5.3 | 5.3 |
+| 1.5 | 602 | 401.3 | 1 | 15.333 | 27 | 26 | 27 | 114 | 4.7 | -10.0 | terminal-pane | 27 | 4.7 | 4.7 |
+| 1.5 | 603 | 402.7 | 2 | 15.333 | 27 | 26 | 27 | 114 | 3.3 | -10.0 | terminal-pane | 27 | 3.3 | 3.3 |
+| 1.5 | 604 | 403.3 | 3 | 15.333 | 27 | 26 | 27 | 114 | 2.7 | -10.0 | terminal-pane | 27 | 2.7 | 2.7 |
+| 1.5 | 605 | 404.7 | 4 | 15.333 | 27 | 26 | 27 | 114 | 1.3 | -10.0 | terminal-pane | 27 | 1.3 | 1.3 |
+| 1.5 | 606 | 405.3 | 5 | 15.333 | 27 | 26 | 27 | 114 | 0.7 | -10.0 | terminal-pane | 27 | 0.7 | 0.7 |
+| 1.5 | 607 | 406.7 | 6 | 15.333 | 27 | 26 | 27 | 114 | -0.7 | -10.0 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.5 | 608 | 407.3 | 7 | 15.333 | 27 | 26 | 27 | 114 | -1.3 | -10.0 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.5 | 609 | 408.7 | 8 | 15.333 | 27 | 26 | 27 | 114 | -2.7 | -10.0 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.5 | 610 | 409.3 | 9 | 15.333 | 27 | 26 | 27 | 114 | -3.3 | -10.0 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.5 | 611 | 410.7 | 10 | 15.333 | 27 | 26 | 27 | 114 | -4.7 | -10.0 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.5 | 612 | 411.3 | 11 | 15.333 | 27 | 26 | 27 | 114 | -5.3 | -10.0 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.5 | 613 | 412.7 | 12 | 15.333 | 27 | 26 | 27 | 114 | -6.7 | -10.0 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.5 | 614 | 413.3 | 13 | 15.333 | 27 | 26 | 27 | 114 | -7.3 | -10.0 | terminal-pane | 27 | 0.0 | 0.0 |
+| 1.5 | 615 | 414.7 | 14 | 15.333 | 28 | 27 | 28 | 114 | 6.7 | -10.0 | terminal-pane | 28 | 6.7 | 6.7 |
+| 1.5 | 616 | 415.3 | 15 | 15.333 | 28 | 27 | 28 | 114 | 6.0 | -10.0 | terminal-pane | 28 | 6.0 | 6.0 |
+| 1.5 | 617 | 416.7 | 0 | 15.333 | 28 | 27 | 28 | 114 | 4.7 | -10.0 | terminal-pane | 28 | 4.7 | 4.7 |
+| 1.5 | 618 | 417.3 | 1 | 15.333 | 28 | 27 | 28 | 114 | 4.0 | -10.0 | terminal-pane | 28 | 4.0 | 4.0 |
+| 1.5 | 619 | 418.7 | 2 | 15.333 | 28 | 27 | 28 | 114 | 2.7 | -10.0 | terminal-pane | 28 | 2.7 | 2.7 |
+
+Checks on this build, as the model predicts:
+
+- PASS guard (rows): WebGL renderer, screen an exact multiple of the measured cell, settled — 60 probes
+- PASS guard: at DPR 1 the probed heights cover every remainder of the cell height — 16/16 remainders
+- PASS guard: each probe grows the content height by 1 px (DPR 1: exactly; scaled: within 0.5 px) — 57 probes
+- PASS guard: the rows change across the DPR 1 sweep, and the program follows them — rows 25,26,27; program 25,26,27
+- FAIL TROW-02: the terminal has the rows that fit in its content height — 60/60 fail
+- FAIL TROW-03: the last row's bottom is inside the pane's visible box — 33/60 fail
+- PASS TROW-04: the last column's right edge is inside the pane's visible box — 60 probes
+- FAIL TROW-05: the program reads the rows that fit and the terminal's columns — 60/60 fail
+
+### Stop rule verdict
+
+- parent is .terminal-pane at every probe: true
+- rows = ⌊parseInt(height) / h⌋ at every probe: true
+- |clip − clipModel| ≤ 0.5 at every probe: true
+- some probe clips the last row: true
+- the last row fails exactly where clipModel > 0.5: true
+- the rows fit fails exactly where ⌊c⌋ mod h ≥ h − 16: true
+- last column inside at every probe: true
+
+No stop condition holds. The parent is `.terminal-pane` at every probe, the rows equal the addon model ⌊parseInt(height) / h⌋ at every probe, the measured clip equals the clip model within 0.5 px at every probe, 33 of 60 probes clip the last row, and the last column is inside the visible box at every probe. The rows-fit check fails at all 60 probes (h ≤ 16, so every remainder is ≥ h − 16), the last-row check fails at exactly the 33 probes whose clip model exceeds 0.5 px, and the program check fails wherever the rows check does. The plan continues to T2.
+
+### Columns (baseline, `playground-smoke-rows-cols.json`)
+
+| DPR | vw | cols | program cols | w | last column right − visible right |
+| --- | -- | ---- | ------------ | - | --------------------------------- |
+| 1 | 1189 | 118 | 118 | 7.000 | -9.0 |
+| 1 | 1190 | 118 | 118 | 7.000 | -10.0 |
+| 1 | 1191 | 119 | 119 | 7.000 | -4.0 |
+| 1 | 1192 | 119 | 119 | 7.000 | -5.0 |
+| 1 | 1193 | 119 | 119 | 7.000 | -6.0 |
+| 1 | 1194 | 119 | 119 | 7.000 | -7.0 |
+| 1 | 1195 | 119 | 119 | 7.000 | -8.0 |
+| 1 | 1196 | 119 | 119 | 7.000 | -9.0 |
+| 1 | 1197 | 119 | 119 | 7.000 | -10.0 |
+| 1 | 1198 | 120 | 120 | 7.000 | -4.0 |
+| 1 | 1199 | 120 | 120 | 7.000 | -5.0 |
+| 1 | 1200 | 120 | 120 | 7.000 | -6.0 |
+| 1.25 | 1189 | 115 | 115 | 7.200 | -7.0 |
+| 1.25 | 1190 | 115 | 115 | 7.200 | -8.0 |
+| 1.25 | 1191 | 115 | 115 | 7.200 | -9.0 |
+| 1.25 | 1192 | 115 | 115 | 7.200 | -10.0 |
+| 1.25 | 1193 | 115 | 115 | 7.200 | -11.0 |
+| 1.25 | 1194 | 116 | 116 | 7.200 | -4.8 |
+| 1.25 | 1195 | 116 | 116 | 7.200 | -5.8 |
+| 1.25 | 1196 | 116 | 116 | 7.200 | -6.8 |
+| 1.25 | 1197 | 116 | 116 | 7.200 | -7.8 |
+| 1.25 | 1198 | 116 | 116 | 7.200 | -8.8 |
+| 1.25 | 1199 | 116 | 116 | 7.200 | -9.8 |
+| 1.25 | 1200 | 116 | 116 | 7.200 | -10.8 |
+| 1.5 | 1189 | 113 | 113 | 7.333 | -6.3 |
+| 1.5 | 1190 | 113 | 113 | 7.333 | -7.3 |
+| 1.5 | 1191 | 113 | 113 | 7.333 | -8.3 |
+| 1.5 | 1192 | 113 | 113 | 7.333 | -9.3 |
+| 1.5 | 1193 | 113 | 113 | 7.333 | -10.3 |
+| 1.5 | 1194 | 114 | 114 | 7.333 | -4.0 |
+| 1.5 | 1195 | 114 | 114 | 7.333 | -5.0 |
+| 1.5 | 1196 | 114 | 114 | 7.333 | -6.0 |
+| 1.5 | 1197 | 114 | 114 | 7.333 | -7.0 |
+| 1.5 | 1198 | 114 | 114 | 7.333 | -8.0 |
+| 1.5 | 1199 | 114 | 114 | 7.333 | -9.0 |
+| 1.5 | 1200 | 114 | 114 | 7.333 | -10.0 |
+
+The last column is inside the visible box at every `rows` and `cols` probe (4 to 11 px of the right padding left), and the column count changes in each DPR sweep.
+
+### Other T1 readings
+
+- `look` passes on this build at vh 600, 617 and 640: inset 8/10/8/10, origin (10, 8), chip right 14 / top 10. M2 (chip appended to `.xterm`) fails only the chip check (right 24, top 18); M3 (pane `padding: 6px 10px`) fails only the inset and origin checks (6/10/6/10, origin (10, 6)). Both through the mutant runner: anchor count 1, `.orig` restored, porcelain unchanged.
+- `Browser.setWindowBounds` cannot be tried: Electron rejects `Browser.getWindowForTarget` with `-32601 'Browser.getWindowForTarget' wasn't found`, so there is no window id to resize. Viewport emulation stands.
+- The fill script needed `process.stdout._refreshSize()`: node caches the console size, and under ConPTY no resize signal reaches it, so `getWindowSize()` stayed at 80 × 24.
+- A session spawned over IPC appears in the rail only after a reload. The drive reloads into Tree, starts the stream capture, then opens Agents, so the replay on attach is captured.
+
 ---
 
 ## Architecture
