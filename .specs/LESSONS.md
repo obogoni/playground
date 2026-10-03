@@ -582,6 +582,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: SPEC_DEVIATION src/main/session-manager.ts:126 (session-manager)
 - last seen: 2026-10-02T17:30:50Z
 
+### L-101 - When an error branch needs an I/O failure the OS cannot produce portably, fail the call through a mocked module or injected seam instead of leaving the branch untested
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: agent-prompts
+- evidence: M17 src/main/prompt-library.ts:39 (APR-06 unreadable) (testing)
+- last seen: 2026-10-03T12:22:13Z
+
+### L-102 - Lift every behavioural rule stated in the spec's assumptions table into a numbered acceptance criterion, or it ships unimplemented and untested
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: agent-prompts
+- evidence: spec.md Assumptions 'Value whitespace' vs NewSessionDialog.tsx:172-173 (spec)
+- last seen: 2026-10-03T12:22:14Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

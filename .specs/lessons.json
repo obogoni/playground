@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 101,
+  "next_id": 103,
   "lessons": [
     {
       "id": "L-001",
@@ -1723,6 +1723,42 @@
       ],
       "created": "2026-10-02T17:30:50Z",
       "last_seen": "2026-10-02T17:30:50Z"
+    },
+    {
+      "id": "L-101",
+      "key": "surviving_mutant::when an error branch needs an i o failure the os cannot produce portably fail the call through a mocked module or injected seam instead of leaving the branch untested",
+      "text": "When an error branch needs an I/O failure the OS cannot produce portably, fail the call through a mocked module or injected seam instead of leaving the branch untested",
+      "signal": "surviving_mutant",
+      "scope": "testing",
+      "status": "candidate",
+      "features": [
+        "agent-prompts"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M17 src/main/prompt-library.ts:39 (APR-06 unreadable) (testing)"
+      ],
+      "created": "2026-10-03T12:22:13Z",
+      "last_seen": "2026-10-03T12:22:13Z"
+    },
+    {
+      "id": "L-102",
+      "key": "spec_precision_gap::lift every behavioural rule stated in the spec s assumptions table into a numbered acceptance criterion or it ships unimplemented and untested",
+      "text": "Lift every behavioural rule stated in the spec's assumptions table into a numbered acceptance criterion, or it ships unimplemented and untested",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "agent-prompts"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "spec.md Assumptions 'Value whitespace' vs NewSessionDialog.tsx:172-173 (spec)"
+      ],
+      "created": "2026-10-03T12:22:14Z",
+      "last_seen": "2026-10-03T12:22:14Z"
     }
   ]
 }
