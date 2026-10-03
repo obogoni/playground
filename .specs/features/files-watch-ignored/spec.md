@@ -231,54 +231,54 @@ section alone; on the build before the change its first check fails.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FWIG-01 | P1: ignored — AC 1 | T10, T5, T19, T21 | Done (T10, T5, T19, T21) |
-| FWIG-02 | P1: ignored — AC 2 | T10 | Done (T10) |
-| FWIG-03 | P1: ignored — AC 3 | T9, T10 | Done (T9, T10) |
-| FWIG-04 | P1: ignored — AC 4 | T8, T10 | Done (T8, T10) |
-| FWIG-05 | P1: ignored — AC 5 | T8, T10 | Done (T8, T10) |
-| FWIG-06 | P1: ignored — AC 6 | T8 | Done (T8) |
-| FWIG-07 | P1: ignored — AC 7 | T10 | Done (T10) |
-| FWIG-08 | P1: ignored — AC 8 | T10 | Done (T10) |
-| FWIG-09 | P1: ignored — AC 9 | T10 | Done (T10) |
-| FWIG-10 | P1: ignored — AC 10 | T9, T10 | Done (T9, T10) |
-| FWIG-11 | P1: ignored — AC 11 | T10 | Done (T10) |
-| FWIG-12 | P1: ignored — AC 12 | T10 | Done (T10) |
-| FWIG-13 | P1: ignored — AC 13 | T10 | Done (T10) |
-| FWIG-14 | P1: ignored — AC 14 | T5, T19 | Done (T5, T19) |
-| FWIG-15 | P1: index — AC 15 | T7, T9, T11, T12 | Done (T7, T9, T11, T12) |
-| FWIG-16 | P1: index — AC 16 | T11 | Done (T11) |
-| FWIG-17 | P1: index — AC 17 | T20, T21 | Done (T20, T21) |
-| FWIG-18 | P1: gate — AC 18 | T13, T17 | Done (T13, T17) |
-| FWIG-19 | P1: gate — AC 19 | T13, T17 | Done (T13, T17) |
-| FWIG-20 | P1: gate — AC 20 | T13, T17 | Done (T13, T17) |
-| FWIG-21 | P1: gate — AC 21 | T13, T17 | Done (T13, T17) |
-| FWIG-22 | P1: gate — AC 22 | T17 | Done (T17) |
-| FWIG-23 | P1: gate — AC 23 | T13, T17 | Done (T13, T17) |
-| FWIG-24 | P1: sections — AC 24 | T14, T16, T20, T21 | Done (T14, T16, T20 mutant 2) |
-| FWIG-25 | P1: sections — AC 25 | T15, T16, T17 | Done (T15, T16, T17) |
-| FWIG-26 | P1: sections — AC 26 | T14, T16 | Done (T14, T16) |
-| FWIG-27 | P1: sections — AC 27 | T16, T19 | Done (T16, T19) |
-| FWIG-28 | P1: sections — AC 28 | T18 | Done (T18) |
-| FWIG-29 | P1: sections — AC 29 | T16 | Done (T16) |
-| FWIG-30 | P1: live — AC 30 | T19 | Done (T19) |
-| FWIG-31 | P1: live — AC 31 | T19 | Done (T19) |
-| FWIG-32 | P1: bench — AC 32 | T4 | Done (T4) |
-| FWIG-33 | P1: bench — AC 33 | T4 | Done (T4) |
-| FWIG-34 | P1: bench — AC 34 | T4 | Done (T4) |
-| FWIG-35 | P1: bench — AC 35 | T4 | Done (T4) |
-| FWIG-36 | P1: bench — AC 36 | T3 | Done (T3) |
-| FWIG-37 | P1: bench — AC 37 | T3, T20, T21 | Done (T3, T20, T21) |
+| FWIG-01 | P1: ignored — AC 1 | T10, T5, T19, T21 | Verified (T10, T5, T19, T21) |
+| FWIG-02 | P1: ignored — AC 2 | T10 | Verified (T10) |
+| FWIG-03 | P1: ignored — AC 3 | T9, T10 | Verified (T9, T10) |
+| FWIG-04 | P1: ignored — AC 4 | T8, T10 | Verified (T8, T10) |
+| FWIG-05 | P1: ignored — AC 5 | T8, T10 | Verified (T8, T10) |
+| FWIG-06 | P1: ignored — AC 6 | T8 | Verified (T8) |
+| FWIG-07 | P1: ignored — AC 7 | T10 | Verified (T10); test gap at the root `.gitignore`, see Follow-ups |
+| FWIG-08 | P1: ignored — AC 8 | T10 | Verified (T10) |
+| FWIG-09 | P1: ignored — AC 9 | T10 | Verified (T10) |
+| FWIG-10 | P1: ignored — AC 10 | T9, T10 | Verified (T9, T10); wording gap, see Follow-ups |
+| FWIG-11 | P1: ignored — AC 11 | T10 | Verified (T10) |
+| FWIG-12 | P1: ignored — AC 12 | T10 | Verified (T10) |
+| FWIG-13 | P1: ignored — AC 13 | T10 | Verified (T10); test gap on leave-and-return, see Follow-ups |
+| FWIG-14 | P1: ignored — AC 14 | T5, T19 | Verified (T5, T19) |
+| FWIG-15 | P1: index — AC 15 | T7, T9, T11, T12 | Verified (T7, T9, T11, T12); three reads unasserted, see Follow-ups |
+| FWIG-16 | P1: index — AC 16 | T11 | Verified (T11) |
+| FWIG-17 | P1: index — AC 17 | T20, T21 | Verified (T20, T21) |
+| FWIG-18 | P1: gate — AC 18 | T13, T17 | Verified (T13, T17) |
+| FWIG-19 | P1: gate — AC 19 | T13, T17 | Verified (T13, T17) |
+| FWIG-20 | P1: gate — AC 20 | T13, T17 | Verified (T13, T17) |
+| FWIG-21 | P1: gate — AC 21 | T13, T17 | Verified (T13, T17) |
+| FWIG-22 | P1: gate — AC 22 | T17 | Verified (T17); read only, see Follow-ups |
+| FWIG-23 | P1: gate — AC 23 | T13, T17 | Verified (T13, T17) |
+| FWIG-24 | P1: sections — AC 24 | T14, T16, T20, T21 | Verified (T14, T16, T20 mutant 2) |
+| FWIG-25 | P1: sections — AC 25 | T15, T16, T17 | Verified (T15, T16, T17) |
+| FWIG-26 | P1: sections — AC 26 | T14, T16 | Verified (T14, T16) |
+| FWIG-27 | P1: sections — AC 27 | T16, T19 | Verified (T16, T19); thin, see Follow-ups |
+| FWIG-28 | P1: sections — AC 28 | T18 | Verified (T18); read only, see Follow-ups |
+| FWIG-29 | P1: sections — AC 29 | T16 | Verified (T16); read only, see Follow-ups |
+| FWIG-30 | P1: live — AC 30 | T19 | Verified (T19) |
+| FWIG-31 | P1: live — AC 31 | T19 | Verified (T19) |
+| FWIG-32 | P1: bench — AC 32 | T4 | Verified (T4) |
+| FWIG-33 | P1: bench — AC 33 | T4 | Verified (T4) |
+| FWIG-34 | P1: bench — AC 34 | T4 | Verified (T4) |
+| FWIG-35 | P1: bench — AC 35 | T4 | Verified (T4) |
+| FWIG-36 | P1: bench — AC 36 | T3 | Verified (T3) |
+| FWIG-37 | P1: bench — AC 37 | T3, T20, T21 | Verified (T3, T20, T21) |
 | FWIG-38 | P1: bench — AC 38 | T3, T20, T21 | Not met, owner-accepted (follow-up #167) |
-| FWIG-39 | P1: bench — AC 39 | T3, T20, T21 | Done (T3, T20, T21) |
-| FWIG-40 | P1: bench — AC 40 | T1 | Done (T1) |
-| FWIG-41 | P1: bench — AC 41 | T6, T21 | Done (T6, T21) |
-| FWIG-42 | P1: smoke — AC 42 | T19 | Done (T19) |
-| FWIG-43 | P1: smoke — AC 43 | T5, T19 | Done (T5, T19) |
-| FWIG-44 | P1: smoke — AC 44 | T5, T19 | Done (T5, T19) |
-| FWIG-45 | P1: smoke — AC 45 | T5, T19 | Done (T5, T19) |
-| FWIG-46 | Edge: an ignored folder created after the watch | T10 | Done (T10) |
-| FWIG-47 | Edge: an ignored folder deleted | T9, T10 | Done (T9, T10) |
-| FWIG-48 | Edge: unusual characters in a path | T9 | Done (T9) |
+| FWIG-39 | P1: bench — AC 39 | T3, T20, T21 | Verified (T3, T20, T21) |
+| FWIG-40 | P1: bench — AC 40 | T1 | Verified (T1) |
+| FWIG-41 | P1: bench — AC 41 | T6, T21 | Verified (T6, T21) |
+| FWIG-42 | P1: smoke — AC 42 | T19 | Verified (T19) |
+| FWIG-43 | P1: smoke — AC 43 | T5, T19 | Verified (T5, T19) |
+| FWIG-44 | P1: smoke — AC 44 | T5, T19 | Verified (T5, T19) |
+| FWIG-45 | P1: smoke — AC 45 | T5, T19 | Verified (T5, T19) |
+| FWIG-46 | Edge: an ignored folder created after the watch | T10 | Verified (T10) |
+| FWIG-47 | Edge: an ignored folder deleted | T9, T10 | Verified (T9, T10) |
+| FWIG-48 | Edge: unusual characters in a path | T9 | Verified (T9) |
 
 **Coverage:** 48 total, 48 mapped to tasks, 0 unmapped.
 
@@ -289,3 +289,19 @@ section alone; on the build before the change its first check fails.
 - [ ] The build-loop bench run reads 0 git processes and 0 `files:changed` on `bench-wt-1` in every steady row, where the run before the change reads more than 0
 - [ ] The edit-loop run reads at most 2 `cat-file` per `files:changed`, and the touch-loop run 0 `worktree:status`, each against a worse figure before the change
 - [ ] The Files diff smoke passes in full except FPOL-14, FPOL-16 and FPOL-18 (failing the same way on `origin/main`), and its new section fails on the build before the change
+
+---
+
+## Follow-ups (Verifier, 2026-10-03)
+
+The Verifier's report (`validation.md`, "Validation: files-watch-ignored") found no production defect
+and no AC without evidence. Under the owner's rule for this loop, these are follow-ups, not fix tasks:
+
+- FWIG-07: no test names a root-level `.gitignore` after an answer is cached (sensor U3 survived).
+- FWIG-13: no test leaves and returns to the same worktree while a check runs (sensor U7 survived).
+- FWIG-15: `diffStats`'s since-base reads and `untrackedStats`'s `ls-files` carry the flags but no
+  test records their args (sensor U9 survived).
+- FWIG-10: "emit the batch as it would without the filter" should say that answers learned before
+  the failure still apply, as the code does.
+- FWIG-22, 27, 28 and 29 rest on code reading; no check fails if their wiring regresses.
+- The watcher's catch around a throwing `emit` has no test.
