@@ -89,6 +89,50 @@ describe('runHookShell', () => {
     expect(readFileSync(join(dir, 'initialized.txt'), 'utf8')).toContain('marker')
   })
 
+  // CRTO-07, CRTO-08: the command's stdin is ignored, so a read gets end of input at
+  // once and the command settles with its own exit code. Run in tmpdir() like the
+  // timeout tests: without the fix the shell waits until killed, and a live shell
+  // would hold the per-test directory.
+  it('settles a command that prompts with set /p instead of waiting for input', async () => {
+    const started = Date.now()
+    const result = await runHookShell('set /p answer=Continue? & echo after-prompt', {
+      cwd: tmpdir(),
+      env,
+      timeoutMs: 30000
+    })
+
+    expect(Date.now() - started).toBeLessThan(5000)
+    expect(result.code).toBe(0)
+    expect(result.timedOut).toBeUndefined()
+    expect(result.stdout).toContain('after-prompt')
+  })
+
+  it('settles a command that pauses instead of waiting for a key', async () => {
+    const started = Date.now()
+    const result = await runHookShell('pause & echo after-pause', {
+      cwd: tmpdir(),
+      env,
+      timeoutMs: 30000
+    })
+
+    expect(Date.now() - started).toBeLessThan(5000)
+    expect(result.code).toBe(0)
+    expect(result.timedOut).toBeUndefined()
+    // Asserted on the echoed word, not on pause's localized prompt.
+    expect(result.stdout).toContain('after-pause')
+  })
+
+  it('reports the exit code of a command that read stdin, not a timeout', async () => {
+    const result = await runHookShell('set /p answer=x & exit /b 3', {
+      cwd: tmpdir(),
+      env,
+      timeoutMs: 30000
+    })
+
+    expect(result.code).toBe(3)
+    expect(result.timedOut).toBeUndefined()
+  })
+
   // The two timeout tests deliberately run in tmpdir() rather than the per-test
   // directory: killing the shell does not kill its children, and a surviving
   // grandchild holds its cwd open, which would make the afterEach cleanup fail

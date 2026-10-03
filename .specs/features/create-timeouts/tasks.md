@@ -192,10 +192,10 @@ T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] Tests, with `timeoutMs: 30000`: `set /p answer=Continue? & echo after-prompt` settles in under 5000 ms with `code` 0, no `timedOut`, stdout containing `after-prompt`; `pause & echo after-pause` the same with `after-pause` (asserted on that word, not on `pause`'s localized prompt); `set /p answer=x & exit /b 3` reports `code` 3 and no `timedOut`
-- [ ] Each new test fails on the pre-T3 `hook-shell.ts` (seen once)
-- [ ] Gate check passes: `npx vitest run src/main/hook-shell.test.ts` then `npm test`
-- [ ] Test count: T2 count + 3
+- [x] Tests, with `timeoutMs: 30000`: `set /p answer=Continue? & echo after-prompt` settles in under 5000 ms with `code` 0, no `timedOut`, stdout containing `after-prompt`; `pause & echo after-pause` the same with `after-pause` (asserted on that word, not on `pause`'s localized prompt); `set /p answer=x & exit /b 3` reports `code` 3 and no `timedOut`
+- [x] Each new test fails on the pre-T3 `hook-shell.ts` (seen once: all three `Test timed out in 30000ms`)
+- [x] Gate check passes: `npx vitest run src/main/hook-shell.test.ts` then `npm test` (122 files, 2627 passed; lint 0 errors, 18 warnings; typecheck exit 0)
+- [x] Test count: T2 count + 3
 
 **Tests**: unit
 **Gate**: quick

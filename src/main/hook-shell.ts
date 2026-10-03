@@ -47,7 +47,10 @@ export const runHookShell: HookShell = (cmd, { cwd, env, timeoutMs }) => {
       shell: true,
       windowsHide: true,
       timeout: timeoutMs,
-      killSignal: 'SIGTERM'
+      killSignal: 'SIGTERM',
+      // No keyboard input (CRTO-07): a prompt or `pause` reads end of input at
+      // once instead of waiting out the timeout. stdout and stderr stay pipes.
+      stdio: ['ignore', 'pipe', 'pipe']
     })
     let stdout = ''
     let stderr = ''
