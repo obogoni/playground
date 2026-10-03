@@ -165,28 +165,35 @@ nudges; the eligibility check when the debounced listing would start.
 
 **Done when**:
 
-- [ ] Tests: `NAME_BACKOFF_BASE_MS` is `5000`, `NAME_BACKOFF_FACTOR` `2`, `NAME_BACKOFF_MAX_MS` `300000`, by literal (MAGIT-17, L-009, L-019)
-- [ ] Tests: after the k-th listing answering `[]` (k = 1..8), a nudge whose debounce elapses 1 ms before `5 s × 2^(k−1)` (capped at 300 s) after that listing starts no call, and one whose debounce elapses exactly then starts one (MAGIT-18, MAGIT-22, MAGIT-23, MAGIT-43, L-042)
-- [ ] Tests: three misses, then a listing that names the session; a nudge right after starts a call (MAGIT-19, L-017)
-- [ ] Tests (`it.each`, L-054): exit 1, timeout, not a JSON array, resolver throws, spawn throws: each counts a miss for an unnamed session (a nudge before 5 s starts no call); a named session after the same failure still gets a call on a nudge (MAGIT-20)
-- [ ] Tests: three misses, then `watch` with a new Claude id starts a call after the 1 s debounce; `watch` with the same Claude id keeps the misses (no call before the due time) (MAGIT-21, MAGIT-45, L-017)
-- [ ] Tests: a named session whose entry disappears from a successful listing is due 5 s after it: no call at 4,999 ms, a call at 5,000 ms (MAGIT-44)
-- [ ] Tests: `unwatch` of a session with three misses, then `watch` of the same app session and Claude id, starts a call after the debounce (MAGIT-27)
-- [ ] Every existing poller test passes unchanged
-- [ ] Gate check passes: `npx vitest run src/main/session-name-poller.test.ts`, then the full gate
-- [ ] Test count: T2 count + the new tests
+- [x] Tests: `NAME_BACKOFF_BASE_MS` is `5000`, `NAME_BACKOFF_FACTOR` `2`, `NAME_BACKOFF_MAX_MS` `300000`, by literal (MAGIT-17, L-009, L-019)
+- [x] Tests: after the k-th listing answering `[]` (k = 1..8), a nudge whose debounce elapses 1 ms before `5 s × 2^(k−1)` (capped at 300 s) after that listing starts no call, and one whose debounce elapses exactly then starts one (MAGIT-18, MAGIT-22, MAGIT-23, MAGIT-43, L-042)
+- [x] Tests: three misses, then a listing that names the session; a nudge right after starts a call (MAGIT-19, L-017)
+- [x] Tests (`it.each`, L-054): exit 1, timeout, not a JSON array, resolver throws, spawn throws: each counts a miss for an unnamed session (a nudge before 5 s starts no call); a named session after the same failure still gets a call on a nudge (MAGIT-20)
+- [x] Tests: three misses, then `watch` with a new Claude id starts a call after the 1 s debounce; `watch` with the same Claude id keeps the misses (no call before the due time) (MAGIT-21, MAGIT-45, L-017)
+- [x] Tests: a named session whose entry disappears from a successful listing is due 5 s after it: no call at 4,999 ms, a call at 5,000 ms (MAGIT-44)
+- [x] Tests: `unwatch` of a session with three misses, then `watch` of the same app session and Claude id, starts a call after the debounce (MAGIT-27)
+- [x] Every existing poller test passes unchanged
+- [x] Gate check passes: `npx vitest run src/main/session-name-poller.test.ts`, then the full gate
+- [x] Test count: T2 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(session-name): back off the listing for a session it does not name`
 
+**Result** (2026-10-03): 25 new tests, 2794 in all; lint 0 errors, 18 warnings; no existing test line
+changed. **Deviation**: T3 ships the whole gate in `#run`, the tick (`#tickAsked`) and the end-of-call
+rerun included, as design.md describes it. Its k = 1..8 test spans several 30 s ticks, and an ungated tick
+would start listings that move the due times, so the split planned between T3 and T4 had no green state in
+between. T4 keeps its tests and becomes test-only.
+
 ---
 
 ### T4: The tick and the coalesced rerun follow the same gate
 
 **What**: `#tickAsked` for the 30 s interval; the tick and the end-of-call rerun start a listing only when
-an asking session, or for a tick any watched session, is eligible; `dispose` clears both asks.
+an asking session, or for a tick any watched session, is eligible; `dispose` clears both asks. **Since T3's
+deviation the code is in place; this task adds the tests that pin it.**
 **Where**: `src/main/session-name-poller.ts`
 **Depends on**: T3
 **Reuses**: T3's tests and fakes
@@ -211,7 +218,7 @@ an asking session, or for a tick any watched session, is eligible; `dispose` cle
 **Tests**: unit
 **Gate**: quick
 
-**Commit**: `feat(session-name): skip ticks and reruns that no session is due for`
+**Commit**: `test(session-name): pin the tick and rerun gate of the listing backoff`
 
 ---
 

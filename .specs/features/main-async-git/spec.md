@@ -282,17 +282,17 @@ ships.
 | MAGIT-14 | P1: fields — AC 14 | #154 | Delivered (PERF-21) |
 | MAGIT-15 | P1: fields — AC 15 | #154 | Delivered (PERF-21) |
 | MAGIT-16 | P1: fields — AC 16 | #154 | Delivered (PERF-21) |
-| MAGIT-17 | P1: backoff — AC 17 | T3 | Pending |
-| MAGIT-18 | P1: backoff — AC 18 | T3 | Pending |
-| MAGIT-19 | P1: backoff — AC 19 | T3 | Pending |
-| MAGIT-20 | P1: backoff — AC 20 | T3 | Pending |
-| MAGIT-21 | P1: backoff — AC 21 | T3 | Pending |
-| MAGIT-22 | P1: backoff — AC 22 | T3 | Pending |
-| MAGIT-23 | P1: backoff — AC 23 | T3 | Pending |
+| MAGIT-17 | P1: backoff — AC 17 | T3 | Done (T3) |
+| MAGIT-18 | P1: backoff — AC 18 | T3 | Done (T3) |
+| MAGIT-19 | P1: backoff — AC 19 | T3 | Done (T3) |
+| MAGIT-20 | P1: backoff — AC 20 | T3 | Done (T3) |
+| MAGIT-21 | P1: backoff — AC 21 | T3 | Done (T3) |
+| MAGIT-22 | P1: backoff — AC 22 | T3 | Done (T3) |
+| MAGIT-23 | P1: backoff — AC 23 | T3 | Done (T3) |
 | MAGIT-24 | P1: backoff — AC 24 | T4 | Pending |
 | MAGIT-25 | P1: backoff — AC 25 | T4 | Pending |
 | MAGIT-26 | P1: backoff — AC 26 | T4 | Pending |
-| MAGIT-27 | P1: backoff — AC 27 | T3 | Pending |
+| MAGIT-27 | P1: backoff — AC 27 | T3 | Done (T3) |
 | MAGIT-28 | P1: backoff — AC 28 | T4 | Pending |
 | MAGIT-29 | P1: measured — AC 29 | T1 | Done (T1) |
 | MAGIT-30 | P1: measured — AC 30 | T1 | Done (T1) |
@@ -308,9 +308,9 @@ ships.
 | MAGIT-40 | Edge: two sessions on one cwd | #154 | Delivered (PERF-21) |
 | MAGIT-41 | Edge: two reads of one session in reverse order | #154 | Delivered (PERF-21) |
 | MAGIT-42 | Edge: quit with reads in flight | #154 | Delivered (PERF-21) |
-| MAGIT-43 | Edge: due time equals now | T3 | Pending |
-| MAGIT-44 | Edge: a named session loses its entry | T3 | Pending |
-| MAGIT-45 | Edge: Claude id changes while backing off | T3 | Pending |
+| MAGIT-43 | Edge: due time equals now | T3 | Done (T3) |
+| MAGIT-44 | Edge: a named session loses its entry | T3 | Done (T3) |
+| MAGIT-45 | Edge: Claude id changes while backing off | T3 | Done (T3) |
 | MAGIT-46 | Edge: dispose while backing off | T4 | Pending |
 
 **Coverage:** 46 total: 22 mapped to tasks, 20 delivered by #154, 4 dropped, 0 unmapped.
