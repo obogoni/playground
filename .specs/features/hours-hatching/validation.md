@@ -2,6 +2,8 @@
 
 ## Validation: hours-hatching — PASS
 
+> **Renumbered after round 2 (2026-10-03):** the decision this report cites was recorded as AD-054 and is now AD-055, because PR #158 (#146) took AD-054 first. Only the number changed.
+
 **Latest round**: round 2 (2026-10-03, `ee17201..4ec1a17`) passed; F1 resolved, hatch recipe
 changed by the owner and re-verified. See "Round 2" at the end; the round 1 rows for HHAT-17, 22 and
 29 below describe the first recipe and are superseded there.
@@ -56,13 +58,13 @@ call.
 | HHAT-13 | Only free look is the previous one → Other | `test.ts:534-536` task 17 `toBe('other')` | ✅ PASS |
 | HHAT-14 | Light slots 1–8 `#2f76e8 #eb6623 #28ae76 #dbab37 #e984b7 #0f6f19 #4e3ca6 #d10b47` | `HoursCalendar.css:22-29` (read: exact match, in order); smoke `smoke.mjs:213-216` `PALETTE.light` literal, `smoke.mjs:969` `offPalette.length === 0` on the eight solid bars' computed `backgroundColor` | ✅ PASS |
 | HHAT-15 | Dark slots 1–8 `#2790da #b64906 #14a889 #bc8b03 #c90982 #117a2c #8c63f5 #f45468` | `HoursCalendar.css:11-18` (read: exact match, in order); `smoke.mjs:969` dark half of `PALETTE`; mutant S2 | ✅ PASS |
-| HHAT-16 | Validator `--pairs all` exit 0, `#ffffff` light / `#221f1b` dark | Re-run by the Verifier 2026-10-03 (`<dataviz-skill-dir>/scripts/validate_palette.js`): light exit 0, dark exit 0, outputs identical to the spec's and AD-054's (`.specs/STATE.md:64`) | ✅ PASS |
+| HHAT-16 | Validator `--pairs all` exit 0, `#ffffff` light / `#221f1b` dark | Re-run by the Verifier 2026-10-03 (`<dataviz-skill-dir>/scripts/validate_palette.js`): light exit 0, dark exit 0, outputs identical to the spec's and AD-055's (`.specs/STATE.md:64`) | ✅ PASS |
 | HHAT-17 | 45° stripes of the hue, 2 px in every 6 px, over `color-mix(in oklab, hue 20%, #fff)` | `HoursCalendar.css:193-196`; smoke `smoke.mjs:1631` `p?.image === stripes(PALETTE[t][0])` = `repeating-linear-gradient(45deg, rgb(..) 0px, rgb(..) 2px, rgba(0, 0, 0, 0) 2px, rgba(0, 0, 0, 0) 6px)` on bar, legend and drawer swatch, both themes; `smoke.mjs:1636` `p?.color === worn[t].ground` (probe's computed `color-mix(in oklab, <hue> 20%, #fff)`) and ground ≠ hue | ✅ PASS |
 | HHAT-18 | Solid: hue fill, no stripes | `smoke.mjs:1649` `p?.image === 'none' && p.color === rgb(PALETTE[t][0])`, both themes, bar + both swatches | ✅ PASS |
 | HHAT-19 | Other and No task never hatched | `test.ts:635-636` `lookClass('other')` → `'role-other'`, `lookClass('no-task')` → `'role-no-task'` (the only class source for all three surfaces) | ✅ PASS |
 | HHAT-20 | Bars, legend swatch, drawer swatch show the same look | `HoursCalendar.tsx:193`, `HoursLegend.tsx:52`, `HoursView.tsx:486` all `lookClass(...)`; smoke `smoke.mjs:944` `b.chip === b.sig && b.row === b.sig` for all 14 seeded tasks (fill + stripes signature); mutant S1 | ✅ PASS |
 | HHAT-21 | Swatches 14 × 14 px | `HoursLegend.css:84-85`, `HoursView.css:254-255`; smoke `smoke.mjs:1659` `Math.abs(p.w - 14) < 0.01 && Math.abs(p.h - 14) < 0.01` on legend and drawer swatches | ✅ PASS |
-| HHAT-22 | H1 ≥ 15, H2 ≥ 15, H3 ≤ 12° and nearest own slot, both themes | Re-measured by the Verifier over the validator's own `lin` / OKLab / `deltaE` (table below): all 16 pass; matches AD-054 (`.specs/STATE.md:64`) to the decimal | ✅ PASS |
+| HHAT-22 | H1 ≥ 15, H2 ≥ 15, H3 ≤ 12° and nearest own slot, both themes | Re-measured by the Verifier over the validator's own `lin` / OKLab / `deltaE` (table below): all 16 pass; matches AD-055 (`.specs/STATE.md:64`) to the decimal | ✅ PASS |
 | HHAT-23 | Looks frozen while the week is shown | `HoursView.tsx:129-136` unchanged freeze; `test.ts:611-613` `roleOf(frozen, …)` keeps `slot1`, `slot2`, new task `other` | ✅ PASS |
 | HHAT-24 | Hover/focus on a hatched chip, header or bar dims others to 30% | `smoke.mjs:1676` chip, `:1696` header + bar, `:1718` keyboard focus, all through `onlyFull` (`smoke.mjs:460-463`: own bars `opacity === 1`, others `Math.abs(b.opacity - 0.3) < 0.01`) | ✅ PASS |
 | HHAT-25 | Click a hatched chip → only its days | `smoke.mjs:1731` one head, the seeded Sunday, chip pressed with ×; `:1746` × restores six days | ✅ PASS |
@@ -122,7 +124,7 @@ its own. The lowest margins are light yellow (H2 16.0) and light magenta (H2 17.
 | light | `#ffffff` | 0 | `#d10b47`↔`#eb6623` 15.6 PASS | `#0f6f19`↔`#eb6623` 8.5 protan PASS | WARN: `#28ae76` 2.84, `#dbab37` 2.12, `#e984b7` 2.49 |
 | dark | `#221f1b` | 0 | `#f45468`↔`#c90982` 15.2 PASS | `#f45468`↔`#bc8b03` 6.4 deutan WARN | PASS, all ≥ 3:1 |
 
-Identical to the spec's "Validator output" and AD-054. The WARNs are covered by the relief channel the
+Identical to the spec's "Validator output" and AD-055. The WARNs are covered by the relief channel the
 spec keeps (labels, tooltips, legend, hover, filter).
 
 ---
@@ -312,16 +314,16 @@ OKLab, in every place that states it:
 
 | Where | Statement |
 | ----- | --------- |
-| CSS `src/renderer/src/components/HoursCalendar.css:193-196` | `background-color: color-mix(in oklab, var(--hcal-c) 5%, #fff)`; `background-image: repeating-linear-gradient(45deg, var(--hcal-c) 0 3px, transparent 3px 6px)`; comment `:192` "half the pattern" (AD-054) |
+| CSS `src/renderer/src/components/HoursCalendar.css:193-196` | `background-color: color-mix(in oklab, var(--hcal-c) 5%, #fff)`; `background-image: repeating-linear-gradient(45deg, var(--hcal-c) 0 3px, transparent 3px 6px)`; comment `:192` "half the pattern" (AD-055) |
 | Spec AC 17 (`spec.md:182`) and Assumptions "The hatch", "Hatch ground", "Stripe geometry" (`spec.md:42`, `:52`, `:53`) | 3 px in every 6 px, 5% with white in OKLab, owner confirmed 2026-10-03 |
-| Design "The Hatch" and "Hatch legibility" (`design.md:190-265`) and its AD-054 copy (`design.md:305-325`) | same CSS block; ground 5%, stripe share 1/2; smoke expectation `<hue> 0px, <hue> 3px, transparent 3px, transparent 6px` |
-| AD-054 (`.specs/STATE.md:64`) | 3 px in every 6 px over `color-mix(in oklab, <hue> 5%, #fff)`, owner decision 2026-10-03 |
+| Design "The Hatch" and "Hatch legibility" (`design.md:190-265`) and its AD-055 copy (`design.md:305-325`) | same CSS block; ground 5%, stripe share 1/2; smoke expectation `<hue> 0px, <hue> 3px, transparent 3px, transparent 6px` |
+| AD-055 (`.specs/STATE.md:64`) | 3 px in every 6 px over `color-mix(in oklab, <hue> 5%, #fff)`, owner decision 2026-10-03 |
 | Smoke section 16 (`scripts/smoke-hours-calendar.mjs:62-67` header, `:1625` probe `5%`, `:1629-1630` `stripes()` with `3px`, checks `:1631`, `:1636`) | expects the same gradient string and a ground equal to a probe's computed `color-mix(in oklab, <hue> 5%, #fff)` |
 | `tasks.md` T3 and T14 notes (`:180-183`, `:459-461`) | record the change and say the boxes above them describe the first recipe |
 
 No stale claim of the hatch as 2 px or 20%. Every remaining "2 px" / "20%" about the hatch is
 history or a rejected alternative: spec `:42`, `:52`, `:53`, `:182` ("first shipped as 2 px over
-20%"), design `:200`, `:254-265`, `:312`, AD-054's rationale, `tasks.md:20` (with "5% since the
+20%"), design `:200`, `:254-265`, `:312`, AD-055's rationale, `tasks.md:20` (with "5% since the
 owner's 2026-10-03 change") and T14's original What (`tasks.md:437`, followed by its dated note).
 Other "2px" hits in the CSS and spec are unrelated (bar gap, outline, the tooltip's 12 × 2 px key).
 
@@ -347,10 +349,10 @@ ground and hue ≤ 12°, and the ground's nearest slot hue is its own.
 
 All 16 slots pass; every ground's nearest slot hue is its own. Worst: H1 25.9 (light yellow), H2 15.5
 (light yellow, the thinnest margin, 0.5 above the floor), H3 5.4° (light magenta). Identical to the
-design table and AD-054 to the decimal, grounds and means to the hex digit. With the mean left
+design table and AD-055 to the decimal, grounds and means to the hex digit. With the mean left
 unrounded H2 moves by at most 0.1 (light magenta 16.5); no verdict changes.
 
-The rejected alternatives cited in spec, design and AD-054 reproduce: stripes 3 in 6 over a 20%
+The rejected alternatives cited in spec, design and AD-055 reproduce: stripes 3 in 6 over a 20%
 ground fail H2 on light yellow (12.8) and light magenta (13.7); stripes 4 in 6 over 20% fail H2 in 8
 of 16 slots (light yellow 9.2) and on light yellow over pure white (11.9); pure white with 3 in 6
 passes H2 (light yellow 16.4) but its ground has no hue, so H3 fails in 14 of 16 slots. The first
@@ -399,7 +401,7 @@ touched.
 | ----- | ------ |
 | Minimum, surgical | ✅ Two CSS values and a comment; three strings in smoke section 16 (header, probe, `stripes()`, two check names); one unit test |
 | Test maps to the spec | ✅ The new test names HHAT-05; its fixture comment states the decision it pins |
-| Docs record the decision | ✅ Spec Assumptions and AC 17 dated owner confirmed 2026-10-03; design keeps the first recipe and the rejected alternatives with their numbers; AD-054 updated in place, as the AD-018 / AD-029 pattern does |
+| Docs record the decision | ✅ Spec Assumptions and AC 17 dated owner confirmed 2026-10-03; design keeps the first recipe and the rejected alternatives with their numbers; AD-055 updated in place, as the AD-018 / AD-029 pattern does |
 
 ### Follow-ups
 
@@ -408,7 +410,7 @@ touched.
   The rule is still one shared selector, so a slot-specific drift is not possible in the CSS as written.
 - **F3** (from round 1, unchanged, thin evidence): the neutral kept-chip swatch is exercised with a
   solid task only.
-- **F4** (new, cosmetic): in `design.md`'s AD-054 copy the rewrap left a short line ("other than the",
+- **F4** (new, cosmetic): in `design.md`'s AD-055 copy the rewrap left a short line ("other than the",
   `design.md:314`). Text is correct; only the wrap is uneven.
 
 ### Requirement traceability (round 2)

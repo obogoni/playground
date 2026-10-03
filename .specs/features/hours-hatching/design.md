@@ -190,7 +190,7 @@ non-zero exit is the spec's stop rule.
 ## The Hatch
 
 ```css
-/* A hatched look: stripes of the hue, half the pattern, over a light tint of it (AD-054). */
+/* A hatched look: stripes of the hue, half the pattern, over a light tint of it (AD-055). */
 :is(.hcal-bar, .hleg-swatch, .hours-group-swatch).hatched {
   background-color: color-mix(in oklab, var(--hcal-c) 5%, #fff);
   background-image: repeating-linear-gradient(45deg, var(--hcal-c) 0 3px, transparent 3px 6px);
@@ -302,7 +302,7 @@ tint of the hue (H3).
 | Stripes as `background-image`, ground as `background-color` | Two longhands, not one shorthand gradient | The smoke tells hatched from solid by either property |
 | Swatch rules shared | One `role-slotN` block for three surfaces | The stripe is defined once and cannot drift between bars and swatches |
 
-### AD-054 (planned as AD-TBD when main held up to AD-051; numbered at Execute)
+### AD-055 (planned as AD-TBD when main held up to AD-051; numbered at Execute)
 
 **The Hours calendar gives tasks sixteen looks, the eight hues solid and hatched, spread across the
 week, superseding AD-045's palette and assignment.** Light `#2f76e8 #eb6623 #28ae76 #dbab37 #e984b7

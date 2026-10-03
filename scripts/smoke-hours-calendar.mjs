@@ -209,7 +209,7 @@ const weekDay = (weeks, offset) =>
     today.getDate() - sinceMonday + 7 * weeks + offset
   )
 
-// AD-054's palette, slots 1 to 8 (HHAT-14, HHAT-15).
+// AD-055's palette, slots 1 to 8 (HHAT-14, HHAT-15).
 const PALETTE = {
   dark: ['#2790da', '#b64906', '#14a889', '#bc8b03', '#c90982', '#117a2c', '#8c63f5', '#f45468'],
   light: ['#2f76e8', '#eb6623', '#28ae76', '#dbab37', '#e984b7', '#0f6f19', '#4e3ca6', '#d10b47']
@@ -952,7 +952,7 @@ async function calendarSections() {
     `${sunday.count}`
   )
   // The seed's first eight tasks take the solids in seed order: their bars wear
-  // AD-054's palette in order.
+  // AD-055's palette in order.
   const shownTheme = await evaluate(`document.documentElement.dataset.theme`)
   const worn = {}
   for (const theme of ['dark', 'light']) {

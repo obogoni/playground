@@ -1,9 +1,9 @@
 /*
  * Hours week calendar (HCAL). Task looks are eight hues, each solid and
- * hatched (AD-054, superseding AD-045's palette and AD-030 here) — change a hue
+ * hatched (AD-055, superseding AD-045's palette and AD-030 here) — change a hue
  * only after re-running the dataviz validator with `--pairs all` against this
  * view's --panel in both themes and the hatch legibility check (H1 to H3), and
- * updating AD-054.
+ * updating AD-055.
  */
 
 :root,
@@ -189,7 +189,7 @@
   --hcal-c: var(--hcal-slot8);
 }
 
-/* A hatched look: stripes of the hue, half the pattern, over a light tint of it (AD-054). */
+/* A hatched look: stripes of the hue, half the pattern, over a light tint of it (AD-055). */
 :is(.hcal-bar, .hleg-swatch, .hours-group-swatch).hatched {
   background-color: color-mix(in oklab, var(--hcal-c) 5%, #fff);
   background-image: repeating-linear-gradient(45deg, var(--hcal-c) 0 3px, transparent 3px 6px);

@@ -319,7 +319,7 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [x] The number checked free across `origin/main`, the fork's branches and every open PR's `STATE.md` (main held AD-051 at planning) (2026-10-03: `origin/main` holds up to AD-053; no branch on `origin` or the fork holds AD-054 or higher; upstream has no open PR; recorded as AD-054)
+- [x] The number checked free across `origin/main`, the fork's branches and every open PR's `STATE.md` (main held AD-051 at planning) (2026-10-03: `origin/main` holds up to AD-053; no branch on `origin` or the fork held AD-054 or higher and upstream had no open PR, so it was recorded as AD-054; renumbered AD-055 the same day, after PR #158 (#146), executed in parallel, opened first with its own AD-054)
 - [x] The H1 to H3 re-run passes every slot in both themes; a failure stops here and goes to the owner (2026-10-03, over the validator's `lin`, OKLab and `deltaE`: every slot passes; matches the design's table except dark aqua's mean, `#b5dacd` H2 21.9 against `#b6dacd` 22.0, a rounding difference)
 - [x] Gate check passes: `npx vitest run src/renderer/src/lib/hours-calendar.test.ts` then `npm test` (55 and 2522 passing)
 
@@ -345,7 +345,7 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [x] Every superseded HTF item names its replacement; HTF-03, 05, 06 and 07..15 stay untouched (Out of Scope row, HTF-01 → HHAT-14, 15; HTF-02 → HHAT-03; HTF-04 → HHAT-12; HTF-16 → HHAT-27; all under AD-054)
+- [x] Every superseded HTF item names its replacement; HTF-03, 05, 06 and 07..15 stay untouched (Out of Scope row, HTF-01 → HHAT-14, 15; HTF-02 → HHAT-03; HTF-04 → HHAT-12; HTF-16 → HHAT-27; all under AD-055)
 - [x] Gate check passes: `npx vitest run src/renderer/src/lib/hours-calendar.test.ts` then `npm test` (55 and 2522 passing)
 
 **Tests**: none
