@@ -453,10 +453,32 @@ process tree killed after each drive and the folder deleted.
 
 **Done when**:
 
-- [ ] `## Measurements` holds a "Before" part: the commit, the machine without names (CPU class, cores, RAM), each run's summary verbatim, and a table of the four Files figures per steady row
-- [ ] The three Files targets read FAIL on the build loop and touch loop runs and on the edit loop run, or the exception is written with its reason (for example, a figure already at target, which triggers the T1 stop rule)
-- [ ] A note at the top: the Verifier keeps this section and adds its report below it
-- [ ] Gate check passes: `npm run lint`
+- [x] `## Measurements` holds a "Before" part: the commit, the machine without names (CPU class, cores, RAM), each run's summary verbatim, and a table of the four Files figures per steady row
+- [x] The three Files targets read FAIL on the build loop and touch loop runs and on the edit loop run, or the exception is written with its reason (for example, a figure already at target, which triggers the T1 stop rule)
+- [x] A note at the top: the Verifier keeps this section and adds its report below it
+- [x] Gate check passes: `npm run lint`
+
+**Result (2026-10-03)**: the four runs on the built app at `e941982` (no production change), 306 s
+each, all exit 0; written to `validation.md`, `## Measurements`, "Before (T6, 2026-10-03)".
+
+- Floor: every steady row 0 / 0 / 0 / 0 on `bench-wt-1`.
+- Build loop (100 ms): steady rows 186 / 185 / 185 `files:changed`, 1,702 / 1,670 / 1,664 git,
+  1,137 / 1,115 / 1,109 `cat-file`, 0 `worktree:status`. "ignored writes start no git 1702 **FAIL**".
+- Edit loop (1,000 ms): 60 / 59 / 60 `files:changed`, 300 / 295 / 300 git, 120 / 118 / 120
+  `cat-file`, 0 `worktree:status`. "untouched sections stay ... 2.00 **PASS**".
+- Touch loop (1,000 ms): 119 / 118 / 119 `files:changed`, 1,731 / 1,709 / 1,730 git, 1,074 /
+  1,059 / 1,074 `cat-file`, 60 / 60 / 59 `worktree:status`. "the view's reads leave the index alone
+  60 **FAIL**".
+- **Exception, stop rule: the edit target (FWIG-38) already reads PASS before the change**, at 358
+  `cat-file` / 179 `files:changed` = 2.00, its limit. Each edit batch reads one HEAD side (2
+  `cat-file`), so one All changes section re-reads; the build loop's batches read 6 (three sections).
+  The stack re-reads only its mounted sections (expanded and near the viewport), and the appended
+  file is the stack's first section, which grows by 60 lines a minute and, by inference from the
+  counts, leaves itself the only one mounted (the spawn row, while it is still short, reads 3.8 per
+  batch). The edit run as specified cannot show the change. **Stopped here: the owner decides**
+  between keeping the run as it is (FWIG-38 shown by unit tests only) and changing the edit loop so
+  the written file does not crowd the viewport, then re-running this run. validation.md lists both.
+  No production change was made.
 
 **Tests**: manual
 **Gate**: manual
