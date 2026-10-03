@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AgentChild, AgentSpawn } from './agent-step-runner'
+import { installDiagnostics, NOOP_DIAGNOSTICS } from './diagnostics'
 import {
   NAME_DEBOUNCE_MS,
   NAME_INTERVAL_MS,
@@ -397,5 +398,71 @@ describe('SessionNamePoller — what it reports', () => {
     expect(t.listings).toEqual([])
     expect(t.logs).toEqual([])
     expect(t.calls).toHaveLength(1)
+  })
+})
+
+describe('SessionNamePoller — reports each listing to diagnostics (PDIAG-27)', () => {
+  let starts = 0
+  let ends = 0
+
+  beforeEach(() => {
+    starts = 0
+    ends = 0
+    installDiagnostics({
+      ...NOOP_DIAGNOSTICS,
+      enabled: true,
+      nameListingStarted: () => {
+        starts++
+        return () => {
+          ends++
+        }
+      }
+    })
+  })
+  afterEach(() => installDiagnostics(null))
+
+  it('reports one start and one end for a listing that closes with code 0', () => {
+    const t = makePoller()
+    t.poller.watch('s1', 'sid-1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+    expect(starts).toBe(1)
+    expect(ends).toBe(0)
+    t.children[0].stdout(LISTING)
+    t.children[0].close(0)
+    expect(starts).toBe(1)
+    expect(ends).toBe(1)
+  })
+
+  it('reports one end for a listing that times out', () => {
+    const t = makePoller()
+    t.poller.watch('s1', 'sid-1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS + NAME_TIMEOUT_MS)
+    expect(t.children[0].killed).toBe(true)
+    t.children[0].close(null)
+    expect(starts).toBe(1)
+    expect(ends).toBe(1)
+  })
+
+  it('reports one end for a child that emits error and then close', () => {
+    const t = makePoller()
+    t.poller.watch('s1', 'sid-1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+    t.children[0].error(new Error('spawn ENOENT'))
+    t.children[0].close(-2)
+    expect(starts).toBe(1)
+    expect(ends).toBe(1)
+  })
+
+  it('reports no start when the spawn throws', () => {
+    const t = makePoller({
+      spawn: () => {
+        throw new Error('spawn EACCES')
+      }
+    })
+    t.poller.watch('s1', 'sid-1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+    expect(t.logs[0]).toContain('spawn EACCES')
+    expect(starts).toBe(0)
+    expect(ends).toBe(0)
   })
 })

@@ -1,5 +1,6 @@
 import type { AgentChild, AgentSpawn } from './agent-step-runner'
 import { parseAgentsListing } from './agents-listing'
+import { diagnostics } from './diagnostics'
 
 /** Hook events from sessions starting together share one call (SNAME-09). */
 export const NAME_DEBOUNCE_MS = 1000
@@ -122,6 +123,7 @@ export class SessionNamePoller {
       return
     }
     this.#inFlight = child
+    const listed = diagnostics().nameListingStarted()
 
     let stdout = ''
     let stderr = ''
@@ -136,6 +138,7 @@ export class SessionNamePoller {
     const settle = (outcome: () => void): void => {
       if (settled) return
       settled = true
+      listed()
       clearTimeout(timer)
       this.#inFlight = null
       if (this.#disposed) return

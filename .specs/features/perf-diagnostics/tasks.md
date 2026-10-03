@@ -425,10 +425,13 @@ thing in `settle`.
 
 **Done when**:
 
-- [ ] Tests (recording fake): a listing that closes with code 0 reports one start and one end; one that times out reports one end; one whose child emits `error` then `close` reports one end
-- [ ] Tests: a spawn that throws reports no start
-- [ ] Gate check passes: `npx vitest run src/main/session-name-poller.test.ts`, then the full gate
-- [ ] Test count: T9 count + the new tests
+- [x] Tests (recording fake): a listing that closes with code 0 reports one start and one end; one that times out reports one end; one whose child emits `error` then `close` reports one end
+- [x] Tests: a spawn that throws reports no start
+- [x] Gate check passes: `npx vitest run src/main/session-name-poller.test.ts`, then the full gate
+- [x] Test count: T9 count + the new tests (2,553 + 4 = 2,557)
+
+**Note**: the end runs first thing in `settle` after its `settled` guard, so the `error`-then-`close` pair
+reports one end at the call site, not only after the module's own de-duplication.
 
 **Tests**: unit
 **Gate**: quick

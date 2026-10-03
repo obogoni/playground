@@ -291,7 +291,7 @@ without asking.
 | PDIAG-24 | P1: activity — AC 24 | T4, T11 | In progress (T4) |
 | PDIAG-25 | P1: activity — AC 25 | T4, T11 | In progress (T4) |
 | PDIAG-26 | P1: activity — AC 26 | T4, T11 | In progress (T4) |
-| PDIAG-27 | P1: activity — AC 27 | T4, T10 | In progress (T4) |
+| PDIAG-27 | P1: activity — AC 27 | T4, T10 | Done (T4, T10) |
 | PDIAG-28 | P1: bench — AC 28 | T15 | Pending |
 | PDIAG-29 | P1: bench — AC 29 | T15 | Pending |
 | PDIAG-30 | P1: bench — AC 30 | T15 | Pending |
