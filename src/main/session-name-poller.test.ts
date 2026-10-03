@@ -698,3 +698,117 @@ describe('SessionNamePoller — backs off for a session the listing does not nam
     expect(t.calls).toHaveLength(4)
   })
 })
+
+describe('SessionNamePoller — the tick and the rerun follow the backoff (MAGIT)', () => {
+  it('skips a tick while the only session backs off, and lists on the first tick after it is due (MAGIT-24)', () => {
+    const t0 = Date.now()
+    const t = unnamedWithMisses(3, specDue) // listings at 1 s, 6 s, 16 s; due at 36 s
+
+    vi.advanceTimersByTime(t0 + 30000 - Date.now())
+    expect(t.calls).toHaveLength(3)
+    vi.advanceTimersByTime(29999)
+    expect(t.calls).toHaveLength(3)
+    vi.advanceTimersByTime(1)
+
+    expect(t.calls).toHaveLength(4)
+  })
+
+  it('lists on every tick while a named session is watched next to a backing-off one (MAGIT-24, MAGIT-26)', () => {
+    const t = makePoller()
+    t.poller.watch('s1', 'sid-1')
+    t.poller.watch('s2', 'sid-never')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+    t.children[0].stdout(LISTING)
+    t.children[0].close(0)
+
+    for (let tick = 1; tick <= 10; tick++) {
+      vi.advanceTimersByTime(tick === 1 ? NAME_INTERVAL_MS - NAME_DEBOUNCE_MS : NAME_INTERVAL_MS)
+      expect(t.calls).toHaveLength(1 + tick)
+      t.children[tick].stdout(LISTING)
+      t.children[tick].close(0)
+    }
+
+    expect(t.calls).toHaveLength(11)
+  })
+
+  it('drops the rerun a nudge asked for when the call it waited on misses the session (MAGIT-25)', () => {
+    const t = makePoller()
+    t.poller.watch('s1', 'sid-1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS) // call in flight
+    vi.advanceTimersByTime(100)
+    t.poller.nudge('s1')
+    answerEmpty(t.children[0])
+
+    vi.advanceTimersByTime(4999)
+
+    expect(t.calls).toHaveLength(1)
+  })
+
+  it('drops a tick coalesced during a call when only a backing-off session is watched (MAGIT-25)', () => {
+    const t0 = Date.now()
+    const t = makePoller()
+    t.poller.watch('s1', 'sid-1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+    answerEmpty(t.children[0]) // due at 6 s
+    vi.advanceTimersByTime(t0 + 28500 - Date.now())
+    t.poller.nudge('s1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS) // second call at 29.5 s, in flight over the 30 s tick
+    expect(t.calls).toHaveLength(2)
+    vi.advanceTimersByTime(1000)
+    answerEmpty(t.children[1]) // at 30.5 s: due at 40.5 s
+
+    vi.advanceTimersByTime(9999)
+
+    expect(t.calls).toHaveLength(2)
+  })
+
+  it('reruns once for a tick coalesced during a call when a named session is watched (MAGIT-25)', () => {
+    const t0 = Date.now()
+    const t = watchedAndListed()
+    vi.advanceTimersByTime(t0 + 28500 - Date.now())
+    t.poller.nudge('s1')
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS) // call at 29.5 s, in flight over the 30 s tick
+    expect(t.calls).toHaveLength(2)
+    vi.advanceTimersByTime(1000)
+    t.children[1].stdout(LISTING)
+    t.children[1].close(0)
+
+    vi.advanceTimersByTime(NAME_DEBOUNCE_MS)
+    expect(t.calls).toHaveLength(3)
+    t.children[2].stdout(LISTING)
+    t.children[2].close(0)
+    vi.advanceTimersByTime(t0 + 59999 - Date.now())
+
+    expect(t.calls).toHaveLength(3)
+  })
+
+  it('lists a never-named session nudged every second at 1, 6, 16, 36, 76, 156 and 316 s only (MAGIT-28)', () => {
+    const t0 = Date.now()
+    const t = makePoller()
+    const startedAt: number[] = []
+    t.poller.watch('s1', 'sid-1')
+
+    for (let second = 1; second <= 600; second++) {
+      vi.advanceTimersByTime(1000)
+      while (startedAt.length < t.calls.length) {
+        startedAt.push(Date.now() - t0)
+        answerEmpty(t.children[startedAt.length - 1])
+      }
+      t.poller.nudge('s1')
+    }
+
+    expect(startedAt).toEqual([1000, 6000, 16000, 36000, 76000, 156000, 316000])
+  })
+
+  it('starts no call after dispose while a session backs off (MAGIT-46)', () => {
+    const t = unnamedWithMisses(1, specDue)
+
+    t.poller.dispose()
+    for (let second = 1; second <= 600; second++) {
+      t.poller.nudge('s1')
+      vi.advanceTimersByTime(1000)
+    }
+
+    expect(t.calls).toHaveLength(1)
+  })
+})

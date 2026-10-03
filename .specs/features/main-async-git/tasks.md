@@ -206,19 +206,25 @@ deviation the code is in place; this task adds the tests that pin it.**
 
 **Done when**:
 
-- [ ] Tests: one unnamed session, due after the next tick: the tick starts no call; the first tick after its due time starts one (MAGIT-24)
-- [ ] Tests: a named and an unnamed session: every tick for 5 minutes starts a call, 10 in all (MAGIT-24, MAGIT-26)
-- [ ] Tests: a nudge from an unnamed session during a call that ends with `[]` schedules no rerun; a tick coalesced during a call with only a backing-off session watched schedules no rerun; a tick coalesced with a named session watched reruns once (MAGIT-25)
-- [ ] Tests: a never-named session, a nudge right after each whole second for 10 minutes, each listing closed at once with `[]`: the spawn calls land at 1, 6, 16, 36, 76, 156 and 316 s, and nowhere else (MAGIT-28)
-- [ ] Tests: `dispose` while a session backs off, then 10 minutes of ticks and nudges, starts no call (MAGIT-46)
-- [ ] Every existing poller test passes unchanged
-- [ ] Gate check passes: `npx vitest run src/main/session-name-poller.test.ts`, then the full gate
-- [ ] Test count: T3 count + the new tests
+- [x] Tests: one unnamed session, due after the next tick: the tick starts no call; the first tick after its due time starts one (MAGIT-24)
+- [x] Tests: a named and an unnamed session: every tick for 5 minutes starts a call, 10 in all (MAGIT-24, MAGIT-26)
+- [x] Tests: a nudge from an unnamed session during a call that ends with `[]` schedules no rerun; a tick coalesced during a call with only a backing-off session watched schedules no rerun; a tick coalesced with a named session watched reruns once (MAGIT-25)
+- [x] Tests: a never-named session, a nudge right after each whole second for 10 minutes, each listing closed at once with `[]`: the spawn calls land at 1, 6, 16, 36, 76, 156 and 316 s, and nowhere else (MAGIT-28)
+- [x] Tests: `dispose` while a session backs off, then 10 minutes of ticks and nudges, starts no call (MAGIT-46)
+- [x] Every existing poller test passes unchanged
+- [x] Gate check passes: `npx vitest run src/main/session-name-poller.test.ts`, then the full gate
+- [x] Test count: T3 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `test(session-name): pin the tick and rerun gate of the listing backoff`
+
+**Result** (2026-10-03): 7 new tests, 2801 in all; lint 0 errors, 18 warnings. The tests passed on first
+run, since T3 shipped the code, so three throwaway mutants (copy to `.orig`, restore in `finally`) showed
+they can fail: an ungated tick fails 9 tests (MAGIT-18, 24, 25, 28), an ungated rerun 19, and a `dispose`
+that leaves the poller live fails SNAME-14's test. MAGIT-46's test survives that last mutant, because
+`dispose` also clears the watched sessions, so nudges and ticks find no one to list.
 
 ---
 
