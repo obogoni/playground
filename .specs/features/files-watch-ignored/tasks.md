@@ -378,12 +378,54 @@ section and the icon checks.
 
 **Done when** (dev app on a throwaway user data folder, freshly seeded; results written here):
 
-- [ ] On the current build (no production change yet), `SMOKE_ONLY=watch`: 15a FAILS (events arrive for the ignored writes) while 15b and 15c pass; the counts written here
-- [ ] 15c seen failing on a main mutant that drops `--exclude-standard` from `listDir`'s untracked read (relaunched), restored from `.orig`
-- [ ] 15b seen failing when the control file is written outside the worktree instead (a throwaway edit of the section, reverted): no event names it
-- [ ] The full drive still reaches the icon checks last (read in the drive order)
-- [ ] `git status --porcelain` equals the baseline after the mutant; `.git/info/exclude` of the seed restored by the section's cleanup
-- [ ] Gate check passes: `npm run lint`
+- [x] On the current build (no production change yet), `SMOKE_ONLY=watch`: 15a FAILS (events arrive for the ignored writes) while 15b and 15c pass; the counts written here
+- [x] 15c seen failing on a main mutant that drops `--exclude-standard` from `listDir`'s untracked read (relaunched), restored from `.orig`
+- [x] 15b seen failing when the control file is written outside the worktree instead (a throwaway edit of the section, reverted): no event names it
+- [x] The full drive still reaches the icon checks last (read in the drive order)
+- [x] `git status --porcelain` equals the baseline after the mutant; `.git/info/exclude` of the seed restored by the section's cleanup
+- [x] Gate check passes: `npm run lint`
+
+**Result (2026-10-03)**: the dev app at T4's commit (no production change), each drive on a fresh
+seed and a fresh launch: a throwaway folder under the system temp folder holding the seed and the
+user data (`SMOKE_BASE`, `SMOKE_CONFIG`), CDP port 9241 (`SMOKE_PORT`), the three flags; the app's
+process tree killed after each drive and the folder deleted.
+
+- Shape: `watchSection(ws)` in `scripts/smoke-files-diff.mjs`, run by `SMOKE_ONLY=watch` after
+  `selectWorktree` and in the full drive between `discardChecks` and `iconChecks`. It appends
+  `fwig-build/` to the seed's `.git/info/exclude`, creates `fwig-build/`, waits 2 s, then subscribes
+  in the page (`window.api.on('files:changed', ...)` into `window.__fwigEvents`) and keeps only the
+  events for the seed's worktree. 15a: 20 writes `fwig-build/out-NN.bin` 100 ms apart, then
+  1,500 ms, no event. 15b: `fwig-control-<stamp>.txt` at the root, an event naming it within
+  2,000 ms. 15c: the Folder tree and the Uncommitted list, each re-listed by a mode click, hold the
+  control file (so the check cannot pass on an empty list) and no `fwig-build` row. Cleanup in
+  `finally`: unsubscribe, delete `fwig-build/` and the control file, write back the exclude bytes.
+- `SMOKE_ONLY=watch`, current build: **15a FAIL** ("7 events, 27 paths", every one under
+  `fwig-build`, the folder itself named in each batch); 15b PASS (after about 330 ms); 15c PASS
+  (control listed in both, no `fwig-build` row). 2/3 checks passed, exit 1.
+- 15c on the main mutant (`'--exclude-standard'` removed from `listDir`'s `ls-files --others`
+  call in `src/main/file-tree.ts`, copied to `.orig`, the dev app launched after the write):
+  **15c FAIL**, "Folder: control true, ["fwig-build"]; Uncommitted: control true, []". Restored
+  from `.orig`.
+- 15b with the control written to the seed's base folder instead of the worktree (a throwaway edit
+  of the section, copied to `.orig`): **15b FAIL**, "no event named it" (15c also failed, its
+  control no longer listed). Restored from `.orig`.
+- Full drive, current build: discard checks end at 56, the watch section is 57 to 59 (15a FAIL as
+  above, 15b and 15c PASS), the icon checks follow at 60 to 69. 110/114 passed, exit 1.
+- SPEC_DEVIATION (wording, not behaviour): the icon checks are not the drive's last section on
+  `main` either. Sections 12 and 13 (FPOL) and 14 (fold) run after them, as the comment beside
+  `discardChecks` ("stay last") no longer says. The watch section sits where design.md puts it,
+  directly before the icon checks, and the order after them is unchanged. FWIG-42's "its icon
+  section still last" reads as "the order after the discard section is unchanged".
+- **Pre-existing failures, not this section's**: the full drive also failed FPOL-14 ("Expand all
+  opens every listed section", 0 -> 0 of 50), FPOL-16 ("9 diff editors ... for 0 open sections")
+  and FPOL-18 ("opened true: 0 -> 0 -> 0 of 45"). A second full drive with the watch call removed
+  from the full drive (a throwaway edit) failed the same three, 108/111. T19's full drive (FWIG-42)
+  meets them.
+- `git status --porcelain` equal to the baseline after every mutant (only this task's
+  `scripts/smoke-files-diff.mjs`); the seed's `.git/info/exclude` byte for byte as before each drive
+  (read before and after by the harness). No electron process from these drives and no throwaway
+  folder left.
+- Gate: `npm run lint` 0 errors, 18 warnings.
 
 **Tests**: manual
 **Gate**: manual

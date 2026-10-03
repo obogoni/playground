@@ -243,7 +243,7 @@ section alone; on the build before the change its first check fails.
 | FWIG-11 | P1: ignored — AC 11 | T10 | Pending |
 | FWIG-12 | P1: ignored — AC 12 | T10 | Pending |
 | FWIG-13 | P1: ignored — AC 13 | T10 | Pending |
-| FWIG-14 | P1: ignored — AC 14 | T5, T19 | Pending |
+| FWIG-14 | P1: ignored — AC 14 | T5, T19 | In progress (T5) |
 | FWIG-15 | P1: index — AC 15 | T7, T9, T11, T12 | Pending |
 | FWIG-16 | P1: index — AC 16 | T11 | Pending |
 | FWIG-17 | P1: index — AC 17 | T20, T21 | Pending |
@@ -272,9 +272,9 @@ section alone; on the build before the change its first check fails.
 | FWIG-40 | P1: bench — AC 40 | T1 | Done (T1) |
 | FWIG-41 | P1: bench — AC 41 | T6, T21 | Pending |
 | FWIG-42 | P1: smoke — AC 42 | T19 | Pending |
-| FWIG-43 | P1: smoke — AC 43 | T5, T19 | Pending |
-| FWIG-44 | P1: smoke — AC 44 | T5, T19 | Pending |
-| FWIG-45 | P1: smoke — AC 45 | T5, T19 | Pending |
+| FWIG-43 | P1: smoke — AC 43 | T5, T19 | In progress (T5) |
+| FWIG-44 | P1: smoke — AC 44 | T5, T19 | In progress (T5) |
+| FWIG-45 | P1: smoke — AC 45 | T5, T19 | In progress (T5) |
 | FWIG-46 | Edge: an ignored folder created after the watch | T10 | Pending |
 | FWIG-47 | Edge: an ignored folder deleted | T9, T10 | Pending |
 | FWIG-48 | Edge: unusual characters in a path | T9 | Pending |
