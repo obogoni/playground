@@ -93,3 +93,21 @@ export function buildRawSpawnPlan(command: string, cwd: string, shell: Shell): S
   }
   return { file: 'pwsh.exe', args: ['-NoExit', '-Command', command], cwd, autoCommand: command }
 }
+
+/** The env var that carries a session's initial prompt into its pwsh host. */
+export const PROMPT_ENV = 'PLAYGROUND_PROMPT'
+
+/**
+ * Prompted sibling of `buildSpawnPlan`: always pwsh, whatever the default
+ * shell, because cmd cannot carry a line break or `"` inside one argument.
+ * The prompt never enters this command line (no quoting layer can corrupt
+ * it): the PTY env carries it in `PROMPT_ENV`, which the line moves into a
+ * local and removes before the agent starts, so the agent's own children never
+ * see it. `--` ends option parsing, so a prompt starting with `-` (a Markdown
+ * list) is still the positional prompt, after any flags in `args`.
+ */
+export function buildPromptSpawnPlan(agent: AgentDef, cwd: string): SpawnPlan {
+  const call = ['&', quotePwsh(agent.command), ...agent.args.map(quotePwsh), '--', '$p'].join(' ')
+  const autoCommand = `$p = $env:${PROMPT_ENV}; Remove-Item Env:${PROMPT_ENV}; ${call}`
+  return { file: 'pwsh.exe', args: ['-NoExit', '-Command', autoCommand], cwd, autoCommand }
+}

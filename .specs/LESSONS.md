@@ -582,13 +582,31 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: SPEC_DEVIATION src/main/session-manager.ts:126 (session-manager)
 - last seen: 2026-10-02T17:30:50Z
 
-### L-101 - State an edge-case tolerance against the same floored quantity the main criterion uses, or the tolerance cannot hold at fractional sizes
+### L-101 - When an error branch needs an I/O failure the OS cannot produce portably, fail the call through a mocked module or injected seam instead of leaving the branch untested
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: agent-prompts
+- evidence: M17 src/main/prompt-library.ts:39 (APR-06 unreadable) (testing)
+- last seen: 2026-10-03T12:22:13Z
+
+### L-102 - Lift every behavioural rule stated in the spec's assumptions table into a numbered acceptance criterion, or it ships unimplemented and untested
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: agent-prompts
+- evidence: spec.md Assumptions 'Value whitespace' vs NewSessionDialog.tsx:172-173 (spec)
+- last seen: 2026-10-03T12:22:14Z
+
+### L-103 - When main re-checks a rule the renderer already enforces, state the rejection message in the spec so the backstop test can assert it
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `main-backstop` · harmful: 0
+- features: agent-prompts
+- evidence: validation.md APR-26 backstop: src/main/session-manager.test.ts:1498 asserts only .rejects.toThrow() (main-backstop)
+- last seen: 2026-10-03T12:45:36Z
+
+### L-104 - State an edge-case tolerance against the same floored quantity the main criterion uses, or the tolerance cannot hold at fractional sizes
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer layout` · harmful: 0
 - features: terminal-last-row
 - evidence: validation.md Spec-Precision Gaps 1 (Edge case 1 vs P1 AC3) (renderer layout)
 - last seen: 2026-10-03T10:53:15Z
 
-### L-102 - When a layout criterion is measured against an inner element, also require that element to fill its container, or a frozen inner element satisfies it
+### L-105 - When a layout criterion is measured against an inner element, also require that element to fill its container, or a frozen inner element satisfies it
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer layout` · harmful: 0
 - features: terminal-last-row
 - evidence: validation.md Spec-Precision Gaps 2 (P1 AC3/AC4, mutant V-S1) (renderer layout)
