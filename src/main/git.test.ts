@@ -87,8 +87,10 @@ describe('gitFailureLine', () => {
 
 describe('isTimeout', () => {
   it('is true when git() kills the process because timeoutMs elapsed', async () => {
-    // `hash-object --stdin` waits on a stdin execFile never closes, so only the timeout ends it.
-    const err = await rejectionOf(git(tmpdir(), ['hash-object', '--stdin'], { timeoutMs: 200 }))
+    // A `!` alias that sleeps outlives the 200 ms limit, so only the timeout ends it.
+    const err = await rejectionOf(
+      git(tmpdir(), ['-c', 'alias.wait=!sleep 5', 'wait'], { timeoutMs: 200 })
+    )
     expect(isTimeout(err)).toBe(true)
   })
 
@@ -120,6 +122,13 @@ describe('git', () => {
       'envp'
     ])
     expect(stdout.trim()).toBe('prompt=0')
+  })
+
+  it('gives git a stdin already at end of input (CRTO-06)', async () => {
+    // With no timeoutMs, only an ended stdin lets `hash-object --stdin` return: it hashes
+    // the empty input to git's empty-blob id.
+    const { stdout } = await git(tmpdir(), ['hash-object', '--stdin'])
+    expect(stdout.trim()).toBe('e69de29bb2d1d6434b8b29ae775ad8c2e48c5391')
   })
 
   it('hands every argument to git literally, with no shell to parse it', async () => {
@@ -195,7 +204,10 @@ describe('git reports to diagnostics (PDIAG-09, PDIAG-15)', () => {
 
   it('reports one start and one end for a timed-out call, which is still a timeout', async () => {
     const rec = recordingGit()
-    const err = await rejectionOf(git(tmpdir(), ['hash-object', '--stdin'], { timeoutMs: 200 }))
+    // stdin is ended (CRTO-06), so the blocker is a `!` alias that sleeps past the limit.
+    const err = await rejectionOf(
+      git(tmpdir(), ['-c', 'alias.wait=!sleep 5', 'wait'], { timeoutMs: 200 })
+    )
     expect(isTimeout(err)).toBe(true)
     expect(rec.starts).toHaveLength(1)
     expect(rec.ends).toBe(1)

@@ -6,7 +6,9 @@ import type { WorkspaceNode } from '../../../shared/tree'
 import type { PostCreateHookResult } from '../../../shared/worktrees'
 import { worktreePathFor } from '../../../shared/worktrees'
 import { api } from '../lib/api'
+import { BUSY_CANCEL_TITLE } from '../lib/create-progress'
 import { defaultBaseFor, repoOptionsOf } from '../lib/repo-options'
+import { useCreateProgress } from '../lib/use-create-progress'
 import { usePathCheck } from '../lib/use-path-check'
 import { BranchExistsChoice } from './BranchExistsChoice'
 import { HookFailureNotice } from './HookFailureNotice'
@@ -69,6 +71,8 @@ export function StartWorkDialog({
     path: string
     hook: PostCreateHookResult
   } | null>(null)
+  // The step of the create in flight, shown while busy (CRTO-16, CRTO-17).
+  const progress = useCreateProgress()
   const branchEdited = useRef(false)
 
   const selectedRepo = repoOptions.find((r) => r.path === repoPath)
@@ -161,9 +165,11 @@ export function StartWorkDialog({
         baseBranch: baseBranch.trim() || undefined,
         worktreeTemplate: effectiveWorktreeTemplate,
         updateBase,
-        onExisting
+        onExisting,
+        requestId: progress.begin()
       })
       .then((result) => {
+        progress.end()
         if (result.ok && result.path) {
           // The worktree exists either way; a failed init command only earns an
           // advisory before the normal flow continues (WPC-13/15).
@@ -184,17 +190,20 @@ export function StartWorkDialog({
         setBusy(false)
       })
       .catch((err) => {
+        progress.end()
         setError(String(err))
         setBusy(false)
       })
   }
 
   return (
-    // While the hook advisory is up the worktree already exists, so dismissing by
-    // backdrop must continue the post-create flow, not silently drop it (WPC-14).
+    // While a create runs the backdrop does nothing, so its outcome is never lost
+    // (CRTO-19). While the hook advisory is up the worktree already exists, so
+    // dismissing by backdrop must continue the post-create flow, not silently drop
+    // it (WPC-14).
     <div
       className="dialog-backdrop"
-      onClick={hookFailure ? () => onCreated(hookFailure.path) : onClose}
+      onClick={busy ? undefined : hookFailure ? () => onCreated(hookFailure.path) : onClose}
     >
       <div className="dialog-panel" onClick={(event) => event.stopPropagation()}>
         <header className="dialog-header">
@@ -286,6 +295,14 @@ export function StartWorkDialog({
               </span>
             </span>
           </label>
+          {progress.label !== null && (
+            <div className="dialog-progress" role="status">
+              <span className="dialog-progress-loader">
+                <Icon name="loader" size={13} />
+              </span>
+              {progress.label}
+            </div>
+          )}
           {error && (
             <div className="dialog-error">
               <Icon name="alert" size={13} /> {error}
@@ -308,7 +325,13 @@ export function StartWorkDialog({
           />
         ) : (
           <footer className="dialog-footer">
-            <button type="button" className="dialog-btn-ghost" onClick={onClose}>
+            <button
+              type="button"
+              className="dialog-btn-ghost"
+              onClick={onClose}
+              disabled={busy}
+              title={busy ? BUSY_CANCEL_TITLE : undefined}
+            >
               Cancel
             </button>
             <button

@@ -13,7 +13,8 @@ const MAX_STDOUT_BYTES = 64 * 1024 * 1024
 
 /**
  * The single way this app runs git (AD-023, STBR-27): `execFile`, so no shell
- * ever parses the arguments, a hidden window, and `GIT_TERMINAL_PROMPT=0`.
+ * ever parses the arguments, a hidden window, `GIT_TERMINAL_PROMPT=0`, and
+ * stdin ended (CRTO-06), so nothing git starts can wait on keyboard input.
  * `timeoutMs` maps to `execFile`'s `timeout`: the process is killed once it
  * elapses, and the rejection satisfies `isTimeout` (STBR-24).
  */
@@ -30,7 +31,7 @@ export function git(
   const start = diagnostics().gitRequested(cwd, args)
   return pace(() => {
     const end = start()
-    return run('git', args, {
+    const started = run('git', args, {
       cwd,
       windowsHide: true,
       env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
@@ -42,7 +43,11 @@ export function git(
       // caller is meant to rely on; the callers that need a real cap measure it
       // themselves, as file-diff does before reading a blob.
       maxBuffer: MAX_STDOUT_BYTES
-    }).finally(end)
+    })
+    // execFile ignores a `stdio` option, so stdin is a pipe; ending it at once
+    // gives git end of input instead of a read that waits forever (CRTO-06).
+    started.child.stdin?.end()
+    return started.finally(end)
   })
 }
 
@@ -51,7 +56,11 @@ export function git(
  * test can prove what a code path did NOT ask for — the only way to show that
  * a listing never read a subtree, since the evidence is an absence.
  */
-export type GitRunner = (cwd: string, args: string[]) => Promise<{ stdout: string }>
+export type GitRunner = (
+  cwd: string,
+  args: string[],
+  opts?: { timeoutMs?: number }
+) => Promise<{ stdout: string }>
 
 /**
  * The line of a git failure the app shows (BSLG-12, BSLG-13): git's first stderr
