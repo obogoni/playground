@@ -13,6 +13,7 @@ import type {
   DiffSides,
   FileContent,
   FileStat,
+  FilesChanged,
   FilesMode
 } from '../../../shared/files'
 import type { LaunchResult } from '../../../shared/shortcuts'
@@ -27,6 +28,7 @@ import {
 } from './diff-view'
 import { afterDiscard } from './discard-view'
 import {
+  bumpRevisions,
   filesStateFor,
   keepUnchanged,
   launcherTarget,
@@ -40,6 +42,8 @@ import {
   type UnchangedChoice,
   type UnchangedChoices
 } from './files-view'
+import { createRefreshGate, mergeBatches } from './refresh-gate'
+import { useLatestCallback } from './use-latest-callback'
 
 /** One open file (FXPL-18): what was read for it, and when it was last picked. */
 export interface FileTab {
@@ -117,6 +121,11 @@ interface WorktreeFiles {
    * memory only, never written to the config (FOLD-19, FOLD-22).
    */
   unchanged: UnchangedChoices
+  /**
+   * Disk batches that named each listed Uncommitted file, by path (FWIG-25).
+   * In memory only.
+   */
+  revisions: Record<string, number>
 }
 
 /** A worktree the user has not opened yet. Constant, so it stays referentially stable. */
@@ -131,7 +140,8 @@ const EMPTY: WorktreeFiles = {
   bases: null,
   stats: [],
   commits: null,
-  unchanged: {}
+  unchanged: {},
+  revisions: {}
 }
 
 export interface UseFilesOptions {
@@ -184,6 +194,8 @@ export interface UseFiles {
   uncommittedCount: number
   /** Bumped when every open diff must re-read against a new git state (FDIF-31). */
   refreshToken: number
+  /** Disk batches that named each listed Uncommitted file, by path (FWIG-25). */
+  diskRevisions: Readonly<Record<string, number>>
   /** Absolute path the launcher row acts on (FXPL-26); null when nothing is picked. */
   launchTarget: string | null
   setMode: (mode: FilesMode) => void
@@ -275,8 +287,8 @@ export function useFiles({
   )
 
   const loadDir = useCallback(
-    (wt: string, dir: string): void => {
-      api
+    (wt: string, dir: string): Promise<void> => {
+      return api
         .invoke('files:list-dir', { worktreePath: wt, dir })
         .then((listing) => patchFiles(wt, (s) => ({ entries: { ...s.entries, [dir]: listing } })))
         .catch(console.error)
@@ -285,8 +297,8 @@ export function useFiles({
   )
 
   const loadChanged = useCallback(
-    (wt: string, from: string): void => {
-      api
+    (wt: string, from: string): Promise<void> => {
+      return api
         .invoke('files:changed-since', { worktreePath: wt, base: from })
         .then((changed) => patchFiles(wt, () => ({ changed })))
         .catch(console.error)
@@ -295,8 +307,8 @@ export function useFiles({
   )
 
   const loadUncommitted = useCallback(
-    (wt: string): void => {
-      api
+    (wt: string): Promise<void> => {
+      return api
         .invoke('worktrees:changes', { worktreePath: wt })
         .then((files) => patchFiles(wt, () => ({ uncommitted: files })))
         .catch(console.error)
@@ -306,14 +318,14 @@ export function useFiles({
 
   /** The counts behind the stack's header and every section header (FDIF-19/20). */
   const loadStats = useCallback(
-    (wt: string, lens: FilesMode, from: string | undefined): void => {
+    (wt: string, lens: FilesMode, from: string | undefined): Promise<void> => {
       // Commits mode has no list of its own to count: each commit's tab brings
       // its own counts back with `commits:files`.
       if (lens === 'full' || lens === 'commits' || (lens === 'since-base' && !from)) {
         patchFiles(wt, () => ({ stats: [] }))
-        return
+        return Promise.resolve()
       }
-      api
+      return api
         .invoke('files:diff-stats', { worktreePath: wt, mode: lens, base: from })
         .then((stats) => patchFiles(wt, () => ({ stats })))
         .catch(console.error)
@@ -323,14 +335,14 @@ export function useFiles({
 
   /** The first page of the Commits list, replacing whatever was paged in before. */
   const loadCommits = useCallback(
-    (wt: string, from: string | undefined): void => {
+    (wt: string, from: string | undefined): Promise<void> => {
       // FCMT-07: with no base there is no merge base to stop at, and F1's base
       // prompt takes the list's place rather than the app guessing one.
       if (!from) {
         patchFiles(wt, () => ({ commits: null }))
-        return
+        return Promise.resolve()
       }
-      api
+      return api
         .invoke('commits:list', { worktreePath: wt, base: from })
         .then((commits) => patchFiles(wt, () => ({ commits })))
         .catch(console.error)
@@ -356,8 +368,8 @@ export function useFiles({
   )
 
   const readTab = useCallback(
-    (wt: string, path: string): void => {
-      api
+    (wt: string, path: string): Promise<void> => {
+      return api
         .invoke('files:read', { worktreePath: wt, relPath: path })
         .then((content) =>
           patchFiles(wt, (s) => ({
@@ -377,7 +389,7 @@ export function useFiles({
    * rather than the diff it last held (spec §Edge Cases).
    */
   const readDiff = useCallback(
-    (wt: string, tab: DiffTab, from: string | null): void => {
+    (wt: string, tab: DiffTab, from: string | null): Promise<void> => {
       const key = tabKeyOf(tab)
       const put = (sides: DiffSides | null): void =>
         patchFiles(wt, (s) => ({
@@ -386,39 +398,44 @@ export function useFiles({
       const request = diffRequestFor(tab.mode, tab.changed, from)
       if (!request) {
         put(null)
-        return
+        return Promise.resolve()
       }
-      api.invoke('files:diff-sides', { worktreePath: wt, request }).then(put).catch(console.error)
+      return api
+        .invoke('files:diff-sides', { worktreePath: wt, request })
+        .then(put)
+        .catch(console.error)
     },
     [patchFiles]
   )
 
-  /** Re-lists whatever the current mode shows, and its counts (FXPL-22/23, FDIF-19). */
+  /**
+   * Re-lists whatever the current mode shows, and its counts (FXPL-22/23,
+   * FDIF-19). Settles once every read it started has settled (FWIG-21); like
+   * the loaders, it never rejects.
+   */
   const refreshMode = useCallback(
-    (wt: string, lens: FilesMode, from: string | undefined, expanded: string[]): void => {
-      loadStats(wt, lens, from)
+    (wt: string, lens: FilesMode, from: string | undefined, expanded: string[]): Promise<void> => {
+      const reads = [loadStats(wt, lens, from)]
       if (lens === 'full') {
-        loadDir(wt, '')
-        for (const dir of expanded) loadDir(wt, dir)
-        return
-      }
-      if (lens === 'uncommitted') {
-        loadUncommitted(wt)
-        return
-      }
-      if (lens === 'commits') {
-        loadCommits(wt, from)
+        reads.push(loadDir(wt, ''))
+        for (const dir of expanded) reads.push(loadDir(wt, dir))
+      } else if (lens === 'uncommitted') {
+        reads.push(loadUncommitted(wt))
+      } else if (lens === 'commits') {
+        reads.push(loadCommits(wt, from))
         // The uncommitted row's count is read the way the uncommitted mode
         // reads its list, not from the tree snapshot the design suggested: the
         // snapshot only moves when the app re-reads the tree, so a file saved
         // while the list is open would leave the row's number stale.
-        loadUncommitted(wt)
-        return
+        reads.push(loadUncommitted(wt))
+      } else if (from) {
+        reads.push(loadChanged(wt, from))
+      } else {
+        // FXPL-11: with no base there is nothing to compare, and the picker
+        // asks for one rather than the app guessing.
+        patchFiles(wt, () => ({ changed: null }))
       }
-      // FXPL-11: with no base there is nothing to compare, and the picker asks
-      // for one rather than the app guessing.
-      if (from) loadChanged(wt, from)
-      else patchFiles(wt, () => ({ changed: null }))
+      return Promise.allSettled(reads).then(() => undefined)
     },
     [loadDir, loadUncommitted, loadChanged, loadCommits, loadStats, patchFiles]
   )
@@ -495,38 +512,75 @@ export function useFiles({
     api.invoke('files:watch', { worktreePath: active ? worktreePath : null }).catch(console.error)
   }, [active, worktreePath])
 
+  /**
+   * One batch refresh, run by the gate (FWIG-18..21). It reads the view as it
+   * is when it starts, not as it was when the batch arrived (FWIG-22): a
+   * waiting batch may start after a mode switch, and one for a worktree or a
+   * direction already left does nothing (FWIG-23). It settles once every read
+   * it started has settled, and never rejects.
+   */
+  const runBatch = useLatestCallback((event: FilesChanged): Promise<void> => {
+    const current = live.current
+    if (!current.active || !current.worktreePath) return Promise.resolve()
+    if (event.worktreePath !== current.worktreePath) return Promise.resolve()
+    const wt = current.worktreePath
+    const tabs = current.here.tabs
+    const reads: Promise<void>[] = []
+    // Every open file tab the batch touches is re-read in place (FXPL-21/24).
+    const open = tabs.filter((tab): tab is FileTab => tab.kind === 'file').map((tab) => tab.path)
+    for (const path of tabsAffected(open, event.paths)) reads.push(readTab(wt, path))
+
+    const diffs = tabs.filter((tab): tab is DiffTab => tab.kind === 'diff')
+    if (event.gitStateChanged) {
+      // FDIF-31: the index or HEAD moved, so both sides of everything may have.
+      for (const tab of diffs) reads.push(readDiff(wt, tab, current.mergeBase))
+      setRefreshToken((token) => token + 1)
+    } else {
+      // FDIF-30: a write on disk only moves the uncommitted diff of that file.
+      const uncommitted = diffs.filter((tab) => tab.mode === 'uncommitted')
+      const touched = new Set(
+        tabsAffected(
+          uncommitted.map((tab) => tab.path),
+          event.paths
+        )
+      )
+      for (const tab of uncommitted) {
+        if (touched.has(tab.path)) reads.push(readDiff(wt, tab, current.mergeBase))
+      }
+      // FWIG-25: in the uncommitted stack, the sections of the listed files
+      // the batch names re-read, and no other.
+      if (current.mode === 'uncommitted') {
+        const listed = current.here.uncommitted.map((file) => file.path)
+        const named = tabsAffected(listed, event.paths)
+        if (named.length > 0) {
+          patchFiles(wt, (s) => ({ revisions: bumpRevisions(s.revisions, named) }))
+        }
+      }
+    }
+    reads.push(refreshMode(wt, current.mode, current.effectiveBase, current.here.expanded))
+    return Promise.allSettled(reads).then(() => undefined)
+  })
+
+  // One batch refresh at a time, with one merged trailing run (FWIG-18..21).
+  // Created once; `runBatch` keeps its identity, so the gate always runs the
+  // latest one. Only `files:changed` batches go through it: a mode switch, a
+  // base change, a discard and the first listing still refresh at once.
+  const [gate] = useState(() => createRefreshGate<FilesChanged>(runBatch, mergeBatches))
+
   useEffect(() => {
     return api.on('files:changed', (event) => {
       const current = live.current
       if (!current.active || !current.worktreePath) return
       if (event.worktreePath !== current.worktreePath) return
-      const wt = current.worktreePath
-      const tabs = current.here.tabs
-      // Every open file tab the batch touches is re-read in place (FXPL-21/24).
-      const open = tabs.filter((tab): tab is FileTab => tab.kind === 'file').map((tab) => tab.path)
-      for (const path of tabsAffected(open, event.paths)) readTab(wt, path)
-
-      const diffs = tabs.filter((tab): tab is DiffTab => tab.kind === 'diff')
-      if (event.gitStateChanged) {
-        // FDIF-31: the index or HEAD moved, so both sides of everything may have.
-        for (const tab of diffs) readDiff(wt, tab, current.mergeBase)
-        setRefreshToken((token) => token + 1)
-      } else {
-        // FDIF-30: a write on disk only moves the uncommitted diff of that file.
-        const uncommitted = diffs.filter((tab) => tab.mode === 'uncommitted')
-        const touched = new Set(
-          tabsAffected(
-            uncommitted.map((tab) => tab.path),
-            event.paths
-          )
-        )
-        for (const tab of uncommitted) {
-          if (touched.has(tab.path)) readDiff(wt, tab, current.mergeBase)
-        }
-      }
-      refreshMode(wt, current.mode, current.effectiveBase, current.here.expanded)
+      gate.request(event)
     })
-  }, [readTab, readDiff, refreshMode])
+  }, [gate])
+
+  // FWIG-23: a batch waiting for another worktree, or for a direction just
+  // left, is dropped; the running one finishes and finds nothing to do.
+  useEffect(() => {
+    gate.dropWaiting()
+  }, [gate, active, worktreePath])
 
   const persist = useCallback(
     (patch: Partial<FilesState>): void => {
@@ -861,6 +915,7 @@ export function useFiles({
     diffLayout,
     diffIgnoreWhitespace,
     refreshToken,
+    diskRevisions: here.revisions,
     launchTarget: worktreePath && target !== null ? absoluteIn(worktreePath, target) : null,
     setMode,
     setBase,

@@ -13,6 +13,7 @@ import {
   nextChangeTarget,
   readingBeforeUpdate,
   regionStates,
+  requestKey,
   tabKeyOf,
   tabsWithAllChanges,
   totals,
@@ -102,6 +103,94 @@ describe('diffRequestFor', () => {
   it('has no diff to build when the base no longer resolves (edge case, FXPL-11)', () => {
     // The base prompt takes the place of a stale diff, so there is no request.
     expect(diffRequestFor('since-base', changed('src/app.ts', 'modified'), null)).toBeNull()
+  })
+})
+
+describe('requestKey', () => {
+  it('gives equal keys to two requests for the same change and merge base, built separately (FWIG-24)', () => {
+    const first = diffRequestFor('since-base', changed('src/app.ts', 'modified'), 'abc1234')
+    const second = diffRequestFor('since-base', changed('src/app.ts', 'modified'), 'abc1234')
+
+    expect(first).not.toBe(second)
+    expect(requestKey(first)).toBe(requestKey(second))
+  })
+
+  it('gives equal keys to two uncommitted requests for the same change (FWIG-24)', () => {
+    const first = diffRequestFor('uncommitted', changed('src/app.ts', 'modified'), null)
+    const second = diffRequestFor('uncommitted', changed('src/app.ts', 'modified'), null)
+
+    expect(requestKey(first)).toBe(requestKey(second))
+  })
+
+  it('gives equal keys to an untracked and an added file of the same path: the same sides (FWIG-24)', () => {
+    const untracked = diffRequestFor('uncommitted', changed('src/new.ts', 'untracked'), null)
+    const added = diffRequestFor('uncommitted', changed('src/new.ts', 'added'), null)
+
+    expect(requestKey(untracked)).toBe(requestKey(added))
+  })
+
+  it('changes when a modified file is deleted (FWIG-26)', () => {
+    const modified = diffRequestFor('uncommitted', changed('src/app.ts', 'modified'), null)
+    const deleted = diffRequestFor('uncommitted', changed('src/app.ts', 'deleted'), null)
+
+    expect(requestKey(deleted)).not.toBe(requestKey(modified))
+  })
+
+  it('changes when an added file becomes modified (FWIG-26)', () => {
+    const added = diffRequestFor('since-base', changed('src/app.ts', 'added'), 'abc1234')
+    const modified = diffRequestFor('since-base', changed('src/app.ts', 'modified'), 'abc1234')
+
+    expect(requestKey(modified)).not.toBe(requestKey(added))
+  })
+
+  it('changes with the path (FWIG-26)', () => {
+    const a = diffRequestFor('uncommitted', changed('src/a.ts', 'modified'), null)
+    const b = diffRequestFor('uncommitted', changed('src/b.ts', 'modified'), null)
+
+    expect(requestKey(b)).not.toBe(requestKey(a))
+  })
+
+  it('changes with the old path of a rename (FWIG-26)', () => {
+    const fromOld = diffRequestFor(
+      'uncommitted',
+      changed('src/new.ts', 'renamed', 'src/old.ts'),
+      null
+    )
+    const fromOther = diffRequestFor(
+      'uncommitted',
+      changed('src/new.ts', 'renamed', 'src/other.ts'),
+      null
+    )
+    const plain = diffRequestFor('uncommitted', changed('src/new.ts', 'modified'), null)
+
+    expect(requestKey(fromOther)).not.toBe(requestKey(fromOld))
+    expect(requestKey(plain)).not.toBe(requestKey(fromOld))
+  })
+
+  it('changes with the merge base (FWIG-26)', () => {
+    const before = diffRequestFor('since-base', changed('src/app.ts', 'modified'), 'abc1234')
+    const after = diffRequestFor('since-base', changed('src/app.ts', 'modified'), 'def5678')
+
+    expect(requestKey(after)).not.toBe(requestKey(before))
+  })
+
+  it('gives no request a key of its own, unlike every request', () => {
+    const keys = [
+      requestKey(diffRequestFor('uncommitted', changed('src/app.ts', 'modified'), null)),
+      requestKey(diffRequestFor('uncommitted', changed('src/app.ts', 'untracked'), null)),
+      requestKey(diffRequestFor('uncommitted', changed('src/app.ts', 'deleted'), null)),
+      requestKey(diffRequestFor('since-base', changed('src/app.ts', 'modified'), 'abc1234'))
+    ]
+
+    expect(diffRequestFor('since-base', changed('src/app.ts', 'modified'), null)).toBeNull()
+    for (const key of keys) expect(requestKey(null)).not.toBe(key)
+  })
+
+  it('tells a disk side from a HEAD side of the same path', () => {
+    const disk = requestKey({ original: null, modified: { disk: true, path: 'src/app.ts' } })
+    const head = requestKey({ original: null, modified: { rev: 'HEAD', path: 'src/app.ts' } })
+
+    expect(disk).not.toBe(head)
   })
 })
 

@@ -35,6 +35,7 @@ import { git } from './git'
 import { GitStateWatcher } from './git-state-watcher'
 import { readCommits, readSyncState, runGitOp } from './git-sync'
 import { runHookShell } from './hook-shell'
+import { checkIgnored } from './ignore-check'
 import { emit, handle, onSend } from './ipc'
 import { createMcpResultServer } from './mcp-result-server'
 import { purgePasteDir } from './paste-temp'
@@ -439,6 +440,7 @@ app.whenReady().then(() => {
     watch: watchPort,
     resolveGitDir,
     schedule: timerScheduler,
+    checkIgnored: (worktreePath, paths) => checkIgnored(worktreePath, paths),
     emit: (event) => {
       if (!mainWindow) return
       emit(mainWindow.webContents, 'files:changed', event)

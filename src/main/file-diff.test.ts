@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -10,7 +10,7 @@ import {
   readDiffSides,
   type GitRunner
 } from './file-diff'
-import { git as runGit } from './git'
+import { git as runGit, READ_ONLY_FLAGS } from './git'
 
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync('git', args, { cwd, encoding: 'utf8' })
@@ -174,6 +174,73 @@ describe('diffStats', () => {
     writeFileSync(join(repo, 'a.txt'), 'one\nedited\n', 'utf8')
     expect(await diffStats(repo, 'full')).toEqual([])
   })
+
+  it('passes the read-only flags in front of every git read it runs (FWIG-15)', async () => {
+    const calls: string[][] = []
+    const recording: GitRunner = (cwd, args) => {
+      calls.push(args)
+      return runGit(cwd, args)
+    }
+    git(repo, 'checkout', '-b', 'feature')
+    writeFileSync(join(repo, 'b.txt'), 'alpha\n', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'work')
+    writeFileSync(join(repo, 'notes.md'), 'l1\n', 'utf8')
+
+    await diffStats(repo, 'since-base', 'main', recording)
+    await diffStats(repo, 'uncommitted', undefined, recording)
+
+    // merge-base and diff for the base, then diff and the untracked listing.
+    expect(calls.map((args) => args[READ_ONLY_FLAGS.length])).toEqual([
+      'merge-base',
+      'diff',
+      'diff',
+      'ls-files'
+    ])
+    for (const args of calls) {
+      expect(args.slice(0, READ_ONLY_FLAGS.length)).toEqual([
+        '--no-optional-locks',
+        '-c',
+        'diff.autoRefreshIndex=false'
+      ])
+    }
+  })
+})
+
+describe('diffStats leaves the index alone (FWIG-16)', () => {
+  let root: string
+  let repo: string
+  const files = Array.from({ length: 20 }, (_, i) => `f${String(i).padStart(2, '0')}.txt`)
+
+  beforeEach(async () => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-ix-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    git(repo, 'config', 'core.autocrlf', 'false')
+    for (const file of files) writeFileSync(join(repo, file), `${file}\n`, 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+    // The index must be older than the rewrite, as it is when a build touches
+    // files long after the last git command; T2 measured the refresh this way.
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('reads the Uncommitted counts after a same-bytes rewrite without rewriting .git/index', async () => {
+    for (const file of files) writeFileSync(join(repo, file), `${file}\n`, 'utf8')
+    const before = readFileSync(join(repo, '.git', 'index'))
+
+    const stats = await diffStats(repo, 'uncommitted')
+
+    expect(stats).toEqual([])
+    expect(readFileSync(join(repo, '.git', 'index')).equals(before)).toBe(true)
+  })
 })
 
 describe('readDiffSides', () => {
@@ -285,7 +352,41 @@ describe('readDiffSides', () => {
     )
 
     expect(sides.original).toEqual({ kind: 'too-large', size: big.length })
-    expect(calls.map((args) => args[0])).toEqual(['cat-file'])
+    // One call, read-only, and it is the size probe: the prefix, then cat-file.
+    expect(calls.map((args) => args.slice(0, READ_ONLY_FLAGS.length))).toEqual([
+      ['--no-optional-locks', '-c', 'diff.autoRefreshIndex=false']
+    ])
+    expect(calls.map((args) => args[READ_ONLY_FLAGS.length])).toEqual(['cat-file'])
+  })
+
+  it('reads every side of an uncommitted file with the read-only prefix (FWIG-15, L-020)', async () => {
+    writeFileSync(join(repo, 'a.txt'), 'edited on disk\n', 'utf8')
+
+    await readDiffSides(
+      repo,
+      { original: { rev: 'HEAD', path: 'a.txt' }, modified: { disk: true, path: 'a.txt' } },
+      recording
+    )
+
+    expect(calls).toEqual([
+      [...READ_ONLY_FLAGS, 'cat-file', '-s', 'HEAD:a.txt'],
+      [...READ_ONLY_FLAGS, 'cat-file', '--filters', 'HEAD:a.txt']
+    ])
+  })
+
+  it('reads every side of a since-base file with the read-only prefix (FWIG-15, L-020)', async () => {
+    await readDiffSides(
+      repo,
+      { original: { rev: mergeBase, path: 'a.txt' }, modified: { rev: 'HEAD', path: 'a.txt' } },
+      recording
+    )
+
+    expect(calls).toEqual([
+      [...READ_ONLY_FLAGS, 'cat-file', '-s', `${mergeBase}:a.txt`],
+      [...READ_ONLY_FLAGS, 'show', `${mergeBase}:a.txt`],
+      [...READ_ONLY_FLAGS, 'cat-file', '-s', 'HEAD:a.txt'],
+      [...READ_ONLY_FLAGS, 'show', 'HEAD:a.txt']
+    ])
   })
 
   it('reports a blob holding a NUL as binary', async () => {

@@ -8,7 +8,7 @@ import type {
   FilesMode
 } from '../shared/files'
 import { BINARY_SNIFF_BYTES, MAX_VIEW_BYTES, isBinary, readForView } from './file-reader'
-import { git, gitFailureLine, type GitRunner } from './git'
+import { git, gitFailureLine, READ_ONLY_FLAGS, type GitRunner } from './git'
 
 /**
  * How this module runs git, re-exported from `git.ts` so the two places that
@@ -142,7 +142,12 @@ async function readSide(
   if ('disk' in ref) return readForView(worktreePath, ref.path)
   let size: number
   try {
-    const { stdout } = await run(worktreePath, ['cat-file', '-s', `${ref.rev}:${ref.path}`])
+    const { stdout } = await run(worktreePath, [
+      ...READ_ONLY_FLAGS,
+      'cat-file',
+      '-s',
+      `${ref.rev}:${ref.path}`
+    ])
     size = Number(stdout.trim())
   } catch (err) {
     return { kind: 'error', message: gitFailureLine(err) }
@@ -152,8 +157,8 @@ async function readSide(
     const { stdout } = await run(
       worktreePath,
       asCheckedOut
-        ? ['cat-file', '--filters', `${ref.rev}:${ref.path}`]
-        : ['show', `${ref.rev}:${ref.path}`]
+        ? [...READ_ONLY_FLAGS, 'cat-file', '--filters', `${ref.rev}:${ref.path}`]
+        : [...READ_ONLY_FLAGS, 'show', `${ref.rev}:${ref.path}`]
     )
     // The blob arrives decoded, so the sniff runs over the head re-encoded
     // rather than over git's bytes. A NUL survives the round trip, which is
@@ -183,13 +188,20 @@ async function readSide(
 export async function diffStats(
   worktreePath: string,
   mode: FilesMode,
-  base?: string
+  base?: string,
+  run: GitRunner = git
 ): Promise<FileStat[]> {
   if (mode === 'since-base') {
     if (base === undefined) return []
     try {
-      const { stdout: mergeBase } = await git(worktreePath, ['merge-base', 'HEAD', base])
-      const { stdout } = await git(worktreePath, [
+      const { stdout: mergeBase } = await run(worktreePath, [
+        ...READ_ONLY_FLAGS,
+        'merge-base',
+        'HEAD',
+        base
+      ])
+      const { stdout } = await run(worktreePath, [
+        ...READ_ONLY_FLAGS,
         'diff',
         '--numstat',
         '-z',
@@ -204,12 +216,18 @@ export async function diffStats(
   if (mode === 'uncommitted') {
     let tracked: FileStat[]
     try {
-      const { stdout } = await git(worktreePath, ['diff', '--numstat', '-z', 'HEAD'])
+      const { stdout } = await run(worktreePath, [
+        ...READ_ONLY_FLAGS,
+        'diff',
+        '--numstat',
+        '-z',
+        'HEAD'
+      ])
       tracked = parseNumstat(stdout)
     } catch {
       return []
     }
-    return [...tracked, ...(await untrackedStats(worktreePath))]
+    return [...tracked, ...(await untrackedStats(worktreePath, run))]
   }
   return []
 }
@@ -260,10 +278,16 @@ export function parseNumstat(stdout: string): FileStat[] {
  * would count it once staged. Read through F1's reader, so the 1 MB cap and the
  * NUL sniff apply here too, and each reports which of the two it hit.
  */
-async function untrackedStats(worktreePath: string): Promise<FileStat[]> {
+async function untrackedStats(worktreePath: string, run: GitRunner): Promise<FileStat[]> {
   let paths: string[]
   try {
-    const { stdout } = await git(worktreePath, ['ls-files', '--others', '--exclude-standard', '-z'])
+    const { stdout } = await run(worktreePath, [
+      ...READ_ONLY_FLAGS,
+      'ls-files',
+      '--others',
+      '--exclude-standard',
+      '-z'
+    ])
     paths = stdout.split('\0').filter((p) => p !== '')
   } catch {
     return []

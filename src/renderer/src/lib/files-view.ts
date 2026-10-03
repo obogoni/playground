@@ -208,6 +208,23 @@ export function tabsAffected(openTabs: string[], changedPaths: string[]): string
 }
 
 /**
+ * How many disk batches have named each listed Uncommitted file (FWIG-25). An
+ * All changes section re-reads when its number moves, so a write re-reads
+ * the written file's section and no other. Each named path goes up by one,
+ * once per batch however often the batch names it, in a new object; an empty
+ * list hands `prev` back as is, so nothing re-renders.
+ */
+export function bumpRevisions(
+  prev: Readonly<Record<string, number>>,
+  paths: readonly string[]
+): Record<string, number> {
+  if (paths.length === 0) return prev
+  const next = { ...prev }
+  for (const path of new Set(paths)) next[path] = (prev[path] ?? 0) + 1
+  return next
+}
+
+/**
  * Bytes as the size a file manager would print — the *size* a tab shows for a
  * file it cannot render (FXPL-20). Below 1 KB the count is exact; above it the
  * value steps through KB, MB and GB and stops there, and it keeps one decimal

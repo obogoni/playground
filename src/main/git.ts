@@ -16,12 +16,13 @@ const MAX_STDOUT_BYTES = 64 * 1024 * 1024
  * ever parses the arguments, a hidden window, `GIT_TERMINAL_PROMPT=0`, and
  * stdin ended (CRTO-06), so nothing git starts can wait on keyboard input.
  * `timeoutMs` maps to `execFile`'s `timeout`: the process is killed once it
- * elapses, and the rejection satisfies `isTimeout` (STBR-24).
+ * elapses, and the rejection satisfies `isTimeout` (STBR-24). `input`, when
+ * given, is written to the child's stdin before it is ended.
  */
 export function git(
   cwd: string,
   args: string[],
-  opts: { timeoutMs?: number } = {}
+  opts: { timeoutMs?: number; input?: string } = {}
 ): Promise<{ stdout: string }> {
   // GIT_TERMINAL_PROMPT=0: a fetch with no cached credentials fails fast instead
   // of hanging the main process on an un-answerable prompt (WBR-02 → blocks).
@@ -46,10 +47,21 @@ export function git(
     })
     // execFile ignores a `stdio` option, so stdin is a pipe; ending it at once
     // gives git end of input instead of a read that waits forever (CRTO-06).
-    started.child.stdin?.end()
+    if (opts.input !== undefined) started.child.stdin?.end(opts.input)
+    else started.child.stdin?.end()
     return started.finally(end)
   })
 }
+
+/**
+ * Prefix for every read that must not write the index (FWIG-15). `--no-optional-locks` stops
+ * `status`'s refresh; `diff.autoRefreshIndex=false` stops `diff`'s, which the first does not.
+ */
+export const READ_ONLY_FLAGS: readonly string[] = [
+  '--no-optional-locks',
+  '-c',
+  'diff.autoRefreshIndex=false'
+]
 
 /**
  * How a module runs git when a test needs to stand in for it. Injectable so a

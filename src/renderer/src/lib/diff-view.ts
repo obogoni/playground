@@ -59,6 +59,26 @@ function modifiedExists(changed: ChangedPath): boolean {
   return changed.status !== 'deleted'
 }
 
+/**
+ * What a diff request reads, as one string (FWIG-24, FWIG-26). The list is
+ * re-read on every batch and each re-read builds new request objects, so an
+ * All changes section compares this key, not the object: two requests reading
+ * the same sides have the same key, and a change of status that changes a
+ * side, of path, of a rename's old path or of the merge base changes it. A
+ * status change that leaves the sides alone (untracked to added) keeps the
+ * key; the `git add` behind it moves the index, which re-reads every section
+ * anyway (FWIG-27).
+ */
+export function requestKey(request: DiffRequest | null): string {
+  if (request === null) return '-'
+  return `${sideKey(request.original)}\u0000${sideKey(request.modified)}`
+}
+
+function sideKey(side: DiffRef | null): string {
+  if (side === null) return 'none'
+  return 'disk' in side ? `disk:${side.path}` : `rev:${side.rev}:${side.path}`
+}
+
 /** What the tab strip can hold, as far as identity goes (FDIF-08, FDIF-17, FCMT-20). */
 export type TabRef =
   | { kind: 'file'; path: string }

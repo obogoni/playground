@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { installDiagnostics, NOOP_DIAGNOSTICS, type Diagnostics } from './diagnostics'
-import { git, gitFailureLine, isTimeout } from './git'
+import { git, gitFailureLine, isTimeout, READ_ONLY_FLAGS } from './git'
 
 /** The rejection `git()` produces, so the helpers are exercised against execFile's real error shape. */
 async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
@@ -137,6 +137,39 @@ describe('git', () => {
     const { stdout } = await git(tmpdir(), ['rev-parse', '--sq-quote', arg])
     expect(stdout.trim()).toBe(`'${arg}'`)
   })
+
+  it("writes input to the child's stdin and closes it (FWIG-15, L-020)", async () => {
+    // hash-object hashes what it read from stdin, so the answer proves the child received `abc`
+    // and saw stdin end; without the close it would wait forever.
+    const { stdout } = await git(tmpdir(), ['hash-object', '--stdin'], { input: 'abc' })
+    expect(stdout.trim()).toBe('f2ba8f84ab5c1bce84a7b441cb1959cfc7093b7f')
+  })
+})
+
+describe('READ_ONLY_FLAGS (FWIG-15)', () => {
+  it('is --no-optional-locks then -c diff.autoRefreshIndex=false (L-009)', () => {
+    expect(READ_ONLY_FLAGS).toEqual(['--no-optional-locks', '-c', 'diff.autoRefreshIndex=false'])
+  })
+
+  describe('in a temp repository', () => {
+    let repo: string
+
+    beforeAll(async () => {
+      repo = realpathSync.native(mkdtempSync(join(tmpdir(), 'git-ro-')))
+      await git(repo, ['init', '-q'])
+    })
+
+    afterAll(() => {
+      rmSync(repo, { recursive: true, force: true })
+    })
+
+    it('leaves a read answering as the plain one does', async () => {
+      const plain = await git(repo, ['rev-parse', '--git-dir'])
+      const prefixed = await git(repo, [...READ_ONLY_FLAGS, 'rev-parse', '--git-dir'])
+      expect(plain.stdout.trim()).toBe('.git')
+      expect(prefixed.stdout).toBe(plain.stdout)
+    })
+  })
 })
 
 interface GitRecord {
@@ -210,6 +243,18 @@ describe('git reports to diagnostics (PDIAG-09, PDIAG-15)', () => {
     )
     expect(isTimeout(err)).toBe(true)
     expect(rec.starts).toHaveLength(1)
+    expect(rec.ends).toBe(1)
+  })
+
+  it('reports one start and one end for a call with input, which goes through the pacer', async () => {
+    const rec = recordingGit()
+    const call = git(tmpdir(), ['hash-object', '--stdin'], { input: 'abc' })
+    expect(rec.requests).toEqual([{ cwd: tmpdir(), args: ['hash-object', '--stdin'] }])
+    // Paced: nothing starts in the same turn as the request.
+    expect(rec.starts).toHaveLength(0)
+    const { stdout } = await call
+    expect(stdout.trim()).toBe('f2ba8f84ab5c1bce84a7b441cb1959cfc7093b7f')
+    expect(rec.starts).toEqual([{ cwd: tmpdir(), args: ['hash-object', '--stdin'] }])
     expect(rec.ends).toBe(1)
   })
 

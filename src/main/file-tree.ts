@@ -6,7 +6,7 @@ import type {
   FileEntry
 } from '../shared/files'
 import type { ChangeStatus } from '../shared/worktrees'
-import { git, gitFailureLine, type GitRunner } from './git'
+import { git, gitFailureLine, READ_ONLY_FLAGS, type GitRunner } from './git'
 
 /**
  * One folder of a worktree as the Files tree shows it (FXPL-04/05): tracked
@@ -45,9 +45,18 @@ export async function listDir(
   const pathspec = folder === '' ? [] : ['--', `${folder}/`]
 
   const [tree, staged, others] = await Promise.allSettled([
-    run(worktreePath, ['ls-tree', '-z', `HEAD:${folder}`]),
-    run(worktreePath, ['diff', '--cached', '--name-status', '-z', 'HEAD', ...pathspec]),
+    run(worktreePath, [...READ_ONLY_FLAGS, 'ls-tree', '-z', `HEAD:${folder}`]),
     run(worktreePath, [
+      ...READ_ONLY_FLAGS,
+      'diff',
+      '--cached',
+      '--name-status',
+      '-z',
+      'HEAD',
+      ...pathspec
+    ]),
+    run(worktreePath, [
+      ...READ_ONLY_FLAGS,
       'ls-files',
       '--others',
       '--exclude-standard',
@@ -204,16 +213,27 @@ export function foldChildren(paths: string[], dir: string): FileEntry[] {
  * uncommitted work is the other mode's subject. A base that no longer exists
  * comes back as `mergeBase: null` with git's error line (edge case).
  */
-export async function changedSince(worktreePath: string, base: string): Promise<ChangedListing> {
+export async function changedSince(
+  worktreePath: string,
+  base: string,
+  run: GitRunner = git
+): Promise<ChangedListing> {
   let mergeBase: string
   try {
-    const { stdout } = await git(worktreePath, ['merge-base', 'HEAD', base])
+    const { stdout } = await run(worktreePath, [...READ_ONLY_FLAGS, 'merge-base', 'HEAD', base])
     mergeBase = stdout.trim()
   } catch (err) {
     return { mergeBase: null, files: [], error: gitFailureLine(err) }
   }
   try {
-    const { stdout } = await git(worktreePath, ['diff', '--name-status', '-z', mergeBase, 'HEAD'])
+    const { stdout } = await run(worktreePath, [
+      ...READ_ONLY_FLAGS,
+      'diff',
+      '--name-status',
+      '-z',
+      mergeBase,
+      'HEAD'
+    ])
     return { mergeBase, files: parseNameStatus(stdout) }
   } catch (err) {
     return { mergeBase, files: [], error: gitFailureLine(err) }
