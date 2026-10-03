@@ -165,10 +165,10 @@ T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] Tests: `git(tmpdir(), ['hash-object', '--stdin'])` resolves with stdout `e69de29bb2d1d6434b8b29ae775ad8c2e48c5391` and no `timeoutMs` given; the `isTimeout` test still asserts `true` with its new blocker; the existing `GIT_TERMINAL_PROMPT` and literal-argument tests pass unchanged
-- [ ] The new stdin test fails on the pre-T2 `git.ts` (seen once)
-- [ ] Gate check passes: `npx vitest run src/main/git.test.ts` then `npm test`
-- [ ] Test count: T1 count + 1
+- [x] Tests: `git(tmpdir(), ['hash-object', '--stdin'])` resolves with stdout `e69de29bb2d1d6434b8b29ae775ad8c2e48c5391` and no `timeoutMs` given; the `isTimeout` test still asserts `true` with its new blocker; the existing `GIT_TERMINAL_PROMPT` and literal-argument tests pass unchanged
+- [x] The new stdin test fails on the pre-T2 `git.ts` (seen once: `Test timed out in 30000ms`)
+- [x] Gate check passes: `npx vitest run src/main/git.test.ts` then `npm test` (122 files, 2624 passed; lint 0 errors, 18 warnings; typecheck exit 0)
+- [x] Test count: T1 count + 1
 
 **Tests**: unit
 **Gate**: quick
