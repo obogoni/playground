@@ -188,7 +188,7 @@ today (BSLG-31).
     `deps.platform !== 'win32'` → null with no git call (BSLG-22). Reads, in the repository:
     `git rev-parse --path-format=absolute --git-common-dir` (failure → null, BSLG-41);
     `git config --type=bool --get core.longpaths` (`true` → on; unset or false → off, BSLG-40;
-    a non-boolean value makes git refuse every command, so the first read already fails and the
+    a non-boolean value makes git refuse every command the check runs, so the first read already fails and the
     check returns null, BSLG-39); `git rev-parse --verify --quiet refs/heads/<branch>`.
     `writesRef` is true only when the create writes a local ref: the branch does not exist for
     git, or it exists and the create is a Recreate from a base. An existing branch checked out
@@ -294,7 +294,7 @@ export interface PathCheckRequest {
 | -------------- | -------- | ----------- |
 | A limit is passed | `pathLimitProblem` message | Dialog line under the preview, `Create worktree` disabled; a direct `worktrees:create` returns the same text |
 | The path check's git read fails | `checkCreatePaths` returns null | No message; the create goes on and git's own `fatal:` line shows (BSLG-41) |
-| `core.longpaths` holds a non-boolean | Git refuses every command in the repository, so the check's first read fails → null | No message; the create returns git's `fatal: bad boolean config value …` line (BSLG-39) |
+| `core.longpaths` holds a non-boolean | Git refuses every command the check and the create run, so the check's first read fails → null | No message; the create returns git's `fatal: bad boolean config value …` line (BSLG-39) |
 | `worktrees:check-paths` invoke rejects | The hook stores no answer | No message; Create follows the other gates |
 | `git worktree add` fails for another reason | `gitFailureLine` | The dialog shows git's `fatal:`/`error:` line (BSLG-14) |
 | A failure line with no prefix (M4) | `gitFailureLine` falls back to the first line | The check refuses it first under P2; without P2 the user sees `Preparing worktree …` |
