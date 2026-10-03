@@ -309,16 +309,29 @@ after it, merged with a pending burst; `forget` keeps waiting requests; `stop` a
 
 **Done when**:
 
-- [ ] Tests (real repo with one linked worktree): an injected counter is called once per worktree path, with exactly the paths `git worktree list` gives, and its `{ dirty, changes }` lands on each node
-- [ ] Tests: a counter answering `null` for one worktree gives that node `dirty: false, changes: 0` and leaves the other's values
-- [ ] Existing `listWorktrees` tests pass unedited (the default counter)
-- [ ] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts`, then the full gate (suite wall time compared with T1's, L-005)
-- [ ] Test count: T4 count + the new tests
+- [x] Tests (real repo with one linked worktree): an injected counter is called once per worktree path, with exactly the paths `git worktree list` gives, and its `{ dirty, changes }` lands on each node
+- [x] Tests: a counter answering `null` for one worktree gives that node `dirty: false, changes: 0` and leaves the other's values
+- [x] Existing `listWorktrees` tests pass unedited (the default counter)
+- [x] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts`, then the full gate (suite wall time compared with T1's, L-005)
+- [x] Test count: T4 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `refactor(worktrees): take the change counter as a parameter`
+
+**Record (2026-10-03)**: ✅ Done.
+
+- `listWorktrees(repoPath, countChanges = worktreeStatus)` with the exported `CountChanges` type; a
+  `null` answer reads `dirty: false, changes: 0`. `statusOf` stays for `removeWorktree`'s dirty check,
+  which this feature does not route through the scheduler; the listing no longer calls it.
+- `src/main/worktree-manager.test.ts` gains 2 tests: a repo with one linked worktree asks the injected
+  counter for exactly `[repo, sibling]` and shows `[true, 7]` / `[false, 0]`; a counter answering
+  `null` for the sibling shows it `false, 0` and leaves the primary at `true, 4`. The 6 existing
+  `listWorktrees` tests pass unedited on the default counter.
+- Quick gate 90/90 (89 s, the file's real-git cost). Full gate: typecheck exit 0, lint exit 0 with 18
+  warnings, **122 files, 2,604 tests** (2,602 + 2), all pass; suite **87.19 s** against T1's 94.74 s
+  (L-005: no slowdown).
 
 ---
 
