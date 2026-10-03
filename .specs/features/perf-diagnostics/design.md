@@ -401,7 +401,7 @@ interface Row {
 | Where the spawn timing comes from | The bench times each `sessions:spawn` round trip | "A new session takes long to start" is a renderer-to-main round trip; the log cannot see it |
 | The bench's steady window | Full minutes after a `startup` and a `spawn` minute | The fixed 60 s flush is aligned to app start, not to the bench |
 
-> **AD-056 (main holds up to AD-053; PR #158 holds AD-054, PR #160 holds AD-055): performance figures come from one
+> **AD-057 (main holds up to AD-053; PR #158 holds AD-054, PR #160 holds AD-055, PR #161 holds AD-056): performance figures come from one
 > opt-in diagnostics module.** `src/main/diagnostics.ts` owns every performance counter in main and is
 > reached through `diagnostics()`; it is live only when `PLAYGROUND_DEBUG_PERF=1`, and otherwise a
 > no-op that starts no timer and no monitor. Every git process main starts reports to it (the runner,
