@@ -49,11 +49,17 @@ export function git(
  */
 export type GitRunner = (cwd: string, args: string[]) => Promise<{ stdout: string }>
 
-/** Git's own first stderr line (e.g. "fatal: …") reads better than execFile's wrapper message. */
+/**
+ * The line of a git failure the app shows (BSLG-12, BSLG-13): git's first stderr
+ * line that starts with `fatal:` or `error:`, so a progress note such as
+ * `Preparing worktree …` printed before it never stands in for the reason; else
+ * the first non-empty stderr line; else the Error message's first line. Trimmed.
+ */
 export function gitFailureLine(err: unknown): string {
   const stderr = (err as { stderr?: string }).stderr
-  const line = stderr?.split(/\r?\n/).find((l) => l.trim() !== '')
-  if (line) return line.trim()
+  const lines = (stderr?.split(/\r?\n/) ?? []).map((l) => l.trim())
+  const line = lines.find((l) => /^(fatal|error):/.test(l)) ?? lines.find((l) => l !== '')
+  if (line) return line
   return err instanceof Error ? err.message.split('\n')[0] : String(err)
 }
 

@@ -49,6 +49,16 @@ export function worktreePathFor(repoPath: string, branch: string, template?: str
   return `${parent}${sep}${worktreeNameFor(repoPath, branch, template)}`
 }
 
+/** What the path check needs to know about a create (BSLG-17..30): the dialog's values. */
+export interface PathCheckRequest {
+  repoPath: string
+  branch: string
+  baseBranch?: string
+  worktreeTemplate?: string
+  /** Create only; the dialog's ask never sends it. */
+  onExisting?: 'reuse' | 'recreate'
+}
+
 /**
  * Outcome of the repo-declared post-create command (WPC-02..05). Present on a
  * create result only when a command actually ran: absent means the repo declared

@@ -618,6 +618,36 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: validation.md U4, U5 (src/renderer/src/lib/hours-calendar.ts:242) (testing)
 - last seen: 2026-10-03T11:13:28Z
 
+### L-107 - Test a guard's placement before a destructive step with a fixture the code path can see; a fixture the tool cannot read skips the step and the test passes for the wrong reason.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main tests` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md W3, W4 (src/main/worktree-manager.ts:93-94; src/main/worktree-manager.test.ts:759) (src/main tests)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-108 - When a measurement shows an edge case's state cannot occur, restate the edge case at the nearest state that still exercises the guard, not only its tests.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: branch-slug-short
+- evidence: BSLG-38 (validation.md edge cases; src/main/worktree-manager.test.ts:759) (specs)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-109 - When a spec applies a rule again on a fallback path, assert the rule on that path too.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/shared` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md S11 (src/shared/tasks.ts:57; BSLG-06) (src/shared)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-110 - Test a platform gate with at least two non-target platforms, or a gate keyed on the wrong platform survives.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md C1 (src/main/path-limits.ts:94; src/main/path-limits.test.ts:297) (src/main)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-111 - A test of a pure stale-answer helper does not prove the hook passes it the current key; give the hook wiring its own discriminating check.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer hooks` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md SM-A (src/renderer/src/lib/use-path-check.ts:68; BSLG-42) (renderer hooks)
+- last seen: 2026-10-03T12:50:22Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

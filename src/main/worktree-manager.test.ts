@@ -14,6 +14,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sanitizeBranch, worktreeNameFor, worktreePathFor } from '../shared/worktrees'
 import type { DirRemovalResult } from './dir-remover'
+import { git as gitRunner } from './git'
 import {
   changedFilesOf,
   createWorktree,
@@ -116,6 +117,20 @@ describe('listWorktrees', () => {
     mkdirSync(plain)
 
     await expect(listWorktrees(plain)).rejects.toBeInstanceOf(GitError)
+  })
+
+  it("puts git's own failure line in the GitError message (BSLG-16)", async () => {
+    const plain = join(root, 'not-a-repo')
+    mkdirSync(plain)
+
+    const err = await listWorktrees(plain).then(
+      () => null,
+      (e: unknown) => e
+    )
+
+    const prefix = `git failed in ${plain}: fatal: not a git repository`
+    expect(err).toBeInstanceOf(GitError)
+    expect((err as GitError).message.slice(0, prefix.length)).toBe(prefix)
   })
 })
 
@@ -496,6 +511,17 @@ describe('createWorktree', () => {
     expect(result.ok).toBe(false)
     expect(result.error).toBeTruthy()
   })
+
+  it("returns git's fatal: line, not its progress note, when worktree add fails (BSLG-14)", async () => {
+    git(repo, 'branch', 'user')
+
+    const result = await createWorktree(repo, 'user/x', 'main')
+
+    expect(result.ok).toBe(false)
+    const prefix = "fatal: cannot lock ref 'refs/heads/user/x'"
+    expect(result.error?.slice(0, prefix.length)).toBe(prefix)
+    expect(result.error).not.toContain('Preparing worktree')
+  })
 })
 
 describe('createWorktree — existing branch (EXB)', () => {
@@ -615,6 +641,221 @@ describe('createWorktree — existing branch (EXB)', () => {
     expect(result.ok).toBe(false)
     expect(result.error).toMatch(/exists/i)
     expect(result.conflict).toBeUndefined()
+  })
+})
+
+describe('createWorktree — path check (BSLG-25..39)', () => {
+  const refMessage = (n: number): string =>
+    `The branch's ref path is ${n} characters, over Windows' limit of 259. Shorten the name, or enable core.longpaths in the repository.`
+  const reflogMessage = (n: number): string =>
+    `The branch's reflog folder path is ${n} characters, over Windows' limit of 247 for a folder. Shorten the name, or enable core.longpaths in the repository.`
+  const folderMessage = (n: number): string =>
+    `The worktree folder path is ${n} characters, over the 215 git accepts. Shorten the name, or use a shorter worktree template such as {repo}-{id}.`
+  /** The owner's template: the folder never grows with the branch. */
+  const IDS = '{repo}-{id}'
+  const win32 = { platform: 'win32' as const, git: gitRunner }
+
+  let root: string
+  let repo: string
+  /** The common git dir as Windows counts it, from the OS's canonical path. */
+  let commonDir: string
+
+  beforeEach(() => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-paths-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'core.autocrlf', 'false')
+    git(repo, 'config', 'core.longpaths', 'false')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+    commonDir = `${repo}\\.git`
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  /** `user/dev/<id>-bbb…`, whose ref path is exactly `length` characters. */
+  function branchWithRefPath(id: number, length: number): string {
+    const head = `user/dev/${id}-`
+    const overhead = `${commonDir}\\refs\\heads\\`.length + '.lock'.length
+    return head + 'b'.repeat(length - overhead - head.length)
+  }
+  const refPathOf = (branch: string): number =>
+    `${commonDir}\\refs\\heads\\${branch.replaceAll('/', '\\')}.lock`.length
+  const resolves = (branch: string, ...config: string[]): boolean => {
+    try {
+      git(repo, ...config, 'rev-parse', '--verify', '--quiet', `refs/heads/${branch}`)
+      return true
+    } catch {
+      return false
+    }
+  }
+  /** BSLG-26: the repository's own core.longpaths is still what the test set. */
+  const expectLongPaths = (value: string): void => {
+    expect(git(repo, 'config', '--local', '--get', 'core.longpaths').trim()).toBe(value)
+  }
+  const worktreeCount = (): number =>
+    git(repo, 'worktree', 'list', '--porcelain')
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith('worktree ')).length
+
+  it('refuses a ref path of 260 and leaves no folder, branch or worktree (BSLG-25, BSLG-35)', async () => {
+    const branch = branchWithRefPath(11, 260)
+    expect(refPathOf(branch)).toBe(260)
+
+    const result = await createWorktree(repo, branch, 'main', IDS, false, undefined, win32)
+
+    expect(result).toEqual({ ok: false, error: refMessage(260) })
+    expect(existsSync(worktreePathFor(repo, branch, IDS))).toBe(false)
+    expect(git(repo, 'branch', '--list', branch).trim()).toBe('')
+    expect(worktreeCount()).toBe(1)
+    expectLongPaths('false')
+  })
+
+  it('refuses before refreshing the base: no fetch error from a missing remote (BSLG-25)', async () => {
+    git(repo, 'branch', 'base')
+    git(repo, 'remote', 'add', 'gone', join(root, 'missing-remote'))
+    git(repo, 'update-ref', 'refs/remotes/gone/base', 'HEAD')
+    git(repo, 'config', 'branch.base.remote', 'gone')
+    git(repo, 'config', 'branch.base.merge', 'refs/heads/base')
+    // The refresh fails when it runs: a short name reaches it and gets git's fetch error.
+    const short = await createWorktree(repo, 'user/dev/12-x', 'base', IDS, true, undefined, win32)
+    expect(short.ok).toBe(false)
+    expect(short.error).not.toMatch(/ref path/)
+
+    const branch = branchWithRefPath(13, 260)
+    const result = await createWorktree(repo, branch, 'base', IDS, true, undefined, win32)
+
+    expect(result).toEqual({ ok: false, error: refMessage(260) })
+    expectLongPaths('false')
+  })
+
+  it('creates a ref path of 259, the last length git accepts (BSLG-35)', async () => {
+    const branch = branchWithRefPath(14, 259)
+    expect(refPathOf(branch)).toBe(259)
+
+    const result = await createWorktree(repo, branch, 'main', IDS, false, undefined, win32)
+
+    expect(result).toEqual({ ok: true, path: worktreePathFor(repo, branch, IDS) })
+    expect(resolves(branch)).toBe(true)
+    expectLongPaths('false')
+  })
+
+  it('creates a ref path of 270 when the repository enables core.longpaths (BSLG-21)', async () => {
+    git(repo, 'config', 'core.longpaths', 'true')
+    const branch = branchWithRefPath(15, 270)
+    expect(refPathOf(branch)).toBe(270)
+
+    const result = await createWorktree(repo, branch, 'main', IDS, false, undefined, win32)
+
+    expect(result).toEqual({ ok: true, path: worktreePathFor(repo, branch, IDS) })
+    expect(resolves(branch)).toBe(true)
+    expectLongPaths('true')
+  })
+
+  it('refuses Recreate of a 270 ref path before deleting the branch (BSLG-38)', async () => {
+    const branch = branchWithRefPath(16, 270)
+    git(repo, '-c', 'core.longpaths=true', 'branch', branch, 'main')
+    git(repo, '-c', 'core.longpaths=true', 'pack-refs', '--all')
+    const tip = git(repo, '-c', 'core.longpaths=true', 'rev-parse', `refs/heads/${branch}`).trim()
+
+    const result = await createWorktree(repo, branch, 'main', IDS, false, 'recreate', win32)
+
+    expect(result).toEqual({ ok: false, error: refMessage(270) })
+    expect(resolves(branch, '-c', 'core.longpaths=true')).toBe(true)
+    expect(git(repo, '-c', 'core.longpaths=true', 'rev-parse', `refs/heads/${branch}`).trim()).toBe(
+      tip
+    )
+    expectLongPaths('false')
+  })
+
+  it('checks out an existing M2-shaped branch on Reuse, as git accepts it (BSLG-37)', async () => {
+    // Reflog folder 248 (past 247) and ref path 251; git resolves it with core.longpaths off,
+    // and `worktree add <folder> <branch>` succeeds (design.md, Measurements).
+    const dirs = 'user/' + 'd'.repeat(248 - `${commonDir}\\logs\\refs\\heads\\`.length - 5)
+    const branch = `${dirs}/ab`
+    expect(`${commonDir}\\logs\\refs\\heads\\${dirs.replaceAll('/', '\\')}`).toHaveLength(248)
+    expect(refPathOf(branch)).toBe(251)
+    git(repo, '-c', 'core.longpaths=true', 'branch', branch, 'main')
+    expect(resolves(branch)).toBe(true)
+
+    const result = await createWorktree(repo, branch, 'main', 'reuse-wt', false, 'reuse', win32)
+
+    expect(result).toEqual({ ok: true, path: join(root, 'reuse-wt') })
+    expect(git(result.path!, 'rev-parse', '--abbrev-ref', 'HEAD').trim()).toBe(branch)
+    expectLongPaths('false')
+  })
+
+  it('refuses Recreate of an M2-shaped branch git can see before deleting it (BSLG-25, BSLG-38)', async () => {
+    // Reflog folder 248 and ref path 251: git resolves the branch with core.longpaths off, so the
+    // create reaches the Recreate fork, and only the check placed before it keeps `branch -D` away.
+    const dirs = 'user/' + 'r'.repeat(248 - `${commonDir}\\logs\\refs\\heads\\`.length - 5)
+    const branch = `${dirs}/ab`
+    expect(`${commonDir}\\logs\\refs\\heads\\${dirs.replaceAll('/', '\\')}`).toHaveLength(248)
+    expect(refPathOf(branch)).toBe(251)
+    git(repo, '-c', 'core.longpaths=true', 'branch', branch, 'main')
+    expect(resolves(branch)).toBe(true)
+    const tip = git(repo, 'rev-parse', `refs/heads/${branch}`).trim()
+
+    const result = await createWorktree(
+      repo,
+      branch,
+      'main',
+      'recreate-wt',
+      false,
+      'recreate',
+      win32
+    )
+
+    expect(result).toEqual({ ok: false, error: reflogMessage(248) })
+    expect(existsSync(join(root, 'recreate-wt'))).toBe(false)
+    expect(git(repo, 'rev-parse', `refs/heads/${branch}`).trim()).toBe(tip)
+    expect(worktreeCount()).toBe(1)
+    expectLongPaths('false')
+  })
+
+  it('refuses a worktree folder of 216 under the default template and creates nothing (BSLG-30)', async () => {
+    const prefix = `${root}\\repo-`
+    const branch = 'f/' + 'x'.repeat(216 - prefix.length - 2)
+    const target = worktreePathFor(repo, branch)
+    expect(target).toHaveLength(216)
+
+    const result = await createWorktree(repo, branch, 'main', undefined, false, undefined, win32)
+
+    expect(result).toEqual({ ok: false, error: folderMessage(216) })
+    expect(existsSync(target)).toBe(false)
+    expect(git(repo, 'branch', '--list', branch).trim()).toBe('')
+    expect(worktreeCount()).toBe(1)
+    expectLongPaths('false')
+  })
+
+  it("returns git's fatal line when core.longpaths is not a boolean (BSLG-39)", async () => {
+    git(repo, 'config', 'core.longpaths', 'maybe')
+    try {
+      const result = await createWorktree(
+        repo,
+        'user/dev/17-x',
+        'main',
+        IDS,
+        false,
+        undefined,
+        win32
+      )
+
+      expect(result.ok).toBe(false)
+      const prefix = 'fatal: bad boolean config value'
+      expect(result.error?.slice(0, prefix.length)).toBe(prefix)
+      expect(existsSync(worktreePathFor(repo, 'user/dev/17-x', IDS))).toBe(false)
+    } finally {
+      // git refuses to run inside the repository now; reset the value from outside it.
+      git(root, 'config', '--file', join(repo, '.git', 'config'), 'core.longpaths', 'false')
+    }
+    expectLongPaths('false')
   })
 })
 

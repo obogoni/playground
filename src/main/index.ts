@@ -32,6 +32,7 @@ import { runHookShell } from './hook-shell'
 import { emit, handle, onSend } from './ipc'
 import { createMcpResultServer } from './mcp-result-server'
 import { purgePasteDir } from './paste-temp'
+import { checkCreatePaths } from './path-limits'
 import { ensurePromptsFolder, listPrompts } from './prompt-library'
 import { findOnPath } from './path-lookup'
 import { startLoopDelayLog } from './perf-monitor'
@@ -401,6 +402,8 @@ app.whenReady().then(() => {
     ({ repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting }) =>
       createWorktreeWithHook(repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting)
   )
+  // BSLG-23: the dialogs ask the create's own path check as the name changes.
+  handle('worktrees:check-paths', (req) => checkCreatePaths(req).then((problem) => ({ problem })))
   handle('worktrees:remove', ({ repoPath, worktreePath, force }) =>
     removeWorktree(repoPath, worktreePath, { force })
   )
