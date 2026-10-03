@@ -457,10 +457,33 @@ diagnostics().stop())`; `startLoopDelayLog` reads `diagnosticsEnabled(process.en
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
-- [ ] Manual, enabled: the built app on a fresh `--user-data-dir` with `PLAYGROUND_DEBUG_PERF=1` and the three flags; after 65 s `perf-diagnostics.jsonl` holds one line that parses with all six sections and this build's version, and the app's stdout still shows the `[perf] loop` line every 10 s; the window closed, the process exits within 30 s; result written here
-- [ ] Manual, disabled: the same launch without the variable; after 65 s the user data folder holds no `perf-diagnostics.jsonl` and stdout shows no `[perf] loop` line; result written here
-- [ ] Manual, the probes: on the enabled launch, a `git commit --allow-empty` in a registered worktree's terminal outside the app moves `recounts` and `emits["worktree:status"]` for that worktree's folder in the next line (seed with `scripts/bench-sessions.mjs`'s layout by hand, or any throwaway repo registered in the throwaway config); result written here
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+- [x] Manual, enabled: the built app on a fresh `--user-data-dir` with `PLAYGROUND_DEBUG_PERF=1` and the three flags; after 65 s `perf-diagnostics.jsonl` holds one line that parses with all six sections and this build's version, and the app's stdout still shows the `[perf] loop` line every 10 s; the window closed, the process exits within 30 s; result written here
+- [x] Manual, disabled: the same launch without the variable; after 65 s the user data folder holds no `perf-diagnostics.jsonl` and stdout shows no `[perf] loop` line; result written here
+- [x] Manual, the probes: on the enabled launch, a `git commit --allow-empty` in a registered worktree's terminal outside the app moves `recounts` and `emits["worktree:status"]` for that worktree's folder in the next line (seed with `scripts/bench-sessions.mjs`'s layout by hand, or any throwaway repo registered in the throwaway config); result written here
+
+**Results (2026-10-03, built app at this task's tree, `node_modules/electron/dist/electron.exe .`, throwaway
+`--user-data-dir` in a temp folder, the three flags, CDP port 9347; a scratch driver, not a repo file)**:
+
+- **Enabled**: the first line landed at 61-63 s after launch and parsed with `v: 1`, `windowMs` 60,008,
+  this process's `pid`, `version: "0.1.0"` (what `app:version` answers), and all six sections plus
+  `git.wait`. Line 1 counted the start-up git work: 11 processes (`worktree` 3, `status` 6, `rev-parse` 2),
+  `peakConcurrent: 4`, `wait.maxMs` 96.5, keyed `app` and `probe-wt-1` only; no line held the temp path.
+  The `[perf] loop` line printed 12 times, at 12.5 s, 22.5 s ... 122.5 s, every 10 s. `window.close()`
+  through CDP: exit code 0 after 0.2 s. Loop floor at idle: `p50Ms` 15.9, `p99Ms` 16.8-17.3.
+- **Disabled**: the same launch with `PLAYGROUND_DEBUG_PERF` removed from the env; after 66 s the user
+  data folder held 16 entries and no `perf-diagnostics.jsonl`, and stdout had no `[perf] loop` line. Exit
+  code 0 after 0.2 s.
+- **Probes**: a throwaway repository `app` with one linked worktree `probe-wt-1`, their parent registered
+  as the only workspace in the throwaway `config.json`. **`git commit --allow-empty` does not move them**:
+  line 2 read `recounts: {}`, no emit and no git, because an empty commit on a clean index rewrites
+  neither `index` nor `HEAD` in `.git/worktrees/probe-wt-1` (the `index` mtime stayed at the `worktree
+  add`), and `GitStateWatcher` reacts only to those two entries (SCRF-01). This is the app's existing
+  watcher, not the probes. Rerun with a commit that stages a file (`git add change.txt`, `git commit`)
+  right after line 1: line 2 read `recounts: { "probe-wt-1": 1 }`, `emits["worktree:status"]:
+  { "probe-wt-1": 1 }` and one git process under `probe-wt-1`, where line 1 had `recounts: {}` and no
+  emit. Both launches exited on `window.close()`; no `electron.exe` from this worktree was left
+  (`Get-CimInstance Win32_Process`).
 
 **Tests**: manual
 **Gate**: build

@@ -265,14 +265,14 @@ without asking.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| PDIAG-01 | P1: log — AC 1 | T2, T5, T11 | In progress (T2, T5) |
-| PDIAG-02 | P1: log — AC 2 | T1, T5, T11 | In progress (T1, T5) |
+| PDIAG-01 | P1: log — AC 1 | T2, T5, T11 | Done (T2, T5, T11) |
+| PDIAG-02 | P1: log — AC 2 | T1, T5, T11 | Done (T1, T5, T11) |
 | PDIAG-03 | P1: log — AC 3 | T2, T5 | Done (T2, T5) |
 | PDIAG-04 | P1: log — AC 4 | T2 | Done (T2) |
 | PDIAG-05 | P1: log — AC 5 | T3, T4 | Done (T3, T4) |
 | PDIAG-06 | P1: log — AC 6 | T2, T3 | Done (T2, T3) |
 | PDIAG-07 | P1: log — AC 7 | T2 | Done (T2) |
-| PDIAG-08 | P1: log — AC 8 | T2, T11 | In progress (T2) |
+| PDIAG-08 | P1: log — AC 8 | T2, T11 | Done (T2, T11) |
 | PDIAG-09 | P1: git — AC 9 | T6 | Done (T6) |
 | PDIAG-10 | P1: git — AC 10 | T3 | Done (T3) |
 | PDIAG-11 | P1: git — AC 11 | T3 | Done (T3) |
@@ -288,9 +288,9 @@ without asking.
 | PDIAG-21 | P1: pty — AC 21 | T4, T9 | Done (T4, T9) |
 | PDIAG-22 | P1: pty — AC 22 | T1, T9 | Done (T1, T9) |
 | PDIAG-23 | P1: pty — AC 23 | T4 | Done (T4) |
-| PDIAG-24 | P1: activity — AC 24 | T4, T11 | In progress (T4) |
-| PDIAG-25 | P1: activity — AC 25 | T4, T11 | In progress (T4) |
-| PDIAG-26 | P1: activity — AC 26 | T4, T11 | In progress (T4) |
+| PDIAG-24 | P1: activity — AC 24 | T4, T11 | Done (T4, T11) |
+| PDIAG-25 | P1: activity — AC 25 | T4, T11 | Done (T4, T11) |
+| PDIAG-26 | P1: activity — AC 26 | T4, T11 | Done (T4, T11) |
 | PDIAG-27 | P1: activity — AC 27 | T4, T10 | Done (T4, T10) |
 | PDIAG-28 | P1: bench — AC 28 | T15 | Pending |
 | PDIAG-29 | P1: bench — AC 29 | T15 | Pending |
