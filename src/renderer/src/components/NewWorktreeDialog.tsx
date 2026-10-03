@@ -5,6 +5,7 @@ import type { PostCreateHookResult } from '../../../shared/worktrees'
 import { worktreePathFor } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { defaultBaseFor, repoOptionsOf } from '../lib/repo-options'
+import { usePathCheck } from '../lib/use-path-check'
 import { BranchExistsChoice } from './BranchExistsChoice'
 import { HookFailureNotice } from './HookFailureNotice'
 import { Icon } from './Icon'
@@ -70,10 +71,23 @@ export function NewWorktreeDialog({
   }, [workspacePath])
 
   const effectiveWorktreeTemplate = worktreeOverride ?? worktreeTemplate
-  // Gate only on a selected repo and a non-empty branch; if the template renders
-  // an empty folder name, let main's empty-render guard return a readable error
-  // instead of silently disabling the button.
-  const canCreate = selectedRepo !== undefined && branch.trim() !== '' && !busy
+  // Main's path check for the name as it changes (BSLG-17..30, BSLG-24); null
+  // while an answer is pending, so Create stays enabled until one refuses.
+  const pathProblem = usePathCheck(
+    selectedRepo !== undefined && branch.trim() !== ''
+      ? {
+          repoPath,
+          branch,
+          baseBranch: baseBranch.trim() || undefined,
+          worktreeTemplate: effectiveWorktreeTemplate
+        }
+      : null
+  )
+  // Gate only on a selected repo, a non-empty branch and no path problem; if the
+  // template renders an empty folder name, let main's empty-render guard return a
+  // readable error instead of silently disabling the button.
+  const canCreate =
+    selectedRepo !== undefined && branch.trim() !== '' && !busy && pathProblem === null
 
   const pickRepo = (path: string): void => {
     setRepoPath(path)
@@ -186,6 +200,11 @@ export function NewWorktreeDialog({
               {worktreePathFor(repoPath, branch, effectiveWorktreeTemplate)}
             </div>
           </div>
+          {pathProblem && (
+            <div className="dialog-error dialog-path-limit">
+              <Icon name="alert" size={13} /> {pathProblem}
+            </div>
+          )}
           <label className={`dialog-check${baseBranch.trim() === '' ? ' disabled' : ''}`}>
             <input
               type="checkbox"

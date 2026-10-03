@@ -552,9 +552,11 @@ titles as written.
 
 **Done when**:
 
-- [ ] Same request shape and gate as T14
-- [ ] `grep -rn "dialog-error\|dialog-btn-primary" scripts/smoke-create.mjs` selectors still match (L-053)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npx electron-vite build`
+- [x] Same request shape and gate as T14
+- [x] `grep -rn "dialog-error\|dialog-btn-primary" scripts/smoke-create.mjs` selectors still match (L-053)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npx electron-vite build`
+
+**Done** (T15): the same request, line and `canCreate` gate as T14 in `NewWorktreeDialog`. `smoke-create.mjs`'s `.dialog-error` (lines 58, 124) and `.dialog-btn-primary` (lines 59, 95, 120, 142) selectors still match. Typecheck 0; lint 0 errors, 18 warnings (baseline); `electron-vite build` exit 0.
 
 **Tests**: none
 **Gate**: build
