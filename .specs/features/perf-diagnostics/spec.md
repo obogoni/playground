@@ -297,7 +297,7 @@ without asking.
 | PDIAG-30 | P1: bench — AC 30 | T15 | Pending |
 | PDIAG-31 | P1: bench — AC 31 | T15 | Pending |
 | PDIAG-32 | P1: bench — AC 32 | T15 | Pending |
-| PDIAG-33 | P1: bench — AC 33 | T13 | Pending |
+| PDIAG-33 | P1: bench — AC 33 | T13 | Done (T13) |
 | PDIAG-34 | P1: bench — AC 34 | T15, T16 | Pending |
 | PDIAG-35 | P1: bench — AC 35 | T15 | Pending |
 | PDIAG-36 | P1: bench — AC 36 | T14 | Pending |

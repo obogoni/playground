@@ -534,9 +534,24 @@ diagnostics().stop())`; `startLoopDelayLog` reads `diagnosticsEnabled(process.en
 
 **Done when**:
 
-- [ ] Manual: `node scripts/bench-tui.mjs --fps 20 --rows 30 > out.bin` for 5 s writes 100 frames (counted by the frame counter in the last frame), each frame starts with the erase-and-up sequence for 30 lines, and two consecutive frames differ; numbers written here
-- [ ] Manual: Ctrl+C in a terminal leaves the terminal on the main screen with the cursor shown
-- [ ] Gate check passes: `npm run lint`
+- [x] Manual: `node scripts/bench-tui.mjs --fps 20 --rows 30 > out.bin` for 5 s writes 100 frames (counted by the frame counter in the last frame), each frame starts with the erase-and-up sequence for 30 lines, and two consecutive frames differ; numbers written here
+- [x] Manual: Ctrl+C in a terminal leaves the terminal on the main screen with the cursor shown
+- [x] Gate check passes: `npm run lint`
+
+**Results (2026-10-03; a scratch driver, not a repo file)**:
+
+- **Rate and shape**: stdout piped to `out.bin` and the process killed 5,000 ms after its first byte, three
+  runs: each holds 101 frames, the last frame's counter reads `frame 101` (frame 1 at 0 ms, frame 101 at
+  5,000 ms: 100 intervals of 50 ms). The file starts with `ESC[?1049h ESC[?2004h ESC[?25l`; frame 1 starts
+  with `ESC[2K\r`, and every later frame with `ESC[2K ESC[1A` 30 times then `ESC[2K\r`; every frame has 30
+  lines with `ESC[38;5;<c>m`; 100 of 100 consecutive pairs differ; 3,762 bytes a frame. Each frame has its
+  own deadline from the start, so the Windows timer tick (about 15.6 ms) does not slow the rate.
+- **Ctrl+C**: the script run in a real ConPTY through `node-pty` (plain Node loads its prebuild), `\x03`
+  typed after 2 s: the script exits 0, and the last alternate-screen sequence in the output is ConPTY's
+  `ESC[?1049l` after the last `ESC[?1049h`, and the last cursor sequence is `ESC[?25h` after the last
+  `ESC[?25l`. The same through `pwsh -Command & node ...` (pwsh itself exits 1 on the interrupt).
+- **Closed stdout**: `node scripts/bench-tui.mjs | head -c 20000` exits 0 after 0.5 s.
+- `npm run lint`: exit 0, 18 warnings.
 
 **Tests**: manual
 **Gate**: manual
