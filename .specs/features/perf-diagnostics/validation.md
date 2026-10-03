@@ -309,7 +309,7 @@ Expanded depth (20 behaviour-level mutants), in a throwaway `git worktree` of `d
 | M19 | `src/main/diagnostics.ts:325` | bytes as UTF-16 length, not UTF-8 | `D:586` | ✅ Killed |
 | M20 | `src/main/diagnostics.ts:190` | a failed write logged every time, not once per streak | `D:295` | ✅ Killed |
 
-**Result**: 18/20 killed, 2 survived - FAIL ❌. The bench scripts and the `index.ts` wiring were not
+**Round 1 sensor**: 18/20 killed, 2 survived - FAIL ❌ (superseded by Round 2 below). The bench scripts and the `index.ts` wiring were not
 mutated (manual layer; T16 already falsified three bench figures with real runs).
 
 Isolation: the real worktree's `git status --porcelain` was empty before the sensor and empty after the
@@ -362,3 +362,77 @@ All 51 IDs stay **Done**; PDIAG-02 is **Done, test to strengthen** until Fix 1 l
 **Gate**: 2,577 passed, 0 failed; lint 18 warnings
 
 **Next steps**: Fix 1, then re-verify (round 2 of at most 3); optionally reword PDIAG-30, 36 and 37.
+
+## Validation round 2: PASS ✅
+
+**Date**: 2026-10-03
+**Diff range**: `90d5082..3f02d8a` (T18, one commit: `test(diagnostics): prove the disabled factory starts no
+timer and no monitor`)
+**Verifier**: independent sub-agent (author ≠ verifier); scope per the verifier budget: the fix diff only.
+The round-1 report above is kept as written, except its sensor line, relabelled from `Result` to
+`Round 1 sensor` so that this round's verdict is the one `validate_state.py` reads.
+
+**Result**: PASS ✅ - Fix 1 landed as planned, the round-1 survivors are killed through the new seam, the
+three spec-precision notes are closed, the gate is green.
+
+### Fix check
+
+- **App path unchanged**: `src/main/index.ts:313-319` calls `createAppDiagnostics({ env, userDataPath,
+  version })` with no `ports`; `src/main/diagnostics.ts:465` and `:467` fall back to `realClock` (`:430`)
+  and `nodeLoopMonitor` (`:440`). The switch check still comes first (`src/main/diagnostics.ts:463`).
+  `ports` is typed as a partial pick of `clock` / `startLoopMonitor` only (`:461`); the writer stays real.
+- **Outcome asserted, not calls only**: `src/main/diagnostics.test.ts:712-735` counts the timers registered
+  on a fake clock (with their period) and the monitors started. For `undefined`, `''`, `'0'` and `'true'`
+  it asserts `toEqual({ timers: [], monitors: 0 })` (`:731-732`, PDIAG-02); for `'1'` it asserts
+  `toEqual({ timers: [60000], monitors: 1 })` (`:734`, PDIAG-01's cadence and PDIAG-17's one monitor).
+- **No weakening**: the diff only adds a test and an optional parameter; the round-1 disabled test
+  (`src/main/diagnostics.test.ts:705-710`, no-op returned and no file) is untouched.
+
+### Reworded acceptance criteria
+
+| ID | New wording (spec.md) | Code | Result |
+| -- | --------------------- | ---- | ------ |
+| PDIAG-30 | `.specs/features/perf-diagnostics/spec.md:202` - at least `bench-wt-1`, so `--sessions 0` seeds one | `scripts/bench-sessions.mjs:167` - `i <= Math.max(options.sessions, 1)`; `:329` the index loop reads `bench-wt-1` | ✅ matches |
+| PDIAG-36 | `.specs/features/perf-diagnostics/spec.md:208` - each target line shows PASS, FAIL, or `n/a` | `scripts/bench-summary.mjs:18` verdict type `'PASS' \| 'FAIL' \| 'n/a'`; `n/a` at `:129`, `:135`, `:142`; rows then worst at `:207-213`, targets at `:219-224` | ✅ matches |
+| PDIAG-37 | `.specs/features/perf-diagnostics/spec.md:209` - after the rows, one line with the longest round trip in ms | `scripts/bench-summary.mjs:214-218` pushed after the rows and the worst row, before `targets` | ✅ matches |
+
+`validate_spec.py .specs/features/perf-diagnostics/spec.md`: exit 0, 0 errors, 0 warnings.
+
+### Discrimination sensor (round 2)
+
+A throwaway `git worktree` of `3f02d8a` in the session scratch folder, `node_modules` joined by a
+junction; each mutant written into `src/main/diagnostics.ts`, `npx vitest run src/main/diagnostics.test.ts`
+run, the file restored and compared byte for byte. Unmutated baseline: 38 passed.
+
+| # | Mutation at `createAppDiagnostics` | Killed by | Result |
+| - | ---------------------------------- | --------- | ------ |
+| M5 | the monitor port (`opts.ports?.startLoopMonitor ?? nodeLoopMonitor`) called before the switch check | `src/main/diagnostics.test.ts:732` (`monitors` 1, expected 0) | ✅ Killed |
+| M6 | the clock port's `every(60000, ...)` called before the switch check | `src/main/diagnostics.test.ts:732` (`timers` `[60000]`, expected `[]`) | ✅ Killed |
+| M21 | ports ignored when enabled (`clock: realClock`) | `src/main/diagnostics.test.ts:734` (no fake timer registered) | ✅ Killed |
+| M22 | switch check inverted | `src/main/diagnostics.test.ts:705`, `:712`, and the enabled file test | ✅ Killed (3 tests) |
+| M5raw | `nodeLoopMonitor()` called directly, bypassing the port | none | ➖ Survived, out of the seam (not scored) |
+| M6raw | `setInterval(() => {}, 60000)` called directly, bypassing the clock | none | ➖ Survived, out of the seam (not scored) |
+
+**Sensor**: 4/4 scored mutants killed. M5 and M6 are the round-1 mutants expressed through the seam that
+Fix 1 prescribed; the two raw variants write code that ignores the injected ports, which no injected
+fake can see. Under `.specs/codebase/TESTING.md:21` (seam unit-tested, thin shell read, no `vi.mock`)
+that is the read part: the only references to the real ports in `createAppDiagnostics` are the two
+fallbacks after the check (`src/main/diagnostics.ts:465`, `:467`). Optional hardening, not a gap: a
+`vi.useFakeTimers()` + `vi.getTimerCount()` assertion would also catch M6raw; M5raw cannot be caught
+without mocking `perf_hooks`.
+
+Isolation: the real worktree's `git status --porcelain` was empty before the sensor and after; the
+junction was removed before `git worktree remove --force`, and the real `node_modules` was intact
+afterwards.
+
+### Gate check (round 2)
+
+- **Command**: `npm run typecheck && npm run lint && npm test` at `3f02d8a`
+- **Outcome**: exit 0; typecheck clean; lint 0 errors, **18 warnings** (unchanged); **2,578 passed**,
+  0 failed, 121 files (Vitest 83.1 s). Count 2,577 → 2,578 (+1, the new test).
+
+### Summary (final)
+
+**Overall verdict**: PASS ✅ - 51/51 IDs with evidence matching the spec outcome; PDIAG-02 now
+discriminated (M5, M6 killed); spec-precision notes 1-3 closed by the PDIAG-30, 36 and 37 rewording;
+gate green. PDIAG-02 moves from "Done, test to strengthen" to **Done**.
