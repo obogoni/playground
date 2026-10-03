@@ -210,6 +210,32 @@
   color: var(--red);
 }
 
+/* The step of a create in flight (CRTO-16): the error line's shape, muted, with a spinner. */
+.dialog-progress {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.dialog-progress-loader {
+  display: inline-flex;
+  animation: dialog-progress-spin 1s linear infinite;
+}
+
+@keyframes dialog-progress-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog-progress-loader {
+    animation: none;
+  }
+}
+
 .dialog-footer {
   padding: 16px 24px;
   border-top: 1px solid var(--border);
@@ -231,6 +257,13 @@
 
 .dialog-btn-ghost:hover {
   color: var(--text);
+}
+
+/* The footer's Cancel while a create runs (CRTO-20). */
+.dialog-footer .dialog-btn-ghost:disabled {
+  opacity: 0.5;
+  color: var(--text-muted);
+  cursor: default;
 }
 
 .dialog-btn-primary {

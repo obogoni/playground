@@ -440,9 +440,11 @@ T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] Backdrop while the hook advisory shows still continues the flow (WPC-14), read in review
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npx electron-vite build`
-- [ ] Test count: T11 count (no new tests)
+- [x] Backdrop while the hook advisory shows still continues the flow (WPC-14), read in review: `busy ? undefined : hookFailure ? () => onCreated(hookFailure.path) : onClose`, and the advisory is set in the same callback that sets `busy` false, so the busy guard never covers it
+- [x] Gate check passes: `npm run typecheck && npm run lint && npx electron-vite build` (typecheck exit 0; lint 0 errors, 18 warnings; build exit 0)
+- [x] Test count: T11 count (no new tests)
+
+**Notes**: the footer Cancel's disabled look (`.dialog-footer .dialog-btn-ghost:disabled`, opacity 0.5, no hover colour) is scoped to the footer, so `BranchExistsChoice`'s busy Cancel keeps its current look. The spinner reuses the `SyncPopover` rule: 1 s linear rotation, off under `prefers-reduced-motion: reduce`.
 
 **Tests**: none
 **Gate**: build
