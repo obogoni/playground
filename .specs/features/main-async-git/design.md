@@ -2,6 +2,11 @@
 
 **Spec**: `.specs/features/main-async-git/spec.md`
 **Status**: Approved (planned 2026-10-01, approved by the owner 2026-10-01). Executes after `perf-diagnostics` (#147); T1's baseline can stop it.
+**Reconciled 2026-10-03** (owner approved, after #147 shipped as PR #162): #154 already ships the
+asynchronous period read (PERF-21: `readGitAsync` through `git()`, `resolveSnapshotAsync` and
+`#reattribute` in `time-tracker.ts`). What is left is the name poller below, and deleting the uncalled
+synchronous `readGit`. The sections on the tracker, the provisional fields, the bench runs and the
+mutants describe the plan of 2026-10-01 and are kept as history; they are not executed.
 
 ---
 
@@ -91,6 +96,10 @@ watched session.
 
 ### Snapshot read (`src/main/time-snapshot.ts`)
 
+**Reconciled 2026-10-03**: only the deletion is left. `readGit` (`time-snapshot.ts:51-69`) and the
+`execFileSync` import go; `readGitAsync`, `buildSnapshot` and their callers stay as #154 shipped them. The
+description below is the plan of 2026-10-01.
+
 - **Purpose**: read a cwd's git common dir and branch without blocking main.
 - **Interfaces**:
 
@@ -119,6 +128,9 @@ watched session.
 - **Reuses**: `git()`; the parsing it has today.
 
 ### Time tracker (`src/main/time-tracker.ts`)
+
+**Reconciled 2026-10-03**: delivered by #154 (PERF-21), with a different rule for a closed period: a
+late read patches a period that closed and was kept in the log (owner's call). Not executed here.
 
 - **Purpose**: unchanged; only the open path and one new continuation change.
 - **Dependency change**:
@@ -190,7 +202,8 @@ watched session.
   - On success at the settle instant `t`: for each watched `s`, `names.has(s.claudeId)` → `named = true,
     misses = 0`; else `named = false, misses += 1, dueAt = t + backoff(misses)`. Then the listeners, as today.
   - On failure at `t`: for each watched `s` with `named === false`, `misses += 1, dueAt = t + backoff(misses)`.
-    The accounting sits in `#fail`, which every failure path already calls (resolver throw, spawn throw, error
+    The accounting sits in `#fail`, before its once-per-streak `return` (`session-name-poller.ts:169`),
+    which every failure path already calls (resolver throw, spawn throw, error
     event, timeout, non-zero exit, not a JSON array); the once-per-streak log in it is unchanged (SNAME-12).
   - At the end of `settle`, after the outcome: when (`#asked.size > 0` or `#tickAsked`) and `#watched.size >
     0`, `#schedule()`. The debounced `#run()` re-checks eligibility, so a rerun asked for by a session that
@@ -204,6 +217,8 @@ watched session.
   above while planning; T5 pins it as a test.
 
 ### Measurement (no code)
+
+**Dropped 2026-10-03** (owner: unit tests only). T1 cites #147's baseline instead.
 
 - T1 and T6 run `node scripts/bench-sessions.mjs --sessions 6 --minutes 1 --json <file>` three times each,
   and read the `spawn` row's `loop p99/max`, `git n`, `sync` and the round-trip line from the printed summary.
@@ -272,14 +287,11 @@ link equal to the branch's task carries no flag (HTSK-36).
 | Poller clock | `Date.now()` | The poller already uses the global timers; Vitest's fake timers move both |
 | `git.sync` | Kept in the line, reads 0 | The bench's `sync` column is then the regression check |
 
-> **AD-TBD (number chosen at Execute; main holds up to AD-051): main never waits on git for a time period,
-> and the name listing backs off for a session it does not name.** `TimeTracker` opens a period at once with
-> the fields of a failed read and applies the read's result, through the git runner, to that same period only
-> (matched by period id); a period closed first keeps what it had, and nothing about a pending read is
-> persisted (`v: 1` unchanged). **Amends AD-048** ("applies it over the branch snapshot at every period
-> open": the link is applied at open and again when the read settles) and **TIME-03** ("captured when the
-> period opens": read from a call started when it opens). `SessionNamePoller` keeps a miss count and a due
-> time per watched session: after the k-th miss it is due `min(5 s × 2^(k−1), 5 min)` after that listing; a
-> new Claude id or a name resets it; nudges, ticks and reruns start a listing only for an eligible session;
-> named sessions keep the 30 s cadence. **Amends AD-040** ("on later events for a still-unnamed session") and
-> SNAME-09, SNAME-10, SNAME-12. Spec / design / tasks: `.specs/features/main-async-git/` (MAGIT-01..46).
+> **AD-TBD (number chosen at Execute): the session-name listing backs off for a session it does not
+> name.** `SessionNamePoller` keeps a miss count and a due time per watched session: after the k-th miss
+> it is due `min(5 s × 2^(k−1), 5 min)` after that listing; a failed listing is a miss for every unnamed
+> session; a new Claude id or a name resets it; nudges, ticks and reruns start a listing only for an
+> eligible session; named sessions keep the 30 s cadence. **Amends AD-040** ("on later events for a
+> still-unnamed session") and SNAME-09, SNAME-10, SNAME-12. The asynchronous period read the plan also
+> held shipped with #154 (PERF-21). Spec / design / tasks: `.specs/features/main-async-git/`
+> (MAGIT-01..46).

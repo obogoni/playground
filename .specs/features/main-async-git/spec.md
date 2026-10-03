@@ -15,8 +15,8 @@ the listing never names keeps it running back to back, about one Claude process 
 
 **Depends on #147.** This feature executes only after #147 (diagnostics log and bench, branch
 `feature/perf-diagnostics`) has executed. Its stop rule (MAGIT-30) and its target figures (MAGIT-29..35)
-are read with that bench, so no task here starts before it exists. Status on 2026-10-03: #147 is planned
-and not executed, so this feature is paused (owner's call).
+are read with that bench, so no task here starts before it exists. Status on 2026-10-03: #147 shipped as
+PR #162, merged into `main` at `fc19a3c`, and this branch was rebased onto it the same day.
 
 **Overlap with upstream PR #154** (merged 2026-10-01, after this plan was written on `d4a3da9`). Its body
 says "#151: partly covered. The period git read is async, and the binary lookup is cached and
@@ -34,11 +34,28 @@ T1, when this branch is rebased:
 At T1 the tasks for the covered rows are dropped or reduced, and the plan is re-validated against main and
 re-approved by the owner before T4.
 
+### Reconciliation (2026-10-03, owner approved)
+
+- **Scope**: the per-session listing backoff, plus deleting the uncalled synchronous `readGit` (owner:
+  delete it, so MAGIT-05 stays). MAGIT-01..04, MAGIT-06..16 and MAGIT-38..42 are delivered by #154 (PERF-21,
+  `multi-agent-performance` spec AC 5-7) and are not re-tested here. Their rows are rewritten to what #154
+  ships: AC 3 (the cached attribution, not nulls), AC 7 (no `git.sync` counter), AC 12 and AC 14 (a late
+  read also patches a closed period that was kept).
+- **Stop rule**: #147's baseline is the before figure. With 6 sessions opening, the worst `spawn`-row
+  `loop max` is 31.7 ms, under 50 ms, and a never-named session still gets a listing after every hook event
+  (cited in `validation.md`). The verdict: the backoff proceeds.
+- **Measurement**: unit tests only (owner). The bench's sessions never start a listing (`names` is 0 in
+  every #147 run), and the spawn stall is no longer this feature's to fix. MAGIT-31..34 are dropped.
+- **`git.sync`** never shipped: #147 counts every git process at the paced start of `git()`.
+- **Tasks renumbered**: T1 reconciliation and baseline, T2 the uncalled read (old T3, reduced), T3 and T4
+  the backoff (old T4, T5), T5 the decision (old T8). Old T2, T6 and T7 are dropped.
+
 ## Goals
 
-- [ ] No synchronous git call is left in main's period-open path: `git.sync` reads 0 in every bench row
-- [ ] With 6 sessions opening, the bench's `spawn` row shows no main stall over 50 ms (`loop max` at most 50)
-- [ ] Every period still records the repository, branch and task it records today, once its read settles
+- [x] No synchronous git call is left in main's period-open path (delivered by #154, PERF-21)
+- [x] With 6 sessions opening, the bench's `spawn` row shows no main stall over 50 ms (#147 baseline: 31.7 ms)
+- [x] Every period still records the repository, branch and task it records today, once its read settles (PERF-21)
+- [ ] The snapshot module holds no synchronous git read
 - [ ] A session the listing never names costs at most one listing per backoff interval, never back to back
 - [ ] Named sessions keep the 30 s cadence
 
@@ -53,6 +70,7 @@ re-approved by the owner before T4.
 | Sharing one in-flight read between periods of the same cwd | Each open keeps its own read, so what a period records is still read at its own open (see assumptions) |
 | Driving a suspend and resume from the bench | The bench cannot sleep the machine; the wake path is proven by a unit test (see assumptions) |
 | Driving the name poller from the bench | The bench runs raw-command sessions only (PDIAG-32); no Claude session, no listing. The backoff is proven by fake-clock unit tests |
+| Bench runs after the change and the bench mutants | Reconciliation 2026-10-03: the bench never lists names, and the spawn stall is #154's; the backoff is proven by unit tests |
 | Any change to what a period records or what the app shows | Issue #151, Solution: only *when* changes |
 | A commit field on periods | The issue says "branch and commit"; the snapshot reads the repository (`--git-common-dir`) and the branch, and has no commit field. Nothing is added |
 
@@ -64,7 +82,7 @@ re-approved by the owner before T4.
 | --------------------- | -------------- | --------- | ---------- |
 | When a period gets its git fields | The period opens at once; its repository, branch and branch task arrive when the read returns, and stay null on a failure, as today on a timeout | Issue #151, Solution | owner confirmed 2026-10-01 |
 | How the read runs | Asynchronously, through the app's git runner (`git()` in `src/main/git.ts`, AD-023) with its 2 s timeout | Issue #151, Implementation Decisions | owner confirmed 2026-10-01 |
-| A period that closes before its read settles | Keeps what it had: the fields of a failed read, with the session's link applied (AD-048) | Issue #151, Implementation Decisions | owner confirmed 2026-10-01 |
+| A period that closes before its read settles | Keeps what it had: the fields of a failed read, with the session's link applied (AD-048) | Issue #151, Implementation Decisions | owner confirmed 2026-10-01; superseded 2026-10-03 by #154 (PERF-21 AC 6: a kept period is patched in the log) |
 | What is recorded or shown | Nothing changes, only when; log lines keep `v: 1` and the same keys | Issue #151, Solution; AD-048 keeps `v: 1` | owner confirmed 2026-10-01 |
 | The poller's backoff shape | A per-session miss count and next-due time; the interval doubles after each miss up to a ceiling; it resets when a new session id appears or the session gets a name; named sessions keep 30 s | Issue #151, Solution and Implementation Decisions | owner confirmed 2026-10-01 |
 | Synchronous config and time-log writes | Stay as they are unless the bench shows them in the stalls; then a follow-up | Issue #151, Implementation Decisions | owner confirmed 2026-10-01 |
@@ -76,13 +94,13 @@ re-approved by the owner before T4.
 | A nudge that arrives while the session is backing off | Still arms the 1 s debounce, but the listing starts only if the session is due when the debounce elapses; otherwise it is dropped, not deferred, and the next hook event or the 30 s tick tries again | Deferring would arm a timer per session; hook events of a live session keep arriving, and the tick bounds the wait | owner confirmed 2026-10-01 |
 | The 30 s tick while every watched session backs off | Skipped when no watched session has 0 misses and none has reached its due time | Without it a never-named session still costs one listing every 30 s, and the ceiling would mean nothing | owner confirmed 2026-10-01 |
 | A rerun coalesced during a call | Started at the end of the call only if a session that asked for it, or for a pending tick any watched session, has 0 misses or has reached its due time | Hook events during a 2 s call would otherwise start the next call right after it, the back-to-back pattern this removes | owner confirmed 2026-10-01 |
-| `git.sync` in the diagnostics line | Kept, with the `{ sync: true }` probe option that loses its only caller; after this feature it reads 0 | The `v: 1` line and the bench's `sync` column stay as #147 shipped them, and a 0 there is the evidence that no synchronous git is left | owner confirmed 2026-10-01 |
-| The wake target | Proven by a tracker unit test (`resumeFromSuspend` with 6 sessions starts 6 reads and returns before any settles) and by no synchronous call left in the read path; no bench run sleeps the machine | The bench cannot suspend the machine; driving `powerMonitor` through main's inspector would be a bench extension of its own | owner confirmed 2026-10-01 |
+| `git.sync` in the diagnostics line | Kept, with the `{ sync: true }` probe option that loses its only caller; after this feature it reads 0 | The `v: 1` line and the bench's `sync` column stay as #147 shipped them, and a 0 there is the evidence that no synchronous git is left | owner confirmed 2026-10-01; superseded 2026-10-03: #147 shipped no `git.sync` counter |
+| The wake target | Proven by a tracker unit test (`resumeFromSuspend` with 6 sessions starts 6 reads and returns before any settles) and by no synchronous call left in the read path; no bench run sleeps the machine | The bench cannot suspend the machine; driving `powerMonitor` through main's inspector would be a bench extension of its own | owner confirmed 2026-10-01; delivered by #154 (PERF-21) |
 | Each open reads at its own instant | No sharing of an in-flight read between two opens on the same cwd | Sharing would let a period record a read started before it opened; two read-only `rev-parse` processes on one worktree are harmless | owner confirmed 2026-10-01 |
-| When a settled read is written | At once: the sidecar is rewritten and `time:changed` is pushed for each period whose fields changed | A crash after the read then recovers the period with its fields; N small sidecar writes on a wake are counted by the bench, and coalescing them is the follow-up the issue allows | owner confirmed 2026-10-01 |
-| What the Hours view shows during the read | The open period sits under its session's link, or under No task, until its read settles (about 150 ms measured; at most 2 s); an open period of a session linked to the task its branch names shows the hand mark for that time | The open period is pushed at once so the counters start with the session; holding the push until the read settles would delay the counter instead | owner confirmed 2026-10-01 |
-| Stop rule | The first task measures the baseline. Listings are back to back by construction today (code read with file:line). IF no baseline run shows a `spawn`-row `loop max` over 50 ms THEN the task reports that to the owner and continues; IF the listings are also not back to back THEN it stops before any production change | Instruction for this plan: report when spawn of 6 shows no stall and no back-to-back listings; the bench's small seeded repository can read cheaper than the owner's large one, so a missing stall alone does not stop the backoff | owner confirmed 2026-10-01 |
-| After-change measurement | Three runs of `node scripts/bench-sessions.mjs --sessions 6 --minutes 1 --json` before and three after, on the same machine | `loop max` is a single-sample figure; three runs show its spread | owner confirmed 2026-10-01 |
+| When a settled read is written | At once: the sidecar is rewritten and `time:changed` is pushed for each period whose fields changed | A crash after the read then recovers the period with its fields; N small sidecar writes on a wake are counted by the bench, and coalescing them is the follow-up the issue allows | owner confirmed 2026-10-01; delivered by #154 (PERF-21) |
+| What the Hours view shows during the read | The open period sits under its session's link, or under No task, until its read settles (about 150 ms measured; at most 2 s); an open period of a session linked to the task its branch names shows the hand mark for that time | The open period is pushed at once so the counters start with the session; holding the push until the read settles would delay the counter instead | owner confirmed 2026-10-01; superseded 2026-10-03 by #154: the open period starts on the attribution cached for its cwd |
+| Stop rule | The first task measures the baseline. Listings are back to back by construction today (code read with file:line). IF no baseline run shows a `spawn`-row `loop max` over 50 ms THEN the task reports that to the owner and continues; IF the listings are also not back to back THEN it stops before any production change | Instruction for this plan: report when spawn of 6 shows no stall and no back-to-back listings; the bench's small seeded repository can read cheaper than the owner's large one, so a missing stall alone does not stop the backoff | owner confirmed 2026-10-01; applied 2026-10-03 at T1 on #147's baseline |
+| After-change measurement | Three runs of `node scripts/bench-sessions.mjs --sessions 6 --minutes 1 --json` before and three after, on the same machine | `loop max` is a single-sample figure; three runs show its spread | owner confirmed 2026-10-01; dropped 2026-10-03 (owner: unit tests only) |
 
 **Open questions:** none unmarked. The owner confirmed every row above on 2026-10-01.
 
@@ -97,15 +115,18 @@ app not to freeze while it reads the branch, so that sessions start and respond 
 
 **Why P1**: This is the stall the issue measures.
 
+**Reconciled 2026-10-03**: delivered by #154 (PERF-21) except AC 5, which T2 delivers. The other criteria
+describe what #154 ships and are not re-tested here.
+
 **Acceptance Criteria**:
 
 1. WHEN a period opens (spawn, duplicate, respawn, resume, task change, resume from sleep) THEN the time tracker SHALL add it to its open periods, rewrite `time-open.json` and push `time:changed` before that period's git read settles <!-- event-driven -->
 2. WHEN a period opens THEN the tracker SHALL start exactly one git read for the run's cwd, from inside the same call that opened the period <!-- event-driven -->
-3. WHILE a period's read has not settled, the period SHALL carry the fields a failed read gives today: null workspace path, repo name and branch; and the session's link with `taskByHand: true` when it has one, or a null task id and title when it has none <!-- state-driven -->
+3. WHILE a period's read has not settled, the period SHALL carry the attribution cached for its cwd (nulls when none is cached), with the session's link applied (AD-048) <!-- state-driven -->
 4. The snapshot read SHALL run `git rev-parse --path-format=absolute --git-common-dir --abbrev-ref HEAD` in the run's cwd through the git runner, with `timeoutMs: 2000` <!-- ubiquitous -->
 5. The snapshot module SHALL make no synchronous child-process call <!-- ubiquitous -->
 6. WHEN the machine resumes from sleep with N running sessions that are not paused THEN `resumeFromSuspend` SHALL start N reads and return before any of them settles <!-- event-driven -->
-7. WHEN the snapshot read runs THEN diagnostics SHALL count it as one git process of the runner, under `rev-parse`, and SHALL NOT count it under `git.sync` <!-- event-driven -->
+7. WHEN the snapshot read runs THEN diagnostics SHALL count it as one git process of the runner, under `rev-parse` <!-- event-driven -->
 
 **Independent Test**: With a read that never settles, `started` for a session returns, `snapshot().open`
 holds the period with null repository and branch, and the fake store holds a sidecar write and the fake
@@ -120,15 +141,18 @@ task, so that time booking keeps its data.
 
 **Why P1**: An async read that loses or misplaces the fields would corrupt the hours log.
 
+**Reconciled 2026-10-03**: delivered by #154 (PERF-21 AC 6, 7); AC 12 and AC 14 are rewritten to its
+behaviour (owner's call). Not re-tested here.
+
 **Acceptance Criteria**:
 
 8. WHEN a period's read settles and that period is still its session's open period THEN the tracker SHALL replace the period's workspace path, repo name, branch, task id, task title and hand flag with the snapshot the read gives, with the session's link applied over it (AD-048), and SHALL keep the period's id, session id, agent, cwd and start <!-- event-driven -->
 9. WHEN a settled read changes an open period's fields THEN the tracker SHALL rewrite `time-open.json` with the changed period and push `time:changed` once <!-- event-driven -->
 10. WHEN a session is linked to the task its branch names and its read settles THEN the open period SHALL carry that task with no `taskByHand` key <!-- event-driven -->
 11. WHEN a heartbeat rewrote an open period's last-seen before its read settles THEN the patched period SHALL keep the heartbeat's last-seen <!-- event-driven -->
-12. IF a read settles after its period closed (the session ended, was paused, was suspended, changed task, was respawned, or the app quit) THEN the tracker SHALL change no period, SHALL NOT append to or rewrite `time-log.jsonl`, SHALL NOT write `time-open.json`, and SHALL NOT push `time:changed` <!-- unwanted-behavior -->
+12. IF a read settles after its period closed and was kept in the log, with an attribution different from the period's, THEN the tracker SHALL rewrite that period in `time-log.jsonl` and push `time:changed`; IF the period was discarded (under 1 s) THEN it SHALL change nothing <!-- unwanted-behavior -->
 13. IF a read settles while its session has a newer open period THEN the tracker SHALL leave the newer period unchanged, matching the read to its period by period id <!-- unwanted-behavior -->
-14. WHEN a period closes before its read settles THEN the line appended to `time-log.jsonl` SHALL carry the fields of AC 3 <!-- event-driven -->
+14. WHEN a period closes before its read settles THEN the line appended to `time-log.jsonl` SHALL carry the fields of AC 3, until AC 12 patches it <!-- event-driven -->
 15. IF a read fails, times out, rejects or throws THEN the period SHALL keep the fields of AC 3, and the tracker SHALL NOT write `time-open.json` nor push `time:changed` for that read <!-- unwanted-behavior -->
 16. The tracker SHALL write log lines and the sidecar with today's keys and `v: 1`, and SHALL record no field for a read that has not settled <!-- ubiquitous -->
 
@@ -173,18 +197,21 @@ is shown to help and the measure is shown able to fail.
 
 **Why P1**: Issue #151 names the bench and its targets; #147's stop rule applies.
 
+**Reconciled 2026-10-03**: the before figures are #147's baseline, and nothing is measured after the change
+(owner: unit tests only). AC 29 and AC 35 are reworded; AC 31 to AC 34 are dropped.
+
 **Acceptance Criteria**:
 
-29. The first task SHALL record, before any production change, #147's `--sessions 6` baseline `spawn` row and three runs of `node scripts/bench-sessions.mjs --sessions 6 --minutes 1 --json <file>` at the base commit: the `spawn` row's `loop p99/max`, `git n` and `sync`, and the longest `sessions:spawn` round trip <!-- ubiquitous -->
+29. The first task SHALL record, before any production change, #147's `--sessions 6` baseline with its commit: the `spawn` row's `loop p99/max` and `git n`, the `names` column, and the longest `sessions:spawn` round trip <!-- ubiquitous -->
 30. IF no baseline run shows a `spawn`-row `loop max` over 50 ms, and the listing path is not back to back at the cited lines, THEN the first task SHALL stop and report to the owner before any production change <!-- unwanted-behavior -->
-31. WHEN the change is in THEN three runs of the same command SHALL each show `sync` 0 in every row and a `spawn`-row `loop max` of at most 50 ms <!-- event-driven -->
-32. IF an after-change run's `spawn`-row `loop max` exceeds 50 ms while `sync` reads 0 THEN the measuring task SHALL record the figure as a stall outside this feature, report it to the owner, and SHALL NOT widen this feature <!-- unwanted-behavior -->
-33. WHEN a bench run is kept (`--keep`) after the change THEN its `time-log.jsonl` SHALL hold one `v: 1` line per session, each with `repoName` `app` and `branch` `bench/<i>` of its worktree <!-- event-driven -->
-34. WHEN a throwaway mutant blocks main for 150 ms inside each period open THEN the `spawn` row's `loop max` SHALL read over 150 ms, and WHEN a mutant adds a synchronous git call with the `sync` probe THEN the `sync` column SHALL read above 0 <!-- event-driven -->
-35. The validation notes SHALL hold the before and after figures of AC 29 and AC 31 per run, with the commit each ran on <!-- ubiquitous -->
+31. WHEN the change is in THEN three runs of the same command SHALL each show `sync` 0 in every row and a `spawn`-row `loop max` of at most 50 ms (**dropped 2026-10-03**) <!-- event-driven -->
+32. IF an after-change run's `spawn`-row `loop max` exceeds 50 ms while `sync` reads 0 THEN the measuring task SHALL record the figure as a stall outside this feature, report it to the owner, and SHALL NOT widen this feature (**dropped 2026-10-03**) <!-- unwanted-behavior -->
+33. WHEN a bench run is kept (`--keep`) after the change THEN its `time-log.jsonl` SHALL hold one `v: 1` line per session, each with `repoName` `app` and `branch` `bench/<i>` of its worktree (**dropped 2026-10-03**) <!-- event-driven -->
+34. WHEN a throwaway mutant blocks main for 150 ms inside each period open THEN the `spawn` row's `loop max` SHALL read over 150 ms, and WHEN a mutant adds a synchronous git call with the `sync` probe THEN the `sync` column SHALL read above 0 (**dropped 2026-10-03**) <!-- event-driven -->
+35. The validation notes SHALL hold the figures of AC 29 with the commit they ran on <!-- ubiquitous -->
 
-**Independent Test**: The `## Measurements` section of `validation.md` holds three before rows and three
-after rows, the kept run's log lines, and the two mutant readings.
+**Independent Test**: The `## Measurements` section of `validation.md` holds #147's `spawn` row, its commit,
+the cited listing lines and the stop-rule verdict.
 
 ---
 
@@ -198,10 +225,10 @@ ships.
 
 **Acceptance Criteria**:
 
-36. WHEN the feature ships THEN `.specs/STATE.md` SHALL hold the new decision with its number chosen at Execute, amending AD-040 and AD-048's "at every period open" <!-- event-driven -->
-37. WHEN the feature ships THEN the traceability rows of TIME-03 and TIME-12, of SNAME-09, SNAME-10 and SNAME-12, and of PDIAG-15 SHALL name the new decision as amending them <!-- event-driven -->
+36. WHEN the feature ships THEN `.specs/STATE.md` SHALL hold the new decision with its number chosen at Execute, amending AD-040's "on later events for a still-unnamed session" <!-- event-driven -->
+37. WHEN the feature ships THEN the traceability rows of SNAME-09, SNAME-10 and SNAME-12 SHALL name the new decision as amending them <!-- event-driven -->
 
-**Independent Test**: A grep for the decision's number finds it in `STATE.md` and in the three specs' rows.
+**Independent Test**: A grep for the decision's number finds it in `STATE.md` and in the session-name spec's rows.
 
 ---
 
@@ -239,60 +266,60 @@ ships.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| MAGIT-01 | P1: open — AC 1 | T2 | Pending |
-| MAGIT-02 | P1: open — AC 2 | T2 | Pending |
-| MAGIT-03 | P1: open — AC 3 | T2 | Pending |
-| MAGIT-04 | P1: open — AC 4 | T3 | Pending |
-| MAGIT-05 | P1: open — AC 5 | T3 | Pending |
-| MAGIT-06 | P1: open — AC 6 | T2 | Pending |
-| MAGIT-07 | P1: open — AC 7 | T3, T6 | Pending |
-| MAGIT-08 | P1: fields — AC 8 | T2 | Pending |
-| MAGIT-09 | P1: fields — AC 9 | T2 | Pending |
-| MAGIT-10 | P1: fields — AC 10 | T2 | Pending |
-| MAGIT-11 | P1: fields — AC 11 | T2 | Pending |
-| MAGIT-12 | P1: fields — AC 12 | T2 | Pending |
-| MAGIT-13 | P1: fields — AC 13 | T2 | Pending |
-| MAGIT-14 | P1: fields — AC 14 | T2 | Pending |
-| MAGIT-15 | P1: fields — AC 15 | T2, T3 | Pending |
-| MAGIT-16 | P1: fields — AC 16 | T2, T6 | Pending |
-| MAGIT-17 | P1: backoff — AC 17 | T4 | Pending |
-| MAGIT-18 | P1: backoff — AC 18 | T4 | Pending |
-| MAGIT-19 | P1: backoff — AC 19 | T4 | Pending |
-| MAGIT-20 | P1: backoff — AC 20 | T4 | Pending |
-| MAGIT-21 | P1: backoff — AC 21 | T4 | Pending |
-| MAGIT-22 | P1: backoff — AC 22 | T4 | Pending |
-| MAGIT-23 | P1: backoff — AC 23 | T4 | Pending |
-| MAGIT-24 | P1: backoff — AC 24 | T5 | Pending |
-| MAGIT-25 | P1: backoff — AC 25 | T5 | Pending |
-| MAGIT-26 | P1: backoff — AC 26 | T5 | Pending |
-| MAGIT-27 | P1: backoff — AC 27 | T4 | Pending |
-| MAGIT-28 | P1: backoff — AC 28 | T5 | Pending |
+| MAGIT-01 | P1: open — AC 1 | #154 | Delivered (PERF-21) |
+| MAGIT-02 | P1: open — AC 2 | #154 | Delivered (PERF-21) |
+| MAGIT-03 | P1: open — AC 3 | #154 | Delivered (PERF-21) |
+| MAGIT-04 | P1: open — AC 4 | #154 | Delivered (PERF-21) |
+| MAGIT-05 | P1: open — AC 5 | T2 | Pending |
+| MAGIT-06 | P1: open — AC 6 | #154 | Delivered (PERF-21) |
+| MAGIT-07 | P1: open — AC 7 | #154 | Delivered (PERF-21) |
+| MAGIT-08 | P1: fields — AC 8 | #154 | Delivered (PERF-21) |
+| MAGIT-09 | P1: fields — AC 9 | #154 | Delivered (PERF-21) |
+| MAGIT-10 | P1: fields — AC 10 | #154 | Delivered (PERF-21) |
+| MAGIT-11 | P1: fields — AC 11 | #154 | Delivered (PERF-21) |
+| MAGIT-12 | P1: fields — AC 12 | #154 | Delivered (PERF-21) |
+| MAGIT-13 | P1: fields — AC 13 | #154 | Delivered (PERF-21) |
+| MAGIT-14 | P1: fields — AC 14 | #154 | Delivered (PERF-21) |
+| MAGIT-15 | P1: fields — AC 15 | #154 | Delivered (PERF-21) |
+| MAGIT-16 | P1: fields — AC 16 | #154 | Delivered (PERF-21) |
+| MAGIT-17 | P1: backoff — AC 17 | T3 | Pending |
+| MAGIT-18 | P1: backoff — AC 18 | T3 | Pending |
+| MAGIT-19 | P1: backoff — AC 19 | T3 | Pending |
+| MAGIT-20 | P1: backoff — AC 20 | T3 | Pending |
+| MAGIT-21 | P1: backoff — AC 21 | T3 | Pending |
+| MAGIT-22 | P1: backoff — AC 22 | T3 | Pending |
+| MAGIT-23 | P1: backoff — AC 23 | T3 | Pending |
+| MAGIT-24 | P1: backoff — AC 24 | T4 | Pending |
+| MAGIT-25 | P1: backoff — AC 25 | T4 | Pending |
+| MAGIT-26 | P1: backoff — AC 26 | T4 | Pending |
+| MAGIT-27 | P1: backoff — AC 27 | T3 | Pending |
+| MAGIT-28 | P1: backoff — AC 28 | T4 | Pending |
 | MAGIT-29 | P1: measured — AC 29 | T1 | Pending |
 | MAGIT-30 | P1: measured — AC 30 | T1 | Pending |
-| MAGIT-31 | P1: measured — AC 31 | T6 | Pending |
-| MAGIT-32 | P1: measured — AC 32 | T6 | Pending |
-| MAGIT-33 | P1: measured — AC 33 | T6 | Pending |
-| MAGIT-34 | P1: measured — AC 34 | T7 | Pending |
-| MAGIT-35 | P1: measured — AC 35 | T1, T6, T7 | Pending |
-| MAGIT-36 | P2: specs — AC 36 | T8 | Pending |
-| MAGIT-37 | P2: specs — AC 37 | T8 | Pending |
-| MAGIT-38 | Edge: open and close within 1 s | T2 | Pending |
-| MAGIT-39 | Edge: not a worktree, git missing, cwd gone | T2, T3 | Pending |
-| MAGIT-40 | Edge: two sessions on one cwd | T2 | Pending |
-| MAGIT-41 | Edge: two reads of one session in reverse order | T2 | Pending |
-| MAGIT-42 | Edge: quit with reads in flight | T2 | Pending |
-| MAGIT-43 | Edge: due time equals now | T4 | Pending |
-| MAGIT-44 | Edge: a named session loses its entry | T4 | Pending |
-| MAGIT-45 | Edge: Claude id changes while backing off | T4 | Pending |
-| MAGIT-46 | Edge: dispose while backing off | T5 | Pending |
+| MAGIT-31 | P1: measured — AC 31 | — | Dropped 2026-10-03 |
+| MAGIT-32 | P1: measured — AC 32 | — | Dropped 2026-10-03 |
+| MAGIT-33 | P1: measured — AC 33 | — | Dropped 2026-10-03 |
+| MAGIT-34 | P1: measured — AC 34 | — | Dropped 2026-10-03 |
+| MAGIT-35 | P1: measured — AC 35 | T1 | Pending |
+| MAGIT-36 | P2: specs — AC 36 | T5 | Pending |
+| MAGIT-37 | P2: specs — AC 37 | T5 | Pending |
+| MAGIT-38 | Edge: open and close within 1 s | #154 | Delivered (PERF-21) |
+| MAGIT-39 | Edge: not a worktree, git missing, cwd gone | #154 | Delivered (PERF-21) |
+| MAGIT-40 | Edge: two sessions on one cwd | #154 | Delivered (PERF-21) |
+| MAGIT-41 | Edge: two reads of one session in reverse order | #154 | Delivered (PERF-21) |
+| MAGIT-42 | Edge: quit with reads in flight | #154 | Delivered (PERF-21) |
+| MAGIT-43 | Edge: due time equals now | T3 | Pending |
+| MAGIT-44 | Edge: a named session loses its entry | T3 | Pending |
+| MAGIT-45 | Edge: Claude id changes while backing off | T3 | Pending |
+| MAGIT-46 | Edge: dispose while backing off | T4 | Pending |
 
-**Coverage:** 46 total, 46 mapped to tasks, 0 unmapped.
+**Coverage:** 46 total: 22 mapped to tasks, 20 delivered by #154, 4 dropped, 0 unmapped.
 
 ---
 
 ## Success Criteria
 
-- [ ] `git.sync` reads 0 in every row of three after-change bench runs with 6 sessions, and each `spawn` row's `loop max` is at most 50 ms (or the stall is attributed outside this feature and reported)
-- [ ] A kept bench run's `time-log.jsonl` records each session's repository and branch
+- [ ] `grep -nE "execFileSync|spawnSync|execSync" src/main/time-snapshot.ts` finds nothing
 - [ ] A never-named session nudged every second for 10 minutes starts 7 listings, against about 200 today with a 2 s call
-- [ ] Every existing time-tracker and session-name-poller assertion passes unchanged
+- [ ] Named sessions keep the 30 s cadence
+- [ ] Every existing session-name-poller and time-snapshot assertion passes unchanged
