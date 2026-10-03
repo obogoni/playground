@@ -644,9 +644,10 @@ in 128 files (2,792 + 16), typecheck clean, lint 0 errors and 18 warnings (uncha
   runner's timeout"); `checkIgnored` adds no timer. The test's runner records the `timeoutMs` it
   receives (`[5000]`) and stands in for a hanging check with a real `git hash-object --stdin`
   killed at 200 ms, so the rejection has the runner's real timeout shape (`:259-269`).
-- That timeout case relies on stdin staying open without `input`. Once PR #165 (CRTO-06, stdin
-  ended on every call) merges, it moves to a sleeping alias (`-c alias.wait=!sleep 5 wait`), as
-  #165 did for its own cases.
+- That timeout case relied on stdin staying open without `input`. It now runs a sleeping alias
+  (`-c alias.wait=!sleep 5 wait`), as #165 (CRTO-06, stdin ended on every call) did for its own
+  cases, so it holds with or without #165 (changed 2026-10-03, when merging into `develop` with #165
+  showed the stdin version answering at once).
 - Red first: 9 failures on the missing exports before the change.
 
 **Tests**: unit

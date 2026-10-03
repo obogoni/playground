@@ -258,11 +258,12 @@ describe('checkIgnored (real repository)', () => {
 
   it('answers null when the run is killed at its timeout, which is 5000 ms (FWIG-10)', async () => {
     const timeouts: number[] = []
-    // Stands in for a check-ignore that hangs: a real git that waits on stdin no one closes,
-    // killed by the runner's timeout, so the rejection has the runner's real timeout shape.
+    // Stands in for a check-ignore that hangs: a real git whose `!` alias sleeps past the limit,
+    // killed by the runner's timeout, so the rejection has the runner's real timeout shape. Not
+    // a read waiting on stdin: CRTO-06 (#153) ends stdin on every call.
     const hanging: IgnoreRunner = (cwd, _args, opts) => {
       timeouts.push(opts.timeoutMs)
-      return runGit(cwd, ['hash-object', '--stdin'], { timeoutMs: 200 })
+      return runGit(cwd, ['-c', 'alias.wait=!sleep 5', 'wait'], { timeoutMs: 200 })
     }
 
     expect(await checkIgnored(repo, ['bin', 'bin/a.dll'], hanging)).toBeNull()
