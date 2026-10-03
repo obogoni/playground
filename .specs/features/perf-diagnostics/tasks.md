@@ -705,11 +705,37 @@ by measuring nothing (memory: smoke checks that cannot fail).
 
 **Done when** (numbers written here):
 
-- [ ] Mutant 1: a 2 ms busy-wait at the top of `SessionRingBuffer.append`; rebuilt; `--sessions 3 --minutes 1` reads `append mean` at least 2 ms above an unmutated run of the same command, and `loop p99` above it too (the monitor sees a busy Electron main)
-- [ ] Mutant 2: the git-state `onSettled` in `index.ts` starts two `recountWorktree` calls at once; `--sessions 1 --minutes 1 --index-interval 100` reads `wt peak` at least 2 and `status/s` above the unmutated run's, so the overlap and rate targets can read FAIL from a real overlap
-- [ ] Mutant 3: a probe removed (`recountStarted` in `recountWorktree`); the index run reads `recounts` 0 while `wt:status` stays above 0
-- [ ] Each mutant restored from `.orig`; `git status --porcelain` equals the baseline; rebuilt
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Mutant 1: a 2 ms busy-wait at the top of `SessionRingBuffer.append`; rebuilt; `--sessions 3 --minutes 1` reads `append mean` at least 2 ms above an unmutated run of the same command, and `loop p99` above it too (the monitor sees a busy Electron main)
+- [x] Mutant 2: the git-state `onSettled` in `index.ts` starts two `recountWorktree` calls at once; `--sessions 1 --minutes 1 --index-interval 100` reads `wt peak` at least 2 and `status/s` above the unmutated run's, so the overlap and rate targets can read FAIL from a real overlap
+- [x] Mutant 3: a probe removed (`recountStarted` in `recountWorktree`); the index run reads `recounts` 0 while `wt:status` stays above 0
+- [x] Each mutant restored from `.orig`; `git status --porcelain` equals the baseline; rebuilt
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Results (2026-10-03, at `6615d0b`; one scratch driver ran the five runs one after the other: two
+unmutated references, then each mutant written over a `.orig` copy, built, benched, restored in
+`finally` and built again; steady 1 figures)**:
+
+| Run | Command | append mean / max ms | loop p99 / max ms | wt peak | status/s | wt:status | recounts | git n |
+| --- | ------- | -------------------- | ----------------- | ------- | -------- | --------- | -------- | ----- |
+| Reference 1 | `--sessions 3 --minutes 1` | 0.036 / 0.106 | 17.0 / 23.7 | 0 | 0 | 0 | 0 | 0 |
+| Mutant 1 (2 ms busy-wait in `append`) | same | **2.054** / 3.910 | **23.5** / 30.1 | 0 | 0 | 0 | 0 | 0 |
+| Reference 2 | `--sessions 1 --minutes 1 --index-interval 100` | 0.037 / 0.259 | 24.8 / 35.1 | 1 | 4 | 189 | 190 | 190 |
+| Mutant 2 (two recounts per settle) | same | 0.036 / 0.200 | 24.3 / 26.1 | **2** | **8** | 187 | 376 | 374 |
+| Mutant 3 (`recountStarted` removed) | same | 0.044 / 0.270 | 24.7 / 28.8 | 1 | 4 | **187** | **0** | 188 |
+
+- **Mutant 1**: append mean 0.036 → 2.054 ms (+2.018, at least 2 ms above) and its target line FAIL;
+  loop p99 17.0 → 23.5 ms (and loop max 23.7 → 30.1): `monitorEventLoopDelay` sees a busy Electron main
+  (PDIAG-17, PDIAG-21).
+- **Mutant 2**: `wt peak` 1 → 2 and `status/s` 4 → 8; the overlap target reads `2 FAIL` and the status
+  target `8 FAIL` from a real overlap (PDIAG-34, PDIAG-41).
+- **Mutant 3**: `recounts` 190 → 0 while `wt:status` stays at 187 (PDIAG-24's probe is what the column
+  reads).
+- After the driver: `git status --porcelain` empty, no `.orig` left, the build rebuilt from the clean tree;
+  no electron from the worktree, no `bench-tui` process and no `pg-bench-` folder left. The mutant runs'
+  headers read `commit=6615d0b-dirty`.
+- Gate: typecheck clean, lint exit 0 with 18 warnings, 2,577 passed.
+- Seen on the way, for T17: the index loop alone raises the idle loop p99 from about 17 ms to about 24-25
+  ms with one session (Reference 2 against Reference 1 and Run B).
 
 **Tests**: manual
 **Gate**: manual

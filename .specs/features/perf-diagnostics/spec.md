@@ -281,7 +281,7 @@ without asking.
 | PDIAG-14 | P1: git — AC 14 | T7, T8 | Done (T7, T8) |
 | PDIAG-15 | P1: git — AC 15 | T3, T6 | Done (T3, T6) |
 | PDIAG-16 | P1: git — AC 16 | T3 | Done (T3) |
-| PDIAG-17 | P1: loop — AC 17 | T5, T16 | In progress (T5) |
+| PDIAG-17 | P1: loop — AC 17 | T5, T16 | Done (T5, T16) |
 | PDIAG-18 | P1: loop — AC 18 | T2 | Done (T2) |
 | PDIAG-19 | P1: loop — AC 19 | T2 | Done (T2) |
 | PDIAG-20 | P1: pty — AC 20 | T4, T9 | Done (T4, T9) |
@@ -298,14 +298,14 @@ without asking.
 | PDIAG-31 | P1: bench — AC 31 | T15 | Done (T15) |
 | PDIAG-32 | P1: bench — AC 32 | T15 | Done (T15) |
 | PDIAG-33 | P1: bench — AC 33 | T13 | Done (T13) |
-| PDIAG-34 | P1: bench — AC 34 | T15, T16 | In progress (T15) |
+| PDIAG-34 | P1: bench — AC 34 | T15, T16 | Done (T15, T16) |
 | PDIAG-35 | P1: bench — AC 35 | T15 | Done (T15) |
 | PDIAG-36 | P1: bench — AC 36 | T14 | Done (T14) |
 | PDIAG-37 | P1: bench — AC 37 | T14, T15 | Done (T14, T15) |
 | PDIAG-38 | P1: bench — AC 38 | T15 | Done (T15) |
 | PDIAG-39 | P1: bench — AC 39 | T15 | Done (T15) |
 | PDIAG-40 | P1: baseline — AC 40 | T17 | Pending |
-| PDIAG-41 | P1: baseline — AC 41 | T14, T16 | In progress (T14) |
+| PDIAG-41 | P1: baseline — AC 41 | T14, T16 | Done (T14, T16) |
 | PDIAG-42 | P1: baseline — AC 42 | T17 | Pending |
 | PDIAG-43 | P1: baseline — AC 43 | T17 | Pending |
 | PDIAG-44 | P2: docs — AC 44 | T12 | Done (T12) |
