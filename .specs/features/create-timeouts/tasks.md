@@ -533,10 +533,18 @@ It then removes the worktree through `worktrees:remove` and deletes the branch, 
 
 **Done when**:
 
-- [ ] Each new check seen failing on its mutant, then passing: `progressLabel` mutant (label); the Start Work backdrop's busy guard removed (backdrop); its Cancel's `disabled={busy}` removed (Cancel)
-- [ ] The mutant script keeps `.orig`, asserts the mutant applied, restores in `finally`; `git status --porcelain` clean afterwards
-- [ ] The existing Start Work checks still pass
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Each new check seen failing on its mutant, then passing: `progressLabel` mutant (label); the Start Work backdrop's busy guard removed (backdrop); its Cancel's `disabled={busy}` removed (Cancel)
+- [x] The mutant script keeps `.orig`, asserts the mutant applied, restores in `finally`; `git status --porcelain` clean afterwards
+- [x] The existing Start Work checks still pass
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Notes** (2026-10-03, offline, on the #145 seed: `--seed` with `SMOKE_CONFIG` and `SMOKE_BASE`, no Azure DevOps, no work item URL):
+- New section `SMOKE_ONLY=progress`, checks 10-13 (the script's numbering continues after 9), on `bss-default\app` with `postCreateCommands` written to `bss-default\.app\config.json` and the refresh unticked. It runs in the full drive too when the seed is present.
+- **Deviation: how Start Work opens.** The card's Start work button stays disabled without live work item details, so the section calls the Tasks pane's own `onStartWork` prop (read from its React fiber) with a placeholder task that is not pinned and has no details (`#4821`, `acme/platform`, empty URL). The dialog that opens is the real `StartWorkDialog` (kicker `Start work`); with no details it asks Azure DevOps nothing (the parent lookup is skipped) and the branch is typed.
+- Both sections now refresh the tree and select another worktree before Create, so the last check (14.4, 13) sees the create's own selection: on a first backdrop mutant run, a row left selected by the previous run already read `chore/progress` at 889 ms.
+- `SMOKE_ONLY=progress`: 4/4 twice in a row on the same seed; the worktree, the branch and the `.app` folder are gone afterwards. The T14 section, with the new precondition: 5/5 twice in a row.
+- Mutants (same script as T14, renderer only, no relaunch): `progressLabel` always `Preparing…` killed by 10 (`seen: ["Preparing…"]`); Cancel's `disabled={busy}` removed killed by 11 (`disabled: false`); the backdrop's busy guard removed killed by 12 (`open: false`) and 13. `git status --porcelain` showed only this task's scripts afterwards.
+- Whole script after `--clean`, `--seed` and a fresh launch: 11/11 (checks 1-7 and 10-13; the slug section and the legacy STWK checks print their skip notices). `smoke-create.mjs` whole run on a fresh seed: 12/14, the same two pre-existing CRWT failures as in T14.
 
 **Tests**: manual
 **Gate**: manual

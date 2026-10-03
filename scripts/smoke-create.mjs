@@ -208,6 +208,24 @@ const HOOK_COMMAND = 'ping -n 6 127.0.0.1 > NUL'
 const HOOK_LABEL = 'Running post-create command…'
 const BUSY_TITLE = 'Wait for the create to finish'
 
+/**
+ * Refreshes the tree and selects a worktree other than chore/progress, so the
+ * last check sees the create's own selection, not one left by an earlier run.
+ */
+const selectOtherWorktree = `(async () => {
+  document.querySelector('.topbar-icon-btn[title="Refresh"]')?.click()
+  const branchOf = (row) => row.querySelector('.sidebar-worktree-branch')?.textContent
+  for (let i = 0; i < 25; i++) {
+    await new Promise((r) => setTimeout(r, 200))
+    const rows = [...document.querySelectorAll('.sidebar-worktree')]
+    if (rows.length === 0 || rows.some((row) => branchOf(row) === ${JSON.stringify(PROGRESS_BRANCH)})) continue
+    rows[0].click()
+    break
+  }
+  await new Promise((r) => setTimeout(r, 200))
+  return document.querySelector('.sidebar-worktree.selected .sidebar-worktree-branch')?.textContent ?? null
+})()`
+
 const git = (args, cwd) =>
   execFileSync('git', args, { cwd, encoding: 'utf8', windowsHide: true }).trim()
 
@@ -259,6 +277,10 @@ async function progressSection(ws, wsNode, api) {
 
   // A run that was cut short may have left the worktree or the branch behind.
   await removeProgressWorktree(ws, api, worktreePath)
+  const selectedBefore = await evaluate(ws, selectOtherWorktree)
+  if (selectedBefore === null || selectedBefore === PROGRESS_BRANCH) {
+    throw new Error(`No other worktree could be selected first: ${selectedBefore}`)
+  }
   mkdirSync(appDir, { recursive: true })
   writeFileSync(
     configFile,
