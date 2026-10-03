@@ -360,11 +360,19 @@ as today and answers both nulls on any rejection. The unused synchronous `readGi
 
 **Done when**:
 
-- [ ] Tests (recording fake): `readGitAsync` in a temp folder outside git reports one request and one start for subcommand `rev-parse`, ends it once, and still answers both nulls
-- [ ] Tests: `readGitAsync` in a temp repository (`git init`) reports one start and one end, and answers its git common dir and branch as before (the existing cases still pass unchanged)
-- [ ] The call read against the old one: same arguments, same 2 s timeout, nulls on any failure; written here
-- [ ] Gate check passes: `npx vitest run src/main/time-snapshot.test.ts`, then the full gate
-- [ ] Test count: T7 count + the new tests
+- [x] Tests (recording fake): `readGitAsync` in a temp folder outside git reports one request and one start for subcommand `rev-parse`, ends it once, and still answers both nulls
+- [x] Tests: `readGitAsync` in a temp repository (`git init`) reports one start and one end, and answers its git common dir and branch as before (the existing cases still pass unchanged)
+- [x] The call read against the old one: same arguments, same 2 s timeout, nulls on any failure; written here
+- [x] Gate check passes: `npx vitest run src/main/time-snapshot.test.ts`, then the full gate
+- [x] Test count: T7 count + the new tests (2,549 + 2 = 2,551)
+
+**Read against the old call (2026-10-03)**: the same five arguments
+(`rev-parse --path-format=absolute --git-common-dir --abbrev-ref HEAD`) go to `git(cwd, args, { timeoutMs:
+2000 })`, which becomes `execFile`'s `timeout: 2000` with the same `cwd` and `windowsHide: true`; stdout is
+still a UTF-8 string split on `\r?\n`; any rejection (not a repository, git missing, timeout) lands in the
+`catch` and answers both nulls, as the old `err ? []` did. `git()` adds `GIT_TERMINAL_PROMPT=0`, the 64 MiB
+`maxBuffer` and the spawn queue (design.md). The synchronous `readGit` is untouched. The two existing
+`readGitAsync` cases pass unchanged.
 
 **Tests**: unit
 **Gate**: quick

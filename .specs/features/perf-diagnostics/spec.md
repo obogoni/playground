@@ -278,7 +278,7 @@ without asking.
 | PDIAG-11 | P1: git — AC 11 | T3 | Done (T3) |
 | PDIAG-12 | P1: git — AC 12 | T3 | Done (T3) |
 | PDIAG-13 | P1: git — AC 13 | T3 | Done (T3) |
-| PDIAG-14 | P1: git — AC 14 | T7, T8 | In progress (T7) |
+| PDIAG-14 | P1: git — AC 14 | T7, T8 | Done (T7, T8) |
 | PDIAG-15 | P1: git — AC 15 | T3, T6 | Done (T3, T6) |
 | PDIAG-16 | P1: git — AC 16 | T3 | Done (T3) |
 | PDIAG-17 | P1: loop — AC 17 | T5, T16 | In progress (T5) |
