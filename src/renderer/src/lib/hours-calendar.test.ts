@@ -480,6 +480,21 @@ describe('assignColours and legendEntries', () => {
     ])
   })
 
+  it('takes a solid before a hatched look on a use tie, even one whose hue its day holds (HHAT-05)', () => {
+    // Tasks 1 to 15 on Monday, task 16 on Monday and Wednesday, tasks 17 to 23 on
+    // Tuesday, task 24 on Wednesday. Task 24 may take red or hatched blue to
+    // hatched violet, each used once; Wednesday holds hatched red, so only solid
+    // before hatched puts red ahead of hatched blue.
+    const colours = assignColours(
+      report({
+        periods: week(...range(1, 15, [14]), [16, [14, 16]], ...range(17, 23, [15]), [24, [16]])
+      })
+    )
+    expect(colours.get('task:16')).toBe('slot8-hatched')
+    expect(colours.get('task:23')).toBe('slot7')
+    expect(colours.get('task:24')).toBe('slot8')
+  })
+
   it('gives sixteen tasks on one day the solids in palette order, then hatched 1 to 8 (HHAT-07, HHAT-10)', () => {
     const colours = assignColours(report({ periods: week(...range(1, 16, [14])) }))
     expect(
