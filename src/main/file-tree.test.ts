@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { changedSince, foldChildren, listBases, listDir, parseNameStatus } from './file-tree'
-import { git as runGit, type GitRunner } from './git'
+import { git as runGit, READ_ONLY_FLAGS, type GitRunner } from './git'
 
 /** `git diff --name-status -z` output: NUL after every field, including the last. */
 const z = (...fields: string[]): string => fields.map((f) => `${f}\0`).join('')
@@ -183,6 +183,32 @@ describe('listDir', () => {
     expect(listing.entries.map((e) => e.name)).toEqual(['deep'])
   })
 
+  it('runs all three reads with the read-only prefix (FWIG-15, L-020)', async () => {
+    const calls: string[][] = []
+    const recording: GitRunner = (cwd, args) => {
+      calls.push(args)
+      return runGit(cwd, args)
+    }
+
+    const listing = await listDir(repo, 'src', recording)
+
+    expect(calls).toEqual([
+      [...READ_ONLY_FLAGS, 'ls-tree', '-z', 'HEAD:src'],
+      [...READ_ONLY_FLAGS, 'diff', '--cached', '--name-status', '-z', 'HEAD', '--', 'src/'],
+      [
+        ...READ_ONLY_FLAGS,
+        'ls-files',
+        '--others',
+        '--exclude-standard',
+        '--directory',
+        '-z',
+        '--',
+        'src/'
+      ]
+    ])
+    expect(listing).toEqual(await listDir(repo, 'src'))
+  })
+
   it('returns git’s error line and no entries when git fails', async () => {
     const listing = await listDir(root, '')
 
@@ -256,6 +282,22 @@ describe('changedSince', () => {
       { path: 'a.txt', status: 'modified' },
       { path: 'new.txt', status: 'added' }
     ])
+  })
+
+  it('runs both reads with the read-only prefix (FWIG-15, L-020)', async () => {
+    const calls: string[][] = []
+    const recording: GitRunner = (cwd, args) => {
+      calls.push(args)
+      return runGit(cwd, args)
+    }
+
+    const listing = await changedSince(repo, 'main', recording)
+
+    expect(calls).toEqual([
+      [...READ_ONLY_FLAGS, 'merge-base', 'HEAD', 'main'],
+      [...READ_ONLY_FLAGS, 'diff', '--name-status', '-z', baseCommit, 'HEAD']
+    ])
+    expect(listing.files.map((f) => f.path)).toEqual(['a.txt', 'new.txt'])
   })
 
   it('does not list an uncommitted edit', async () => {

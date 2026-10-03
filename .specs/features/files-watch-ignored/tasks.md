@@ -796,10 +796,26 @@ warnings, 107 s wall (T9: 102 s; each real-repository case costs about 0.45 s fo
 
 **Done when**:
 
-- [ ] Tests: a recording runner sees `READ_ONLY_FLAGS` in front of all three `listDir` reads (the `allSettled` trio, L-029) and both `changedSince` reads
-- [ ] Tests: the existing listings are unchanged
-- [ ] Gate check passes: `npx vitest run src/main/file-tree.test.ts`, then the full gate and `npx electron-vite build`
-- [ ] Test count: T11 count + the new tests
+- [x] Tests: a recording runner sees `READ_ONLY_FLAGS` in front of all three `listDir` reads (the `allSettled` trio, L-029) and both `changedSince` reads
+- [x] Tests: the existing listings are unchanged
+- [x] Gate check passes: `npx vitest run src/main/file-tree.test.ts`, then the full gate and `npx electron-vite build`
+- [x] Test count: T11 count + the new tests
+
+**Result (2026-10-03)**: `src/main/file-tree.test.ts` 23 tests (21 + 2 new), all passing; full gate
+2,836 tests in 128 files (2,834 + 2), typecheck clean, lint 0 errors and 18 warnings, 110 s wall;
+`npx electron-vite build` passes. Phase 2 ends here.
+
+- Shape: `...READ_ONLY_FLAGS` in front of `ls-tree`, `diff --cached --name-status` and `ls-files
+  --others` in `listDir`, and of `merge-base` and `diff --name-status` in `changedSince`.
+- `changedSince` gains the same injectable runner `listDir` already has (`run: GitRunner = git`,
+  third parameter). Without it, no recording runner could see its args. `index.ts` still calls
+  it with two arguments, so production behaviour is unchanged. This adds a parameter, not
+  behaviour, and is not a deviation from design.md's "Files reads".
+- The recorded args (L-020) are asserted exactly, in call order (`file-tree.test.ts:186`: `listDir(repo,
+  'src')`'s trio with the `-- src/` pathspec; `:287`: `changedSince(repo, 'main')`'s two reads).
+  Each case also checks the result: the recorded `listDir` equals an unrecorded one, and
+  `changedSince` still lists `a.txt` and `new.txt`. Every existing listing case passes unchanged.
+- Red first: both new cases failed on the unprefixed args before the change.
 
 **Tests**: unit
 **Gate**: quick
