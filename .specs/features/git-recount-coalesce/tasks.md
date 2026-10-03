@@ -552,16 +552,48 @@ on a main mutant.
 
 **Done when** (numbers written here):
 
-- [ ] The full `node scripts/smoke-status-bar.mjs`, unmutated: `counterRefresh()`'s checks pass with their assertions unchanged (a terminal commit within 2 s, a focus, a second focus within 5 s, a turn end) (RCNT-27, RCNT-30); every other check it reaches written here, with where it stops if it stops, compared with the same script on `f3d68ca`
-- [ ] Mutant M1 (main, dev app relaunched, mutant confirmed live): `onRecounted` never emits: the terminal-commit check FAILs
-- [ ] Mutant M2 (main): the scheduler's runner is never called for a request (`request` resolves `null` at once): the turn-end check FAILs
-- [ ] Each mutant restored from `.orig`; `git status --porcelain` equals the baseline
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] The full `node scripts/smoke-status-bar.mjs`, unmutated: `counterRefresh()`'s checks pass with their assertions unchanged (a terminal commit within 2 s, a focus, a second focus within 5 s, a turn end) (RCNT-27, RCNT-30); every other check it reaches written here, with where it stops if it stops, compared with the same script on `f3d68ca`
+- [x] Mutant M1 (main, dev app relaunched, mutant confirmed live): `onRecounted` never emits: the terminal-commit check FAILs
+- [x] Mutant M2 (main): the scheduler's runner is never called for a request (`request` resolves `null` at once): the turn-end check FAILs
+- [x] Each mutant restored from `.orig`; `git status --porcelain` equals the baseline
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
 
 **Tests**: manual
 **Gate**: manual
 
 **Commit**: `docs(specs): record the status bar smoke on coalesced recounts (#149)`
+
+**Record (2026-10-03)**: ✅ Done.
+
+- Every run: the dev app on a throwaway userData in a scratch folder outside the repository, CDP port
+  9333 (`SMOKE_PORT`), relaunched fresh for each run; the script seeds its own fixture. No registry
+  agent started (the turn-end check uses the script's fake `claude.cmd`).
+- **Unmutated, on `4d9eea3` (T9's commit): 59/59 PASS, the script runs to the end.**
+  `counterRefresh()`'s checks, assertions unchanged (printed 32..39): the counter worktree starts at 3;
+  **a terminal commit drops the counter within 2 s (SCRF-01): "1 after 569 ms"**; edits alone leave it
+  at 1; **a focus rebuilds the tree (SCRF-09): 1 → 3**; **a second focus within 5 s rebuilds nothing
+  (SCRF-10): 3**; the fake agent gets its hook token; a turn in progress leaves it at 3; **the turn
+  end recounts (SCRF-07): 3 → 5**. The other 51 checks (STBR-01..06, 08..23, 25, 26, 29, 31, plus the
+  popover layering, missing-folder, inline-Done, Escape and cleanup checks) all PASS.
+- **Same script on `f3d68ca`** (a temporary `git worktree add` in the scratch folder, `npm ci
+  --ignore-scripts` and the electron install, removed afterwards): **59/59 PASS**, runs to the end; the
+  terminal commit lands "1 after 558 ms". Neither run stops at the changes-popover section.
+- **Mutant M1** (`src/main/index.ts`, `onRecounted` logs and never emits `worktree:status`): live
+  before the smoke (its construction-time log line in the dev log); the dev log then shows 6 swallowed
+  emits, one of them the counter worktree's commit with count 1. **54/59: the terminal-commit check
+  FAILs, "3 after 4342 ms; git sees 1"**; the edits-alone, first-focus, second-focus and
+  turn-in-progress checks fail after it (the counter is one step behind for the rest of the section);
+  the turn-end check passes (a request answers it).
+- **Mutant M2** (`src/main/recount-scheduler.ts`, `request` logs and resolves `null` without a run):
+  live (176 log lines in the dev log). **51/59: the turn-end check FAILs, "POST 204; 0 → 0"**; so do
+  the counter worktree's start (0), the focus checks, the turn-in-progress check, STBR-29 (0), STBR-14's
+  counter and STBR-25 (every tree build reads clean). The terminal-commit check passes (a git-state
+  recount does not go through `request`).
+- Each mutant written and restored by a script through `.orig`; `git status --porcelain` before and
+  after each: empty, equal.
+- RCNT-01's, RCNT-09's and RCNT-13's manual halves are M1's and M2's runs above; their rows were
+  already `Done` from their unit tasks.
+- Gate: `npm run lint` exit 0 with 18 warnings (unchanged).
 
 ---
 
