@@ -508,14 +508,31 @@ unedited. Re-read the test file at T7 and name any other test that pins the batc
 
 **Done when**:
 
-- [ ] Manual: `node scripts/smoke-files-commits.mjs` against the dev app: check 20 ("The not-pushed markers clear after a push from the status bar (FCMT-32)") passes (L-086); the run's other results written here
-- [ ] `.specs/features/files-commits/spec.md` FCMT-32 carries the note "Trigger amended by RCNT-26 (AD-NNN): the list follows `tree:get` results; both named triggers end in one"
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Manual: `node scripts/smoke-files-commits.mjs` against the dev app: check 20 ("The not-pushed markers clear after a push from the status bar (FCMT-32)") passes (L-086); the run's other results written here
+- [x] `.specs/features/files-commits/spec.md` FCMT-32 carries the note "Trigger amended by RCNT-26 (AD-NNN): the list follows `tree:get` results; both named triggers end in one"
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: manual
 **Gate**: manual
 
 **Commit**: `perf(files): reload the commit list on tree rebuilds only`
+
+**Record (2026-10-03)**: ✅ Done.
+
+- `App` passes `useTree`'s `treeRevision` to `useFiles` instead of `tree`; the comment names both
+  FCMT-32 triggers (a status bar operation, a focus) as `tree:get` results and says a recount patch no
+  longer reloads the list (RCNT-26).
+- `node scripts/smoke-files-commits.mjs` against the dev app (throwaway userData, freshly seeded repo
+  in a scratch folder outside the repository, `SMOKE_PORT` 9333): **30/30 PASS**. Check 20 in the
+  script's comments, printed as 28, "The not-pushed markers clear after a push from the status bar
+  (FCMT-32)": PASS, "4 marked before, Push clicked, all cleared". The other 29 (FCMT-01..06, 08, 09,
+  11, 12, 14..17, 19..23, 25, 26, 29..31, the author-clipping and Escape checks) all PASS.
+- Falsified: with `treeRevision: 0` in `App` (relaunched app, re-seeded repo), the same run reads
+  29/30, and the one FAIL is check 20, "4 marked before, Push clicked, still marked". Restored from
+  `.orig`; `git status --porcelain` equal to the baseline.
+- `.specs/features/files-commits/spec.md` FCMT-32 carries the AD-058 amendment note.
+- Gate: typecheck exit 0, lint exit 0 with 18 warnings (unchanged), **122 files, 2,606 tests**, all
+  pass.
 
 ---
 

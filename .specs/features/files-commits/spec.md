@@ -163,7 +163,7 @@ what an agent commits appears without a refresh.
 29. WHEN `HEAD` moves — a new commit, an amend, a reset or a rebase — THEN the Commits list SHALL refresh within 1 s <!-- event-driven -->
 30. WHEN the user changes the base THEN the Commits list SHALL refresh against the new merge base <!-- event-driven -->
 31. WHEN the list refreshes THEN an open commit tab SHALL keep showing the commit it was opened for <!-- event-driven -->
-32. WHEN the status bar completes a push, sync, publish or fetch, or the window regains focus, THEN the not-pushed markers SHALL be recomputed <!-- event-driven -->
+32. WHEN the status bar completes a push, sync, publish or fetch, or the window regains focus, THEN the not-pushed markers SHALL be recomputed <!-- event-driven --> *Trigger amended by RCNT-26 (AD-058), delivered 2026-10-03 in `git-recount-coalesce` T9: the list follows `tree:get` results; both named triggers end in one.*
 
 **Independent Test**: With the Commits mode open, an agent commits: a new row appears on top within a second, and an already open commit tab is untouched.
 

@@ -266,7 +266,7 @@ with its commit, and each target figure reads FAIL before and PASS after.
 | RCNT-23 | P1: status bar — AC 23 | — | Delivered by #154 (PERF-12) |
 | RCNT-24 | P1: status bar — AC 24 | — | Delivered by #154 (PERF-13) |
 | RCNT-25 | P1: status bar — AC 25 | — | Delivered by #154 (AD-052) |
-| RCNT-26 | P1: status bar — AC 26 | T9 | Pending |
+| RCNT-26 | P1: status bar — AC 26 | T9 | Done |
 | RCNT-27 | P1: current — AC 27 | T10 | Pending |
 | RCNT-28 | P1: current — AC 28 | — | Dropped (2026-10-03) |
 | RCNT-29 | P1: current — AC 29 | — | Dropped (2026-10-03) |
