@@ -1027,9 +1027,60 @@ typecheck clean, lint 0 errors and 18 warnings (none in the two changed files), 
 
 **Done when**:
 
-- [ ] `runBatch` reads `live.current` when it starts, never the batch's arrival-time state (read and written here, FWIG-22)
-- [ ] A manual check on the dev app: with a `console.count` added for the duration of the check only, 10 writes 50 ms apart to one listed file give at most two batch runs in flight over time, never overlapping (start and end logged), and the diff shows the last write; the instrumentation removed and the diff clean of it
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] `runBatch` reads `live.current` when it starts, never the batch's arrival-time state (read and written here, FWIG-22)
+- [x] A manual check on the dev app: with a `console.count` added for the duration of the check only, 10 writes 50 ms apart to one listed file give at most two batch runs in flight over time, never overlapping (start and end logged), and the diff shows the last write; the instrumentation removed and the diff clean of it
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Result (2026-10-03)**: full gate 2,863 tests in 129 files (unchanged, no tests by convention),
+typecheck clean, lint 0 errors and 18 warnings, 102 s wall.
+
+- Shape:
+  - `loadDir`, `loadChanged`, `loadUncommitted`, `loadStats`, `loadCommits`, `readTab` and
+    `readDiff` return their promises, each still ending in `.catch(console.error)`, so none
+    rejects. The early exits return `Promise.resolve()`.
+  - `refreshMode` collects what it starts and returns `Promise.allSettled` of it.
+  - `WorktreeFiles` gains `revisions` (`{}` in `EMPTY`), and `UseFiles` gains `diskRevisions`
+    (`here.revisions`).
+- `runBatch` (`use-files.ts:522`) is the old handler's body. It collects every read it starts:
+  - the open file tabs the batch names;
+  - on a git-state change, every diff tab, with `refreshToken + 1` as before;
+  - otherwise, the uncommitted diff tabs the batch names. In Uncommitted mode only, it also bumps
+    `bumpRevisions` for `tabsAffected(listed uncommitted paths, event.paths)`, and patches only
+    when that list is not empty;
+  - then `refreshMode`.
+
+  It resolves on `Promise.allSettled` of all of them (FWIG-21).
+- FWIG-22, read: `runBatch` takes `live.current` on its first line (`:523`), when the gate starts
+  it, not when the batch arrived. It returns at once when the direction is not active or the
+  worktree is another (FWIG-23).
+- `runBatch` goes through `useLatestCallback`, so it keeps one identity and always runs the latest
+  closure. The gate comes from a `useState` initializer (`:568`), so it is created once and no ref
+  is read during render. The `files:changed` listener keeps its two filters and calls
+  `gate.request(event)` (`:575`); it depends on `[gate]` only, so it never resubscribes. An effect
+  on `[gate, active, worktreePath]` calls `dropWaiting()` (`:582`). A mode switch, a base change, a
+  discard and the first listing still call `refreshMode` directly, outside the gate.
+- Manual check, dev app:
+  - Setup: throwaway user data and seed under the system temp folder (`SMOKE_CONFIG` /
+    `SMOKE_BASE`, `--seed`), CDP port 9347, the three flags. The seed was registered as the only
+    workspace; `feature/diff` was selected, then Files, Uncommitted, All changes.
+  - Instrumentation, temporary: the gate's `run` wrapped with `console.count('fwig-run')`,
+    start/end times in `window.__fwigRuns`, and request times in `window.__fwigRequests`.
+  - 10 writes 50 ms apart to the listed `untracked.txt`, in 553-573 ms, were done three times:
+    - three requests and three runs each time, about 180-200 ms long, each starting after the
+      previous one ended (for example 122,113-122,304, 122,377-122,553, 122,675-122,855 ms);
+    - no overlap and no unsettled run, one in flight at a time;
+    - each batch arrived after the previous run had settled, so the merge path was not exercised in
+      the app (the unit tests show it, T13).
+  - The open `untracked.txt` diff tab showed the last write (`write 10 of 10, mark-...-10`) after
+    the burst.
+  - The All changes section of that file did not move from its earlier content. This is expected
+    until T18: `FileTabs` passes no `revisions` yet, so the uncommitted stack re-reads only on
+    `refreshToken`. T18 re-checks the section.
+  - Two sections (`crlf.txt`, `untracked.txt`) held no editor until the stack was scrolled. They
+    were inside the 600 px margin, so this is the mount plan's near-viewport behaviour T4 and T6
+    already recorded, not this change.
+  - The instrumentation was removed by restoring the file's pre-instrumentation copy:
+    `git diff` holds no `__fwig`, `console.count` or `FWIG-TEMP`.
 
 **Tests**: manual
 **Gate**: full
