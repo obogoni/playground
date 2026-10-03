@@ -659,9 +659,9 @@ function App(): JSX.Element {
           agents={agents}
           source={nsSource}
           tasks={tasks.tasks}
-          onSpawn={(agentName, cwd, adhocCommand, task) => {
+          onSpawn={(agentName, cwd, adhocCommand, task, prompt) => {
             setNsSource(null)
-            spawnSession(agentName, cwd, adhocCommand, task)
+            spawnSession(agentName, cwd, adhocCommand, task, prompt)
           }}
           onClose={() => setNsSource(null)}
         />

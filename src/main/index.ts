@@ -32,6 +32,7 @@ import { runHookShell } from './hook-shell'
 import { emit, handle, onSend } from './ipc'
 import { createMcpResultServer } from './mcp-result-server'
 import { purgePasteDir } from './paste-temp'
+import { ensurePromptsFolder, listPrompts } from './prompt-library'
 import { findOnPath } from './path-lookup'
 import { startLoopDelayLog } from './perf-monitor'
 import { withPostCreateHook } from './post-create-hook'
@@ -696,8 +697,8 @@ app.whenReady().then(() => {
   hookServer.onTaskLink((sessionId, task) => sessions.setTask(sessionId, task))
   namePoller.onListing((names) => sessions.applyNames(names))
   handle('sessions:list', () => sessions.list())
-  handle('sessions:spawn', ({ agentName, cwd, adhocCommand, task }) =>
-    sessions.spawn(agentName, cwd, adhocCommand, task)
+  handle('sessions:spawn', ({ agentName, cwd, adhocCommand, task, prompt }) =>
+    sessions.spawn(agentName, cwd, adhocCommand, task, prompt)
   )
   // Returning the promise is load-bearing: ipcMain.handle awaits it, so the
   // renderer's `sessions:stop` only resolves once the PTY has really exited
@@ -808,6 +809,15 @@ app.whenReady().then(() => {
     const result = await scaffoldWorkflow(workflowsRoot, name)
     if (result.ok) shell.showItemInFolder(result.path)
     return result
+  })
+
+  // Prompt files are discovered on demand like workflows (APR-01); the folder is
+  // created on request so "Open prompts folder" always has something to open (APR-08).
+  const promptsRoot = join(homedir(), '.playground', 'prompts')
+  handle('prompts:list', () => listPrompts(promptsRoot))
+  handle('prompts:openFolder', async () => {
+    await ensurePromptsFolder(promptsRoot)
+    await shell.openPath(promptsRoot)
   })
 
   // Free the shared MCP result server's loopback port when the app quits (WF3-10).

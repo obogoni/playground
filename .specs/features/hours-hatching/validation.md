@@ -258,7 +258,7 @@ legend and drawer swatches; focus and filter on a hatched task behave as on a so
 
 **Next steps**: add F1's fixture as one unit test; then open the PR.
 
-**Lessons**: L-101 recorded (`surviving_mutant`, scope `testing`) from U4 and U5. F2 and F3 are thin
+**Lessons**: L-106 recorded (`surviving_mutant`, scope `testing`) from U4 and U5. F2 and F3 are thin
 smoke evidence, not a surviving mutant or a precision gap, so they record no lesson.
 
 ---
@@ -422,5 +422,5 @@ touched.
 | HHAT-22 | Verified (first recipe) | ✅ Verified on the new recipe (table above; worst H2 15.5, light yellow) |
 | HHAT-29 | Verified (first recipe) | ✅ Verified on the new recipe (`smoke.mjs:1631`, `:1636`, `:1649`; 12/12 on the real build) |
 
-**Lessons**: none recorded. F1 was a surviving mutant in round 1 and already produced L-101; this
+**Lessons**: none recorded. F1 was a surviving mutant in round 1 and already produced L-106; this
 round found no surviving mutant, no spec-precision gap and no failed AC.

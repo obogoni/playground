@@ -59,6 +59,26 @@ token, `404` unknown path, `405` not a `POST`, `413` body over 4 KiB. When the v
 the caller is not in a session the app can link: not Claude Code, not spawned by the app, or
 spawned before the app's listener was up.
 
+- Start a session on a **prompt file**: every `~/.playground/prompts/<name>.md` shows up as a
+  prompt in the New Session dialog, for any registry agent (**Open prompts folder** creates and
+  opens the folder). Each `{{name}}` placeholder becomes a required field in a second step;
+  `{{taskId}}`, `{{taskTitle}}`, `{{branch}}` and `{{worktree}}` arrive pre-filled from the
+  dialog's selections and stay editable
+
+```markdown
+<!-- ~/.playground/prompts/implement.md -->
+Implement task #{{taskId}} ({{taskTitle}}) on branch {{branch}} with /tlc-spec-driven.
+
+Focus: {{focus}}
+```
+
+The agent starts interactively on the resolved prompt, passed as its last argument after `--`
+(`claude <args> -- "<prompt>"`), so a prompt that starts with a Markdown `-` still works.
+**Respawn** and **Duplicate** start the agent without it. A resolved prompt over 8000 characters
+blocks Spawn, and a file over 16 KiB is listed as broken. The text arrives verbatim, line breaks
+included, when the agent command is an executable (as `claude.exe` is); an agent launched
+through a `.cmd`/`.bat` shim may receive it cut at the first line break or with `"` removed.
+
 ![Agents view — embedded agent terminals attributed to their worktree and task](docs/screenshots/agents.png)
 
 **Throughout**
