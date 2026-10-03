@@ -197,6 +197,14 @@ the owner on 2026-10-01.
 
 **Coverage:** 21 total, 21 implemented (tasks.md, Requirement → Evidence Map), 0 unmapped.
 
+### Follow-ups (from validation, owner 2026-10-03)
+
+- **F1 (CRTO-05)**: no smoke drives a timeout into a dialog; the limits are constants, so it needs a test-only override.
+- **F2 (CRTO-16)**: the smokes assert only the hook label on screen; the refresh and checkout labels are pinned by `create-progress.test.ts`.
+- **F3 (CRTO-20)**: while a reuse or recreate runs, the Cancel on screen is `BranchExistsChoice`'s; it is disabled but has no `Wait for the create to finish` tooltip. The owner kept it as a follow-up for a later issue.
+- **F4**: the Start Work progress smoke opens the dialog through the Tasks pane's React fiber prop (offline); re-check it on a React upgrade.
+- Not from this feature: `smoke-create.mjs`'s two CRWT create checks fail on `main` too, because the dialog's base refresh is on by default and the seed has no remote.
+
 ---
 
 ## Success Criteria
