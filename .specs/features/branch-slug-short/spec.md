@@ -214,7 +214,7 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-20 | P1: check, AC 20 | Tasks | Pending: T14, T15, T17 (smoke 1, 2), T18 (smoke 9) |
 | BSLG-21 | P1: check, AC 21 | Tasks | T6, T8, T9 done; T17 (smoke 3) pending |
 | BSLG-22 | P1: check, AC 22 | Tasks | Done: T8 |
-| BSLG-23 | P1: check, AC 23 | Tasks | T10, T11 done; T12, T13, T17 (smoke 2) pending |
+| BSLG-23 | P1: check, AC 23 | Tasks | T10, T11, T12 done; T13, T17 (smoke 2) pending |
 | BSLG-24 | P1: check, AC 24 | Tasks | T11 done; T14, T15, T17 (smoke 1), T18 (smoke 9) pending |
 | BSLG-25 | P1: check, AC 25 | Tasks | T9 done; T17 (smoke 4) pending |
 | BSLG-26 | P1: check, AC 26 | Tasks | Done: T9 |
@@ -233,7 +233,7 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-39 | Edge: non-boolean value | Tasks | Done: T8, T9 |
 | BSLG-40 | Edge: repository value wins | Tasks | Done: T8 |
 | BSLG-41 | Edge: unreadable repository | Tasks | Done: T8 |
-| BSLG-42 | Edge: stale answer | Tasks | Pending: T12 |
+| BSLG-42 | Edge: stale answer | Tasks | Done: T12 |
 | BSLG-43 | Edge: `error:` before `fatal:` | Tasks | Done: T3 |
 | BSLG-44 | Edge: `fatal:` inside a line | Tasks | Done: T3 |
 

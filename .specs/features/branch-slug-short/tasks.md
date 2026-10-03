@@ -468,10 +468,12 @@ titles as written.
 
 **Done when**:
 
-- [ ] Tests: `PATH_CHECK_DELAY_MS` is 250 (literal); keys differ when any of the four values differs, alone (L-087); `baseBranch` absent and `''` give the same key, and the same for `worktreeTemplate`
-- [ ] Tests: `problemFor` returns the problem for the current key, null for another key (BSLG-42), null for a null answer, and null for a current answer with no problem
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/path-check.test.ts` then `npm test`
-- [ ] Test count: T9 count + the new tests
+- [x] Tests: `PATH_CHECK_DELAY_MS` is 250 (literal); keys differ when any of the four values differs, alone (L-087); `baseBranch` absent and `''` give the same key, and the same for `worktreeTemplate`
+- [x] Tests: `problemFor` returns the problem for the current key, null for another key (BSLG-42), null for a null answer, and null for a current answer with no problem
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/path-check.test.ts` then `npm test`
+- [x] Test count: T9 count + the new tests
+
+**Done** (T12): 13 new tests in `src/renderer/src/lib/path-check.test.ts`; suite 2607 → 2620 passed. The key is the four values as a JSON array, so a `|` inside one value cannot make two value sets share a key (one test pins it).
 
 **Tests**: unit
 **Gate**: quick
