@@ -265,10 +265,10 @@ section alone; on the build before the change its first check fails.
 | FWIG-33 | P1: bench — AC 33 | T4 | Pending |
 | FWIG-34 | P1: bench — AC 34 | T4 | Pending |
 | FWIG-35 | P1: bench — AC 35 | T4 | Pending |
-| FWIG-36 | P1: bench — AC 36 | T3 | Pending |
-| FWIG-37 | P1: bench — AC 37 | T3, T20, T21 | Pending |
-| FWIG-38 | P1: bench — AC 38 | T3, T20, T21 | Pending |
-| FWIG-39 | P1: bench — AC 39 | T3, T20, T21 | Pending |
+| FWIG-36 | P1: bench — AC 36 | T3 | Done (T3) |
+| FWIG-37 | P1: bench — AC 37 | T3, T20, T21 | In progress (T3) |
+| FWIG-38 | P1: bench — AC 38 | T3, T20, T21 | In progress (T3) |
+| FWIG-39 | P1: bench — AC 39 | T3, T20, T21 | In progress (T3) |
 | FWIG-40 | P1: bench — AC 40 | T1 | Done (T1) |
 | FWIG-41 | P1: bench — AC 41 | T6, T21 | Pending |
 | FWIG-42 | P1: smoke — AC 42 | T19 | Pending |

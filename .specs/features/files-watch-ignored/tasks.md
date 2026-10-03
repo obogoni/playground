@@ -252,14 +252,37 @@ targets in `judgeTargets` and `DEFAULT_TARGETS.filesCatFilePerEmit`.
 
 **Done when**:
 
-- [ ] Tests: `DEFAULT_TARGETS.filesCatFilePerEmit` is `2` by literal (L-009), and #147's existing defaults are unchanged
-- [ ] Tests: a fixture line gives `filesEmits`, `filesGit`, `filesCatFile` and `filesStatusEmits` for `bench-wt-1`; a line with no `bench-wt-1` entries gives 0 for each
-- [ ] Tests: the build target is PASS with every steady row at 0 / 0, FAIL with one row at 1 git process and with one row at 1 `files:changed`, and `n/a` with `sessions: 1`, without `--files-view`, and with a second loop on
-- [ ] Tests: the edit target is PASS at a ratio of exactly 2 (L-042), FAIL just above it, and `n/a` with no `files:changed` in the steady rows or with a second loop on
-- [ ] Tests: the touch target is PASS at 0 and FAIL at 1 `worktree:status` on `bench-wt-1`; `n/a` for another run shape
-- [ ] Tests: `formatSummary` prints the `files` block only when `filesView` is on, one line per row, and the three target lines
-- [ ] Gate check passes: `npx vitest run scripts/bench-summary.test.ts`, then the full gate
-- [ ] Test count: T1 count + the new tests
+- [x] Tests: `DEFAULT_TARGETS.filesCatFilePerEmit` is `2` by literal (L-009), and #147's existing defaults are unchanged
+- [x] Tests: a fixture line gives `filesEmits`, `filesGit`, `filesCatFile` and `filesStatusEmits` for `bench-wt-1`; a line with no `bench-wt-1` entries gives 0 for each
+- [x] Tests: the build target is PASS with every steady row at 0 / 0, FAIL with one row at 1 git process and with one row at 1 `files:changed`, and `n/a` with `sessions: 1`, without `--files-view`, and with a second loop on
+- [x] Tests: the edit target is PASS at a ratio of exactly 2 (L-042), FAIL just above it, and `n/a` with no `files:changed` in the steady rows or with a second loop on
+- [x] Tests: the touch target is PASS at 0 and FAIL at 1 `worktree:status` on `bench-wt-1`; `n/a` for another run shape
+- [x] Tests: `formatSummary` prints the `files` block only when `filesView` is on, one line per row, and the three target lines
+- [x] Gate check passes: `npx vitest run scripts/bench-summary.test.ts`, then the full gate
+- [x] Test count: T1 count + the new tests
+
+**Result (2026-10-03)**: `scripts/bench-summary.test.ts` 39 tests (20 of #147's + 19 new), all
+passing; full gate 2,788 tests in 127 files (2,769 + 19), typecheck clean, lint 0 errors and 18
+warnings (unchanged), about 104 s wall.
+
+- Shape: `rowOf(line, label, { filesWorktree })` adds `filesEmits`, `filesGit`, `filesCatFile` and
+  `filesStatusEmits` only when the option is given, so #147's exact `rowOf` test holds unchanged;
+  `phaseRows(lines, { minutes, filesWorktree })` forwards it; `worstRow` takes the Files columns at
+  their largest when the rows carry them. `judgeTargets` takes `filesView`, `buildIntervalMs`,
+  `editIntervalMs` and `touchIntervalMs` (each off by default) and always returns #147's four targets
+  first, then `filesIgnoredWrites`, `filesCatFilePerEmit` and `filesIndexUntouched`. A Files target is
+  judged only with `sessions === 0`, `filesView` and its loop as the only loop running; the index loop
+  counts as a loop. `formatSummary` adds `files-view  build=.. edit=.. touch=..` to the header, a
+  `files` block after the rows and the three Files target lines only with `filesView`; without it the
+  text is #147's, byte for byte.
+- Values: the build target's value is the larger of the worst steady row's git count and
+  `files:changed` count (spec-precision gap: FWIG-37 defines the verdict, not a single printed
+  value; PASS is exactly "both 0 in every steady row"). The edit target's value is the steady
+  `cat-file` total over the steady `files:changed` total, printed to 2 decimals and judged unrounded.
+  The touch target's value is the worst steady row's `worktree:status` on `bench-wt-1`.
+- #147's `DEFAULT_TARGETS` test is an exact `toEqual`; it now lists five keys, its four values
+  unchanged and `filesCatFilePerEmit: 2` added (the only edit to an existing test; an exact-object
+  assertion cannot hold a new key otherwise).
 
 **Tests**: unit
 **Gate**: quick
