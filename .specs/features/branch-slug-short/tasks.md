@@ -441,8 +441,10 @@ titles as written.
 
 **Done when**:
 
-- [ ] The handler returns `{ problem }` from `checkCreatePaths(req)` with the real deps
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] The handler returns `{ problem }` from `checkCreatePaths(req)` with the real deps
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Done** (T11): the handler calls `checkCreatePaths(req)` with no deps, so the real platform and git; typecheck 0; lint 0 errors, 18 warnings (baseline); suite 2607 passed, unchanged.
 
 **Tests**: none
 **Gate**: full
