@@ -199,9 +199,9 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-05 | P1: slugs, AC 5 | Tasks | Done: T2 |
 | BSLG-06 | P1: slugs, AC 6 | Tasks | Done: T2 |
 | BSLG-07 | P1: slugs, AC 7 | Tasks | Done: T2 |
-| BSLG-08 | P1: slugs, AC 8 | Tasks | T2 done; T18 (smoke 8) pending |
+| BSLG-08 | P1: slugs, AC 8 | Tasks | Done: T2 (the proof); T18 (smoke 8) written, optional, not run: `SMOKE_LONG_TASK_URL` unset |
 | BSLG-09 | P1: slugs, AC 9 | Tasks | Done: T2 |
-| BSLG-10 | P1: slugs, AC 10 | Tasks | T2 done; T18 (smoke 8) pending |
+| BSLG-10 | P1: slugs, AC 10 | Tasks | Done: T2 (the proof); T18 (smoke 8) written, optional, not run: `SMOKE_LONG_TASK_URL` unset |
 | BSLG-11 | P1: slugs, AC 11 | Tasks | Done: T2 |
 | BSLG-12 | P1: error, AC 12 | Tasks | Done: T3; recorded in AD-055 (T16) |
 | BSLG-13 | P1: error, AC 13 | Tasks | Done: T3 |
@@ -211,11 +211,11 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-17 | P1: check, AC 17 | Tasks | Done: T6, T8, T17 (smoke 1); recorded in AD-055 (T16) |
 | BSLG-18 | P1: check, AC 18 | Tasks | Done: T6 |
 | BSLG-19 | P1: check, AC 19 | Tasks | Done: T6, T17 (smoke 2) |
-| BSLG-20 | P1: check, AC 20 | Tasks | T14, T15, T17 (smoke 1, 2) done; T18 (smoke 9) pending |
+| BSLG-20 | P1: check, AC 20 | Tasks | Done: T14, T15, T17 (smoke 1, 2); T18 (smoke 9) written, optional, not run: `SMOKE_LONG_TASK_URL` unset |
 | BSLG-21 | P1: check, AC 21 | Tasks | Done: T6, T8, T9, T17 (smoke 3) |
 | BSLG-22 | P1: check, AC 22 | Tasks | Done: T8 |
 | BSLG-23 | P1: check, AC 23 | Tasks | Done: T10, T11, T12, T13, T17 (smoke 2) |
-| BSLG-24 | P1: check, AC 24 | Tasks | T11, T14, T15, T17 (smoke 1) done; T18 (smoke 9) pending |
+| BSLG-24 | P1: check, AC 24 | Tasks | Done: T11, T14, T15, T17 (smoke 1); T18 (smoke 9) written, optional, not run: `SMOKE_LONG_TASK_URL` unset |
 | BSLG-25 | P1: check, AC 25 | Tasks | Done: T9, T17 (smoke 4) |
 | BSLG-26 | P1: check, AC 26 | Tasks | Done: T9 |
 | BSLG-27 | P2: folder, AC 27 | Tasks | Done: T7, T17 (smoke 6) |

@@ -14,7 +14,7 @@
  * It writes, under SMOKE_BASE (default <temp>\bss-smoke):
  *
  *   bss-ids\.app\config.json   worktreeTemplate {repo}-{id}
- *   bss-ids\api                core.longpaths=false, a local branch `user`,
+ *   bss-ids\api                core.longpaths=false, a local branch `team`,
  *                              `main` tracking bss-origin.git
  *   bss-ids\web                core.longpaths=true
  *   bss-default\app            core.longpaths=true, global template {repo}-{branch}
@@ -32,6 +32,13 @@
  *
  * SMOKE_ONLY selects a section:
  *   longpath   checks 1-7 on the seed.
+ *   slug       checks 8-9 on the seed, optional: they run only with
+ *              SMOKE_LONG_TASK_URL set to a work item whose title slugs to more
+ *              than 40 characters under the rule before #145 (refused otherwise),
+ *              and an az CLI logged in to its org. Without the variable the
+ *              section prints a skip notice and counts as neither pass nor fail.
+ *              Never write the URL or the title into the repository; the slug
+ *              rule's proof is its unit tests.
  *   stwk       the legacy STWK checks below, which need SMOKE_TASK_URL.
  * With no SMOKE_ONLY and the seed present under SMOKE_BASE, every seed section
  * runs and the legacy checks print a skip notice (they assume their own config,
@@ -115,8 +122,9 @@ function seed() {
   )
   const api = join(IDS_WS, 'api')
   seedRepo(api, false)
-  // `user` makes the branch `user/77-x` collide in check 5.
-  git(['branch', 'user'], api)
+  // `team` makes the branch `team/77-x` collide in check 5. Not `user`: Start Work's
+  // nested template puts every branch under `user/`, and check 8 creates one.
+  git(['branch', 'team'], api)
   execFileSync('git', ['init', '-q', '--bare', '-b', 'main', ORIGIN], { windowsHide: true })
   git(['config', 'core.autocrlf', 'false'], ORIGIN)
   git(['config', 'core.longpaths', 'false'], ORIGIN)
@@ -406,9 +414,9 @@ async function longpathSection(ws) {
     JSON.stringify({ ok: direct.ok, error: direct.error, made: made4 })
   )
 
-  // 5: git's own line for a create git refuses: `user` exists, so `user/77-x` cannot.
+  // 5: git's own line for a create git refuses: `team` exists, so `team/77-x` cannot.
   await evaluate(ws, clickChip('api'))
-  await evaluate(ws, setBranch('user/77-x'))
+  await evaluate(ws, setBranch('team/77-x'))
   await sleep(ANSWER_WAIT_MS)
   const before5 = await evaluate(ws, dialogState)
   await evaluate(ws, `document.querySelector('.dialog-btn-primary').click()`)
@@ -421,10 +429,10 @@ async function longpathSection(ws) {
     )
   }
   check(
-    "5. creating user/77-x on api shows git's fatal: cannot lock ref line, not Preparing worktree (BSLG-14)",
+    "5. creating team/77-x on api shows git's fatal: cannot lock ref line, not Preparing worktree (BSLG-14)",
     before5.repo === 'api' &&
       before5.createDisabled === false &&
-      (error5 ?? '').startsWith("fatal: cannot lock ref 'refs/heads/user/77-x'") &&
+      (error5 ?? '').startsWith("fatal: cannot lock ref 'refs/heads/team/77-x'") &&
       !(error5 ?? '').includes('Preparing worktree'),
     JSON.stringify({ repo: before5.repo, error: error5 })
   )
@@ -467,6 +475,127 @@ async function longpathSection(ws) {
     JSON.stringify({ ok: direct7.ok, error: direct7.error, made: made7 })
   )
   await evaluate(ws, `document.querySelector('.dialog-btn-ghost')?.click()`)
+}
+
+/* ------------------------------------------------------ long title (BSLG) -- */
+
+/** The slug the rule before #145 made: every word, no cap. */
+const previousSlugOf = (title) =>
+  title
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((word) => word !== '')
+    .join('-')
+
+const SLUG_SKIP_NOTICE =
+  'SKIP  slug section (checks 8-9): set SMOKE_LONG_TASK_URL to a work item whose title slugs to more than 40 characters; the slug rule is proven by its unit tests'
+
+async function slugSection(ws) {
+  const url = process.env.SMOKE_LONG_TASK_URL
+  if (!url) {
+    console.log(SLUG_SKIP_NOTICE)
+    return
+  }
+  const idMatch = url.match(/\/edit\/(\d+)/)
+  if (!idMatch)
+    throw new Error(
+      'SMOKE_LONG_TASK_URL does not look like a work item URL (.../_workitems/edit/<id>)'
+    )
+  const taskId = Number(idMatch[1])
+  const repos = await seededRepos(ws)
+  if (!repos) throw new Error(`The seed under ${BASE} is not in the app's tree; run --seed first`)
+  const { api } = repos
+
+  // Pin the work item through the add row, then wait for its card.
+  await evaluate(
+    ws,
+    `(() => { ${setInput('.tasks-add-input', url)} document.querySelector('.tasks-pin-btn').click() })()`
+  )
+  let title = null
+  for (let i = 0; i < 60 && title === null; i++) {
+    await sleep(500)
+    title = await evaluate(
+      ws,
+      `document.querySelector('.task-card .task-card-title')?.textContent ?? null`
+    )
+  }
+  if (title === null) throw new Error('The long-title work item did not pin')
+  // The section proves nothing on a title the old rule already kept short.
+  if (previousSlugOf(title).length <= 40) {
+    throw new Error(
+      'SMOKE_LONG_TASK_URL: its title slugs to 40 characters or fewer; pick a longer one'
+    )
+  }
+
+  // 8: Start Work on api prefills a branch whose slugs are at most 40 characters.
+  await evaluate(ws, `document.querySelector('.task-card .task-start-btn').click()`)
+  await sleep(500)
+  await evaluate(ws, clickChip('api'))
+  // The parent lookup re-renders the prefill once it lands; wait for the value to settle.
+  let prefill = null
+  for (let i = 0, last = null, same = 0; i < 40 && same < 6; i++) {
+    await sleep(250)
+    prefill = (await evaluate(ws, dialogState)).branch
+    same = prefill === last ? same + 1 : 0
+    last = prefill
+  }
+  const segments = (prefill ?? '').split('/')
+  const slugAfterId = (segment, id) => segment.slice(`${id}-`.length)
+  const leaf = segments[segments.length - 1] ?? ''
+  const leafOk = leaf.startsWith(`${taskId}-`) && slugAfterId(leaf, taskId).length <= 40
+  const parentSegment = segments.length === 4 ? segments[2] : null
+  const parentId = parentSegment?.match(/^(\d+)-/)?.[1] ?? null
+  const parentOk =
+    parentSegment === null ||
+    (parentId !== null && slugAfterId(parentSegment, parentId).length <= 40)
+
+  // 9: in the same dialog, a hand-typed name with a ref path of 287.
+  const b287 = branchForRefPath(commonDirOf(api.path), 287)
+  await evaluate(ws, setBranch(b287))
+  const s287 = await waitForLine(ws, refMessage(287))
+  check(
+    '9. Start Work on api: a hand-typed ref path of 287 shows the AC 17 text and disables Create (BSLG-20, BSLG-24)',
+    s287.repo === 'api' && s287.line === refMessage(287) && s287.createDisabled === true,
+    JSON.stringify({ repo: s287.repo, line: s287.line, createDisabled: s287.createDisabled })
+  )
+
+  // 8, finished: back to the prefilled name, created with core.longpaths=false, then removed.
+  await evaluate(ws, setBranch(prefill))
+  await sleep(ANSWER_WAIT_MS)
+  const beforeCreate = await evaluate(ws, dialogState)
+  await evaluate(ws, `document.querySelector('.dialog-btn-primary').click()`)
+  for (let i = 0; i < 60 && (await evaluate(ws, dialogState)).open; i++) await sleep(500)
+  const after = await evaluate(ws, dialogState)
+  const tree = await evaluate(ws, `window.api.invoke('tree:get')`)
+  const made = tree
+    .flatMap((w) => w.repos)
+    .find((r) => r.path === api.path)
+    ?.worktrees.find((w) => w.branch === prefill)
+  const removed = made
+    ? await evaluate(
+        ws,
+        `window.api.invoke('worktrees:remove', ${JSON.stringify({ repoPath: api.path, worktreePath: made.path })})`
+      )
+    : null
+  check(
+    '8. Start Work on api prefills slugs of at most 40 characters after the ids, and creates the worktree with core.longpaths=false (BSLG-08, BSLG-10, BSLG-24)',
+    leafOk &&
+      parentOk &&
+      beforeCreate.line === null &&
+      beforeCreate.createDisabled === false &&
+      after.open === false &&
+      made !== undefined &&
+      removed?.ok === true,
+    JSON.stringify({
+      segments: segments.length,
+      leafSlug: slugAfterId(leaf, taskId).length,
+      parentSlug: parentSegment === null ? null : slugAfterId(parentSegment, parentId ?? '').length,
+      created: made !== undefined,
+      removed: removed?.ok ?? null
+    })
+  )
 }
 
 /* --------------------------------------------------------- legacy (STWK) -- */
@@ -731,8 +860,8 @@ async function legacySection(ws) {
 /* ----------------------------------------------------------------- drive -- */
 
 async function drive() {
-  if (ONLY !== null && !['longpath', 'stwk'].includes(ONLY)) {
-    console.error(`Unknown SMOKE_ONLY=${ONLY}; expected longpath or stwk`)
+  if (ONLY !== null && !['longpath', 'slug', 'stwk'].includes(ONLY)) {
+    console.error(`Unknown SMOKE_ONLY=${ONLY}; expected longpath, slug or stwk`)
     process.exit(1)
   }
   const target = await pageTarget()
@@ -744,6 +873,7 @@ async function drive() {
 
   const seeded = existsSync(join(IDS_WS, 'api')) && existsSync(join(DEFAULT_WS, 'app'))
   if (ONLY === 'longpath' || (ONLY === null && seeded)) await longpathSection(ws)
+  if (ONLY === 'slug' || (ONLY === null && seeded)) await slugSection(ws)
   if (ONLY === 'stwk' || (ONLY === null && !seeded)) await legacySection(ws)
   if (ONLY === null && seeded) {
     console.log(

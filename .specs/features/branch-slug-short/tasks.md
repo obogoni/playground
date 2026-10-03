@@ -646,11 +646,13 @@ Then the full gate.
 
 **Done when**:
 
-- [ ] When `SMOKE_LONG_TASK_URL` is set: each check seen failing on its mutant, then passing: the cap removed from `slugOf` (8, renderer reload); `StartWorkDialog` not gating Create on the problem (9)
-- [ ] Without `SMOKE_LONG_TASK_URL`: `SMOKE_ONLY=slug` prints the skip notice and reports the section as neither pass nor fail, and a full run prints the same notice and runs every other section
-- [ ] The URL and the title never appear in a committed file
-- [ ] `SMOKE_ONLY=longpath` passes on a fresh seed and launch, and so does `SMOKE_ONLY=slug` when `SMOKE_LONG_TASK_URL` is set
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+- [ ] When `SMOKE_LONG_TASK_URL` is set: each check seen failing on its mutant, then passing: the cap removed from `slugOf` (8, renderer reload); `StartWorkDialog` not gating Create on the problem (9) — **not run**: `SMOKE_LONG_TASK_URL` was not set in this session, so checks 8 and 9 are written but unproven; they need an owner run with the variable
+- [x] Without `SMOKE_LONG_TASK_URL`: `SMOKE_ONLY=slug` prints the skip notice and reports the section as neither pass nor fail, and a full run prints the same notice and runs every other section
+- [x] The URL and the title never appear in a committed file
+- [x] `SMOKE_ONLY=longpath` passes on a fresh seed and launch, and so does `SMOKE_ONLY=slug` when `SMOKE_LONG_TASK_URL` is set — the longpath half; the slug half waits on the variable, as above
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
+
+**Done** (T18): `slugSection` in `scripts/smoke-start-work.mjs`. Without `SMOKE_LONG_TASK_URL`, `SMOKE_ONLY=slug` printed the skip notice and `0/0 checks passed` (exit 0); a full run on the seed ran checks 1–7 (7/7) and printed the slug and legacy skip notices. With the variable, the section pins the item, refuses a title whose previous-rule slug is 40 characters or fewer, reads Start Work's prefill on `api` (each slug after its id at most 40, the parent segment only when the item has one), then shows check 9 on a typed 287 name in the same dialog, and finally creates the prefilled branch with `core.longpaths=false` and removes it through `worktrees:remove`; its output prints lengths, never the title or the branch. The seed's colliding branch is now `team`, not `user`: the nested template puts every Start Work branch under `user/`, so check 8's create would have hit check 5's collision. Check 5 types `team/77-x`; it passed and was seen failing again on the first-stderr-line mutant (relaunched). Final `SMOKE_ONLY=longpath` 7/7 on a fresh seed and launch. Gate: typecheck 0; lint 0 errors, 18 warnings (baseline); suite 2620 passed; `electron-vite build` exit 0.
 
 **Tests**: manual
 **Gate**: manual

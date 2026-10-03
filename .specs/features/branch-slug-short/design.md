@@ -240,7 +240,7 @@ Rules 3 and 4 are the P2 story; T7 adds them, and dropping P2 removes T7 only.
 
 - `--seed` (app not running) writes under `SMOKE_BASE` two workspaces and a `SMOKE_CONFIG`:
   - `bss-ids/` with `.app/config.json` `worktreeTemplate: "{repo}-{id}"`, holding `api`
-    (`core.longpaths=false` and a branch named `user`) and `web` (`core.longpaths=true`);
+    (`core.longpaths=false` and a branch named `team`; not `user`, which would block every branch the nested template makes) and `web` (`core.longpaths=true`);
   - `bss-default/` with no override (global default `{repo}-{branch}`), holding `app`
     (`core.longpaths=true`);
   - the config registers both, with `ado.branchTemplate` `user/{dev}/{usId}-{usSlug}/{id}-{slug}`
