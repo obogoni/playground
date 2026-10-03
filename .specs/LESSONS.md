@@ -582,6 +582,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: SPEC_DEVIATION src/main/session-manager.ts:126 (session-manager)
 - last seen: 2026-10-02T17:30:50Z
 
+### L-101 - When a factory decides enabled-vs-no-op before touching real ports (timer, monitor, file), inject those ports with optional overrides so the disabled test can assert zero calls; checking only the returned no-op and an empty folder lets a leaked timer or monitor survive.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main/**` · harmful: 0
+- features: perf-diagnostics
+- evidence: src/main/diagnostics.ts:461 (M5/M6) (src/main/**)
+- last seen: 2026-10-03T14:19:26Z
+
+### L-102 - When design.md fixes a printed output's exact layout, re-read the spec ACs that describe that output against it (where each figure appears, every verdict value it can print) and align the wording before Execute.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: perf-diagnostics
+- evidence: PDIAG-36/PDIAG-37 vs design.md:225-237 (specs)
+- last seen: 2026-10-03T14:19:26Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
