@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import type { LegendEntry } from '../lib/hours-calendar'
+import { lookClass, type LegendEntry } from '../lib/hours-calendar'
 import { formatHmCompact } from '../lib/time-format'
 import { Icon } from './Icon'
 import './HoursLegend.css'
@@ -49,7 +49,7 @@ export function HoursLegend({
               aria-pressed={picked}
               onClick={() => onTogglePick(e)}
             >
-              <span className={`hleg-swatch role-${e.role}`} />
+              <span className={`hleg-swatch ${lookClass(e.role)}`} />
               <span className="hleg-label">{e.label}</span>
               <span className="hleg-total">{formatHmCompact(e.totalMs)}</span>
             </button>

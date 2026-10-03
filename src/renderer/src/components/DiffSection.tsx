@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 import type { ChangedPath, DiffRequest, DiffSides, FileStat } from '../../../shared/files'
 import { api } from '../lib/api'
 import { changeStatusView } from '../lib/change-status'
+import { requestKey } from '../lib/diff-view'
 import type { UnchangedChoice } from '../lib/files-view'
 import { DiffViewer, type DiffHandle } from './DiffViewer'
 import { FilePlaceholder } from './FilePlaceholder'
@@ -43,6 +44,8 @@ interface DiffSectionProps {
   ignoreWhitespace: boolean
   /** Bumped when every open diff must re-read against a new git state (FDIF-31/32). */
   refreshToken: number
+  /** Bumped when a disk batch named this file in Uncommitted mode; 0 elsewhere (FWIG-25). */
+  revision: number
   /** The stack's last Hide unchanged / Show unchanged press, for this section's editor. */
   unchanged: UnchangedChoice | null
   onToggle: (path: string) => void
@@ -79,6 +82,7 @@ export function DiffSection({
   layout,
   ignoreWhitespace,
   refreshToken,
+  revision,
   unchanged,
   onToggle,
   onElement,
@@ -96,15 +100,27 @@ export function DiffSection({
     return () => onElement(path, null)
   }, [path, onElement])
 
-  // The sides are read when the section first holds an editor, and again
-  // whenever the stack hands it a new request — which the stack re-derives from
-  // every re-read of the mode's list, so an index or HEAD move lands here
-  // (FDIF-31). `refreshToken` covers a refresh that leaves the list identical.
+  // The stack builds a new request object on every re-read of the mode's list,
+  // so the read below keys on what the request reads, not on the object
+  // (FWIG-24, FWIG-26). The object itself is handed over through this ref,
+  // written by an effect: reading a ref during render is a lint error.
+  const key = requestKey(request)
+  const requestRef = useRef(request)
   useEffect(() => {
-    if (!mounted || !expanded || !request || stat.uncountable) return
+    requestRef.current = request
+  })
+
+  // The sides are read when the section first holds an editor, and again when
+  // the request reads other sides (FWIG-26), when a disk batch named this file
+  // (`revision`, FWIG-25) or when the index or HEAD moved (`refreshToken`,
+  // FDIF-31, FWIG-27). A list re-read that leaves the sides alone reads nothing
+  // (FWIG-24).
+  useEffect(() => {
+    const current = requestRef.current
+    if (!mounted || !expanded || !current || stat.uncountable) return
     let cancelled = false
     api
-      .invoke('files:diff-sides', { worktreePath, request })
+      .invoke('files:diff-sides', { worktreePath, request: current })
       .then((next) => {
         if (!cancelled) setSides(next)
       })
@@ -112,7 +128,7 @@ export function DiffSection({
     return () => {
       cancelled = true
     }
-  }, [mounted, expanded, request, stat.uncountable, worktreePath, refreshToken])
+  }, [mounted, expanded, key, revision, stat.uncountable, worktreePath, refreshToken])
 
   const held = height ?? estimatedHeight(stat)
 

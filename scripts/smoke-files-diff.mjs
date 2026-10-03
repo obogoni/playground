@@ -20,6 +20,9 @@
  * SMOKE_ONLY=fold on step 2 runs section 14 alone (FOLD, issue #130), from a
  * fresh seed and launch like any drive.
  *
+ * SMOKE_ONLY=watch on step 2 runs the watch section alone (checks 15a..15c,
+ * FWIG-14, 43..45, issue #150), from a fresh seed and launch like any drive.
+ *
  * Point SMOKE_CONFIG at the config.json of the userData dir in use, and
  * SMOKE_BASE at the folder to seed into. Run the app with --user-data-dir so
  * the owner's real workspaces, sessions and pinned tasks are never in scope.
@@ -539,6 +542,15 @@ async function drive() {
     return failed.length
   }
 
+  // SMOKE_ONLY=watch runs the watch section alone; it builds its own fixture.
+  if (process.env.SMOKE_ONLY === 'watch') {
+    await watchSection(ws)
+    const failed = checks.filter((c) => !c.ok)
+    console.log(`\n${checks.length - failed.length}/${checks.length} checks passed (watch only)`)
+    ws.close()
+    return failed.length
+  }
+
   // SMOKE_ONLY=fold runs section 14 alone, for iterating on it; the full drive
   // still runs before a PR.
   if (process.env.SMOKE_ONLY === 'fold') {
@@ -1002,6 +1014,10 @@ async function drive() {
   // After the glyph sections, whose lists it would change, and before the
   // icon checks, which reload the window and stay last.
   await discardChecks(ws)
+
+  // After the discard section and before the icon checks: its fixture is
+  // ignored, its control file is removed, and the exclude file is restored.
+  await watchSection(ws)
 
   await iconChecks(ws)
 
@@ -3764,6 +3780,114 @@ async function foldSetup(ws) {
   git(['add', '-A'])
   git(['commit', '-m', 'commit everything left'])
   await sleep(2500)
+}
+
+/* ----------------------------------------------------------------- watch -- */
+
+/** The folder the watch section writes into; `.git/info/exclude` ignores it while it runs. */
+const WATCH_DIR = 'fwig-build'
+const WATCH_WRITES = 20
+const WATCH_WRITE_GAP_MS = 100
+const WATCH_QUIET_MS = 1500
+const WATCH_CONTROL_MS = 2000
+
+/** The `files:changed` events the page has collected for the seed's worktree since it subscribed. */
+const watchEvents = `
+  (window.__fwigEvents ?? [])
+    .filter((e) => e.worktreePath.split(String.fromCharCode(92)).join('/').toLowerCase().endsWith('/fxd-smoke-seed/app'))
+`
+
+/**
+ * 15a..15c. Writes under a folder git ignores refresh nothing (FWIG-14, 43..45,
+ * issue #150). The folder is ignored through `.git/info/exclude`, so no earlier
+ * section's listing changes; a control file at the root shows the watch is live,
+ * so 15a cannot pass on a watcher that sends nothing at all.
+ */
+async function watchSection(ws) {
+  const exclude = join(REPO, '.git', 'info', 'exclude')
+  const excludeBefore = existsSync(exclude) ? readFileSync(exclude) : null
+  const dir = join(REPO, WATCH_DIR)
+  const control = `fwig-control-${Date.now()}.txt`
+  const controlPath = join(REPO, control)
+  try {
+    mkdirSync(join(REPO, '.git', 'info'), { recursive: true })
+    const text = excludeBefore === null ? '' : excludeBefore.toString('utf8')
+    writeFileSync(exclude, `${text}${text === '' || text.endsWith(LF) ? '' : LF}${WATCH_DIR}/${LF}`)
+    mkdirSync(dir, { recursive: true })
+    // Drain: the folder's own creation is a batch of its own, before the subscription.
+    await sleep(2000)
+    await evaluate(
+      ws,
+      `(() => {
+        window.__fwigEvents = []
+        window.__fwigOff = window.api.on('files:changed', (e) => window.__fwigEvents.push(e))
+        return true
+      })()`
+    )
+
+    // 15a (FWIG-43): 20 writes 100 ms apart, then 1,500 ms with no event.
+    for (let i = 0; i < WATCH_WRITES; i++) {
+      writeFileSync(
+        join(dir, `out-${String(i).padStart(2, '0')}.bin`),
+        `build ${i} ${Date.now()}${LF}`
+      )
+      await sleep(WATCH_WRITE_GAP_MS)
+    }
+    await sleep(WATCH_QUIET_MS)
+    const ignored = await evaluate(ws, watchEvents)
+    check(
+      `15a. ${WATCH_WRITES} writes under an ignored folder send no files:changed within ${WATCH_QUIET_MS} ms (FWIG-43)`,
+      ignored.length === 0,
+      `${ignored.length} events, ${ignored.reduce((n, e) => n + e.paths.length, 0)} paths: ` +
+        J(ignored.slice(0, 3).map((e) => e.paths.slice(0, 4)))
+    )
+
+    // 15b (FWIG-44): the control, outside the ignored folder, arrives within 2,000 ms.
+    writeFileSync(controlPath, `control${LF}`)
+    const started = Date.now()
+    let named = false
+    while (!named && Date.now() - started < WATCH_CONTROL_MS) {
+      named = (await evaluate(ws, watchEvents)).some((e) => e.paths.includes(control))
+      if (!named) await sleep(100)
+    }
+    check(
+      `15b. A write outside the ignored folder sends a files:changed naming it within ${WATCH_CONTROL_MS} ms (FWIG-44)`,
+      named,
+      named ? `after about ${Date.now() - started} ms` : 'no event named it'
+    )
+
+    // 15c (FWIG-14, 45): neither listing shows the ignored folder; both show the control.
+    const listed = async (mode) => {
+      await evaluate(ws, clickByText('.file-tree-mode', mode))
+      await sleep(1200)
+      return readWhen(
+        ws,
+        `[...document.querySelectorAll('.file-tree-body .file-tree-row')].map((r) => r.getAttribute('title'))`,
+        (rows) => rows.includes(control)
+      )
+    }
+    const folder = await listed('Folder')
+    const uncommitted = await listed('Uncommitted')
+    const shows = (rows) => rows.filter((p) => (p ?? '').startsWith(WATCH_DIR))
+    check(
+      '15c. The ignored folder is in neither the Folder tree nor the Uncommitted list (FWIG-14, 45)',
+      folder.includes(control) &&
+        uncommitted.includes(control) &&
+        shows(folder).length === 0 &&
+        shows(uncommitted).length === 0,
+      `Folder: control ${folder.includes(control)}, ${J(shows(folder))}; ` +
+        `Uncommitted: control ${uncommitted.includes(control)}, ${J(shows(uncommitted))}`
+    )
+  } finally {
+    await evaluate(
+      ws,
+      `(() => { window.__fwigOff?.(); delete window.__fwigEvents; return true })()`
+    )
+    rmTree(dir)
+    rmSync(controlPath, { force: true })
+    if (excludeBefore === null) rmSync(exclude, { force: true })
+    else writeFileSync(exclude, excludeBefore)
+  }
 }
 
 /* ----------------------------------------------------------------- icons -- */

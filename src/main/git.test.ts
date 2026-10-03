@@ -1,7 +1,9 @@
+import { mkdtempSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { afterEach, describe, expect, it } from 'vitest'
+import { join } from 'node:path'
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { installDiagnostics, NOOP_DIAGNOSTICS, type Diagnostics } from './diagnostics'
-import { git, gitFailureLine, isTimeout } from './git'
+import { git, gitFailureLine, isTimeout, READ_ONLY_FLAGS } from './git'
 
 /** The rejection `git()` produces, so the helpers are exercised against execFile's real error shape. */
 async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
@@ -29,12 +31,66 @@ describe('gitFailureLine', () => {
   it('stringifies a thrown value that is not an Error', () => {
     expect(gitFailureLine('plain failure')).toBe('plain failure')
   })
+
+  const failure = (stderr: string): Error =>
+    Object.assign(new Error('Command failed: git worktree add'), { stderr })
+
+  it("prefers git's fatal: line over a progress note before it (BSLG-12)", () => {
+    const err = failure(
+      "Preparing worktree (new branch 'x')\nfatal: cannot lock ref 'refs/heads/x': Filename too long\n"
+    )
+    expect(gitFailureLine(err)).toBe("fatal: cannot lock ref 'refs/heads/x': Filename too long")
+  })
+
+  it('prefers an error: line over a hint before it (BSLG-12)', () => {
+    expect(gitFailureLine(failure('hint: a\nerror: b\n'))).toBe('error: b')
+  })
+
+  it('returns the first of error: and fatal: when both appear (BSLG-43)', () => {
+    expect(gitFailureLine(failure('error: a\nfatal: b\n'))).toBe('error: a')
+  })
+
+  it('never picks a line that only contains fatal: further in (BSLG-44)', () => {
+    expect(gitFailureLine(failure('hint: fatal: x\n'))).toBe('hint: fatal: x')
+    expect(gitFailureLine(failure('hint: fatal: x\nfatal: y\n'))).toBe('fatal: y')
+  })
+
+  it('trims the prefixed line it returns (BSLG-12)', () => {
+    expect(gitFailureLine(failure('note\n   fatal: z  \n'))).toBe('fatal: z')
+  })
+
+  describe('with real git failures (L-024)', () => {
+    let repo: string
+
+    beforeAll(async () => {
+      repo = realpathSync.native(mkdtempSync(join(tmpdir(), 'git-line-')))
+      await git(repo, ['init', '-q'])
+    })
+
+    afterAll(() => {
+      rmSync(repo, { recursive: true, force: true })
+    })
+
+    it("returns git's fatal: line for a failed rev-parse (BSLG-12)", async () => {
+      const err = await rejectionOf(git(repo, ['rev-parse', '--verify', 'no-such-ref']))
+      expect(gitFailureLine(err)).toBe('fatal: Needed a single revision')
+    })
+
+    it("returns git's error: line for a failed checkout (BSLG-12)", async () => {
+      const err = await rejectionOf(git(repo, ['checkout', 'no-such-path']))
+      expect(gitFailureLine(err)).toBe(
+        "error: pathspec 'no-such-path' did not match any file(s) known to git"
+      )
+    })
+  })
 })
 
 describe('isTimeout', () => {
   it('is true when git() kills the process because timeoutMs elapsed', async () => {
-    // `hash-object --stdin` waits on a stdin execFile never closes, so only the timeout ends it.
-    const err = await rejectionOf(git(tmpdir(), ['hash-object', '--stdin'], { timeoutMs: 200 }))
+    // A `!` alias that sleeps outlives the 200 ms limit, so only the timeout ends it.
+    const err = await rejectionOf(
+      git(tmpdir(), ['-c', 'alias.wait=!sleep 5', 'wait'], { timeoutMs: 200 })
+    )
     expect(isTimeout(err)).toBe(true)
   })
 
@@ -68,11 +124,51 @@ describe('git', () => {
     expect(stdout.trim()).toBe('prompt=0')
   })
 
+  it('gives git a stdin already at end of input (CRTO-06)', async () => {
+    // With no timeoutMs, only an ended stdin lets `hash-object --stdin` return: it hashes
+    // the empty input to git's empty-blob id.
+    const { stdout } = await git(tmpdir(), ['hash-object', '--stdin'])
+    expect(stdout.trim()).toBe('e69de29bb2d1d6434b8b29ae775ad8c2e48c5391')
+  })
+
   it('hands every argument to git literally, with no shell to parse it', async () => {
     const arg = 'a&b|c>d %PATH% $(x) `y` "q" ; e'
     // --sq-quote echoes its arguments back, single-quoted, exactly as git received them.
     const { stdout } = await git(tmpdir(), ['rev-parse', '--sq-quote', arg])
     expect(stdout.trim()).toBe(`'${arg}'`)
+  })
+
+  it("writes input to the child's stdin and closes it (FWIG-15, L-020)", async () => {
+    // hash-object hashes what it read from stdin, so the answer proves the child received `abc`
+    // and saw stdin end; without the close it would wait forever.
+    const { stdout } = await git(tmpdir(), ['hash-object', '--stdin'], { input: 'abc' })
+    expect(stdout.trim()).toBe('f2ba8f84ab5c1bce84a7b441cb1959cfc7093b7f')
+  })
+})
+
+describe('READ_ONLY_FLAGS (FWIG-15)', () => {
+  it('is --no-optional-locks then -c diff.autoRefreshIndex=false (L-009)', () => {
+    expect(READ_ONLY_FLAGS).toEqual(['--no-optional-locks', '-c', 'diff.autoRefreshIndex=false'])
+  })
+
+  describe('in a temp repository', () => {
+    let repo: string
+
+    beforeAll(async () => {
+      repo = realpathSync.native(mkdtempSync(join(tmpdir(), 'git-ro-')))
+      await git(repo, ['init', '-q'])
+    })
+
+    afterAll(() => {
+      rmSync(repo, { recursive: true, force: true })
+    })
+
+    it('leaves a read answering as the plain one does', async () => {
+      const plain = await git(repo, ['rev-parse', '--git-dir'])
+      const prefixed = await git(repo, [...READ_ONLY_FLAGS, 'rev-parse', '--git-dir'])
+      expect(plain.stdout.trim()).toBe('.git')
+      expect(prefixed.stdout).toBe(plain.stdout)
+    })
   })
 })
 
@@ -141,9 +237,24 @@ describe('git reports to diagnostics (PDIAG-09, PDIAG-15)', () => {
 
   it('reports one start and one end for a timed-out call, which is still a timeout', async () => {
     const rec = recordingGit()
-    const err = await rejectionOf(git(tmpdir(), ['hash-object', '--stdin'], { timeoutMs: 200 }))
+    // stdin is ended (CRTO-06), so the blocker is a `!` alias that sleeps past the limit.
+    const err = await rejectionOf(
+      git(tmpdir(), ['-c', 'alias.wait=!sleep 5', 'wait'], { timeoutMs: 200 })
+    )
     expect(isTimeout(err)).toBe(true)
     expect(rec.starts).toHaveLength(1)
+    expect(rec.ends).toBe(1)
+  })
+
+  it('reports one start and one end for a call with input, which goes through the pacer', async () => {
+    const rec = recordingGit()
+    const call = git(tmpdir(), ['hash-object', '--stdin'], { input: 'abc' })
+    expect(rec.requests).toEqual([{ cwd: tmpdir(), args: ['hash-object', '--stdin'] }])
+    // Paced: nothing starts in the same turn as the request.
+    expect(rec.starts).toHaveLength(0)
+    const { stdout } = await call
+    expect(stdout.trim()).toBe('f2ba8f84ab5c1bce84a7b441cb1959cfc7093b7f')
+    expect(rec.starts).toEqual([{ cwd: tmpdir(), args: ['hash-object', '--stdin'] }])
     expect(rec.ends).toBe(1)
   })
 

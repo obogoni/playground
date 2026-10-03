@@ -582,31 +582,145 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: SPEC_DEVIATION src/main/session-manager.ts:126 (session-manager)
 - last seen: 2026-10-02T17:30:50Z
 
-### L-101 - When a factory decides enabled-vs-no-op before touching real ports (timer, monitor, file), inject those ports with optional overrides so the disabled test can assert zero calls; checking only the returned no-op and an empty folder lets a leaked timer or monitor survive.
+### L-101 - When an error branch needs an I/O failure the OS cannot produce portably, fail the call through a mocked module or injected seam instead of leaving the branch untested
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: agent-prompts
+- evidence: M17 src/main/prompt-library.ts:39 (APR-06 unreadable) (testing)
+- last seen: 2026-10-03T12:22:13Z
+
+### L-102 - Lift every behavioural rule stated in the spec's assumptions table into a numbered acceptance criterion, or it ships unimplemented and untested
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: agent-prompts
+- evidence: spec.md Assumptions 'Value whitespace' vs NewSessionDialog.tsx:172-173 (spec)
+- last seen: 2026-10-03T12:22:14Z
+
+### L-103 - When main re-checks a rule the renderer already enforces, state the rejection message in the spec so the backstop test can assert it
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `main-backstop` · harmful: 0
+- features: agent-prompts
+- evidence: validation.md APR-26 backstop: src/main/session-manager.test.ts:1498 asserts only .rejects.toThrow() (main-backstop)
+- last seen: 2026-10-03T12:45:36Z
+
+### L-104 - State an edge-case tolerance against the same floored quantity the main criterion uses, or the tolerance cannot hold at fractional sizes
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer layout` · harmful: 0
+- features: terminal-last-row
+- evidence: validation.md Spec-Precision Gaps 1 (Edge case 1 vs P1 AC3) (renderer layout)
+- last seen: 2026-10-03T10:53:15Z
+
+### L-105 - When a layout criterion is measured against an inner element, also require that element to fill its container, or a frozen inner element satisfies it
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer layout` · harmful: 0
+- features: terminal-last-row
+- evidence: validation.md Spec-Precision Gaps 2 (P1 AC3/AC4, mutant V-S1) (renderer layout)
+- last seen: 2026-10-03T10:53:15Z
+
+### L-106 - When a pick is ranked by several tie-break keys, give each adjacent pair of keys a fixture where they disagree, or dropping or reordering a key still passes
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: hours-hatching
+- evidence: validation.md U4, U5 (src/renderer/src/lib/hours-calendar.ts:242) (testing)
+- last seen: 2026-10-03T11:13:28Z
+
+### L-107 - Test a guard's placement before a destructive step with a fixture the code path can see; a fixture the tool cannot read skips the step and the test passes for the wrong reason.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main tests` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md W3, W4 (src/main/worktree-manager.ts:93-94; src/main/worktree-manager.test.ts:759) (src/main tests)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-108 - When a measurement shows an edge case's state cannot occur, restate the edge case at the nearest state that still exercises the guard, not only its tests.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: branch-slug-short
+- evidence: BSLG-38 (validation.md edge cases; src/main/worktree-manager.test.ts:759) (specs)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-109 - When a spec applies a rule again on a fallback path, assert the rule on that path too.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/shared` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md S11 (src/shared/tasks.ts:57; BSLG-06) (src/shared)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-110 - Test a platform gate with at least two non-target platforms, or a gate keyed on the wrong platform survives.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md C1 (src/main/path-limits.ts:94; src/main/path-limits.test.ts:297) (src/main)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-111 - A test of a pure stale-answer helper does not prove the hook passes it the current key; give the hook wiring its own discriminating check.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer hooks` · harmful: 0
+- features: branch-slug-short
+- evidence: validation.md SM-A (src/renderer/src/lib/use-path-check.ts:68; BSLG-42) (renderer hooks)
+- last seen: 2026-10-03T12:50:22Z
+
+### L-112 - When a factory decides enabled-vs-no-op before touching real ports (timer, monitor, file), inject those ports with optional overrides so the disabled test can assert zero calls; checking only the returned no-op and an empty folder lets a leaked timer or monitor survive.
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main/**` · harmful: 0
 - features: perf-diagnostics
 - evidence: src/main/diagnostics.ts:461 (M5/M6) (src/main/**)
 - last seen: 2026-10-03T14:19:26Z
 
-### L-102 - When design.md fixes a printed output's exact layout, re-read the spec ACs that describe that output against it (where each figure appears, every verdict value it can print) and align the wording before Execute.
+### L-113 - When design.md fixes a printed output's exact layout, re-read the spec ACs that describe that output against it (where each figure appears, every verdict value it can print) and align the wording before Execute.
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
 - features: perf-diagnostics
 - evidence: PDIAG-36/PDIAG-37 vs design.md:225-237 (specs)
 - last seen: 2026-10-03T14:19:26Z
 
-### L-103 - With a fake clock, a check that nothing more runs must advance past the earliest instant that run could start, re-derived whenever the timing rule changes; a window that ends before it cannot fail
+### L-114 - When an AC names a dialog control, list every state that renders its own copy of that control (footer, sub-panels) so the AC has one meaning
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer-dialogs` · harmful: 0
+- features: create-timeouts
+- evidence: CRTO-20 / BranchExistsChoice.tsx:40 (validation.md G1) (renderer-dialogs)
+- last seen: 2026-10-03T17:43:45Z
+
+### L-115 - Derive a formatter's unit boundary from the spec's literal texts and pin each literal with the real constant, not from the design's general rule
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `main` · harmful: 0
+- features: create-timeouts
+- evidence: SPEC_DEVIATION limitText, worktree-manager.ts (validation.md Deviations) (main)
+- last seen: 2026-10-03T17:43:45Z
+
+### L-116 - To pin a backoff reset, assert what the reset changes later (the next miss waits the base interval again), not a call triggered at or after the due instant, which passes with or without the reset.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `tests/backoff` · harmful: 0
+- features: main-async-git
+- evidence: src/main/session-name-poller.test.ts:536 (M1, MAGIT-19) (tests/backoff)
+- last seen: 2026-10-03T18:13:46Z
+
+### L-117 - When a rule matches a file name at any depth, test the root-level name as well as a nested one; a match on '/name' alone misses the root and still passes a nested-only test.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `main-watcher` · harmful: 0
+- features: files-watch-ignored
+- evidence: U3 src/main/file-watcher.ts:174 (FWIG-07) (main-watcher)
+- last seen: 2026-10-03T23:00:08Z
+
+### L-118 - When stale async results are dropped by a generation counter, test leaving and returning to the same target while the async step is held; a plain deselect is caught by the target check and leaves the counter untested.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `main-watcher` · harmful: 0
+- features: files-watch-ignored
+- evidence: U7 src/main/file-watcher.ts:190 (FWIG-13) (main-watcher)
+- last seen: 2026-10-03T23:00:08Z
+
+### L-119 - When an AC requires the same flags on every git call of a module, route each call through an injectable runner and assert its args; calls made straight to the git helper stay unasserted.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `git-reads` · harmful: 0
+- features: files-watch-ignored
+- evidence: U9 src/main/file-diff.ts:284 (FWIG-15) (git-reads)
+- last seen: 2026-10-03T23:00:09Z
+
+### L-120 - When a fallback AC says a batch passes as it would without a filter, state whether answers cached before the failure still apply, and pin that reading with a test that starts from a non-empty cache.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: files-watch-ignored
+- evidence: FWIG-10 vs src/main/file-watcher.ts:182-184 (specs)
+- last seen: 2026-10-03T23:00:09Z
+
+### L-121 - A code read is not evidence for an AC: give each AC a test, a numbered smoke check or a named run, and list any AC left to reading as a gap in the plan's evidence split.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `specs` · harmful: 0
+- features: files-watch-ignored
+- evidence: FWIG-22, FWIG-28, FWIG-29 (read only) (specs)
+- last seen: 2026-10-03T23:00:09Z
+
+### L-122 - With a fake clock, a check that nothing more runs must advance past the earliest instant that run could start, re-derived whenever the timing rule changes; a window that ends before it cannot fail
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing/schedulers` · harmful: 0
 - features: git-recount-coalesce
 - evidence: src/main/recount-scheduler.test.ts:408 (V6) (testing/schedulers)
 - last seen: 2026-10-03T17:19:43Z
 
-### L-104 - When a rate target is measured at process start but enforced by a scheduler upstream of a shared spawn queue, count the spacing from the previous run's end, because queue waits shrink the gap between the real process starts
+### L-123 - When a rate target is measured at process start but enforced by a scheduler upstream of a shared spawn queue, count the spacing from the previous run's end, because queue waits shrink the gap between the real process starts
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `src/main/**, perf` · harmful: 0
 - features: git-recount-coalesce
 - evidence: RCNT-32 (tasks.md T11, A1 status/s 2) (src/main/**, perf)
 - last seen: 2026-10-03T17:19:43Z
 
-### L-105 - When a stop or quit criterion says open requests are answered with nothing, state whether a request already taken by an in-flight run counts as open
+### L-124 - When a stop or quit criterion says open requests are answered with nothing, state whether a request already taken by an in-flight run counts as open
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
 - features: git-recount-coalesce
 - evidence: RCNT-12 (validation.md, spec-precision gap) (spec)

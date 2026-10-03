@@ -23,6 +23,7 @@ import type {
 } from './files'
 import type { CommitLists, GitOp, GitOpResult, SyncState } from './git'
 import type { ProbeResult } from './links'
+import type { PromptEntry } from './prompt-template'
 import type { ClipboardPaste } from './paste'
 import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type {
@@ -42,7 +43,13 @@ import type {
   StepEvent,
   WorkflowDef
 } from './workflows'
-import type { ChangedFile, CreateWorktreeResult, RemoveWorktreeResult } from './worktrees'
+import type {
+  ChangedFile,
+  CreateStep,
+  CreateWorktreeResult,
+  PathCheckRequest,
+  RemoveWorktreeResult
+} from './worktrees'
 
 /**
  * Single request/response channel map shared by main, preload, and renderer.
@@ -86,8 +93,15 @@ export interface IpcContract {
        * as-is; `recreate` = force-delete and recut from base.
        */
       onExisting?: 'reuse' | 'recreate'
+      /** Pushes `worktrees:create-step` for this id while the create runs; absent = no steps (CRTO-11, CRTO-18). */
+      requestId?: string
     }
     res: CreateWorktreeResult
+  }
+  /** The create's path check, asked by the dialogs as the name changes; null = no limit passed (BSLG-23). */
+  'worktrees:check-paths': {
+    req: Omit<PathCheckRequest, 'onExisting'>
+    res: { problem: string | null }
   }
   /**
    * Delete-first worktree removal (WRFT-01): the app deletes the directory, then
@@ -133,7 +147,14 @@ export interface IpcContract {
   'sessions:list': { req: void; res: SessionView[] }
   /** Resolve agent (or run `adhocCommand` raw) + cwd, shell-host the PTY, persist, return the view; `task` links it by hand (HTSK-09). */
   'sessions:spawn': {
-    req: { agentName: string; cwd: string; adhocCommand?: string; task?: SessionTask }
+    req: {
+      agentName: string
+      cwd: string
+      adhocCommand?: string
+      task?: SessionTask
+      /** The resolved initial prompt, sent after `--`; registry agents only (APR-30). */
+      prompt?: string
+    }
     res: SessionView
   }
   /** Kill the hosting PTY → status stopped; no orphaned process survives. */
@@ -186,6 +207,10 @@ export interface IpcContract {
   'workflows:respond': { req: { runId: string; decision: RespondDecision }; res: void }
   /** Drop any discovery cache (v1 no-op — discovery is on-demand) (WF2-01). */
   'workflows:reload': { req: void; res: void }
+  /** Every `*.md` in `~/.playground/prompts`, valid (`{name,template}`) or broken (`{name,error}`) (APR-01/06). */
+  'prompts:list': { req: void; res: PromptEntry[] }
+  /** Create `~/.playground/prompts` when missing and open it in the OS file manager (APR-08). */
+  'prompts:openFolder': { req: void; res: void }
   /** Scaffold a new workflow folder from a template + reveal it; an existing id is rejected, never overwritten (WF5-22/24/25). */
   'workflows:scaffold': { req: { name: string }; res: ScaffoldResult }
   /** One folder's direct children, tracked plus untracked-not-ignored; a git failure lands in `error` (FXPL-02/04/05). */
@@ -285,6 +310,8 @@ export interface IpcEvents {
   'worktree:status': { worktreePath: string; dirty: boolean; changes: number }
   /** An auto-pin pass after `tree:get` pinned tasks derived from worktree branches (APIN-06). */
   'tasks:changed': { snapshot: TasksSnapshot }
+  /** The step a `worktrees:create` call with this `requestId` has reached (CRTO-11). */
+  'worktrees:create-step': { requestId: string; step: CreateStep }
 }
 
 export interface IpcSends {

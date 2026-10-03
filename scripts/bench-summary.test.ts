@@ -62,12 +62,13 @@ const byName = (results: { name: string }[], name: string): Record<string, unkno
   results.find((r) => r.name === name) as Record<string, unknown>
 
 describe('DEFAULT_TARGETS', () => {
-  it('holds the four targets of issue #147', () => {
+  it('holds the four targets of issue #147 and the Files cat-file ratio of issue #150', () => {
     expect(DEFAULT_TARGETS).toEqual({
       loopP99Ms: 30,
       appendMeanMs: 0.1,
       statusPerSecond: 1,
-      worktreePeak: 1
+      worktreePeak: 1,
+      filesCatFilePerEmit: 2
     })
   })
 })
@@ -356,5 +357,329 @@ describe('formatSummary', () => {
     expect(text.split('\n')[0]).toContain('sessions=0')
     expect(text.split('\n')[0]).toContain('index=off')
     expect(text).toContain('spawn: no session opened')
+  })
+})
+
+/* Issue #150: the Files view's four columns for bench-wt-1 and its three targets (FWIG-36..39). */
+
+const FILES = { filesWorktree: 'bench-wt-1' }
+
+describe('rowOf with a Files worktree', () => {
+  const line = logLine({
+    git: {
+      count: 60,
+      totalMs: 900,
+      maxMs: 88,
+      peakConcurrent: 2,
+      wait: { totalMs: 0, maxMs: 0 },
+      bySubcommand: {},
+      byWorktree: {
+        'bench-wt-1': {
+          count: 30,
+          peakConcurrent: 1,
+          bySubcommand: {
+            'cat-file': { count: 20, maxPerSecond: 4 },
+            diff: { count: 10, maxPerSecond: 1 }
+          }
+        },
+        'bench-wt-2': {
+          count: 30,
+          peakConcurrent: 1,
+          bySubcommand: { 'cat-file': { count: 25, maxPerSecond: 4 } }
+        }
+      }
+    },
+    emits: {
+      'worktree:status': { 'bench-wt-1': 7, 'bench-wt-2': 3 },
+      'files:changed': { 'bench-wt-1': 9, 'bench-wt-2': 11 }
+    }
+  })
+
+  it("adds bench-wt-1's files:changed, git, cat-file and worktree:status counts to the row", () => {
+    const r = rowOf(line, 'steady 1', FILES)
+    expect(r.filesEmits).toBe(9)
+    expect(r.filesGit).toBe(30)
+    expect(r.filesCatFile).toBe(20)
+    expect(r.filesStatusEmits).toBe(7)
+    // the #147 columns are the same as without the option, and only four columns are added
+    expect(r).toEqual({ ...rowOf(line, 'steady 1'), ...r })
+    expect(Object.keys(r)).toHaveLength(Object.keys(rowOf(line, 'steady 1')).length + 4)
+  })
+
+  it('gives 0 for each Files column when the line has no bench-wt-1 entry', () => {
+    const r = rowOf(logLine(), 'startup', FILES)
+    expect(r.filesEmits).toBe(0)
+    expect(r.filesGit).toBe(0)
+    expect(r.filesCatFile).toBe(0)
+    expect(r.filesStatusEmits).toBe(0)
+  })
+
+  it('gives 0 cat-file when bench-wt-1 ran git but no cat-file', () => {
+    const r = rowOf(
+      logLine({
+        git: {
+          ...(logLine().git as Record<string, unknown>),
+          byWorktree: { 'bench-wt-1': { count: 4, peakConcurrent: 1, bySubcommand: {} } }
+        }
+      }),
+      'steady 1',
+      FILES
+    )
+    expect(r.filesGit).toBe(4)
+    expect(r.filesCatFile).toBe(0)
+  })
+
+  it('is passed through by phaseRows', () => {
+    const rows = phaseRows([line, line, line], { minutes: 1, ...FILES })
+    expect(rows.map((r: { filesCatFile: number }) => r.filesCatFile)).toEqual([20, 20, 20])
+  })
+})
+
+/** Startup and spawn far over every limit, so only the steady rows can decide. */
+function filesRows(...steady: Record<string, number>[]): Record<string, unknown>[] {
+  const files = { filesEmits: 0, filesGit: 0, filesCatFile: 0, filesStatusEmits: 0 }
+  const loud = { filesEmits: 999, filesGit: 999, filesCatFile: 999, filesStatusEmits: 999 }
+  return [
+    row('startup', 0, loud),
+    row('spawn', 0, loud),
+    ...steady.map((over, i) => row(`steady ${i + 1}`, 0, { ...files, ...over }))
+  ]
+}
+
+describe('worstRow with Files columns', () => {
+  it('takes each Files column at its largest over the steady rows', () => {
+    const worst = worstRow(
+      filesRows(
+        { filesEmits: 3, filesGit: 10, filesCatFile: 2, filesStatusEmits: 0 },
+        { filesEmits: 1, filesGit: 12, filesCatFile: 6, filesStatusEmits: 4 }
+      )
+    )
+    expect(worst).toMatchObject({
+      filesEmits: 3,
+      filesGit: 12,
+      filesCatFile: 6,
+      filesStatusEmits: 4
+    })
+  })
+})
+
+describe('judgeTargets, the Files targets', () => {
+  type Shape = {
+    sessions?: number
+    indexIntervalMs?: number
+    filesView?: boolean
+    buildIntervalMs?: number
+    editIntervalMs?: number
+    touchIntervalMs?: number
+  }
+  const judgeFiles = (rows: Record<string, unknown>[], shape: Shape): Record<string, unknown>[] =>
+    judgeTargets(rows, {
+      sessions: 0,
+      indexIntervalMs: 0,
+      filesView: true,
+      targets: DEFAULT_TARGETS,
+      ...shape
+    })
+  const build = { buildIntervalMs: 100 }
+  const edit = { editIntervalMs: 1000 }
+  const touch = { touchIntervalMs: 1000 }
+
+  describe('ignored writes start no git (build loop)', () => {
+    it('passes with every steady row at 0 git processes and 0 files:changed', () => {
+      expect(byName(judgeFiles(filesRows({}, {}, {}), build), 'filesIgnoredWrites')).toEqual({
+        name: 'filesIgnoredWrites',
+        value: 0,
+        limit: 0,
+        verdict: 'PASS'
+      })
+    })
+
+    it('fails with one steady row at 1 git process', () => {
+      const result = byName(
+        judgeFiles(filesRows({}, { filesGit: 1 }, {}), build),
+        'filesIgnoredWrites'
+      )
+      expect(result).toMatchObject({ value: 1, verdict: 'FAIL' })
+    })
+
+    it('fails with one steady row at 1 files:changed', () => {
+      const result = byName(
+        judgeFiles(filesRows({}, {}, { filesEmits: 1 }), build),
+        'filesIgnoredWrites'
+      )
+      expect(result).toMatchObject({ value: 1, verdict: 'FAIL' })
+    })
+
+    it('reads n/a with a session, without --files-view, and with a second loop on', () => {
+      const failing = filesRows({ filesGit: 5, filesEmits: 5 })
+      const verdict = (shape: Shape): unknown =>
+        byName(judgeFiles(failing, { ...build, ...shape }), 'filesIgnoredWrites').verdict
+      expect(verdict({})).toBe('FAIL')
+      expect(verdict({ sessions: 1 })).toBe('n/a')
+      expect(verdict({ filesView: false })).toBe('n/a')
+      expect(verdict(edit)).toBe('n/a')
+      expect(verdict(touch)).toBe('n/a')
+      expect(verdict({ indexIntervalMs: 100 })).toBe('n/a')
+    })
+  })
+
+  describe('untouched sections stay (edit loop)', () => {
+    it('passes at exactly 2 cat-file per files:changed over the steady totals', () => {
+      // 30 / 10 and 10 / 10 per row; 40 / 20 = 2 over the totals
+      const rows = filesRows(
+        { filesCatFile: 30, filesEmits: 10 },
+        { filesCatFile: 10, filesEmits: 10 }
+      )
+      expect(byName(judgeFiles(rows, edit), 'filesCatFilePerEmit')).toEqual({
+        name: 'filesCatFilePerEmit',
+        value: 2,
+        limit: 2,
+        verdict: 'PASS'
+      })
+    })
+
+    it('fails just above 2', () => {
+      const rows = filesRows(
+        { filesCatFile: 21, filesEmits: 10 },
+        { filesCatFile: 20, filesEmits: 10 }
+      )
+      expect(byName(judgeFiles(rows, edit), 'filesCatFilePerEmit')).toMatchObject({
+        value: 2.05,
+        verdict: 'FAIL'
+      })
+    })
+
+    it('reads n/a with no files:changed in the steady rows', () => {
+      const rows = filesRows({ filesCatFile: 8, filesEmits: 0 })
+      expect(byName(judgeFiles(rows, edit), 'filesCatFilePerEmit').verdict).toBe('n/a')
+    })
+
+    it('reads n/a with a second loop on, a session, or without --files-view', () => {
+      const failing = filesRows({ filesCatFile: 50, filesEmits: 10 })
+      const verdict = (shape: Shape): unknown =>
+        byName(judgeFiles(failing, { ...edit, ...shape }), 'filesCatFilePerEmit').verdict
+      expect(verdict({})).toBe('FAIL')
+      expect(verdict(build)).toBe('n/a')
+      expect(verdict(touch)).toBe('n/a')
+      expect(verdict({ indexIntervalMs: 100 })).toBe('n/a')
+      expect(verdict({ sessions: 1 })).toBe('n/a')
+      expect(verdict({ filesView: false })).toBe('n/a')
+    })
+  })
+
+  describe("the view's reads leave the index alone (touch loop)", () => {
+    it('passes with 0 worktree:status on bench-wt-1 in every steady row', () => {
+      expect(byName(judgeFiles(filesRows({}, {}), touch), 'filesIndexUntouched')).toEqual({
+        name: 'filesIndexUntouched',
+        value: 0,
+        limit: 0,
+        verdict: 'PASS'
+      })
+    })
+
+    it('fails at 1 worktree:status on bench-wt-1 in one steady row', () => {
+      const rows = filesRows({}, { filesStatusEmits: 1 })
+      expect(byName(judgeFiles(rows, touch), 'filesIndexUntouched')).toMatchObject({
+        value: 1,
+        verdict: 'FAIL'
+      })
+    })
+
+    it('reads n/a for another run shape', () => {
+      const failing = filesRows({ filesStatusEmits: 3 })
+      const verdict = (shape: Shape): unknown =>
+        byName(judgeFiles(failing, { ...touch, ...shape }), 'filesIndexUntouched').verdict
+      expect(verdict({})).toBe('FAIL')
+      expect(verdict(build)).toBe('n/a')
+      expect(verdict(edit)).toBe('n/a')
+      expect(verdict({ indexIntervalMs: 100 })).toBe('n/a')
+      expect(verdict({ sessions: 1 })).toBe('n/a')
+      expect(verdict({ filesView: false })).toBe('n/a')
+    })
+  })
+
+  it("leaves #147's four targets first and as they are", () => {
+    const rows = filesRows({ loopP99: 29, worktreePeak: 1 })
+    const plain = judgeTargets(rows, { sessions: 0, indexIntervalMs: 0, targets: DEFAULT_TARGETS })
+    const withFiles = judgeFiles(rows, build)
+    expect(withFiles.slice(0, 4)).toEqual(plain.slice(0, 4))
+    expect(plain.map((t: { name: string }) => t.name)).toEqual([
+      'loopP99Ms',
+      'appendMeanMs',
+      'statusPerSecond',
+      'worktreePeak',
+      'filesIgnoredWrites',
+      'filesCatFilePerEmit',
+      'filesIndexUntouched'
+    ])
+  })
+})
+
+describe('formatSummary with the Files view', () => {
+  const options = {
+    sessions: 0,
+    minutes: 2,
+    fps: 20,
+    rows: 30,
+    files: 500,
+    indexInterval: 0,
+    commit: 'abc1234',
+    filesView: true,
+    buildInterval: 100,
+    editInterval: 0,
+    touchInterval: 0
+  }
+  const rows = filesRows(
+    { filesEmits: 3, filesGit: 41, filesCatFile: 22, filesStatusEmits: 0 },
+    { filesEmits: 4, filesGit: 52, filesCatFile: 33, filesStatusEmits: 1 }
+  )
+  const worst = worstRow(rows)
+  const judged = (filesView: boolean): Record<string, unknown>[] =>
+    judgeTargets(rows, {
+      sessions: 0,
+      indexIntervalMs: 0,
+      targets: DEFAULT_TARGETS,
+      filesView,
+      buildIntervalMs: 100
+    })
+
+  it('prints the Files block, one line per row, and the three Files target lines', () => {
+    const lines = formatSummary(options, rows, worst, judged(true), null).split('\n')
+    expect(lines[0]).toBe(
+      'bench-sessions  sessions=0  fps=20  rows=30  files=500  index=off  minutes=2  commit=abc1234' +
+        '  files-view  build=100ms  edit=off  touch=off'
+    )
+    const head = lines.findIndex((l) => l.startsWith('files '))
+    expect(head).toBeGreaterThan(1)
+    expect(lines[head]).toMatch(/^files\s+files:changed\s+git n\s+cat-file\s+wt:status$/)
+    const block = lines.slice(head + 1, head + 6)
+    expect(block.map((l) => l.split(/\s{2,}/)[0])).toEqual([
+      'startup',
+      'spawn',
+      'steady 1',
+      'steady 2',
+      'worst'
+    ])
+    expect(block[0]).toMatch(/^startup\s+999\s+999\s+999\s+999$/)
+    expect(block[2]).toMatch(/^steady 1\s+3\s+41\s+22\s+0$/)
+    expect(block[3]).toMatch(/^steady 2\s+4\s+52\s+33\s+1$/)
+    expect(block[4]).toMatch(/^worst\s+4\s+52\s+33\s+1$/)
+    for (const l of block) expect(l).toHaveLength(lines[head].length)
+    const targetsAt = lines.indexOf('targets')
+    expect(lines.slice(targetsAt + 1)).toHaveLength(7)
+    expect(lines[targetsAt + 5]).toMatch(/^ {2}ignored writes start no git\s+52\s+FAIL$/)
+    expect(lines[targetsAt + 6]).toMatch(
+      /^ {2}untouched sections stay: cat-file per files:changed <= 2\s+7\.86\s+n\/a$/
+    )
+    expect(lines[targetsAt + 7]).toMatch(/^ {2}the view's reads leave the index alone\s+1\s+n\/a$/)
+  })
+
+  it('prints no Files block and only the four #147 target lines without --files-view', () => {
+    const text = formatSummary({ ...options, filesView: false }, rows, worst, judged(false), null)
+    const lines = text.split('\n')
+    expect(lines[0]).not.toContain('files-view')
+    expect(lines.some((l) => /^files\s+files:changed/.test(l))).toBe(false)
+    expect(lines.slice(lines.indexOf('targets') + 1)).toHaveLength(4)
+    expect(text).not.toContain('ignored writes')
   })
 })

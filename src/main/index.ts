@@ -35,9 +35,12 @@ import { git } from './git'
 import { GitStateWatcher } from './git-state-watcher'
 import { readCommits, readSyncState, runGitOp } from './git-sync'
 import { runHookShell } from './hook-shell'
+import { checkIgnored } from './ignore-check'
 import { emit, handle, onSend } from './ipc'
 import { createMcpResultServer } from './mcp-result-server'
 import { purgePasteDir } from './paste-temp'
+import { checkCreatePaths } from './path-limits'
+import { ensurePromptsFolder, listPrompts } from './prompt-library'
 import { findOnPath } from './path-lookup'
 import { startLoopDelayLog } from './perf-monitor'
 import { withPostCreateHook } from './post-create-hook'
@@ -411,11 +414,25 @@ app.whenReady().then(() => {
     readCommand: resolvePostCreateCommand,
     shell: runHookShell
   })
+  // CRTO-11, CRTO-18: steps are pushed only for a request that names itself.
+  // `emitToWindow` is defined further down this block and read only when a create runs.
   handle(
     'worktrees:create',
-    ({ repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting }) =>
-      createWorktreeWithHook(repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting)
+    ({ repoPath, branch, baseBranch, worktreeTemplate, updateBase, onExisting, requestId }) =>
+      createWorktreeWithHook(
+        repoPath,
+        branch,
+        baseBranch,
+        worktreeTemplate,
+        updateBase,
+        onExisting,
+        requestId === undefined
+          ? undefined
+          : (step) => emitToWindow('worktrees:create-step', { requestId, step })
+      )
   )
+  // BSLG-23: the dialogs ask the create's own path check as the name changes.
+  handle('worktrees:check-paths', (req) => checkCreatePaths(req).then((problem) => ({ problem })))
   handle('worktrees:remove', ({ repoPath, worktreePath, force }) =>
     removeWorktree(repoPath, worktreePath, { force })
   )
@@ -432,6 +449,7 @@ app.whenReady().then(() => {
     watch: watchPort,
     resolveGitDir,
     schedule: timerScheduler,
+    checkIgnored: (worktreePath, paths) => checkIgnored(worktreePath, paths),
     emit: (event) => {
       if (!mainWindow) return
       emit(mainWindow.webContents, 'files:changed', event)
@@ -716,8 +734,8 @@ app.whenReady().then(() => {
   hookServer.onTaskLink((sessionId, task) => sessions.setTask(sessionId, task))
   namePoller.onListing((names) => sessions.applyNames(names))
   handle('sessions:list', () => sessions.list())
-  handle('sessions:spawn', ({ agentName, cwd, adhocCommand, task }) =>
-    sessions.spawn(agentName, cwd, adhocCommand, task)
+  handle('sessions:spawn', ({ agentName, cwd, adhocCommand, task, prompt }) =>
+    sessions.spawn(agentName, cwd, adhocCommand, task, prompt)
   )
   // Returning the promise is load-bearing: ipcMain.handle awaits it, so the
   // renderer's `sessions:stop` only resolves once the PTY has really exited
@@ -828,6 +846,15 @@ app.whenReady().then(() => {
     const result = await scaffoldWorkflow(workflowsRoot, name)
     if (result.ok) shell.showItemInFolder(result.path)
     return result
+  })
+
+  // Prompt files are discovered on demand like workflows (APR-01); the folder is
+  // created on request so "Open prompts folder" always has something to open (APR-08).
+  const promptsRoot = join(homedir(), '.playground', 'prompts')
+  handle('prompts:list', () => listPrompts(promptsRoot))
+  handle('prompts:openFolder', async () => {
+    await ensurePromptsFolder(promptsRoot)
+    await shell.openPath(promptsRoot)
   })
 
   // Free the shared MCP result server's loopback port when the app quits (WF3-10).

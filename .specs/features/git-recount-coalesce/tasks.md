@@ -887,7 +887,7 @@ git on one worktree` **1, PASS**. RCNT-32 Done.
 ### T14: Fix 1 from verification round 1
 
 **What**: Make the "nothing more runs" checks able to fail: settle each deferred run at its own
-instant before advancing past the window (L-103), and pin RCNT-12's clarified wording (a request a
+instant before advancing past the window (L-122, L-103 before merging main), and pin RCNT-12's clarified wording (a request a
 running recount already took is answered by that recount at quit).
 **Where**: `src/main/recount-scheduler.test.ts`
 **Depends on**: T13

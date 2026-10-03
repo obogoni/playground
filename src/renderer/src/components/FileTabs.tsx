@@ -466,6 +466,9 @@ export function FileTabs({ worktreePath, files, onToast, onDiscard }: FileTabsPr
             layout={files.diffLayout}
             ignoreWhitespace={files.diffIgnoreWhitespace}
             refreshToken={files.refreshToken}
+            // FWIG-25/28: a disk write re-reads its own section in the
+            // uncommitted stack only; diff to origin compares two commits.
+            revisions={files.mode === 'uncommitted' ? files.diskRevisions : undefined}
             onHandle={onHandle}
             // FDSC-38/40: the section ↶ belongs to the uncommitted stack only;
             // diff to origin gets none.

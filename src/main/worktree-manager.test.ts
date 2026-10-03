@@ -12,15 +12,31 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { sanitizeBranch, worktreeNameFor, worktreePathFor } from '../shared/worktrees'
+import {
+  sanitizeBranch,
+  worktreeNameFor,
+  worktreePathFor,
+  type CreateStep
+} from '../shared/worktrees'
 import type { DirRemovalResult } from './dir-remover'
+import { git as gitRunner, gitFailureLine, type GitRunner } from './git'
+import { withPostCreateHook, type HookShell } from './post-create-hook'
+import {
+  removeReleasedFolder,
+  startWaitingRemote,
+  trackWaitingRemote
+} from './waiting-remote.fixture'
 import {
   changedFilesOf,
+  CHECKOUT_TIMEOUT_MS,
   createWorktree,
+  createWorktreeWith,
   GitError,
   listWorktrees,
   parseChangedFiles,
   parsePorcelainBlocks,
+  REAL_CREATE_DEPS,
+  REFRESH_TIMEOUT_MS,
   removeWorktree,
   worktreeStatus
 } from './worktree-manager'
@@ -151,6 +167,20 @@ describe('listWorktrees', () => {
       [repo, true, 4],
       [sibling, false, 0]
     ])
+  })
+
+  it("puts git's own failure line in the GitError message (BSLG-16)", async () => {
+    const plain = join(root, 'not-a-repo')
+    mkdirSync(plain)
+
+    const err = await listWorktrees(plain).then(
+      () => null,
+      (e: unknown) => e
+    )
+
+    const prefix = `git failed in ${plain}: fatal: not a git repository`
+    expect(err).toBeInstanceOf(GitError)
+    expect((err as GitError).message.slice(0, prefix.length)).toBe(prefix)
   })
 })
 
@@ -531,6 +561,17 @@ describe('createWorktree', () => {
     expect(result.ok).toBe(false)
     expect(result.error).toBeTruthy()
   })
+
+  it("returns git's fatal: line, not its progress note, when worktree add fails (BSLG-14)", async () => {
+    git(repo, 'branch', 'user')
+
+    const result = await createWorktree(repo, 'user/x', 'main')
+
+    expect(result.ok).toBe(false)
+    const prefix = "fatal: cannot lock ref 'refs/heads/user/x'"
+    expect(result.error?.slice(0, prefix.length)).toBe(prefix)
+    expect(result.error).not.toContain('Preparing worktree')
+  })
 })
 
 describe('createWorktree — existing branch (EXB)', () => {
@@ -650,6 +691,275 @@ describe('createWorktree — existing branch (EXB)', () => {
     expect(result.ok).toBe(false)
     expect(result.error).toMatch(/exists/i)
     expect(result.conflict).toBeUndefined()
+  })
+})
+
+describe('createWorktree — path check (BSLG-25..39)', () => {
+  const refMessage = (n: number): string =>
+    `The branch's ref path is ${n} characters, over Windows' limit of 259. Shorten the name, or enable core.longpaths in the repository.`
+  const reflogMessage = (n: number): string =>
+    `The branch's reflog folder path is ${n} characters, over Windows' limit of 247 for a folder. Shorten the name, or enable core.longpaths in the repository.`
+  const folderMessage = (n: number): string =>
+    `The worktree folder path is ${n} characters, over the 215 git accepts. Shorten the name, or use a shorter worktree template such as {repo}-{id}.`
+  /** The owner's template: the folder never grows with the branch. */
+  const IDS = '{repo}-{id}'
+  const win32 = { platform: 'win32' as const, git: gitRunner }
+
+  let root: string
+  let repo: string
+  /** The common git dir as Windows counts it, from the OS's canonical path. */
+  let commonDir: string
+
+  beforeEach(() => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-paths-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'core.autocrlf', 'false')
+    git(repo, 'config', 'core.longpaths', 'false')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+    commonDir = `${repo}\\.git`
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  /** `user/dev/<id>-bbb…`, whose ref path is exactly `length` characters. */
+  function branchWithRefPath(id: number, length: number): string {
+    const head = `user/dev/${id}-`
+    const overhead = `${commonDir}\\refs\\heads\\`.length + '.lock'.length
+    return head + 'b'.repeat(length - overhead - head.length)
+  }
+  const refPathOf = (branch: string): number =>
+    `${commonDir}\\refs\\heads\\${branch.replaceAll('/', '\\')}.lock`.length
+  const resolves = (branch: string, ...config: string[]): boolean => {
+    try {
+      git(repo, ...config, 'rev-parse', '--verify', '--quiet', `refs/heads/${branch}`)
+      return true
+    } catch {
+      return false
+    }
+  }
+  /** BSLG-26: the repository's own core.longpaths is still what the test set. */
+  const expectLongPaths = (value: string): void => {
+    expect(git(repo, 'config', '--local', '--get', 'core.longpaths').trim()).toBe(value)
+  }
+  const worktreeCount = (): number =>
+    git(repo, 'worktree', 'list', '--porcelain')
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith('worktree ')).length
+
+  it('refuses a ref path of 260 and leaves no folder, branch or worktree (BSLG-25, BSLG-35)', async () => {
+    const branch = branchWithRefPath(11, 260)
+    expect(refPathOf(branch)).toBe(260)
+
+    const result = await createWorktreeWith({ ...REAL_CREATE_DEPS, pathCheck: win32 })(
+      repo,
+      branch,
+      'main',
+      IDS,
+      false,
+      undefined
+    )
+
+    expect(result).toEqual({ ok: false, error: refMessage(260) })
+    expect(existsSync(worktreePathFor(repo, branch, IDS))).toBe(false)
+    expect(git(repo, 'branch', '--list', branch).trim()).toBe('')
+    expect(worktreeCount()).toBe(1)
+    expectLongPaths('false')
+  })
+
+  it('refuses before refreshing the base: no fetch error from a missing remote (BSLG-25)', async () => {
+    git(repo, 'branch', 'base')
+    git(repo, 'remote', 'add', 'gone', join(root, 'missing-remote'))
+    git(repo, 'update-ref', 'refs/remotes/gone/base', 'HEAD')
+    git(repo, 'config', 'branch.base.remote', 'gone')
+    git(repo, 'config', 'branch.base.merge', 'refs/heads/base')
+    // The refresh fails when it runs: a short name reaches it and gets git's fetch error.
+    const short = await createWorktreeWith({ ...REAL_CREATE_DEPS, pathCheck: win32 })(
+      repo,
+      'user/dev/12-x',
+      'base',
+      IDS,
+      true,
+      undefined
+    )
+    expect(short.ok).toBe(false)
+    expect(short.error).not.toMatch(/ref path/)
+
+    const branch = branchWithRefPath(13, 260)
+    const result = await createWorktreeWith({ ...REAL_CREATE_DEPS, pathCheck: win32 })(
+      repo,
+      branch,
+      'base',
+      IDS,
+      true,
+      undefined
+    )
+
+    expect(result).toEqual({ ok: false, error: refMessage(260) })
+    expectLongPaths('false')
+  })
+
+  it('creates a ref path of 259, the last length git accepts (BSLG-35)', async () => {
+    const branch = branchWithRefPath(14, 259)
+    expect(refPathOf(branch)).toBe(259)
+
+    const result = await createWorktreeWith({ ...REAL_CREATE_DEPS, pathCheck: win32 })(
+      repo,
+      branch,
+      'main',
+      IDS,
+      false,
+      undefined
+    )
+
+    expect(result).toEqual({ ok: true, path: worktreePathFor(repo, branch, IDS) })
+    expect(resolves(branch)).toBe(true)
+    expectLongPaths('false')
+  })
+
+  it('creates a ref path of 270 when the repository enables core.longpaths (BSLG-21)', async () => {
+    git(repo, 'config', 'core.longpaths', 'true')
+    const branch = branchWithRefPath(15, 270)
+    expect(refPathOf(branch)).toBe(270)
+
+    const result = await createWorktreeWith({ ...REAL_CREATE_DEPS, pathCheck: win32 })(
+      repo,
+      branch,
+      'main',
+      IDS,
+      false,
+      undefined
+    )
+
+    expect(result).toEqual({ ok: true, path: worktreePathFor(repo, branch, IDS) })
+    expect(resolves(branch)).toBe(true)
+    expectLongPaths('true')
+  })
+
+  it('refuses Recreate of a 270 ref path before deleting the branch (BSLG-38)', async () => {
+    const branch = branchWithRefPath(16, 270)
+    git(repo, '-c', 'core.longpaths=true', 'branch', branch, 'main')
+    git(repo, '-c', 'core.longpaths=true', 'pack-refs', '--all')
+    const tip = git(repo, '-c', 'core.longpaths=true', 'rev-parse', `refs/heads/${branch}`).trim()
+
+    const result = await createWorktreeWith({ ...REAL_CREATE_DEPS, pathCheck: win32 })(
+      repo,
+      branch,
+      'main',
+      IDS,
+      false,
+      'recreate'
+    )
+
+    expect(result).toEqual({ ok: false, error: refMessage(270) })
+    expect(resolves(branch, '-c', 'core.longpaths=true')).toBe(true)
+    expect(git(repo, '-c', 'core.longpaths=true', 'rev-parse', `refs/heads/${branch}`).trim()).toBe(
+      tip
+    )
+    expectLongPaths('false')
+  })
+
+  it('checks out an existing M2-shaped branch on Reuse, as git accepts it (BSLG-37)', async () => {
+    // Reflog folder 248 (past 247) and ref path 251; git resolves it with core.longpaths off,
+    // and `worktree add <folder> <branch>` succeeds (design.md, Measurements).
+    const dirs = 'user/' + 'd'.repeat(248 - `${commonDir}\\logs\\refs\\heads\\`.length - 5)
+    const branch = `${dirs}/ab`
+    expect(`${commonDir}\\logs\\refs\\heads\\${dirs.replaceAll('/', '\\')}`).toHaveLength(248)
+    expect(refPathOf(branch)).toBe(251)
+    git(repo, '-c', 'core.longpaths=true', 'branch', branch, 'main')
+    expect(resolves(branch)).toBe(true)
+
+    const result = await createWorktreeWith({ ...REAL_CREATE_DEPS, pathCheck: win32 })(
+      repo,
+      branch,
+      'main',
+      'reuse-wt',
+      false,
+      'reuse'
+    )
+
+    expect(result).toEqual({ ok: true, path: join(root, 'reuse-wt') })
+    expect(git(result.path!, 'rev-parse', '--abbrev-ref', 'HEAD').trim()).toBe(branch)
+    expectLongPaths('false')
+  })
+
+  it('refuses Recreate of an M2-shaped branch git can see before deleting it (BSLG-25, BSLG-38)', async () => {
+    // Reflog folder 248 and ref path 251: git resolves the branch with core.longpaths off, so the
+    // create reaches the Recreate fork, and only the check placed before it keeps `branch -D` away.
+    const dirs = 'user/' + 'r'.repeat(248 - `${commonDir}\\logs\\refs\\heads\\`.length - 5)
+    const branch = `${dirs}/ab`
+    expect(`${commonDir}\\logs\\refs\\heads\\${dirs.replaceAll('/', '\\')}`).toHaveLength(248)
+    expect(refPathOf(branch)).toBe(251)
+    git(repo, '-c', 'core.longpaths=true', 'branch', branch, 'main')
+    expect(resolves(branch)).toBe(true)
+    const tip = git(repo, 'rev-parse', `refs/heads/${branch}`).trim()
+
+    const result = await createWorktreeWith({ ...REAL_CREATE_DEPS, pathCheck: win32 })(
+      repo,
+      branch,
+      'main',
+      'recreate-wt',
+      false,
+      'recreate'
+    )
+
+    expect(result).toEqual({ ok: false, error: reflogMessage(248) })
+    expect(existsSync(join(root, 'recreate-wt'))).toBe(false)
+    expect(git(repo, 'rev-parse', `refs/heads/${branch}`).trim()).toBe(tip)
+    expect(worktreeCount()).toBe(1)
+    expectLongPaths('false')
+  })
+
+  it('refuses a worktree folder of 216 under the default template and creates nothing (BSLG-30)', async () => {
+    const prefix = `${root}\\repo-`
+    const branch = 'f/' + 'x'.repeat(216 - prefix.length - 2)
+    const target = worktreePathFor(repo, branch)
+    expect(target).toHaveLength(216)
+
+    const result = await createWorktreeWith({ ...REAL_CREATE_DEPS, pathCheck: win32 })(
+      repo,
+      branch,
+      'main',
+      undefined,
+      false,
+      undefined
+    )
+
+    expect(result).toEqual({ ok: false, error: folderMessage(216) })
+    expect(existsSync(target)).toBe(false)
+    expect(git(repo, 'branch', '--list', branch).trim()).toBe('')
+    expect(worktreeCount()).toBe(1)
+    expectLongPaths('false')
+  })
+
+  it("returns git's fatal line when core.longpaths is not a boolean (BSLG-39)", async () => {
+    git(repo, 'config', 'core.longpaths', 'maybe')
+    try {
+      const result = await createWorktreeWith({ ...REAL_CREATE_DEPS, pathCheck: win32 })(
+        repo,
+        'user/dev/17-x',
+        'main',
+        IDS,
+        false,
+        undefined
+      )
+
+      expect(result.ok).toBe(false)
+      const prefix = 'fatal: bad boolean config value'
+      expect(result.error?.slice(0, prefix.length)).toBe(prefix)
+      expect(existsSync(worktreePathFor(repo, 'user/dev/17-x', IDS))).toBe(false)
+    } finally {
+      // git refuses to run inside the repository now; reset the value from outside it.
+      git(root, 'config', '--file', join(repo, '.git', 'config'), 'core.longpaths', 'false')
+    }
+    expectLongPaths('false')
   })
 })
 
@@ -823,6 +1133,628 @@ describe('createWorktree — base refresh (WBR)', () => {
     // EXB-D8: a preliminary-step failure must not destroy the branch.
     expect(headOf(repo, 'feature/re')).toBe(tipBefore)
     expect(existsSync(join(root, 'repo-feature-re'))).toBe(false)
+  })
+})
+
+describe('createWorktree — bounded calls (CRTO-01, CRTO-09)', () => {
+  let root: string
+  let origin: string
+  let repo: string
+  let calls: { args: string[]; opts?: { timeoutMs?: number } }[]
+
+  /** Delegates to the real git and logs every call with its options. */
+  const recording: GitRunner = (cwd, args, opts) => {
+    calls.push({ args, opts })
+    return gitRunner(cwd, args, opts)
+  }
+  const create = (): ReturnType<typeof createWorktreeWith> =>
+    createWorktreeWith({ ...REAL_CREATE_DEPS, run: recording })
+
+  /** The options of the one recorded call whose arguments start with `prefix`. */
+  const optsOf = (...prefix: string[]): { timeoutMs?: number } | undefined => {
+    const matched = calls.filter((c) => prefix.every((arg, i) => c.args[i] === arg))
+    expect(matched).toHaveLength(1)
+    return matched[0].opts
+  }
+  /** Every recorded local read (`rev-parse`, `worktree list`, `branch -D`) runs unbounded. */
+  const expectLocalReadsUnbounded = (): void => {
+    const reads = calls.filter(
+      (c) =>
+        c.args[0] === 'rev-parse' ||
+        (c.args[0] === 'worktree' && c.args[1] === 'list') ||
+        (c.args[0] === 'branch' && c.args[1] === '-D')
+    )
+    expect(reads.length).toBeGreaterThan(0)
+    for (const read of reads) expect(read.opts?.timeoutMs).toBeUndefined()
+  }
+
+  beforeEach(() => {
+    calls = []
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-bounded-')))
+    origin = join(root, 'origin')
+    repo = join(root, 'repo')
+    git(root, 'init', '--bare', '-b', 'main', origin)
+    git(root, 'clone', origin, 'repo')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+    git(repo, 'push', '-u', 'origin', 'main')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('pins the limits: 60 s for each refresh call, 10 min for the checkout (L-009)', () => {
+    expect(REFRESH_TIMEOUT_MS).toBe(60000)
+    expect(CHECKOUT_TIMEOUT_MS).toBe(600000)
+    expect(REAL_CREATE_DEPS).toStrictEqual({
+      run: gitRunner,
+      refreshTimeoutMs: 60000,
+      checkoutTimeoutMs: 600000
+    })
+  })
+
+  it('bounds the fetch and the merge --ff-only of a checked-out base, and the add (CRTO-01)', async () => {
+    const result = await create()(repo, 'feature/a', 'main', undefined, true)
+
+    expect(result.ok).toBe(true)
+    expect(optsOf('fetch', 'origin', 'main')).toEqual({ timeoutMs: 60000 })
+    expect(optsOf('merge', '--ff-only', 'origin/main')).toEqual({ timeoutMs: 60000 })
+    expect(optsOf('worktree', 'add')).toEqual({ timeoutMs: 600000 })
+    expectLocalReadsUnbounded()
+  })
+
+  it('bounds the fetch into a base that is not checked out (CRTO-01)', async () => {
+    git(repo, 'checkout', '-b', 'release')
+    git(repo, 'push', '-u', 'origin', 'release')
+    git(repo, 'checkout', 'main')
+
+    const result = await create()(repo, 'feature/r', 'release', undefined, true)
+
+    expect(result.ok).toBe(true)
+    expect(optsOf('fetch', 'origin', 'release:release')).toEqual({ timeoutMs: 60000 })
+    expect(optsOf('worktree', 'add')).toEqual({ timeoutMs: 600000 })
+    expectLocalReadsUnbounded()
+  })
+
+  it('bounds the add of an existing branch with an empty base (CRTO-09)', async () => {
+    git(repo, 'branch', 'chore')
+
+    const result = await create()(repo, 'chore')
+
+    expect(result.ok).toBe(true)
+    expect(optsOf('worktree', 'add')).toEqual({ timeoutMs: 600000 })
+  })
+
+  it('bounds the add of a reused branch (CRTO-09)', async () => {
+    git(repo, 'branch', 'feature/reuse')
+
+    const result = await create()(repo, 'feature/reuse', 'main', undefined, false, 'reuse')
+
+    expect(result.ok).toBe(true)
+    expect(optsOf('worktree', 'add')).toEqual({ timeoutMs: 600000 })
+    expectLocalReadsUnbounded()
+  })
+
+  it('bounds the refresh and the add of a recreate, not its branch -D (CRTO-01, CRTO-09)', async () => {
+    git(repo, 'branch', 'feature/re')
+
+    const result = await create()(repo, 'feature/re', 'main', undefined, true, 'recreate')
+
+    expect(result.ok).toBe(true)
+    expect(optsOf('fetch', 'origin', 'main')).toEqual({ timeoutMs: 60000 })
+    expect(optsOf('merge', '--ff-only', 'origin/main')).toEqual({ timeoutMs: 60000 })
+    expect(optsOf('branch', '-D', 'feature/re')?.timeoutMs).toBeUndefined()
+    expect(optsOf('worktree', 'add')).toEqual({ timeoutMs: 600000 })
+    expectLocalReadsUnbounded()
+  })
+})
+
+/** Rejects the way `git()` does when its timeout kills git: `killed: true`. */
+const killed = (): Error => Object.assign(new Error('Command failed: killed'), { killed: true })
+
+/** True when `args` is exactly `match`. */
+const sameArgs = (args: string[], match: string[]): boolean =>
+  args.length === match.length && match.every((arg, i) => args[i] === arg)
+
+/**
+ * A runner whose `match` call never settles on its own: it rejects with
+ * `killed: true` only when its `timeoutMs` elapses, like `execFile`'s kill.
+ * Every other call goes to the real git without a limit, since the tests' limits
+ * of a few milliseconds are meant for the hung call alone.
+ */
+const hangingWhere =
+  (matches: (args: string[]) => boolean): GitRunner =>
+  (cwd, args, opts) => {
+    if (!matches(args)) return gitRunner(cwd, args)
+    return new Promise((_resolve, reject) => {
+      if (opts?.timeoutMs !== undefined) setTimeout(() => reject(killed()), opts.timeoutMs)
+    })
+  }
+const hangingOn = (...match: string[]): GitRunner => hangingWhere((args) => sameArgs(args, match))
+/** True for any `git worktree add`, whatever its target and branch. */
+const isAdd = (args: string[]): boolean => args[0] === 'worktree' && args[1] === 'add'
+
+/** A runner whose `match` call is killed at once, whatever its limit. */
+const killedAtOnce =
+  (...match: string[]): GitRunner =>
+  (cwd, args, opts) =>
+    sameArgs(args, match) ? Promise.reject(killed()) : gitRunner(cwd, args, opts)
+
+describe('createWorktree — refresh timeout (CRTO-02..04)', () => {
+  const FETCH_TEXT =
+    'Fetching origin/main timed out after 60 s. Retry, or uncheck "Update base branch from remote" to skip.'
+  const FF_TEXT =
+    'Fast-forwarding "main" to origin/main timed out after 60 s. Retry, or uncheck "Update base branch from remote" to skip.'
+  /** Limits of 20 ms for the never-settling runner; the texts then read `0.02 s`. */
+  const FAKE_LIMITS = { refreshTimeoutMs: 20, checkoutTimeoutMs: 20 }
+
+  let root: string
+  let origin: string
+  let repo: string
+
+  beforeEach(() => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-refresh-timeout-')))
+    origin = join(root, 'origin')
+    repo = join(root, 'repo')
+    git(root, 'init', '--bare', '-b', 'main', origin)
+    git(root, 'clone', origin, 'repo')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+    git(repo, 'push', '-u', 'origin', 'main')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  const branchResolves = (branch: string): boolean => {
+    try {
+      git(repo, 'rev-parse', '--verify', '--quiet', `refs/heads/${branch}`)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  it('ends the create on a hung fetch with the fetch text and makes nothing (CRTO-02)', async () => {
+    const create = createWorktreeWith({
+      ...REAL_CREATE_DEPS,
+      ...FAKE_LIMITS,
+      run: hangingOn('fetch', 'origin', 'main')
+    })
+
+    const result = await create(repo, 'feature/hung', 'main', undefined, true)
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'Fetching origin/main timed out after 0.02 s. Retry, or uncheck "Update base branch from remote" to skip.'
+    })
+    expect(existsSync(join(root, 'repo-feature-hung'))).toBe(false)
+    expect(branchResolves('feature/hung')).toBe(false)
+  })
+
+  it('ends the create on a hung merge --ff-only with the fast-forward text (CRTO-03)', async () => {
+    const create = createWorktreeWith({
+      ...REAL_CREATE_DEPS,
+      ...FAKE_LIMITS,
+      run: hangingOn('merge', '--ff-only', 'origin/main')
+    })
+
+    const result = await create(repo, 'feature/hung', 'main', undefined, true)
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'Fast-forwarding "main" to origin/main timed out after 0.02 s. Retry, or uncheck "Update base branch from remote" to skip.'
+    })
+    expect(existsSync(join(root, 'repo-feature-hung'))).toBe(false)
+    expect(branchResolves('feature/hung')).toBe(false)
+  })
+
+  it('ends the create on a hung fetch into an unchecked base with the fast-forward text (CRTO-03)', async () => {
+    git(repo, 'checkout', '-b', 'release')
+    git(repo, 'push', '-u', 'origin', 'release')
+    git(repo, 'checkout', 'main')
+    const create = createWorktreeWith({
+      ...REAL_CREATE_DEPS,
+      ...FAKE_LIMITS,
+      run: hangingOn('fetch', 'origin', 'release:release')
+    })
+
+    const result = await create(repo, 'feature/hung', 'release', undefined, true)
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'Fast-forwarding "release" to origin/release timed out after 0.02 s. Retry, or uncheck "Update base branch from remote" to skip.'
+    })
+    expect(existsSync(join(root, 'repo-feature-hung'))).toBe(false)
+    expect(branchResolves('feature/hung')).toBe(false)
+  })
+
+  it('keeps the existing branch at its tip when a recreate fetch hangs (CRTO-04)', async () => {
+    git(repo, 'checkout', '-b', 'feature/re')
+    writeFileSync(join(repo, 'a.txt'), 'branch-work', 'utf8')
+    git(repo, 'commit', '-am', 'branch work')
+    git(repo, 'checkout', 'main')
+    const tipBefore = git(repo, 'rev-parse', 'feature/re').trim()
+    const create = createWorktreeWith({
+      ...REAL_CREATE_DEPS,
+      ...FAKE_LIMITS,
+      run: hangingOn('fetch', 'origin', 'main')
+    })
+
+    const result = await create(repo, 'feature/re', 'main', undefined, true, 'recreate')
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'Fetching origin/main timed out after 0.02 s. Retry, or uncheck "Update base branch from remote" to skip.'
+    })
+    expect(git(repo, 'rev-parse', 'feature/re').trim()).toBe(tipBefore)
+    expect(existsSync(join(root, 'repo-feature-re'))).toBe(false)
+  })
+
+  it('reads 60 s in the fetch text with the real limit (CRTO-02)', async () => {
+    const create = createWorktreeWith({
+      ...REAL_CREATE_DEPS,
+      run: killedAtOnce('fetch', 'origin', 'main')
+    })
+
+    const result = await create(repo, 'feature/t', 'main', undefined, true)
+
+    expect(result).toEqual({ ok: false, error: FETCH_TEXT })
+  })
+
+  it('reads 60 s in the fast-forward text with the real limit (CRTO-03)', async () => {
+    const create = createWorktreeWith({
+      ...REAL_CREATE_DEPS,
+      run: killedAtOnce('merge', '--ff-only', 'origin/main')
+    })
+
+    const result = await create(repo, 'feature/t', 'main', undefined, true)
+
+    expect(result).toEqual({ ok: false, error: FF_TEXT })
+  })
+
+  it("keeps git's own line for a fetch that fails without a kill (WBR-02)", async () => {
+    git(repo, 'remote', 'set-url', 'origin', join(root, 'missing-remote'))
+    const direct = await gitRunner(repo, ['fetch', 'origin', 'main']).then(
+      () => new Error('the fetch succeeded'),
+      (e: unknown) => e
+    )
+
+    const result = await createWorktree(repo, 'feature/gone', 'main', undefined, true)
+
+    expect(result).toEqual({ ok: false, error: gitFailureLine(direct) })
+    expect(result.error).toMatch(/^fatal: /)
+  })
+})
+
+describe('createWorktree — checkout timeout (CRTO-10)', () => {
+  /** The checkout text for a limit written as `limit` and a target folder. */
+  const checkoutText = (limit: string, target: string): string =>
+    `Creating the worktree timed out after ${limit} and git was stopped. Part of it may remain at ${target}; remove it before retrying.`
+  const hungAdd = createWorktreeWith({
+    ...REAL_CREATE_DEPS,
+    refreshTimeoutMs: 20,
+    checkoutTimeoutMs: 20,
+    run: hangingWhere(isAdd)
+  })
+
+  let root: string
+  let repo: string
+
+  beforeEach(() => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-checkout-timeout-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('ends a new-branch create when the add hangs', async () => {
+    const result = await hungAdd(repo, 'feature/new', 'main')
+
+    expect(result).toEqual({
+      ok: false,
+      error: checkoutText('0.02 s', join(root, 'repo-feature-new'))
+    })
+  })
+
+  it('ends an existing-branch create (empty base) when the add hangs', async () => {
+    git(repo, 'branch', 'chore')
+
+    const result = await hungAdd(repo, 'chore')
+
+    expect(result).toEqual({ ok: false, error: checkoutText('0.02 s', join(root, 'repo-chore')) })
+  })
+
+  it('ends a reuse when the add hangs', async () => {
+    git(repo, 'branch', 'feature/reuse')
+
+    const result = await hungAdd(repo, 'feature/reuse', 'main', undefined, false, 'reuse')
+
+    expect(result).toEqual({
+      ok: false,
+      error: checkoutText('0.02 s', join(root, 'repo-feature-reuse'))
+    })
+  })
+
+  it('ends a recreate when the add hangs', async () => {
+    git(repo, 'branch', 'feature/re')
+
+    const result = await hungAdd(repo, 'feature/re', 'main', undefined, false, 'recreate')
+
+    expect(result).toEqual({
+      ok: false,
+      error: checkoutText('0.02 s', join(root, 'repo-feature-re'))
+    })
+  })
+
+  it('reads 10 min and names the target with the real limit', async () => {
+    const create = createWorktreeWith({
+      ...REAL_CREATE_DEPS,
+      run: (cwd, args, opts) =>
+        isAdd(args) ? Promise.reject(killed()) : gitRunner(cwd, args, opts)
+    })
+
+    const result = await create(repo, 'feature/t', 'main')
+
+    expect(result).toEqual({
+      ok: false,
+      error: `Creating the worktree timed out after 10 min and git was stopped. Part of it may remain at ${join(root, 'repo-feature-t')}; remove it before retrying.`
+    })
+  })
+
+  it('does not run the post-create command after a checkout timeout (WPC-08)', async () => {
+    const shellCalls: string[] = []
+    const shell: HookShell = async (cmd) => {
+      shellCalls.push(cmd)
+      return { code: 0, stdout: '', stderr: '' }
+    }
+    const create = withPostCreateHook(hungAdd, { readCommand: () => 'echo init', shell })
+
+    const result = await create(repo, 'feature/hooked', 'main')
+
+    expect(result).toEqual({
+      ok: false,
+      error: checkoutText('0.02 s', join(root, 'repo-feature-hooked'))
+    })
+    expect(shellCalls).toEqual([])
+  })
+})
+
+describe('createWorktree — a real fetch that waits for credentials (CRTO-02)', () => {
+  let root: string
+  let repo: string
+  let remote: Awaited<ReturnType<typeof startWaitingRemote>>
+
+  beforeEach(async () => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-waiting-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+    remote = await startWaitingRemote()
+    trackWaitingRemote(repo, remote.url)
+  })
+
+  afterEach(async () => {
+    await remote.close()
+    await removeReleasedFolder(root)
+  })
+
+  it('ends the create at the refresh limit with the fetch text and no worktree', async () => {
+    const create = createWorktreeWith({ ...REAL_CREATE_DEPS, refreshTimeoutMs: 2000 })
+
+    const result = await create(repo, 'feature/waiting', 'main', undefined, true)
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'Fetching origin/main timed out after 2 s. Retry, or uncheck "Update base branch from remote" to skip.'
+    })
+    expect(existsSync(join(root, 'repo-feature-waiting'))).toBe(false)
+    expect(git(repo, 'worktree', 'list', '--porcelain')).not.toContain('feature/waiting')
+  })
+})
+
+describe('createWorktree — steps (CRTO-11, CRTO-12, CRTO-14, CRTO-15)', () => {
+  vi.setConfig({ testTimeout: 30000, hookTimeout: 30000 })
+
+  let root: string
+  let origin: string
+  let repo: string
+  let steps: CreateStep[]
+  const onStep = (step: CreateStep): void => {
+    steps.push(step)
+  }
+
+  beforeEach(() => {
+    steps = []
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-steps-')))
+    origin = join(root, 'origin')
+    repo = join(root, 'repo')
+    git(root, 'init', '--bare', '-b', 'main', origin)
+    git(root, 'clone', origin, 'repo')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+    git(repo, 'push', '-u', 'origin', 'main')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('reports the refresh, then the checkout, when the refresh is on', async () => {
+    const result = await createWorktree(
+      repo,
+      'feature/a',
+      'main',
+      undefined,
+      true,
+      undefined,
+      onStep
+    )
+
+    expect(result.ok).toBe(true)
+    expect(steps).toEqual(['refreshing-base', 'creating-worktree'])
+  })
+
+  it('reports only the checkout when the refresh is off (CRTO-12)', async () => {
+    const result = await createWorktree(
+      repo,
+      'feature/b',
+      'main',
+      undefined,
+      false,
+      undefined,
+      onStep
+    )
+
+    expect(result.ok).toBe(true)
+    expect(steps).toEqual(['creating-worktree'])
+  })
+
+  it('reports only the checkout for an existing branch with an empty base (CRTO-12)', async () => {
+    git(repo, 'branch', 'chore')
+
+    const result = await createWorktree(
+      repo,
+      'chore',
+      undefined,
+      undefined,
+      true,
+      undefined,
+      onStep
+    )
+
+    expect(result.ok).toBe(true)
+    expect(steps).toEqual(['creating-worktree'])
+  })
+
+  it('reports only the checkout for a reuse, even with the refresh on (CRTO-12)', async () => {
+    git(repo, 'branch', 'feature/reuse')
+
+    const result = await createWorktree(
+      repo,
+      'feature/reuse',
+      'main',
+      undefined,
+      true,
+      'reuse',
+      onStep
+    )
+
+    expect(result.ok).toBe(true)
+    expect(steps).toEqual(['creating-worktree'])
+  })
+
+  it('reports the refresh, then the checkout, for a recreate with the refresh on', async () => {
+    git(repo, 'branch', 'feature/re')
+
+    const result = await createWorktree(
+      repo,
+      'feature/re',
+      'main',
+      undefined,
+      true,
+      'recreate',
+      onStep
+    )
+
+    expect(result.ok).toBe(true)
+    expect(steps).toEqual(['refreshing-base', 'creating-worktree'])
+  })
+
+  it('reports nothing after a refresh that failed (CRTO-14)', async () => {
+    git(repo, 'branch', 'local-only')
+
+    const result = await createWorktree(
+      repo,
+      'feature/c',
+      'local-only',
+      undefined,
+      true,
+      undefined,
+      onStep
+    )
+
+    expect(result.ok).toBe(false)
+    expect(steps).toEqual(['refreshing-base'])
+  })
+
+  it('reports nothing for a branch-exists conflict (CRTO-14)', async () => {
+    git(repo, 'branch', 'feature/taken')
+
+    const result = await createWorktree(
+      repo,
+      'feature/taken',
+      'main',
+      undefined,
+      true,
+      undefined,
+      onStep
+    )
+
+    expect(result).toEqual({ ok: false, conflict: 'branch-exists' })
+    expect(steps).toEqual([])
+  })
+
+  it('reports nothing when the target folder exists (CRTO-14)', async () => {
+    mkdirSync(join(root, 'repo-feature-d'))
+
+    const result = await createWorktree(
+      repo,
+      'feature/d',
+      'main',
+      undefined,
+      true,
+      undefined,
+      onStep
+    )
+
+    expect(result.ok).toBe(false)
+    expect(steps).toEqual([])
+  })
+
+  it('reports nothing when the template renders an empty folder name (CRTO-14)', async () => {
+    const result = await createWorktree(
+      repo,
+      'chore/cleanup',
+      'main',
+      '{id}',
+      true,
+      undefined,
+      onStep
+    )
+
+    expect(result.ok).toBe(false)
+    expect(steps).toEqual([])
   })
 })
 

@@ -11,13 +11,31 @@
  * figures. Exit 2: no built app. Exit 1: the harness failed (port taken, the
  * app never answered, the lines never arrived).
  *
+ * Issue #150 (FWIG-32..36): --files-view seeds bench-wt-1 for the Files view
+ * (a committed .gitignore naming build-out/, 50 files in build-out/, 12
+ * tracked files changed, the Uncommitted mode in the config) and opens the
+ * Files direction on it through CDP before the loops start. One write loop per
+ * run: --build-interval writes build-out/obj-<k mod 50>.bin, --edit-interval
+ * rewrites the line the seed appended to src/f0000.ts in place, with new
+ * content of the same byte length (so the stack's layout holds),
+ * --touch-interval rewrites src/f0100.ts with its own bytes.
+ *
  * Run: npx electron-vite build
  *      node scripts/bench-sessions.mjs [--sessions 3] [--minutes 3] [--fps 20] [--rows 30]
  *        [--files 500] [--index-interval <ms>] [--port 9334] [--json <file>] [--keep]
+ *        [--files-view [--build-interval <ms> | --edit-interval <ms> | --touch-interval <ms>]]
  */
 
 import { spawn, spawnSync, execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -53,7 +71,7 @@ const text = (value, flag) => {
   return value
 }
 
-/** One row per flag; a flag with no `parse` is a switch. #150 adds its write loop here. */
+/** One row per flag; a flag with no `parse` is a switch. */
 const OPTIONS = [
   { flag: '--sessions', key: 'sessions', default: 3, parse: count(0) },
   { flag: '--minutes', key: 'minutes', default: 3, parse: count(1) },
@@ -63,7 +81,11 @@ const OPTIONS = [
   { flag: '--index-interval', key: 'indexInterval', default: 0, parse: count(0) },
   { flag: '--port', key: 'port', default: 9334, parse: count(1) },
   { flag: '--json', key: 'json', default: null, parse: text },
-  { flag: '--keep', key: 'keep', default: false }
+  { flag: '--keep', key: 'keep', default: false },
+  { flag: '--files-view', key: 'filesView', default: false },
+  { flag: '--build-interval', key: 'buildInterval', default: 0, parse: count(0) },
+  { flag: '--edit-interval', key: 'editInterval', default: 0, parse: count(0) },
+  { flag: '--touch-interval', key: 'touchInterval', default: 0, parse: count(0) }
 ]
 
 function parseOptions(argv) {
@@ -100,10 +122,23 @@ const userData = join(temp, 'user-data')
 const ws = join(temp, 'ws')
 const repo = join(ws, 'app')
 const logPath = join(userData, LOG_FILE)
+/** The worktree the Files view opens on, and the summary's Files columns read (FWIG-32, 36). */
+const FILES_WORKTREE = 'bench-wt-1'
+const filesWt = join(ws, FILES_WORKTREE)
+const BUILD_FILES = 50
+const CHANGED_FILES = 12
+/** The seeded line's value is zero-padded, so the edit loop can rewrite it at the same length. */
+const SEEDED_DIGITS = 6
+const seededLine = (f, value) =>
+  `export const seeded_${f} = ${String(value).padStart(SEEDED_DIGITS, '0')}\n`
 
 let app = null
 let indexTimer = null
+/** The write loops of #150, one per flag; each counts its writes and skipped writes. */
+const loops = []
 let cleaned = false
+
+const stopLoops = () => loops.forEach((l) => clearInterval(l.timer))
 
 const appRunning = () => app !== null && app.exitCode === null && app.signalCode === null
 
@@ -112,6 +147,7 @@ function cleanup() {
   if (cleaned) return
   cleaned = true
   clearInterval(indexTimer)
+  stopLoops()
   if (appRunning()) spawnSync('taskkill', ['/pid', String(app.pid), '/T', '/F'])
   if (options.keep) {
     console.log(`kept: ${temp}`)
@@ -154,14 +190,17 @@ const git = (args, cwd = repo) =>
     { cwd, encoding: 'utf8', windowsHide: true }
   ).trim()
 
+const fileName = (f) => `f${String(f).padStart(4, '0')}`
+
 function seed() {
   mkdirSync(join(repo, 'src'), { recursive: true })
   git(['init', '-q', '-b', 'main'])
   for (let f = 0; f < options.files; f++) {
-    const name = `f${String(f).padStart(4, '0')}`
+    const name = fileName(f)
     const lines = Array.from({ length: 20 }, (_, l) => `export const ${name}_${l} = ${f * 20 + l}`)
     writeFileSync(join(repo, 'src', `${name}.ts`), lines.join('\n') + '\n')
   }
+  if (options.filesView) writeFileSync(join(repo, '.gitignore'), 'build-out/\n')
   git(['add', '-A'])
   git(['commit', '-q', '-m', 'bench seed'])
   for (let i = 1; i <= Math.max(options.sessions, 1); i++) {
@@ -169,8 +208,33 @@ function seed() {
   }
   mkdirSync(userData, { recursive: true })
   const workspace = { id: ws.toLowerCase(), path: ws, displayName: 'bench' }
-  writeFileSync(join(userData, 'config.json'), JSON.stringify({ workspaces: [workspace] }, null, 2))
+  const config = { workspaces: [workspace] }
+  if (options.filesView) config.ui = { files: { [seedFilesView()]: { mode: 'uncommitted' } } }
+  writeFileSync(join(userData, 'config.json'), JSON.stringify(config, null, 2))
 }
+
+/**
+ * FWIG-32: build-out/ holds 50 ignored files and 12 tracked files carry one uncommitted line each.
+ * Returns bench-wt-1's path as the app keys its Files lens: git's listing with every `/` turned
+ * into `\` (parsePorcelainBlocks in src/main/worktree-manager.ts).
+ */
+function seedFilesView() {
+  mkdirSync(join(filesWt, 'build-out'), { recursive: true })
+  for (let k = 0; k < BUILD_FILES; k++) writeFileSync(buildFile(k), `build seed ${k}\n`)
+  for (let f = 0; f < CHANGED_FILES; f++) {
+    appendFileSync(join(filesWt, 'src', `${fileName(f)}.ts`), seededLine(f, f))
+  }
+  const listed = git(['worktree', 'list', '--porcelain'])
+    .split('\n')
+    .filter((l) => l.startsWith('worktree '))
+    .map((l) => l.slice('worktree '.length))
+    .find((p) => p.endsWith(`/${FILES_WORKTREE}`) || p.endsWith(`\\${FILES_WORKTREE}`))
+  if (!listed) throw new Error(`git worktree list does not name ${FILES_WORKTREE}`)
+  return listed.replaceAll('/', '\\')
+}
+
+const buildFile = (k) =>
+  join(filesWt, 'build-out', `obj-${String(k % BUILD_FILES).padStart(2, '0')}.bin`)
 
 function commitOf() {
   const sha = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT, encoding: 'utf8' })
@@ -236,6 +300,71 @@ function evaluate(ws, expression) {
 
 const invoke = (socket, channel, payload) =>
   evaluate(socket, `window.api.invoke(${JSON.stringify(channel)}, ${JSON.stringify(payload)})`)
+
+const clickByText = (selector, text) => `
+  (() => {
+    const el = [...document.querySelectorAll(${JSON.stringify(selector)})]
+      .find((e) => (e.textContent || '').trim() === ${JSON.stringify(text)})
+    if (!el) return false
+    el.click()
+    return true
+  })()
+`
+
+/** How long the Files view may take to show its All changes sections (design, Bench rows). */
+const SECTIONS_TIMEOUT_MS = 15_000
+const sectionCount = `document.querySelectorAll('.diff-section').length`
+
+/**
+ * FWIG-32: the Files direction on bench-wt-1, as scripts/smoke-files-diff.mjs's selectWorktree
+ * reaches it (Tree, the branch row, Files), with All changes in front. Fails the run when no
+ * section shows within 15 s.
+ */
+async function openFilesView(socket) {
+  await evaluate(socket, clickByText('.topbar-segment', 'Tree'))
+  const branch = `[...document.querySelectorAll('.sidebar-worktree-branch')]
+    .find((e) => (e.textContent || '').trim() === 'bench/1')`
+  let picked = false
+  for (let i = 0; i < 30 && !picked; i++) {
+    picked = await evaluate(
+      socket,
+      `(() => { const el = ${branch}; if (!el) return false; el.closest('.sidebar-worktree').click(); return true })()`
+    )
+    if (!picked) await sleep(1000)
+  }
+  if (!picked) fail('--files-view: the branch bench/1 never showed in the sidebar')
+  await sleep(900)
+  await evaluate(socket, clickByText('.topbar-segment', 'Files'))
+  const deadline = Date.now() + SECTIONS_TIMEOUT_MS
+  while (Date.now() < deadline) {
+    await evaluate(socket, clickByText('.file-tab-label', 'All changes'))
+    const n = await evaluate(socket, sectionCount)
+    if (n > 0) return n
+    await sleep(500)
+  }
+  const tabs = await evaluate(
+    socket,
+    `[...document.querySelectorAll('.file-tab-label')].map((e) => e.textContent.trim())`
+  )
+  fail(
+    `--files-view: no All changes sections (.diff-section) in the Files view of ${FILES_WORKTREE} ` +
+      `after ${SECTIONS_TIMEOUT_MS / 1000} s; file tabs ${JSON.stringify(tabs)}`
+  )
+}
+
+/** A write loop (FWIG-33..35): `write(k)` every `ms`; a failed write is counted and skipped. */
+function startLoop(name, ms, write) {
+  const loop = { name, writes: 0, skipped: 0, timer: null }
+  loop.timer = setInterval(() => {
+    try {
+      write(loop.writes + loop.skipped)
+      loop.writes++
+    } catch {
+      loop.skipped++
+    }
+  }, ms)
+  loops.push(loop)
+}
 
 /* -------------------------------------------------------------------- log -- */
 
@@ -323,6 +452,32 @@ for (let i = 1; i <= options.sessions; i++) {
 }
 if (sessionIds.length > 0) await invoke(socket, 'sessions:attach', { id: sessionIds[0] })
 
+if (options.filesView) {
+  const sections = await openFilesView(socket)
+  console.log(`bench-sessions: Files view open on ${FILES_WORKTREE}, ${sections} sections`)
+}
+if (options.buildInterval > 0) {
+  // new bytes on every write, cycling 50 names (FWIG-33)
+  startLoop('build', options.buildInterval, (k) =>
+    writeFileSync(buildFile(k), `build ${k} ${Date.now()}\n`.repeat(64))
+  )
+}
+if (options.editInterval > 0) {
+  // FWIG-34: the seeded line, rewritten in place with new content of the same byte length
+  const edited = join(filesWt, 'src', 'f0000.ts')
+  const seeded = readFileSync(edited, 'utf8')
+  const kept = seeded.slice(0, seeded.length - seededLine(0, 0).length)
+  if (kept + seededLine(0, 0) !== seeded)
+    fail('--edit-interval: src/f0000.ts does not end in its seeded line')
+  startLoop('edit', options.editInterval, (k) =>
+    writeFileSync(edited, kept + seededLine(0, (k + 1) % 10 ** SEEDED_DIGITS))
+  )
+}
+if (options.touchInterval > 0) {
+  const touched = join(filesWt, 'src', 'f0100.ts')
+  startLoop('touch', options.touchInterval, () => writeFileSync(touched, readFileSync(touched)))
+}
+
 let indexWrites = 0
 let indexSkipped = 0
 if (options.indexInterval > 0) {
@@ -342,6 +497,7 @@ if (options.indexInterval > 0) {
 const wanted = options.minutes + 2
 const lines = await waitForLines(wanted, firstLineAt + (options.minutes + 3) * MINUTE_MS)
 clearInterval(indexTimer)
+stopLoops()
 const complete = lines.length >= wanted
 
 for (const id of sessionIds) {
@@ -368,17 +524,25 @@ if (code === 'timeout') {
   await exited
 }
 
-const rows = phaseRows(lines, { minutes: options.minutes })
+const rows = phaseRows(lines, {
+  minutes: options.minutes,
+  filesWorktree: options.filesView ? FILES_WORKTREE : undefined
+})
 const worst = worstRow(rows)
 const targets = judgeTargets(rows, {
   sessions: options.sessions,
   indexIntervalMs: options.indexInterval,
-  targets: DEFAULT_TARGETS
+  targets: DEFAULT_TARGETS,
+  filesView: options.filesView,
+  buildIntervalMs: options.buildInterval,
+  editIntervalMs: options.editInterval,
+  touchIntervalMs: options.touchInterval
 })
 console.log(formatSummary(options, rows, worst, targets, spawnMs))
 if (options.indexInterval > 0) {
   console.log(`index loop: ${indexWrites} writes, ${indexSkipped} skipped`)
 }
+for (const l of loops) console.log(`${l.name} loop: ${l.writes} writes, ${l.skipped} skipped`)
 if (options.json) {
   writeFileSync(
     resolve(options.json),

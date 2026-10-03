@@ -1,31 +1,32 @@
 /*
- * Hours week calendar (HCAL). Task colours are the dataviz reference palette's
- * eight categorical slots in order (AD-045, superseding AD-030 here) — change
- * one only after re-running the dataviz validator with `--pairs all` against
- * this view's --panel in both themes and updating AD-045's weak pairs.
+ * Hours week calendar (HCAL). Task looks are eight hues, each solid and
+ * hatched (AD-055, superseding AD-045's palette and AD-030 here) — change a hue
+ * only after re-running the dataviz validator with `--pairs all` against this
+ * view's --panel in both themes and the hatch legibility check (H1 to H3), and
+ * updating AD-055.
  */
 
 :root,
 :root[data-theme='dark'] {
-  --hcal-slot1: #3987e5;
-  --hcal-slot2: #d95926;
-  --hcal-slot3: #199e70;
-  --hcal-slot4: #c98500;
-  --hcal-slot5: #d55181;
-  --hcal-slot6: #008300;
-  --hcal-slot7: #9085e9;
-  --hcal-slot8: #e66767;
+  --hcal-slot1: #2790da;
+  --hcal-slot2: #b64906;
+  --hcal-slot3: #14a889;
+  --hcal-slot4: #bc8b03;
+  --hcal-slot5: #c90982;
+  --hcal-slot6: #117a2c;
+  --hcal-slot7: #8c63f5;
+  --hcal-slot8: #f45468;
 }
 
 :root[data-theme='light'] {
-  --hcal-slot1: #2a78d6;
-  --hcal-slot2: #eb6834;
-  --hcal-slot3: #1baf7a;
-  --hcal-slot4: #eda100;
-  --hcal-slot5: #e87ba4;
-  --hcal-slot6: #008300;
-  --hcal-slot7: #4a3aa7;
-  --hcal-slot8: #e34948;
+  --hcal-slot1: #2f76e8;
+  --hcal-slot2: #eb6623;
+  --hcal-slot3: #28ae76;
+  --hcal-slot4: #dbab37;
+  --hcal-slot5: #e984b7;
+  --hcal-slot6: #0f6f19;
+  --hcal-slot7: #4e3ca6;
+  --hcal-slot8: #d10b47;
 }
 
 /* Takes the height the Hours body leaves; the hour rows divide it (HCAL-26). */
@@ -155,36 +156,43 @@
   inset: -4px;
 }
 
-.hcal-bar.role-slot1 {
+/* A hue for bars, legend swatches and drawer swatches alike (HHAT-20). */
+:is(.hcal-bar, .hleg-swatch, .hours-group-swatch).role-slot1 {
   --hcal-c: var(--hcal-slot1);
 }
 
-.hcal-bar.role-slot2 {
+:is(.hcal-bar, .hleg-swatch, .hours-group-swatch).role-slot2 {
   --hcal-c: var(--hcal-slot2);
 }
 
-.hcal-bar.role-slot3 {
+:is(.hcal-bar, .hleg-swatch, .hours-group-swatch).role-slot3 {
   --hcal-c: var(--hcal-slot3);
 }
 
-.hcal-bar.role-slot4 {
+:is(.hcal-bar, .hleg-swatch, .hours-group-swatch).role-slot4 {
   --hcal-c: var(--hcal-slot4);
 }
 
-.hcal-bar.role-slot5 {
+:is(.hcal-bar, .hleg-swatch, .hours-group-swatch).role-slot5 {
   --hcal-c: var(--hcal-slot5);
 }
 
-.hcal-bar.role-slot6 {
+:is(.hcal-bar, .hleg-swatch, .hours-group-swatch).role-slot6 {
   --hcal-c: var(--hcal-slot6);
 }
 
-.hcal-bar.role-slot7 {
+:is(.hcal-bar, .hleg-swatch, .hours-group-swatch).role-slot7 {
   --hcal-c: var(--hcal-slot7);
 }
 
-.hcal-bar.role-slot8 {
+:is(.hcal-bar, .hleg-swatch, .hours-group-swatch).role-slot8 {
   --hcal-c: var(--hcal-slot8);
+}
+
+/* A hatched look: stripes of the hue, half the pattern, over a light tint of it (AD-055). */
+:is(.hcal-bar, .hleg-swatch, .hours-group-swatch).hatched {
+  background-color: color-mix(in oklab, var(--hcal-c) 5%, #fff);
+  background-image: repeating-linear-gradient(45deg, var(--hcal-c) 0 3px, transparent 3px 6px);
 }
 
 .hcal-bar.role-other {

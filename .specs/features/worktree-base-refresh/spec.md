@@ -50,7 +50,7 @@ The existing failure paths (empty template name, target exists, plain `git workt
 
 - **No persisted preference / Settings entry** (WBR-D3). No `AppConfig` change.
 - **No merge/rebase of a diverged base** — fast-forward only; divergence blocks (WBR-D2).
-- **No interactive credential handling.** Fetch relies on already-cached git credentials; a credential prompt is suppressed (`GIT_TERMINAL_PROMPT=0`) and treated as a fetch failure → block. (Documented limitation; GUI helper popups are outside our control.)
+- **No interactive credential handling.** Fetch relies on already-cached git credentials; a credential prompt is suppressed (`GIT_TERMINAL_PROMPT=0`) and treated as a fetch failure → block. (Documented limitation; GUI helper popups are outside our control.) **Amended by AD-059 (`create-timeouts`, CRTO-02, 2026-10-03):** a helper that waits instead of answering no longer holds the create; the fetch and the fast-forward stop after 60 s each and the dialog shows the fetch timeout text. A helper's window may stay open after git is killed.
 - **No update of the base when checking out an existing branch** (empty base field, WBR-D4).
 - **No new toast/notification channel** — errors ride the dialog's existing inline error.
 

@@ -31,6 +31,12 @@ interface AllChangesTabProps {
   ignoreWhitespace: boolean
   /** Bumped when every open diff must re-read against a new git state (FDIF-31/32). */
   refreshToken: number
+  /**
+   * Each file's disk revision (FWIG-25): a section re-reads when its number
+   * moves. Only the uncommitted stack passes it; diff to origin and a commit
+   * tab never do, so there no disk batch re-reads a section (FWIG-28, FWIG-29).
+   */
+  revisions?: Readonly<Record<string, number>>
   /** The stack's own navigation, for the tab strip's buttons and keys (FDIF-26). */
   onHandle?: (handle: DiffHandle | null) => void
   /**
@@ -81,6 +87,7 @@ export function AllChangesTab({
   layout,
   ignoreWhitespace,
   refreshToken,
+  revisions,
   onHandle,
   onDiscard,
   unchanged = null,
@@ -369,6 +376,7 @@ export function AllChangesTab({
             layout={layout}
             ignoreWhitespace={ignoreWhitespace}
             refreshToken={refreshToken}
+            revision={revisions?.[file.path] ?? 0}
             unchanged={unchanged}
             onToggle={onToggle}
             onElement={onElement}

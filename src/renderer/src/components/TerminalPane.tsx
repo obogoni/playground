@@ -6,6 +6,7 @@ import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal, type IBufferRange, type ITheme } from '@xterm/xterm'
 import { PASTE_GAP_MS, planPaste } from '../../../shared/paste'
 import { api } from '../lib/api'
+import { watchDevicePixelRatio } from '../lib/device-pixel-ratio'
 import {
   activeBufferOf,
   bufferPositionForMouseEvent,
@@ -97,7 +98,7 @@ function readTheme(): ITheme {
 /**
  * Embedded xterm bound to one session (PRD stories 2, 18; handoff §C-b). PTY
  * bytes arrive over session:data; keystrokes go back over session:input; the
- * container drives fit() + session:resize. The terminal is themed via
+ * host inside the pane drives fit() + session:resize. The terminal is themed via
  * readTheme() — the full token→ANSI palette map, re-emitted on theme toggle
  * via a MutationObserver below (handoff §Terminal theming, AGCF-07).
  */
@@ -108,6 +109,11 @@ export function TerminalPane({
   onToast
 }: TerminalPaneProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
+  // What the terminal opens into. It has no vertical padding: the fit addon
+  // reads this element's height with its padding included and subtracts only
+  // xterm's own, so a padded host gets a row that does not fit (#146). The pane
+  // around it keeps the spacing, the chip and every mouse and drop listener.
+  const hostRef = useRef<HTMLDivElement>(null)
   // Read through a ref so a new callback identity never remounts the terminal
   // (the effect below re-attaches the session when its deps change).
   const onToastRef = useRef(onToast)
@@ -117,7 +123,8 @@ export function TerminalPane({
 
   useEffect(() => {
     const container = containerRef.current
-    if (!container) return
+    const host = hostRef.current
+    if (!container || !host) return
 
     // Timestamp of the last Ctrl+C this pane handled as a copy or discarded.
     // Declared inside the effect so it dies with the pane and never leaks a
@@ -171,7 +178,7 @@ export function TerminalPane({
     // '15-graphemes' itself, folding VS16/ZWJ/regional sequences into one
     // grapheme with the right width.
     term.loadAddon(new UnicodeGraphemesAddon())
-    term.open(container)
+    term.open(host)
     // GPU rendering (PERF-04): the WebGL addon loads only after open(). No WebGL2
     // or a lost context leaves the terminal on the DOM renderer (PERF-05, PERF-06).
     const gpu = attachGpuRenderer(term, () => new WebglAddon(), console.warn)
@@ -459,7 +466,7 @@ export function TerminalPane({
       }
     })
 
-    // Keep the PTY's dimensions matched to the container; coalesced by the
+    // Keep the PTY's dimensions matched to the host; coalesced by the
     // browser's resize delivery so rapid drags don't crash the PTY.
     const sendResize = (): void => {
       fit.fit()
@@ -467,7 +474,15 @@ export function TerminalPane({
     }
     sendResize()
     const observer = new ResizeObserver(sendResize)
-    observer.observe(container)
+    observer.observe(host)
+    // A display scale change resizes the cell, not the host, so the observer
+    // never sees it. The refit waits one frame, so xterm has re-measured its
+    // cell for the new ratio first (TROW-09); a pending frame is replaced.
+    let dprFrame = 0
+    const stopDpr = watchDevicePixelRatio(window, () => {
+      cancelAnimationFrame(dprFrame)
+      dprFrame = requestAnimationFrame(sendResize)
+    })
 
     // Recolor the terminal live when the app theme toggles (handoff: re-emit
     // the theme on toggle). data-theme flips on <html>.
@@ -593,6 +608,8 @@ export function TerminalPane({
       selectionSub.dispose()
       for (const handler of probeHandlers) handler.dispose()
       observer.disconnect()
+      stopDpr()
+      cancelAnimationFrame(dprFrame)
       themeObserver.disconnect()
       offData()
       offExit()
@@ -602,5 +619,9 @@ export function TerminalPane({
     }
   }, [sessionId, undoByte, cwd])
 
-  return <div ref={containerRef} className="terminal-pane" />
+  return (
+    <div ref={containerRef} className="terminal-pane">
+      <div ref={hostRef} className="terminal-host" />
+    </div>
+  )
 }

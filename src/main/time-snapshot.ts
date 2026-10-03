@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process'
 import { basename, dirname, resolve } from 'node:path'
 import { taskIdFromBranch } from '../shared/tasks'
 import type { PeriodSnapshotFields } from '../shared/time'
@@ -47,32 +46,12 @@ export function buildSnapshot(input: SnapshotInput): PeriodSnapshotFields {
   }
 }
 
-/** Shell seam, hand-verified: one git call, any failure (not a repo, git missing, timeout) → nulls. */
-export function readGit(cwd: string): { gitCommonDir: string | null; branch: string | null } {
-  try {
-    const out = execFileSync(
-      'git',
-      ['rev-parse', '--path-format=absolute', '--git-common-dir', '--abbrev-ref', 'HEAD'],
-      {
-        cwd,
-        timeout: 2000,
-        windowsHide: true,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore']
-      }
-    )
-    const [gitCommonDir, branch] = out.split(/\r?\n/)
-    return gitCommonDir && branch ? { gitCommonDir, branch } : { gitCommonDir: null, branch: null }
-  } catch {
-    return { gitCommonDir: null, branch: null }
-  }
-}
-
 /**
- * `readGit` without blocking the main process (PERF-21): the same git call,
- * timeout and nulls on any failure, through the git runner, so it is queued
- * and counted like every other call (PDIAG-14). A period opens on the cached
- * attribution and is patched when this answers.
+ * One git call without blocking the main process (PERF-21): any failure (not
+ * a repo, git missing, 2 s timeout) answers nulls (TIME-12). It goes through
+ * the git runner, so it is queued and counted like every other call
+ * (PDIAG-14). A period opens on the cached attribution and is patched when
+ * this answers.
  */
 export async function readGitAsync(
   cwd: string
