@@ -204,7 +204,10 @@ describe('git reports to diagnostics (PDIAG-09, PDIAG-15)', () => {
 
   it('reports one start and one end for a timed-out call, which is still a timeout', async () => {
     const rec = recordingGit()
-    const err = await rejectionOf(git(tmpdir(), ['hash-object', '--stdin'], { timeoutMs: 200 }))
+    // stdin is ended (CRTO-06), so the blocker is a `!` alias that sleeps past the limit.
+    const err = await rejectionOf(
+      git(tmpdir(), ['-c', 'alias.wait=!sleep 5', 'wait'], { timeoutMs: 200 })
+    )
     expect(isTimeout(err)).toBe(true)
     expect(rec.starts).toHaveLength(1)
     expect(rec.ends).toBe(1)
