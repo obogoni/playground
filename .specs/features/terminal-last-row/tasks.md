@@ -12,7 +12,8 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 **Design**: `.specs/features/terminal-last-row/design.md`
 **Status**: Approved (owner, 2026-10-01)
 **Branch**: `feature/terminal-last-row` (cut from `origin/main`)
-**Test baseline**: **B** = the `npm test` count on the branch before T1, measured in T1's setup and written here. Every "Test count" below is `B + N`, cumulative.
+**Test baseline**: **B** = 2508 (`npm test` on the branch rebased onto `origin/main` `6d96ae4`, 2026-10-03). Every "Test count" below is `B + N`, cumulative.
+**Renderer amendment 2026-10-03 (owner)**: the smoke measures the WebGL renderer, as `design.md` §Renderer Amendment states. Where a task below says DOM rows or the last DOM row, read that section.
 **Stop rule**: T1 measures the cause on the current build. If the measured cause differs from the model in `design.md` §Predicted Model, Execute stops after T1 and the plan goes back to the owner. T2 does not start.
 **Owner decision 2026-10-01**: keep today's columns. Only the vertical axis changes: the pane takes `padding: 8px 0` and a `border-box` host takes `padding: 0 10px` (`design.md` §Verdict 2, TROW-11).
 **Owner confirmed 2026-10-01** (spec Assumptions): spacing reading, height emulation, sweep size, display scale route, the fill script, as the plan proposed them.

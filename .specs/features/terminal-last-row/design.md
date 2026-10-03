@@ -16,6 +16,31 @@ Main, preload and the IPC contract do not change.
 
 ---
 
+## Renderer Amendment (2026-10-03, owner: measure on WebGL)
+
+The plan was written against the DOM renderer. Before Execute, `origin/main` (PERF-04, merged with #157) loads `@xterm/addon-webgl` after `term.open` (`TerminalPane.tsx`, `attachGpuRenderer`), with the DOM renderer as the fallback. The fix does not change; the smoke's way of reading the terminal does.
+
+| Fact | Evidence |
+| ---- | -------- |
+| Under WebGL there is no `.xterm-rows`; `.xterm-screen` holds the link-layer canvas and one unclassed WebGL canvas, both styled to the CSS canvas size | Spike on the dev app, 2026-10-03 |
+| WebGL cell: device height `ceil(charH × dpr)`, device width `floor(charW × dpr)`; CSS canvas `round(rows × device height / dpr)` by `round(cols × device width / dpr)`, set on `.xterm-screen` style | `node_modules/@xterm/addon-webgl/src/WebglRenderer.ts:566-607`, `:191-192` |
+| The DOM renderer's height is the same (`ceil(charH × dpr)`); its width is not floored (`charW × dpr`), so **columns depend on the renderer** and the column baseline must be taken on WebGL | `DomRenderer.ts:114-127` |
+| xterm measures the char with `OffscreenCanvas.measureText('W')` at `${fontSize}px ${fontFamily}`, height = `fontBoundingBoxAscent + fontBoundingBoxDescent` | `node_modules/@xterm/xterm/src/browser/services/CharSizeService.ts:104-125` |
+| The spike read charW 7.617, charH 15 at DPR 1.5: device cell 11 × 23, canvas 1353 × 782 = 123 cols × 34 rows exactly; pane content height 514.7 px, so 33 rows fit and the terminal had 34 | Spike, 2026-10-03 |
+
+**What the smoke reads instead** (replaces the DOM reads in §`scripts/smoke-terminal-rows.mjs`):
+
+- `h`, `w`: the page measures `'W'` with an `OffscreenCanvas` at the pane's font (`13px 'Cascadia Mono', Consolas, 'JetBrains Mono', monospace`, pinned as a literal), then `h = ceil(charH × dpr) / dpr` and `w = floor(charW × dpr) / dpr`.
+- `rows` = round(`.xterm-screen` style height / h), `cols` = round(style width / w).
+- New guard, at every probe: the renderer is WebGL (no `.xterm-rows`, a WebGL canvas present), and the screen's style height and width equal `round(rows × h)` and `round(cols × w)` exactly. A wrong cell model, a font change or a DOM fallback fails it.
+- `lastBottom` = screen top + rows × h; `lastRight` = screen left + cols × w.
+- `ptyRows`, `ptyCols`: the last `ROWS=<n> COLS=<m>` in the session's `session:data` stream, captured in the page from before the session is selected. The canvas text cannot be read from the DOM, so the "last DOM row contains the marker" check goes; TROW-05 rests on `ptyRows` equalling the rows that fit and `ptyCols` equalling `cols`, with the last row's bottom inside the visible box (TROW-03).
+- Each DPR sweep starts with one discarded warm-up probe at another height, so the first kept probe does not depend on the order of xterm's re-measure and the observer.
+
+Spec ACs, mutants and stop rule are unchanged. The `cols` baseline is recorded on WebGL.
+
+---
+
 ## Verified Facts This Design Stands On
 
 | Fact | Evidence |
