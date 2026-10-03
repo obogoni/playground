@@ -314,8 +314,9 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] The number checked free across `origin/main`, the fork's branches and every open PR's `STATE.md` (main held AD-051 at planning)
-- [ ] The H1 to H3 re-run passes every slot in both themes; a failure stops here and goes to the owner
+- [x] The number checked free across `origin/main`, the fork's branches and every open PR's `STATE.md` (main held AD-051 at planning) (2026-10-03: `origin/main` holds up to AD-053; no branch on `origin` or the fork holds AD-054 or higher; upstream has no open PR; recorded as AD-054)
+- [x] The H1 to H3 re-run passes every slot in both themes; a failure stops here and goes to the owner (2026-10-03, over the validator's `lin`, OKLab and `deltaE`: every slot passes; matches the design's table except dark aqua's mean, `#b5dacd` H2 21.9 against `#b6dacd` 22.0, a rounding difference)
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/hours-calendar.test.ts` then `npm test` (55 and 2522 passing)
 
 **Tests**: none
 **Gate**: quick
