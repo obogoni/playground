@@ -615,16 +615,36 @@ in 128 files (2,792 + 16), typecheck clean, lint 0 errors and 18 warnings (uncha
 
 **Done when** (real temp repository, `core.autocrlf` pinned off, L-026):
 
-- [ ] Tests: `IGNORE_CHECK_TIMEOUT_MS` is `5000` by literal (L-009)
-- [ ] Tests: with a root `.gitignore` (`bin/`, `*.log`), a nested `src/.gitignore` (`gen/`) and `.git/info/exclude` (`scratch/`), the answer holds `bin`, `bin/Debug/a.dll`, `src/x.log`, `src/gen/a.ts`, `scratch/n.txt` and not `src/a.ts`
-- [ ] Tests: after `git add -f bin/keep.txt` and a commit, `bin` and `bin/keep.txt` are absent from the answer and `bin/Debug/a.dll` is present
-- [ ] Tests: after `bin/` is deleted, `bin/Debug/a.dll` is present and `bin` is absent (FWIG-47)
-- [ ] Tests: no path ignored (git exits 1) answers an empty set, not null
-- [ ] Tests: paths with a space, `#`, `!`, a leading `-` and `é` come back exactly as sent (FWIG-48)
-- [ ] Tests: a temp folder that is not a repository answers null; a runner that never settles past the timeout answers null (injected runner receiving `timeoutMs: 5000`)
-- [ ] Tests: the recorded call's args start with `READ_ONLY_FLAGS`, then `check-ignore`, `--stdin`, `-z`, and its `input` is the paths joined and ended by NUL (L-020)
-- [ ] Gate check passes: `npx vitest run src/main/ignore-check.test.ts`, then the full gate (wall time, L-005)
-- [ ] Test count: T8 count + the new tests
+- [x] Tests: `IGNORE_CHECK_TIMEOUT_MS` is `5000` by literal (L-009)
+- [x] Tests: with a root `.gitignore` (`bin/`, `*.log`), a nested `src/.gitignore` (`gen/`) and `.git/info/exclude` (`scratch/`), the answer holds `bin`, `bin/Debug/a.dll`, `src/x.log`, `src/gen/a.ts`, `scratch/n.txt` and not `src/a.ts`
+- [x] Tests: after `git add -f bin/keep.txt` and a commit, `bin` and `bin/keep.txt` are absent from the answer and `bin/Debug/a.dll` is present
+- [x] Tests: after `bin/` is deleted, `bin/Debug/a.dll` is present and `bin` is absent (FWIG-47)
+- [x] Tests: no path ignored (git exits 1) answers an empty set, not null
+- [x] Tests: paths with a space, `#`, `!`, a leading `-` and `é` come back exactly as sent (FWIG-48)
+- [x] Tests: a temp folder that is not a repository answers null; a runner that never settles past the timeout answers null (injected runner receiving `timeoutMs: 5000`)
+- [x] Tests: the recorded call's args start with `READ_ONLY_FLAGS`, then `check-ignore`, `--stdin`, `-z`, and its `input` is the paths joined and ended by NUL (L-020)
+- [x] Gate check passes: `npx vitest run src/main/ignore-check.test.ts`, then the full gate (wall time, L-005)
+- [x] Test count: T8 count + the new tests
+
+**Result (2026-10-03)**: `src/main/ignore-check.test.ts` 25 tests (16 + 9 new), all passing in about
+5 s; full gate 2,817 tests in 128 files (2,808 + 9), typecheck clean, lint 0 errors and 18 warnings,
+102 s wall (T7: 100 s; no drift, L-005).
+
+- Shape: `checkIgnored` runs `[...READ_ONLY_FLAGS, 'check-ignore', '--stdin', '-z']` with the paths
+  each ended by NUL as `input` and `timeoutMs: IGNORE_CHECK_TIMEOUT_MS`; it splits stdout on NUL. A
+  rejection whose `code` is 1 and that is not a timeout answers an empty set; every other rejection
+  answers null.
+- Fixture (fresh per test, `core.autocrlf` false): root `.gitignore` `bin/` and `*.log`,
+  `src/.gitignore` `gen/`, `.git/info/exclude` `scratch/`, `src/a.ts` committed. The answers are
+  asserted as exact sets (`ignore-check.test.ts:192-217`, `:230`, `:237`, `:241`, `:250`), so a path
+  reported that should not be fails as well as one missing. Every row matches T2's semantics probe.
+- FWIG-48: ten paths, five under `bin/` and five root-level `*.log` (a space, `#`, `!`, a leading
+  `-`, `é`), come back exactly as sent; `src/é ! #.ts` and `src/-a.ts` are not reported.
+- The timeout is the runner's, as design.md's Error Handling says ("killed at 5,000 ms by the
+  runner's timeout"); `checkIgnored` adds no timer. The test's runner records the `timeoutMs` it
+  receives (`[5000]`) and stands in for a hanging check with a real `git hash-object --stdin`
+  killed at 200 ms, so the rejection has the runner's real timeout shape (`:259-269`).
+- Red first: 9 failures on the missing exports before the change.
 
 **Tests**: unit
 **Gate**: quick

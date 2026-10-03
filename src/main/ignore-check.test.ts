@@ -1,5 +1,20 @@
-import { describe, expect, it } from 'vitest'
-import { IGNORE_ASK_LIMIT, IgnoreAnswers, parentFolders } from './ignore-check'
+import { execFileSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { git as runGit, READ_ONLY_FLAGS } from './git'
+import {
+  checkIgnored,
+  IGNORE_ASK_LIMIT,
+  IGNORE_CHECK_TIMEOUT_MS,
+  IgnoreAnswers,
+  parentFolders,
+  type IgnoreRunner
+} from './ignore-check'
+
+const sh = (cwd: string, ...args: string[]): string =>
+  execFileSync('git', args, { cwd, encoding: 'utf8' })
 
 /** `count` paths `d/fNNNN.ts` under one folder: one folder question plus `count` path questions. */
 function underOneFolder(count: number): string[] {
@@ -131,5 +146,152 @@ describe('IgnoreAnswers', () => {
         'src/a.ts'
       ])
     })
+  })
+})
+
+describe('IGNORE_CHECK_TIMEOUT_MS', () => {
+  it('is 5000 (FWIG-10, L-009)', () => {
+    expect(IGNORE_CHECK_TIMEOUT_MS).toBe(5000)
+  })
+})
+
+describe('checkIgnored (real repository)', () => {
+  let root: string
+  let repo: string
+
+  /** Creates each file, and its folders, under the repository. */
+  const touch = (...paths: string[]): void => {
+    for (const path of paths) {
+      mkdirSync(dirname(join(repo, path)), { recursive: true })
+      writeFileSync(join(repo, path), 'x\n', 'utf8')
+    }
+  }
+
+  beforeEach(() => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-ign-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    sh(repo, 'init', '-q', '-b', 'main')
+    sh(repo, 'config', 'user.email', 'test@test.local')
+    sh(repo, 'config', 'user.name', 'Test')
+    // This machine's system gitconfig sets core.autocrlf=true (L-026).
+    sh(repo, 'config', 'core.autocrlf', 'false')
+    writeFileSync(join(repo, '.gitignore'), 'bin/\n*.log\n', 'utf8')
+    touch('src/a.ts')
+    writeFileSync(join(repo, 'src', '.gitignore'), 'gen/\n', 'utf8')
+    writeFileSync(join(repo, '.git', 'info', 'exclude'), 'scratch/\n', 'utf8')
+    sh(repo, 'add', '.')
+    sh(repo, 'commit', '-q', '-m', 'init')
+    touch('bin/Debug/a.dll', 'src/x.log', 'src/gen/a.ts', 'scratch/n.txt')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('answers what every exclude source ignores, at any depth, and nothing else (FWIG-03)', async () => {
+    const ignored = await checkIgnored(repo, [
+      'bin',
+      'bin/Debug',
+      'bin/Debug/a.dll',
+      'src',
+      'src/a.ts',
+      'src/x.log',
+      'src/gen',
+      'src/gen/a.ts',
+      'scratch',
+      'scratch/n.txt'
+    ])
+    expect(ignored).toEqual(
+      new Set([
+        'bin',
+        'bin/Debug',
+        'bin/Debug/a.dll',
+        'src/x.log',
+        'src/gen',
+        'src/gen/a.ts',
+        'scratch',
+        'scratch/n.txt'
+      ])
+    )
+  })
+
+  it('never answers a tracked file, nor the ignored folder that holds it, as ignored (FWIG-03)', async () => {
+    touch('bin/keep.txt')
+    sh(repo, 'add', '-f', 'bin/keep.txt')
+    sh(repo, 'commit', '-q', '-m', 'keep')
+
+    const ignored = await checkIgnored(repo, [
+      'bin',
+      'bin/keep.txt',
+      'bin/Debug',
+      'bin/Debug/a.dll'
+    ])
+    expect(ignored).toEqual(new Set(['bin/Debug', 'bin/Debug/a.dll']))
+  })
+
+  it('still answers the paths under a deleted ignored folder, but not the folder itself (FWIG-47)', async () => {
+    rmSync(join(repo, 'bin'), { recursive: true, force: true })
+
+    const ignored = await checkIgnored(repo, ['bin', 'bin/Debug', 'bin/Debug/a.dll'])
+    expect(ignored).toEqual(new Set(['bin/Debug', 'bin/Debug/a.dll']))
+  })
+
+  it('answers an empty set, not null, when git ignores none of the paths (exit code 1)', async () => {
+    expect(await checkIgnored(repo, ['src', 'src/a.ts'])).toEqual(new Set())
+  })
+
+  it('answers paths with unusual characters exactly as they were sent (FWIG-48)', async () => {
+    const odd = ['bin/a b.dll', 'bin/#h.dll', 'bin/!x.dll', 'bin/-lead.dll', 'bin/é.dll']
+    const oddRoot = ['-lead.log', '#h.log', '!x.log', 'a b.log', 'é.log']
+    touch(...odd, ...oddRoot, 'src/é ! #.ts', 'src/-a.ts')
+
+    const ignored = await checkIgnored(repo, [...odd, ...oddRoot, 'src/é ! #.ts', 'src/-a.ts'])
+    expect(ignored).toEqual(new Set([...odd, ...oddRoot]))
+  })
+
+  it('answers null in a folder that is not a repository (FWIG-10)', async () => {
+    const plain = join(root, 'plain')
+    mkdirSync(plain)
+    expect(await checkIgnored(plain, ['bin', 'bin/a.dll'])).toBeNull()
+  })
+
+  it('answers null when the run is killed at its timeout, which is 5000 ms (FWIG-10)', async () => {
+    const timeouts: number[] = []
+    // Stands in for a check-ignore that hangs: a real git that waits on stdin no one closes,
+    // killed by the runner's timeout, so the rejection has the runner's real timeout shape.
+    const hanging: IgnoreRunner = (cwd, _args, opts) => {
+      timeouts.push(opts.timeoutMs)
+      return runGit(cwd, ['hash-object', '--stdin'], { timeoutMs: 200 })
+    }
+
+    expect(await checkIgnored(repo, ['bin', 'bin/a.dll'], hanging)).toBeNull()
+    expect(timeouts).toEqual([5000])
+  })
+
+  it('runs one read-only check-ignore over stdin, each path ended by NUL (FWIG-15, L-020)', async () => {
+    const calls: { args: string[]; input: string }[] = []
+    const recording: IgnoreRunner = (cwd, args, opts) => {
+      calls.push({ args, input: opts.input })
+      return runGit(cwd, args, opts)
+    }
+
+    const ignored = await checkIgnored(repo, ['bin', 'src/a.ts', 'src/x.log'], recording)
+
+    expect(ignored).toEqual(new Set(['bin', 'src/x.log']))
+    expect(calls).toEqual([
+      {
+        args: [
+          '--no-optional-locks',
+          '-c',
+          'diff.autoRefreshIndex=false',
+          'check-ignore',
+          '--stdin',
+          '-z'
+        ],
+        input: 'bin\0src/a.ts\0src/x.log\0'
+      }
+    ])
+    expect(calls[0].args.slice(0, READ_ONLY_FLAGS.length)).toEqual([...READ_ONLY_FLAGS])
   })
 })

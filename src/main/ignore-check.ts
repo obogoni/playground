@@ -1,5 +1,10 @@
+import { git, isTimeout, READ_ONLY_FLAGS } from './git'
+
 /** At most this many paths are asked about in one batch (FWIG-06). */
 export const IGNORE_ASK_LIMIT = 2000
+
+/** A check that runs longer is killed, and its batch passes unfiltered (FWIG-10). */
+export const IGNORE_CHECK_TIMEOUT_MS = 5000
 
 /** Worktree-relative parent folders, outermost first: 'a/b/c.ts' → ['a', 'a/b']. */
 export function parentFolders(path: string): string[] {
@@ -70,5 +75,38 @@ export class IgnoreAnswers {
 
   private known(path: string): boolean {
     return this.ignored.has(path) || this.kept.has(path)
+  }
+}
+
+export type IgnoreRunner = (
+  cwd: string,
+  args: string[],
+  opts: { input: string; timeoutMs: number }
+) => Promise<{ stdout: string }>
+
+/**
+ * `git [...READ_ONLY_FLAGS] check-ignore --stdin -z` over `paths` (FWIG-03, FWIG-15):
+ * the set of paths git reports ignored, exactly as sent; an empty set on exit
+ * code 1, which means none is ignored; null on any other failure or a timeout
+ * (FWIG-10).
+ */
+export async function checkIgnored(
+  worktreePath: string,
+  paths: readonly string[],
+  run: IgnoreRunner = git
+): Promise<Set<string> | null> {
+  try {
+    const { stdout } = await run(
+      worktreePath,
+      [...READ_ONLY_FLAGS, 'check-ignore', '--stdin', '-z'],
+      {
+        input: paths.map((path) => `${path}\0`).join(''),
+        timeoutMs: IGNORE_CHECK_TIMEOUT_MS
+      }
+    )
+    return new Set(stdout.split('\0').filter((path) => path !== ''))
+  } catch (err) {
+    if (!isTimeout(err) && (err as { code?: unknown } | null)?.code === 1) return new Set()
+    return null
   }
 }
