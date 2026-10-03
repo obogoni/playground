@@ -361,9 +361,9 @@ T11
 
 **Done when**:
 
-- [ ] Values with surrounding whitespace resolve trimmed; inner whitespace kept
-- [ ] The dialog's preview and spawned text use `resolveForm`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Values with surrounding whitespace resolve trimmed; inner whitespace kept
+- [x] The dialog's preview and spawned text use `resolveForm`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: unit
 **Gate**: build

@@ -149,6 +149,7 @@ edit a long prompt by hand.
 7. WHILE any field is empty after trimming the **Spawn** button SHALL be disabled. <!-- APR-23 -->
 8. WHILE the second step is shown the "Will run" card SHALL show the agent command line followed by the prompt resolved from the current field values, updating on every keystroke. <!-- APR-25 -->
 9. IF the resolved prompt is longer than 8000 characters THEN the **Spawn** button SHALL be disabled and the dialog SHALL show "Prompt too long (<n> / 8000 characters)". <!-- APR-26 -->
+9a. WHEN the prompt is resolved from the form THEN each value SHALL be trimmed of leading and trailing whitespace before substitution, keeping inner whitespace. <!-- APR-37 -->
 10. WHEN the developer presses **Back** THEN the dialog SHALL return to the first step with agent, directory, task and prompt unchanged, and pressing **Next** again with the same prompt SHALL restore the values typed before. <!-- APR-27 -->
 11. IF the developer selects a different prompt after going Back THEN the dialog SHALL discard typed values of placeholders the new prompt does not have and keep those it shares. <!-- APR-28 -->
 12. WHEN the selected prompt has no placeholders THEN the primary button SHALL stay **Spawn**, no second step SHALL appear, and "Will run" SHALL show the prompt text. <!-- APR-29 -->
@@ -245,8 +246,9 @@ resolved prompt (APR-26), file changed mid-dialog (APR-35), prompt switch after 
 | APR-34 | P1: Spawn | Tasks | Implementing |
 | APR-35 | P1: Spawn | Tasks | Implementing |
 | APR-36 | P1: Spawn | Tasks | Implementing |
+| APR-37 | P1: Variables form | Tasks | Implementing |
 
-**Coverage:** 36 total, 0 mapped to tasks, 36 unmapped (pre-Tasks).
+**Coverage:** 37 total, 0 mapped to tasks, 37 unmapped (pre-Tasks).
 
 ---
 

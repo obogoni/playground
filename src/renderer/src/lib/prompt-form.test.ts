@@ -5,6 +5,7 @@ import {
   formBlockers,
   prefillValues,
   promptContext,
+  resolveForm,
   type PromptContext
 } from './prompt-form'
 import type { LevelOption } from './session-levels'
@@ -158,5 +159,17 @@ describe('formBlockers', () => {
 
   it('does not block a resolved prompt of exactly 8000 characters (APR-26)', () => {
     expect(formBlockers({}, [], 'a'.repeat(8000)).tooLong).toBeNull()
+  })
+})
+
+describe('resolveForm', () => {
+  it('trims each value before substituting it and keeps inner whitespace (APR-37)', () => {
+    expect(
+      resolveForm('Review {{branch}} for #{{taskId}}: {{note}}.', {
+        branch: '  feature/x \t',
+        taskId: ' 42 ',
+        note: '  two  words  '
+      })
+    ).toBe('Review feature/x for #42: two  words.')
   })
 })

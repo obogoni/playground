@@ -1,4 +1,4 @@
-import { PROMPT_MAX_CHARS } from '../../../shared/prompt-template'
+import { PROMPT_MAX_CHARS, resolvePrompt } from '../../../shared/prompt-template'
 import type { PinnedTaskView, SessionTask } from '../../../shared/tasks'
 import type { LevelOption } from './session-levels'
 
@@ -81,4 +81,10 @@ export function formBlockers(
     emptyFields: names.filter((name) => (values[name] ?? '').trim() === ''),
     tooLong: resolved.length > PROMPT_MAX_CHARS ? resolved.length : null
   }
+}
+
+/** The prompt the dialog previews and spawns: every value trimmed, then resolved (APR-37). */
+export function resolveForm(template: string, values: Record<string, string>): string {
+  const trimmed = Object.fromEntries(Object.entries(values).map(([name, v]) => [name, v.trim()]))
+  return resolvePrompt(template, trimmed)
 }

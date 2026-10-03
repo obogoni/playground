@@ -4,7 +4,6 @@ import type { AgentDef } from '../../../shared/agents'
 import {
   PROMPT_MAX_CHARS,
   parsePlaceholders,
-  resolvePrompt,
   type PromptEntry
 } from '../../../shared/prompt-template'
 import type { PinnedTaskView, SessionTask } from '../../../shared/tasks'
@@ -12,7 +11,7 @@ import type { PeriodTaskChoice } from '../../../shared/time'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { api } from '../lib/api'
 import type { IsolationLevel } from '../lib/isolation-level'
-import { carryValues, formBlockers, promptContext } from '../lib/prompt-form'
+import { carryValues, formBlockers, promptContext, resolveForm } from '../lib/prompt-form'
 import {
   adoptBrowsed,
   cwdAfterLevelChange,
@@ -170,7 +169,7 @@ export function NewSessionDialog({
   const needsStep2 = names.length > 0
   const ctx = promptContext(task, options.find((o) => o.path === cwd) ?? null, cwd ?? '', tasks)
   const values = carryValues(typed, names, ctx)
-  const resolved = chosen ? resolvePrompt(chosen.template, values) : ''
+  const resolved = chosen ? resolveForm(chosen.template, values) : ''
   const blockers = formBlockers(values, names, resolved)
   const promptReady = blockers.emptyFields.length === 0 && blockers.tooLong === null
   const showStep2 = step === 2 && needsStep2
