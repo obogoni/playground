@@ -219,11 +219,11 @@ T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] Tests, with a recording runner that delegates to the real `git` and logs `(args, opts)`: on a refresh with the base checked out, `fetch origin main` and `merge --ff-only origin/main` carry `timeoutMs: 60000`; with the base not checked out, `fetch origin main:main` carries `60000`; `worktree add` carries `600000` on the new-branch, existing-branch (empty base), reuse and recreate paths; `rev-parse`, `worktree list` and `branch -D` carry no `timeoutMs`
-- [ ] Tests pin the constants by literal: `REFRESH_TIMEOUT_MS === 60000`, `CHECKOUT_TIMEOUT_MS === 600000`, and `REAL_CREATE_DEPS` holds `git` and both constants (L-009)
-- [ ] Every existing `createWorktree` test passes unchanged
-- [ ] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts` then `npm test`
-- [ ] Test count: T3 count + the new tests
+- [x] Tests, with a recording runner that delegates to the real `git` and logs `(args, opts)`: on a refresh with the base checked out, `fetch origin main` and `merge --ff-only origin/main` carry `timeoutMs: 60000`; with the base not checked out, `fetch origin main:main` carries `60000` (tested as `fetch origin release:release`, the WBR shape of an unchecked base); `worktree add` carries `600000` on the new-branch, existing-branch (empty base), reuse and recreate paths; `rev-parse`, `worktree list` and `branch -D` carry no `timeoutMs`
+- [x] Tests pin the constants by literal: `REFRESH_TIMEOUT_MS === 60000`, `CHECKOUT_TIMEOUT_MS === 600000`, and `REAL_CREATE_DEPS` holds `git` and both constants (L-009)
+- [x] Every existing `createWorktree` test passes unchanged (the path-check block changed its call shape only, to `createWorktreeWith({ ...REAL_CREATE_DEPS, pathCheck: win32 })(…)`)
+- [x] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts` then `npm test` (122 files, 2633 passed; lint 0 errors, 18 warnings; typecheck exit 0)
+- [x] Test count: T3 count + the new tests (+6)
 
 **Tests**: unit
 **Gate**: quick
