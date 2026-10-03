@@ -287,7 +287,7 @@ link equal to the branch's task carries no flag (HTSK-36).
 | Poller clock | `Date.now()` | The poller already uses the global timers; Vitest's fake timers move both |
 | `git.sync` | Kept in the line, reads 0 | The bench's `sync` column is then the regression check |
 
-> **AD-TBD (number chosen at Execute): the session-name listing backs off for a session it does not
+> **AD-060: the session-name listing backs off for a session it does not
 > name.** `SessionNamePoller` keeps a miss count and a due time per watched session: after the k-th miss
 > it is due `min(5 s × 2^(k−1), 5 min)` after that listing; a failed listing is a miss for every unnamed
 > session; a new Claude id or a name resets it; nudges, ticks and reruns start a listing only for an

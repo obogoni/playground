@@ -301,8 +301,8 @@ ships.
 | MAGIT-33 | P1: measured — AC 33 | — | Dropped 2026-10-03 |
 | MAGIT-34 | P1: measured — AC 34 | — | Dropped 2026-10-03 |
 | MAGIT-35 | P1: measured — AC 35 | T1 | Done (T1) |
-| MAGIT-36 | P2: specs — AC 36 | T5 | Pending |
-| MAGIT-37 | P2: specs — AC 37 | T5 | Pending |
+| MAGIT-36 | P2: specs — AC 36 | T5 | Done (T5) |
+| MAGIT-37 | P2: specs — AC 37 | T5 | Done (T5) |
 | MAGIT-38 | Edge: open and close within 1 s | #154 | Delivered (PERF-21) |
 | MAGIT-39 | Edge: not a worktree, git missing, cwd gone | #154 | Delivered (PERF-21) |
 | MAGIT-40 | Edge: two sessions on one cwd | #154 | Delivered (PERF-21) |

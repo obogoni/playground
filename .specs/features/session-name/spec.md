@@ -126,10 +126,10 @@ Every ambiguity is resolved or recorded here — nothing is left silently unclea
 | SNAME-06 | P1: Row label | Tasks | ✅ Verified (T6) |
 | SNAME-07 | P1: Row label | Tasks | ✅ Verified (T6) |
 | SNAME-08 | P1: Listing | Tasks | ✅ Verified (T4) |
-| SNAME-09 | P1: Listing | Tasks | ✅ Verified (T3, T4) |
-| SNAME-10 | P1: Listing | Tasks | ✅ Verified (T3, T7) |
+| SNAME-09 | P1: Listing | Tasks | ✅ Verified (T3, T4) — **amended by AD-060** |
+| SNAME-10 | P1: Listing | Tasks | ✅ Verified (T3, T7) — **amended by AD-060** |
 | SNAME-11 | P1: Listing | Tasks | ✅ Verified (T4) |
-| SNAME-12 | P1: Listing | Tasks | ✅ Verified (T3) |
+| SNAME-12 | P1: Listing | Tasks | ✅ Verified (T3) — **amended by AD-060** |
 | SNAME-13 | P1: Listing | Tasks | ✅ Verified (T2) |
 | SNAME-14 | P1: Listing | Tasks | ✅ Verified (T3, T7) |
 | SNAME-15 | P1: Listing | Tasks | ✅ Verified (T1, T4) |

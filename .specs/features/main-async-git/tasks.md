@@ -244,12 +244,12 @@ session-name traceability rows it amends (L-033).
 
 **Done when**:
 
-- [ ] The decision's number is the next free one across `main`, `develop`, the open PRs and the sibling worktrees' local branches at this moment, and the reason is written in its row, as earlier decisions do (MAGIT-36)
-- [ ] `.specs/STATE.md` holds the decision, amending AD-040 (MAGIT-36)
-- [ ] The rows of SNAME-09, SNAME-10 and SNAME-12 (`session-name/spec.md`) name the decision (MAGIT-37)
-- [ ] `AD-TBD` in this feature's design.md replaced by the number; this spec's traceability statuses updated
-- [ ] A grep for the number finds it in `STATE.md` and in the session-name spec
-- [ ] Gate check passes: `npm run lint`
+- [x] The decision's number is the next free one across `main`, `develop`, the open PRs and the sibling worktrees' local branches at this moment, and the reason is written in its row, as earlier decisions do (MAGIT-36)
+- [x] `.specs/STATE.md` holds the decision, amending AD-040 (MAGIT-36)
+- [x] The rows of SNAME-09, SNAME-10 and SNAME-12 (`session-name/spec.md`) name the decision (MAGIT-37)
+- [x] `AD-TBD` in this feature's design.md replaced by the number; this spec's traceability statuses updated
+- [x] A grep for the number finds it in `STATE.md` and in the session-name spec
+- [x] Gate check passes: `npm run lint`
 
 **Tests**: none
 **Gate**: lint
