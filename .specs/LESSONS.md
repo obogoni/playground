@@ -582,6 +582,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: SPEC_DEVIATION src/main/session-manager.ts:126 (session-manager)
 - last seen: 2026-10-02T17:30:50Z
 
+### L-101 - When a pick is ranked by several tie-break keys, give each adjacent pair of keys a fixture where they disagree, or dropping or reordering a key still passes
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: hours-hatching
+- evidence: validation.md U4, U5 (src/renderer/src/lib/hours-calendar.ts:242) (testing)
+- last seen: 2026-10-03T11:13:28Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

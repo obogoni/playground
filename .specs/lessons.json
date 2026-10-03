@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 101,
+  "next_id": 102,
   "lessons": [
     {
       "id": "L-001",
@@ -1723,6 +1723,24 @@
       ],
       "created": "2026-10-02T17:30:50Z",
       "last_seen": "2026-10-02T17:30:50Z"
+    },
+    {
+      "id": "L-101",
+      "key": "surviving_mutant::when a pick is ranked by several tie break keys give each adjacent pair of keys a fixture where they disagree or dropping or reordering a key still passes",
+      "text": "When a pick is ranked by several tie-break keys, give each adjacent pair of keys a fixture where they disagree, or dropping or reordering a key still passes",
+      "signal": "surviving_mutant",
+      "scope": "testing",
+      "status": "candidate",
+      "features": [
+        "hours-hatching"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md U4, U5 (src/renderer/src/lib/hours-calendar.ts:242) (testing)"
+      ],
+      "created": "2026-10-03T11:13:28Z",
+      "last_seen": "2026-10-03T11:13:28Z"
     }
   ]
 }

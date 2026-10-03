@@ -234,37 +234,37 @@ same search held 14.6 normal-vision with 7.8 CVD. The WARN band is legal with th
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| HHAT-01 | P1: neighbours, AC 1 | Execute | Implemented: T1, T3, T10 |
-| HHAT-02 | P1: neighbours, AC 2 | Execute | Implemented: T2 |
-| HHAT-03 | P1: neighbours, AC 3 | Execute | Implemented: T2, T10 |
-| HHAT-04 | P1: neighbours, AC 4 | Execute | Implemented: T2 |
-| HHAT-05 | P1: neighbours, AC 5 | Execute | Implemented: T2 |
-| HHAT-06 | P1: neighbours, AC 6 | Execute | Implemented: T2 |
-| HHAT-07 | P1: neighbours, AC 7 | Execute | Implemented: T2 |
-| HHAT-08 | P1: neighbours, AC 8 | Execute | Implemented: T2, T14 |
-| HHAT-09 | P1: own look, AC 9 | Execute | Implemented: T2 |
-| HHAT-10 | P1: own look, AC 10 | Execute | Implemented: T2, T12 |
-| HHAT-11 | P1: same day, AC 11 | Execute | Implemented: T2 |
-| HHAT-12 | P1: same day, AC 12 | Execute | Implemented: T2, T10 |
-| HHAT-13 | P1: same day, AC 13 | Execute | Implemented: T2 |
-| HHAT-14 | P1: colours, AC 14 | Execute | Implemented: T3, T12 |
-| HHAT-15 | P1: colours, AC 15 | Execute | Implemented: T3, T12 |
-| HHAT-16 | P1: colours, AC 16 | Execute | Implemented: T3, T9 |
-| HHAT-17 | P1: one look, AC 17 | Execute | Implemented: T3, T14 |
-| HHAT-18 | P1: one look, AC 18 | Execute | Implemented: T3, T14 |
-| HHAT-19 | P1: one look, AC 19 | Execute | Implemented: T1, T3 |
-| HHAT-20 | P1: one look, AC 20 | Execute | Implemented: T4..T8, T12 |
-| HHAT-21 | P1: one look, AC 21 | Execute | Implemented: T4, T5, T14 |
-| HHAT-22 | P1: one look, AC 22 | Execute | Implemented: T3, T9 |
-| HHAT-23 | P2: nothing moves, AC 23 | Execute | Implemented: T2 |
-| HHAT-24 | P2: nothing moves, AC 24 | Execute | Implemented: T15 |
-| HHAT-25 | P2: nothing moves, AC 25 | Execute | Implemented: T15 |
-| HHAT-26 | P2: nothing moves, AC 26 | Execute | Implemented: T13, T15 |
-| HHAT-27 | P2: smoke, AC 27 | Execute | Implemented: T10, T12 |
-| HHAT-28 | P2: smoke, AC 28 | Execute | Implemented: T11, T14 |
-| HHAT-29 | P2: smoke, AC 29 | Execute | Implemented: T14 |
+| HHAT-01 | P1: neighbours, AC 1 | Execute | Verified (validation.md, 2026-10-03): T1, T3, T10 |
+| HHAT-02 | P1: neighbours, AC 2 | Execute | Verified (validation.md, 2026-10-03): T2 |
+| HHAT-03 | P1: neighbours, AC 3 | Execute | Verified (validation.md, 2026-10-03): T2, T10 |
+| HHAT-04 | P1: neighbours, AC 4 | Execute | Verified (validation.md, 2026-10-03): T2 |
+| HHAT-05 | P1: neighbours, AC 5 | Execute | Verified (validation.md, 2026-10-03): T2 (follow-up F1: the solid-before-hatched tie is not pinned by a unit test; mutants U4, U5 survived) |
+| HHAT-06 | P1: neighbours, AC 6 | Execute | Verified (validation.md, 2026-10-03): T2 |
+| HHAT-07 | P1: neighbours, AC 7 | Execute | Verified (validation.md, 2026-10-03): T2 |
+| HHAT-08 | P1: neighbours, AC 8 | Execute | Verified (validation.md, 2026-10-03): T2, T14 |
+| HHAT-09 | P1: own look, AC 9 | Execute | Verified (validation.md, 2026-10-03): T2 |
+| HHAT-10 | P1: own look, AC 10 | Execute | Verified (validation.md, 2026-10-03): T2, T12 |
+| HHAT-11 | P1: same day, AC 11 | Execute | Verified (validation.md, 2026-10-03): T2 |
+| HHAT-12 | P1: same day, AC 12 | Execute | Verified (validation.md, 2026-10-03): T2, T10 |
+| HHAT-13 | P1: same day, AC 13 | Execute | Verified (validation.md, 2026-10-03): T2 |
+| HHAT-14 | P1: colours, AC 14 | Execute | Verified (validation.md, 2026-10-03): T3, T12 |
+| HHAT-15 | P1: colours, AC 15 | Execute | Verified (validation.md, 2026-10-03): T3, T12 |
+| HHAT-16 | P1: colours, AC 16 | Execute | Verified (validation.md, 2026-10-03): T3, T9 |
+| HHAT-17 | P1: one look, AC 17 | Execute | Verified (validation.md, 2026-10-03): T3, T14 (follow-up F2: exact recipe smoke-read on slot 1 only) |
+| HHAT-18 | P1: one look, AC 18 | Execute | Verified (validation.md, 2026-10-03): T3, T14 |
+| HHAT-19 | P1: one look, AC 19 | Execute | Verified (validation.md, 2026-10-03): T1, T3 |
+| HHAT-20 | P1: one look, AC 20 | Execute | Verified (validation.md, 2026-10-03): T4..T8, T12 |
+| HHAT-21 | P1: one look, AC 21 | Execute | Verified (validation.md, 2026-10-03): T4, T5, T14 |
+| HHAT-22 | P1: one look, AC 22 | Execute | Verified (validation.md, 2026-10-03): T3, T9 |
+| HHAT-23 | P2: nothing moves, AC 23 | Execute | Verified (validation.md, 2026-10-03): T2 |
+| HHAT-24 | P2: nothing moves, AC 24 | Execute | Verified (validation.md, 2026-10-03): T15 |
+| HHAT-25 | P2: nothing moves, AC 25 | Execute | Verified (validation.md, 2026-10-03): T15 |
+| HHAT-26 | P2: nothing moves, AC 26 | Execute | Verified (validation.md, 2026-10-03): T13, T15 |
+| HHAT-27 | P2: smoke, AC 27 | Execute | Verified (validation.md, 2026-10-03): T10, T12 |
+| HHAT-28 | P2: smoke, AC 28 | Execute | Verified (validation.md, 2026-10-03): T11, T14 |
+| HHAT-29 | P2: smoke, AC 29 | Execute | Verified (validation.md, 2026-10-03): T14 (follow-up F2: exact recipe smoke-read on slot 1 only) |
 
-**Coverage:** 29 total, 29 mapped to tasks, 0 unmapped.
+**Coverage:** 29 total, 29 mapped to tasks, 0 unmapped; 29 verified (`validation.md`, PASS, follow-ups F1 to F3).
 
 ---
 
