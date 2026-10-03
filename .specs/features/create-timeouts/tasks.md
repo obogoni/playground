@@ -20,7 +20,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 - **Line numbers moved**: the WBR clone setup is the `createWorktree — base refresh (WBR)` block (`worktree-manager.test.ts:862`); the `isTimeout` blocker is `git.test.ts:87-92`; the create handler is `index.ts:400-403`; `emitToWindow` is defined at `index.ts:493`; the forward-verbatim test is `post-create-hook.test.ts:292`.
 - **AD number**: `main` and the open PRs hold up to AD-057 (#162); T16 checks again before writing.
 
-**Baseline (2026-10-03, on `a2d6e1d` + the plan commits)**: `npx vitest run` 121 files, 2622 tests passed; `npm run typecheck` exit 0; `npm run lint` 0 errors, 18 warnings. Five slowest test files: recorded by T1.
+**Baseline (2026-10-03, on `a2d6e1d` + the plan commits)**: `npx vitest run` 121 files, 2622 tests passed; `npm run typecheck` exit 0; `npm run lint` 0 errors, 18 warnings. Five slowest test files of a full run (T1, re-measured on the same base: 121 files, 2622 passed): `worktree-manager.test.ts` 128.6 s, `git-sync.test.ts` 91.6 s, `commit-log.test.ts` 46.9 s, `file-discard.test.ts` 35.6 s, `file-diff.test.ts` 28.3 s (file wall time under the parallel run).
 
 **Setup (before T1, no commit)**: the worktree has no `node_modules`. Run `npm ci --ignore-scripts` and `node node_modules/electron/install.js`, then record the **test baseline** here: `npx vitest run` count, `npm run typecheck`, `npm run lint` errors and warnings, and the five slowest test files of a full run (L-005).
 
@@ -128,15 +128,20 @@ T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] Setup step done and the baseline recorded at the top of this file
-- [ ] Fixture test passes, and fails when the helper is replaced by one that answers at once (seen once, not committed)
-- [ ] The throwaway create run shows the promise still pending at 10 s; output pasted under Notes
-- [ ] `afterEach` cleanup succeeds on Windows (no `EPERM` from a held folder)
-- [ ] **Stop rule applied**: if the fetch does not block until the kill, stop here and report to the owner
-- [ ] Gate check passes: `npx vitest run src/main/waiting-remote.fixture.test.ts` then `npm test`
-- [ ] Test count: baseline + 1
+- [x] Setup step done and the baseline recorded at the top of this file
+- [x] Fixture test passes, and fails when the helper is replaced by one that answers at once (seen once, not committed)
+- [x] The throwaway create run shows the promise still pending at 10 s; output pasted under Notes
+- [x] `afterEach` cleanup succeeds on Windows (no `EPERM` from a held folder)
+- [x] **Stop rule applied**: if the fetch does not block until the kill, stop here and report to the owner
+- [x] Gate check passes: `npx vitest run src/main/waiting-remote.fixture.test.ts` then `npm test`
+- [x] Test count: baseline + 1
 
-**Notes**: _(evidence from the throwaway run goes here)_
+**Notes** (2026-10-03, git 2.55.0.windows.4, Node 24.19.0):
+- Throwaway run of today's `createWorktree(repo, 'feature/hang', 'main', undefined, true)` against the fixture: `after 10011 ms: still pending`. After `close()` released the helper: `settled at 10025 ms with {"ok":false,"error":"fatal: could not read Username for 'http://127.0.0.1:57490': terminal prompts disabled"}; worktree folder exists: false`. Stop rule: the fetch blocks until killed, so T2 proceeds.
+- Fixture test: passes at 3.0 s with `isTimeout === true`. With the helper replaced by `echo username=x; echo password=y` it fails: `expected false to be true` (git fails at once on the second 401).
+- **Deviation from the planned helper.** `!cd / && sleep 30` does not wait: git appends the operation, so the shell runs `sleep 30 get`, which fails at once (`sleep: invalid time interval 'get'`, measured). The helper is a shell function, `!f() { cd / && curl -s --max-time 30 <remote>/wait; }; f`, so `get` becomes its argument.
+- **Deviation from the planned cleanup.** `cd /` is not enough on Windows: after git is killed, `git remote-http` and `git-remote-http.exe` (cwd in the repo) wait on the helper, and `rmSync` fails with `EPERM` (measured, still at 5 s). The helper therefore waits on a `/wait` request the fixture's server holds open until `close()`; once released, the orphans exit within about 60 ms. `removeReleasedFolder` retries `EPERM`/`EBUSY` for up to 5 s after `close()`, because `rmSync`'s own `maxRetries` did not retry this `EPERM` (measured). Tests that use the fixture call `close()` and then `removeReleasedFolder` in `afterEach`.
+- Full run after T1: 122 files, 2623 passed; lint 0 errors, 18 warnings; typecheck exit 0. Five slowest files: `worktree-manager.test.ts` 105.6 s, `git-sync.test.ts` 81.8 s, `commit-log.test.ts` 49.5 s, `file-discard.test.ts` 36.2 s, `file-diff.test.ts` 29.4 s.
 
 **Tests**: unit
 **Gate**: quick
