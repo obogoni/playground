@@ -250,42 +250,12 @@
 /* The task's colour in the calendar (HCAL-11), so a row and its bar match. */
 .hours-group-swatch {
   flex: none;
-  width: 10px;
-  height: 10px;
+  /* 14 px shows three to four stripes of a hatched look (HHAT-21). */
+  width: 14px;
+  height: 14px;
   box-sizing: border-box;
   border-radius: 3px;
-}
-
-.hours-group-swatch.role-slot1 {
-  background: var(--hcal-slot1);
-}
-
-.hours-group-swatch.role-slot2 {
-  background: var(--hcal-slot2);
-}
-
-.hours-group-swatch.role-slot3 {
-  background: var(--hcal-slot3);
-}
-
-.hours-group-swatch.role-slot4 {
-  background: var(--hcal-slot4);
-}
-
-.hours-group-swatch.role-slot5 {
-  background: var(--hcal-slot5);
-}
-
-.hours-group-swatch.role-slot6 {
-  background: var(--hcal-slot6);
-}
-
-.hours-group-swatch.role-slot7 {
-  background: var(--hcal-slot7);
-}
-
-.hours-group-swatch.role-slot8 {
-  background: var(--hcal-slot8);
+  background: var(--hcal-c);
 }
 
 .hours-group-swatch.role-other {

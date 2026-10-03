@@ -9,7 +9,7 @@ import type { ActivityChange } from './activity-notification'
 import { ConfigStore } from './config-store'
 import type { PtyHandle, PtyPort } from './pty-port'
 import type { SpawnPlan } from './spawn-plan'
-import { ACTIVITY_TOKEN_ENV } from './claude-hook-settings'
+import { ACTIVITY_TOKEN_ENV, TASK_URL_ENV } from './claude-hook-settings'
 import {
   SessionManager,
   SESSION_EXIT_WAIT_MS,
@@ -1436,5 +1436,105 @@ describe('SessionManager activity transitions of a linked session', () => {
     manager.handleHookEvent(view.id, hookEvent('Stop'))
 
     expect(changes.map((c) => c.task)).toEqual([null, { id: 4821, title: 'Diagnose login loop' }])
+  })
+})
+
+describe('SessionManager spawn with a prompt', () => {
+  const MOVE_PROMPT = '$p = $env:PLAYGROUND_PROMPT; Remove-Item Env:PLAYGROUND_PROMPT; '
+  const PROMPT = '- review {{x}} it\'s $HOME & "done"\nline 2 ação'
+
+  it('hosts the prompted launch in pwsh even when the default shell is cmd (APR-36)', async () => {
+    const { manager, config, port } = makeManager({ hooks: fakeHooks(null) })
+    config.patch({ ui: { defaultShell: 'cmd' } })
+
+    await manager.spawn('Codex', CWD, undefined, undefined, PROMPT)
+
+    expect(port.handles[0].plan).toEqual({
+      file: 'pwsh.exe',
+      args: ['-NoExit', '-Command', MOVE_PROMPT + '& codex --full-auto -- $p'],
+      cwd: CWD,
+      autoCommand: MOVE_PROMPT + '& codex --full-auto -- $p'
+    })
+    expect(port.envs[0]).toEqual({ PLAYGROUND_PROMPT: PROMPT })
+  })
+
+  it('puts the hook --settings before -- and keeps the session token env (APR-30, APR-31)', async () => {
+    const { manager, port, hooks } = makeManager()
+
+    const view = await manager.spawn('Claude', CWD, undefined, undefined, PROMPT)
+
+    expect(port.handles[0].plan.autoCommand).toBe(
+      MOVE_PROMPT + '& claude --settings C:\\app\\hooks.json -- $p'
+    )
+    const token = port.envs[0]?.[ACTIVITY_TOKEN_ENV]
+    expect(token).toBeTruthy()
+    expect(port.envs[0]).toEqual({
+      [ACTIVITY_TOKEN_ENV]: token,
+      [TASK_URL_ENV]: TASK_URL,
+      PLAYGROUND_PROMPT: PROMPT
+    })
+    expect(hooks.registered).toEqual([{ token, sessionId: view.id }])
+  })
+
+  it('accepts a prompt of exactly 8000 characters (APR-26)', async () => {
+    const { manager, port, config } = makeManager()
+    const prompt = 'x'.repeat(8000)
+
+    await manager.spawn('Claude', CWD, undefined, undefined, prompt)
+
+    expect(port.envs[0]?.PLAYGROUND_PROMPT).toBe(prompt)
+    expect(config.get().sessions).toHaveLength(1)
+  })
+
+  it.each([
+    ['an ad-hoc command', 'npm run dev', PROMPT],
+    ['a blank prompt', undefined, ' \n\t '],
+    ['a prompt over 8000 characters', undefined, 'x'.repeat(8001)]
+  ])('rejects %s before spawning or persisting anything', async (_, adhoc, prompt) => {
+    const { manager, config, port, hooks } = makeManager()
+
+    await expect(
+      manager.spawn(adhoc ? 'Ad-hoc' : 'Claude', CWD, adhoc, undefined, prompt)
+    ).rejects.toThrow()
+
+    expect(port.handles).toEqual([])
+    expect(hooks.registered).toEqual([])
+    expect(config.get().sessions).toEqual([])
+    expect(manager.list()).toEqual([])
+  })
+
+  it('respawns a prompted session with no prompt and the default-shell plan (APR-33)', async () => {
+    const { manager, config, port } = makeManager()
+    config.patch({ ui: { defaultShell: 'cmd' } })
+    const view = await manager.spawn('Claude', CWD, undefined, undefined, PROMPT)
+    port.handles[0].emitExit(0)
+
+    await manager.respawn(view.id)
+
+    expect(port.handles[1].plan.file).toBe('cmd.exe')
+    expect(port.handles[1].plan.autoCommand).toBe('claude --settings C:\\app\\hooks.json')
+    expect(port.envs[1]).not.toHaveProperty('PLAYGROUND_PROMPT')
+  })
+
+  it('duplicates a prompted session with no prompt and the default-shell plan (APR-33)', async () => {
+    const { manager, config, port } = makeManager({ hooks: fakeHooks(null) })
+    config.patch({ ui: { defaultShell: 'cmd' } })
+    const view = await manager.spawn('Codex', CWD, undefined, undefined, PROMPT)
+
+    await manager.duplicate(view.id)
+
+    expect(port.handles[1].plan.file).toBe('cmd.exe')
+    expect(port.handles[1].plan.autoCommand).toBe('codex --full-auto')
+    expect(port.envs[1]).toBeUndefined()
+  })
+
+  it('persists the session exactly as one spawned without a prompt (APR-34)', async () => {
+    const { manager, config } = makeManager()
+    const view = await manager.spawn('Claude', CWD, undefined, undefined, PROMPT)
+
+    expect(config.get().sessions).toEqual([
+      { id: view.id, agent: 'Claude', cwd: CWD, title: 'Claude · repo-feature', status: 'running' }
+    ])
+    expect(JSON.stringify(config.get())).not.toContain('line 2 ação')
   })
 })

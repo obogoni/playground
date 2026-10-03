@@ -11,7 +11,14 @@ import type { ConfigStore } from './config-store'
 import { isKeystroke } from './keystroke'
 import type { PtyHandle, PtyPort } from './pty-port'
 import { SessionRingBuffer } from './session-ring-buffer'
-import { buildRawSpawnPlan, buildSpawnPlan, type AgentDef } from './spawn-plan'
+import { PROMPT_MAX_CHARS } from '../shared/prompt-template'
+import {
+  PROMPT_ENV,
+  buildPromptSpawnPlan,
+  buildRawSpawnPlan,
+  buildSpawnPlan,
+  type AgentDef
+} from './spawn-plan'
 
 /** Typed main→renderer push, bound to the live window's webContents by index.ts. */
 export type EmitFn = <E extends IpcEvent>(channel: E, payload: IpcEvents[E]) => void
@@ -76,6 +83,15 @@ function withTask<T extends PersistedSession>(meta: T, task: SessionTask | null)
 
 /** Stored on ad-hoc sessions in place of a registry agent name. */
 const ADHOC_AGENT = 'Ad-hoc'
+
+/** Main's backstop for the dialog's prompt rules (APR-10, APR-23, APR-26). */
+function assertPrompt(prompt: string, adhocCommand: string | undefined): void {
+  if (adhocCommand) throw new Error('An ad-hoc command cannot take a prompt')
+  if (prompt.trim() === '') throw new Error('The prompt is empty')
+  if (prompt.length > PROMPT_MAX_CHARS) {
+    throw new Error(`Prompt too long (${prompt.length} / ${PROMPT_MAX_CHARS} characters)`)
+  }
+}
 
 /**
  * How long `stop` waits for the PTY's *real* exit before giving up and letting
@@ -146,8 +162,10 @@ export class SessionManager {
     agentName: string,
     cwd: string,
     adhocCommand?: string,
-    task?: SessionTask
+    task?: SessionTask,
+    prompt?: string
   ): Promise<SessionView> {
+    if (prompt !== undefined) assertPrompt(prompt, adhocCommand)
     const leaf = basename(cwd) || cwd
     const meta: PersistedSession = adhocCommand
       ? {
@@ -167,7 +185,9 @@ export class SessionManager {
           status: 'running',
           ...(task ? { task } : {})
         }
-    await this.#start(meta) // rejects on a bad cwd/shell/agent before anything is persisted (PTYH-14)
+    // The prompt goes to this launch only: it is never persisted, so Respawn and
+    // Duplicate start without it (APR-33, APR-34).
+    await this.#start(meta, prompt) // rejects on a bad cwd/shell/agent before anything is persisted (PTYH-14)
     this.#persistUpsert(meta)
     return this.#toView(meta)
   }
@@ -362,26 +382,33 @@ export class SessionManager {
   }
 
   /** Spawn the PTY for a meta and wire its streams; registers the Map entry. */
-  async #start(meta: PersistedSession): Promise<void> {
+  async #start(meta: PersistedSession, prompt?: string): Promise<void> {
     const shell = this.deps.config.get().ui.defaultShell
     // Resolved here, once, so a registry edit mid-session cannot change how a
     // running session was launched (ACTV-30).
     const agent = meta.command ? null : this.#resolve(meta.agent)
     const token = agent && this.#hookable(agent) ? randomUUID() : null
     if (token !== null) this.deps.hooks?.register(token, meta.id)
+    const hooked = agent && (token === null ? agent : this.#withHookSettings(agent))
+    // A prompted launch is always hosted in pwsh: cmd cannot carry a line break
+    // or `"` in one argument (APR-36).
     const plan = meta.command
       ? buildRawSpawnPlan(meta.command, meta.cwd, shell)
-      : buildSpawnPlan(token === null ? agent! : this.#withHookSettings(agent!), meta.cwd, shell)
+      : prompt !== undefined
+        ? buildPromptSpawnPlan(hooked!, meta.cwd)
+        : buildSpawnPlan(hooked!, meta.cwd, shell)
     const taskUrl = this.deps.hooks?.taskUrl
+    const tokenEnv =
+      token === null
+        ? undefined
+        : { [ACTIVITY_TOKEN_ENV]: token, ...(taskUrl ? { [TASK_URL_ENV]: taskUrl } : {}) }
     const generation = this.#generation
     this.#starting.add(meta.id)
     let handle: PtyHandle
     try {
       handle = await this.deps.port.spawn(
         plan,
-        token === null
-          ? undefined
-          : { [ACTIVITY_TOKEN_ENV]: token, ...(taskUrl ? { [TASK_URL_ENV]: taskUrl } : {}) }
+        prompt === undefined ? tokenEnv : { ...tokenEnv, [PROMPT_ENV]: prompt }
       )
     } catch (err) {
       // The run never existed, so its token must not be accepted (PTYH-16).

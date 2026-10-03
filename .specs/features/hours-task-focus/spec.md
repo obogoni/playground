@@ -17,7 +17,7 @@ detail to its bars, and there is no way to see just the days one task took.
 
 | Feature | Reason |
 | ------- | ------ |
-| Texture (hatching) as a second channel | Owner chose more hues instead (grill Q1) |
+| Texture (hatching) as a second channel | Owner chose more hues instead (grill Q1). **Superseded by AD-055 (2026-10-01)**: `hours-hatching` adds one diagonal hatch of each hue as a second channel (HHAT-01, HHAT-17) |
 | A view of every day a task took, across weeks | Owner decision (grill Q3): the filter works inside the week view; ◀ ▶ carry it |
 | A task keeping one colour across weeks | Owner decision (grill Q4): colours are assigned per week so same-day tasks differ |
 | Persisting the filter across restarts | Not requested; it is view state |
@@ -59,9 +59,21 @@ detail to its bars, and there is no way to see just the days one task took.
 **Acceptance Criteria**:
 
 1. The calendar SHALL offer eight task colours, in the palette order of the Assumptions table, in both themes
+   > **Palette values superseded by HHAT-14 and HHAT-15 — see AD-055 (2026-10-01).** `hours-hatching`
+   > retunes the eight hues, in the same order, so both palettes pass the dataviz validator with
+   > `--pairs all`, and adds a hatched look of each hue: sixteen looks in all (HHAT-01). The values in
+   > this spec's Assumptions table are the old ones.
 2. WHEN the week's colours are assigned THEN each task, in order of week total (ties by first start), SHALL take the first colour in palette order not already taken by a task sharing a day with it
+   > **Superseded by HHAT-03 — see AD-055 (2026-10-01).** Taken in the same order, each task now
+   > takes, among the looks no same-day task holds and other than the previous task's, the one used
+   > least in the week so far, then solid before hatched, then a hue not on its day and not the
+   > previous task's, then palette order (HHAT-03 to HHAT-07). Tasks on different days no longer
+   > all land on the first colours.
 3. WHEN a day holds eight tasks or fewer THEN no two of its tasks SHALL share a colour
 4. IF every colour is taken by tasks sharing a day with a task THEN that task SHALL be Other
+   > **Superseded by HHAT-12 — see AD-055 (2026-10-01).** A ninth task on a day now takes a hatched
+   > look; a task is Other only when same-day tasks hold all sixteen looks (HHAT-12), or when the one
+   > look left is the previous task's (HHAT-13).
 5. The legend, the day drawer's swatches and the bars SHALL show the same colour for a task
 6. WHILE a week stays on screen its colours SHALL NOT change (HCAL-24)
 
@@ -113,6 +125,9 @@ detail to its bars, and there is no way to see just the days one task took.
 **Acceptance Criteria**:
 
 16. WHEN the smoke opens the seeded Sunday THEN it SHALL find eight distinct bar colours among its fourteen tasks, and six Other bars
+    > **Superseded by HHAT-27 — see AD-055 (2026-10-01).** The seeded Sunday's fourteen tasks now
+    > wear fourteen different looks, eight solid then six hatched, and no bar is Other; the smoke
+    > checks that instead.
 17. WHEN the smoke opens the seeded Sunday THEN its drawer summary SHALL read `14 tasks`
 
 ---
@@ -130,10 +145,10 @@ detail to its bars, and there is no way to see just the days one task took.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| HTF-01 | P1: colours — AC 1 | Execute | Verified (T12, T13, T14 smoke) |
-| HTF-02 | P1: colours — AC 2 | Execute | Implemented (T1) |
+| HTF-01 | P1: colours — AC 1 | Execute | Verified (T12, T13, T14 smoke); palette values superseded by HHAT-14, HHAT-15 (AD-055) |
+| HTF-02 | P1: colours — AC 2 | Execute | Implemented (T1); superseded by HHAT-03 (AD-055) |
 | HTF-03 | P1: colours — AC 3 | Execute | Implemented (T1) |
-| HTF-04 | P1: colours — AC 4 | Execute | Implemented (T1) |
+| HTF-04 | P1: colours — AC 4 | Execute | Implemented (T1); superseded by HHAT-12 (AD-055) |
 | HTF-05 | P1: colours — AC 5 | Execute | Implemented (T3, T4, T5) |
 | HTF-06 | P1: colours — AC 6 | Execute | Implemented (T1) |
 | HTF-07 | P1: hover — AC 7 | Execute | Verified (T13 smoke) |
@@ -145,7 +160,7 @@ detail to its bars, and there is no way to see just the days one task took.
 | HTF-13 | P1: filter — AC 13 | Execute | Verified (T13 smoke) |
 | HTF-14 | P1: filter — AC 14 | Execute | Verified (T13 smoke) |
 | HTF-15 | P1: filter — AC 15 | Execute | Verified (T13 smoke) |
-| HTF-16 | P2: smoke — AC 16 | Execute | Verified (T12 smoke) |
+| HTF-16 | P2: smoke — AC 16 | Execute | Verified (T12 smoke); superseded by HHAT-27 (AD-055) |
 | HTF-17 | P2: smoke — AC 17 | Execute | Verified (T12 smoke) |
 
 **Coverage:** 17 total, 17 mapped to tasks, 0 unmapped.

@@ -29,17 +29,19 @@
  *      card: the card reaches past its last group, the drawer scrolls it as one
  *      unit and the page does not scroll; a short day still fills the drawer
  *      (HDRW-01..04)
- *  11. the seeded Sunday's fourteen tasks wear eight distinct colours and six
- *      Other bars, the first eight in the palette's colours and order in both
- *      themes; each task's legend and drawer swatches wear its bar's colour;
- *      the summary reads `14 tasks · 14 blocks` (HTF-01, 03, 05, 16, 17)
+ *  11. the seeded Sunday's fourteen tasks wear fourteen different looks: slots
+ *      1 to 8 solid, in the palette's colours and order in both themes, then
+ *      slots 1 to 6 hatched, and no Other; each task's legend and drawer
+ *      swatches wear its bar's look, colour and stripes; the summary reads
+ *      `14 tasks · 14 blocks` (HHAT-10, 14, 15, 20, 27; HTF-03, 05, 17)
  *  12. pointing at a legend chip, a drawer group header or a bar, or focusing a
  *      chip or a bar, leaves only that task's bars at full opacity, and leaving
  *      each restores them; clicking a chip shows only the seeded Sunday, closes a drawer open
  *      on Monday and marks the chip with a ×; ◀ ▶ keep the pick and the current
  *      week says it has no time for it, keeping the chip at 0h00 with the
  *      neutral swatch and its ×; the × and a second click clear it; no
- *      bar changes colour throughout (HTF-07..15)
+ *      bar changes its look, stripes included, throughout (HTF-07..15,
+ *      HHAT-26)
  *  13. on the seeded `develop` Wednesday two weeks back: `Split at` starts on
  *      the period's midpoint; splitting at its start is refused and splitting
  *      at 10:00 gives two periods on `develop`; the parts moved to #9201 and
@@ -57,12 +59,22 @@
  *      #9201 chosen records 9201 with the flag on `feature/9202-seed` and sits
  *      under #9201; its strip's From branch records 9202 with no flag and moves
  *      it under #9202 (HTSK-07..11, 13, 36)
+ *  16. on the spread week, five weeks back, no two neighbouring legend chips
+ *      look alike and the chips read eight solids, then hatched blue and
+ *      hatched orange; on the seeded Sunday the first hatched task's bar,
+ *      legend swatch and drawer swatch show 45° stripes of its hue, 3 px in
+ *      every 6 px, over the hue mixed 5% with white, in both themes, and its
+ *      solid twin shows none; both swatches are 14 × 14 px; pointing at or
+ *      focusing that hatched task's chip, drawer header or bar leaves only its
+ *      bars at full opacity, clicking its chip shows only the seeded Sunday
+ *      and its × every day again, and no bar changes its look throughout
+ *      (HHAT-08, 17, 18, 21, 24..26, 28, 29)
  *
  * NOT automatable here: keyboard focus showing the tooltip, and the two-theme
- * look. The ad-hoc sessions carry no task, so every task colour is read on the
- * seeded Sunday.
+ * look. The ad-hoc sessions carry no task, so every task look is read on the
+ * seeded Sunday and the spread week.
  *
- * Verify by hand (sections 13 to 15 cannot reach these):
+ * Verify by hand (sections 13 to 16 cannot reach these):
  *   - the picker's typed lookup: a work item number shows one `{type} #{id}
  *     {title}` row, a bad one shows main's error text, and choosing the row
  *     pins nothing (HTSK-02..05); the smoke never types there, since it would
@@ -70,6 +82,7 @@
  *   - a linked session's notification names the linked task (HTSK-21)
  *   - a session's link survives a real app restart (HTSK-17)
  *   - the hand mark's look, in the light and the dark theme (HTSK-38)
+ *   - the stripes at 14 px and on a 6 px bar, in both themes (HHAT-17, HHAT-21)
  *
  * The sessions are ad-hoc `pwsh` in C:/Windows and C:/Windows/System32 — never a
  * registry agent, which on a machine with the CLI installed starts a real agent.
@@ -81,8 +94,11 @@
  *        writes a tall past Sunday into a new directory under %TEMP%, plus a
  *        git repo `ws/acme-widgets` on `develop` with a worktree
  *        `wt/acme-widgets-9202` on `feature/9202-seed`, a config registering
- *        `ws` and pinning acme/platform #9201 and #9202, and a closed 09:00 to
- *        12:00 period on `develop` two Wednesdays back; prints the next command
+ *        `ws` and pinning acme/platform #9201 and #9202, a closed 09:00 to
+ *        12:00 period on `develop` two Wednesdays back, and a spread week five
+ *        weeks back: ten tasks, #9301 to #9310, two a day Monday to Friday,
+ *        task k on weekday (k - 1) mod 5 for (11 - k) × 10 minutes; prints the
+ *        next command
  *   2. npm run dev -- -- "--user-data-dir=<that directory>" --remote-debugging-port=9222
  *        --disable-renderer-backgrounding --disable-backgrounding-occluded-windows
  *        --disable-background-timer-throttling
@@ -91,9 +107,9 @@
  *        period is in the app; on a pass it closes the app and deletes the
  *        directory, on a failure it leaves both and prints the directory
  *
- * SMOKE_ONLY=assign on step 3 runs sections 13 to 15 alone, from a fresh seed
- * and launch like any drive, for iterating on them; the full drive still runs
- * before a PR.
+ * SMOKE_ONLY=assign on step 3 runs sections 13 to 15 alone, and SMOKE_ONLY=looks
+ * section 16 alone, each from a fresh seed and launch like any drive, for
+ * iterating on them; the full drive still runs before a PR.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -193,6 +209,15 @@ const weekDay = (weeks, offset) =>
     today.getDate() - sinceMonday + 7 * weeks + offset
   )
 
+// AD-055's palette, slots 1 to 8 (HHAT-14, HHAT-15).
+const PALETTE = {
+  dark: ['#2790da', '#b64906', '#14a889', '#bc8b03', '#c90982', '#117a2c', '#8c63f5', '#f45468'],
+  light: ['#2f76e8', '#eb6623', '#28ae76', '#dbab37', '#e984b7', '#0f6f19', '#4e3ca6', '#d10b47']
+}
+const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`
+/** In-page `sig(el)`: a look's computed fill and stripes. */
+const LOOK_SIG = `const sig = el => { const s = getComputedStyle(el); return s.backgroundColor + ' / ' + s.backgroundImage }`
+
 // DOM probes, evaluated in the page.
 const HEADS = `[...document.querySelectorAll('.hcal-head')]`
 const headLabels = () => evaluate(`${HEADS}.map(h => h.getAttribute('aria-label'))`)
@@ -237,7 +262,8 @@ const overlapsDay = (snapshot, day) => {
 
 // --seed: a throwaway userData directory holding one tall day, the previous
 // week's Sunday (always past and complete, and outside every other step's
-// weeks). Fictitious tasks only: the repository is public.
+// weeks), and a spread week five weeks back, two tasks a day Monday to Friday
+// with falling week totals. Fictitious tasks only: the repository is public.
 const TEMP = realpathSync.native(tmpdir())
 const POINTER = join(TEMP, 'playground-smoke-hours.last')
 const SEED_TITLES = [
@@ -257,6 +283,21 @@ const SEED_TITLES = [
   'Fix the timezone offset'
 ]
 const seedId = (i) => `hours-smoke-seed-${String(i + 1).padStart(2, '0')}`
+// The spread week: task k (#9300 + k) on weekday (k - 1) mod 5, for (11 - k) × 10
+// minutes, so tasks k and k + 5 share a day and the week totals fall with k.
+const SPREAD_TITLES = [
+  'Tidy the release notes',
+  'Sort the export columns',
+  'Cap the retry backoff',
+  'Lint the email templates',
+  'Index the order lookups',
+  'Batch the push alerts',
+  'Hide the beta banner',
+  'Log the slow queries',
+  'Pin the font versions',
+  'Clean the temp uploads'
+]
+const spreadId = (i) => `hours-smoke-spread-${String(i + 1).padStart(2, '0')}`
 // The `develop` period sections 13 and 14 split and reassign, and the two pins they choose.
 const DEVELOP_ID = 'hours-smoke-develop'
 const PINS = [9201, 9202]
@@ -336,10 +377,31 @@ if (process.argv.includes('--seed')) {
       taskTitle: null
     })
   )
+  SPREAD_TITLES.forEach((title, i) => {
+    const day = weekDay(-5, i % 5)
+    const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), i < 5 ? 9 : 14)
+    const taskId = 9301 + i
+    lines.push(
+      JSON.stringify({
+        v: 1,
+        id: spreadId(i),
+        sessionId: 'hours-smoke-spread',
+        agent: 'Ad-hoc',
+        cwd: 'C:\\Windows',
+        start: start.toISOString(),
+        end: new Date(start.getTime() + (10 - i) * 10 * 60_000).toISOString(),
+        workspacePath: null,
+        repoName: 'acme-widgets',
+        branch: `feature/${taskId}-seed`,
+        taskId,
+        taskTitle: title
+      })
+    )
+  })
   writeFileSync(join(dir, 'time-log.jsonl'), lines.join('\n') + '\n')
   writeFileSync(POINTER, dir)
   console.log(
-    `Seeded ${lines.length} periods (${dayHeader(sunday)}, ${dayHeader(wednesday)}) in ${dir}`
+    `Seeded ${lines.length} periods (${dayHeader(sunday)}, ${dayHeader(wednesday)}, ${dayHeader(weekDay(-5, 0))} to ${dayHeader(weekDay(-5, 4))}) in ${dir}`
   )
   console.log(
     `Launch: npm run dev -- -- "--user-data-dir=${dir}" --remote-debugging-port=${PORT} --disable-renderer-backgrounding --disable-backgrounding-occluded-windows --disable-background-timer-throttling`
@@ -360,9 +422,11 @@ await waitFor(`typeof window.api !== 'undefined'`, 'the preload bridge')
 // Refuse anything but the seeded directory, before a session or a write.
 const seededDir = existsSync(POINTER) ? readFileSync(POINTER, 'utf8').trim() : null
 const snapshotIds = new Set((await invoke('time:snapshot')).periods.map((p) => p.id))
-const missingSeed = [...SEED_TITLES.map((_, i) => seedId(i)), DEVELOP_ID].filter(
-  (id) => !snapshotIds.has(id)
-)
+const missingSeed = [
+  ...SEED_TITLES.map((_, i) => seedId(i)),
+  DEVELOP_ID,
+  ...SPREAD_TITLES.map((_, i) => spreadId(i))
+].filter((id) => !snapshotIds.has(id))
 if (!seededDir || missingSeed.length > 0) {
   console.error(
     `not running on the seeded data — ${!seededDir ? `no ${POINTER}` : `${missingSeed.length} seeded periods missing`}; run with --seed first`
@@ -376,6 +440,49 @@ const before = await invoke('time:snapshot')
 const knownPeriods = new Set(before.periods.map((p) => p.id))
 const sessionIds = []
 const todayHeader = dayHeader(todayMidnight)
+
+// Probes for focusing a task (sections 12 and 16), evaluated in the page.
+const labelOf = (title) =>
+  evaluate(
+    `[...document.querySelectorAll('.hleg-label')].map(l => l.textContent).find(t => t.includes(${JSON.stringify(title)})) ?? null`
+  )
+const chipOf = (label) =>
+  `[...document.querySelectorAll('.hleg-chip')].find(c => c.querySelector('.hleg-label').textContent === ${JSON.stringify(label)})`
+const barOf = (label) =>
+  `[...document.querySelectorAll('.hcal-bar')].find(b => b.getAttribute('aria-label').startsWith(${JSON.stringify(`${label}, `)}))`
+const rowOf = (label) =>
+  `[...document.querySelectorAll('.hours-drawer .hours-group')].find(g => g.querySelector('.hours-group-label').textContent === ${JSON.stringify(label)})?.querySelector('.hours-group-head')`
+const bars = () =>
+  evaluate(
+    `(() => { ${LOOK_SIG}; return [...document.querySelectorAll('.hcal-bar')].map(b => ({ label: b.getAttribute('aria-label').split(', ')[0], look: sig(b), opacity: Number(getComputedStyle(b).opacity) })) })()`
+  )
+/** Only `label`'s bars at full opacity, every other of the fourteen at 30%. */
+const onlyFull = (list, label) =>
+  list.length === 14 &&
+  list.some((b) => b.label === label) &&
+  list.every((b) => (b.label === label ? b.opacity === 1 : Math.abs(b.opacity - 0.3) < 0.01))
+const pointAt = async (element) => {
+  const at = await evaluate(
+    `(() => { const e = ${element}; if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } })()`
+  )
+  if (at) await send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...at })
+  await sleep(400)
+  return at !== null
+}
+const pointAway = async () => {
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 2, y: 2 })
+  await sleep(400)
+}
+// A bar's look is its fill and its stripes (`LOOK_SIG`), so a pick or a fade
+// that strips a hatched bar's stripes changes it.
+const lookOf = (list) => new Map(list.map((b) => [b.label, b.look]))
+const sameLooks = (list, reference) =>
+  list.length > 0 && list.every((b) => reference.get(b.label) === b.look)
+const pressedChips = () =>
+  evaluate(
+    `[...document.querySelectorAll('.hleg-chip')].filter(c => c.querySelector('.hleg-pick').getAttribute('aria-pressed') === 'true').map(c => ({ label: c.querySelector('.hleg-label').textContent, total: c.querySelector('.hleg-total').textContent, swatch: [...c.querySelector('.hleg-swatch').classList].find(x => x.startsWith('role-')), clear: c.querySelector('.hleg-clear') !== null }))`
+  )
+const allFull = (list) => list.length === 14 && list.every((b) => b.opacity === 1)
 
 /** Sections 1 to 12, on the calendar the setup opened. */
 async function calendarSections() {
@@ -807,46 +914,45 @@ async function calendarSections() {
       : 'no card'
   )
 
-  // 11. Eight colours on the seeded Sunday, never two on one day (HTF-01, 03, 05, 16, 17).
+  // 11. Fourteen looks on the seeded Sunday, never two alike (HHAT-10, 14, 15, 20, 27).
   for (let i = 0; i < 8 && !(await headLabels()).some((l) => l.startsWith(seedHeader)); i++) {
     await nav('Previous week')
     await sleep(300)
   }
   await clickHead(seedHeader)
   await sleep(400)
+  // A look's signature is its computed fill and stripes, so a hatched look and
+  // its solid twin differ, and so does a swatch that lost its stripes.
   const sunday = await evaluate(
-    `(() => { const roleOf = el => [...el.classList].find(c => c.startsWith('role-')); const bg = el => getComputedStyle(el).backgroundColor; const bars = [...document.querySelectorAll('.hcal-col.selected .hcal-bar')].map(b => ({ label: b.getAttribute('aria-label').split(', ')[0], role: roleOf(b), bg: bg(b) })); const chips = new Map([...document.querySelectorAll('.hleg-chip')].map(c => [c.querySelector('.hleg-label').textContent, bg(c.querySelector('.hleg-swatch'))])); const rows = new Map([...document.querySelectorAll('.hours-drawer .hours-group')].map(g => [g.querySelector('.hours-group-label').textContent, bg(g.querySelector('.hours-group-swatch'))])); return { bars: bars.map(b => ({ ...b, chip: chips.get(b.label) ?? null, row: rows.get(b.label) ?? null })), count: document.querySelector('.hours-drawer .hours-day-count')?.textContent ?? null } })()`
+    `(() => { const lookOf = el => [...el.classList].filter(c => c.startsWith('role-') || c === 'hatched').join(' '); ${LOOK_SIG}; const bars = [...document.querySelectorAll('.hcal-col.selected .hcal-bar')].map(b => ({ label: b.getAttribute('aria-label').split(', ')[0], look: lookOf(b), sig: sig(b) })); const chips = new Map([...document.querySelectorAll('.hleg-chip')].map(c => [c.querySelector('.hleg-label').textContent, sig(c.querySelector('.hleg-swatch'))])); const rows = new Map([...document.querySelectorAll('.hours-drawer .hours-group')].map(g => [g.querySelector('.hours-group-label').textContent, sig(g.querySelector('.hours-group-swatch'))])); return { bars: bars.map(b => ({ ...b, chip: chips.get(b.label) ?? null, row: rows.get(b.label) ?? null })), count: document.querySelector('.hours-drawer .hours-day-count')?.textContent ?? null } })()`
   )
-  const slotBars = sunday.bars.filter((b) => /^role-slot[1-8]$/.test(b.role))
-  const otherBars = sunday.bars.filter((b) => b.role === 'role-other')
-  const slotColours = new Set(slotBars.map((b) => b.bg))
+  // The seed's tasks share the day and have equal time, so they are coloured in
+  // seed order: the eight solids, then hatched blue to hatched green.
+  const expectedLooks = SEED_TITLES.map((_, i) =>
+    i < 8 ? `role-slot${i + 1}` : `role-slot${i - 7} hatched`
+  )
+  const wornLooks = SEED_TITLES.map(
+    (title) => sunday.bars.find((b) => b.label.includes(title))?.look ?? null
+  )
   check(
-    "the seeded Sunday's fourteen tasks wear eight distinct colours and six Other bars",
+    "the seeded Sunday's fourteen tasks wear fourteen different looks, eight solid then six hatched, no Other",
     sunday.bars.length === 14 &&
-      slotBars.length === 8 &&
-      slotColours.size === 8 &&
-      otherBars.length === 6 &&
-      new Set(otherBars.map((b) => b.bg)).size === 1 &&
-      !slotColours.has(otherBars[0].bg),
-    `${slotBars.length} slot bars in ${slotColours.size} colours, ${otherBars.length} Other`
+      wornLooks.every((look, i) => look === expectedLooks[i]) &&
+      new Set(sunday.bars.map((b) => b.sig)).size === 14,
+    `${wornLooks.join(' | ')}; ${new Set(sunday.bars.map((b) => b.sig)).size} signatures`
   )
   check(
-    "each seeded task's legend and drawer swatches wear its bar's colour",
-    sunday.bars.length === 14 && sunday.bars.every((b) => b.chip === b.bg && b.row === b.bg),
-    JSON.stringify(sunday.bars.filter((b) => b.chip !== b.bg || b.row !== b.bg).slice(0, 2))
+    "each seeded task's legend and drawer swatches wear its bar's look",
+    sunday.bars.length === 14 && sunday.bars.every((b) => b.chip === b.sig && b.row === b.sig),
+    JSON.stringify(sunday.bars.filter((b) => b.chip !== b.sig || b.row !== b.sig).slice(0, 2))
   )
   check(
     "the seeded Sunday's summary counts its tasks",
     sunday.count === '14 tasks · 14 blocks',
     `${sunday.count}`
   )
-  // The seed's first eight tasks share the day and have equal time, so they
-  // take the slots in seed order: their bars wear AD-045's palette in order.
-  const PALETTE = {
-    dark: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'],
-    light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948']
-  }
-  const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`
+  // The seed's first eight tasks take the solids in seed order: their bars wear
+  // AD-055's palette in order.
   const shownTheme = await evaluate(`document.documentElement.dataset.theme`)
   const worn = {}
   for (const theme of ['dark', 'light']) {
@@ -861,60 +967,21 @@ async function calendarSections() {
       .filter(([, , want, got]) => want !== got)
   )
   check(
-    "the seeded Sunday's first eight tasks wear the palette's eight colours in order, in both themes",
+    "the seeded Sunday's eight solid tasks wear the palette's eight colours in order, in both themes",
     offPalette.length === 0,
     JSON.stringify(offPalette.slice(0, 3))
   )
 
   // 12. Hover and filter by task, in the seeded week (HTF-07..15).
-  const labelOf = (title) =>
-    evaluate(
-      `[...document.querySelectorAll('.hleg-label')].map(l => l.textContent).find(t => t.includes(${JSON.stringify(title)})) ?? null`
-    )
   const [taskA, taskB, taskC, taskD] = await Promise.all(
     SEED_TITLES.slice(0, 4).map((title) => labelOf(title))
   )
-  const chipOf = (label) =>
-    `[...document.querySelectorAll('.hleg-chip')].find(c => c.querySelector('.hleg-label').textContent === ${JSON.stringify(label)})`
-  const barOf = (label) =>
-    `[...document.querySelectorAll('.hcal-bar')].find(b => b.getAttribute('aria-label').startsWith(${JSON.stringify(`${label}, `)}))`
-  const rowOf = (label) =>
-    `[...document.querySelectorAll('.hours-drawer .hours-group')].find(g => g.querySelector('.hours-group-label').textContent === ${JSON.stringify(label)})?.querySelector('.hours-group-head')`
-  const bars = () =>
-    evaluate(
-      `[...document.querySelectorAll('.hcal-bar')].map(b => ({ label: b.getAttribute('aria-label').split(', ')[0], bg: getComputedStyle(b).backgroundColor, opacity: Number(getComputedStyle(b).opacity) }))`
-    )
-  /** Only `label`'s bars at full opacity, every other of the fourteen at 30%. */
-  const onlyFull = (list, label) =>
-    list.length === 14 &&
-    list.some((b) => b.label === label) &&
-    list.every((b) => (b.label === label ? b.opacity === 1 : Math.abs(b.opacity - 0.3) < 0.01))
   const opacities = (list) =>
     [...new Set(list.map((b) => `${b.label === taskA ? 'A' : '·'}${b.opacity}`))].join(' ')
-  const pointAt = async (element) => {
-    const at = await evaluate(
-      `(() => { const e = ${element}; if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } })()`
-    )
-    if (at) await send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...at })
-    await sleep(400)
-    return at !== null
-  }
-  const pointAway = async () => {
-    await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 2, y: 2 })
-    await sleep(400)
-  }
-  const colourOf = (list) => new Map(list.map((b) => [b.label, b.bg]))
-  const sameColours = (list, reference) =>
-    list.length > 0 && list.every((b) => reference.get(b.label) === b.bg)
-  const pressedChips = () =>
-    evaluate(
-      `[...document.querySelectorAll('.hleg-chip')].filter(c => c.querySelector('.hleg-pick').getAttribute('aria-pressed') === 'true').map(c => ({ label: c.querySelector('.hleg-label').textContent, total: c.querySelector('.hleg-total').textContent, swatch: [...c.querySelector('.hleg-swatch').classList].find(x => x.startsWith('role-')), clear: c.querySelector('.hleg-clear') !== null }))`
-    )
-  const allFull = (list) => list.length === 14 && list.every((b) => b.opacity === 1)
 
   await pointAway()
   const rest = await bars()
-  const palette = colourOf(rest)
+  const looks = lookOf(rest)
   const pointedChip = await pointAt(chipOf(taskA))
   const chipHover = await bars()
   check(
@@ -1050,11 +1117,11 @@ async function calendarSections() {
     `${clearedHeads.length} days after ×, ${repickedHeads} after a pick, ${reclearedHeads.length} after a second click`
   )
   check(
-    'no bar changes colour while tasks are pointed at, picked or cleared',
+    'no bar changes its look, stripes included, while tasks are pointed at, picked or cleared',
     [chipHover, rowHover, barHover, barFocus, chipFocus, picked, cleared, recleared].every((list) =>
-      sameColours(list, palette)
-    ) && palette.size === 14,
-    `${palette.size} bars`
+      sameLooks(list, looks)
+    ) && looks.size === 14,
+    `${looks.size} bars`
   )
 }
 
@@ -1505,6 +1572,196 @@ async function dialogSection() {
   )
 }
 
+/** 16. Spread looks, the hatch, and focus on a hatched task (HHAT-08, 17, 18, 21, 24..26, 28, 29). */
+async function looksSection() {
+  const seedStart = new Date(before.periods.find((p) => p.id === seedId(0)).start)
+  const seedHeader = dayHeader(
+    new Date(seedStart.getFullYear(), seedStart.getMonth(), seedStart.getDate())
+  )
+  await reloadInto('hours')
+  await waitFor(`document.querySelector('.hcal') !== null`, 'the calendar')
+  await sleep(300)
+
+  // The spread week: its chips in legend order, which is colouring order.
+  for (let i = 0; i < 5; i++) {
+    await nav('Previous week')
+    await sleep(300)
+  }
+  const chips = await evaluate(
+    `(() => { ${LOOK_SIG}; return [...document.querySelectorAll('.hleg-chip')].map(c => { const s = c.querySelector('.hleg-swatch'); return { label: c.querySelector('.hleg-label').textContent, look: [...s.classList].filter(x => x.startsWith('role-') || x === 'hatched').join(' '), sig: sig(s) } }) })()`
+  )
+  const shortLooks = chips.map((c) => c.look.replace('role-', '')).join(' | ')
+  check(
+    'no two neighbouring legend chips of the spread week look alike',
+    chips.length === 10 && chips.every((c, i) => i === 0 || c.sig !== chips[i - 1].sig),
+    `${chips.length} chips: ${shortLooks}`
+  )
+  const spreadLooks = [1, 2, 3, 4, 5, 6, 7, 8]
+    .map((n) => `role-slot${n}`)
+    .concat(['role-slot1 hatched', 'role-slot2 hatched'])
+  check(
+    "the spread week's chips, by week total, read eight solids then hatched blue and hatched orange",
+    chips.length === 10 &&
+      chips.every((c, i) => c.label.includes(SPREAD_TITLES[i]) && c.look === spreadLooks[i]),
+    chips.map((c) => `${c.label.slice(6, 10)} ${c.look.replace('role-', '')}`).join(' | ')
+  )
+
+  // The seeded Sunday: its first hatched task (slot 1 hatched) and its solid twin.
+  await nav('This week')
+  await sleep(300)
+  for (let i = 0; i < 8 && !(await headLabels()).some((l) => l.startsWith(seedHeader)); i++) {
+    await nav('Previous week')
+    await sleep(300)
+  }
+  await clickHead(seedHeader)
+  await sleep(400)
+  const [solidTitle, hatchedTitle] = [SEED_TITLES[0], SEED_TITLES[8]]
+  const themes = ['dark', 'light']
+  const shownTheme = await evaluate(`document.documentElement.dataset.theme`)
+  const worn = {}
+  for (const theme of themes) {
+    // The ground is compared with a probe's own computed color-mix of the hue.
+    worn[theme] = await evaluate(
+      `(() => { document.documentElement.dataset.theme = ${JSON.stringify(theme)}; const parts = t => [[...document.querySelectorAll('.hcal-col.selected .hcal-bar')].find(b => b.getAttribute('aria-label').split(', ')[0].includes(t)), [...document.querySelectorAll('.hleg-chip')].find(c => c.querySelector('.hleg-label').textContent.includes(t))?.querySelector('.hleg-swatch'), [...document.querySelectorAll('.hours-drawer .hours-group')].find(g => g.querySelector('.hours-group-label').textContent.includes(t))?.querySelector('.hours-group-swatch')]; const read = el => { if (!el) return null; const s = getComputedStyle(el); const r = el.getBoundingClientRect(); return { color: s.backgroundColor, image: s.backgroundImage, w: r.width, h: r.height } }; const probe = document.createElement('div'); probe.style.backgroundColor = 'color-mix(in oklab, ${rgb(PALETTE[theme][0])} 5%, #fff)'; document.body.append(probe); const ground = getComputedStyle(probe).backgroundColor; probe.remove(); return { hatched: parts(${JSON.stringify(hatchedTitle)}).map(read), solid: parts(${JSON.stringify(solidTitle)}).map(read), ground } })()`
+    )
+  }
+  await evaluate(`document.documentElement.dataset.theme = ${JSON.stringify(shownTheme)}, true`)
+  const stripes = (hex) =>
+    `repeating-linear-gradient(45deg, ${rgb(hex)} 0px, ${rgb(hex)} 3px, rgba(0, 0, 0, 0) 3px, rgba(0, 0, 0, 0) 6px)`
+  check(
+    "the first hatched task's bar, legend swatch and drawer swatch show 45° stripes of its hue, 3 px in every 6 px, in both themes",
+    themes.every((t) => worn[t].hatched.every((p) => p?.image === stripes(PALETTE[t][0]))),
+    themes.map((t) => `${t}: ${worn[t].hatched.map((p) => p?.image ?? 'missing')[0]}`).join(' / ')
+  )
+  check(
+    "the hatched task's stripes lie over its hue mixed 5% with white, in both themes",
+    themes.every(
+      (t) =>
+        worn[t].ground !== rgb(PALETTE[t][0]) &&
+        worn[t].hatched.every((p) => p?.color === worn[t].ground)
+    ),
+    themes
+      .map(
+        (t) => `${t} probe ${worn[t].ground}: ${worn[t].hatched.map((p) => p?.color).join(', ')}`
+      )
+      .join(' / ')
+  )
+  check(
+    "its solid twin's bar and swatches are filled with the hue and show no stripes, in both themes",
+    themes.every((t) =>
+      worn[t].solid.every((p) => p?.image === 'none' && p.color === rgb(PALETTE[t][0]))
+    ),
+    themes
+      .map((t) => `${t}: ${worn[t].solid.map((p) => `${p?.color} ${p?.image}`).join(', ')}`)
+      .join(' / ')
+  )
+  const sizes = [worn.dark.hatched, worn.dark.solid].flatMap(([, chip, row]) => [chip, row])
+  check(
+    'the legend and drawer swatches measure 14 × 14 px',
+    sizes.every((p) => p && Math.abs(p.w - 14) < 0.01 && Math.abs(p.h - 14) < 0.01),
+    sizes.map((p) => (p ? `${p.w}×${p.h}` : 'missing')).join(', ')
+  )
+
+  // Focus on the hatched task, as section 12 does for solid ones (HHAT-24..26).
+  const hatched = await labelOf(hatchedTitle)
+  const shown = (list) =>
+    [...new Set(list.map((b) => `${b.label === hatched ? 'H' : '·'}${b.opacity}`))].join(' ')
+  await pointAway()
+  const rest = await bars()
+  const looks = lookOf(rest)
+  const pointedChip = await pointAt(chipOf(hatched))
+  const chipHover = await bars()
+  await pointAway()
+  const chipLeft = await bars()
+  check(
+    "pointing at the hatched task's chip leaves only its bars at full opacity, and leaving restores them",
+    Boolean(hatched) &&
+      allFull(rest) &&
+      pointedChip &&
+      onlyFull(chipHover, hatched) &&
+      allFull(chipLeft),
+    `${hatched}: ${shown(chipHover)} / ${shown(chipLeft)}`
+  )
+  // The ninth of fourteen groups sits below the drawer's fold.
+  await evaluate(`${rowOf(hatched)}?.scrollIntoView({ block: 'center' }), true`)
+  await sleep(200)
+  const pointedRow = await pointAt(rowOf(hatched))
+  const rowHover = await bars()
+  await pointAway()
+  const rowLeft = await bars()
+  const pointedBar = await pointAt(barOf(hatched))
+  const barHover = await bars()
+  await pointAway()
+  const barLeft = await bars()
+  check(
+    "pointing at the hatched task's drawer header or bar does the same",
+    pointedRow &&
+      onlyFull(rowHover, hatched) &&
+      allFull(rowLeft) &&
+      pointedBar &&
+      onlyFull(barHover, hatched) &&
+      allFull(barLeft),
+    `row ${pointedRow} ${shown(rowHover)}, bar ${pointedBar} ${shown(barHover)}`
+  )
+  await evaluate(`${chipOf(hatched)}?.querySelector('.hleg-pick')?.focus(), true`)
+  await sleep(400)
+  const chipFocus = await bars()
+  await evaluate(`document.activeElement.blur(), true`)
+  await sleep(400)
+  const chipBlurred = await bars()
+  await evaluate(`${barOf(hatched)}?.focus(), true`)
+  await sleep(400)
+  const barFocus = await bars()
+  await evaluate(`document.activeElement.blur(), true`)
+  await sleep(400)
+  const barBlurred = await bars()
+  check(
+    "keyboard focus on the hatched task's chip or bar fades the other tasks, and leaving restores them",
+    onlyFull(chipFocus, hatched) &&
+      allFull(chipBlurred) &&
+      onlyFull(barFocus, hatched) &&
+      allFull(barBlurred),
+    `chip ${shown(chipFocus)}, bar ${shown(barFocus)}`
+  )
+  await evaluate(`${chipOf(hatched)}?.querySelector('.hleg-pick')?.click(), true`)
+  await sleep(400)
+  const pickedHeads = await headLabels()
+  const picked = await bars()
+  const pressed = await pressedChips()
+  check(
+    "clicking the hatched task's chip shows only the seeded Sunday, the chip selected with its ×",
+    pickedHeads.length === 1 &&
+      pickedHeads[0].startsWith(seedHeader) &&
+      pressed.length === 1 &&
+      pressed[0].label === hatched &&
+      pressed[0].clear &&
+      onlyFull(picked, hatched),
+    `${pickedHeads.map((l) => l.slice(0, 16)).join(' | ')}; ${JSON.stringify(pressed)}`
+  )
+  await evaluate(`${chipOf(hatched)}?.querySelector('.hleg-clear')?.click(), true`)
+  await sleep(400)
+  const clearedHeads = await headLabels()
+  const cleared = await bars()
+  const clearedPressed = await pressedChips()
+  check(
+    'its × shows every day again',
+    pickedHeads.length === 1 &&
+      clearedHeads.length === 6 &&
+      clearedPressed.length === 0 &&
+      allFull(cleared),
+    `${pickedHeads.length} day picked, ${clearedHeads.length} after ×`
+  )
+  check(
+    'no bar changes its look while the hatched task is pointed at, focused, picked or cleared',
+    [chipHover, rowHover, barHover, chipFocus, barFocus, picked, cleared].every((list) =>
+      sameLooks(list, looks)
+    ) &&
+      looks.size === 14 &&
+      new Set(looks.values()).size === 14,
+    `${looks.size} bars, ${new Set(looks.values()).size} looks`
+  )
+}
+
 try {
   for (const cwd of FOLDERS) {
     const view = await invoke('sessions:spawn', {
@@ -1519,11 +1776,17 @@ try {
   await waitFor(`document.querySelector('.hcal') !== null`, 'the calendar')
   await sleep(500)
 
-  // SMOKE_ONLY=assign skips sections 1 to 12: nothing in 13 to 15 reads them.
-  if (ONLY !== 'assign') await calendarSections()
-  await periodSection()
-  await railSection()
-  await dialogSection()
+  // SMOKE_ONLY=assign skips sections 1 to 12 and 16: nothing in 13 to 15 reads
+  // them. SMOKE_ONLY=looks runs section 16 alone: it reads only the seed.
+  if (ONLY === 'looks') {
+    await looksSection()
+  } else {
+    if (ONLY !== 'assign') await calendarSections()
+    await periodSection()
+    await railSection()
+    await dialogSection()
+    if (ONLY !== 'assign') await looksSection()
+  }
 } finally {
   for (const id of sessionIds) {
     await invoke('sessions:stop', { id }).catch(() => {})
@@ -1544,7 +1807,7 @@ try {
 
 const failed = checks.filter((c) => !c.ok)
 console.log(
-  `\n${checks.length - failed.length}/${checks.length} checks passed${ONLY === 'assign' ? ' (sections 13 to 15 only)' : ''}`
+  `\n${checks.length - failed.length}/${checks.length} checks passed${ONLY === 'assign' ? ' (sections 13 to 15 only)' : ONLY === 'looks' ? ' (section 16 only)' : ''}`
 )
 if (failed.length > 0) {
   console.log(`Seeded data left in place for inspection: ${seededDir}`)

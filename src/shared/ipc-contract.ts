@@ -23,6 +23,7 @@ import type {
 } from './files'
 import type { CommitLists, GitOp, GitOpResult, SyncState } from './git'
 import type { ProbeResult } from './links'
+import type { PromptEntry } from './prompt-template'
 import type { ClipboardPaste } from './paste'
 import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type {
@@ -143,7 +144,14 @@ export interface IpcContract {
   'sessions:list': { req: void; res: SessionView[] }
   /** Resolve agent (or run `adhocCommand` raw) + cwd, shell-host the PTY, persist, return the view; `task` links it by hand (HTSK-09). */
   'sessions:spawn': {
-    req: { agentName: string; cwd: string; adhocCommand?: string; task?: SessionTask }
+    req: {
+      agentName: string
+      cwd: string
+      adhocCommand?: string
+      task?: SessionTask
+      /** The resolved initial prompt, sent after `--`; registry agents only (APR-30). */
+      prompt?: string
+    }
     res: SessionView
   }
   /** Kill the hosting PTY → status stopped; no orphaned process survives. */
@@ -196,6 +204,10 @@ export interface IpcContract {
   'workflows:respond': { req: { runId: string; decision: RespondDecision }; res: void }
   /** Drop any discovery cache (v1 no-op — discovery is on-demand) (WF2-01). */
   'workflows:reload': { req: void; res: void }
+  /** Every `*.md` in `~/.playground/prompts`, valid (`{name,template}`) or broken (`{name,error}`) (APR-01/06). */
+  'prompts:list': { req: void; res: PromptEntry[] }
+  /** Create `~/.playground/prompts` when missing and open it in the OS file manager (APR-08). */
+  'prompts:openFolder': { req: void; res: void }
   /** Scaffold a new workflow folder from a template + reveal it; an existing id is rejected, never overwritten (WF5-22/24/25). */
   'workflows:scaffold': { req: { name: string }; res: ScaffoldResult }
   /** One folder's direct children, tracked plus untracked-not-ignored; a git failure lands in `error` (FXPL-02/04/05). */

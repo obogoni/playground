@@ -13,6 +13,7 @@ import {
   assignColours,
   dimmedGroups,
   legendEntries,
+  lookClass,
   roleOf,
   timeAxis,
   visibleColumns,
@@ -482,7 +483,7 @@ function GroupSection({
         onMouseEnter={() => onHover(group.key)}
         onMouseLeave={() => onHover(null)}
       >
-        <span className={`hours-group-swatch role-${role}`} />
+        <span className={`hours-group-swatch ${lookClass(role)}`} />
         <span
           className={`hours-group-label${group.taskId === null ? ' no-task' : ''}`}
           title={group.label}
