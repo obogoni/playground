@@ -417,8 +417,8 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Seen failing first on `.hcal-bar.dimmed { background-image: none; }` added to `HoursCalendar.css` through the `.orig` script, while the old `backgroundColor`-only signature is shown passing on the same mutant
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Seen failing first on `.hcal-bar.dimmed { background-image: none; }` added to `HoursCalendar.css` through the `.orig` script, while the old `backgroundColor`-only signature is shown passing on the same mutant (2026-10-03, sections 10 to 12, fresh seed and launch each: the rule added after the `.hatched` rule, since an equal-specificity rule before it loses; the new check failed on the mutant (`no bar changes its look, stripes included, …`), and T12's smoke passed 23/23 on the same mutant; the real build passed 23/23. The first mutant run also failed the two keyboard-focus checks; a rerun failed only the look check, and T12's smoke passed them on the same mutant, so that was a cold flake)
+- [x] Gate check passes: `npm run lint` (warning count unchanged) (0 errors, 18 warnings)
 
 **Tests**: manual
 **Gate**: manual

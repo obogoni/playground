@@ -259,7 +259,7 @@ same search held 14.6 normal-vision with 7.8 CVD. The WARN band is legal with th
 | HHAT-23 | P2: nothing moves, AC 23 | Execute | Implemented: T2 |
 | HHAT-24 | P2: nothing moves, AC 24 | Tasks | In Tasks (T15) |
 | HHAT-25 | P2: nothing moves, AC 25 | Tasks | In Tasks (T15) |
-| HHAT-26 | P2: nothing moves, AC 26 | Tasks | In Tasks (T13) |
+| HHAT-26 | P2: nothing moves, AC 26 | Execute | Implemented: T13 |
 | HHAT-27 | P2: smoke, AC 27 | Execute | Implemented: T10, T12 |
 | HHAT-28 | P2: smoke, AC 28 | Execute | Implementing: T11 done; T14 |
 | HHAT-29 | P2: smoke, AC 29 | Tasks | In Tasks (T14) |

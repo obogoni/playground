@@ -40,7 +40,8 @@
  *      on Monday and marks the chip with a ×; ◀ ▶ keep the pick and the current
  *      week says it has no time for it, keeping the chip at 0h00 with the
  *      neutral swatch and its ×; the × and a second click clear it; no
- *      bar changes colour throughout (HTF-07..15)
+ *      bar changes its look, stripes included, throughout (HTF-07..15,
+ *      HHAT-26)
  *  13. on the seeded `develop` Wednesday two weeks back: `Split at` starts on
  *      the period's midpoint; splitting at its start is refused and splitting
  *      at 10:00 gives two periods on `develop`; the parts moved to #9201 and
@@ -933,7 +934,7 @@ async function calendarSections() {
     `[...document.querySelectorAll('.hours-drawer .hours-group')].find(g => g.querySelector('.hours-group-label').textContent === ${JSON.stringify(label)})?.querySelector('.hours-group-head')`
   const bars = () =>
     evaluate(
-      `[...document.querySelectorAll('.hcal-bar')].map(b => ({ label: b.getAttribute('aria-label').split(', ')[0], bg: getComputedStyle(b).backgroundColor, opacity: Number(getComputedStyle(b).opacity) }))`
+      `(() => { ${LOOK_SIG}; return [...document.querySelectorAll('.hcal-bar')].map(b => ({ label: b.getAttribute('aria-label').split(', ')[0], look: sig(b), opacity: Number(getComputedStyle(b).opacity) })) })()`
     )
   /** Only `label`'s bars at full opacity, every other of the fourteen at 30%. */
   const onlyFull = (list, label) =>
@@ -954,9 +955,11 @@ async function calendarSections() {
     await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 2, y: 2 })
     await sleep(400)
   }
-  const colourOf = (list) => new Map(list.map((b) => [b.label, b.bg]))
-  const sameColours = (list, reference) =>
-    list.length > 0 && list.every((b) => reference.get(b.label) === b.bg)
+  // A bar's look is its fill and its stripes (`LOOK_SIG`), so a pick or a fade
+  // that strips a hatched bar's stripes changes it.
+  const lookOf = (list) => new Map(list.map((b) => [b.label, b.look]))
+  const sameLooks = (list, reference) =>
+    list.length > 0 && list.every((b) => reference.get(b.label) === b.look)
   const pressedChips = () =>
     evaluate(
       `[...document.querySelectorAll('.hleg-chip')].filter(c => c.querySelector('.hleg-pick').getAttribute('aria-pressed') === 'true').map(c => ({ label: c.querySelector('.hleg-label').textContent, total: c.querySelector('.hleg-total').textContent, swatch: [...c.querySelector('.hleg-swatch').classList].find(x => x.startsWith('role-')), clear: c.querySelector('.hleg-clear') !== null }))`
@@ -965,7 +968,7 @@ async function calendarSections() {
 
   await pointAway()
   const rest = await bars()
-  const palette = colourOf(rest)
+  const looks = lookOf(rest)
   const pointedChip = await pointAt(chipOf(taskA))
   const chipHover = await bars()
   check(
@@ -1101,11 +1104,11 @@ async function calendarSections() {
     `${clearedHeads.length} days after ×, ${repickedHeads} after a pick, ${reclearedHeads.length} after a second click`
   )
   check(
-    'no bar changes colour while tasks are pointed at, picked or cleared',
+    'no bar changes its look, stripes included, while tasks are pointed at, picked or cleared',
     [chipHover, rowHover, barHover, barFocus, chipFocus, picked, cleared, recleared].every((list) =>
-      sameColours(list, palette)
-    ) && palette.size === 14,
-    `${palette.size} bars`
+      sameLooks(list, looks)
+    ) && looks.size === 14,
+    `${looks.size} bars`
   )
 }
 
