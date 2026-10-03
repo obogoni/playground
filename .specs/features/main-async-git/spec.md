@@ -55,9 +55,9 @@ re-approved by the owner before T4.
 - [x] No synchronous git call is left in main's period-open path (delivered by #154, PERF-21)
 - [x] With 6 sessions opening, the bench's `spawn` row shows no main stall over 50 ms (#147 baseline: 31.7 ms)
 - [x] Every period still records the repository, branch and task it records today, once its read settles (PERF-21)
-- [ ] The snapshot module holds no synchronous git read
-- [ ] A session the listing never names costs at most one listing per backoff interval, never back to back
-- [ ] Named sessions keep the 30 s cadence
+- [x] The snapshot module holds no synchronous git read
+- [x] A session the listing never names costs at most one listing per backoff interval, never back to back
+- [x] Named sessions keep the 30 s cadence
 
 ## Out of Scope
 
@@ -270,7 +270,7 @@ ships.
 | MAGIT-02 | P1: open — AC 2 | #154 | Delivered (PERF-21) |
 | MAGIT-03 | P1: open — AC 3 | #154 | Delivered (PERF-21) |
 | MAGIT-04 | P1: open — AC 4 | #154 | Delivered (PERF-21) |
-| MAGIT-05 | P1: open — AC 5 | T2 | Done (T2) |
+| MAGIT-05 | P1: open — AC 5 | T2 | ✅ Verified (T2) |
 | MAGIT-06 | P1: open — AC 6 | #154 | Delivered (PERF-21) |
 | MAGIT-07 | P1: open — AC 7 | #154 | Delivered (PERF-21) |
 | MAGIT-08 | P1: fields — AC 8 | #154 | Delivered (PERF-21) |
@@ -282,44 +282,54 @@ ships.
 | MAGIT-14 | P1: fields — AC 14 | #154 | Delivered (PERF-21) |
 | MAGIT-15 | P1: fields — AC 15 | #154 | Delivered (PERF-21) |
 | MAGIT-16 | P1: fields — AC 16 | #154 | Delivered (PERF-21) |
-| MAGIT-17 | P1: backoff — AC 17 | T3 | Done (T3) |
-| MAGIT-18 | P1: backoff — AC 18 | T3 | Done (T3) |
-| MAGIT-19 | P1: backoff — AC 19 | T3 | Done (T3) |
-| MAGIT-20 | P1: backoff — AC 20 | T3 | Done (T3) |
-| MAGIT-21 | P1: backoff — AC 21 | T3 | Done (T3) |
-| MAGIT-22 | P1: backoff — AC 22 | T3 | Done (T3) |
-| MAGIT-23 | P1: backoff — AC 23 | T3 | Done (T3) |
-| MAGIT-24 | P1: backoff — AC 24 | T4 | Done (T4) |
-| MAGIT-25 | P1: backoff — AC 25 | T4 | Done (T4) |
-| MAGIT-26 | P1: backoff — AC 26 | T4 | Done (T4) |
-| MAGIT-27 | P1: backoff — AC 27 | T3 | Done (T3) |
-| MAGIT-28 | P1: backoff — AC 28 | T4 | Done (T4) |
-| MAGIT-29 | P1: measured — AC 29 | T1 | Done (T1) |
-| MAGIT-30 | P1: measured — AC 30 | T1 | Done (T1) |
+| MAGIT-17 | P1: backoff — AC 17 | T3 | ✅ Verified (T3) |
+| MAGIT-18 | P1: backoff — AC 18 | T3 | ✅ Verified (T3) |
+| MAGIT-19 | P1: backoff — AC 19 | T3 | ✅ Verified (T3) |
+| MAGIT-20 | P1: backoff — AC 20 | T3 | ✅ Verified (T3) |
+| MAGIT-21 | P1: backoff — AC 21 | T3 | ✅ Verified (T3) |
+| MAGIT-22 | P1: backoff — AC 22 | T3 | ✅ Verified (T3) |
+| MAGIT-23 | P1: backoff — AC 23 | T3 | ✅ Verified (T3) |
+| MAGIT-24 | P1: backoff — AC 24 | T4 | ✅ Verified (T4) |
+| MAGIT-25 | P1: backoff — AC 25 | T4 | ✅ Verified (T4) |
+| MAGIT-26 | P1: backoff — AC 26 | T4 | ✅ Verified (T4) |
+| MAGIT-27 | P1: backoff — AC 27 | T3 | ✅ Verified (T3) |
+| MAGIT-28 | P1: backoff — AC 28 | T4 | ✅ Verified (T4) |
+| MAGIT-29 | P1: measured — AC 29 | T1 | ✅ Verified (T1) |
+| MAGIT-30 | P1: measured — AC 30 | T1 | ✅ Verified (T1) |
 | MAGIT-31 | P1: measured — AC 31 | — | Dropped 2026-10-03 |
 | MAGIT-32 | P1: measured — AC 32 | — | Dropped 2026-10-03 |
 | MAGIT-33 | P1: measured — AC 33 | — | Dropped 2026-10-03 |
 | MAGIT-34 | P1: measured — AC 34 | — | Dropped 2026-10-03 |
-| MAGIT-35 | P1: measured — AC 35 | T1 | Done (T1) |
-| MAGIT-36 | P2: specs — AC 36 | T5 | Done (T5) |
-| MAGIT-37 | P2: specs — AC 37 | T5 | Done (T5) |
+| MAGIT-35 | P1: measured — AC 35 | T1 | ✅ Verified (T1) |
+| MAGIT-36 | P2: specs — AC 36 | T5 | ✅ Verified (T5) |
+| MAGIT-37 | P2: specs — AC 37 | T5 | ✅ Verified (T5) |
 | MAGIT-38 | Edge: open and close within 1 s | #154 | Delivered (PERF-21) |
 | MAGIT-39 | Edge: not a worktree, git missing, cwd gone | #154 | Delivered (PERF-21) |
 | MAGIT-40 | Edge: two sessions on one cwd | #154 | Delivered (PERF-21) |
 | MAGIT-41 | Edge: two reads of one session in reverse order | #154 | Delivered (PERF-21) |
 | MAGIT-42 | Edge: quit with reads in flight | #154 | Delivered (PERF-21) |
-| MAGIT-43 | Edge: due time equals now | T3 | Done (T3) |
-| MAGIT-44 | Edge: a named session loses its entry | T3 | Done (T3) |
-| MAGIT-45 | Edge: Claude id changes while backing off | T3 | Done (T3) |
-| MAGIT-46 | Edge: dispose while backing off | T4 | Done (T4) |
+| MAGIT-43 | Edge: due time equals now | T3 | ✅ Verified (T3) |
+| MAGIT-44 | Edge: a named session loses its entry | T3 | ✅ Verified (T3) |
+| MAGIT-45 | Edge: Claude id changes while backing off | T3 | ✅ Verified (T3) |
+| MAGIT-46 | Edge: dispose while backing off | T4 | ✅ Verified (T4) |
 
 **Coverage:** 46 total: 22 mapped to tasks, 20 delivered by #154, 4 dropped, 0 unmapped.
 
 ---
 
+## Follow-ups (Verifier, 2026-10-03)
+
+Test-only gaps on correct code, recorded and not fixed (owner rule: a test-only gap gets no fix round).
+
+1. MAGIT-19's test names the session on a call that starts at its due time, so it cannot tell whether the
+   misses were reset (mutant M1 survived). A test that names the session after three misses and lets the
+   next listing miss it should see the next call 5 s after that listing, not 40 s.
+2. MAGIT-46's test does not reach the `#disposed` guard, because `dispose` also empties the watched
+   sessions. A `watch` after `dispose` would pin it. Optional.
+
 ## Success Criteria
 
-- [ ] `grep -nE "execFileSync|spawnSync|execSync" src/main/time-snapshot.ts` finds nothing
-- [ ] A never-named session nudged every second for 10 minutes starts 7 listings, against about 200 today with a 2 s call
-- [ ] Named sessions keep the 30 s cadence
-- [ ] Every existing session-name-poller and time-snapshot assertion passes unchanged
+- [x] `grep -nE "execFileSync|spawnSync|execSync" src/main/time-snapshot.ts` finds nothing
+- [x] A never-named session nudged every second for 10 minutes starts 7 listings, against about 200 today with a 2 s call
+- [x] Named sessions keep the 30 s cadence
+- [x] Every existing session-name-poller and time-snapshot assertion passes unchanged
