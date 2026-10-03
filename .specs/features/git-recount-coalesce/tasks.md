@@ -350,15 +350,26 @@ after it, merged with a pending burst; `forget` keeps waiting requests; `stop` a
 
 **Done when**:
 
-- [ ] Tests: with two repos registered, an injected counter receives every worktree of both and nothing else, and the snapshot carries its answers
-- [ ] Existing `buildTree` tests pass unedited (no option given)
-- [ ] Gate check passes: `npx vitest run src/main/tree.test.ts`, then the full gate
-- [ ] Test count: T5 count + the new tests
+- [x] Tests: with two repos registered, an injected counter receives every worktree of both and nothing else, and the snapshot carries its answers
+- [x] Existing `buildTree` tests pass unedited (no option given)
+- [x] Gate check passes: `npx vitest run src/main/tree.test.ts`, then the full gate
+- [x] Test count: T5 count + the new tests
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `refactor(tree): pass the change counter through the tree build`
+
+**Record (2026-10-03)**: ✅ Done.
+
+- `buildTree(registry, { countChanges })` hands the counter to every `listWorktrees`.
+- `src/main/tree.test.ts` gains 1 test: two repos (`api` with a linked worktree, `web`) ask the counter
+  for exactly those three paths and the snapshot shows `[true, 3]`, `[false, 0]`, `[true, 5]`. The
+  expected paths go through `realpathSync.native`, since git names a worktree by its long path and the
+  fixture's temp dir can hold an 8.3 short name. The 4 existing tests pass unedited.
+- Quick gate 5/5. Full gate: typecheck exit 0, lint exit 0 with 18 warnings, **122 files, 2,605
+  tests** (2,604 + 1), all pass.
+- Mutant seen failing: `buildTree` not passing the counter on.
 
 ---
 
