@@ -200,16 +200,18 @@ T4 → T5
 
 **Done when**:
 
-- [ ] With a fake window at ratio 1, the armed query is exactly `'(resolution: 1dppx)'`, and at ratio 1.25 exactly `'(resolution: 1.25dppx)'` (literal strings, L-009)
-- [ ] A change to 1.5 calls `onChange` once with `1.5`, removes the listener from the old query and arms `'(resolution: 1.5dppx)'` (TROW-09)
-- [ ] Three successive changes (1.5, 2, 1) give three calls with those ratios in order, each from a freshly armed query (TROW-10 re-arm)
-- [ ] After dispose, the current query has no listener and a later change calls nothing; dispose after a change removes the re-armed listener, not the first one (TROW-10 dispose)
-- [ ] M5 (keep the first query after a change) and M6 (dispose removes nothing) each fail at least one test, run through the mutant runner
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/device-pixel-ratio.test.ts`
-- [ ] Test count: B + ≥5 tests pass (no silent deletions)
+- [x] With a fake window at ratio 1, the armed query is exactly `'(resolution: 1dppx)'`, and at ratio 1.25 exactly `'(resolution: 1.25dppx)'` (literal strings, L-009)
+- [x] A change to 1.5 calls `onChange` once with `1.5`, removes the listener from the old query and arms `'(resolution: 1.5dppx)'` (TROW-09)
+- [x] Three successive changes (1.5, 2, 1) give three calls with those ratios in order, each from a freshly armed query (TROW-10 re-arm)
+- [x] After dispose, the current query has no listener and a later change calls nothing; dispose after a change removes the re-armed listener, not the first one (TROW-10 dispose)
+- [x] M5 (keep the first query after a change) and M6 (dispose removes nothing) each fail at least one test, run through the mutant runner
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/device-pixel-ratio.test.ts`
+- [x] Test count: B + ≥5 tests pass (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick
+
+**Status**: ✅ Complete (2026-10-03). 5 tests in `device-pixel-ratio.test.ts`, with a fake window whose queries fire only when `matches` flips, as the browser's do. M5 (no re-arm) fails 2 tests and M6 (dispose removes nothing) fails 2, each through a scratch mutant script (anchor count 1, `.orig` restored, porcelain unchanged).
 
 **Commit**: `feat(terminal): watch the display scale for changes`
 
