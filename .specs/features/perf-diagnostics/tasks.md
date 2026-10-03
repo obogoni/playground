@@ -576,15 +576,32 @@ diagnostics().stop())`; `startLoopDelayLog` reads `diagnosticsEnabled(process.en
 
 **Done when**:
 
-- [ ] Tests: `DEFAULT_TARGETS` is `{ loopP99Ms: 30, appendMeanMs: 0.1, statusPerSecond: 1, worktreePeak: 1 }` by literal (L-009)
-- [ ] Tests: `parseLines` skips blank lines and throws naming the line number of a line that is not JSON
-- [ ] Tests: five lines with `minutes: 3` label `startup`, `spawn`, `steady 1..3`; a sixth line is ignored
-- [ ] Tests: `rowOf` on a fixture with two sessions and two worktrees computes every column: `appendMeanMs` as the sum of `appendMs` over the sum of `chunks`, `ptyKBps` from `windowMs`, `worktreePeak` and `statusMaxPerSecond` as the largest over worktrees; a line with no chunk gives `appendMeanMs: 0`
-- [ ] Tests: `worstRow` takes each column's largest steady value and the steady totals for `appendMeanMs`, and ignores `startup` and `spawn` even when they are larger
-- [ ] Tests: each target gives PASS one unit under its limit and FAIL at the limit for the strict ones (`< 30`, `< 0.1`) and one unit over for the inclusive ones (`<= 1`); the loop target is `n/a` at 3 sessions; the status target is `n/a` without an index loop; the append target is `n/a` with no chunk (the `--sessions 0` case)
-- [ ] Tests: `formatSummary` prints the header with every option, one line per row in order, the spawn round trip line, and the four target lines
-- [ ] Gate check passes: `npx vitest run scripts/bench-summary.test.ts`, then the full gate
-- [ ] Test count: T10 count + the new tests (T11-T13 add none)
+- [x] Tests: `DEFAULT_TARGETS` is `{ loopP99Ms: 30, appendMeanMs: 0.1, statusPerSecond: 1, worktreePeak: 1 }` by literal (L-009)
+- [x] Tests: `parseLines` skips blank lines and throws naming the line number of a line that is not JSON
+- [x] Tests: five lines with `minutes: 3` label `startup`, `spawn`, `steady 1..3`; a sixth line is ignored
+- [x] Tests: `rowOf` on a fixture with two sessions and two worktrees computes every column: `appendMeanMs` as the sum of `appendMs` over the sum of `chunks`, `ptyKBps` from `windowMs`, `worktreePeak` and `statusMaxPerSecond` as the largest over worktrees; a line with no chunk gives `appendMeanMs: 0`
+- [x] Tests: `worstRow` takes each column's largest steady value and the steady totals for `appendMeanMs`, and ignores `startup` and `spawn` even when they are larger
+- [x] Tests: each target gives PASS one unit under its limit and FAIL at the limit for the strict ones (`< 30`, `< 0.1`) and one unit over for the inclusive ones (`<= 1`); the loop target is `n/a` at 3 sessions; the status target is `n/a` without an index loop; the append target is `n/a` with no chunk (the `--sessions 0` case)
+- [x] Tests: `formatSummary` prints the header with every option, one line per row in order, the spawn round trip line, and the four target lines
+- [x] Gate check passes: `npx vitest run scripts/bench-summary.test.ts`, then the full gate
+- [x] Test count: T10 count + the new tests (T11-T13 add none): 2,557 + 20 = 2,577, in 121 files
+
+**Results (2026-10-03)**: quick gate 20 passed; full gate typecheck clean, lint exit 0 with 18 warnings,
+2,577 passed. Adequacy, in `scripts/bench-summary.test.ts`: `DEFAULT_TARGETS` `:66` (`toEqual` the
+literal); `parseLines` `:78` (two objects, blank lines skipped), `:83` (`toThrow(/line 3\b/)`); `phaseRows`
+`:94`, `:101` (labels and order), `:106-107` (sixth line dropped); `rowOf` `:151` (all 16 columns of a
+two-session, two-worktree line: append mean 10 / 400 = 0.025, 500,000 bytes over 50,000 ms = 10 KB/s,
+`worktreePeak` 3, `statusMaxPerSecond` 5 ignoring `rev-parse`'s 9), `:173-178` (zeros with no chunk);
+`worstRow` `:192` (startup 1,000 and spawn 500 ignored; append mean (5 + 9) / 100 = 0.14, not the largest
+row mean 0.5); targets `:216-252` (29 PASS / 30 FAIL, 0.099 / 0.1, 1 PASS / 2 FAIL twice), `:257-259`
+(steady rows only), `:263` (loop `n/a` at 3), `:267` (status `n/a` at index 0), `:274` (append `n/a`
+with no chunk), `:285` (a recalibrated limit is used, PDIAG-42); `formatSummary` `:315-339` (header,
+column heads, row order with `worst`, the steady-total append mean 4.167, the round trip line, four
+target lines with value and verdict), `:345` (fixed columns), `:356-358` (`sessions=0`, `index=off`,
+`spawn: no session opened`, PDIAG-51). Every test maps to a Done-when line, PDIAG-36/37/41/42/51 or
+design.md's fixed columns. Spec-precision note: "the header with every option" is read as design.md's
+header (`sessions fps rows files index minutes commit`); `--port`, `--json` and `--keep` change where the
+run talks and writes, not what it measures, and are not printed.
 
 **Tests**: unit
 **Gate**: quick
