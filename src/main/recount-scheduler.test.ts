@@ -240,6 +240,7 @@ describe('RecountScheduler single flight', () => {
 
     await h.advanceTo(4500)
     h.runs[1].resolve(COUNT)
+    await h.advanceTo(4500)
     await h.advanceTo(8000)
     expect(h.startsOf(A)).toEqual([0, 4000])
     // One report per run: each served events.
@@ -341,6 +342,7 @@ describe('RecountScheduler single flight', () => {
 
     await h.advanceTo(500)
     h.runs[0].resolve(COUNT)
+    await h.advanceTo(500)
     await h.advanceTo(5000)
 
     expect(h.startsOf(A)).toEqual([0])
@@ -406,6 +408,8 @@ describe('RecountScheduler single flight', () => {
     h.scheduler.forget(A)
     await h.advanceTo(500)
     h.runs[0].resolve(COUNT)
+    // Settle at 500, so a wrong trailing run would be due at 1,500, inside the window.
+    await h.advanceTo(500)
     await h.advanceTo(5000)
 
     expect(h.startsOf(A)).toEqual([250])
@@ -554,5 +558,24 @@ describe('RecountScheduler requests', () => {
     await h.advanceTo(3000)
     expect(later.value).toBeNull()
     expect(h.runs.map((r) => r.path)).toEqual([A])
+  })
+
+  it('answers a request a running recount took at stop with that recount, emitting nothing (RCNT-12)', async () => {
+    const h = harness({ deferred: true })
+    h.scheduler.notify(A)
+    await h.advanceTo(100)
+    const taken = track(h.scheduler.request(A))
+    await h.advanceTo(100)
+    expect(h.startsOf(A)).toEqual([100])
+
+    h.scheduler.stop()
+    await h.advanceTo(150)
+    expect(taken.value).toBe('pending')
+
+    h.runs[0].resolve({ dirty: true, changes: 7 })
+    await h.advanceTo(150)
+    expect(taken.value).toEqual({ dirty: true, changes: 7 })
+    // The run served an event, but nothing is emitted after quit.
+    expect(h.recounted).toEqual([])
   })
 })

@@ -98,6 +98,12 @@ T8 → T9 → T10 → T11
 T11 → T12 → T13
 ```
 
+### Phase 5: Fix from verification round 1
+
+```
+T13 → T14
+```
+
 ---
 
 ## Task Breakdown
@@ -878,6 +884,40 @@ git on one worktree` **1, PASS**. RCNT-32 Done.
   processes were stopped by their throwaway userData path afterwards; the owner's installed app was
   not touched.
 
+### T14: Fix 1 from verification round 1
+
+**What**: Make the "nothing more runs" checks able to fail: settle each deferred run at its own
+instant before advancing past the window (L-103), and pin RCNT-12's clarified wording (a request a
+running recount already took is answered by that recount at quit).
+**Where**: `src/main/recount-scheduler.test.ts`
+**Depends on**: T13
+**Reuses**: the harness's `advanceTo` and `track`
+**Requirement**: RCNT-06, RCNT-11, RCNT-12
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] "lets a running recount finish on forget, with no trailing run (RCNT-11)", "runs nothing after a recount that saw no event (RCNT-06)" and "runs exactly one trailing recount, 1,000 ms after an overdue run ends" settle their run at the resolve instant (500, 500, 4,500 ms) before advancing to the end of the window; assertions unchanged
+- [x] New test "answers a request a running recount took at stop with that recount, emitting nothing (RCNT-12)": the taken request stays pending after `stop`, gets `{ dirty: true, changes: 7 }` when the run settles, and `onRecounted` is not called
+- [x] spec.md AC 12 carries the clarification, as design.md's `stop()` already stated (validation.md F2)
+- [x] Mutant V6 (`forget` returns early on a running lane, keeping the burst) fails the forget test; mutant S1 (a run settling after `stop` answers its waiters `null`) fails the new test; `git status --porcelain` unchanged after both
+- [x] Gate check passes: `npx vitest run src/main/recount-scheduler.test.ts` (28), then the full gate
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `test(main): make the recount scheduler's no-run checks able to fail`
+
+**Record (2026-10-03)**: ✅ Done. Quick gate 28/28. Full gate: typecheck exit 0, lint exit 0 with 18
+warnings (unchanged), 122 files and 2,610 tests pass (2,609 + 1). V6 killed by exactly the forget test
+(before this task it survived: the run's end landed at 5,000 ms, so a wrong trailing run fell due at
+6,000 ms, outside the window); S1 killed by exactly the new RCNT-12 test. Both mutants ran on the real
+file through a copy-and-restore script; porcelain afterwards showed only this task's two files.
+
 ---
 
 ## Phase Execution Map
@@ -889,11 +929,13 @@ Phase 1:  T1
 Phase 2:  T1 ------→ T2 ------→ T3 ------→ T4 ------→ T5 ------→ T6 ------→ T7 ------→ T8
 Phase 3:  T8 ------→ T9 ------→ T10 -----→ T11
 Phase 4:  T11 -----→ T12 -----→ T13
+Phase 5:  T13 -----→ T14
 ```
 
 Thirteen tasks. T1 runs in the orchestrator; then two batches: Phase 2 (seven tasks) and Phase 3 (three
 tasks). T1 is a stop point. Phase 4 was added on 2026-10-03 for T11's FAIL (owner decision: spacing
-from the previous recount's end).
+from the previous recount's end). Phase 5 was added the same day for verification round 1's surviving
+mutant (test-only).
 
 ---
 
@@ -914,6 +956,7 @@ from the previous recount's end).
 | T11: figures after | 1 run, notes | ✅ Granular |
 | T12: spacing from the end | 1 rule + its spec notes, 1 file | ✅ Granular |
 | T13: figures after the fix | 1 run + 1 smoke run, notes | ✅ Granular |
+| T14: fix 1 | 3 test settles + 1 test, 1 file | ✅ Granular |
 
 ## Diagram-Definition Cross-Check
 
@@ -932,6 +975,7 @@ from the previous recount's end).
 | T11 | T10 | T10 → T11 | ✅ Match |
 | T12 | T11 | T11 → T12 | ✅ Match |
 | T13 | T12 | T12 → T13 | ✅ Match |
+| T14 | T13 | T13 → T14 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -950,6 +994,7 @@ from the previous recount's end).
 | T11: figures after | notes | none | none | ✅ OK |
 | T12: spacing from the end | recount scheduler | unit | unit | ✅ OK |
 | T13: figures after the fix | notes | none | none | ✅ OK |
+| T14: fix 1 | recount scheduler tests | unit | unit | ✅ OK |
 
 ## Requirement Coverage
 
@@ -960,13 +1005,13 @@ from the previous recount's end).
 | 03 | T2 | T11 A1, T13 A2 |
 | 04 | T2, T4, T12 | T11 A1, T13 A2 |
 | 05 | T3 | T11 A1, T13 A2 |
-| 06 | T3 | — |
+| 06 | T3, T14 | — |
 | 07 | T2 | — |
 | 08 | T2 | — |
 | 09 | T2, T4 | T7 (read), T10 M1 |
 | 10 | T3 | — |
-| 11 | T3, T7 | — |
-| 12 | T2, T4 | T7 (read) |
+| 11 | T3, T7, T14 | — |
+| 12 | T2, T4, T14 | T7 (read) |
 | 13 | T4 | T8 (read), T10 M2 |
 | 14 | T4 | — |
 | 15 | T4 | — |

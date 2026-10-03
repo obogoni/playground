@@ -107,7 +107,7 @@ start a burst of git processes for each of their commands, so that my machine st
 9. WHEN a recount that served at least one git-state event returns a count THEN main SHALL emit one `worktree:status` with `{ worktreePath, dirty, changes }` <!-- event-driven -->
 10. IF a recount returns no count or throws THEN the scheduler SHALL emit nothing for it and SHALL leave the worktree free for its next recount <!-- unwanted-behavior -->
 11. WHEN the watcher stops watching a worktree THEN the scheduler SHALL cancel that worktree's waiting git-state recount <!-- event-driven -->
-12. WHEN the app quits THEN the scheduler SHALL cancel every waiting recount, start no new one, answer every open and later request with no count, and emit nothing more <!-- event-driven -->
+12. WHEN the app quits THEN the scheduler SHALL cancel every waiting recount, start no new one, answer every open and later request with no count, and emit nothing more. A request already taken by a recount that is running at quit is open no longer: it gets that recount's result (clarified 2026-10-03 after verification round 1, as design.md's `stop()` states) <!-- event-driven -->
 
 **Independent Test**: With a fake clock and a counting runner, ten events 100 ms apart on one
 worktree give one run at 1,000 ms; an event during that run gives exactly one more run, no sooner than
@@ -246,13 +246,13 @@ with its commit, and each target figure reads FAIL before and PASS after.
 | RCNT-03 | P1: one at a time — AC 3 | T2 | Done |
 | RCNT-04 | P1: one at a time — AC 4 | T2, T4, T12 | Done |
 | RCNT-05 | P1: one at a time — AC 5 | T3 | Done |
-| RCNT-06 | P1: one at a time — AC 6 | T3 | Done |
+| RCNT-06 | P1: one at a time — AC 6 | T3, T14 | Done |
 | RCNT-07 | P1: one at a time — AC 7 | T2 | Done |
 | RCNT-08 | P1: one at a time — AC 8 | T2 | Done |
 | RCNT-09 | P1: one at a time — AC 9 | T2, T4, T7 | Done |
 | RCNT-10 | P1: one at a time — AC 10 | T3 | Done |
-| RCNT-11 | P1: one at a time — AC 11 | T3, T7 | Done |
-| RCNT-12 | P1: one at a time — AC 12 | T2, T4, T7 | Done |
+| RCNT-11 | P1: one at a time — AC 11 | T3, T7, T14 | Done |
+| RCNT-12 | P1: one at a time — AC 12 | T2, T4, T7, T14 | Done |
 | RCNT-13 | P1: shared lane — AC 13 | T4, T8 | Done |
 | RCNT-14 | P1: shared lane — AC 14 | T4 | Done |
 | RCNT-15 | P1: shared lane — AC 15 | T4 | Done |
