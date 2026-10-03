@@ -500,10 +500,16 @@ It then removes the worktree through `worktrees:remove` and deletes the branch, 
 
 **Done when**:
 
-- [ ] Each new check seen failing on its mutant, then passing: `progressLabel` returning `PREPARING_LABEL` for every step (14.1); the decorator's `onStep?.('running-hook')` removed, dev app relaunched (14.1); Cancel's `disabled={busy}` removed (14.2); the backdrop's busy guard removed (14.3)
-- [ ] The mutant script keeps `.orig`, asserts the mutant applied, restores in `finally`; `git status --porcelain` clean afterwards
-- [ ] The section passes twice in a row on the same seed (the cleanup works)
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Each new check seen failing on its mutant, then passing: `progressLabel` returning `PREPARING_LABEL` for every step (14.1); the decorator's `onStep?.('running-hook')` removed, dev app relaunched (14.1); Cancel's `disabled={busy}` removed (14.2); the backdrop's busy guard removed (14.3)
+- [x] The mutant script keeps `.orig`, asserts the mutant applied, restores in `finally`; `git status --porcelain` clean afterwards
+- [x] The section passes twice in a row on the same seed (the cleanup works)
+- [x] Gate check passes: `npm run lint` (warning count unchanged)
+
+**Notes** (2026-10-03, dev app on a throwaway `--user-data-dir`, CDP port from `SMOKE_PORT`):
+- `smoke-create.mjs` now honours `SMOKE_PORT` (default 9222) and `SMOKE_ONLY=progress`. The section waits up to 4 s for the hook label instead of sampling once at 1500 ms; on the real build the line read `Preparing…`, `Creating worktree…`, `Running post-create command…` and reached the hook label at about 560 ms, and the dialog closed at about 6 s.
+- `SMOKE_ONLY=progress`: 5/5 twice in a row on the same seed, before and after the mutant runs; the worktree, the branch and the `.app` folder it writes are gone afterwards.
+- Mutants, each applied by a script outside the repo that keeps an `.orig` copy, checks the anchor once and restores in `finally` (`git status --porcelain` showed only this task's script afterwards): `progressLabel` always `Preparing…` killed by 14.1 (`seen: ["Preparing…"]`); `onStep?.('running-hook')` removed, app relaunched, killed by 14.1 (`seen` stops at `Creating worktree…`); Cancel's `disabled={busy}` removed killed by 14.2 (`disabled: false`); the backdrop's busy guard removed killed by 14.3 (`open: false`) and 14.4.
+- Whole script on a fresh seed and a fresh launch: 12/14. The two CRWT create checks (`create closes dialog and selects the new worktree`, `worktree exists on disk`) fail the same way on the pre-feature build (`dd6cbe7`, its own script): the dialog's base refresh is on by default (WBR) and the seed has no remote, so the create stops on `Base branch "main" has no remote upstream to refresh from.` Not caused by this feature and left as it is.
 
 **Tests**: manual
 **Gate**: manual
