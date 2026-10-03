@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 103,
+  "next_id": 104,
   "lessons": [
     {
       "id": "L-001",
@@ -1759,6 +1759,24 @@
       ],
       "created": "2026-10-03T12:22:14Z",
       "last_seen": "2026-10-03T12:22:14Z"
+    },
+    {
+      "id": "L-103",
+      "key": "spec_precision_gap::when main re checks a rule the renderer already enforces state the rejection message in the spec so the backstop test can assert it",
+      "text": "When main re-checks a rule the renderer already enforces, state the rejection message in the spec so the backstop test can assert it",
+      "signal": "spec_precision_gap",
+      "scope": "main-backstop",
+      "status": "candidate",
+      "features": [
+        "agent-prompts"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md APR-26 backstop: src/main/session-manager.test.ts:1498 asserts only .rejects.toThrow() (main-backstop)"
+      ],
+      "created": "2026-10-03T12:45:36Z",
+      "last_seen": "2026-10-03T12:45:36Z"
     }
   ]
 }

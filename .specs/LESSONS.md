@@ -594,6 +594,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: spec.md Assumptions 'Value whitespace' vs NewSessionDialog.tsx:172-173 (spec)
 - last seen: 2026-10-03T12:22:14Z
 
+### L-103 - When main re-checks a rule the renderer already enforces, state the rejection message in the spec so the backstop test can assert it
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `main-backstop` · harmful: 0
+- features: agent-prompts
+- evidence: validation.md APR-26 backstop: src/main/session-manager.test.ts:1498 asserts only .rejects.toThrow() (main-backstop)
+- last seen: 2026-10-03T12:45:36Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
