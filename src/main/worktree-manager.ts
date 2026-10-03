@@ -234,6 +234,9 @@ async function addWorktree(
     await ctx.deps.run(repoPath, args, { timeoutMs: ctx.deps.checkoutTimeoutMs })
     return { ok: true, path: target }
   } catch (err) {
+    if (isTimeout(err)) {
+      return { ok: false, error: checkoutTimeoutText(target, ctx.deps.checkoutTimeoutMs) }
+    }
     return { ok: false, error: gitFailureLine(err) }
   }
 }
@@ -345,6 +348,14 @@ function fetchTimeoutText(upstream: string, ms: number): string {
 /** The fast-forward, either form, was killed by its limit (CRTO-03). */
 function fastForwardTimeoutText(baseBranch: string, upstream: string, ms: number): string {
   return `Fast-forwarding "${baseBranch}" to ${upstream} timed out after ${limitText(ms)}. Retry, or uncheck "Update base branch from remote" to skip.`
+}
+
+/**
+ * The checkout was killed by its limit (CRTO-10). Killing `git worktree add` does
+ * not kill the checkout it started, so the folder may remain; the text names it.
+ */
+function checkoutTimeoutText(target: string, ms: number): string {
+  return `Creating the worktree timed out after ${limitText(ms)} and git was stopped. Part of it may remain at ${target}; remove it before retrying.`
 }
 
 /** A non-fast-forward reads better as "diverged"; anything else keeps git's own line. */

@@ -278,11 +278,11 @@ T13 → T14 → T15 → T16
 
 **Done when**:
 
-- [ ] Tests, never-settling `worktree add` with a 20 ms limit: the create ends `ok: false` on the new-branch, existing-branch, reuse and recreate paths
-- [ ] Test with the real limit and an at-once `killed: true`: the exact text `Creating the worktree timed out after 10 min and git was stopped. Part of it may remain at {target}; remove it before retrying.` with the real target path
-- [ ] Test: `withPostCreateHook` over a create whose `worktree add` timed out does not call its shell
-- [ ] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts` then `npm test`
-- [ ] Test count: T5 count + the new tests
+- [x] Tests, never-settling `worktree add` with a 20 ms limit: the create ends `ok: false` on the new-branch, existing-branch, reuse and recreate paths (each with the exact checkout text at `0.02 s` and its target)
+- [x] Test with the real limit and an at-once `killed: true`: the exact text `Creating the worktree timed out after 10 min and git was stopped. Part of it may remain at {target}; remove it before retrying.` with the real target path
+- [x] Test: `withPostCreateHook` over a create whose `worktree add` timed out does not call its shell
+- [x] Gate check passes: `npx vitest run src/main/worktree-manager.test.ts` then `npm test` (122 files, 2647 passed; lint 0 errors, 18 warnings; typecheck exit 0; `electron-vite build` exit 0 at the end of Phase 3)
+- [x] Test count: T5 count + the new tests (+6)
 
 **Tests**: unit
 **Gate**: quick

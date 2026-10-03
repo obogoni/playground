@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sanitizeBranch, worktreeNameFor, worktreePathFor } from '../shared/worktrees'
 import type { DirRemovalResult } from './dir-remover'
 import { git as gitRunner, gitFailureLine, type GitRunner } from './git'
+import { withPostCreateHook, type HookShell } from './post-create-hook'
 import {
   removeReleasedFolder,
   startWaitingRemote,
@@ -1225,14 +1226,17 @@ const sameArgs = (args: string[], match: string[]): boolean =>
  * Every other call goes to the real git without a limit, since the tests' limits
  * of a few milliseconds are meant for the hung call alone.
  */
-const hangingOn =
-  (...match: string[]): GitRunner =>
+const hangingWhere =
+  (matches: (args: string[]) => boolean): GitRunner =>
   (cwd, args, opts) => {
-    if (!sameArgs(args, match)) return gitRunner(cwd, args)
+    if (!matches(args)) return gitRunner(cwd, args)
     return new Promise((_resolve, reject) => {
       if (opts?.timeoutMs !== undefined) setTimeout(() => reject(killed()), opts.timeoutMs)
     })
   }
+const hangingOn = (...match: string[]): GitRunner => hangingWhere((args) => sameArgs(args, match))
+/** True for any `git worktree add`, whatever its target and branch. */
+const isAdd = (args: string[]): boolean => args[0] === 'worktree' && args[1] === 'add'
 
 /** A runner whose `match` call is killed at once, whatever its limit. */
 const killedAtOnce =
@@ -1392,6 +1396,108 @@ describe('createWorktree — refresh timeout (CRTO-02..04)', () => {
 
     expect(result).toEqual({ ok: false, error: gitFailureLine(direct) })
     expect(result.error).toMatch(/^fatal: /)
+  })
+})
+
+describe('createWorktree — checkout timeout (CRTO-10)', () => {
+  /** The checkout text for a limit written as `limit` and a target folder. */
+  const checkoutText = (limit: string, target: string): string =>
+    `Creating the worktree timed out after ${limit} and git was stopped. Part of it may remain at ${target}; remove it before retrying.`
+  const hungAdd = createWorktreeWith({
+    ...REAL_CREATE_DEPS,
+    refreshTimeoutMs: 20,
+    checkoutTimeoutMs: 20,
+    run: hangingWhere(isAdd)
+  })
+
+  let root: string
+  let repo: string
+
+  beforeEach(() => {
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'wtm-checkout-timeout-')))
+    repo = join(root, 'repo')
+    mkdirSync(repo)
+    git(repo, 'init', '-b', 'main')
+    git(repo, 'config', 'user.email', 'test@test.local')
+    git(repo, 'config', 'user.name', 'Test')
+    writeFileSync(join(repo, 'a.txt'), 'one', 'utf8')
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-m', 'init')
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('ends a new-branch create when the add hangs', async () => {
+    const result = await hungAdd(repo, 'feature/new', 'main')
+
+    expect(result).toEqual({
+      ok: false,
+      error: checkoutText('0.02 s', join(root, 'repo-feature-new'))
+    })
+  })
+
+  it('ends an existing-branch create (empty base) when the add hangs', async () => {
+    git(repo, 'branch', 'chore')
+
+    const result = await hungAdd(repo, 'chore')
+
+    expect(result).toEqual({ ok: false, error: checkoutText('0.02 s', join(root, 'repo-chore')) })
+  })
+
+  it('ends a reuse when the add hangs', async () => {
+    git(repo, 'branch', 'feature/reuse')
+
+    const result = await hungAdd(repo, 'feature/reuse', 'main', undefined, false, 'reuse')
+
+    expect(result).toEqual({
+      ok: false,
+      error: checkoutText('0.02 s', join(root, 'repo-feature-reuse'))
+    })
+  })
+
+  it('ends a recreate when the add hangs', async () => {
+    git(repo, 'branch', 'feature/re')
+
+    const result = await hungAdd(repo, 'feature/re', 'main', undefined, false, 'recreate')
+
+    expect(result).toEqual({
+      ok: false,
+      error: checkoutText('0.02 s', join(root, 'repo-feature-re'))
+    })
+  })
+
+  it('reads 10 min and names the target with the real limit', async () => {
+    const create = createWorktreeWith({
+      ...REAL_CREATE_DEPS,
+      run: (cwd, args, opts) =>
+        isAdd(args) ? Promise.reject(killed()) : gitRunner(cwd, args, opts)
+    })
+
+    const result = await create(repo, 'feature/t', 'main')
+
+    expect(result).toEqual({
+      ok: false,
+      error: `Creating the worktree timed out after 10 min and git was stopped. Part of it may remain at ${join(root, 'repo-feature-t')}; remove it before retrying.`
+    })
+  })
+
+  it('does not run the post-create command after a checkout timeout (WPC-08)', async () => {
+    const shellCalls: string[] = []
+    const shell: HookShell = async (cmd) => {
+      shellCalls.push(cmd)
+      return { code: 0, stdout: '', stderr: '' }
+    }
+    const create = withPostCreateHook(hungAdd, { readCommand: () => 'echo init', shell })
+
+    const result = await create(repo, 'feature/hooked', 'main')
+
+    expect(result).toEqual({
+      ok: false,
+      error: checkoutText('0.02 s', join(root, 'repo-feature-hooked'))
+    })
+    expect(shellCalls).toEqual([])
   })
 })
 
