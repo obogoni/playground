@@ -29,10 +29,11 @@
  *      card: the card reaches past its last group, the drawer scrolls it as one
  *      unit and the page does not scroll; a short day still fills the drawer
  *      (HDRW-01..04)
- *  11. the seeded Sunday's fourteen tasks wear eight distinct colours and six
- *      Other bars, the first eight in the palette's colours and order in both
- *      themes; each task's legend and drawer swatches wear its bar's colour;
- *      the summary reads `14 tasks · 14 blocks` (HTF-01, 03, 05, 16, 17)
+ *  11. the seeded Sunday's fourteen tasks wear fourteen different looks: slots
+ *      1 to 8 solid, in the palette's colours and order in both themes, then
+ *      slots 1 to 6 hatched, and no Other; each task's legend and drawer
+ *      swatches wear its bar's look, colour and stripes; the summary reads
+ *      `14 tasks · 14 blocks` (HHAT-10, 14, 15, 20, 27; HTF-03, 05, 17)
  *  12. pointing at a legend chip, a drawer group header or a bar, or focusing a
  *      chip or a bar, leaves only that task's bars at full opacity, and leaving
  *      each restores them; clicking a chip shows only the seeded Sunday, closes a drawer open
@@ -195,6 +196,15 @@ const weekDay = (weeks, offset) =>
     today.getMonth(),
     today.getDate() - sinceMonday + 7 * weeks + offset
   )
+
+// AD-054's palette, slots 1 to 8 (HHAT-14, HHAT-15).
+const PALETTE = {
+  dark: ['#2790da', '#b64906', '#14a889', '#bc8b03', '#c90982', '#117a2c', '#8c63f5', '#f45468'],
+  light: ['#2f76e8', '#eb6623', '#28ae76', '#dbab37', '#e984b7', '#0f6f19', '#4e3ca6', '#d10b47']
+}
+const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`
+/** In-page `sig(el)`: a look's computed fill and stripes. */
+const LOOK_SIG = `const sig = el => { const s = getComputedStyle(el); return s.backgroundColor + ' / ' + s.backgroundImage }`
 
 // DOM probes, evaluated in the page.
 const HEADS = `[...document.querySelectorAll('.hcal-head')]`
@@ -849,46 +859,45 @@ async function calendarSections() {
       : 'no card'
   )
 
-  // 11. Eight colours on the seeded Sunday, never two on one day (HTF-01, 03, 05, 16, 17).
+  // 11. Fourteen looks on the seeded Sunday, never two alike (HHAT-10, 14, 15, 20, 27).
   for (let i = 0; i < 8 && !(await headLabels()).some((l) => l.startsWith(seedHeader)); i++) {
     await nav('Previous week')
     await sleep(300)
   }
   await clickHead(seedHeader)
   await sleep(400)
+  // A look's signature is its computed fill and stripes, so a hatched look and
+  // its solid twin differ, and so does a swatch that lost its stripes.
   const sunday = await evaluate(
-    `(() => { const roleOf = el => [...el.classList].find(c => c.startsWith('role-')); const bg = el => getComputedStyle(el).backgroundColor; const bars = [...document.querySelectorAll('.hcal-col.selected .hcal-bar')].map(b => ({ label: b.getAttribute('aria-label').split(', ')[0], role: roleOf(b), bg: bg(b) })); const chips = new Map([...document.querySelectorAll('.hleg-chip')].map(c => [c.querySelector('.hleg-label').textContent, bg(c.querySelector('.hleg-swatch'))])); const rows = new Map([...document.querySelectorAll('.hours-drawer .hours-group')].map(g => [g.querySelector('.hours-group-label').textContent, bg(g.querySelector('.hours-group-swatch'))])); return { bars: bars.map(b => ({ ...b, chip: chips.get(b.label) ?? null, row: rows.get(b.label) ?? null })), count: document.querySelector('.hours-drawer .hours-day-count')?.textContent ?? null } })()`
+    `(() => { const lookOf = el => [...el.classList].filter(c => c.startsWith('role-') || c === 'hatched').join(' '); ${LOOK_SIG}; const bars = [...document.querySelectorAll('.hcal-col.selected .hcal-bar')].map(b => ({ label: b.getAttribute('aria-label').split(', ')[0], look: lookOf(b), sig: sig(b) })); const chips = new Map([...document.querySelectorAll('.hleg-chip')].map(c => [c.querySelector('.hleg-label').textContent, sig(c.querySelector('.hleg-swatch'))])); const rows = new Map([...document.querySelectorAll('.hours-drawer .hours-group')].map(g => [g.querySelector('.hours-group-label').textContent, sig(g.querySelector('.hours-group-swatch'))])); return { bars: bars.map(b => ({ ...b, chip: chips.get(b.label) ?? null, row: rows.get(b.label) ?? null })), count: document.querySelector('.hours-drawer .hours-day-count')?.textContent ?? null } })()`
   )
-  const slotBars = sunday.bars.filter((b) => /^role-slot[1-8]$/.test(b.role))
-  const otherBars = sunday.bars.filter((b) => b.role === 'role-other')
-  const slotColours = new Set(slotBars.map((b) => b.bg))
+  // The seed's tasks share the day and have equal time, so they are coloured in
+  // seed order: the eight solids, then hatched blue to hatched green.
+  const expectedLooks = SEED_TITLES.map((_, i) =>
+    i < 8 ? `role-slot${i + 1}` : `role-slot${i - 7} hatched`
+  )
+  const wornLooks = SEED_TITLES.map(
+    (title) => sunday.bars.find((b) => b.label.includes(title))?.look ?? null
+  )
   check(
-    "the seeded Sunday's fourteen tasks wear eight distinct colours and six Other bars",
+    "the seeded Sunday's fourteen tasks wear fourteen different looks, eight solid then six hatched, no Other",
     sunday.bars.length === 14 &&
-      slotBars.length === 8 &&
-      slotColours.size === 8 &&
-      otherBars.length === 6 &&
-      new Set(otherBars.map((b) => b.bg)).size === 1 &&
-      !slotColours.has(otherBars[0].bg),
-    `${slotBars.length} slot bars in ${slotColours.size} colours, ${otherBars.length} Other`
+      wornLooks.every((look, i) => look === expectedLooks[i]) &&
+      new Set(sunday.bars.map((b) => b.sig)).size === 14,
+    `${wornLooks.join(' | ')}; ${new Set(sunday.bars.map((b) => b.sig)).size} signatures`
   )
   check(
-    "each seeded task's legend and drawer swatches wear its bar's colour",
-    sunday.bars.length === 14 && sunday.bars.every((b) => b.chip === b.bg && b.row === b.bg),
-    JSON.stringify(sunday.bars.filter((b) => b.chip !== b.bg || b.row !== b.bg).slice(0, 2))
+    "each seeded task's legend and drawer swatches wear its bar's look",
+    sunday.bars.length === 14 && sunday.bars.every((b) => b.chip === b.sig && b.row === b.sig),
+    JSON.stringify(sunday.bars.filter((b) => b.chip !== b.sig || b.row !== b.sig).slice(0, 2))
   )
   check(
     "the seeded Sunday's summary counts its tasks",
     sunday.count === '14 tasks · 14 blocks',
     `${sunday.count}`
   )
-  // The seed's first eight tasks share the day and have equal time, so they
-  // take the slots in seed order: their bars wear AD-045's palette in order.
-  const PALETTE = {
-    dark: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'],
-    light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948']
-  }
-  const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`
+  // The seed's first eight tasks take the solids in seed order: their bars wear
+  // AD-054's palette in order.
   const shownTheme = await evaluate(`document.documentElement.dataset.theme`)
   const worn = {}
   for (const theme of ['dark', 'light']) {
@@ -903,7 +912,7 @@ async function calendarSections() {
       .filter(([, , want, got]) => want !== got)
   )
   check(
-    "the seeded Sunday's first eight tasks wear the palette's eight colours in order, in both themes",
+    "the seeded Sunday's eight solid tasks wear the palette's eight colours in order, in both themes",
     offPalette.length === 0,
     JSON.stringify(offPalette.slice(0, 3))
   )

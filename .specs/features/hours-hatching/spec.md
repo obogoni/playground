@@ -243,24 +243,24 @@ same search held 14.6 normal-vision with 7.8 CVD. The WARN band is legal with th
 | HHAT-07 | P1: neighbours, AC 7 | Execute | Implemented: T2 |
 | HHAT-08 | P1: neighbours, AC 8 | Execute | Implementing: T2 done; T14 |
 | HHAT-09 | P1: own look, AC 9 | Execute | Implemented: T2 |
-| HHAT-10 | P1: own look, AC 10 | Execute | Implementing: T2 done; T12 |
+| HHAT-10 | P1: own look, AC 10 | Execute | Implemented: T2, T12 |
 | HHAT-11 | P1: same day, AC 11 | Execute | Implemented: T2 |
 | HHAT-12 | P1: same day, AC 12 | Execute | Implemented: T2, T10 |
 | HHAT-13 | P1: same day, AC 13 | Execute | Implemented: T2 |
-| HHAT-14 | P1: colours, AC 14 | Execute | Implementing: T3 done; T12 |
-| HHAT-15 | P1: colours, AC 15 | Execute | Implementing: T3 done; T12 |
+| HHAT-14 | P1: colours, AC 14 | Execute | Implemented: T3, T12 |
+| HHAT-15 | P1: colours, AC 15 | Execute | Implemented: T3, T12 |
 | HHAT-16 | P1: colours, AC 16 | Execute | Implemented: T3, T9 |
 | HHAT-17 | P1: one look, AC 17 | Execute | Implementing: T3 done; T14 |
 | HHAT-18 | P1: one look, AC 18 | Execute | Implementing: T3 done; T14 |
 | HHAT-19 | P1: one look, AC 19 | Execute | Implemented: T1, T3 |
-| HHAT-20 | P1: one look, AC 20 | Execute | Implementing: T4..T8 done; T12 |
+| HHAT-20 | P1: one look, AC 20 | Execute | Implemented: T4..T8, T12 |
 | HHAT-21 | P1: one look, AC 21 | Execute | Implementing: T4, T5 done; T14 |
 | HHAT-22 | P1: one look, AC 22 | Execute | Implemented: T3, T9 |
 | HHAT-23 | P2: nothing moves, AC 23 | Execute | Implemented: T2 |
 | HHAT-24 | P2: nothing moves, AC 24 | Tasks | In Tasks (T15) |
 | HHAT-25 | P2: nothing moves, AC 25 | Tasks | In Tasks (T15) |
 | HHAT-26 | P2: nothing moves, AC 26 | Tasks | In Tasks (T13) |
-| HHAT-27 | P2: smoke, AC 27 | Execute | Implementing: T10 done; T12 |
+| HHAT-27 | P2: smoke, AC 27 | Execute | Implemented: T10, T12 |
 | HHAT-28 | P2: smoke, AC 28 | Execute | Implementing: T11 done; T14 |
 | HHAT-29 | P2: smoke, AC 29 | Tasks | In Tasks (T14) |
 

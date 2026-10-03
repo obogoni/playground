@@ -391,9 +391,9 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Seen failing first, each mutant through the `.orig` script: `assignColours` swapped for `origin/main`'s fails the fourteen-looks check; `HoursLegend.tsx` rendering `` `role-${e.role}` `` again fails the swatch-signature check; two light slots swapped in the palette fails the palette check
-- [ ] The rewritten "six Other bars" check is named in the commit body (HTF-16 is superseded)
-- [ ] Gate check passes: `npm run lint` (warning count unchanged)
+- [x] Seen failing first, each mutant through the `.orig` script: `assignColours` swapped for `origin/main`'s fails the fourteen-looks check; `HoursLegend.tsx` rendering `` `role-${e.role}` `` again fails the swatch-signature check; two light slots swapped in the palette fails the palette check (2026-10-03, sections 10 to 12 on a fresh seed and launch each: the `assignColours` mutant failed only "fourteen different looks" (tasks 9 to 14 Other, 9 signatures); the legend mutant failed only "legend and drawer swatches wear its bar's look" (hatched chips `rgba(0, 0, 0, 0) / none`); light slots 1 and 2 swapped failed only the palette check; the real build passed 23/23; `git status` unchanged after each)
+- [x] The rewritten "six Other bars" check is named in the commit body (HTF-16 is superseded)
+- [x] Gate check passes: `npm run lint` (warning count unchanged) (0 errors, 18 warnings)
 
 **Tests**: manual
 **Gate**: manual
