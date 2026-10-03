@@ -167,21 +167,33 @@ event, and `stop` for waiting recounts.
 
 **Done when**:
 
-- [ ] Tests (fake `now`; a fake `Scheduler` with `advance(ms)` that fires due timers in time order; a runner that counts calls and answers `{ dirty: true, changes: 1 }`): `RECOUNT_QUIET_MS` is `250`, `RECOUNT_MAX_WAIT_MS` `1000`, `RECOUNT_MIN_INTERVAL_MS` `1000`, each by literal
-- [ ] Tests: one event at 0 starts no run at 249 ms and one run at 250 ms
-- [ ] Tests: events at 0, 100 and 200 ms start one run, at 450 ms (quiet after the last)
-- [ ] Tests: events every 100 ms from 0 to 900 ms start no run before 1,000 ms and one at 1,000 ms (maximum wait from the first, ahead of the 1,150 ms quiet time)
-- [ ] Tests: a run at 250 ms, then an event at 300 ms: the next run starts at exactly 1,250 ms, not at 550 ms and not at 1,249 (RCNT-04, RCNT-37)
-- [ ] Tests: events on A every 100 ms and one event on B at 50 ms: B runs at 300 ms, A at 1,000 ms, and B's run moves nothing of A's (RCNT-08)
-- [ ] Tests: a run set off by events calls `onRecounted` once with the path and the runner's count
-- [ ] Tests: `stop` with a run waiting: advancing 2,000 ms starts nothing; an event after `stop` starts nothing; a run that was in flight at `stop` resolves and calls no `onRecounted`
-- [ ] Gate check passes: `npx vitest run src/main/recount-scheduler.test.ts`, then the full gate
-- [ ] Test count: T1 baseline + the new tests
+- [x] Tests (fake `now`; a fake `Scheduler` with `advance(ms)` that fires due timers in time order; a runner that counts calls and answers `{ dirty: true, changes: 1 }`): `RECOUNT_QUIET_MS` is `250`, `RECOUNT_MAX_WAIT_MS` `1000`, `RECOUNT_MIN_INTERVAL_MS` `1000`, each by literal
+- [x] Tests: one event at 0 starts no run at 249 ms and one run at 250 ms
+- [x] Tests: events at 0, 100 and 200 ms start one run, at 450 ms (quiet after the last)
+- [x] Tests: events every 100 ms from 0 to 900 ms start no run before 1,000 ms and one at 1,000 ms (maximum wait from the first, ahead of the 1,150 ms quiet time)
+- [x] Tests: a run at 250 ms, then an event at 300 ms: the next run starts at exactly 1,250 ms, not at 550 ms and not at 1,249 (RCNT-04, RCNT-37)
+- [x] Tests: events on A every 100 ms and one event on B at 50 ms: B runs at 300 ms, A at 1,000 ms, and B's run moves nothing of A's (RCNT-08)
+- [x] Tests: a run set off by events calls `onRecounted` once with the path and the runner's count
+- [x] Tests: `stop` with a run waiting: advancing 2,000 ms starts nothing; an event after `stop` starts nothing; a run that was in flight at `stop` resolves and calls no `onRecounted`
+- [x] Gate check passes: `npx vitest run src/main/recount-scheduler.test.ts`, then the full gate
+- [x] Test count: T1 baseline + the new tests
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(main): schedule worktree recounts after a quiet period`
+
+**Record (2026-10-03)**: ✅ Done.
+
+- `src/main/recount-scheduler.test.ts`, 8 tests (`RecountScheduler timing`): the three constants by
+  literal; a lone event runs at 250 ms, not 249; a burst at 0/100/200 runs at 450 ms; events every
+  100 ms to 900 run at 1,000 ms, not 999; a run at 250 then an event at 300 runs at 1,250 ms, not 1,249;
+  B at 50 runs at 300 while A runs at 1,000; `onRecounted` once with `[A, { dirty: true, changes: 1 }]`;
+  `stop` starts nothing waiting or later and emits nothing for the run in flight.
+- Quick gate 8/8. Full gate: typecheck exit 0, lint exit 0 with 18 warnings (unchanged), **122 files,
+  2,586 tests** (2,578 + 8), all pass.
+- Mutants seen failing: no spacing (RCNT-04 test), no maximum wait (RCNT-03 and RCNT-08 tests), `due <
+  now` (hangs on the due-now re-arm), `onRecounted` after `stop` (RCNT-12 test).
 
 ---
 

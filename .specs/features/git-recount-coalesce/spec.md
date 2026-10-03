@@ -242,13 +242,13 @@ with its commit, and each target figure reads FAIL before and PASS after.
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | RCNT-01 | P1: one at a time — AC 1 | T7 | Pending |
-| RCNT-02 | P1: one at a time — AC 2 | T2 | Pending |
-| RCNT-03 | P1: one at a time — AC 3 | T2 | Pending |
+| RCNT-02 | P1: one at a time — AC 2 | T2 | Done |
+| RCNT-03 | P1: one at a time — AC 3 | T2 | Done |
 | RCNT-04 | P1: one at a time — AC 4 | T2, T4 | Pending |
 | RCNT-05 | P1: one at a time — AC 5 | T3 | Pending |
 | RCNT-06 | P1: one at a time — AC 6 | T3 | Pending |
-| RCNT-07 | P1: one at a time — AC 7 | T2 | Pending |
-| RCNT-08 | P1: one at a time — AC 8 | T2 | Pending |
+| RCNT-07 | P1: one at a time — AC 7 | T2 | Done |
+| RCNT-08 | P1: one at a time — AC 8 | T2 | Done |
 | RCNT-09 | P1: one at a time — AC 9 | T2, T4, T7 | Pending |
 | RCNT-10 | P1: one at a time — AC 10 | T3 | Pending |
 | RCNT-11 | P1: one at a time — AC 11 | T3, T7 | Pending |
@@ -277,7 +277,7 @@ with its commit, and each target figure reads FAIL before and PASS after.
 | RCNT-34 | P1: measured — AC 34 | — | Dropped (2026-10-03) |
 | RCNT-35 | P1: measured — AC 35 | T1 | Done |
 | RCNT-36 | P1: measured — AC 36 | — | Dropped (2026-10-03) |
-| RCNT-37 | Edge: due exactly at the spacing | T2 | Pending |
+| RCNT-37 | Edge: due exactly at the spacing | T2 | Done |
 | RCNT-38 | Edge: request during a run | T4 | Pending |
 | RCNT-39 | Edge: a read that throws | — | Dropped (owner 2026-10-03) |
 | RCNT-40 | Edge: the described worktree changes | — | Delivered by #154 (AD-052) |
