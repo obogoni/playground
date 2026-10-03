@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/agent-prompts/design.md`
-**Status**: In Progress
+**Status**: Done
 
 ---
 
@@ -108,7 +108,7 @@ T7 → T8 → T9
 - [x] Lists `*.md` (any case) regular files by name without extension; ignores subfolders and other extensions
 - [x] Sorted case-insensitively ascending
 - [x] Missing folder → `[]`
-- [x] Empty → `{name, error: 'empty'}`; > 16 KiB → `{name, error: 'larger than 16 KiB'}`; unreadable → `error` starting `unreadable: `; other prompts still listed — **gap:** the `unreadable:` branch has no test (no portable way to make a regular-file read fail on Windows without admin; see T2 commit body)
+- [x] Empty → `{name, error: 'empty'}`; > 16 KiB → `{name, error: 'larger than 16 KiB'}`; unreadable → `error` starting `unreadable: `; other prompts still listed (the `unreadable:` branch was untested here; covered by T10 via an injected `PromptFs`)
 - [x] Template text is normalised (BOM, CRLF, trim)
 - [x] `ensurePromptsFolder` creates a missing nested folder and is a no-op when it exists
 - [x] Temp dirs removed with async `rm` (non-ASCII profile path)

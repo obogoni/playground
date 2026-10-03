@@ -210,45 +210,45 @@ resolved prompt (APR-26), file changed mid-dialog (APR-35), prompt switch after 
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| APR-01 | P1: Discover | Tasks | Implementing |
-| APR-02 | P1: Discover | Tasks | Implementing |
-| APR-03 | P1: Discover | Tasks | Implementing |
-| APR-04 | P1: Discover | Tasks | Implementing |
-| APR-05 | P1: Discover | Tasks | Implementing |
-| APR-06 | P1: Discover | Tasks | Implementing |
-| APR-07 | P1: Discover | Tasks | Implementing |
-| APR-08 | P1: Pick | Tasks | Implementing |
-| APR-09 | P1: Pick | Tasks | Implementing |
-| APR-10 | P1: Pick | Tasks | Implementing |
-| APR-11 | P1: Pick | Tasks | Implementing |
-| APR-12 | P1: Parsing | Tasks | Implementing |
-| APR-13 | P1: Parsing | Tasks | Implementing |
-| APR-14 | P1: Parsing | Tasks | Implementing |
-| APR-15 | P1: Parsing | Tasks | Implementing |
-| APR-16 | P1: Parsing | Tasks | Implementing |
-| APR-17 | P1: Variables form | Tasks | Implementing |
-| APR-18 | P1: Variables form | Tasks | Implementing |
-| APR-19 | P1: Variables form | Tasks | Implementing |
-| APR-20 | P1: Variables form | Tasks | Implementing |
-| APR-21 | P1: Variables form | Tasks | Implementing |
-| APR-22 | P1: Variables form | Tasks | Implementing |
-| APR-23 | P1: Variables form | Tasks | Implementing |
-| APR-24 | P1: Spawn | Tasks | Implementing |
-| APR-25 | P1: Variables form | Tasks | Implementing |
-| APR-26 | P1: Variables form | Tasks | Implementing |
-| APR-27 | P1: Variables form | Tasks | Implementing |
-| APR-28 | P1: Variables form | Tasks | Implementing |
-| APR-29 | P1: Variables form | Tasks | Implementing |
-| APR-30 | P1: Spawn | Tasks | Implementing |
-| APR-31 | P1: Spawn | Tasks | Implementing |
-| APR-32 | P1: Spawn | Tasks | Implementing |
-| APR-33 | P1: Spawn | Tasks | Implementing |
-| APR-34 | P1: Spawn | Tasks | Implementing |
-| APR-35 | P1: Spawn | Tasks | Implementing |
-| APR-36 | P1: Spawn | Tasks | Implementing |
-| APR-37 | P1: Variables form | Tasks | Implementing |
+| APR-01 | P1: Discover | Tasks | Verified (hand-UAT pending) |
+| APR-02 | P1: Discover | Tasks | Verified |
+| APR-03 | P1: Discover | Tasks | Verified |
+| APR-04 | P1: Discover | Tasks | Verified |
+| APR-05 | P1: Discover | Tasks | Verified |
+| APR-06 | P1: Discover | Tasks | Verified |
+| APR-07 | P1: Discover | Tasks | Verified (hand-UAT pending) |
+| APR-08 | P1: Pick | Tasks | Verified (hand-UAT pending) |
+| APR-09 | P1: Pick | Tasks | Verified (hand-UAT pending) |
+| APR-10 | P1: Pick | Tasks | Verified (hand-UAT pending) |
+| APR-11 | P1: Pick | Tasks | Verified (hand-UAT pending) |
+| APR-12 | P1: Parsing | Tasks | Verified |
+| APR-13 | P1: Parsing | Tasks | Verified |
+| APR-14 | P1: Parsing | Tasks | Verified |
+| APR-15 | P1: Parsing | Tasks | Verified |
+| APR-16 | P1: Parsing | Tasks | Verified |
+| APR-17 | P1: Variables form | Tasks | Verified (hand-UAT pending) |
+| APR-18 | P1: Variables form | Tasks | Verified (hand-UAT pending) |
+| APR-19 | P1: Variables form | Tasks | Verified |
+| APR-20 | P1: Variables form | Tasks | Verified |
+| APR-21 | P1: Variables form | Tasks | Verified |
+| APR-22 | P1: Variables form | Tasks | Verified (hand-UAT pending) |
+| APR-23 | P1: Variables form | Tasks | Verified (hand-UAT pending) |
+| APR-24 | P1: Spawn | Tasks | Verified |
+| APR-25 | P1: Variables form | Tasks | Verified (hand-UAT pending) |
+| APR-26 | P1: Variables form | Tasks | Verified (hand-UAT pending) |
+| APR-27 | P1: Variables form | Tasks | Verified (hand-UAT pending) |
+| APR-28 | P1: Variables form | Tasks | Verified (hand-UAT pending) |
+| APR-29 | P1: Variables form | Tasks | Verified (hand-UAT pending) |
+| APR-30 | P1: Spawn | Tasks | Verified |
+| APR-31 | P1: Spawn | Tasks | Verified |
+| APR-32 | P1: Spawn | Tasks | Verified |
+| APR-33 | P1: Spawn | Tasks | Verified |
+| APR-34 | P1: Spawn | Tasks | Verified |
+| APR-35 | P1: Spawn | Tasks | Verified (hand-UAT pending) |
+| APR-36 | P1: Spawn | Tasks | Verified |
+| APR-37 | P1: Variables form | Tasks | Verified (hand-UAT pending) |
 
-**Coverage:** 37 total, 0 mapped to tasks, 37 unmapped (pre-Tasks).
+**Coverage:** 37 total, 37 mapped to tasks, all verified (`validation.md`); the 17 marked hand-UAT pending have a renderer or IPC binding checked by code reading only.
 
 ---
 
