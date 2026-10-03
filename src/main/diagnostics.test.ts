@@ -1,5 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  appendWriter,
+  createAppDiagnostics,
   createDiagnostics,
   diagnostics,
   diagnosticsEnabled,
@@ -671,6 +676,61 @@ describe('createDiagnostics: output, recounts, emits and listings', () => {
     expect(text).toContain('"bench-wt-2"')
     for (const leak of ['TOP-SECRET-OUTPUT', 'Users', 'someone', 'secret-project', 'home']) {
       expect(text).not.toContain(leak)
+    }
+  })
+})
+
+describe('real ports', () => {
+  let dir: string
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'pg-diag-'))
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5 })
+  })
+
+  const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+
+  it('appendWriter creates the file on the first line and appends the next after it (PDIAG-03)', async () => {
+    const file = join(dir, 'perf-diagnostics.jsonl')
+    const write = appendWriter(file)
+    await write('{"n":1}\n')
+    expect(readFileSync(file, 'utf8')).toBe('{"n":1}\n')
+    await write('{"n":2}\n')
+    expect(readFileSync(file, 'utf8')).toBe('{"n":1}\n{"n":2}\n')
+  })
+
+  it('createAppDiagnostics answers the no-op and writes no file when the switch is off (PDIAG-02)', async () => {
+    const d = createAppDiagnostics({ env: {}, userDataPath: dir, version: '9.9.9', intervalMs: 10 })
+    expect(d).toBe(NOOP_DIAGNOSTICS)
+    await wait(50)
+    expect(readdirSync(dir)).toEqual([])
+  })
+
+  it('createAppDiagnostics writes lines to <userData>/perf-diagnostics.jsonl when the switch is on (PDIAG-01, PDIAG-03)', async () => {
+    const d = createAppDiagnostics({
+      env: { PLAYGROUND_DEBUG_PERF: '1' },
+      userDataPath: dir,
+      version: '9.9.9',
+      intervalMs: 50
+    })
+    const file = join(dir, 'perf-diagnostics.jsonl')
+    try {
+      expect(d.enabled).toBe(true)
+      for (let i = 0; i < 100 && !existsSync(file); i++) await wait(10)
+      await wait(20)
+      const text = readFileSync(file, 'utf8')
+      expect(text.endsWith('\n')).toBe(true)
+      const first = JSON.parse(text.split('\n')[0]) as DiagnosticsLine
+      expect(first.v).toBe(1)
+      expect(first.version).toBe('9.9.9')
+      expect(first.pid).toBe(process.pid)
+      expect(first.loop.resolutionMs).toBe(10)
+    } finally {
+      d.stop()
+      await wait(100)
     }
   })
 })

@@ -1,3 +1,6 @@
+import { appendFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { monitorEventLoopDelay } from 'node:perf_hooks'
 import { LOOP_RESOLUTION_MS } from './perf-monitor'
 
 /** The switch: `PLAYGROUND_DEBUG_PERF=1` turns the log on (PDIAG-01, PDIAG-02). */
@@ -421,6 +424,49 @@ export const NOOP_DIAGNOSTICS: Diagnostics = Object.freeze({
 /** True only when the switch holds exactly `'1'` (PDIAG-02). */
 export function diagnosticsEnabled(env: NodeJS.ProcessEnv): boolean {
   return env[DIAGNOSTICS_ENV] === '1'
+}
+
+/** The app's clock: `performance.now()` for durations, `Date.now()` for timestamps. */
+export const realClock: DiagnosticsClock = {
+  now: () => performance.now(),
+  wallNow: () => Date.now(),
+  every: (ms, fn) => {
+    const handle = setInterval(fn, ms)
+    return () => clearInterval(handle)
+  }
+}
+
+/** Main's event-loop delay histogram at a 10 ms resolution, enabled (PDIAG-17). */
+export function nodeLoopMonitor(): LoopDelayMonitor {
+  const h = monitorEventLoopDelay({ resolution: LOOP_RESOLUTION_MS })
+  h.enable()
+  return h
+}
+
+/** Appends each line to `path` asynchronously; the file is created by the first line. */
+export function appendWriter(path: string): LogWriter {
+  return (line) => appendFile(path, line, 'utf8')
+}
+
+/**
+ * The app's module: `NOOP_DIAGNOSTICS` unless the switch is on, decided before any port
+ * is touched (PDIAG-02); otherwise a live module writing `<userData>/perf-diagnostics.jsonl`.
+ */
+export function createAppDiagnostics(opts: {
+  env: NodeJS.ProcessEnv
+  userDataPath: string
+  version: string
+  intervalMs?: number // tests only; the app never passes it
+}): Diagnostics {
+  if (!diagnosticsEnabled(opts.env)) return NOOP_DIAGNOSTICS
+  return createDiagnostics({
+    clock: realClock,
+    writer: appendWriter(join(opts.userDataPath, DIAGNOSTICS_LOG_FILE)),
+    startLoopMonitor: nodeLoopMonitor,
+    meta: { pid: process.pid, version: opts.version },
+    log: (msg) => console.error(msg),
+    intervalMs: opts.intervalMs
+  })
 }
 
 let installed: Diagnostics = NOOP_DIAGNOSTICS

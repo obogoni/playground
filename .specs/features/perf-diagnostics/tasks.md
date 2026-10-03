@@ -263,12 +263,12 @@ no-op when disabled before touching any port.
 
 **Done when**:
 
-- [ ] Tests (real temp dir): `appendWriter` creates the file on the first line and appends the second after it, both intact
-- [ ] Tests: `createAppDiagnostics({ env: {}, userDataPath: tmp, version })` returns `NOOP_DIAGNOSTICS`, and after 50 ms the temp dir holds no file
-- [ ] Tests: `createAppDiagnostics({ env: { PLAYGROUND_DEBUG_PERF: '1' }, userDataPath: tmp, version: '9.9.9', intervalMs: 50 })` writes a line to `<tmp>/perf-diagnostics.jsonl` within 1 s with `version: '9.9.9'` and this process's `pid`; `stop()` is called in `finally`
-- [ ] `nodeLoopMonitor` uses `monitorEventLoopDelay({ resolution: LOOP_RESOLUTION_MS })` and calls `enable()` (read; its effect is observed in T16)
-- [ ] Gate check passes: `npx vitest run src/main/diagnostics.test.ts`, then the full gate
-- [ ] Test count: T4 count + the new tests
+- [x] Tests (real temp dir): `appendWriter` creates the file on the first line and appends the second after it, both intact
+- [x] Tests: `createAppDiagnostics({ env: {}, userDataPath: tmp, version })` returns `NOOP_DIAGNOSTICS`, and after 50 ms the temp dir holds no file
+- [x] Tests: `createAppDiagnostics({ env: { PLAYGROUND_DEBUG_PERF: '1' }, userDataPath: tmp, version: '9.9.9', intervalMs: 50 })` writes a line to `<tmp>/perf-diagnostics.jsonl` within 1 s with `version: '9.9.9'` and this process's `pid`; `stop()` is called in `finally`
+- [x] `nodeLoopMonitor` uses `monitorEventLoopDelay({ resolution: LOOP_RESOLUTION_MS })` and calls `enable()` (read; its effect is observed in T16)
+- [x] Gate check passes: `npx vitest run src/main/diagnostics.test.ts`, then the full gate
+- [x] Test count: T4 count + the new tests (2,542 + 3 = 2,545)
 
 **Tests**: unit
 **Gate**: quick
