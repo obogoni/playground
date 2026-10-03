@@ -582,6 +582,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: SPEC_DEVIATION src/main/session-manager.ts:126 (session-manager)
 - last seen: 2026-10-02T17:30:50Z
 
+### L-101 - State an edge-case tolerance against the same floored quantity the main criterion uses, or the tolerance cannot hold at fractional sizes
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer layout` · harmful: 0
+- features: terminal-last-row
+- evidence: validation.md Spec-Precision Gaps 1 (Edge case 1 vs P1 AC3) (renderer layout)
+- last seen: 2026-10-03T10:53:15Z
+
+### L-102 - When a layout criterion is measured against an inner element, also require that element to fill its container, or a frozen inner element satisfies it
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `renderer layout` · harmful: 0
+- features: terminal-last-row
+- evidence: validation.md Spec-Precision Gaps 2 (P1 AC3/AC4, mutant V-S1) (renderer layout)
+- last seen: 2026-10-03T10:53:15Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
