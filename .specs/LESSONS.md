@@ -672,6 +672,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: SPEC_DEVIATION limitText, worktree-manager.ts (validation.md Deviations) (main)
 - last seen: 2026-10-03T17:43:45Z
 
+### L-116 - To pin a backoff reset, assert what the reset changes later (the next miss waits the base interval again), not a call triggered at or after the due instant, which passes with or without the reset.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `tests/backoff` · harmful: 0
+- features: main-async-git
+- evidence: src/main/session-name-poller.test.ts:536 (M1, MAGIT-19) (tests/backoff)
+- last seen: 2026-10-03T18:13:46Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

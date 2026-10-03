@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 116,
+  "next_id": 117,
   "lessons": [
     {
       "id": "L-001",
@@ -1993,6 +1993,24 @@
       ],
       "created": "2026-10-03T17:43:45Z",
       "last_seen": "2026-10-03T17:43:45Z"
+    },
+    {
+      "id": "L-116",
+      "key": "surviving_mutant::to pin a backoff reset assert what the reset changes later the next miss waits the base interval again not a call triggered at or after the due instant which passes with or without the reset",
+      "text": "To pin a backoff reset, assert what the reset changes later (the next miss waits the base interval again), not a call triggered at or after the due instant, which passes with or without the reset.",
+      "signal": "surviving_mutant",
+      "scope": "tests/backoff",
+      "status": "candidate",
+      "features": [
+        "main-async-git"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/main/session-name-poller.test.ts:536 (M1, MAGIT-19) (tests/backoff)"
+      ],
+      "created": "2026-10-03T18:13:46Z",
+      "last_seen": "2026-10-03T18:13:46Z"
     }
   ]
 }
