@@ -273,13 +273,13 @@ without asking.
 | PDIAG-06 | P1: log — AC 6 | T2, T3 | Done (T2, T3) |
 | PDIAG-07 | P1: log — AC 7 | T2 | Done (T2) |
 | PDIAG-08 | P1: log — AC 8 | T2, T11 | In progress (T2) |
-| PDIAG-09 | P1: git — AC 9 | T6 | Pending |
+| PDIAG-09 | P1: git — AC 9 | T6 | Done (T6) |
 | PDIAG-10 | P1: git — AC 10 | T3 | Done (T3) |
 | PDIAG-11 | P1: git — AC 11 | T3 | Done (T3) |
 | PDIAG-12 | P1: git — AC 12 | T3 | Done (T3) |
 | PDIAG-13 | P1: git — AC 13 | T3 | Done (T3) |
 | PDIAG-14 | P1: git — AC 14 | T7, T8 | Pending |
-| PDIAG-15 | P1: git — AC 15 | T3, T6 | In progress (T3) |
+| PDIAG-15 | P1: git — AC 15 | T3, T6 | Done (T3, T6) |
 | PDIAG-16 | P1: git — AC 16 | T3 | Done (T3) |
 | PDIAG-17 | P1: loop — AC 17 | T5, T16 | In progress (T5) |
 | PDIAG-18 | P1: loop — AC 18 | T2 | Done (T2) |

@@ -293,12 +293,12 @@ it calls `start()` and chains the returned `end` with `finally`.
 
 **Done when**:
 
-- [ ] Tests (recording fake installed, restored in `afterEach`): a successful `git(tmpdir(), ['--version'])` reports one start with that cwd and those args, and its end before the awaited call returns
-- [ ] Tests: a failing `git(tmpdir(), ['rev-parse', '--verify', 'no-such-ref'])` reports one start and one end, and still rejects with git's error
-- [ ] Tests: a timed-out `git(tmpdir(), ['hash-object', '--stdin'], { timeoutMs: 200 })` reports one start and one end, and `isTimeout` is still true
-- [ ] Tests: six `git(tmpdir(), ['--version'])` requested at once report six requests at once, but the fake never sees more than 4 started and not ended (the start is the paced one, not the request), and all six end
-- [ ] Gate check passes: `npx vitest run src/main/git.test.ts`, then the full gate (suite wall time compared with T1's, L-005)
-- [ ] Test count: T5 count + the new tests
+- [x] Tests (recording fake installed, restored in `afterEach`): a successful `git(tmpdir(), ['--version'])` reports one start with that cwd and those args, and its end before the awaited call returns
+- [x] Tests: a failing `git(tmpdir(), ['rev-parse', '--verify', 'no-such-ref'])` reports one start and one end, and still rejects with git's error
+- [x] Tests: a timed-out `git(tmpdir(), ['hash-object', '--stdin'], { timeoutMs: 200 })` reports one start and one end, and `isTimeout` is still true
+- [x] Tests: six `git(tmpdir(), ['--version'])` requested at once report six requests at once, but the fake never sees more than 4 started and not ended (the start is the paced one, not the request), and all six end
+- [x] Gate check passes: `npx vitest run src/main/git.test.ts`, then the full gate (suite wall time compared with T1's, L-005: Vitest 91.5 s against T1's 103.7 s)
+- [x] Test count: T5 count + the new tests (2,545 + 4 = 2,549)
 
 **Tests**: unit
 **Gate**: quick
