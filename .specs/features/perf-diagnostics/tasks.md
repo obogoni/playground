@@ -397,10 +397,10 @@ the `session:data` forward is unchanged.
 
 **Done when**:
 
-- [ ] Tests (recording fake): one chunk from a fake PTY reaches the fake once with the session's id and the chunk, and the session's scrollback snapshot ends with it
-- [ ] Tests: with no fake installed (the no-op), a chunk lands in the scrollback once and an attached session still forwards it as `session:data`
-- [ ] Gate check passes: `npx vitest run src/main/session-manager.test.ts`, then the full gate
-- [ ] Test count: T8 count + the new tests
+- [x] Tests (recording fake): one chunk from a fake PTY reaches the fake once with the session's id and the chunk, and the session's scrollback snapshot ends with it
+- [x] Tests: with no fake installed (the no-op), a chunk lands in the scrollback once and an attached session still forwards it as `session:data`
+- [x] Gate check passes: `npx vitest run src/main/session-manager.test.ts`, then the full gate
+- [x] Test count: T8 count + the new tests (2,551 + 2 = 2,553)
 
 **Tests**: unit
 **Gate**: quick

@@ -284,9 +284,9 @@ without asking.
 | PDIAG-17 | P1: loop — AC 17 | T5, T16 | In progress (T5) |
 | PDIAG-18 | P1: loop — AC 18 | T2 | Done (T2) |
 | PDIAG-19 | P1: loop — AC 19 | T2 | Done (T2) |
-| PDIAG-20 | P1: pty — AC 20 | T4, T9 | In progress (T4) |
-| PDIAG-21 | P1: pty — AC 21 | T4, T9 | In progress (T4) |
-| PDIAG-22 | P1: pty — AC 22 | T1, T9 | In progress (T1) |
+| PDIAG-20 | P1: pty — AC 20 | T4, T9 | Done (T4, T9) |
+| PDIAG-21 | P1: pty — AC 21 | T4, T9 | Done (T4, T9) |
+| PDIAG-22 | P1: pty — AC 22 | T1, T9 | Done (T1, T9) |
 | PDIAG-23 | P1: pty — AC 23 | T4 | Done (T4) |
 | PDIAG-24 | P1: activity — AC 24 | T4, T11 | In progress (T4) |
 | PDIAG-25 | P1: activity — AC 25 | T4, T11 | In progress (T4) |

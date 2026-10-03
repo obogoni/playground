@@ -7,6 +7,7 @@ import type { PersistedSession } from '../shared/config'
 import type { SessionTask } from '../shared/tasks'
 import type { ActivityChange } from './activity-notification'
 import { ConfigStore } from './config-store'
+import { installDiagnostics, NOOP_DIAGNOSTICS } from './diagnostics'
 import type { PtyHandle, PtyPort } from './pty-port'
 import type { SpawnPlan } from './spawn-plan'
 import { ACTIVITY_TOKEN_ENV } from './claude-hook-settings'
@@ -1436,5 +1437,46 @@ describe('SessionManager activity transitions of a linked session', () => {
     manager.handleHookEvent(view.id, hookEvent('Stop'))
 
     expect(changes.map((c) => c.task)).toEqual([null, { id: 4821, title: 'Diagnose login loop' }])
+  })
+})
+
+describe('SessionManager reports each append to diagnostics (PDIAG-20, PDIAG-21, PDIAG-22)', () => {
+  afterEach(() => installDiagnostics(null))
+
+  const snapshotOf = (manager: SessionManager, emit: EmitFnRecorder, id: string): unknown => {
+    manager.attach(id)
+    return emit.events.filter((e) => e.channel === 'session:data').at(-1)?.payload
+  }
+
+  it("hands one chunk to diagnostics once, with the session's id, and the scrollback ends with it", async () => {
+    const appends: { sessionId: string; chunk: string }[] = []
+    installDiagnostics({
+      ...NOOP_DIAGNOSTICS,
+      enabled: true,
+      measureAppend: (sessionId, chunk, append) => {
+        appends.push({ sessionId, chunk })
+        append()
+      }
+    })
+    const { manager, port, emit } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+    port.handles[0].emitData('é\n')
+    expect(appends).toEqual([{ sessionId: view.id, chunk: 'é\n' }])
+    const snapshot = snapshotOf(manager, emit, view.id) as { id: string; data: string }
+    expect(snapshot.id).toBe(view.id)
+    expect(snapshot.data.endsWith('é\n')).toBe(true)
+  })
+
+  it('with the no-op installed, appends a chunk once and still forwards it to an attached session', async () => {
+    const { manager, port, emit } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+    manager.attach(view.id)
+    port.handles[0].emitData('only-once\n')
+    expect(emit.events.filter((e) => e.channel === 'session:data').at(-1)?.payload).toEqual({
+      id: view.id,
+      data: 'only-once\n'
+    })
+    const snapshot = snapshotOf(manager, emit, view.id) as { data: string }
+    expect(snapshot.data.split('only-once').length - 1).toBe(1)
   })
 })
