@@ -87,4 +87,33 @@ describe('buildTree', () => {
   it('returns an empty snapshot when nothing is registered', async () => {
     expect(await buildTree(registry)).toEqual([])
   })
+
+  it('counts every worktree of every repo through the injected counter (RCNT-17)', async () => {
+    const apiRepo = makeRepo(workspace, 'api')
+    const webRepo = makeRepo(workspace, 'web')
+    git(apiRepo, 'worktree', 'add', join(workspace, 'api-feature-7'), '-b', 'feature/7')
+    registry.add(workspace)
+    // Git names each worktree by its long path; the temp dir may hold an 8.3 short name.
+    const [api, apiFeature, web] = [apiRepo, join(workspace, 'api-feature-7'), webRepo].map((p) =>
+      realpathSync.native(p)
+    )
+    const asked: string[] = []
+    const answers: Record<string, number> = { [api]: 3, [apiFeature]: 0, [web]: 5 }
+
+    const tree = await buildTree(registry, {
+      countChanges: async (path) => {
+        asked.push(path)
+        return { dirty: answers[path] > 0, changes: answers[path] }
+      }
+    })
+
+    expect(asked.sort()).toEqual([api, apiFeature, web].sort())
+    expect(
+      tree[0].repos.flatMap((r) => r.worktrees.map((w) => [w.path, w.dirty, w.changes]))
+    ).toEqual([
+      [api, true, 3],
+      [apiFeature, false, 0],
+      [web, true, 5]
+    ])
+  })
 })

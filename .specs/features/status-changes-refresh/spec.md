@@ -33,7 +33,7 @@ after four were committed. Window focus re-fetches tasks, not the tree.
 | What the git-state watcher watches | Each worktree's git dir (`git rev-parse --git-dir`), **non-recursively**, reacting to entries named `index` and `HEAD` | Git replaces `index` by renaming `index.lock` over it; a watch on the directory survives the rename where a watch on the file may not. A linked worktree's git dir is `.git/worktrees/<name>`, its own `index` and `HEAD` | y |
 | Whether a terminal commit touches the watched entries | Measured first (T1): `git commit`, `git add` and `git checkout` in a linked worktree and in a primary checkout each produce an event naming `index` or `HEAD` | A commit moves `refs/heads/<branch>`, not `HEAD`; the rule rests on the index being rewritten, which is measured rather than assumed | n — T1 measures |
 | What a git-state event recounts | That one worktree, through a new `worktrees:status` handler, patched into the tree | Rebuilding the whole tree runs `git status` in every worktree of every workspace | y |
-| Bursts | Events for one worktree within 250 ms make one recount | Same window as the Files watcher (`BATCH_MS`); a commit touches the index several times | y |
+| Bursts | Events for one worktree within 250 ms make one recount | Same window as the Files watcher (`BATCH_MS`); a commit touches the index several times. Mechanism revised by RCNT-01..07 (AD-058), delivered 2026-10-03 in `git-recount-coalesce` T7: the scheduler's quiet period replaces the watcher's 250 ms batch; the criterion still holds | y |
 | A patched tree | A new tree identity whenever a git-state recount lands, even with an unchanged count | The status bar recomputes ahead/behind on every new tree identity (STBR-11); a commit changes "ahead" without necessarily changing the count | y |
 | Which worktrees are watched | Exactly those in the latest `tree:get` result; a worktree whose path is missing gets no watcher | The set follows creation and removal with no extra bookkeeping | y |
 | What "turn ended" means | A session's activity going from `working` to `waiting` or `exited` | The states `session-activity-status` already pushes (`session:activity`) | y |
@@ -57,7 +57,7 @@ after four were committed. Window focus re-fetches tasks, not the tree.
 **Acceptance Criteria**:
 
 1. WHEN `index` or `HEAD` changes in the git dir of a worktree in the tree THEN the app SHALL recount that worktree's changed files and show the new count within 2 seconds
-2. WHEN several such changes for one worktree arrive within 250 ms THEN the app SHALL recount it once
+2. WHEN several such changes for one worktree arrive within 250 ms THEN the app SHALL recount it once. *Mechanism revised by RCNT-01..07 (AD-058), delivered 2026-10-03 in `git-recount-coalesce` T7: the scheduler's quiet period replaces the watcher's 250 ms batch; the criterion still holds.*
 3. WHEN a git-state recount lands THEN the tree SHALL get a new identity, so the status bar recomputes ahead and behind
 4. WHEN a new `tree:get` result adds or drops a worktree THEN the app SHALL start or stop watching it
 5. IF a worktree's path is missing THEN the app SHALL NOT watch it and SHALL NOT fail the others

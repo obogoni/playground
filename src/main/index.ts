@@ -46,6 +46,7 @@ import { startLoopDelayLog } from './perf-monitor'
 import { withPostCreateHook } from './post-create-hook'
 import { PtyHostClient } from './pty-host-client'
 import { forkPtyHost } from './pty-host-fork'
+import { RecountScheduler } from './recount-scheduler'
 import { resolvePostCreateCommand } from './repo-config'
 import { scrubAuthEnv } from './scrub-auth-env'
 import { SessionManager, type ActivityHooks, type EmitFn } from './session-manager'
@@ -153,7 +154,7 @@ async function resolveGitDir(worktreePath: string): Promise<string> {
   return resolve(worktreePath, stdout.trim())
 }
 
-/** The real batching delay behind both watchers' `Scheduler`. */
+/** The real delay behind the Files watcher's and the recount scheduler's `Scheduler`. */
 const timerScheduler: Scheduler = {
   after: (ms, fn) => {
     const timer = setTimeout(fn, ms)
@@ -162,8 +163,8 @@ const timerScheduler: Scheduler = {
 }
 
 /**
- * One worktree's changes, recounted for the git-state watcher or on request
- * (SCRF-06). A failure is logged and answered `null`, so the last count stays.
+ * One worktree's changes: the recount scheduler's runner (RCNT-02..15). A
+ * failure is logged and answered `null`, so the last count stays (SCRF-06).
  */
 async function recountWorktree(
   worktreePath: string
@@ -367,23 +368,30 @@ app.whenReady().then(() => {
   })
   handle('workspaces:remove', ({ id }) => registry.remove(id))
   handle('workspaces:templates', ({ workspacePath }) => workspaceTemplates(workspacePath))
+  // Every `git status` main runs to count a worktree goes through one
+  // scheduler: one recount per worktree at a time, at least a second apart
+  // (RCNT-02..15). A recount that served a git-state event is sent on (RCNT-09).
+  const recounts = new RecountScheduler({
+    recount: recountWorktree,
+    onRecounted: (worktreePath, count) => {
+      if (!mainWindow) return
+      emit(mainWindow.webContents, 'worktree:status', { worktreePath, ...count })
+      diagnostics().emitted('worktree:status', worktreePath)
+    },
+    now: () => performance.now(),
+    schedule: timerScheduler
+  })
   // A commit made in any terminal recounts that worktree alone (SCRF-01); the
   // watched set follows every tree snapshot (SCRF-04).
   const gitStateWatcher = new GitStateWatcher({
     watch: watchPort,
     resolveGitDir,
-    schedule: timerScheduler,
-    onSettled: (worktreePath) => {
-      void recountWorktree(worktreePath).then((status) => {
-        if (status && mainWindow) {
-          emit(mainWindow.webContents, 'worktree:status', { worktreePath, ...status })
-          diagnostics().emitted('worktree:status', worktreePath)
-        }
-      })
-    }
+    onEvent: (worktreePath) => recounts.notify(worktreePath),
+    onDropped: (worktreePath) => recounts.forget(worktreePath)
   })
   handle('tree:get', async () => {
-    const tree = await buildTree(registry)
+    // Each worktree's count waits its turn in the scheduler (RCNT-17).
+    const tree = await buildTree(registry, { countChanges: (p) => recounts.request(p) })
     void gitStateWatcher.sync(
       tree.flatMap((ws) => ws.repos.flatMap((repo) => repo.worktrees.map((wt) => wt.path)))
     )
@@ -429,7 +437,8 @@ app.whenReady().then(() => {
     removeWorktree(repoPath, worktreePath, { force })
   )
   handle('worktrees:changes', ({ worktreePath }) => changedFilesOf(worktreePath))
-  handle('worktrees:status', ({ worktreePath }) => recountWorktree(worktreePath))
+  // A turn end's recount skips the quiet period but keeps the single flight (RCNT-13).
+  handle('worktrees:status', ({ worktreePath }) => recounts.request(worktreePath))
   handle('git:sync-state', ({ worktreePath }) => readSyncState(worktreePath))
   handle('git:commits', ({ worktreePath }) => readCommits(worktreePath))
   handle('git:run', ({ worktreePath, op, remote }) => runGitOp(worktreePath, op, remote))
@@ -473,6 +482,7 @@ app.whenReady().then(() => {
   onWillQuit(() => {
     void fileWatcher.select(null)
     gitStateWatcher.closeAll()
+    recounts.stop()
   })
 
   const launcher = new ShortcutLauncher()

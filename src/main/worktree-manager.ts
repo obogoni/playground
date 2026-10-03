@@ -20,12 +20,22 @@ export class GitError extends Error {
   }
 }
 
+/** One worktree's change count, or `null` when it could not be counted. */
+export type CountChanges = (
+  worktreePath: string
+) => Promise<{ dirty: boolean; changes: number } | null>
+
 /**
  * Per-repo worktree reads (PRD WorktreeManager, list-only in M1 — create and
  * remove arrive with the M2 lifecycle feature). Hides the `git` subprocess and
  * the `--porcelain` block format. No shell — execFile keeps paths quote-safe.
+ * `countChanges` counts each worktree; main passes its recount scheduler
+ * (RCNT-17).
  */
-export async function listWorktrees(repoPath: string): Promise<WorktreeNode[]> {
+export async function listWorktrees(
+  repoPath: string,
+  countChanges: CountChanges = worktreeStatus
+): Promise<WorktreeNode[]> {
   let stdout: string
   try {
     ;({ stdout } = await git(repoPath, ['worktree', 'list', '--porcelain']))
@@ -36,7 +46,9 @@ export async function listWorktrees(repoPath: string): Promise<WorktreeNode[]> {
   const blocks = parsePorcelainBlocks(stdout)
   return Promise.all(
     blocks.map(async (block, index) => {
-      const { dirty, changes } = await statusOf(block.path)
+      // A worktree whose path vanished or whose gitdir is broken: report clean
+      // rather than failing the whole repo listing.
+      const { dirty, changes } = (await countChanges(block.path)) ?? { dirty: false, changes: 0 }
       return {
         id: block.path,
         branch: block.branch,

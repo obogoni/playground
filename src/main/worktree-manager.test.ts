@@ -134,6 +134,41 @@ describe('listWorktrees', () => {
     await expect(listWorktrees(plain)).rejects.toBeInstanceOf(GitError)
   })
 
+  it('asks an injected counter once per worktree and shows its answers (RCNT-17)', async () => {
+    const sibling = join(root, 'repo-feature-9')
+    git(repo, 'worktree', 'add', sibling, '-b', 'feature/9')
+    const asked: string[] = []
+    const answers: Record<string, { dirty: boolean; changes: number }> = {
+      [repo]: { dirty: true, changes: 7 },
+      [sibling]: { dirty: false, changes: 0 }
+    }
+
+    const worktrees = await listWorktrees(repo, async (path) => {
+      asked.push(path)
+      return answers[path]
+    })
+
+    expect(asked.sort()).toEqual([repo, sibling].sort())
+    expect(worktrees.map((w) => [w.path, w.dirty, w.changes])).toEqual([
+      [repo, true, 7],
+      [sibling, false, 0]
+    ])
+  })
+
+  it('shows a worktree the counter could not count as clean, and the others as answered (RCNT-17)', async () => {
+    const sibling = join(root, 'repo-feature-10')
+    git(repo, 'worktree', 'add', sibling, '-b', 'feature/10')
+
+    const worktrees = await listWorktrees(repo, async (path) =>
+      path === sibling ? null : { dirty: true, changes: 4 }
+    )
+
+    expect(worktrees.map((w) => [w.path, w.dirty, w.changes])).toEqual([
+      [repo, true, 4],
+      [sibling, false, 0]
+    ])
+  })
+
   it("puts git's own failure line in the GitError message (BSLG-16)", async () => {
     const plain = join(root, 'not-a-repo')
     mkdirSync(plain)

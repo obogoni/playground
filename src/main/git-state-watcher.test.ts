@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BATCH_MS, type WatchHandle, type WatchPort } from './file-watcher'
+import type { WatchHandle, WatchPort } from './file-watcher'
 import { GitStateWatcher } from './git-state-watcher'
 
 const A = 'C:\\work\\repo'
@@ -18,15 +18,14 @@ interface FakeHandle extends WatchHandle {
 
 /**
  * A watch port recording every handle, a git-dir resolver the test can hold
- * open or fail, and a scheduler whose pending callbacks the test fires by hand.
+ * open or fail, and the events and drops the watcher reports, in order.
  * No real `fs.watch`, no timers.
  */
 function harness(opts: { failing?: string[] } = {}): {
   watcher: GitStateWatcher
   handles: FakeHandle[]
-  settled: string[]
-  delays: number[]
-  flush(): void
+  events: string[]
+  dropped: string[]
   open(): FakeHandle[]
   /** Holds the next resolves until `release` runs, to race `sync` against them. */
   hold(): { release(): void }
@@ -45,9 +44,8 @@ function harness(opts: { failing?: string[] } = {}): {
     handles.push(handle)
     return handle
   }
-  const settled: string[] = []
-  const delays: number[] = []
-  let pending: Array<() => void> = []
+  const events: string[] = []
+  const dropped: string[] = []
   let gate: Promise<void> | null = null
   return {
     watcher: new GitStateWatcher({
@@ -57,25 +55,12 @@ function harness(opts: { failing?: string[] } = {}): {
         if (opts.failing?.includes(path)) throw new Error('fatal: not a git repository')
         return GIT_DIRS[path]
       },
-      schedule: {
-        after: (ms, fn) => {
-          delays.push(ms)
-          pending.push(fn)
-          return () => {
-            pending = pending.filter((p) => p !== fn)
-          }
-        }
-      },
-      onSettled: (path) => settled.push(path)
+      onEvent: (path) => events.push(path),
+      onDropped: (path) => dropped.push(path)
     }),
     handles,
-    settled,
-    delays,
-    flush: () => {
-      const due = pending
-      pending = []
-      for (const fn of due) fn()
-    },
+    events,
+    dropped,
     open: () => handles.filter((h) => !h.closed),
     hold: () => {
       let release = (): void => {}
@@ -105,31 +90,25 @@ describe('GitStateWatcher', () => {
     ])
   })
 
-  it('settles an index change once, after the batch window (SCRF-01)', async () => {
+  it('reports an `index` event at once (SCRF-01, RCNT-01)', async () => {
     const h = harness()
     await h.watcher.sync([A])
 
     handleOf(h.handles, A).fire('index')
 
-    expect(h.settled).toEqual([])
-    // The spec's window, as a number: a change to the shared constant must show here.
-    expect(h.delays).toEqual([250])
-    expect(BATCH_MS).toBe(250)
-    h.flush()
-    expect(h.settled).toEqual([A])
+    expect(h.events).toEqual([A])
   })
 
-  it('settles a HEAD change too (SCRF-01)', async () => {
+  it('reports a `HEAD` event at once (SCRF-01, RCNT-01)', async () => {
     const h = harness()
     await h.watcher.sync([A])
 
     handleOf(h.handles, A).fire('HEAD')
-    h.flush()
 
-    expect(h.settled).toEqual([A])
+    expect(h.events).toEqual([A])
   })
 
-  it('settles a burst of changes once (SCRF-02)', async () => {
+  it('reports every event of a burst, leaving the coalescing to the scheduler (RCNT-01)', async () => {
     const h = harness()
     await h.watcher.sync([A])
     const handle = handleOf(h.handles, A)
@@ -137,23 +116,20 @@ describe('GitStateWatcher', () => {
     handle.fire('index')
     handle.fire('HEAD')
     handle.fire('index')
-    h.flush()
 
-    expect(h.delays).toEqual([250])
-    expect(h.settled).toEqual([A])
+    expect(h.events).toEqual([A, A, A])
   })
 
-  it('settles only the worktree whose git state moved (SCRF-01)', async () => {
+  it('reports only the worktree whose git state moved (SCRF-01)', async () => {
     const h = harness()
     await h.watcher.sync([A, B])
 
     handleOf(h.handles, B).fire('index')
-    h.flush()
 
-    expect(h.settled).toEqual([B])
+    expect(h.events).toEqual([B])
   })
 
-  it('never settles for other git-dir entries (SCRF-01)', async () => {
+  it('reports nothing for other git-dir entries (SCRF-01)', async () => {
     const h = harness()
     await h.watcher.sync([A])
     const handle = handleOf(h.handles, A)
@@ -167,10 +143,8 @@ describe('GitStateWatcher', () => {
     ]) {
       handle.fire(name)
     }
-    h.flush()
 
-    expect(h.delays).toEqual([])
-    expect(h.settled).toEqual([])
+    expect(h.events).toEqual([])
   })
 
   it('opens an added worktree, closes a dropped one and keeps the rest (SCRF-04)', async () => {
@@ -187,15 +161,25 @@ describe('GitStateWatcher', () => {
     expect(h.open().map((x) => x.path)).toEqual([GIT_DIRS[B]])
   })
 
-  it('drops a pending settle for a worktree no longer watched (SCRF-04)', async () => {
+  it('reports a dropped worktree once through onDropped (SCRF-04, RCNT-11)', async () => {
     const h = harness()
     await h.watcher.sync([A])
     handleOf(h.handles, A).fire('index')
 
     await h.watcher.sync([])
-    h.flush()
+    await h.watcher.sync([])
 
-    expect(h.settled).toEqual([])
+    expect(h.dropped).toEqual([A])
+  })
+
+  it('never reports a worktree kept across syncs as dropped (RCNT-11)', async () => {
+    const h = harness()
+    await h.watcher.sync([A])
+    await h.watcher.sync([A, B])
+
+    await h.watcher.sync([A])
+
+    expect(h.dropped).toEqual([B])
   })
 
   it('skips a worktree whose git dir does not resolve and watches the others (SCRF-05)', async () => {
@@ -230,15 +214,14 @@ describe('GitStateWatcher', () => {
     expect(h.open()).toEqual([])
   })
 
-  it('closes every watch and drops pending settles on closeAll (quit edge case)', async () => {
+  it('closes every watch on closeAll and reports no drop (quit edge case)', async () => {
     const h = harness()
     await h.watcher.sync([A, B])
     handleOf(h.handles, A).fire('index')
 
     h.watcher.closeAll()
-    h.flush()
 
     expect(h.handles.every((x) => x.closed)).toBe(true)
-    expect(h.settled).toEqual([])
+    expect(h.dropped).toEqual([])
   })
 })

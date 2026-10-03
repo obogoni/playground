@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 122,
+  "next_id": 125,
   "lessons": [
     {
       "id": "L-001",
@@ -2101,6 +2101,60 @@
       ],
       "created": "2026-10-03T23:00:09Z",
       "last_seen": "2026-10-03T23:00:09Z"
+    },
+    {
+      "id": "L-122",
+      "key": "surviving_mutant::with a fake clock a check that nothing more runs must advance past the earliest instant that run could start re derived whenever the timing rule changes a window that ends before it cannot fail",
+      "text": "With a fake clock, a check that nothing more runs must advance past the earliest instant that run could start, re-derived whenever the timing rule changes; a window that ends before it cannot fail",
+      "signal": "surviving_mutant",
+      "scope": "testing/schedulers",
+      "status": "candidate",
+      "features": [
+        "git-recount-coalesce"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/main/recount-scheduler.test.ts:408 (V6) (testing/schedulers)"
+      ],
+      "created": "2026-10-03T17:19:43Z",
+      "last_seen": "2026-10-03T17:19:43Z"
+    },
+    {
+      "id": "L-123",
+      "key": "ac_gap::when a rate target is measured at process start but enforced by a scheduler upstream of a shared spawn queue count the spacing from the previous run s end because queue waits shrink the gap between the real process starts",
+      "text": "When a rate target is measured at process start but enforced by a scheduler upstream of a shared spawn queue, count the spacing from the previous run's end, because queue waits shrink the gap between the real process starts",
+      "signal": "ac_gap",
+      "scope": "src/main/**, perf",
+      "status": "candidate",
+      "features": [
+        "git-recount-coalesce"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "RCNT-32 (tasks.md T11, A1 status/s 2) (src/main/**, perf)"
+      ],
+      "created": "2026-10-03T17:19:43Z",
+      "last_seen": "2026-10-03T17:19:43Z"
+    },
+    {
+      "id": "L-124",
+      "key": "spec_precision_gap::when a stop or quit criterion says open requests are answered with nothing state whether a request already taken by an in flight run counts as open",
+      "text": "When a stop or quit criterion says open requests are answered with nothing, state whether a request already taken by an in-flight run counts as open",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "git-recount-coalesce"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "RCNT-12 (validation.md, spec-precision gap) (spec)"
+      ],
+      "created": "2026-10-03T17:19:43Z",
+      "last_seen": "2026-10-03T17:19:43Z"
     }
   ]
 }

@@ -215,9 +215,11 @@ function App(): JSX.Element {
     ui: ui ?? DEFAULT_CONFIG.ui,
     onPersist: update,
     // The status bar re-reads the tree when a push, sync, publish or fetch
-    // succeeds, and that is the only in-app signal those give. The Commits
-    // list follows it to recompute its not-pushed markers (FCMT-32).
-    treeRevision: tree
+    // succeeds, and a window focus re-reads it too: both end in a `tree:get`
+    // result, which bumps `treeRevision`. The Commits list follows that
+    // revision to recompute its not-pushed markers (FCMT-32), and not the
+    // tree's identity, so a recount patch never reloads it (RCNT-26).
+    treeRevision
   })
 
   /**
