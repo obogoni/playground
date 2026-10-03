@@ -794,6 +794,29 @@ guard. The fix issues wait for the owner. `npm run lint`: exit 0, 18 warnings.
 
 ---
 
+### T18: Fix round 1 - prove the disabled path touches no port
+
+**What**: Verifier round 1 (`90d5082`) found mutants M5/M6 surviving: `createAppDiagnostics` could start a
+loop monitor or a timer before the switch check and no test would see it (PDIAG-02, Success Criterion 1).
+`createAppDiagnostics` takes optional test-only `ports` (`clock`, `startLoopMonitor`); the app passes none.
+Also rewords PDIAG-30, 36 and 37 to what design.md and the code already do (spec-precision gaps 2-4).
+**Where**: `src/main/diagnostics.ts`, `src/main/diagnostics.test.ts`, `spec.md`
+**Depends on**: T17
+**Requirement**: PDIAG-02, PDIAG-17, PDIAG-30, PDIAG-36, PDIAG-37
+
+**Done when**:
+
+- [x] Tests: with the switch unset, `''`, `'0'` or `'true'`, `createAppDiagnostics` registers no timer and starts no monitor; with `'1'` it registers one timer of `60000` ms and starts one monitor
+- [x] M5 (monitor started before the switch check) and M6 (timer started before it) each fail the new test; file restored, `git diff` shows only the fix
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Tests**: unit
+**Gate**: full
+
+**Commit**: `test(diagnostics): prove the disabled factory starts no timer and no monitor`
+
+---
+
 ## Phase Execution Map
 
 ```

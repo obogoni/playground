@@ -709,6 +709,31 @@ describe('real ports', () => {
     expect(readdirSync(dir)).toEqual([])
   })
 
+  it('createAppDiagnostics starts no timer and no monitor when the switch is off, one of each when on (PDIAG-02, PDIAG-17)', () => {
+    const started = (env: NodeJS.ProcessEnv): { timers: number[]; monitors: number } => {
+      const clock = fakeClock()
+      let monitors = 0
+      const d = createAppDiagnostics({
+        env,
+        userDataPath: dir,
+        version: '9.9.9',
+        ports: {
+          clock: clock.clock,
+          startLoopMonitor: () => {
+            monitors++
+            return fakeMonitor()
+          }
+        }
+      })
+      d.stop()
+      return { timers: clock.timers.map((t) => t.ms), monitors }
+    }
+    for (const value of [undefined, '', '0', 'true']) {
+      expect(started({ PLAYGROUND_DEBUG_PERF: value })).toEqual({ timers: [], monitors: 0 })
+    }
+    expect(started({ PLAYGROUND_DEBUG_PERF: '1' })).toEqual({ timers: [60000], monitors: 1 })
+  })
+
   it('createAppDiagnostics writes lines to <userData>/perf-diagnostics.jsonl when the switch is on (PDIAG-01, PDIAG-03)', async () => {
     const d = createAppDiagnostics({
       env: { PLAYGROUND_DEBUG_PERF: '1' },

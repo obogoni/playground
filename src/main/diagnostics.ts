@@ -457,12 +457,14 @@ export function createAppDiagnostics(opts: {
   userDataPath: string
   version: string
   intervalMs?: number // tests only; the app never passes it
+  /** Tests only, to see which ports were touched; the app passes none and gets the real ones. */
+  ports?: Partial<Pick<DiagnosticsDeps, 'clock' | 'startLoopMonitor'>>
 }): Diagnostics {
   if (!diagnosticsEnabled(opts.env)) return NOOP_DIAGNOSTICS
   return createDiagnostics({
-    clock: realClock,
+    clock: opts.ports?.clock ?? realClock,
     writer: appendWriter(join(opts.userDataPath, DIAGNOSTICS_LOG_FILE)),
-    startLoopMonitor: nodeLoopMonitor,
+    startLoopMonitor: opts.ports?.startLoopMonitor ?? nodeLoopMonitor,
     meta: { pid: process.pid, version: opts.version },
     log: (msg) => console.error(msg),
     intervalMs: opts.intervalMs

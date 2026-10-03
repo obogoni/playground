@@ -199,14 +199,14 @@ so that before and after figures compare the same load.
 
 28. IF `out/main/index.js` is missing THEN `node scripts/bench-sessions.mjs` SHALL exit 2 with a message naming `npx electron-vite build`, and SHALL start nothing <!-- unwanted-behavior -->
 29. The bench SHALL start the built app with a new temporary `--user-data-dir`, `PLAYGROUND_DEBUG_PERF=1`, `--remote-debugging-port`, `--disable-renderer-backgrounding`, `--disable-backgrounding-occluded-windows` and `--disable-background-timer-throttling` <!-- ubiquitous -->
-30. The bench SHALL seed its own repository with `--files` tracked files (default 500) and one linked worktree per session named `bench-wt-1` to `bench-wt-N`, registered as the only workspace of the temporary user data folder <!-- ubiquitous -->
+30. The bench SHALL seed its own repository with `--files` tracked files (default 500) and one linked worktree per session named `bench-wt-1` to `bench-wt-N` (at least `bench-wt-1`, so `--sessions 0` seeds one), registered as the only workspace of the temporary user data folder <!-- ubiquitous -->
 31. WHEN the first log line appears THEN the bench SHALL open `--sessions` (default 3) raw-command sessions through `sessions:spawn`, session i in `bench-wt-i`, each running `scripts/bench-tui.mjs`, and SHALL attach the first one <!-- event-driven -->
 32. The bench SHALL never spawn a registry agent, and SHALL need no account and no network <!-- ubiquitous -->
 33. The fake TUI SHALL write `--fps` frames a second (default 20) of `--rows` lines (default 30): it moves the cursor up and erases the previous frame, then writes the new frame with SGR colours, and no two consecutive frames are equal <!-- ubiquitous -->
 34. WHERE `--index-interval <ms>` is given, the bench SHALL rewrite the first worktree's git-dir `index` file with its own bytes every that many ms from the moment the sessions open, counting and skipping failed writes <!-- optional-feature -->
 35. WHEN `--minutes` lines (default 3) have been written after the spawn line THEN the bench SHALL stop the sessions, close the window and print the summary <!-- event-driven -->
-36. The summary SHALL print one row per line, labelled `startup`, `spawn` and `steady 1` to `steady m`, then a `worst` row over the steady rows, then one target line per target with its value and PASS or FAIL <!-- ubiquitous -->
-37. The spawn row SHALL show the longest `sessions:spawn` round trip the bench measured, in ms <!-- ubiquitous -->
+36. The summary SHALL print one row per line, labelled `startup`, `spawn` and `steady 1` to `steady m`, then a `worst` row over the steady rows, then one target line per target with its value and PASS, FAIL, or `n/a` when the run cannot judge it <!-- ubiquitous -->
+37. The summary SHALL print, after the rows, one line with the longest `sessions:spawn` round trip the bench measured, in ms <!-- ubiquitous -->
 38. WHERE `--json <file>` is given, the bench SHALL write the options, the raw lines and the summary to that file <!-- optional-feature -->
 39. The bench SHALL exit 0 after a completed run whatever the figures, and SHALL delete its temporary folders unless `--keep` is given <!-- ubiquitous -->
 
