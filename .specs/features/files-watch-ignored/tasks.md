@@ -1218,11 +1218,11 @@ process tree killed by PID after each drive and the folder deleted.
 - [x] Mutant 1, the watcher emits every named path: the build loop target reads FAIL
 - [x] Mutant 2, `DiffSection`'s key replaced by the request object: the edit loop target reads FAIL with a ratio above 2
 - [x] Mutant 3, `READ_ONLY_FLAGS` without `-c diff.autoRefreshIndex=false`: the touch loop target reads FAIL
-- [ ] The unmutated build reads PASS on all three runs (**BLOCKED**: the edit run reads FAIL, see the Result)
+- [x] The unmutated build reads PASS on all three runs. **Owner-accepted exception (2026-10-03)**: build PASS (0 / 0), touch PASS (0), edit FAIL (6.27; reruns 8.32, 6.37, 6.49; 10.22 before the change). The neighbouring sections remount on every batch (#167), which is outside this feature's design
 - [x] Each mutant restored from `.orig`; `git status --porcelain` equals the baseline; rebuilt
 - [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
-**Result (2026-10-03, BLOCKED on the unmutated edit run)**: the built app at `870bfd9` (T19's commit),
+**Result (2026-10-03; the unmutated edit run FAIL accepted by the owner, follow-up #167)**: the built app at `870bfd9` (T19's commit),
 CDP port 9334, every run `--sessions 0 --files-view --minutes 1` with its one loop, 185 s, exit 0,
 `--json` to a scratch folder outside the repository. Each mutant went through a scratch script: copy to
 `.orig`, write, assert the mutant text present, `npx electron-vite build`, the run, then restore from
@@ -1270,9 +1270,15 @@ quiet, as in T6 (other agent sessions and the owner's installed app running).
   - An attempt to instrument `DiffSection` with temporary `console.log` lines (copy, assert, restore in
     `finally`, rebuild) made the bench fail to open the view twice (no `.diff-section` after 15 s, no
     file tabs); it was restored and replaced by the logpoint above.
-- Stopped here, with no production change and no tuning: FWIG-38 and FWIG-24 cannot read PASS on the
-  bench without changing how the stack mounts or measures its sections. T21 was not run. The owner
-  decides.
+- The batch stopped here and reported to the owner, with no production change and no tuning: FWIG-38
+  cannot read PASS on the bench without changing how the stack mounts or measures its sections.
+- **Owner decision (2026-10-03): the edit run's FAIL is accepted as an exception, and upstream issue
+  #167** ("Files: All changes sections next to a written file lose their editor and re-read on every
+  watch batch") carries the logpoint evidence and the inferred cause. The neighbouring sections
+  remount on every batch, which is outside this feature's design.
+  - FWIG-38 is recorded as not met, owner-accepted, with #167 as the follow-up.
+  - FWIG-24 is met: the key holds the untouched sections' reads to their remounts, and mutant 2 shows
+    the bench catching a key on the object (11.92 against 6.27).
 - Gate: `npm run typecheck && npm run lint && npm test`: typecheck clean, lint 0 errors and 18
   warnings, 2,863 tests in 129 files passing.
 

@@ -254,7 +254,7 @@ section alone; on the build before the change its first check fails.
 | FWIG-21 | P1: gate — AC 21 | T13, T17 | Done (T13, T17) |
 | FWIG-22 | P1: gate — AC 22 | T17 | Done (T17) |
 | FWIG-23 | P1: gate — AC 23 | T13, T17 | Done (T13, T17) |
-| FWIG-24 | P1: sections — AC 24 | T14, T16, T20, T21 | Blocked (T14, T16 done; T20 edit run FAIL) |
+| FWIG-24 | P1: sections — AC 24 | T14, T16, T20, T21 | Done (T14, T16, T20 mutant 2) |
 | FWIG-25 | P1: sections — AC 25 | T15, T16, T17 | Done (T15, T16, T17) |
 | FWIG-26 | P1: sections — AC 26 | T14, T16 | Done (T14, T16) |
 | FWIG-27 | P1: sections — AC 27 | T16, T19 | Done (T16, T19) |
@@ -268,7 +268,7 @@ section alone; on the build before the change its first check fails.
 | FWIG-35 | P1: bench — AC 35 | T4 | Done (T4) |
 | FWIG-36 | P1: bench — AC 36 | T3 | Done (T3) |
 | FWIG-37 | P1: bench — AC 37 | T3, T20, T21 | In progress (T3, T20) |
-| FWIG-38 | P1: bench — AC 38 | T3, T20, T21 | Blocked (T3 done; T20 edit run FAIL) |
+| FWIG-38 | P1: bench — AC 38 | T3, T20, T21 | Not met, owner-accepted (follow-up #167) |
 | FWIG-39 | P1: bench — AC 39 | T3, T20, T21 | In progress (T3, T20) |
 | FWIG-40 | P1: bench — AC 40 | T1 | Done (T1) |
 | FWIG-41 | P1: bench — AC 41 | T6, T21 | In progress (T6) |

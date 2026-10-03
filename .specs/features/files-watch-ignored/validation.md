@@ -202,3 +202,14 @@ above replaces it.
   Collapse all" (0 -> 0 -> 0 of 45), and a second drive with the watch section removed failed the same
   three. The owner recorded them as pre-existing (FWIG-42 amended); T19 is to drive the full smoke on
   `origin/main` (`fc19a3c`) too and compare the two drives check by check. Investigate them upstream, outside #150.
+  T19 did so: the same three fail on both, with the same detail, and nothing else differs.
+- **#167: All changes sections next to a written file lose their editor and re-read on every watch
+  batch.** The edit target (FWIG-38) reads FAIL after the change, at about 6.3 `cat-file` per
+  `files:changed` against a limit of 2 (10.22 before).
+  - T20's logpoint on the built renderer showed the cause: the written section re-reads once, as
+    FWIG-25 asks, but about 220 ms later its two neighbours leave the mount plan and come back about
+    220 ms after that, and each return re-reads them.
+  - Inferred, not measured: a brief change in the written section's height pushes the neighbours past
+    the 600 px margin.
+  - The owner accepted the FAIL as an exception on 2026-10-03 and opened #167, outside this feature's
+    design.
