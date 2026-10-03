@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 104,
+  "next_id": 106,
   "lessons": [
     {
       "id": "L-001",
@@ -1777,6 +1777,42 @@
       ],
       "created": "2026-10-03T12:45:36Z",
       "last_seen": "2026-10-03T12:45:36Z"
+    },
+    {
+      "id": "L-104",
+      "key": "spec_precision_gap::state an edge case tolerance against the same floored quantity the main criterion uses or the tolerance cannot hold at fractional sizes",
+      "text": "State an edge-case tolerance against the same floored quantity the main criterion uses, or the tolerance cannot hold at fractional sizes",
+      "signal": "spec_precision_gap",
+      "scope": "renderer layout",
+      "status": "candidate",
+      "features": [
+        "terminal-last-row"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md Spec-Precision Gaps 1 (Edge case 1 vs P1 AC3) (renderer layout)"
+      ],
+      "created": "2026-10-03T10:53:15Z",
+      "last_seen": "2026-10-03T10:53:15Z"
+    },
+    {
+      "id": "L-105",
+      "key": "spec_precision_gap::when a layout criterion is measured against an inner element also require that element to fill its container or a frozen inner element satisfies it",
+      "text": "When a layout criterion is measured against an inner element, also require that element to fill its container, or a frozen inner element satisfies it",
+      "signal": "spec_precision_gap",
+      "scope": "renderer layout",
+      "status": "candidate",
+      "features": [
+        "terminal-last-row"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md Spec-Precision Gaps 2 (P1 AC3/AC4, mutant V-S1) (renderer layout)"
+      ],
+      "created": "2026-10-03T10:53:15Z",
+      "last_seen": "2026-10-03T10:53:15Z"
     }
   ]
 }
