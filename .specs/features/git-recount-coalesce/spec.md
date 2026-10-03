@@ -16,31 +16,33 @@ limit. Upstream issue #149 is the owner-approved scope; it measures with #147's 
 ## Dependencies
 
 **Depends on #147.** This feature executes only after #147 (diagnostics log and bench, branch
-`feature/perf-diagnostics`) has executed. Its stop points (RCNT-35, RCNT-36) and its target figures
-(RCNT-32..34) are read with that bench, so no task here starts before it exists. Status on 2026-10-03:
-#147 is planned and not executed, so this feature is paused.
+`feature/perf-diagnostics`) has executed. Its stop point (RCNT-35) and its target figure (RCNT-32) are
+read with that bench. Status on 2026-10-03: #147 executed and shipped as PR #162 (open, tip `f3d68ca`);
+this branch was rebased onto it the same day.
 
-**Overlap with upstream PR #154** (merged 2026-10-01, after this plan was written on `d4a3da9`). It
-covers part of this spec and must be reconciled at T1, when this branch is rebased:
+**Reconciled 2026-10-03** with upstream PR #154 (merged 2026-10-01, after this plan was written) and
+with #147's baseline, owner's answers the same day. The first plan's 18 tasks became 11:
 
-| This spec | Covered by #154 | Left for this feature |
-| --------- | --------------- | --------------------- |
-| RCNT-19..21, the tree keeps its identity when a recount changes nothing | PERF-11 (`patchWorktreeStatus` returns the same tree) | Check the tests against AC 20 and 21; likely nothing |
-| RCNT-22..25, the status bar re-reads only for its own worktree | PERF-12, PERF-13, AD-052 (amends SCRF-03 with `treeRevision` and `onRecounted`) | SCRF-03 is already amended by AD-052, so this feature no longer supersedes it; reconcile with AD-052 |
-| RCNT-26, Files Commits list follows `tree:get` only | Not checked | Check against main at T1 |
-| RCNT-16, at most 3 recounts at once | PERF-22: every `git()` call is paced, at most 4 processes at once, across all callers | Decide whether the scheduler's pool of 3 stays on top of the global cap of 4 |
-| RCNT-01..15, RCNT-17, RCNT-18, the per-worktree scheduler | Not covered (#154 says so) | All of it |
-
-At T1 the tasks for the covered rows are dropped or reduced, and the plan is re-validated against main
-before T2.
+| This spec | Where it stands | Decision |
+| --------- | --------------- | -------- |
+| RCNT-01..15, RCNT-17, the per-worktree scheduler, turn-end and tree-build recounts through it | Not covered by #154 (it says so); #147 measured 4 `git status` a second on the written worktree | **Kept**: the feature |
+| RCNT-16, at most 3 recounts at once | PERF-22: every `git()` call is paced, at most 4 processes at once across all callers | **Dropped**: the global cap already bounds the focus fan-out |
+| RCNT-18 and RCNT-39, sync-state and commit-list reads share the worktree's lane | #147's index run read `peakConcurrent` 1 on every worktree; the owner narrowed #149 to the status rate and keeps no-overlap as a regression guard (issue comment, 2026-10-03) | **Dropped** (owner 2026-10-03). The bench selects no worktree, so the status bar's reads were not in that figure; a follow-up if they ever overlap |
+| RCNT-19..21, the tree keeps its identity when a recount changes nothing | PERF-11, `src/renderer/src/lib/tree-status.ts` | **Delivered by #154** |
+| RCNT-22..25 and RCNT-40, the status bar re-reads only for its own worktree | PERF-12, PERF-13, AD-052 (`treeRevision`, `onRecounted`); SCRF-03 already amended there | **Delivered by #154**; this feature no longer supersedes SCRF-03 nor amends STBR-11 |
+| RCNT-26, the Files Commits list follows `tree:get` only | Not covered: `App.tsx` still passes `treeRevision: tree` | **Kept** (owner 2026-10-03): one prop, now `useTree`'s `treeRevision` |
+| RCNT-28, RCNT-29, ahead and upstream follow a terminal commit and checkout | They tested the trigger move, which #154 made | **Dropped**; RCNT-27 and RCNT-30 stay as the freshness guard |
+| RCNT-31, 33, 34, 36, the bench's `--select` and the before-runs | They measured the status bar half (#154's) and the overlap (dropped) | **Dropped**; #147's index run is the before figure |
+| RCNT-32, the target | #147: `git status <= 1 per worktree per s` FAIL (4) | **Kept**, one after-run |
+| RCNT-35, the stop rule | Not met at baseline | **Kept**, judged in T1 |
 
 ## Goals
 
-- [ ] Under a continuous index rewrite, main starts at most one `git status` per worktree per second, and never two git processes on one worktree at once (bench, `--index-interval 100`)
-- [ ] Another worktree's git activity starts no git process for the worktree the status bar describes
-- [ ] The tree, and so the app, re-renders only when a count or dirty flag changed
-- [ ] A focus refresh runs at most 3 `git status` at once
-- [ ] After a commit, stage, checkout or turn end, the status bar shows the new count and ahead/behind within 2 seconds, as today
+- [ ] Under a continuous index rewrite, main starts at most one `git status` per worktree per second, and never two git processes on one worktree at once (bench, `--index-interval 100`; the second half is a regression guard, met at baseline)
+- [ ] ~~Another worktree's git activity starts no git process for the worktree the status bar describes~~ (delivered by #154, AD-052)
+- [ ] ~~The tree, and so the app, re-renders only when a count or dirty flag changed~~ (delivered by #154, PERF-11)
+- [ ] ~~A focus refresh runs at most 3 `git status` at once~~ (dropped 2026-10-03: PERF-22 caps every git process at 4)
+- [ ] After a commit, stage, checkout or turn end, the status bar shows the new count within 2 seconds, as today
 
 ## Out of Scope
 
@@ -100,7 +102,7 @@ start a burst of git processes for each of their commands, so that my machine st
 4. The scheduler SHALL NOT start a recount of a worktree less than 1,000 ms after the previous recount of that worktree started <!-- ubiquitous -->
 5. WHILE a recount of a worktree is running, the scheduler SHALL NOT start another recount of that worktree <!-- state-driven -->
 6. WHEN git-state events arrive for a worktree while its recount runs THEN the scheduler SHALL run exactly one more recount after it, due by AC 2 and 3 with the burst starting at the first of those events <!-- event-driven -->
-7. The scheduler SHALL start a due recount at the first instant AC 4, AC 5 and AC 16 allow <!-- ubiquitous -->
+7. The scheduler SHALL start a due recount at the first instant AC 4 and AC 5 allow (AC 16 dropped 2026-10-03) <!-- ubiquitous -->
 8. The scheduler SHALL keep each worktree's waits and runs apart, so events for one worktree never delay, merge with or cancel another worktree's recount <!-- ubiquitous -->
 9. WHEN a recount that served at least one git-state event returns a count THEN main SHALL emit one `worktree:status` with `{ worktreePath, dirty, changes }` <!-- event-driven -->
 10. IF a recount returns no count or throws THEN the scheduler SHALL emit nothing for it and SHALL leave the worktree free for its next recount <!-- unwanted-behavior -->
@@ -121,14 +123,16 @@ running, so that coming back to the app is smooth.
 
 **Why P1**: The overlap target holds only when every recount goes through one place.
 
+**Reconciled 2026-10-03**: AC 16 and AC 18 dropped (`## Dependencies`); AC 13..15 and 17 kept.
+
 **Acceptance Criteria**:
 
 13. WHEN a recount of a worktree is requested (a turn end through `worktrees:status`, or the tree build) THEN the scheduler SHALL make it due at once, with no quiet period <!-- event-driven -->
 14. The scheduler SHALL answer a request with the result of the first recount of that worktree that starts after the request <!-- ubiquitous -->
 15. WHEN a request and git-state events for one worktree are waiting at the same time THEN the scheduler SHALL serve both with one recount <!-- event-driven -->
-16. The scheduler SHALL run at most 3 recounts at once across all worktrees, and SHALL start the recounts that became due while all 3 were taken in the order they became due <!-- ubiquitous -->
+16. ~~The scheduler SHALL run at most 3 recounts at once across all worktrees, and SHALL start the recounts that became due while all 3 were taken in the order they became due~~ Dropped 2026-10-03: PERF-22 (#154) runs at most 4 git processes at once across the app <!-- ubiquitous -->
 17. The tree build behind `tree:get` SHALL count every worktree's changes through a scheduler request, and SHALL report a worktree whose count fails as clean, as it does today <!-- ubiquitous -->
-18. Main SHALL run a worktree's `git:sync-state` and `git:commits` reads only while no recount of that worktree runs, one read at a time, and SHALL start no recount of that worktree while such a read runs <!-- ubiquitous -->
+18. ~~Main SHALL run a worktree's `git:sync-state` and `git:commits` reads only while no recount of that worktree runs, one read at a time, and SHALL start no recount of that worktree while such a read runs~~ Dropped by the owner 2026-10-03 (no-overlap is a regression guard only) <!-- ubiquitous -->
 
 **Independent Test**: Five worktrees requested at once run 3 recounts, then 2; a request during a
 running recount is answered by the recount after it; a sync-state read requested during a recount
@@ -142,6 +146,8 @@ starts after it ends, and a recount due during the read starts after the read.
 that the UI stays fast.
 
 **Why P1**: A new tree per recount is what re-renders the app and drags the status bar along.
+
+**Reconciled 2026-10-03**: delivered by #154 (PERF-11); no task here.
 
 **Acceptance Criteria**:
 
@@ -160,6 +166,8 @@ patching it with one more change returns a new tree whose other worktrees are `t
 and I want another worktree's git activity not to make the status bar re-read the selected one.
 
 **Why P1**: The re-read is five git processes per event on the described worktree.
+
+**Reconciled 2026-10-03**: AC 22..25 delivered by #154 (PERF-12/13, AD-052); AC 26 kept (T9).
 
 **Acceptance Criteria**:
 
@@ -182,6 +190,8 @@ commits, checkouts and turn ends, so that the fix does not bring back #107.
 
 **Why P1**: The issue forbids trading freshness for fewer processes.
 
+**Reconciled 2026-10-03**: AC 28 and AC 29 dropped; AC 27 and AC 30 kept (T10).
+
 **Acceptance Criteria**:
 
 27. WHEN a commit made in a terminal changes the described worktree's count THEN the status bar SHALL show the new count within 2,000 ms, with no click (SCRF-01) <!-- event-driven -->
@@ -200,6 +210,8 @@ the new checks and the #107 checks.
 bench, so that the fix shows it helped.
 
 **Why P1**: The target is the issue's finish line.
+
+**Reconciled 2026-10-03**: AC 31, 33, 34 and 36 dropped; #147's index run is the before figure; AC 32 (T11) and AC 35 (T1) kept.
 
 **Acceptance Criteria**:
 
@@ -229,60 +241,60 @@ with its commit, and each target figure reads FAIL before and PASS after.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| RCNT-01 | P1: one at a time — AC 1 | T10 | Pending |
-| RCNT-02 | P1: one at a time — AC 2 | T4 | Pending |
-| RCNT-03 | P1: one at a time — AC 3 | T4 | Pending |
-| RCNT-04 | P1: one at a time — AC 4 | T4 | Pending |
-| RCNT-05 | P1: one at a time — AC 5 | T5 | Pending |
-| RCNT-06 | P1: one at a time — AC 6 | T5 | Pending |
-| RCNT-07 | P1: one at a time — AC 7 | T4, T7 | Pending |
-| RCNT-08 | P1: one at a time — AC 8 | T4 | Pending |
-| RCNT-09 | P1: one at a time — AC 9 | T4, T10 | Pending |
-| RCNT-10 | P1: one at a time — AC 10 | T5 | Pending |
-| RCNT-11 | P1: one at a time — AC 11 | T5, T10 | Pending |
-| RCNT-12 | P1: one at a time — AC 12 | T4, T6, T10 | Pending |
-| RCNT-13 | P1: shared lane — AC 13 | T6, T11 | Pending |
-| RCNT-14 | P1: shared lane — AC 14 | T6 | Pending |
-| RCNT-15 | P1: shared lane — AC 15 | T6 | Pending |
-| RCNT-16 | P1: shared lane — AC 16 | T7 | Pending |
-| RCNT-17 | P1: shared lane — AC 17 | T8, T9, T11 | Pending |
-| RCNT-18 | P1: shared lane — AC 18 | T7, T11 | Pending |
-| RCNT-19 | P1: tree — AC 19 | T16 | Pending |
-| RCNT-20 | P1: tree — AC 20 | T16 | Pending |
-| RCNT-21 | P1: tree — AC 21 | T16 | Pending |
-| RCNT-22 | P1: status bar — AC 22 | T13, T14, T17 | Pending |
-| RCNT-23 | P1: status bar — AC 23 | T13, T14, T18 | Pending |
-| RCNT-24 | P1: status bar — AC 24 | T12, T14 | Pending |
-| RCNT-25 | P1: status bar — AC 25 | T14 | Pending |
-| RCNT-26 | P1: status bar — AC 26 | T12, T15 | Pending |
-| RCNT-27 | P1: current — AC 27 | T17 | Pending |
-| RCNT-28 | P1: current — AC 28 | T17 | Pending |
-| RCNT-29 | P1: current — AC 29 | T17 | Pending |
-| RCNT-30 | P1: current — AC 30 | T17 | Pending |
-| RCNT-31 | P1: measured — AC 31 | T2 | Pending |
-| RCNT-32 | P1: measured — AC 32 | T3, T18 | Pending |
-| RCNT-33 | P1: measured — AC 33 | T3, T18 | Pending |
-| RCNT-34 | P1: measured — AC 34 | T3, T18 | Pending |
-| RCNT-35 | P1: measured — AC 35 | T1 | Pending |
-| RCNT-36 | P1: measured — AC 36 | T3 | Pending |
-| RCNT-37 | Edge: due exactly at the spacing | T4 | Pending |
-| RCNT-38 | Edge: request during a run | T6 | Pending |
-| RCNT-39 | Edge: a read that throws | T7 | Pending |
-| RCNT-40 | Edge: the described worktree changes | T13 | Pending |
-| RCNT-41 | Edge: forget with a request waiting | T6 | Pending |
+| RCNT-01 | P1: one at a time — AC 1 | T7 | Pending |
+| RCNT-02 | P1: one at a time — AC 2 | T2 | Pending |
+| RCNT-03 | P1: one at a time — AC 3 | T2 | Pending |
+| RCNT-04 | P1: one at a time — AC 4 | T2, T4 | Pending |
+| RCNT-05 | P1: one at a time — AC 5 | T3 | Pending |
+| RCNT-06 | P1: one at a time — AC 6 | T3 | Pending |
+| RCNT-07 | P1: one at a time — AC 7 | T2 | Pending |
+| RCNT-08 | P1: one at a time — AC 8 | T2 | Pending |
+| RCNT-09 | P1: one at a time — AC 9 | T2, T4, T7 | Pending |
+| RCNT-10 | P1: one at a time — AC 10 | T3 | Pending |
+| RCNT-11 | P1: one at a time — AC 11 | T3, T7 | Pending |
+| RCNT-12 | P1: one at a time — AC 12 | T2, T4, T7 | Pending |
+| RCNT-13 | P1: shared lane — AC 13 | T4, T8 | Pending |
+| RCNT-14 | P1: shared lane — AC 14 | T4 | Pending |
+| RCNT-15 | P1: shared lane — AC 15 | T4 | Pending |
+| RCNT-16 | P1: shared lane — AC 16 | — | Dropped (PERF-22) |
+| RCNT-17 | P1: shared lane — AC 17 | T5, T6, T8 | Pending |
+| RCNT-18 | P1: shared lane — AC 18 | — | Dropped (owner 2026-10-03) |
+| RCNT-19 | P1: tree — AC 19 | — | Delivered by #154 (PERF-11) |
+| RCNT-20 | P1: tree — AC 20 | — | Delivered by #154 (PERF-11) |
+| RCNT-21 | P1: tree — AC 21 | — | Delivered by #154 (PERF-11) |
+| RCNT-22 | P1: status bar — AC 22 | — | Delivered by #154 (PERF-12) |
+| RCNT-23 | P1: status bar — AC 23 | — | Delivered by #154 (PERF-12) |
+| RCNT-24 | P1: status bar — AC 24 | — | Delivered by #154 (PERF-13) |
+| RCNT-25 | P1: status bar — AC 25 | — | Delivered by #154 (AD-052) |
+| RCNT-26 | P1: status bar — AC 26 | T9 | Pending |
+| RCNT-27 | P1: current — AC 27 | T10 | Pending |
+| RCNT-28 | P1: current — AC 28 | — | Dropped (2026-10-03) |
+| RCNT-29 | P1: current — AC 29 | — | Dropped (2026-10-03) |
+| RCNT-30 | P1: current — AC 30 | T10 | Pending |
+| RCNT-31 | P1: measured — AC 31 | — | Dropped (2026-10-03) |
+| RCNT-32 | P1: measured — AC 32 | T11 | Pending |
+| RCNT-33 | P1: measured — AC 33 | — | Dropped (2026-10-03) |
+| RCNT-34 | P1: measured — AC 34 | — | Dropped (2026-10-03) |
+| RCNT-35 | P1: measured — AC 35 | T1 | Done |
+| RCNT-36 | P1: measured — AC 36 | — | Dropped (2026-10-03) |
+| RCNT-37 | Edge: due exactly at the spacing | T2 | Pending |
+| RCNT-38 | Edge: request during a run | T4 | Pending |
+| RCNT-39 | Edge: a read that throws | — | Dropped (owner 2026-10-03) |
+| RCNT-40 | Edge: the described worktree changes | — | Delivered by #154 (AD-052) |
+| RCNT-41 | Edge: forget with a request waiting | T4 | Pending |
 
-**Coverage:** 41 total, 41 mapped to tasks, 0 unmapped.
+**Coverage:** 41 total; 24 mapped to tasks, 17 dropped or delivered by #154 (`## Dependencies`), 0 unmapped.
 
 **Revised by this feature** (recorded at Execute in the same change, AD-018 / AD-028 pattern):
-SCRF-02's mechanism moves from the watcher into the scheduler, and its AC still holds (T10);
-SCRF-03 is superseded by RCNT-19..25 (T16); STBR-11 is amended, "the tree refreshes" meaning a
-`tree:get` result, with RCNT-22 as the git-state path (T16); FCMT-32's trigger becomes the `tree:get`
-result (T15).
+SCRF-02's mechanism moves from the watcher into the scheduler, and its AC still holds (T7);
+FCMT-32's trigger becomes the `tree:get` result (T9). SCRF-03 and STBR-11 were already amended by
+AD-052 (#154), so this feature no longer touches them.
 
 ---
 
 ## Success Criteria
 
-- [ ] The bench's `git status <= 1 per worktree per s` and `no overlapping git on one worktree` targets read FAIL on the before-runs and PASS on the after-runs (T3, T18)
-- [ ] With the index loop on `bench-wt-1` and `bench-wt-2` selected, `bench-wt-2` counts `rev-list` before and none after
-- [ ] The status bar smoke passes, including the #107 counter checks, and each new check was seen failing on a broken build
+- [ ] The bench's `git status <= 1 per worktree per s` target reads FAIL at #147's baseline and PASS
+  after (T11), with `no overlapping git on one worktree` still PASS
+- [ ] The status bar smoke's #107 counter checks pass, and fail on a main mutant (T10)
+- [ ] The Files Commits smoke's FCMT-32 check passes with the list on `tree:get` results (T9)
