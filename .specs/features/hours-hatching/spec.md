@@ -234,7 +234,7 @@ same search held 14.6 normal-vision with 7.8 CVD. The WARN band is legal with th
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| HHAT-01 | P1: neighbours, AC 1 | Tasks | In Tasks (T1, T3) |
+| HHAT-01 | P1: neighbours, AC 1 | Execute | Implementing: T1 done; T3 |
 | HHAT-02 | P1: neighbours, AC 2 | Tasks | In Tasks (T2) |
 | HHAT-03 | P1: neighbours, AC 3 | Tasks | In Tasks (T2) |
 | HHAT-04 | P1: neighbours, AC 4 | Tasks | In Tasks (T2) |
@@ -252,7 +252,7 @@ same search held 14.6 normal-vision with 7.8 CVD. The WARN band is legal with th
 | HHAT-16 | P1: colours, AC 16 | Tasks | In Tasks (T3, T9) |
 | HHAT-17 | P1: one look, AC 17 | Tasks | In Tasks (T3, T14) |
 | HHAT-18 | P1: one look, AC 18 | Tasks | In Tasks (T3, T14) |
-| HHAT-19 | P1: one look, AC 19 | Tasks | In Tasks (T1, T3) |
+| HHAT-19 | P1: one look, AC 19 | Execute | Implementing: T1 done; T3 |
 | HHAT-20 | P1: one look, AC 20 | Tasks | In Tasks (T4..T8, T12) |
 | HHAT-21 | P1: one look, AC 21 | Tasks | In Tasks (T4, T5, T14) |
 | HHAT-22 | P1: one look, AC 22 | Tasks | In Tasks (T3, T9) |

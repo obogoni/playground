@@ -7,6 +7,7 @@ import {
   dimmedGroups,
   layoutLanes,
   legendEntries,
+  lookClass,
   roleOf,
   timeAxis,
   visibleColumns,
@@ -407,6 +408,22 @@ describe('assignColours and legendEntries', () => {
       ['task:6', 'other', 9 * HOUR],
       ['cwd:d:\\acme\\scratch', 'no-task', 1 * HOUR]
     ])
+  })
+})
+
+describe('lookClass', () => {
+  it('names a solid look by its slot alone (HHAT-01)', () => {
+    expect(lookClass('slot1')).toBe('role-slot1')
+    expect(lookClass('slot8')).toBe('role-slot8')
+  })
+
+  it('names a hatched look by its slot plus hatched (HHAT-01)', () => {
+    expect(lookClass('slot3-hatched')).toBe('role-slot3 hatched')
+  })
+
+  it('never hatches Other or No task (HHAT-19)', () => {
+    expect(lookClass('other')).toBe('role-other')
+    expect(lookClass('no-task')).toBe('role-no-task')
   })
 })
 

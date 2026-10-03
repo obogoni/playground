@@ -137,18 +137,14 @@ export function layoutLanes(entries: { block: Block; groupKey: string }[]): Laid
   return laidOut
 }
 
-/** Which colour treatment a group's bars wear (HCAL-11, HTF-01). */
-export type ColourRole =
-  | 'slot1'
-  | 'slot2'
-  | 'slot3'
-  | 'slot4'
-  | 'slot5'
-  | 'slot6'
-  | 'slot7'
-  | 'slot8'
-  | 'other'
-  | 'no-task'
+/** One of the eight palette hues (HHAT-01). */
+export type Slot = 'slot1' | 'slot2' | 'slot3' | 'slot4' | 'slot5' | 'slot6' | 'slot7' | 'slot8'
+
+/**
+ * Which look a group's bars wear: a hue solid or hatched, Other, or No task
+ * (HCAL-11, HHAT-01, HHAT-19).
+ */
+export type ColourRole = Slot | `${Slot}-hatched` | 'other' | 'no-task'
 
 /** One legend line: a task or folder with its colour and week total (HCAL-21). */
 export interface LegendEntry {
@@ -158,7 +154,17 @@ export interface LegendEntry {
   totalMs: number
 }
 
-const SLOTS: ColourRole[] = ['slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6', 'slot7', 'slot8']
+const SLOTS: Slot[] = ['slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6', 'slot7', 'slot8']
+
+const HATCHED = '-hatched'
+
+/**
+ * A look's class names: `role-slot3` for a solid look, `role-slot3 hatched`
+ * for its hatched twin; Other and No task are never hatched (HHAT-01, HHAT-19).
+ */
+export function lookClass(role: ColourRole): string {
+  return role.endsWith(HATCHED) ? `role-${role.slice(0, -HATCHED.length)} hatched` : `role-${role}`
+}
 
 /** Legend rank: every coloured task first, then Other, then folders (HCAL-21). */
 const legendRank = (role: ColourRole): number => (role === 'no-task' ? 2 : role === 'other' ? 1 : 0)

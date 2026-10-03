@@ -15,6 +15,8 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Setup (before T1, no commit)**: the worktree has no `node_modules`. Run `npm ci --ignore-scripts` and `node node_modules/electron/install.js`, then record the **test baseline** here: `npx vitest run` count, `npm run typecheck`, and `npm run lint` errors and warnings.
 
+**Baseline (2026-10-03, rebased on `origin/main` `6d96ae4`)**: `npx vitest run` 119 files, 2508 tests, all passing; `npm run typecheck` exit 0; `npm run lint` exit 0, 0 errors, 18 warnings.
+
 **Owner-confirmed rows** (spec Assumptions, `owner confirmed 2026-10-01`): the proposed hex values (T3, T9, T12), the hatch ground of 20% hue on white in both themes (T3, T9, T14), the hue-preference scope (T2), the only-previous-look-free rule (T2), the tooltip key (T3), all as the plan proposed them.
 
 **Stop rule**: T3 starts by re-running the dataviz validator on the spec's exact values. A non-zero exit in either theme, or an owner rejection of the values, stops Execute before T3's edit; the palette goes back to the owner.
@@ -99,9 +101,11 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Tests: `lookClass` for `slot1`, `slot8`, `slot3-hatched`, `other` and `no-task`, each a literal string; `other` and `no-task` never carry `hatched`
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/hours-calendar.test.ts` then `npm test`
-- [ ] Test count: baseline + the new tests
+- [x] Tests: `lookClass` for `slot1`, `slot8`, `slot3-hatched`, `other` and `no-task`, each a literal string; `other` and `no-task` never carry `hatched`
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/hours-calendar.test.ts` then `npm test`
+- [x] Test count: baseline + the new tests (2508 + 3 = 2511)
+
+`LOOKS` moves to T2, its first user: the web tsconfig sets `noUnusedLocals`, so an unused constant fails typecheck.
 
 **Tests**: unit
 **Gate**: quick
