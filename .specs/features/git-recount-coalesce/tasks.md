@@ -400,18 +400,54 @@ unedited. Re-read the test file at T7 and name any other test that pins the batc
 
 **Done when**:
 
-- [ ] Tests: the rewrites above, plus: an unrelated entry name reports nothing; a worktree kept across two `sync` calls is never reported dropped
-- [ ] `grep -n "BATCH_MS\|schedule" src/main/git-state-watcher.ts` finds nothing
-- [ ] `index.ts` read against design.md "Main wiring" for the scheduler, the watcher, the emit and the quit; written here
-- [ ] `.specs/features/status-changes-refresh/spec.md`: SCRF-02 and the "Bursts" assumption row carry the note "Mechanism revised by RCNT-01..07 (AD-NNN), delivered <date> in `git-recount-coalesce` T7: the scheduler's quiet period replaces the watcher's 250 ms batch; the criterion still holds"
-- [ ] `.specs/STATE.md` gains the AD from design.md. Its number is chosen right before the commit as the next free one after every AD on `origin/main`, on every open upstream PR, and on the local branches of every sibling worktree under `D:/playground-wt/` (parallel sessions take numbers; AD-057 is #147's). The note above names it
-- [ ] Gate check passes: `npx vitest run src/main/git-state-watcher.test.ts`, then the full gate and `npx electron-vite build`
-- [ ] Test count: T6 count + the new tests (rewrites counted as unchanged)
+- [x] Tests: the rewrites above, plus: an unrelated entry name reports nothing; a worktree kept across two `sync` calls is never reported dropped
+- [x] `grep -n "BATCH_MS\|schedule" src/main/git-state-watcher.ts` finds nothing
+- [x] `index.ts` read against design.md "Main wiring" for the scheduler, the watcher, the emit and the quit; written here
+- [x] `.specs/features/status-changes-refresh/spec.md`: SCRF-02 and the "Bursts" assumption row carry the note "Mechanism revised by RCNT-01..07 (AD-NNN), delivered <date> in `git-recount-coalesce` T7: the scheduler's quiet period replaces the watcher's 250 ms batch; the criterion still holds"
+- [x] `.specs/STATE.md` gains the AD from design.md. Its number is chosen right before the commit as the next free one after every AD on `origin/main`, on every open upstream PR, and on the local branches of every sibling worktree under `D:/playground-wt/` (parallel sessions take numbers; AD-057 is #147's). The note above names it
+- [x] Gate check passes: `npx vitest run src/main/git-state-watcher.test.ts`, then the full gate and `npx electron-vite build`
+- [x] Test count: T6 count + the new tests (rewrites counted as unchanged)
 
 **Tests**: unit
 **Gate**: build
 
 **Commit**: `feat(main): feed git-state events to the recount scheduler`
+
+**Record (2026-10-03)**: ✅ Done.
+
+- `GitStateWatcher` reports each `index` / `HEAD` event through `onEvent` and each worktree a later
+  `sync` closes through `onDropped`; `schedule`, `onSettled`, `startBatch`, `Entry.cancelBatch` and the
+  `BATCH_MS` import are gone. `closeAll` closes without reporting.
+- Tests rewritten for the superseded batch, as named above: "settles an index change once, after the
+  batch window" → "reports an `index` event at once"; "settles a HEAD change too" → "reports a `HEAD`
+  event at once"; "settles a burst of changes once (SCRF-02)" → "reports every event of a burst,
+  leaving the coalescing to the scheduler"; "drops a pending settle for a worktree no longer watched" →
+  "reports a dropped worktree once through onDropped"; "closes every watch and drops pending settles on
+  closeAll" → "closes every watch on closeAll and reports no drop". **Two more pinned the batch** and
+  were rewritten the same way: "settles only the worktree whose git state moved" (asserted through
+  `flush()` and `settled`) → "reports only the worktree whose git state moved", and "never settles for
+  other git-dir entries" (asserted `delays` `[]`) → "reports nothing for other git-dir entries" (the
+  Done-when's unrelated-entry test). New: "never reports a worktree kept across syncs as dropped". The
+  other 6 tests pass with their bodies unedited (only the shared harness lost `flush`, `delays` and
+  `settled` and gained `events` and `dropped`).
+- `grep -n "BATCH_MS\|schedule" src/main/git-state-watcher.ts`: no match (exit 1).
+- `index.ts` read against design.md "Main wiring": `recounts = new RecountScheduler({ recount:
+  recountWorktree, onRecounted, now: () => performance.now(), schedule: timerScheduler })` is built
+  before the watcher (371-380); `onRecounted` emits `worktree:status` with `{ worktreePath, ...count }`
+  to `mainWindow` and calls `diagnostics().emitted('worktree:status', worktreePath)` (373-377); the
+  watcher takes `onEvent: recounts.notify` and `onDropped: recounts.forget`, no `schedule` or
+  `onSettled` (383-388); `will-quit` calls `recounts.stop()` beside `gitStateWatcher.closeAll()`
+  (464-465). `recountWorktree` is unchanged apart from its comment and keeps #147's `recountStarted`
+  probe. `tree:get` and `worktrees:status` are T8's.
+- AD-058 added to `.specs/STATE.md`. Searched right before the commit: `origin/main` (fetched) tops at
+  AD-055; open upstream PRs #162 (AD-057) and #161 (AD-056); sibling worktrees and every local and
+  `fork/` branch top at AD-057 (this branch and `perf-diagnostics`); nothing at AD-058 or above.
+- `.specs/features/status-changes-refresh/spec.md`: SCRF AC 2 and the "Bursts" row carry the AD-058
+  revision note.
+- Quick gate 13/13. Full gate: typecheck exit 0, lint exit 0 with 18 warnings, **122 files, 2,606
+  tests** (2,605 + 1; rewrites counted as unchanged), all pass. `npx electron-vite build` exit 0.
+- Mutants seen failing: no `onDropped` on sync (2 tests), `onEvent` for any entry name, `onDropped` on
+  `closeAll`, every entry closed on sync (3 tests).
 
 ---
 
