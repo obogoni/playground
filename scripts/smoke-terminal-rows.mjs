@@ -12,6 +12,9 @@
  *   look  the box the terminal opens into is inset 8/10/8/10 from the pane,
  *         the first row starts at (10, 8) and the copy chip sits 14 px from the
  *         right and 10 px from the top (TROW-07)
+ *   dpr   at 8 fixed heights, the display scale steps 1 → 1.25 → 1.5 → 2 → 1
+ *         with the CSS height unchanged: after the first change and after every
+ *         later one, the rows checks hold with the new cell (TROW-09, TROW-10)
  *
  * The terminal draws on the WebGL renderer (design.md §Renderer Amendment), so
  * nothing about its rows is in the DOM. The cell is measured the way xterm
@@ -41,7 +44,7 @@
  *        exactly the seeded workspace; on a pass it closes the app and deletes
  *        the directory, on a failure it leaves both and prints the directory
  *
- * SMOKE_ONLY=rows|cols|look runs one section after the same setup.
+ * SMOKE_ONLY=rows|cols|look|dpr runs one section after the same setup.
  * SMOKE_BASELINE=write with SMOKE_ONLY=cols records the column count per probed
  * viewport in %TEMP%/playground-smoke-rows-cols.json instead of comparing. It is
  * recorded once on the build before the fix; every later `cols` run compares
@@ -55,7 +58,7 @@ import { join } from 'node:path'
 
 const PORT = Number(process.env.SMOKE_PORT) || 9222
 const ONLY = process.env.SMOKE_ONLY ?? null
-const SECTIONS = ['rows', 'cols', 'look']
+const SECTIONS = ['rows', 'cols', 'look', 'dpr']
 const WRITE_BASELINE = process.env.SMOKE_BASELINE === 'write'
 const REPORT = process.env.SMOKE_REPORT === '1'
 const TEMP = realpathSync.native(tmpdir())
@@ -275,6 +278,7 @@ const READ = `(() => {
     cols,
     webgl,
     exact: Math.round(rows * h) === sh && Math.round(cols * w) === sw,
+    mq: matchMedia('(resolution: ' + dpr + 'dppx)').matches,
     lastBottom: sr.top + rows * h,
     lastRight: sr.left + cols * w,
     visible,
@@ -324,6 +328,8 @@ async function probe(width, height, dpr) {
     if (
       same &&
       reading.vh === height &&
+      reading.exact &&
+      Math.abs(reading.dpr - dpr) < 1e-6 &&
       marker?.rows === reading.rows &&
       marker?.cols === reading.cols
     ) {
@@ -582,6 +588,61 @@ async function lookSection() {
   )
 }
 
+async function dprSection() {
+  console.log('\n— dpr —')
+  // Heights spread over the cell's remainders; the scale changes at each one
+  // with the CSS size held, so only a refit on the scale change can follow.
+  const heights = [600, 603, 607, 611, 614, 618, 622, 625]
+  const factors = [1, 1.25, 1.5, 2, 1]
+  const all = []
+  for (const height of heights) {
+    for (let step = 0; step < factors.length; step++) {
+      all.push({ ...(await probe(ROWS_WIDTH, height, factors[step])), step })
+    }
+  }
+  console.log('  vh step  dpr      h rows  fit pty lastB-visB')
+  for (const p of all) {
+    console.log(
+      `  ${String(p.vh).padStart(4)} ${String(p.step).padStart(4)} ${String(p.dpr).padEnd(4)} ${p.h.toFixed(3).padStart(6)} ${String(p.rows).padStart(4)} ${String(fitRows(p)).padStart(4)} ${String(p.ptyRows).padStart(3)} ${f1(p.lastBottom - p.visible.bottom).padStart(10)}`
+    )
+  }
+
+  // Guards first: the page must really see each scale, or nothing below can fail.
+  checkAll(
+    'guard: the page reports each requested ratio and its resolution query matches',
+    all,
+    (p) => Math.abs(p.pageDpr - p.dpr) > 1e-6 || !p.mq,
+    (p) => `${at(p)} page ${p.pageDpr} query ${p.mq}`
+  )
+  const cells = new Set(all.map((p) => p.h.toFixed(4)))
+  check('guard: the cell height differs between scales', cells.size >= 2, [...cells].join(', '))
+  const moved = heights.filter(
+    (height) => new Set(all.filter((p) => p.vh === height).map(fitRows)).size > 1
+  )
+  check(
+    'guard: at some height the rows that fit change between scales',
+    moved.length > 0,
+    `${moved.length}/${heights.length} heights`
+  )
+  geometryGuard('dpr', all)
+
+  const holds = (p) => rowsOk(p, p.rows) && lastRowInside(p) && p.settled && rowsOk(p, p.ptyRows)
+  const describe = (p) =>
+    `${at(p)} step ${p.step}: rows ${p.rows}, fit ${fitRows(p)}, program ${p.ptyRows}, ${f1(p.lastBottom - p.visible.bottom)} px below`
+  checkAll(
+    'TROW-09: after a scale change the rows fit, the last row is inside and the program follows',
+    all.filter((p) => p.step === 1),
+    (p) => !holds(p),
+    describe
+  )
+  checkAll(
+    'TROW-10: after every later scale change the same holds',
+    all.filter((p) => p.step >= 2),
+    (p) => !holds(p),
+    describe
+  )
+}
+
 const target = await pageTarget()
 ws = new WebSocket(target.webSocketDebuggerUrl)
 await new Promise((resolve, reject) => {
@@ -652,6 +713,7 @@ try {
   if (ONLY === null || ONLY === 'rows') await rowsSection()
   if (ONLY === null || ONLY === 'cols') await colsSection()
   if (ONLY === null || ONLY === 'look') await lookSection()
+  if (ONLY === null || ONLY === 'dpr') await dprSection()
 } finally {
   await send('Emulation.clearDeviceMetricsOverride').catch(() => {})
   if (sessionId !== null) {

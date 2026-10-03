@@ -168,16 +168,18 @@ T4 → T5
 
 **Done when**:
 
-- [ ] `SMOKE_ONLY=dpr` implemented per `design.md` §Sections; after each step it runs the `rows` checks with the newly measured h
-- [ ] The `dpr` guards run before any check: `window.devicePixelRatio` equals the factor, `matchMedia('(resolution: <dpr>dppx)').matches`, h differs between at least two factors, and at least one probe's expected rows change between factors
-- [ ] **Route A** (every guard passes): on T2's build, the section fails with stale rows at ≥1 step. That is its first-seen-failing run, on the natural broken build. The failing steps are written under `## Display scale route (T3)` in `design.md`
-- [ ] **Route B** (any guard fails): the `dpr` section is removed from the script and replaced by `SMOKE_ONLY=probe`, which takes one reading at the app's real size and scale with no override and runs the `rows` checks on it. The failed guard and its readings are written under `## Display scale route (T3)`, and T5 takes its Route B
-- [ ] `SMOKE_ONLY=rows`, `SMOKE_ONLY=cols` and `SMOKE_ONLY=look` still pass on T2's build
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: B tests pass (no silent deletions)
+- [x] `SMOKE_ONLY=dpr` implemented per `design.md` §Sections; after each step it runs the `rows` checks with the newly measured h
+- [x] The `dpr` guards run before any check: `window.devicePixelRatio` equals the factor, `matchMedia('(resolution: <dpr>dppx)').matches`, h differs between at least two factors, and at least one probe's expected rows change between factors
+- [x] **Route A** (every guard passes): on T2's build, the section fails with stale rows at ≥1 step. That is its first-seen-failing run, on the natural broken build. The failing steps are written under `## Display scale route (T3)` in `design.md`
+- [ ] ~~**Route B** (any guard fails)~~ not taken: every guard passed: the `dpr` section is removed from the script and replaced by `SMOKE_ONLY=probe`, which takes one reading at the app's real size and scale with no override and runs the `rows` checks on it. The failed guard and its readings are written under `## Display scale route (T3)`, and T5 takes its Route B
+- [x] `SMOKE_ONLY=rows`, `SMOKE_ONLY=cols` and `SMOKE_ONLY=look` still pass on T2's build
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: B tests pass (no silent deletions)
 
 **Tests**: manual only
 **Gate**: build
+
+**Status**: ✅ Complete (2026-10-03), Route A (`design.md` §Display scale route (T3)). `rows` 8/8, `cols` 6/6, `look` 3/3 still pass on T2's build. The probe now also waits for an exact cell model and the requested ratio before it settles.
 
 **Commit**: `test(smoke): check terminal rows after a display scale change`
 

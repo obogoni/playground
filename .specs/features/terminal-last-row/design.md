@@ -231,6 +231,10 @@ The last column is inside the visible box at every `rows` and `cols` probe (4 to
 - The fill script needed `process.stdout._refreshSize()`: node caches the console size, and under ConPTY no resize signal reaches it, so `getWindowSize()` stayed at 80 × 24.
 - A session spawned over IPC appears in the rail only after a reload. The drive reloads into Tree, starts the stream capture, then opens Agents, so the replay on attach is captured.
 
+## Display scale route (T3)
+
+**Route A.** Every `dpr` guard passes on T2's build: the page reports each requested ratio (float32, within 1e-6) and `matchMedia('(resolution: <page ratio>dppx)')` matches it at all 40 probes; the cell height takes four values (16, 15.2, 15.333, 15.5 at DPR 1, 1.25, 1.5, 2); the rows that fit change between scales at all 8 heights; the geometry guard holds. With the CSS height held, xterm re-measures its cell and redraws, but nothing refits: the rows stay at the DPR 1 count. TROW-09 fails at 8 of 8 first steps (for example vh 600: 24 rows where 26 fit after 1 → 1.25), and TROW-10 fails at 14 of 24 later steps (the steps back to DPR 1 pass, since the old count fits that cell again). The stale count here leaves rows unused instead of clipping, because every emulated scale has a smaller cell than emulated DPR 1 (the float32 ratio makes its device cell 16 px); the check is the same either way.
+
 ---
 
 ## Architecture
