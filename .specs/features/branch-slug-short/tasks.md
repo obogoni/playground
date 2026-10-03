@@ -281,13 +281,15 @@ titles as written.
 
 **Done when**:
 
-- [ ] Tests, constants: `WINDOWS_MAX_FILE_PATH` is 259, `WINDOWS_MAX_FOLDER_PATH` 247, `GIT_MAX_WORKTREE_FOLDER` 215, as literals (L-009, L-019)
-- [ ] Tests, ref path: commonDir `C:\r\.git` and a branch giving a ref path of exactly 259 → null; 260 → `The branch's ref path is 260 characters, over Windows' limit of 259. Shorten the name, or enable core.longpaths in the repository.`; 287 → the same text with 287 (BSLG-35)
-- [ ] Tests, reflog folder: a two-letter last segment with a reflog folder of 247 → null and 248 → `The branch's reflog folder path is 248 characters, over Windows' limit of 247 for a folder. Shorten the name, or enable core.longpaths in the repository.`, the ref path at 250 and 251 in those cases (BSLG-36); a 260-character branch with no `/` gives the ref message (BSLG-34)
-- [ ] Tests, each arm alone (L-087): `longPaths: true` → null for both rules; `writesRef: false` → null for both; a case past both limits returns the ref message
-- [ ] Tests, normalisation: commonDir `C:/r/.git` and `C:\r\.git\` give the same lengths as `C:\r\.git`
-- [ ] Gate check passes: `npx vitest run src/main/path-limits.test.ts` then `npm test`
-- [ ] Test count: T5 count + the new tests
+- [x] Tests, constants: `WINDOWS_MAX_FILE_PATH` is 259, `WINDOWS_MAX_FOLDER_PATH` 247, `GIT_MAX_WORKTREE_FOLDER` 215, as literals (L-009, L-019)
+- [x] Tests, ref path: commonDir `C:\r\.git` and a branch giving a ref path of exactly 259 → null; 260 → `The branch's ref path is 260 characters, over Windows' limit of 259. Shorten the name, or enable core.longpaths in the repository.`; 287 → the same text with 287 (BSLG-35)
+- [x] Tests, reflog folder: a two-letter last segment with a reflog folder of 247 → null and 248 → `The branch's reflog folder path is 248 characters, over Windows' limit of 247 for a folder. Shorten the name, or enable core.longpaths in the repository.`, the ref path at 250 and 251 in those cases (BSLG-36); a 260-character branch with no `/` gives the ref message (BSLG-34)
+- [x] Tests, each arm alone (L-087): `longPaths: true` → null for both rules; `writesRef: false` → null for both; a case past both limits returns the ref message
+- [x] Tests, normalisation: commonDir `C:/r/.git` and `C:\r\.git\` give the same lengths as `C:\r\.git`
+- [x] Gate check passes: `npx vitest run src/main/path-limits.test.ts` then `npm test`
+- [x] Test count: T5 count + the new tests
+
+**Done** (T6): 14 new tests in `src/main/path-limits.test.ts`; suite 2561 → 2575 passed; typecheck 0; lint 0 errors, 18 warnings (baseline). BSLG-34 also holds a no-`/` branch with a ref path of 259, which passes: read as a folder, the whole name would be 259, past 247.
 
 **Tests**: unit
 **Gate**: quick

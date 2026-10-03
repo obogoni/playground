@@ -208,11 +208,11 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-14 | P1: error, AC 14 | Tasks | T5 done; T17 (smoke 5) pending |
 | BSLG-15 | P1: error, AC 15 | Tasks | Done: T3, T4 |
 | BSLG-16 | P1: error, AC 16 | Tasks | Done: T5 |
-| BSLG-17 | P1: check, AC 17 | Tasks | Pending: T6, T8, T17 (smoke 1) |
-| BSLG-18 | P1: check, AC 18 | Tasks | Pending: T6 |
-| BSLG-19 | P1: check, AC 19 | Tasks | Pending: T6, T17 (smoke 2) |
+| BSLG-17 | P1: check, AC 17 | Tasks | T6 done; T8, T17 (smoke 1) pending |
+| BSLG-18 | P1: check, AC 18 | Tasks | Done: T6 |
+| BSLG-19 | P1: check, AC 19 | Tasks | T6 done; T17 (smoke 2) pending |
 | BSLG-20 | P1: check, AC 20 | Tasks | Pending: T14, T15, T17 (smoke 1, 2), T18 (smoke 9) |
-| BSLG-21 | P1: check, AC 21 | Tasks | Pending: T6, T8, T17 (smoke 3) |
+| BSLG-21 | P1: check, AC 21 | Tasks | T6 done; T8, T17 (smoke 3) pending |
 | BSLG-22 | P1: check, AC 22 | Tasks | Pending: T8 |
 | BSLG-23 | P1: check, AC 23 | Tasks | Pending: T12, T13, T17 (smoke 2) |
 | BSLG-24 | P1: check, AC 24 | Tasks | Pending: T14, T15, T17 (smoke 1), T18 (smoke 9) |
@@ -225,9 +225,9 @@ Each carries an ID and its own test or numbered smoke check (L-025).
 | BSLG-31 | Edge: empty title | Tasks | Done: T2 |
 | BSLG-32 | Edge: 40-character word | Tasks | Done: T2 |
 | BSLG-33 | Edge: non-adjacent repeat | Tasks | Done: T2 |
-| BSLG-34 | Edge: no `/` | Tasks | Pending: T6 |
-| BSLG-35 | Edge: ref path 259 / 260 | Tasks | Pending: T6, T9 |
-| BSLG-36 | Edge: reflog folder 247 / 248 | Tasks | Pending: T6 |
+| BSLG-34 | Edge: no `/` | Tasks | Done: T6 |
+| BSLG-35 | Edge: ref path 259 / 260 | Tasks | T6 done; T9 pending |
+| BSLG-36 | Edge: reflog folder 247 / 248 | Tasks | Done: T6 |
 | BSLG-37 | Edge: existing branch | Tasks | Pending: T8, T9 |
 | BSLG-38 | Edge: Recreate | Tasks | Pending: T9 |
 | BSLG-39 | Edge: non-boolean value | Tasks | Pending: T8 |
