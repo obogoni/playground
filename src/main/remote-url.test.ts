@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { RemoteRef } from '../shared/files'
-import { commitUrl, parseRemote } from './remote-url'
+import { commitUrl, createPrUrl, parseRemote, prUrl } from './remote-url'
+import { isHttpsUrl } from './url-policy'
 
 // Every URL here is fictitious: this repository is public and the spec's
 // privacy guardrail forbids a real organisation, project or repository name.
@@ -106,5 +107,49 @@ describe('commitUrl', () => {
     const ref = parseRemote(url)
     expect(ref).not.toBeNull()
     expect(commitUrl(ref as RemoteRef, SHA).startsWith('https://')).toBe(true)
+  })
+})
+
+describe('prUrl and createPrUrl', () => {
+  const widget = { org: 'acme', project: 'platform', repo: 'widget' }
+
+  it("addresses a pull request's page (FPRA-14)", () => {
+    expect(prUrl(widget, 42)).toBe('https://dev.azure.com/acme/platform/_git/widget/pullrequest/42')
+  })
+
+  // FPRA-05: the creation page opens with the source branch filled, and a
+  // branch name's `/` is part of the name, not a path separator.
+  it('fills the source branch of the creation page, slash included', () => {
+    const url = createPrUrl(widget, 'feature/probe')
+
+    expect(url).toBe(
+      'https://dev.azure.com/acme/platform/_git/widget/pullrequestcreate?sourceRef=feature%2Fprobe'
+    )
+    expect(new URL(url).searchParams.get('sourceRef')).toBe('feature/probe')
+  })
+
+  it('round-trips a project named with a space', () => {
+    const ref = parseRemote('https://dev.azure.com/acme/My%20Project/_git/widget')
+    expect(ref).not.toBeNull()
+    const target = ref as Extract<RemoteRef, { provider: 'azure-devops' }>
+
+    expect(prUrl(target, 42)).toBe(
+      'https://dev.azure.com/acme/My%20Project/_git/widget/pullrequest/42'
+    )
+    expect(createPrUrl(target, 'main')).toBe(
+      'https://dev.azure.com/acme/My%20Project/_git/widget/pullrequestcreate?sourceRef=main'
+    )
+  })
+
+  // FPRA-14/05 go through the https-only opener, so every recognized Azure
+  // DevOps remote, whatever its own scheme, must build addresses it accepts.
+  it('builds only addresses the https-only opener accepts', () => {
+    const refs = recognized.flatMap(([, ref]) => (ref.provider === 'azure-devops' ? [ref] : []))
+    expect(refs).toHaveLength(4)
+
+    for (const ref of refs) {
+      expect(isHttpsUrl(prUrl(ref, 42))).toBe(true)
+      expect(isHttpsUrl(createPrUrl(ref, 'feature/probe'))).toBe(true)
+    }
   })
 })

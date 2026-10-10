@@ -210,12 +210,12 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] `prUrl` → `https://dev.azure.com/acme/platform/_git/widget/pullrequest/42`
-- [ ] `createPrUrl` encodes a branch with `/` correctly
-- [ ] A project with a space round-trips
-- [ ] Every output passes `isHttpsUrl`
-- [ ] Gate passes: `npm test`
-- [ ] Test count: 2984 + 4 = **2988**
+- [x] `prUrl` → `https://dev.azure.com/acme/platform/_git/widget/pullrequest/42`
+- [x] `createPrUrl` encodes a branch with `/` correctly
+- [x] A project with a space round-trips
+- [x] Every output passes `isHttpsUrl`
+- [x] Gate passes: `npm test`
+- [x] Test count: 2984 + 4 = **2988** — **actual 2989** (2985 after T4, +4)
 
 **Tests**: unit
 **Gate**: quick
