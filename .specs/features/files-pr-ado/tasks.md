@@ -313,16 +313,16 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] `findPrs` sends `sourceRefName=refs/heads/<branch>`, `sourceRepositoryId=<source id>` and `status=active` to **each** ADO target
-- [ ] `getPr` is used for the Overview, so a 1000-character description arrives whole (the list truncates to 400)
-- [ ] `changedFiles` follows `nextSkip` / `nextTop` until both are 0 or absent (S7) — a 250-file fixture yields 250 files
-- [ ] `threads` sends `$iteration=<latest>&$baseIteration=0`
-- [ ] `fileSide` reads the blob size before content and never requests content above 1 MB or for a binary; a 404 for the original side of an added file is an empty side (S6)
-- [ ] A missing token yields the auth result; a timeout yields an error result; nothing throws
-- [ ] **No read method issues a POST, PATCH, PUT or DELETE** — asserted over every read test
-- [ ] `ado-pr.test.ts` created
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: 3009 + 10 = **3019**
+- [x] `findPrs` sends `sourceRefName=refs/heads/<branch>`, `sourceRepositoryId=<source id>` and `status=active` to **each** ADO target
+- [x] `getPr` is used for the Overview, so a 1000-character description arrives whole (the list truncates to 400)
+- [x] `changedFiles` follows `nextSkip` / `nextTop` until both are 0 or absent (S7) — a 250-file fixture yields 250 files
+- [x] `threads` sends `$iteration=<latest>&$baseIteration=0`
+- [x] `fileSide` reads the blob size before content and never requests content above 1 MB or for a binary; a 404 for the original side of an added file is an empty side (S6)
+- [x] A missing token yields the auth result; a timeout yields an error result; nothing throws
+- [x] **No read method issues a POST, PATCH, PUT or DELETE** — asserted over every read test
+- [x] `ado-pr.test.ts` created
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: 3009 + 10 = **3019** — **actual 3021** (3011 after T8, +10)
 
 **Tests**: unit
 **Gate**: full
