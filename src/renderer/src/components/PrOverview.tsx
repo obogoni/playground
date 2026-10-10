@@ -7,6 +7,7 @@ import { useSharedNow } from '../lib/shared-tick'
 import type { UsePullRequest } from '../lib/use-pull-request'
 import { CommentComposer, MarkdownBody } from './CommentComposer'
 import { Icon } from './Icon'
+import { PrPicker } from './PrPicker'
 import { PrThread } from './PrThread'
 import './PrOverview.css'
 
@@ -88,9 +89,16 @@ export function PrOverview({ pr, onOpenDiff, onToast }: PrOverviewProps): JSX.El
     </div>
   )
 
+  // FPRA-04: several pull requests, so the reader picks the one shown.
+  const picker =
+    search?.kind === 'found' && search.prs.length > 1 ? (
+      <PrPicker prs={search.prs} current={pr.current} onChoose={pr.choose} />
+    ) : null
+
   const state = (body: ReactNode): JSX.Element => (
     <div className="pr-overview">
       {toolbar}
+      {picker}
       <div className="pr-overview-state">{body}</div>
     </div>
   )
@@ -128,7 +136,7 @@ export function PrOverview({ pr, onOpenDiff, onToast }: PrOverviewProps): JSX.El
       case 'found':
         return state(
           search.prs.length > 1
-            ? 'This branch has several active pull requests.'
+            ? 'This branch has several active pull requests. Choose the one to show.'
             : 'Reading the pull request…'
         )
     }
@@ -179,6 +187,7 @@ export function PrOverview({ pr, onOpenDiff, onToast }: PrOverviewProps): JSX.El
   return (
     <div className="pr-overview">
       {toolbar}
+      {picker}
       {pr.notice && (
         <div className="pr-overview-notice" role="status">
           {pr.notice}

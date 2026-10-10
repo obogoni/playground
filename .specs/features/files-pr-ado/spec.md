@@ -216,7 +216,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-01 | P1: Find the branch's PR | Execute | Implementing |
 | FPRA-02 | P1: Find the branch's PR | Execute | Implementing |
 | FPRA-03 | P1: Find the branch's PR | Execute | Implementing |
-| FPRA-04 | P1: Find the branch's PR | Execute | Implementing |
+| FPRA-04 | P1: Find the branch's PR | Execute | Implemented |
 | FPRA-05 | P1: Find the branch's PR | Execute | Implemented |
 | FPRA-06 | P1: Find the branch's PR | Execute | Implemented |
 | FPRA-07 | P1: Find the branch's PR | Execute | Implemented |

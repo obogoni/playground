@@ -635,10 +635,12 @@ Note: a left-side (original) thread opens at its line on the original side, so `
 
 **Done when**:
 
-- [ ] Shown only when more than one PR is found
-- [ ] The choice survives switching worktrees and back while the app runs
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **3046** (unchanged)
+- [x] Shown only when more than one PR is found — `PrOverview` mounts it only for a `found` search with more than one PR, above every state it shows
+- [x] The choice survives switching worktrees and back while the app runs — `usePullRequest` keeps `chosen` per worktree in memory, and a reload picks it again while the search still lists it
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **3046** (unchanged) — **actual 3053** (unchanged); lint warnings 18
+
+Note: the picker sits at the top of the Overview, where the "several pull requests" state is said, rather than in the left column.
 
 **Tests**: none
 **Gate**: full
