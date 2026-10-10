@@ -367,11 +367,11 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] Every handler is a delegation; `shell.openExternal` is reached only after `isHttpsUrl`
-- [ ] Nothing new goes through `setWindowOpenHandler` (https-only since #115, but links still go through `ado-pr:open-link`)
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Phase gate passes: `npx electron-vite build`
-- [ ] Test count: **3025** (unchanged)
+- [x] Every handler is a delegation; `shell.openExternal` is reached only after `isHttpsUrl`
+- [x] Nothing new goes through `setWindowOpenHandler` (https-only since #115, but links still go through `ado-pr:open-link`)
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Phase gate passes: `npx electron-vite build`
+- [x] Test count: **3025** (unchanged) — **actual 3029** (3027 after T10, +2: the open and open-link refusals live in `ado-pr.ts` so each handler is a delegation, and are tested there as `openCommit` is)
 
 **Tests**: none
 **Gate**: build

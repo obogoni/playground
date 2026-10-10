@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import type { PrRef } from '../shared/files'
-import { AdoPrClient } from './ado-pr'
+import { AdoPrClient, openPrLink } from './ado-pr'
 import type { GitRunner } from './git'
 
 // Every name here is fictitious: this repository is public and the spec's
@@ -648,5 +648,54 @@ describe('AdoPrClient writes (FPRA-25/26/27/29/31/32)', () => {
     expect(written).toHaveLength(3)
     await ado.generalComment(PR, 'c')
     expect(written.map((w) => w.method)).toEqual(['POST', 'PATCH', 'POST', 'POST'])
+  })
+})
+
+describe('opening pull request pages and links (FPRA-05/14/23)', () => {
+  it('opens a markdown link only when it is https, and refuses anything else unopened', async () => {
+    const opened: string[] = []
+    const open = async (url: string): Promise<void> => {
+      opened.push(url)
+    }
+
+    expect(await openPrLink('https://example.com/guide', open)).toEqual({ ok: true })
+    for (const href of [
+      'javascript:alert(1)',
+      'data:text/html,<b>x</b>',
+      'http://example.com/',
+      'file:///C:/x',
+      '/relative'
+    ]) {
+      expect((await openPrLink(href, open)).ok).toBe(false)
+    }
+    expect(opened).toEqual(['https://example.com/guide'])
+  })
+
+  it('builds the pull request page, and the create page from the repository the branch is pushed to', async () => {
+    const opened: string[] = []
+    const open = async (url: string): Promise<void> => {
+      opened.push(url)
+    }
+    const pushed = client(
+      () => json({}, 500),
+      fakeGit({
+        branch: 'feature/login',
+        remotes: { upstream: UPSTREAM, fork: FORK },
+        upstream: 'fork'
+      })
+    )
+    const unpushed = client(
+      () => json({}, 500),
+      fakeGit({ branch: 'feature/login', remotes: { upstream: UPSTREAM } })
+    )
+
+    expect(await pushed.openPage('/repo', { pr: PR }, open)).toEqual({ ok: true })
+    expect(await pushed.openPage('/repo', { create: true }, open)).toEqual({ ok: true })
+    expect((await unpushed.openPage('/repo', { create: true }, open)).ok).toBe(false)
+    expect(opened).toEqual([
+      'https://dev.azure.com/acme/platform/_git/widget/pullrequest/42',
+      'https://dev.azure.com/acme/platform/_git/widget-fork/pullrequestcreate?sourceRef=feature%2Flogin'
+    ])
+    expect(readRequests).toEqual([])
   })
 })

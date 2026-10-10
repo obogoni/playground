@@ -12,6 +12,7 @@ import icon from '../../resources/icon.png?asset'
 import { readNotificationPrefs } from '../shared/notifications'
 import type { PeriodSnapshotFields } from '../shared/time'
 import { AdoGateway } from './ado-gateway'
+import { AdoPrClient, openPrLink } from './ado-pr'
 import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-runner'
 import { BinaryResolver } from './binary-resolver'
 import { createActivityHookServer } from './activity-hook-server'
@@ -522,6 +523,29 @@ app.whenReady().then(() => {
       ref
     )
   )
+
+  // Azure DevOps pull requests (F4). One token cache with the Tasks pane; git
+  // reads go through the paced `git()`. The renderer sends intent only, and
+  // every write below is reached only from a user's click (FPRA-32, AD-027).
+  const adoPr = new AdoPrClient({ getToken: () => adoGateway.getToken() })
+  handle('ado-pr:find', ({ worktreePath }) => adoPr.findPrs(worktreePath))
+  handle('ado-pr:get', ({ pr }) => adoPr.getPr(pr))
+  handle('ado-pr:file-sides', ({ pr, path, oldPath }) => adoPr.fileSides(pr, path, oldPath))
+  handle('ado-pr:reply', ({ pr, threadId, rootCommentId, content }) =>
+    adoPr.reply(pr, threadId, rootCommentId, content)
+  )
+  handle('ado-pr:status', ({ pr, threadId, status }) => adoPr.setStatus(pr, threadId, status))
+  handle('ado-pr:thread', (req) => adoPr.createThread(req))
+  handle('ado-pr:comment', ({ pr, content }) => adoPr.generalComment(pr, content))
+  // `shell.openExternal` is reached only through these two, each of which
+  // refuses anything that is not https (FPRA-14/23, AD-044) — never through
+  // `setWindowOpenHandler`.
+  handle('ado-pr:open', (req) =>
+    adoPr.openPage(req.worktreePath, 'pr' in req ? { pr: req.pr } : { create: true }, (url) =>
+      shell.openExternal(url)
+    )
+  )
+  handle('ado-pr:open-link', ({ href }) => openPrLink(href, (url) => shell.openExternal(url)))
 
   // Agent sessions (AM2). SessionManager owns every session's lifecycle,
   // persistence, and stream routing; emit is lazily bound to the live window.

@@ -13,6 +13,7 @@ import type {
   PrThreadView,
   WriteResult
 } from '../shared/files'
+import type { LaunchResult } from '../shared/shortcuts'
 import {
   anchorFromSelection,
   classifyThread,
@@ -30,6 +31,8 @@ import { fetchWithTimeout } from './ado-gateway'
 import { lineEndingChanges } from './file-diff'
 import { MAX_VIEW_BYTES } from './file-reader'
 import { git, type GitRunner } from './git'
+import { createPrUrl, prUrl } from './remote-url'
+import { isHttpsUrl } from './url-policy'
 
 /**
  * The app's Azure DevOps pull-request client (F4). Every request to Azure
@@ -338,6 +341,31 @@ export class AdoPrClient {
     }
   }
 
+  /**
+   * Opens the pull request's page, or Azure DevOps' creation page for the
+   * branch, in the browser (FPRA-05/14). The renderer names the PR or asks
+   * for the create page; the address is built here — the create page from
+   * the repository the branch is pushed to — and opened only if it is https,
+   * as `openCommit` does (FCMT-28, AD-044).
+   */
+  async openPage(
+    worktreePath: string,
+    req: { pr: PrRef } | { create: true },
+    open: (url: string) => Promise<unknown>
+  ): Promise<LaunchResult> {
+    let url: string
+    if ('pr' in req) {
+      url = prUrl(req.pr.target, req.pr.id)
+    } else {
+      const located = await this.locate(worktreePath)
+      if (located.kind !== 'ok' || located.source === null) {
+        return { ok: false, error: 'This branch is not pushed to an Azure DevOps repository.' }
+      }
+      url = createPrUrl(located.source.target, located.branch)
+    }
+    return openHttps(url, open)
+  }
+
   /** A reply, appended to the thread under its root comment (FPRA-25). */
   reply(pr: PrRef, threadId: number, rootCommentId: number, content: string): Promise<WriteResult> {
     return this.send(
@@ -519,6 +547,31 @@ export class AdoPrClient {
     if (!res.ok) return { kind: 'error', message: await failureMessage(res) }
     return { kind: 'ok', value: res }
   }
+}
+
+/**
+ * Opens a link from rendered third-party markdown (FPRA-23): only an `https:`
+ * address reaches the browser, whatever the renderer already checked. Anything
+ * else is refused and nothing is opened.
+ */
+export function openPrLink(
+  href: string,
+  open: (url: string) => Promise<unknown>
+): Promise<LaunchResult> {
+  return openHttps(href, open)
+}
+
+async function openHttps(
+  url: string,
+  open: (url: string) => Promise<unknown>
+): Promise<LaunchResult> {
+  if (!isHttpsUrl(url)) return { ok: false, error: 'Refused to open an address that is not https.' }
+  try {
+    await open(url)
+  } catch (err) {
+    return { ok: false, error: messageOf(err) }
+  }
+  return { ok: true }
 }
 
 /** The REST root of one repository, every segment encoded. */
