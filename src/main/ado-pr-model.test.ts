@@ -4,6 +4,7 @@ import {
   classifyThread,
   iterationContextFor,
   pickRemoteRepos,
+  rootCommentId,
   sourceRemote,
   toChangedPaths,
   visibleComments,
@@ -294,6 +295,28 @@ describe('visibleComments (FPRA-21)', () => {
         at: Date.parse('2026-10-02T08:30:00Z')
       }
     ])
+  })
+})
+
+// [owner 2026-10-10] A reply answers the thread's root, which deleted comments
+// must not hide: `comments[0]` of the visible ones can be a reply.
+describe('rootCommentId (FPRA-25)', () => {
+  it('is the comment with no parent, even when it was deleted', () => {
+    expect(
+      rootCommentId(
+        thread({
+          comments: [
+            comment({ id: 4, parentCommentId: 0, isDeleted: true, content: undefined }),
+            comment({ id: 5, parentCommentId: 4 }),
+            comment({ id: 6, parentCommentId: 4 })
+          ]
+        })
+      )
+    ).toBe(4)
+  })
+
+  it('is the lowest id when no comment names its parent', () => {
+    expect(rootCommentId(thread({ comments: [comment({ id: 9 }), comment({ id: 7 })] }))).toBe(7)
   })
 })
 

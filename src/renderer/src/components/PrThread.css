@@ -1,0 +1,144 @@
+/*
+ * One review thread (FPRA-20/21/25/26), in the Overview's list and under its
+ * line in a PR diff. A resolved thread collapses to one line.
+ */
+
+.pr-thread {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  background: var(--panel);
+  font-size: 12.5px;
+}
+
+.pr-thread.resolved {
+  border-left-color: var(--green);
+}
+
+.pr-thread-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 8px;
+}
+
+.pr-thread-toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  text-align: left;
+}
+
+.pr-thread-chevron {
+  display: flex;
+  color: var(--text-faint);
+  transform: rotate(-90deg);
+  transition: transform 0.12s;
+}
+
+.pr-thread-chevron.open {
+  transform: none;
+}
+
+.pr-thread-author {
+  flex: none;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pr-thread-snippet {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.pr-thread-location {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.pr-thread-location.link {
+  color: var(--accent-text);
+}
+
+.pr-thread-location.link:hover {
+  text-decoration: underline;
+}
+
+.pr-thread-status {
+  flex: none;
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 11.5px;
+}
+
+.pr-thread-resolution {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.pr-thread-error {
+  padding: 0 10px 6px;
+  font-size: 12px;
+  color: var(--red);
+  overflow-wrap: anywhere;
+}
+
+.pr-thread-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px 10px 9px 27px;
+}
+
+.pr-thread-comment + .pr-thread-comment {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.pr-thread-meta {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 3px;
+  font-size: 11.5px;
+}
+
+.pr-thread-meta-author {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pr-thread-meta-date {
+  color: var(--text-faint);
+}
+
+.pr-thread-reply {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.pr-thread-reply:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}

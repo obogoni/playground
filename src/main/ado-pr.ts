@@ -19,6 +19,7 @@ import {
   classifyThread,
   iterationContextFor,
   pickRemoteRepos,
+  rootCommentId,
   sourceRemote,
   toChangedPaths,
   visibleComments,
@@ -618,6 +619,8 @@ function threadView(thread: AdoThread): PrThreadView {
   const status = THREAD_STATUSES.find((s) => s === thread.status) ?? 'unknown'
   return {
     id: thread.id,
+    // From every comment, before the deleted ones are dropped ([owner 2026-10-10]).
+    rootCommentId: rootCommentId(thread),
     // Fixed, Won't fix, Closed and By design are Azure DevOps' resolved states;
     // Active, Pending and a thread with no status read as open (FPRA-20).
     resolution:

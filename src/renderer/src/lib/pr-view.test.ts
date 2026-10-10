@@ -17,6 +17,7 @@ function thread(
 ): PrThreadView {
   return {
     id,
+    rootCommentId: 1,
     resolution,
     providerStatus: resolution === 'active' ? 'active' : 'fixed',
     comments: [{ id: 1, author: 'Robin Widget', content: `Thread ${id}`, at: 0 }],
@@ -85,9 +86,10 @@ describe('statusLabel and OFFERED_STATUSES (FPRA-26)', () => {
   ]
 
   it('labels every Azure DevOps thread status', () => {
+    // [owner 2026-10-10] `fixed` reads "Resolved", as Azure DevOps' web view names it.
     expect(ALL.map(statusLabel)).toEqual([
       'Active',
-      'Fixed',
+      'Resolved',
       "Won't fix",
       'Closed',
       'By design',

@@ -395,6 +395,7 @@ describe('AdoPrClient.threads (FPRA-11, 13, 18, 19, 20)', () => {
       value: [
         {
           id: 1,
+          rootCommentId: 1,
           resolution: 'active',
           providerStatus: 'active',
           comments: [
@@ -409,6 +410,7 @@ describe('AdoPrClient.threads (FPRA-11, 13, 18, 19, 20)', () => {
         },
         {
           id: 2,
+          rootCommentId: 1,
           resolution: 'resolved',
           providerStatus: 'fixed',
           comments: [

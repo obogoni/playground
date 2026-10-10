@@ -231,13 +231,13 @@ so that I never answer a thread that has already moved on.
 | FPRA-17 | P1: Read the PR | Design | Pending |
 | FPRA-18 | P1: Read the PR | Execute | Implementing |
 | FPRA-19 | P1: Read the PR | Execute | Implemented |
-| FPRA-20 | P1: Read the PR | Execute | Implementing |
-| FPRA-21 | P1: Read the PR | Execute | Implementing |
+| FPRA-20 | P1: Read the PR | Execute | Implemented |
+| FPRA-21 | P1: Read the PR | Execute | Implemented |
 | FPRA-22 | P1: Nothing third-party is trusted | Execute | Implementing |
 | FPRA-23 | P1: Nothing third-party is trusted | Execute | Implemented |
 | FPRA-24 | P1: Nothing third-party is trusted | Execute | Implemented |
-| FPRA-25 | P2: Answer the review | Execute | Implementing |
-| FPRA-26 | P2: Answer the review | Execute | Implementing |
+| FPRA-25 | P2: Answer the review | Execute | Implemented |
+| FPRA-26 | P2: Answer the review | Execute | Implemented |
 | FPRA-27 | P2: Answer the review | Execute | Implementing |
 | FPRA-28 | P2: Answer the review | Execute | Implementing |
 | FPRA-29 | P2: Answer the review | Execute | Implementing |

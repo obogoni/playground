@@ -500,6 +500,7 @@ function ownThread(content: string, place: PrThreadView['place']): PrThreadView 
   const first = ownComment(content)
   return {
     id: first.id,
+    rootCommentId: first.id,
     resolution: 'active',
     providerStatus: 'active',
     comments: [first],

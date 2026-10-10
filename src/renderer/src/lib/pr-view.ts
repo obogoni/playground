@@ -55,10 +55,12 @@ export function overviewGroups(threads: PrThreadView[]): OverviewGroups {
   return groups
 }
 
+// [owner 2026-10-10] `fixed` reads "Resolved", as Azure DevOps' web view
+// names it; every other status keeps its own name.
 const STATUS_LABELS: Record<AdoThreadStatus, string> = {
   active: 'Active',
   pending: 'Pending',
-  fixed: 'Fixed',
+  fixed: 'Resolved',
   wontFix: "Won't fix",
   closed: 'Closed',
   byDesign: 'By design',

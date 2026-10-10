@@ -317,6 +317,12 @@ export type PrThreadPlace =
  */
 export interface PrThreadView {
   id: number
+  /**
+   * The comment a reply answers (FPRA-25): the thread's first comment, read
+   * before deleted comments are dropped, so it holds even when that comment
+   * was deleted and `comments[0]` is a reply ([owner 2026-10-10]).
+   */
+  rootCommentId: number
   resolution: 'active' | 'resolved'
   providerStatus?: AdoThreadStatus
   comments: PrComment[]

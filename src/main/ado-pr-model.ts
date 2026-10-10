@@ -46,6 +46,8 @@ export interface AdoComment {
   publishedDate: string
   /** `text`, `system` or `codeChange`. */
   commentType: string
+  /** The comment this one answers; 0 for the thread's first comment. */
+  parentCommentId?: number
   isDeleted?: boolean
 }
 
@@ -192,6 +194,19 @@ export function visibleComments(thread: AdoThread): PrComment[] {
       content: c.content ?? '',
       at: Date.parse(c.publishedDate)
     }))
+}
+
+/**
+ * The comment a reply to this thread answers (FPRA-25): the one with no
+ * parent, else the lowest id. Read from every comment, deleted ones included,
+ * because a deleted first comment is still the thread's root while the first
+ * visible comment is then a reply ([owner 2026-10-10]).
+ */
+export function rootCommentId(thread: AdoThread): number {
+  const root = thread.comments.find((c) => c.parentCommentId === 0)
+  if (root) return root.id
+  const ids = thread.comments.map((c) => c.id)
+  return ids.length > 0 ? Math.min(...ids) : 0
 }
 
 /**

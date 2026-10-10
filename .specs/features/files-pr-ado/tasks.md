@@ -569,11 +569,21 @@ Note: `MarkdownBody`, the inert rendering every comment and the description use,
 
 **Done when**:
 
-- [ ] Setting Active on a resolved thread reopens and expands it
-- [ ] A link click sends only the `data-href`; the component never navigates
-- [ ] **[amended at F5 Spec]** The status control is chosen by the thread's provider — ADO's selector here — so F5 plugs in its Resolve / Reopen toggle without editing this component's structure
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **3046** (unchanged)
+- [x] Setting Active on a resolved thread reopens and expands it — a successful Active (or Pending) expands the thread; a resolved status collapses it
+- [x] A link click sends only the `data-href`; the component never navigates — comments render through `MarkdownBody`, whose anchors carry no `href`
+- [x] **[amended at F5 Spec]** The status control is chosen by the thread's provider — ADO's selector here — so F5 plugs in its Resolve / Reopen toggle without editing this component's structure — `STATUS_CONTROLS[provider]`; F5 adds an entry
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **3046** (unchanged) — **actual 3052** (3050 + 2: owner decision 3's `rootCommentId` tests); lint warnings 18
+
+**[owner 2026-10-10]** Azure DevOps' `fixed` reads **"Resolved"**, as its web view names it: `statusLabel('fixed')` and the expected value in `pr-view.test.ts` changed by the owner's call; the other labels are unchanged.
+
+**[owner 2026-10-10]** `ado-pr:reply` needs the thread's root comment, and deleted comments are filtered out of `PrThreadView`, so `comments[0]` can be a reply. `PrThreadView.rootCommentId` is computed in main from the raw thread before filtering (`rootCommentId` in `ado-pr-model.ts`: the comment whose `parentCommentId` is 0, else the lowest id), with two unit tests; the existing `threads` client test's expected views gain the field.
+
+| Criterion | `file:line` + assertion | Outcome | Covered? |
+| --------- | ----------------------- | ------- | -------- |
+| Root survives a deleted first comment | `src/main/ado-pr-model.test.ts:315` - `).toBe(4)` | the parent-0 comment, deleted | ✅ |
+| Lowest id when no parent is named | `src/main/ado-pr-model.test.ts:319` - `.toBe(7)` | lowest id | ✅ |
+| `fixed` reads Resolved | `src/renderer/src/lib/pr-view.test.ts:90` - `expect(ALL.map(statusLabel)).toEqual([... 'Resolved' ...])` | owner's label | ✅ |
 
 **Tests**: none
 **Gate**: full
