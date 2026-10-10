@@ -44,6 +44,7 @@ import {
 } from './files-view'
 import { createRefreshGate, mergeBatches } from './refresh-gate'
 import { useLatestCallback } from './use-latest-callback'
+import { usePullRequest, type UsePullRequest } from './use-pull-request'
 
 /** One open file (FXPL-18): what was read for it, and when it was last picked. */
 export interface FileTab {
@@ -233,6 +234,8 @@ export interface UseFiles {
   unchangedFor: (key: string) => UnchangedChoice | null
   /** Records a press of Hide unchanged or Show unchanged in one tab (FOLD-12, FOLD-13). */
   pressUnchanged: (key: string, mode: UnchangedMode) => void
+  /** The Pull request mode's state for this worktree (F4). */
+  pr: UsePullRequest
 }
 
 /**
@@ -320,8 +323,14 @@ export function useFiles({
   const loadStats = useCallback(
     (wt: string, lens: FilesMode, from: string | undefined): Promise<void> => {
       // Commits mode has no list of its own to count: each commit's tab brings
-      // its own counts back with `commits:files`.
-      if (lens === 'full' || lens === 'commits' || (lens === 'since-base' && !from)) {
+      // its own counts back with `commits:files`. Pull request mode counts
+      // nothing locally: its files are the provider's (FPRA-15).
+      if (
+        lens === 'full' ||
+        lens === 'commits' ||
+        lens === 'pull-request' ||
+        (lens === 'since-base' && !from)
+      ) {
         patchFiles(wt, () => ({ stats: [] }))
         return Promise.resolve()
       }
@@ -428,6 +437,9 @@ export function useFiles({
         // snapshot only moves when the app re-reads the tree, so a file saved
         // while the list is open would leave the row's number stale.
         reads.push(loadUncommitted(wt))
+      } else if (lens === 'pull-request') {
+        // The pull request's files come from its provider, through
+        // `usePullRequest`; nothing is listed from the local repository.
       } else if (from) {
         reads.push(loadChanged(wt, from))
       } else {
@@ -508,9 +520,14 @@ export function useFiles({
   }, [loadCommits])
 
   // FXPL-23: one worktree is watched, and only while the direction is Files.
+  // Pull request mode shows the provider's copy, so the disk is not watched.
+  const watching = active && mode !== 'pull-request'
   useEffect(() => {
-    api.invoke('files:watch', { worktreePath: active ? worktreePath : null }).catch(console.error)
-  }, [active, worktreePath])
+    api.invoke('files:watch', { worktreePath: watching ? worktreePath : null }).catch(console.error)
+  }, [watching, worktreePath])
+
+  // F4: the Pull request lens reads Azure DevOps, only while it is shown.
+  const pr = usePullRequest({ worktreePath, active: active && mode === 'pull-request' })
 
   /**
    * One batch refresh, run by the gate (FWIG-18..21). It reads the view as it
@@ -938,7 +955,8 @@ export function useFiles({
     togglePin,
     closeTabs,
     unchangedFor: (key) => here.unchanged[key] ?? null,
-    pressUnchanged
+    pressUnchanged,
+    pr
   }
 }
 

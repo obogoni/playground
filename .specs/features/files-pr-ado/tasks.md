@@ -518,11 +518,13 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] No timer triggers a request (FPRA-35)
-- [ ] A write that succeeded followed by a failed reload keeps the written content with a notice (edge case)
-- [ ] **[reconciled 2026-10-10]** `use-files.ts` treats `'pull-request'` as a lens with no local listing, watch or diff read; the mode is remembered per worktree like the other four (FXPL-13, owner 2026-10-10), so reopening the app on a worktree left in it searches Azure DevOps on entry — a read only
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **3046** (unchanged)
+- [x] No timer triggers a request (FPRA-35) — the hook has no timer at all: reads start on entry, on focus (5 s debounce, compared against the last focus time), after a successful write and from `refresh`
+- [x] A write that succeeded followed by a failed reload keeps the written content with a notice (edge case) — the write is applied to the detail on screen before the reload; a failed reload of the PR on screen sets `notice` and leaves the detail
+- [x] **[reconciled 2026-10-10]** `use-files.ts` treats `'pull-request'` as a lens with no local listing, watch or diff read; the mode is remembered per worktree like the other four (FXPL-13, owner 2026-10-10), so reopening the app on a worktree left in it searches Azure DevOps on entry — a read only. `refreshMode` and `loadStats` read nothing for it, `files:watch` gets `null` while it is shown, and `usePullRequest` runs inside `useFiles` as `files.pr`
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **3046** (unchanged) — **actual 3050** (unchanged); lint warnings 18
+
+Notes: a pull request on screen that a later search no longer lists is read once more, so a PR completed or abandoned elsewhere shows its status (edge case) instead of turning into "no pull request". Sides are cached per PR diff tab key with the iteration that was latest when they were asked for; the banner's action drops them, and the open tab reads them again.
 
 **Tests**: none
 **Gate**: full
