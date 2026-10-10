@@ -217,7 +217,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-03 | P1: Find the branch's PR | Design | Pending |
 | FPRA-04 | P1: Find the branch's PR | Design | Pending |
 | FPRA-05 | P1: Find the branch's PR | Execute | Implementing |
-| FPRA-06 | P1: Find the branch's PR | Design | Pending |
+| FPRA-06 | P1: Find the branch's PR | Execute | Implementing |
 | FPRA-07 | P1: Find the branch's PR | Execute | Implementing |
 | FPRA-08 | P1: Find the branch's PR | Design | Pending |
 | FPRA-09 | P1: Read the PR | Execute | Implementing |
@@ -226,7 +226,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-12 | P1: Read the PR | Design | Pending |
 | FPRA-13 | P1: Read the PR | Design | Pending |
 | FPRA-14 | P1: Read the PR | Execute | Implementing |
-| FPRA-15 | P1: Read the PR | Design | Pending |
+| FPRA-15 | P1: Read the PR | Execute | Implementing |
 | FPRA-16 | P1: Read the PR | Design | Pending |
 | FPRA-17 | P1: Read the PR | Design | Pending |
 | FPRA-18 | P1: Read the PR | Design | Pending |

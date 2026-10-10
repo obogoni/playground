@@ -235,12 +235,12 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] `add / edit / delete / rename` map to `ChangeStatus`; the leading `/` is stripped; `originalPath` and `changeTrackingId` survive
-- [ ] The five documented votes map to their labels; an unknown value maps to "no vote"
-- [ ] A repository with a GitHub `origin` and an ADO `fork` yields one ADO target; no ADO remote yields none (FPRA-06)
-- [ ] `ado-pr-model.test.ts` created
-- [ ] Gate passes: `npm test`
-- [ ] Test count: 2988 + 7 = **2995**
+- [x] `add / edit / delete / rename` map to `ChangeStatus`; the leading `/` is stripped; `originalPath` and `changeTrackingId` survive
+- [x] The five documented votes map to their labels; an unknown value maps to "no vote"
+- [x] A repository with a GitHub `origin` and an ADO `fork` yields one ADO target; no ADO remote yields none (FPRA-06)
+- [x] `ado-pr-model.test.ts` created
+- [x] Gate passes: `npm test`
+- [x] Test count: 2988 + 7 = **2995** — **actual 2997** (2989 after T5, +8: `sourceRemote` has two tests of its own)
 
 **Tests**: unit
 **Gate**: quick
