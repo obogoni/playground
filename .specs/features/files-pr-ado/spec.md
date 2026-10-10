@@ -213,7 +213,7 @@ so that I never answer a thread that has already moved on.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FPRA-01 | P1: Find the branch's PR | Execute | Implementing |
+| FPRA-01 | P1: Find the branch's PR | Execute | Implemented |
 | FPRA-02 | P1: Find the branch's PR | Execute | Implementing |
 | FPRA-03 | P1: Find the branch's PR | Execute | Implementing |
 | FPRA-04 | P1: Find the branch's PR | Execute | Implemented |
@@ -227,7 +227,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-12 | P1: Read the PR | Execute | Implementing |
 | FPRA-13 | P1: Read the PR | Execute | Implemented |
 | FPRA-14 | P1: Read the PR | Execute | Implemented |
-| FPRA-15 | P1: Read the PR | Execute | Implementing |
+| FPRA-15 | P1: Read the PR | Execute | Implemented |
 | FPRA-16 | P1: Read the PR | Execute | Implementing |
 | FPRA-17 | P1: Read the PR | Execute | Implemented |
 | FPRA-18 | P1: Read the PR | Execute | Implemented |

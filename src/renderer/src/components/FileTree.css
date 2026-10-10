@@ -16,8 +16,8 @@
 .file-tree-modes {
   flex: 0 0 auto;
   display: flex;
-  /* Four modes no longer fit one line at the column's 200px minimum, and
-     "Diff to origin" must not break mid-label, so the row wraps instead. */
+  /* Five modes do not fit one line at the column's 200px minimum, and no
+     label may break mid-label, so the row wraps instead (FPRA-01). */
   flex-wrap: wrap;
   gap: 2px;
   padding: 8px;

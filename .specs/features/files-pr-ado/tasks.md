@@ -685,10 +685,12 @@ Beyond `PrDiffTab.tsx`: `use-files.ts` gains the `pr-diff` tab (`pr`, `id`, `pat
 
 **Done when**:
 
-- [ ] Five options fit the left column at its minimum width
-- [ ] The PR tree shows each file's status with #131's `StatusGlyph` / `changeStatusView`, as the other modes do
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **3046** (unchanged)
+- [x] Five options fit the left column at its minimum width — the selector row already wraps at the 200px minimum and no label breaks mid-word; the fifth option wraps with the others. On screen at T27
+- [x] The PR tree shows each file's status with #131's `StatusGlyph` / `changeStatusView`, as the other modes do — the PR's files go through `buildTree` and the same `ChangedRows` the diff modes use
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **3046** (unchanged) — **actual 3053** (unchanged); lint warnings 18
+
+Note: a click on a PR file opens its PR diff directly; the solution double-click of the local modes (FXPL-28) does not apply to the provider's copy. With no pull request to list, the column says so and leaves the reason to the Overview.
 
 **Tests**: none
 **Gate**: full
