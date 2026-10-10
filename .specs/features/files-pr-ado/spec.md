@@ -230,7 +230,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-16 | P1: Read the PR | Execute | Implementing |
 | FPRA-17 | P1: Read the PR | Design | Pending |
 | FPRA-18 | P1: Read the PR | Execute | Implementing |
-| FPRA-19 | P1: Read the PR | Execute | Implementing |
+| FPRA-19 | P1: Read the PR | Execute | Implemented |
 | FPRA-20 | P1: Read the PR | Execute | Implementing |
 | FPRA-21 | P1: Read the PR | Execute | Implementing |
 | FPRA-22 | P1: Nothing third-party is trusted | Execute | Implementing |

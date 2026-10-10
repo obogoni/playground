@@ -421,11 +421,11 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] Active, resolved, outdated, general and activity groups each receive exactly their threads; deleted threads appear nowhere
-- [ ] Every ADO status has a label; the statuses offered for a change exclude `unknown`
-- [ ] `pr-view.test.ts` created
-- [ ] Gate passes: `npm test`
-- [ ] Test count: 3034 + 5 = **3039**
+- [x] Active, resolved, outdated, general and activity groups each receive exactly their threads; deleted threads appear nowhere
+- [x] Every ADO status has a label; the statuses offered for a change exclude `unknown`
+- [x] `pr-view.test.ts` created
+- [x] Gate passes: `npm test`
+- [x] Test count: 3034 + 5 = **3039** — **actual 3043** (3038 after T12, +5)
 
 **Tests**: unit
 **Gate**: quick
