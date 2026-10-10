@@ -726,6 +726,30 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: RCNT-12 (validation.md, spec-precision gap) (spec)
 - last seen: 2026-10-03T17:19:43Z
 
+### L-125 - When a rule quantifies over a collection (every/all), test the mixed case where only some items match, or an every-to-some mutant survives.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `unit-tests` · harmful: 0
+- features: files-pr-ado
+- evidence: U1 src/main/ado-pr-model.ts:158 (unit-tests)
+- last seen: 2026-10-10T14:46:19Z
+
+### L-126 - An AC that compares against what is on screen must say what counts as on screen when the view shows none of the things it compares.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: files-pr-ado
+- evidence: FPRA-34 (spec)
+- last seen: 2026-10-10T14:46:19Z
+
+### L-127 - A lookup AC that depends on local configuration (a tracked remote, a setting) must state the outcome when that configuration is absent.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: files-pr-ado
+- evidence: FPRA-02 (spec)
+- last seen: 2026-10-10T14:46:19Z
+
+### L-128 - Before writing a paging edge case for a provider call, check the reference says the call pages; record the finding either way.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: files-pr-ado
+- evidence: spec Edge Cases: threads paging (spec)
+- last seen: 2026-10-10T14:46:20Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
