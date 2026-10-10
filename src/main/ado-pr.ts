@@ -6,13 +6,17 @@ import type {
   PrFile,
   PrRef,
   PrSearch,
+  PrSelection,
   PrStatus,
   PrSummary,
   PrTarget,
-  PrThreadView
+  PrThreadView,
+  WriteResult
 } from '../shared/files'
 import {
+  anchorFromSelection,
   classifyThread,
+  iterationContextFor,
   pickRemoteRepos,
   sourceRemote,
   toChangedPaths,
@@ -32,9 +36,11 @@ import { git, type GitRunner } from './git'
  * DevOps for pull requests goes through here, built from intent the renderer
  * sends — a `PrRef`, a path — never from a URL it holds (FPRA-32).
  *
- * Reads only in this half: no method below sends anything but a GET. Every
- * method returns a result and never throws; a missing token is the "run `az
- * login`" result (FPRA-07), anything else an error the view can show.
+ * Reads send nothing but a GET. The four writes — reply, status, a new thread,
+ * a general comment — each send exactly one request, only when called, which
+ * the IPC layer does only on a user's click (FPRA-32, AD-027). Every method
+ * returns a result and never throws; a missing token is the "run `az login`"
+ * result (FPRA-07), anything else an error the view can show.
  */
 
 /** Bound each request, as the work-items gateway does, so a hung connection cannot hold a view. */
@@ -81,6 +87,24 @@ interface AdoPullRequest {
   sourceRefName: string
   targetRefName: string
   reviewers?: (AdoIdentity & { vote: number; isContainer?: boolean; isRequired?: boolean })[]
+}
+
+/** Azure DevOps' `CommentThreadStatus` values for the statuses a user can set (FPRA-26). */
+const STATUS_CODES: Record<Exclude<AdoThreadStatus, 'unknown'>, number> = {
+  active: 1,
+  fixed: 2,
+  wontFix: 3,
+  closed: 4,
+  byDesign: 5,
+  pending: 6
+}
+
+/** `CommentType.text`: a comment a person wrote. */
+const TEXT_COMMENT = 1
+
+/** What the web UI sets on the threads it creates; the app's writes match it (T1, S5). */
+const SUPPORTS_MARKDOWN = {
+  'Microsoft.TeamFoundation.Discussion.SupportsMarkdown': { type: 'System.Int32', value: 1 }
 }
 
 const THREAD_STATUSES: readonly AdoThreadStatus[] = [
@@ -312,6 +336,100 @@ export class AdoPrClient {
     } catch (err) {
       return { kind: 'error', message: messageOf(err) }
     }
+  }
+
+  /** A reply, appended to the thread under its root comment (FPRA-25). */
+  reply(pr: PrRef, threadId: number, rootCommentId: number, content: string): Promise<WriteResult> {
+    return this.send(
+      'POST',
+      `${apiBase(pr.target)}/pullRequests/${pr.id}/threads/${threadId}/comments?${API_VERSION}`,
+      { content, parentCommentId: rootCommentId, commentType: TEXT_COMMENT }
+    )
+  }
+
+  /** A thread's new status; Active reopens a resolved thread (FPRA-26). */
+  setStatus(
+    pr: PrRef,
+    threadId: number,
+    status: Exclude<AdoThreadStatus, 'unknown'>
+  ): Promise<WriteResult> {
+    return this.send(
+      'PATCH',
+      `${apiBase(pr.target)}/pullRequests/${pr.id}/threads/${threadId}?${API_VERSION}`,
+      { status: STATUS_CODES[status] }
+    )
+  }
+
+  /**
+   * A new thread on a modified-side selection, anchored as Azure DevOps'
+   * own web view anchors one on the whole-PR view (FPRA-27; T1, S1/S2): the
+   * file with a leading `/`, the selection's lines and character offsets as
+   * they are, the file's change tracking id and the iteration on screen.
+   */
+  createThread(req: {
+    pr: PrRef
+    iteration: number
+    changeTrackingId: number
+    selection: PrSelection
+    content: string
+  }): Promise<WriteResult> {
+    const anchor = anchorFromSelection(req.selection)
+    return this.send(
+      'POST',
+      `${apiBase(req.pr.target)}/pullRequests/${req.pr.id}/threads?${API_VERSION}`,
+      {
+        comments: [{ parentCommentId: 0, content: req.content, commentType: TEXT_COMMENT }],
+        status: STATUS_CODES.active,
+        threadContext: {
+          filePath: `/${anchor.path}`,
+          rightFileStart: { line: anchor.startLine, offset: anchor.startOffset },
+          rightFileEnd: { line: anchor.endLine, offset: anchor.endOffset }
+        },
+        pullRequestThreadContext: {
+          changeTrackingId: req.changeTrackingId,
+          iterationContext: iterationContextFor(req.iteration)
+        },
+        properties: SUPPORTS_MARKDOWN
+      }
+    )
+  }
+
+  /** A comment on the pull request as a whole: a thread with no file context (FPRA-29). */
+  generalComment(pr: PrRef, content: string): Promise<WriteResult> {
+    return this.send('POST', `${apiBase(pr.target)}/pullRequests/${pr.id}/threads?${API_VERSION}`, {
+      comments: [{ parentCommentId: 0, content, commentType: TEXT_COMMENT }],
+      status: STATUS_CODES.active,
+      properties: SUPPORTS_MARKDOWN
+    })
+  }
+
+  /**
+   * The one request a write makes. A failure carries Azure DevOps' own message
+   * where it gave one, for the composer to show with the text kept (FPRA-31).
+   */
+  private async send(method: 'POST' | 'PATCH', url: string, body: unknown): Promise<WriteResult> {
+    const token = await this.getToken()
+    if (!token.ok) return { ok: false, message: readFailure({ kind: 'auth' }) }
+    let res: Response
+    try {
+      res = await fetchWithTimeout(
+        this.fetchFn,
+        url,
+        {
+          method,
+          headers: {
+            Authorization: `Bearer ${token.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        },
+        ADO_PR_FETCH_TIMEOUT_MS
+      )
+    } catch (err) {
+      return { ok: false, message: messageOf(err) }
+    }
+    if (!res.ok) return { ok: false, message: await failureMessage(res) }
+    return { ok: true }
   }
 
   /**

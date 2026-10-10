@@ -502,3 +502,151 @@ describe('AdoPrClient.fileSide / fileSides (FPRA-16/17; T1, S6)', () => {
     ])
   })
 })
+
+describe('AdoPrClient writes (FPRA-25/26/27/29/31/32)', () => {
+  interface Written {
+    method: string
+    url: string
+    body: unknown
+  }
+
+  /** A stand-in that records each write's method, URL and parsed body. */
+  function writer(answer: () => Response = () => json({ id: 1 })): {
+    ado: AdoPrClient
+    written: Written[]
+  } {
+    const written: Written[] = []
+    const fetchFn: typeof fetch = async (input, init) => {
+      written.push({
+        method: init?.method ?? 'GET',
+        url: String(input),
+        body: JSON.parse(String(init?.body))
+      })
+      return answer()
+    }
+    return { ado: new AdoPrClient({ getToken: token, fetchFn }), written }
+  }
+
+  const THREADS = `https://dev.azure.com/acme/platform/_apis/git/repositories/widget/pullRequests/42/threads`
+  const MARKDOWN = {
+    'Microsoft.TeamFoundation.Discussion.SupportsMarkdown': { type: 'System.Int32', value: 1 }
+  }
+
+  it('posts a reply under the thread root comment', async () => {
+    const { ado, written } = writer()
+
+    expect(await ado.reply(PR, 9, 1, 'Renamed it.')).toEqual({ ok: true })
+    expect(written).toEqual([
+      {
+        method: 'POST',
+        url: `${THREADS}/9/comments?api-version=7.1`,
+        body: { content: 'Renamed it.', parentCommentId: 1, commentType: 1 }
+      }
+    ])
+  })
+
+  it('patches a thread status, Active included, which reopens it', async () => {
+    const { ado, written } = writer()
+
+    expect(await ado.setStatus(PR, 9, 'fixed')).toEqual({ ok: true })
+    expect(await ado.setStatus(PR, 9, 'active')).toEqual({ ok: true })
+    expect(written).toEqual([
+      { method: 'PATCH', url: `${THREADS}/9?api-version=7.1`, body: { status: 2 } },
+      { method: 'PATCH', url: `${THREADS}/9?api-version=7.1`, body: { status: 1 } }
+    ])
+  })
+
+  it('creates a thread anchored to the selection, its file and the iteration on screen', async () => {
+    const { ado, written } = writer()
+
+    const result = await ado.createThread({
+      pr: PR,
+      iteration: 4,
+      changeTrackingId: 3,
+      selection: { path: 'src/app.ts', startLine: 5, startColumn: 1, endLine: 6, endColumn: 13 },
+      content: 'Could this be a constant?'
+    })
+
+    expect(result).toEqual({ ok: true })
+    expect(written).toEqual([
+      {
+        method: 'POST',
+        url: `${THREADS}?api-version=7.1`,
+        body: {
+          comments: [{ parentCommentId: 0, content: 'Could this be a constant?', commentType: 1 }],
+          status: 1,
+          threadContext: {
+            filePath: '/src/app.ts',
+            rightFileStart: { line: 5, offset: 1 },
+            rightFileEnd: { line: 6, offset: 13 }
+          },
+          pullRequestThreadContext: {
+            changeTrackingId: 3,
+            iterationContext: { firstComparingIteration: 4, secondComparingIteration: 4 }
+          },
+          properties: MARKDOWN
+        }
+      }
+    ])
+  })
+
+  it('posts a general comment as a thread with no file context', async () => {
+    const { ado, written } = writer()
+
+    expect(await ado.generalComment(PR, 'Looks good overall.')).toEqual({ ok: true })
+    expect(written).toEqual([
+      {
+        method: 'POST',
+        url: `${THREADS}?api-version=7.1`,
+        body: {
+          comments: [{ parentCommentId: 0, content: 'Looks good overall.', commentType: 1 }],
+          status: 1,
+          properties: MARKDOWN
+        }
+      }
+    ])
+  })
+
+  it("returns azure devops' own message when it refuses a write", async () => {
+    const forbidden = writer(() =>
+      json({ message: 'TF401027: You need the Git Contribute permission.' }, 403)
+    )
+    const unauthorized = writer(() => new Response('', { status: 401 }))
+    const offline = new AdoPrClient({
+      getToken: token,
+      fetchFn: async () => {
+        throw new TypeError('fetch failed')
+      }
+    })
+
+    expect(await forbidden.ado.reply(PR, 9, 1, 'x')).toEqual({
+      ok: false,
+      message: 'TF401027: You need the Git Contribute permission.'
+    })
+    expect(await unauthorized.ado.generalComment(PR, 'x')).toEqual({
+      ok: false,
+      message: 'Azure DevOps request failed (HTTP 401)'
+    })
+    expect(await offline.setStatus(PR, 9, 'closed')).toEqual({ ok: false, message: 'fetch failed' })
+  })
+
+  it('sends nothing until a write is called, then exactly one request per write', async () => {
+    const { ado, written } = writer()
+    expect(written).toHaveLength(0)
+
+    await ado.reply(PR, 9, 1, 'a')
+    expect(written).toHaveLength(1)
+    await ado.setStatus(PR, 9, 'wontFix')
+    expect(written).toHaveLength(2)
+    await ado.createThread({
+      pr: PR,
+      iteration: 1,
+      changeTrackingId: 1,
+      selection: { path: 'a.ts', startLine: 1, startColumn: 1, endLine: 1, endColumn: 2 },
+      content: 'b'
+    })
+    expect(written).toHaveLength(3)
+    await ado.generalComment(PR, 'c')
+    expect(written.map((w) => w.method)).toEqual(['POST', 'PATCH', 'POST', 'POST'])
+  })
+})

@@ -342,12 +342,12 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] Each write sends exactly the URL and body in the design (reply `parentCommentId` = the thread's root comment); new threads and the general comment carry `SupportsMarkdown` = `{ type: 'System.Int32', value: 1 }` (S5)
-- [ ] `createThread` carries `filePath` with a leading `/`, the anchor, `changeTrackingId` and the iteration context
-- [ ] A 401 / 403 returns `{ ok: false, message }` with ADO's message
-- [ ] Each write method issues exactly one request, and only when called
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: 3019 + 6 = **3025**
+- [x] Each write sends exactly the URL and body in the design (reply `parentCommentId` = the thread's root comment); new threads and the general comment carry `SupportsMarkdown` = `{ type: 'System.Int32', value: 1 }` (S5)
+- [x] `createThread` carries `filePath` with a leading `/`, the anchor, `changeTrackingId` and the iteration context
+- [x] A 401 / 403 returns `{ ok: false, message }` with ADO's message
+- [x] Each write method issues exactly one request, and only when called
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: 3019 + 6 = **3025** — **actual 3027** (3021 after T9, +6)
 
 **Tests**: unit
 **Gate**: full
