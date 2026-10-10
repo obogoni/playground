@@ -774,6 +774,42 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: FPRG-07, tasks.md Fixes found during Execute (.specs)
 - last seen: 2026-10-10T20:16:34Z
 
+### L-133 - When a cached value and a fresh failure can both be present, test the case where both are, not only the failure alone
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `renderer-lib` · harmful: 0
+- features: status-pr-link
+- evidence: U5 pr-status.ts:111-120 (renderer-lib)
+- last seen: 2026-10-10T22:22:59Z
+
+### L-134 - A check that proves two callers share one request must hold the answer so both calls overlap in time
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: status-pr-link
+- evidence: SM4 use-pr-lookup.ts:130 (smoke)
+- last seen: 2026-10-10T22:23:00Z
+
+### L-135 - When an AC places something in a UI container, state where it goes in the state that has no such container
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: status-pr-link
+- evidence: SPRL-19 (G1) (spec)
+- last seen: 2026-10-10T22:23:00Z
+
+### L-136 - When two ACs can apply to the same state, the spec names which one wins
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: status-pr-link
+- evidence: SPRL-15 vs SPRL-17 (G2) (spec)
+- last seen: 2026-10-10T22:23:00Z
+
+### L-137 - State a time threshold's boundary in the AC as at least or more than, matching the comparison intended
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: status-pr-link
+- evidence: SPRL-02 (G3) (spec)
+- last seen: 2026-10-10T22:23:00Z
+
+### L-138 - When a feature inherits another feature's rule that changes an AC's outcome, the spec cites that rule
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: status-pr-link
+- evidence: SPRL-02 and FPRG-26 (G4) (spec)
+- last seen: 2026-10-10T22:23:00Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
