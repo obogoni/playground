@@ -334,6 +334,9 @@ export function FileTree({ worktreePath, files, onToast, onDiscard }: FileTreePr
       files.openFile(path)
       return
     }
+    // A pull request's files open as PR diffs read from its provider (FPRA-16),
+    // never through the local diff modes.
+    if (lens === 'pull-request') return
     const listed = files.changedFiles.find((file) => file.path === path)
     files.openDiff(listed ?? { path, status: status ?? 'modified' }, lens)
   }

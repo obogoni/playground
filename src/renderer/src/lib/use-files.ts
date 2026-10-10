@@ -750,9 +750,12 @@ export function useFiles({
   const requestFor = useCallback(
     // Only the two diff modes compare a path against something. Full-folder
     // mode has no second side, and Commits mode builds its sides from a sha
-    // rather than from the mode (FCMT-17).
+    // rather than from the mode (FCMT-17). Pull request mode reads both sides
+    // from its provider (FPRA-16).
     (changed: ChangedPath): DiffRequest | null =>
-      mode === 'full' || mode === 'commits' ? null : diffRequestFor(mode, changed, mergeBase),
+      mode === 'full' || mode === 'commits' || mode === 'pull-request'
+        ? null
+        : diffRequestFor(mode, changed, mergeBase),
     [mode, mergeBase]
   )
 

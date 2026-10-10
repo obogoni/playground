@@ -12,9 +12,10 @@ import type {
  * them: it lists files that nothing changed, so there is no second side to
  * compare against. Neither is Commits mode: its left column lists commits
  * rather than paths, and a commit's diffs are built from a sha (FCMT-17), not
- * from the mode.
+ * from the mode. Nor is Pull request mode: its sides are read from the
+ * provider, never from the local repository (FPRA-16).
  */
-export type DiffMode = Exclude<FilesMode, 'full' | 'commits'>
+export type DiffMode = Exclude<FilesMode, 'full' | 'commits' | 'pull-request'>
 
 /**
  * Which revision or working copy each side of a diff comes from (FDIF-01..05),

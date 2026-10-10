@@ -163,10 +163,10 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] Write channels carry intent only — no URL, token or raw ADO body crosses IPC
-- [ ] **[amended at F5 Spec]** The model is provider-neutral as the design's amendment describes: `provider` on `PrSummary`, `resolution` + `providerStatus` on threads, neutral reviewer `state` — so F5 adds a provider, not a second model
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **2977** (unchanged)
+- [x] Write channels carry intent only — no URL, token or raw ADO body crosses IPC
+- [x] **[amended at F5 Spec]** The model is provider-neutral as the design's amendment describes: `provider` on `PrSummary`, `resolution` + `providerStatus` on threads, neutral reviewer `state` — so F5 adds a provider, not a second model
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **2977** (unchanged)
 
 **Tests**: none
 **Gate**: full

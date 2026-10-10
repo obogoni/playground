@@ -212,15 +212,15 @@ so that I never answer a thread that has already moved on.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FPRA-01 | P1: Find the branch's PR | Design | Pending |
-| FPRA-02 | P1: Find the branch's PR | Design | Pending |
+| FPRA-01 | P1: Find the branch's PR | Execute | Implementing |
+| FPRA-02 | P1: Find the branch's PR | Execute | Implementing |
 | FPRA-03 | P1: Find the branch's PR | Design | Pending |
 | FPRA-04 | P1: Find the branch's PR | Design | Pending |
 | FPRA-05 | P1: Find the branch's PR | Design | Pending |
 | FPRA-06 | P1: Find the branch's PR | Design | Pending |
 | FPRA-07 | P1: Find the branch's PR | Execute | Implementing |
 | FPRA-08 | P1: Find the branch's PR | Design | Pending |
-| FPRA-09 | P1: Read the PR | Design | Pending |
+| FPRA-09 | P1: Read the PR | Execute | Implementing |
 | FPRA-10 | P1: Read the PR | Design | Pending |
 | FPRA-11 | P1: Read the PR | Design | Pending |
 | FPRA-12 | P1: Read the PR | Design | Pending |
@@ -236,7 +236,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-22 | P1: Nothing third-party is trusted | Design | Pending |
 | FPRA-23 | P1: Nothing third-party is trusted | Design | Pending |
 | FPRA-24 | P1: Nothing third-party is trusted | Design | Pending |
-| FPRA-25 | P2: Answer the review | Design | Pending |
+| FPRA-25 | P2: Answer the review | Execute | Implementing |
 | FPRA-26 | P2: Answer the review | Design | Pending |
 | FPRA-27 | P2: Answer the review | Design | Pending |
 | FPRA-28 | P2: Answer the review | Design | Pending |
