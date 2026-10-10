@@ -147,7 +147,8 @@ export function sourceRemote(upstreamRemote: string | null, repos: AdoRemote[]):
  * - `deleted` when ADO says so, or every comment is deleted (S9) — shown nowhere
  * - `system` when its first comment is a system one or it carries a
  *   `CodeReviewThreadType` property — Activity only
- * - `general` when it has no line to sit on
+ * - `general` when it has no line to sit on — with its file's path when it is
+ *   about a file as a whole ([owner 2026-10-10])
  * - `outdated` when ADO tracked it to an empty range although it started on a
  *   real one: its lines were deleted (S3)
  * - otherwise `placed` where ADO puts it for the latest iteration, on the right
@@ -180,8 +181,9 @@ export function classifyThread(thread: AdoThread): PrThreadPlace {
     const end = context.leftFileEnd ?? start
     return { kind: 'placed', path, side: 'left', startLine: start.line, endLine: end.line }
   }
-  // A file-level thread has no line to be drawn under; the Overview lists it.
-  return { kind: 'general' }
+  // A file-level thread has no line to be drawn under; the Overview lists it
+  // as general, named by its file ([owner 2026-10-10]).
+  return { kind: 'general', path }
 }
 
 /** A thread's comments minus the deleted ones, which carry no content (FPRA-21; T1, S9). */

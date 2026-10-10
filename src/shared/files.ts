@@ -300,10 +300,13 @@ export interface PrComment {
 
 /**
  * Where a thread goes (FPRA-11/13/18/19). Lines are 1-based on the side named;
- * `outdated` threads are listed in the Overview and never drawn in a diff.
+ * `outdated` threads are listed in the Overview and never drawn in a diff. A
+ * `general` thread with a `path` is about a file as a whole: it has no line
+ * to be drawn under, so it is listed as general, named by its file, and opens
+ * that file's PR diff at the top ([owner 2026-10-10]).
  */
 export type PrThreadPlace =
-  | { kind: 'general' }
+  | { kind: 'general'; path?: string }
   | { kind: 'placed'; path: string; side: 'left' | 'right'; startLine: number; endLine: number }
   | { kind: 'outdated'; path: string; line: number }
   | { kind: 'system' }

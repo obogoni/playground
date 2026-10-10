@@ -603,10 +603,19 @@ Note: `MarkdownBody`, the inert rendering every comment and the description use,
 
 **Done when**:
 
-- [ ] Activating an anchored thread opens its file's PR diff at the line
-- [ ] Activity is collapsed by default
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **3046** (unchanged)
+- [x] Activating an anchored thread opens its file's PR diff at the line — the thread's location calls `onOpenDiff(file, { line, side })`; the tab strip wires it to the PR diff tab (T22/T24)
+- [x] Activity is collapsed by default — `activityOpen` starts false and nothing in it mounts while closed
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **3046** (unchanged) — **actual 3053** (3052 + 1: owner decision 2's `classifyThread` test); lint warnings 18
+
+**[owner 2026-10-10]** A thread anchored to a file with no line stays in **General** but shows the file's name, and activating it opens that file's PR diff at the top. The `general` place carries an optional `path` (`src/shared/files.ts`), set by `classifyThread` when the thread context names a file but no line; recorded in spec.md's Assumptions table.
+
+| Criterion | `file:line` + assertion | Outcome | Covered? |
+| --------- | ----------------------- | ------- | -------- |
+| File-level thread keeps its path in General | `src/main/ado-pr-model.test.ts:171` - `toEqual({ kind: 'general', path: 'src/app.ts' })` | general + path | ✅ |
+| No file context stays plain general | `src/main/ado-pr-model.test.ts:165` - `toEqual({ kind: 'general' })` (existing) | general, no path | ✅ |
+
+Note: a left-side (original) thread opens at its line on the original side, so `onOpenDiff` carries the side; an outdated thread is listed by its old line and opens nothing, since the line is gone.
 
 **Tests**: none
 **Gate**: full

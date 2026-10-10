@@ -165,6 +165,15 @@ describe('classifyThread', () => {
     expect(classifyThread(thread())).toEqual({ kind: 'general' })
   })
 
+  // [owner 2026-10-10] A thread on a file with no line stays general, but
+  // keeps the file's path so the Overview can name the file and open it.
+  it('lists a thread on a file with no line as general, with the file path (FPRA-11)', () => {
+    expect(classifyThread(thread({ threadContext: { filePath: '/src/app.ts' } }))).toEqual({
+      kind: 'general',
+      path: 'src/app.ts'
+    })
+  })
+
   it('places a right-anchored thread on the right, a left-only one on the left (FPRA-18)', () => {
     expect(classifyThread(thread({ threadContext: onRight([3, 34], [4, 39]) }))).toEqual({
       kind: 'placed',

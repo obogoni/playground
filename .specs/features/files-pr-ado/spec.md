@@ -68,6 +68,7 @@ ability to reply, resolve, and start threads from a selection.
 | Gateway housekeeping | The raw NUL byte at `ado-gateway.ts:280` (a composite-key separator inside a template string) is replaced by an escape — same runtime value. **[reconciled 2026-10-10]** Done by #122 (#117) as `\x00`, with a control-byte test; F4 only keeps it green | Owner decision (F4-Q8). The byte made grep and ripgrep treat the file as binary, so code searches silently skipped the ADO gateway | y |
 | Branch base | `feature/files-pr-ado` off `main` (**[reconciled 2026-10-10]** F2 and F3 merged; rebased onto `2e3307d`) | Reuses F3's `parseRemote` and `openCommit`, and F2's viewer | y |
 | Mode memory | **[reconciled 2026-10-10]** Pull request is remembered per worktree like the other four modes (FXPL-13), so reopening the app on a worktree left in it searches Azure DevOps on entry | Owner decision (2026-10-10): the search is a read, and every other mode is remembered | y |
+| File-level threads | **[owner 2026-10-10]** A thread anchored to a file with no line stays in the Overview's **General** group but shows the file's name, and activating it opens that file's PR diff at the top. Main keeps the path on the `general` place | There is no line to draw it under, yet the file is what it is about | y |
 | Sandbox for the spike and smoke | **[reconciled 2026-10-10]** A draft PR with no reviewers, on a throwaway branch, in the Azure DevOps organization the owner works in; coordinates by environment variable, findings under fictitious names | Owner decision (2026-10-10). The public-repository guardrail limits what is recorded, not where the probes run | y |
 
 **Project decision — recorded as AD-027 in `.specs/STATE.md` (2026-09-19), covering GitHub as well (F5):**
@@ -216,16 +217,16 @@ so that I never answer a thread that has already moved on.
 | FPRA-02 | P1: Find the branch's PR | Execute | Implementing |
 | FPRA-03 | P1: Find the branch's PR | Execute | Implementing |
 | FPRA-04 | P1: Find the branch's PR | Execute | Implementing |
-| FPRA-05 | P1: Find the branch's PR | Execute | Implementing |
-| FPRA-06 | P1: Find the branch's PR | Execute | Implementing |
-| FPRA-07 | P1: Find the branch's PR | Execute | Implementing |
-| FPRA-08 | P1: Find the branch's PR | Design | Pending |
+| FPRA-05 | P1: Find the branch's PR | Execute | Implemented |
+| FPRA-06 | P1: Find the branch's PR | Execute | Implemented |
+| FPRA-07 | P1: Find the branch's PR | Execute | Implemented |
+| FPRA-08 | P1: Find the branch's PR | Execute | Implemented |
 | FPRA-09 | P1: Read the PR | Execute | Implementing |
-| FPRA-10 | P1: Read the PR | Execute | Implementing |
-| FPRA-11 | P1: Read the PR | Execute | Implementing |
-| FPRA-12 | P1: Read the PR | Design | Pending |
-| FPRA-13 | P1: Read the PR | Execute | Implementing |
-| FPRA-14 | P1: Read the PR | Execute | Implementing |
+| FPRA-10 | P1: Read the PR | Execute | Implemented |
+| FPRA-11 | P1: Read the PR | Execute | Implemented |
+| FPRA-12 | P1: Read the PR | Execute | Implementing |
+| FPRA-13 | P1: Read the PR | Execute | Implemented |
+| FPRA-14 | P1: Read the PR | Execute | Implemented |
 | FPRA-15 | P1: Read the PR | Execute | Implementing |
 | FPRA-16 | P1: Read the PR | Execute | Implementing |
 | FPRA-17 | P1: Read the PR | Design | Pending |
@@ -240,7 +241,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-26 | P2: Answer the review | Execute | Implemented |
 | FPRA-27 | P2: Answer the review | Execute | Implementing |
 | FPRA-28 | P2: Answer the review | Execute | Implementing |
-| FPRA-29 | P2: Answer the review | Execute | Implementing |
+| FPRA-29 | P2: Answer the review | Execute | Implemented |
 | FPRA-30 | P2: Answer the review | Execute | Implemented |
 | FPRA-31 | P2: Answer the review | Execute | Implemented |
 | FPRA-32 | P2: Answer the review | Execute | Implementing |
