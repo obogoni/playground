@@ -544,10 +544,12 @@ Notes: a pull request on screen that a later search no longer lists is read once
 
 **Done when**:
 
-- [ ] Nothing posts without Ctrl+Enter or the Post button
-- [ ] A failed post leaves the text exactly as typed
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **3046** (unchanged)
+- [x] Nothing posts without Ctrl+Enter or the Post button — `onPost` is called from `post()` only, which only those two reach
+- [x] A failed post leaves the text exactly as typed — only a successful result clears the text; a failure sets the inline error and leaves `text` untouched
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **3046** (unchanged) — **actual 3050** (unchanged); lint warnings 18
+
+Note: `MarkdownBody`, the inert rendering every comment and the description use, is exported from this file: Preview is its first user, and a link click in it hands only `data-href` to the caller (FPRA-23).
 
 **Tests**: none
 **Gate**: full
