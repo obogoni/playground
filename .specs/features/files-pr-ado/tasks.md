@@ -660,10 +660,12 @@ Note: the picker sits at the top of the Overview, where the "several pull reques
 
 **Done when**:
 
-- [ ] F2's layout, whitespace, folding, navigation and EOL behaviour all apply
-- [ ] No Comment action on the original side
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **3046** (unchanged)
+- [x] F2's layout, whitespace, folding, navigation and EOL behaviour all apply — the tab mounts F2's `DiffViewer` with the strip's layout, whitespace and Hide / Show unchanged choice, hands its handle to the strip's navigation, and main's sides carry the EOL lines
+- [x] No Comment action on the original side — Comment is offered from `onSelectModified` only, which the viewer never calls for the original side
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **3046** (unchanged) — **actual 3053** (unchanged); lint warnings 18
+
+Beyond `PrDiffTab.tsx`: `use-files.ts` gains the `pr-diff` tab (`pr`, `id`, `path`, the PR's `file`, a one-shot `reveal`) with `openPrDiff` and `clearReveal`; `FileTabs.tsx` renders it and offers Hide / Show unchanged for it as for a one-file diff; `DiffHandle.reveal` takes an optional side, so a thread on a removed line opens at its line on the original side (FPRA-12). A thread's activation from the Overview remounts the tab, which lands once its diff is computed. Threads and Comment show only while the pull request shown is the tab's own and active.
 
 **Tests**: none
 **Gate**: full

@@ -24,8 +24,11 @@ export interface DiffHandle {
   goToDiff: (direction: 'next' | 'previous') => void
   /** The modified-side lines the diff reports as changed, ascending (FDIF-26). */
   changes: () => number[]
-  /** Put the cursor on a modified-side line and scroll the editor to it. */
-  reveal: (line: number) => void
+  /**
+   * Put the cursor on a line and scroll the editor to it: a modified-side line
+   * unless `side` names the original, where a thread on a removed line sits.
+   */
+  reveal: (line: number, side?: 'original' | 'modified') => void
   /** Which modified-side line the cursor is on. */
   line: () => number
   /** Where a modified-side line sits, in pixels from the top of this editor. */
@@ -282,8 +285,8 @@ export function DiffViewer({
     const handle: DiffHandle = {
       goToDiff: (direction) => editor.goToDiff(direction),
       changes: () => changedLines(editor),
-      reveal: (line) => {
-        const inner = editor.getModifiedEditor()
+      reveal: (line, side = 'modified') => {
+        const inner = side === 'original' ? editor.getOriginalEditor() : editor.getModifiedEditor()
         inner.setPosition({ lineNumber: line, column: 1 })
         inner.revealLineInCenter(line)
       },

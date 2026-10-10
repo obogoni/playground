@@ -14,7 +14,9 @@ import type {
   FileContent,
   FileStat,
   FilesChanged,
-  FilesMode
+  FilesMode,
+  PrFile,
+  PrRef
 } from '../../../shared/files'
 import type { LaunchResult } from '../../../shared/shortcuts'
 import { api } from './api'
@@ -88,11 +90,35 @@ export interface CommitTab {
   at: number
 }
 
+/** A line of one side of a diff, where opening it lands (FPRA-12). */
+export interface DiffSpot {
+  line: number
+  side: 'original' | 'modified'
+}
+
+/**
+ * One open PR diff (FPRA-16), keyed by its pull request's number and its path.
+ * Its sides are read from the provider and held by `files.pr`, not here.
+ */
+export interface PrDiffTab {
+  kind: 'pr-diff'
+  /** The pull request it was opened from; picking another one later leaves it on this one. */
+  pr: PrRef
+  /** The pull request's number, which the tab key carries. */
+  id: number
+  path: string
+  /** The PR's entry for the file: its status, a rename's old path, its change tracking id. */
+  file: PrFile
+  /** Where to land once the diff is on screen; set when a thread opened it, then cleared. */
+  reveal: DiffSpot | null
+  at: number
+}
+
 /**
  * Everything the tab strip can hold: the open tabs, plus the fixed one. Any
  * open tab can be pinned (FPOL-01); absent means unpinned.
  */
-export type ViewTab = (FileTab | DiffTab | CommitTab) & { pinned?: boolean }
+export type ViewTab = (FileTab | DiffTab | CommitTab | PrDiffTab) & { pinned?: boolean }
 export type StripTab = ViewTab | { kind: 'all-changes' }
 
 /**
@@ -236,6 +262,13 @@ export interface UseFiles {
   pressUnchanged: (key: string, mode: UnchangedMode) => void
   /** The Pull request mode's state for this worktree (F4). */
   pr: UsePullRequest
+  /**
+   * Opens, or focuses, the PR diff of one file of the pull request shown
+   * (FPRA-16), landing at `at` when a thread asked for it (FPRA-12).
+   */
+  openPrDiff: (file: PrFile, at: DiffSpot | null) => void
+  /** Forgets where a PR diff tab was to land, once it has landed there. */
+  clearReveal: (key: string) => void
 }
 
 /**
@@ -738,6 +771,51 @@ export function useFiles({
     [worktreePath, patchFiles, readCommit]
   )
 
+  const openPrDiff = useCallback(
+    (file: PrFile, at: DiffSpot | null): void => {
+      const detail = pr.detail
+      if (!worktreePath || !detail) return
+      const ref: PrRef = { target: detail.target, id: detail.id }
+      const now = Date.now()
+      const key = tabKeyOf({ kind: 'pr-diff', id: ref.id, path: file.path })
+      patchFiles(worktreePath, (s) => {
+        // As for every other tab, an open PR diff focuses rather than
+        // duplicating; a thread's activation still moves it to its line.
+        if (s.tabs.some((open) => tabKeyOf(open) === key)) {
+          return {
+            tabs: s.tabs.map((open) =>
+              tabKeyOf(open) === key ? { ...open, at: now, ...(at ? { reveal: at } : {}) } : open
+            ),
+            activeTab: key
+          }
+        }
+        const tab: PrDiffTab = {
+          kind: 'pr-diff',
+          pr: ref,
+          id: ref.id,
+          path: file.path,
+          file,
+          reveal: at,
+          at: now
+        }
+        return { tabs: [...s.tabs, tab], activeTab: key }
+      })
+    },
+    [worktreePath, patchFiles, pr.detail]
+  )
+
+  const clearReveal = useCallback(
+    (key: string): void => {
+      if (!worktreePath) return
+      patchFiles(worktreePath, (s) => ({
+        tabs: s.tabs.map((tab) =>
+          tab.kind === 'pr-diff' && tabKeyOf(tab) === key ? { ...tab, reveal: null } : tab
+        )
+      }))
+    },
+    [worktreePath, patchFiles]
+  )
+
   const loadMoreCommits = useCallback((): void => {
     const wt = worktreePath
     const page = live.current.here.commits
@@ -956,7 +1034,9 @@ export function useFiles({
     closeTabs,
     unchangedFor: (key) => here.unchanged[key] ?? null,
     pressUnchanged,
-    pr
+    pr,
+    openPrDiff,
+    clearReveal
   }
 }
 

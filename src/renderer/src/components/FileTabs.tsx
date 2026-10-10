@@ -14,6 +14,7 @@ import { DiffViewer, type DiffHandle } from './DiffViewer'
 import { FileIcon } from './FileIcon'
 import { FilePlaceholder } from './FilePlaceholder'
 import { Icon, type IconName } from './Icon'
+import { PrDiffTab } from './PrDiffTab'
 import './FileTabs.css'
 
 interface FileTabsProps {
@@ -193,6 +194,8 @@ export function FileTabs({ worktreePath, files, onToast, onDiscard }: FileTabsPr
 
   const onDiffSurface = active !== null && active.kind !== 'file'
   const diffTab = active?.kind === 'diff' ? active : null
+  // A PR diff folds like any one-file diff (FPRA-17).
+  const foldTab = active?.kind === 'diff' || active?.kind === 'pr-diff' ? active : null
 
   return (
     <div className="file-tabs">
@@ -402,13 +405,13 @@ export function FileTabs({ worktreePath, files, onToast, onDiscard }: FileTabsPr
           </button>
           {/* FOLD-18: one file's diff folds or reveals like All changes, whose
               own buttons sit in its header. */}
-          {diffTab && (
+          {foldTab && (
             <>
               <button
                 type="button"
                 className="file-tabs-toggle"
                 title="Fold the unchanged lines of this file"
-                onClick={() => files.pressUnchanged(tabKeyOf(diffTab), 'hide')}
+                onClick={() => files.pressUnchanged(tabKeyOf(foldTab), 'hide')}
               >
                 Hide unchanged
               </button>
@@ -416,7 +419,7 @@ export function FileTabs({ worktreePath, files, onToast, onDiscard }: FileTabsPr
                 type="button"
                 className="file-tabs-toggle"
                 title="Show the unchanged lines of this file"
-                onClick={() => files.pressUnchanged(tabKeyOf(diffTab), 'show')}
+                onClick={() => files.pressUnchanged(tabKeyOf(foldTab), 'show')}
               >
                 Show unchanged
               </button>
@@ -479,6 +482,14 @@ export function FileTabs({ worktreePath, files, onToast, onDiscard }: FileTabsPr
           />
         ) : active.kind === 'diff' ? (
           <DiffBody key={tabKeyOf(active)} files={files} tab={active} onHandle={onHandle} />
+        ) : active.kind === 'pr-diff' ? (
+          <PrDiffTab
+            key={tabKeyOf(active)}
+            files={files}
+            tab={active}
+            onHandle={onHandle}
+            onToast={onToast}
+          />
         ) : active.kind === 'commit' ? (
           <CommitTab
             key={tabKeyOf(active)}

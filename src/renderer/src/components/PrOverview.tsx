@@ -4,6 +4,7 @@ import type { PrFile, PrThreadView, ReviewerState } from '../../../shared/files'
 import { overviewGroups } from '../lib/pr-view'
 import { relativeTime } from '../lib/relative-time'
 import { useSharedNow } from '../lib/shared-tick'
+import type { DiffSpot } from '../lib/use-files'
 import type { UsePullRequest } from '../lib/use-pull-request'
 import { CommentComposer, MarkdownBody } from './CommentComposer'
 import { Icon } from './Icon'
@@ -13,12 +14,6 @@ import './PrOverview.css'
 
 /** Relative dates move by the minute; one shared tick re-renders them. */
 const DATE_TICK_MS = 60_000
-
-/** A line of one side of a PR diff, where activating a thread lands. */
-export interface DiffSpot {
-  line: number
-  side: 'original' | 'modified'
-}
 
 const REVIEWER_STATES: Record<ReviewerState, string> = {
   approved: 'Approved',
