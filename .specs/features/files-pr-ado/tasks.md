@@ -139,11 +139,11 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] `getToken()` is public, with its result union unchanged; no second cache exists
-- [ ] Existing gateway tests pass unedited, the #122 control-byte test included
-- [ ] Lint warning baseline recorded in the commit body
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **2977** (unchanged — the control-byte test already exists, from #122)
+- [x] `getToken()` is public, with its result union unchanged; no second cache exists
+- [x] Existing gateway tests pass unedited, the #122 control-byte test included
+- [x] Lint warning baseline recorded in the commit body
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **2977** (unchanged — the control-byte test already exists, from #122)
 
 **Tests**: none (visibility change only; covered by existing tests)
 **Gate**: full

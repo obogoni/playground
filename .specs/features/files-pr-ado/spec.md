@@ -218,7 +218,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-04 | P1: Find the branch's PR | Design | Pending |
 | FPRA-05 | P1: Find the branch's PR | Design | Pending |
 | FPRA-06 | P1: Find the branch's PR | Design | Pending |
-| FPRA-07 | P1: Find the branch's PR | Design | Pending |
+| FPRA-07 | P1: Find the branch's PR | Execute | Implementing |
 | FPRA-08 | P1: Find the branch's PR | Design | Pending |
 | FPRA-09 | P1: Read the PR | Design | Pending |
 | FPRA-10 | P1: Read the PR | Design | Pending |
