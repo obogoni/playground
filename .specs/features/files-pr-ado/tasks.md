@@ -771,10 +771,24 @@ Beyond `FileTabs.tsx`: `tabsWithAllChanges` (`diff-view.ts`) puts the Overview f
 
 **Done when**:
 
-- [ ] Read checks: the fifth mode; the PR found; Overview contents; threads under their lines; resolved collapsed; Activity collapsed; a markdown comment with a `javascript:` link rendered inert; refresh and focus reload
-- [ ] With `--allow-writes`: reply, status change, a thread from a two-line selection landing on those lines in ADO's web view, a general comment — each deleted afterwards
-- [ ] Sandbox coordinates come from environment variables, never from the repository
-- [ ] Numbered pass/fail line per check; all pass against a live dev app
+- [x] Read checks: the fifth mode; the PR found; Overview contents; threads under their lines; resolved collapsed; Activity collapsed; a markdown comment with a `javascript:` link rendered inert; refresh and focus reload. The sandbox holds no resolved thread and no third-party link, so "resolved collapsed" and the inert link are driven in the write run, on what the smoke posts
+- [x] With `--allow-writes`: reply, status change, a thread from a two-line selection landing on those lines — read back over REST, `rightFileStart` / `rightFileEnd` equal to Monaco's selection, lines and columns (S1), rather than looked at in the web view — and a general comment, each deleted afterwards and read back `isDeleted`
+- [x] Sandbox coordinates come from environment variables, never from the repository: `SMOKE_PR_WORKTREE` names a worktree on the PR's branch; the branch, the remote and the PR are found at run time, and the output prints check numbers, counts and line numbers only
+- [x] Numbered pass/fail line per check; all pass against a live dev app, except one SKIP that is never counted as a pass (below)
+
+**Results (2026-10-10, against `896c1f7`)**. The script launches its own dev app on CDP port 9333 with a throwaway `--user-data-dir` and kills only the process tree it started. `SMOKE_ONLY=overview|diff|writes` runs one section.
+
+- Read-only: **21/21 pass, 1 skip**. With `--allow-writes`: **29/29 pass, 1 skip**. Cleanup: 3/3 smoke comments deleted and read back `isDeleted`; the PR is still a draft.
+- **SKIP, FPRA-28** (no Comment on the original side): the sandbox PR modifies no existing file, so the original side has no text to select. The check runs by itself on the first PR file whose status is `modified`.
+- Three defects found by this smoke were fixed in production code before it passed (§ Fixes found during Execute): item metadata as JSON, the Comment bar keeping its place, threads in a diff taking clicks and keys.
+- Falsified (each mutant failed only the checks it names, and the tree was restored, `git status` clean):
+  - the Comment bar mounted only with a selection fails "the diff stays where it is" (34.4 px) and "a drag selects exactly those lines";
+  - no focus debounce fails the focus check (reloads 1 / 1 / 1);
+  - deleted threads listed as general fail the section and deleted-thread checks;
+  - a zone after the thread's first line fails "under its last line";
+  - the pre-`896c1f7` zone rendering fails the real-click check, and the zone-height check, which measures `.diff-viewer-zone-space`, that rendering does not have.
+- Not driven by this smoke: FPRA-08 (detached `HEAD`; the sandbox worktree is not to be touched), FPRA-34 (a new iteration needs a push to the sandbox branch), FPRA-03's picker case and FPRA-02's fork case (the sandbox has one same-repository PR). FPRA-17 is driven through the layout preference only.
+- `scripts/smoke-files-commits.mjs` check 1 now expects Commits as the fourth of five modes; the whole smoke passed 30/30 on a seeded throwaway repository.
 
 **Tests**: manual
 **Gate**: manual

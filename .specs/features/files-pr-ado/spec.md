@@ -215,7 +215,7 @@ so that I never answer a thread that has already moved on.
 | -------------- | ----- | ----- | ------ |
 | FPRA-01 | P1: Find the branch's PR | Execute | Implemented |
 | FPRA-02 | P1: Find the branch's PR | Execute | Implementing |
-| FPRA-03 | P1: Find the branch's PR | Execute | Implementing |
+| FPRA-03 | P1: Find the branch's PR | Execute | Implemented |
 | FPRA-04 | P1: Find the branch's PR | Execute | Implemented |
 | FPRA-05 | P1: Find the branch's PR | Execute | Implemented |
 | FPRA-06 | P1: Find the branch's PR | Execute | Implemented |
@@ -234,7 +234,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-19 | P1: Read the PR | Execute | Implemented |
 | FPRA-20 | P1: Read the PR | Execute | Implemented |
 | FPRA-21 | P1: Read the PR | Execute | Implemented |
-| FPRA-22 | P1: Nothing third-party is trusted | Execute | Implementing |
+| FPRA-22 | P1: Nothing third-party is trusted | Execute | Implemented |
 | FPRA-23 | P1: Nothing third-party is trusted | Execute | Implemented |
 | FPRA-24 | P1: Nothing third-party is trusted | Execute | Implemented |
 | FPRA-25 | P2: Answer the review | Execute | Implemented |
@@ -244,7 +244,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-29 | P2: Answer the review | Execute | Implemented |
 | FPRA-30 | P2: Answer the review | Execute | Implemented |
 | FPRA-31 | P2: Answer the review | Execute | Implemented |
-| FPRA-32 | P2: Answer the review | Execute | Implementing |
+| FPRA-32 | P2: Answer the review | Execute | Implemented |
 | FPRA-33 | P2: Stay current | Execute | Implemented |
 | FPRA-34 | P2: Stay current | Execute | Implemented |
 | FPRA-35 | P2: Stay current | Execute | Implemented |
