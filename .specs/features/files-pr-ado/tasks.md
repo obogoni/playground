@@ -391,17 +391,17 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] `<script>alert(1)</script>` renders as escaped text
-- [ ] `<img src=x onerror=alert(1)>` renders as escaped text
-- [ ] `[x](javascript:alert(1))` renders with no `href` and no `data-href`
-- [ ] `[x](https://example.com)` renders with `data-href` and no `href`
-- [ ] `![alt](https://example.com/a.png)` renders as a link, never an `<img>`
-- [ ] An HTML comment and a `<details>` block render as escaped text
-- [ ] `[x](data:text/html,…)` renders with no `href` and no `data-href`
-- [ ] No output anywhere contains ` on` event attributes or an `href` attribute
-- [ ] `markdown-it` added to `dependencies`, version pinned
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: 3025 + 9 = **3034**
+- [x] `<script>alert(1)</script>` renders as escaped text
+- [x] `<img src=x onerror=alert(1)>` renders as escaped text
+- [x] `[x](javascript:alert(1))` renders with no `href` and no `data-href`
+- [x] `[x](https://example.com)` renders with `data-href` and no `href`
+- [x] `![alt](https://example.com/a.png)` renders as a link, never an `<img>`
+- [x] An HTML comment and a `<details>` block render as escaped text
+- [x] `[x](data:text/html,…)` renders with no `href` and no `data-href`
+- [x] No output anywhere contains ` on` event attributes or an `href` attribute
+- [x] `markdown-it` added to `dependencies`, version pinned
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: 3025 + 9 = **3034** — **actual 3038** (3029 after T11, +9)
 
 **Tests**: unit
 **Gate**: full

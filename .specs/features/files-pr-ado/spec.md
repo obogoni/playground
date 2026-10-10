@@ -221,7 +221,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-07 | P1: Find the branch's PR | Execute | Implementing |
 | FPRA-08 | P1: Find the branch's PR | Design | Pending |
 | FPRA-09 | P1: Read the PR | Execute | Implementing |
-| FPRA-10 | P1: Read the PR | Design | Pending |
+| FPRA-10 | P1: Read the PR | Execute | Implementing |
 | FPRA-11 | P1: Read the PR | Execute | Implementing |
 | FPRA-12 | P1: Read the PR | Design | Pending |
 | FPRA-13 | P1: Read the PR | Execute | Implementing |
@@ -233,9 +233,9 @@ so that I never answer a thread that has already moved on.
 | FPRA-19 | P1: Read the PR | Execute | Implementing |
 | FPRA-20 | P1: Read the PR | Execute | Implementing |
 | FPRA-21 | P1: Read the PR | Execute | Implementing |
-| FPRA-22 | P1: Nothing third-party is trusted | Design | Pending |
+| FPRA-22 | P1: Nothing third-party is trusted | Execute | Implementing |
 | FPRA-23 | P1: Nothing third-party is trusted | Execute | Implemented |
-| FPRA-24 | P1: Nothing third-party is trusted | Design | Pending |
+| FPRA-24 | P1: Nothing third-party is trusted | Execute | Implemented |
 | FPRA-25 | P2: Answer the review | Execute | Implementing |
 | FPRA-26 | P2: Answer the review | Execute | Implementing |
 | FPRA-27 | P2: Answer the review | Execute | Implementing |
