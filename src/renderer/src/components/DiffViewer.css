@@ -82,3 +82,18 @@
   border-left: 2px solid var(--amber);
   border-bottom: 2px solid var(--amber);
 }
+
+/*
+ * A view zone between two lines (FPRA-18). Monaco positions the node and sets
+ * its height from the content's measured one; the content keeps a readable
+ * width however wide the file's longest line makes the editor's content.
+ */
+.diff-viewer-zone {
+  overflow: hidden;
+}
+
+.diff-viewer-zone-content {
+  max-width: 760px;
+  padding: 4px 12px 6px;
+  font-family: var(--font-ui);
+}

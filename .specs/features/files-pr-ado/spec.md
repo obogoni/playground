@@ -239,7 +239,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-25 | P2: Answer the review | Execute | Implementing |
 | FPRA-26 | P2: Answer the review | Execute | Implementing |
 | FPRA-27 | P2: Answer the review | Execute | Implementing |
-| FPRA-28 | P2: Answer the review | Design | Pending |
+| FPRA-28 | P2: Answer the review | Execute | Implementing |
 | FPRA-29 | P2: Answer the review | Execute | Implementing |
 | FPRA-30 | P2: Answer the review | Design | Pending |
 | FPRA-31 | P2: Answer the review | Execute | Implementing |

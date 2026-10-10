@@ -493,12 +493,12 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] Without the props, F2 and F3 behave exactly as before (checked in their tabs)
-- [ ] `onSelectModified` never fires for a selection on the original side
-- [ ] Zones resize with their content and are removed on unmount
-- [ ] **[reconciled 2026-10-10]** Zones coexist with `fitContent`, `onHandle` and Hide / Show unchanged (#130): a thread on a line inside a hidden region shows once the region is revealed, and the editor's fitted height counts the zones
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **3046** (unchanged)
+- [x] Without the props, F2 and F3 behave exactly as before (checked in their tabs) — no existing caller passes either prop: the zone effect has nothing to add and the selection listener calls nothing. Checked by reading; on screen at T27
+- [x] `onSelectModified` never fires for a selection on the original side — only the modified editor's `onDidChangeCursorSelection` is listened to
+- [x] Zones resize with their content and are removed on unmount — a `ResizeObserver` per zone re-lays it out; the editor's disposal takes the zones, and the observers are disconnected with it
+- [x] **[reconciled 2026-10-10]** Zones coexist with `fitContent`, `onHandle` and Hide / Show unchanged (#130): a thread on a line inside a hidden region shows once the region is revealed, and the editor's fitted height counts the zones — Monaco 0.56 gives a zone in a hidden area no height and draws it again when the area is revealed; content height includes zones, so the fitted measure counts them; the diff editor aligns both sides around user zones
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **3046** (unchanged) — **actual 3050** (unchanged from T15); lint warnings 18
 
 **Tests**: none
 **Gate**: full
