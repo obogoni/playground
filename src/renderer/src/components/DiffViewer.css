@@ -84,9 +84,10 @@
 }
 
 /*
- * A view zone between two lines (FPRA-18). Monaco positions the node and sets
- * its height from the content's measured one; the content keeps a readable
- * width however wide the file's longest line makes the editor's content.
+ * A thread between two lines (FPRA-18). A view zone opens the gap; this node is
+ * the overlay widget drawn over it, which the viewer places at the gap's top
+ * across the text area. The content keeps a readable width however wide the
+ * editor is.
  */
 .diff-viewer-zone {
   overflow: hidden;
