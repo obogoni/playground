@@ -438,6 +438,9 @@ describe('AdoPrClient.fileSide / fileSides (FPRA-16/17; T1, S6)', () => {
         const commit = url.searchParams.get('versionDescriptor.version') ?? ''
         const file = byCommit[commit]
         if (!file) return json({ message: 'TF401174: The item could not be found.' }, 404)
+        // Without `$format=json` Azure DevOps answers with the file's own text,
+        // metadata flags or not (T27 found it; measured live).
+        if (url.searchParams.get('$format') !== 'json') return new Response(file.text ?? '')
         return json({
           objectId: `blob-${commit}`,
           contentMetadata: file.isBinary ? { isBinary: true } : { encoding: 65001 }
@@ -468,7 +471,7 @@ describe('AdoPrClient.fileSide / fileSides (FPRA-16/17; T1, S6)', () => {
     expect(
       readRequests.map((r) => [r.url.pathname.split('/').pop(), r.url.searchParams.get('$format')])
     ).toEqual([
-      ['items', null],
+      ['items', 'json'],
       ['blob-small', 'json'],
       ['blob-small', 'text']
     ])

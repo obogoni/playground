@@ -938,3 +938,7 @@ The plan was written on 2026-09-19, stacked on F3, before the Files epic and abo
 | T1 sandbox in an org of the owner's choosing | Owner chose their employer's organization | Draft PR with no reviewers on a throwaway branch; coordinates by env var; findings fictitious |
 
 Execution (owner, 2026-10-10): T1 inline with the owner, then four batch workers — Phase 2, Phases 3 + 4, Phase 5, Phase 6 — followed by the Verifier.
+
+## Fixes found during Execute
+
+- [x] **Item metadata as JSON (found by T27, 2026-10-10).** The read-only smoke showed every PR diff failing with a JSON parse error: `fileSide`'s `items` call lacked `$format=json`, so Azure DevOps answered with the file's text (S6 was recorded without the parameter the probe had sent; re-measured live, `text/plain` without it, `application/json` with it). Fixed in `src/main/ado-pr.ts`; the client test's fake now answers like Azure DevOps (text unless `$format=json`) and asserts the parameter — it fails on the old code. Gate: 3057 tests, lint 18. Commit `fix(main): ask azure devops for pull request item metadata as json`.

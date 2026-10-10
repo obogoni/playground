@@ -314,7 +314,9 @@ export class AdoPrClient {
       path: `/${path}`,
       'versionDescriptor.version': commit,
       'versionDescriptor.versionType': 'commit',
-      includeContentMetadata: 'true'
+      includeContentMetadata: 'true',
+      // Without it Azure DevOps answers with the file's text, not its metadata.
+      $format: 'json'
     })
     const item = await this.getJson<{
       objectId: string
