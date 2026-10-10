@@ -747,11 +747,11 @@ Beyond `FileTabs.tsx`: `tabsWithAllChanges` (`diff-view.ts`) puts the Overview f
 
 **Done when**:
 
-- [ ] README no longer claims view-only, and names exactly the four writes
-- [ ] `.specs/STATE.md` gains **no new AD**; AD-027 is left as recorded, and still matches what shipped — if it does not, AD-027 is amended in place, never duplicated
-- [ ] The STATE handoff no longer says F4 is stacked on F3 (stale since the Files epic merged)
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **3046** (unchanged)
+- [x] README no longer claims view-only, and names exactly the four writes
+- [x] `.specs/STATE.md` gains **no new AD**; AD-027 is left as recorded, and still matches what shipped (`ado-pr.ts` has exactly `reply`, `setStatus`, `createThread`, `generalComment` as writes)
+- [x] The STATE handoff no longer says F4 is stacked on F3 (stale since the Files epic merged)
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Test count: **3046** (unchanged) — **actual 3057** (unchanged); lint warnings 18
 
 **Tests**: none
 **Gate**: full

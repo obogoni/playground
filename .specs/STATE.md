@@ -135,12 +135,8 @@ Nothing has been merged into `obogoni/playground`; the local `develop` merge is 
   never clicks an enabled one; hover a row and read the full message tooltip; and judge the
   four-mode selector at the left column's narrowest width, where it now wraps to two lines.
 
-**Next:** F4 `files-pr-ado` (27 tasks), stacked on F3. Re-chain it with
-`git rebase --onto feature/files-commits eec156e feature/files-pr-ado` — the base is F3's **previous
-tip**, not the common ancestor, or the range replays F3's own commits. Re-measure the test baseline
-as the first act of Execute; it is **1177** on F3's tip. **F4's T1 writes to a real Azure DevOps pull
-request**: a sandbox PR the owner names, with a go-ahead at that moment. F4 also flips the README's
-"ADO is read-only" claim, per AD-027.
+**Next:** F4 `files-pr-ado` is executing off `main` on `feature/files-pr-ado`; F1–F3 merged
+upstream, so nothing is stacked. Its README states the write posture of AD-027.
 
 ### `session-name` (PR #96, merged with the Files epic on 2026-09-25)
 

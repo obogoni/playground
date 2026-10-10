@@ -133,7 +133,9 @@ that risk, since you author it yourself.
 - [Vitest](https://vitest.dev/) for behavior-level tests (real git / FS in temp dirs; hand-rolled fakes, no mocking library)
 - JSON config persisted to `%APPDATA%/playground/config.json` — no database
 
-> Windows-only. ADO integration is view-only.
+> Windows-only. The only thing the app writes to Azure DevOps is a pull-request comment: a reply,
+> a thread's status, a new thread from a selection, or a general comment — each the direct result
+> of a click or Ctrl+Enter. Nothing is written in the background.
 
 ## Development
 
