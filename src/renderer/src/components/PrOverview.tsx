@@ -5,19 +5,15 @@ import type {
   PrProvider,
   PrSearch,
   PrThreadView,
-  PrTimelineEntry,
-  ReviewerState
+  PrTimelineEntry
 } from '../../../shared/files'
+import { providerName, resetTime, type PrFailure } from '../lib/pr-lookup'
+import { REVIEWER_STATES } from '../lib/pr-status'
 import { overviewGroups, prLabel } from '../lib/pr-view'
 import { relativeTime } from '../lib/relative-time'
 import { useSharedNow } from '../lib/shared-tick'
 import type { DiffSpot } from '../lib/use-files'
-import {
-  providerName,
-  resetTime,
-  type PrFailure,
-  type UsePullRequest
-} from '../lib/use-pull-request'
+import type { UsePullRequest } from '../lib/use-pull-request'
 import { CommentComposer, MarkdownBody } from './CommentComposer'
 import { Icon } from './Icon'
 import { PrPicker } from './PrPicker'
@@ -26,17 +22,6 @@ import './PrOverview.css'
 
 /** Relative dates move by the minute; one shared tick re-renders them. */
 const DATE_TICK_MS = 60_000
-
-const REVIEWER_STATES: Record<ReviewerState, string> = {
-  approved: 'Approved',
-  'approved-with-suggestions': 'Approved with suggestions',
-  'no-vote': 'No vote',
-  'waiting-for-author': 'Waiting for author',
-  rejected: 'Rejected',
-  'changes-requested': 'Changes requested',
-  commented: 'Commented',
-  dismissed: 'Dismissed'
-}
 
 interface PrOverviewProps {
   pr: UsePullRequest

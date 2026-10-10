@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { GhStatus } from '../../../shared/files'
 import { api } from './api'
-import { FOCUS_RELOAD_MS } from './use-pull-request'
+import { FOCUS_RELOAD_MS } from './use-pr-lookup'
 
 /**
  * The `gh` CLI's state for the TopBar chip (FPRG-02, 05): asked of main on

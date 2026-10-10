@@ -46,6 +46,7 @@ import {
 } from './files-view'
 import { createRefreshGate, mergeBatches } from './refresh-gate'
 import { useLatestCallback } from './use-latest-callback'
+import type { UsePrLookup } from './use-pr-lookup'
 import { usePullRequest, type UsePullRequest } from './use-pull-request'
 
 /** One open file (FXPL-18): what was read for it, and when it was last picked. */
@@ -187,6 +188,8 @@ export interface UseFilesOptions {
    * (FCMT-32, design D1).
    */
   treeRevision?: unknown
+  /** The pull request lookup App shares with the status bar (F6). */
+  prLookup: UsePrLookup
 }
 
 export interface UseFiles {
@@ -297,7 +300,8 @@ export function useFiles({
   active,
   ui,
   onPersist,
-  treeRevision
+  treeRevision,
+  prLookup
 }: UseFilesOptions): UseFiles {
   const [byWorktree, setByWorktree] = useState<Record<string, WorktreeFiles>>({})
   const [refreshToken, setRefreshToken] = useState(0)
@@ -557,8 +561,12 @@ export function useFiles({
     api.invoke('files:watch', { worktreePath: watching ? worktreePath : null }).catch(console.error)
   }, [watching, worktreePath])
 
-  // F4: the Pull request lens reads Azure DevOps, only while it is shown.
-  const pr = usePullRequest({ worktreePath, active: active && mode === 'pull-request' })
+  // F4: the Pull request lens, over the lookup App shares with the status bar (F6).
+  const pr = usePullRequest({
+    worktreePath,
+    active: active && mode === 'pull-request',
+    lookup: prLookup
+  })
 
   /**
    * One batch refresh, run by the gate (FWIG-18..21). It reads the view as it

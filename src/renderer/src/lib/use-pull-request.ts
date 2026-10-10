@@ -3,11 +3,9 @@ import type {
   DiffSides,
   PrComment,
   PrDetail,
-  PrDetailResult,
   PrFile,
   PrProvider,
   PrRef,
-  PrSearch,
   PrSelection,
   PrSummary,
   PrThreadView,
@@ -17,11 +15,16 @@ import type {
 import type { LaunchResult } from '../../../shared/shortcuts'
 import { api } from './api'
 import { tabKeyOf } from './diff-view'
+import {
+  currentSummary,
+  failureText,
+  foundPrs,
+  refOf,
+  type PrFailure,
+  type PrSearches
+} from './pr-lookup'
 import { prKey, revisionBanner } from './pr-view'
-import { useLatestCallback } from './use-latest-callback'
-
-/** How long a focus reload waits out another focus (FPRA-33, FPRG-05), as App does for its own. */
-export const FOCUS_RELOAD_MS = 5000
+import type { UsePrLookup } from './use-pr-lookup'
 
 /**
  * The revision that was latest when a PR diff's sides were asked for: what a
@@ -40,71 +43,21 @@ export interface PrSidesEntry extends SidesRevision {
 }
 
 /**
- * Why a pull request could not be read, and on which provider: its sign-in
- * ("run `az login`", FPRA-07), its rate limit (FPRG-26), or an error.
- */
-export type PrFailure = { provider: PrProvider } & (
-  | { kind: 'auth' }
-  | { kind: 'rate-limited'; resetAt: number }
-  | { kind: 'error'; message: string }
-)
-
-/** What each provider's search found, by provider; a provider not searched yet is absent. */
-export type PrSearches = Partial<Record<PrProvider, PrSearch>>
-
-const PROVIDER_NAMES: Record<PrProvider, string> = {
-  'azure-devops': 'Azure DevOps',
-  github: 'GitHub'
-}
-
-/** How a provider is named in the mode's messages (FPRG-04, 06). */
-export function providerName(provider: PrProvider): string {
-  return PROVIDER_NAMES[provider]
-}
-
-/** The reset time of a rate limit, as the mode says it (FPRG-26). */
-export function resetTime(resetAt: number): string {
-  return new Date(resetAt).toLocaleTimeString()
-}
-
-/**
- * Everything the Pull request mode holds for one worktree, in memory while the
- * app runs. The mode itself persists with the others (FXPL-13); the choice
- * among several pull requests does not outlive the session (FPRA-04).
+ * What only the Pull request mode holds for one worktree, in memory while the
+ * app runs. The pull requests themselves — searches, details, the pick, the
+ * rate-limit memory — live in the lookup it shares with the status bar (F6).
+ * The mode itself persists with the others (FXPL-13); the choice among
+ * several pull requests does not outlive the session (FPRA-04).
  */
 interface WorktreePr {
-  /** Each provider's own search, kept apart so one failing hides none of the other's (FPRG-07). */
-  searches: PrSearches
-  /** The pull request picked among several (FPRA-04). */
-  chosen: PrRef | null
-  detail: PrDetail | null
-  /** Why the detail could not be read, when there is none to show. */
-  failure: PrFailure | null
-  /** A reload failed while a pull request was on screen; it stays on screen (edge case). */
-  notice: string | null
-  loading: boolean
-  /** The revision the open PR diffs were read at (FPRA-34, FPRG-25). */
-  onScreen: string | null
-  /** PR diff sides by tab key (`pr:<prKey>:<path>`). */
-  sides: Record<string, PrSidesEntry>
   /**
-   * Providers that answered "rate limited" since the last reload the user
-   * asked for; no reload that happens on its own asks them again (FPRG-26).
+   * PR diff sides by tab key (`pr:<prKey>:<path>`), each with the revision it
+   * was read at (FPRA-34, FPRG-25).
    */
-  limited: PrProvider[]
+  sides: Record<string, PrSidesEntry>
 }
 
-const EMPTY: WorktreePr = {
-  limited: [],
-  searches: {},
-  chosen: null,
-  detail: null,
-  failure: null,
-  notice: null,
-  loading: false,
-  onScreen: null,
-  sides: {}
-}
+const EMPTY: WorktreePr = { sides: {} }
 
 export interface UsePullRequest {
   /** What each provider's search found, or why it has nothing; empty before the first search ends. */
@@ -155,11 +108,13 @@ export interface UsePullRequest {
 /**
  * The Pull request mode's state (F4), per worktree.
  *
- * Azure DevOps is read on four occasions and no other (FPRA-33/35): entering
- * the mode, the window regaining focus — debounced by 5 s, as App debounces
- * its own focus refresh — after each successful write, and the refresh button.
- * No timer ever starts a request. Writes go out only through the four write
- * functions, which the views call from a click or Ctrl+Enter (FPRA-32).
+ * The providers are read on these occasions and no other (FPRA-33/35):
+ * entering the mode, the window regaining focus — debounced by 5 s in the
+ * shared lookup, as App debounces its own focus refresh — after each
+ * successful write, and the refresh button; the lookup adds a selection and
+ * the TopBar Refresh for the status bar (SPRL-01, 02). No timer ever starts a
+ * request. Writes go out only through the four write functions, which the
+ * views call from a click or Ctrl+Enter (FPRA-32).
  *
  * A write that succeeded is applied to what is on screen at once, so a reload
  * that fails afterwards leaves it visible, with a notice that the pull request
@@ -167,21 +122,38 @@ export interface UsePullRequest {
  */
 export function usePullRequest({
   worktreePath,
-  active
+  active,
+  lookup
 }: {
   worktreePath: string | null
   /** The Files direction is showing, in Pull request mode. */
   active: boolean
+  /** The lookup App shares with the status bar (F6). */
+  lookup: UsePrLookup
 }): UsePullRequest {
+  const { load, choose: chooseIn, amend } = lookup
   const [byWorktree, setByWorktree] = useState<Record<string, WorktreePr>>({})
   const here = (worktreePath && byWorktree[worktreePath]) || EMPTY
+  const entry = lookup.entryFor(worktreePath)
+  const prs = foundPrs(entry.searches)
+  const listed = currentSummary(prs, entry.chosen)
+  // A pull request the search no longer lists stays on screen and is read
+  // once more, so one completed or abandoned elsewhere says so (edge case).
+  const shownRef = listed ?? entry.shown
+  const read = shownRef ? entry.reads[prKey(shownRef)] : undefined
+  const detail = read?.detail ?? null
+  // What is on screen stays, with a notice, rather than being replaced by an
+  // error about a refresh (edge case).
+  const failure = read && !read.detail ? read.failure : null
+  const notice =
+    read?.detail && read.failure
+      ? `${read.afterWrite ? 'Posted, but the' : 'The'} pull request could not be refreshed: ${failureText(read.failure)}`
+      : null
 
   const live = useRef({ byWorktree })
   useEffect(() => {
     live.current = { byWorktree }
   })
-  // The latest load per worktree; an answer to an older one is dropped.
-  const loads = useRef(new Map<string, number>())
 
   const patch = useCallback(
     (wt: string, change: (state: WorktreePr) => Partial<WorktreePr>): void => {
@@ -193,137 +165,18 @@ export function usePullRequest({
     []
   )
 
-  /**
-   * One reload: the search when asked for, then the pull request it points at.
-   * Both providers are searched at once, each into its own entry, so one that
-   * fails hides none of the other's pull requests (FPRG-07); every later call
-   * goes to the provider the pull request names. A pull request on screen
-   * that the search no longer lists is read once more, so a pull request
-   * completed or abandoned elsewhere says so instead of turning into "no pull
-   * request" (edge case). `chosen` is a pick made just now, which the state
-   * read here does not hold yet.
-   *
-   * A provider that answered "rate limited" keeps that answer through every
-   * reload that happens on its own — a focus, a write — and is asked again
-   * only on one the user asked for: entering the mode, a pick, Refresh
-   * (FPRG-26).
-   */
-  const load = useLatestCallback(async (wt: string, how: LoadHow): Promise<void> => {
-    const ticket = (loads.current.get(wt) ?? 0) + 1
-    loads.current.set(wt, ticket)
-    const stale = (): boolean => loads.current.get(wt) !== ticket
-    const before = live.current.byWorktree[wt] ?? EMPTY
-    const limited = new Set(how.userDriven ? [] : before.limited)
-    patch(wt, () => ({ loading: true, limited: [...limited] }))
-
-    let searches = before.searches
-    if (how.search) {
-      const ask = (provider: PrProvider): Promise<PrSearch | undefined> =>
-        limited.has(provider)
-          ? Promise.resolve(before.searches[provider])
-          : findOn(provider, wt).catch(
-              (err: unknown): PrSearch => ({ kind: 'error', message: messageOf(err) })
-            )
-      const answers = await Promise.all(PROVIDERS.map(ask))
-      if (stale()) return
-      searches = {}
-      PROVIDERS.forEach((provider, i) => {
-        const answer = answers[i]
-        if (answer === undefined) return
-        searches[provider] = answer
-        if (answer.kind === 'rate-limited') limited.add(provider)
-      })
-      patch(wt, () => ({ searches, limited: [...limited] }))
-    }
-
-    const shown = before.detail
-    const pr =
-      currentOf(foundPrs(searches), how.chosen ?? before.chosen) ?? (shown ? refOf(shown) : null)
-    if (pr === null) {
-      patch(wt, () => ({ detail: null, failure: null, notice: null, loading: false }))
-      return
-    }
-    // FPRG-26: what is on screen, or the rate limit it said, stays as it is.
-    if (limited.has(pr.target.provider)) {
-      patch(wt, () => ({ loading: false }))
-      return
-    }
-
-    const result = await getOn(wt, pr).catch(
-      (err: unknown): PrDetailResult => ({ kind: 'error', message: messageOf(err) })
-    )
-    if (stale()) return
-    if (result.kind === 'rate-limited') limited.add(pr.target.provider)
-
-    if (result.kind === 'ok') {
-      const detail = result.detail
-      patch(wt, (state) => {
-        const samePr = state.detail !== null && sameRef(refOf(state.detail), detail)
-        // Diffs read at an older revision stay as they are until the banner
-        // is answered; with none open there is nothing to be behind.
-        const hasDiffs = Object.keys(state.sides).some((key) =>
-          key.startsWith(`pr:${prKey(detail)}:`)
-        )
-        return {
-          detail,
-          failure: null,
-          notice: null,
-          loading: false,
-          onScreen: samePr && hasDiffs ? state.onScreen : detail.revision
-        }
-      })
-      return
-    }
-
-    const failure: PrFailure = { ...result, provider: pr.target.provider }
-    patch(wt, (state) => {
-      // What is on screen stays, with a notice, rather than being replaced
-      // by an error about a refresh (edge case).
-      if (state.detail !== null && sameRef(refOf(state.detail), pr)) {
-        const why = failureText(failure)
-        return {
-          loading: false,
-          limited: [...limited],
-          notice: `${how.afterWrite ? 'Posted, but the' : 'The'} pull request could not be refreshed: ${why}`
-        }
-      }
-      return { detail: null, failure, notice: null, loading: false, limited: [...limited] }
-    })
-  })
-
   // FPRA-33: entering the mode, or arriving at another worktree while in it.
+  // The lookup the bar runs for the same selection is joined, not repeated.
   useEffect(() => {
     if (!active || !worktreePath) return
     void load(worktreePath, { search: true, userDriven: true })
   }, [active, worktreePath, load])
 
-  // FPRA-33: the window regaining focus, debounced against focus flapping.
-  const target = useRef({ active, worktreePath })
-  useEffect(() => {
-    target.current = { active, worktreePath }
-  })
-  const lastFocusAt = useRef(0)
-  useEffect(() => {
-    const onFocus = (): void => {
-      const now = Date.now()
-      if (now - lastFocusAt.current < FOCUS_RELOAD_MS) return
-      lastFocusAt.current = now
-      const { active: on, worktreePath: wt } = target.current
-      if (on && wt) void load(wt, { search: true, userDriven: false })
-    }
-    window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
-  }, [load])
-
   const choose = useCallback(
     (pr: PrRef): void => {
-      if (!worktreePath) return
-      const wt = worktreePath
-      const chosen = refOf(pr)
-      patch(wt, () => ({ chosen }))
-      void load(wt, { search: false, userDriven: true, chosen })
+      if (worktreePath) chooseIn(worktreePath, pr)
     },
-    [worktreePath, patch, load]
+    [worktreePath, chooseIn]
   )
 
   const refresh = useCallback((): void => {
@@ -331,18 +184,16 @@ export function usePullRequest({
   }, [worktreePath, load])
 
   const reloadDiffs = useCallback((): void => {
-    if (!worktreePath) return
-    patch(worktreePath, (state) => {
-      if (!state.detail) return {}
-      const prefix = `pr:${prKey(state.detail)}:`
+    if (!worktreePath || !detail) return
+    const prefix = `pr:${prKey(detail)}:`
+    patch(worktreePath, (state) => ({
       // Dropping the sides is the re-read: an open PR diff asks for sides it
       // does not hold, at the revision that is latest now.
-      const sides = Object.fromEntries(
+      sides: Object.fromEntries(
         Object.entries(state.sides).filter(([key]) => !key.startsWith(prefix))
       )
-      return { sides, onScreen: state.detail.revision }
-    })
-  }, [worktreePath, patch])
+    }))
+  }, [worktreePath, detail, patch])
 
   const readSides = useCallback(
     (pr: PrRef, file: PrFile): void => {
@@ -351,8 +202,8 @@ export function usePullRequest({
       const state = live.current.byWorktree[wt] ?? EMPTY
       const key = tabKeyOf({ kind: 'pr-diff', pr, path: file.path })
       if (state.sides[key]) return
-      const at: SidesRevision = { revision: state.detail?.revision ?? '' }
-      if (state.detail?.ado) at.ado = state.detail.ado
+      const at: SidesRevision = { revision: detail?.revision ?? '' }
+      if (detail?.ado) at.ado = detail.ado
       patch(wt, (s) => ({ sides: { ...s.sides, [key]: { ...at, sides: null } } }))
       const request = {
         worktreePath: wt,
@@ -382,7 +233,7 @@ export function usePullRequest({
           })
         )
     },
-    [worktreePath, patch]
+    [worktreePath, detail, patch]
   )
 
   /**
@@ -398,14 +249,15 @@ export function usePullRequest({
         (err: unknown): WriteResult => ({ ok: false, message: messageOf(err) })
       )
       if (!result.ok) return result
-      patch(wt, (state) => (state.detail ? { detail: apply(state.detail) } : {}))
-      void load(wt, { search: false, userDriven: false, afterWrite: true })
+      if (detail) {
+        const pr = refOf(detail)
+        amend(wt, pr, apply)
+        void load(wt, { search: false, userDriven: false, afterWrite: true, only: [pr] })
+      }
       return result
     },
-    [worktreePath, patch, load]
+    [worktreePath, detail, amend, load]
   )
-
-  const detail = here.detail
 
   const reply = useCallback(
     (
@@ -556,17 +408,15 @@ export function usePullRequest({
 
   const sidesFor = useCallback((key: string) => here.sides[key], [here.sides])
 
-  const prs = foundPrs(here.searches)
-
   return {
-    searches: here.searches,
+    searches: entry.searches,
     prs,
-    current: currentSummary(prs, here.chosen) ?? detail,
+    current: listed ?? detail,
     detail,
-    failure: here.failure,
-    notice: here.notice,
-    loading: here.loading,
-    newIteration: detail !== null && revisionBanner(here.onScreen, detail.revision),
+    failure,
+    notice,
+    loading: entry.loading,
+    newIteration: detail !== null && behind(here.sides, detail),
     choose,
     refresh,
     reloadDiffs,
@@ -580,6 +430,19 @@ export function usePullRequest({
     createPr,
     openLink
   }
+}
+
+/**
+ * Whether an open diff of this pull request was read at another revision than
+ * the latest (FPRA-34, FPRG-25). Diffs read at an older revision stay as they
+ * are until the banner is answered; with none open there is nothing to be
+ * behind.
+ */
+function behind(sides: Record<string, PrSidesEntry>, detail: PrDetail): boolean {
+  const prefix = `pr:${prKey(detail)}:`
+  return Object.entries(sides).some(
+    ([key, entry]) => key.startsWith(prefix) && revisionBanner(entry.revision, detail.revision)
+  )
 }
 
 /**
@@ -604,74 +467,6 @@ function threadSender(
   if (at.ado === undefined || changeTrackingId === undefined) return null
   const iteration = at.ado.iteration
   return () => api.invoke('ado-pr:thread', { pr, iteration, changeTrackingId, selection, content })
-}
-
-/** How one reload came about (FPRA-33, FPRG-26). */
-interface LoadHow {
-  /** Search the providers again before reading the pull request. */
-  search: boolean
-  /** The user asked for it — entering the mode, a pick, Refresh — not a focus or a write. */
-  userDriven: boolean
-  /** It follows a successful write, which its notice says. */
-  afterWrite?: boolean
-  /** A pick made just now, which the state does not hold yet. */
-  chosen?: PrRef
-}
-
-/** The providers searched, in the order their pull requests are listed (FPRG-07). */
-const PROVIDERS: readonly PrProvider[] = ['azure-devops', 'github']
-
-/** One provider's search for the worktree's branch (FPRA-02, FPRG-06). */
-function findOn(provider: PrProvider, worktreePath: string): Promise<PrSearch> {
-  return provider === 'github'
-    ? api.invoke('github-pr:find', { worktreePath })
-    : api.invoke('ado-pr:find', { worktreePath })
-}
-
-/** One pull request in full, from the provider it names. */
-function getOn(worktreePath: string, pr: PrRef): Promise<PrDetailResult> {
-  return pr.target.provider === 'github'
-    ? api.invoke('github-pr:get', { worktreePath, pr })
-    : api.invoke('ado-pr:get', { worktreePath, pr })
-}
-
-/** Every pull request the providers' searches found, in the providers' order (FPRG-07). */
-function foundPrs(searches: PrSearches): PrSummary[] {
-  return Object.values(searches).flatMap((search) => (search?.kind === 'found' ? search.prs : []))
-}
-
-/** The pull request the searches point at: the only one found, or the one picked among several. */
-function currentSummary(prs: PrSummary[], chosen: PrRef | null): PrSummary | null {
-  if (prs.length === 1) return prs[0]
-  return chosen ? (prs.find((pr) => sameRef(pr, chosen)) ?? null) : null
-}
-
-function currentOf(prs: PrSummary[], chosen: PrRef | null): PrRef | null {
-  const summary = currentSummary(prs, chosen)
-  return summary ? refOf(summary) : null
-}
-
-/** A failure in words, naming its provider and the fix for a sign-in (FPRA-07, FPRG-04, 26). */
-function failureText(failure: PrFailure): string {
-  switch (failure.kind) {
-    case 'auth':
-      return failure.provider === 'github'
-        ? 'GitHub sign-in failed — run gh auth login'
-        : 'Azure DevOps sign-in failed — run az login'
-    case 'rate-limited':
-      return `${providerName(failure.provider)} refuses requests until ${resetTime(failure.resetAt)}`
-    case 'error':
-      return failure.message
-  }
-}
-
-function refOf(pr: PrRef): PrRef {
-  return { target: pr.target, id: pr.id }
-}
-
-/** One pull request, by `prKey`: its provider, repository — without case — and number. */
-function sameRef(a: PrRef, b: PrRef): boolean {
-  return prKey(a) === prKey(b)
 }
 
 /**

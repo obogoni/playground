@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 import type { PrSummary } from '../../../shared/files'
 import { prKey, prLabel } from '../lib/pr-view'
-import { providerName } from '../lib/use-pull-request'
+import { providerName } from '../lib/pr-lookup'
 import './PrPicker.css'
 
 /**

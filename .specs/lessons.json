@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 133,
+  "next_id": 139,
   "lessons": [
     {
       "id": "L-001",
@@ -2299,6 +2299,114 @@
       ],
       "created": "2026-10-10T20:16:34Z",
       "last_seen": "2026-10-10T20:16:34Z"
+    },
+    {
+      "id": "L-133",
+      "key": "surviving_mutant::when a cached value and a fresh failure can both be present test the case where both are not only the failure alone",
+      "text": "When a cached value and a fresh failure can both be present, test the case where both are, not only the failure alone",
+      "signal": "surviving_mutant",
+      "scope": "renderer-lib",
+      "status": "candidate",
+      "features": [
+        "status-pr-link"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "U5 pr-status.ts:111-120 (renderer-lib)"
+      ],
+      "created": "2026-10-10T22:22:59Z",
+      "last_seen": "2026-10-10T22:22:59Z"
+    },
+    {
+      "id": "L-134",
+      "key": "surviving_mutant::a check that proves two callers share one request must hold the answer so both calls overlap in time",
+      "text": "A check that proves two callers share one request must hold the answer so both calls overlap in time",
+      "signal": "surviving_mutant",
+      "scope": "smoke",
+      "status": "candidate",
+      "features": [
+        "status-pr-link"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "SM4 use-pr-lookup.ts:130 (smoke)"
+      ],
+      "created": "2026-10-10T22:23:00Z",
+      "last_seen": "2026-10-10T22:23:00Z"
+    },
+    {
+      "id": "L-135",
+      "key": "spec_precision_gap::when an ac places something in a ui container state where it goes in the state that has no such container",
+      "text": "When an AC places something in a UI container, state where it goes in the state that has no such container",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "status-pr-link"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "SPRL-19 (G1) (spec)"
+      ],
+      "created": "2026-10-10T22:23:00Z",
+      "last_seen": "2026-10-10T22:23:00Z"
+    },
+    {
+      "id": "L-136",
+      "key": "spec_precision_gap::when two acs can apply to the same state the spec names which one wins",
+      "text": "When two ACs can apply to the same state, the spec names which one wins",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "status-pr-link"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "SPRL-15 vs SPRL-17 (G2) (spec)"
+      ],
+      "created": "2026-10-10T22:23:00Z",
+      "last_seen": "2026-10-10T22:23:00Z"
+    },
+    {
+      "id": "L-137",
+      "key": "spec_precision_gap::state a time threshold s boundary in the ac as at least or more than matching the comparison intended",
+      "text": "State a time threshold's boundary in the AC as at least or more than, matching the comparison intended",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "status-pr-link"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "SPRL-02 (G3) (spec)"
+      ],
+      "created": "2026-10-10T22:23:00Z",
+      "last_seen": "2026-10-10T22:23:00Z"
+    },
+    {
+      "id": "L-138",
+      "key": "spec_precision_gap::when a feature inherits another feature s rule that changes an ac s outcome the spec cites that rule",
+      "text": "When a feature inherits another feature's rule that changes an AC's outcome, the spec cites that rule",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "status-pr-link"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "SPRL-02 and FPRG-26 (G4) (spec)"
+      ],
+      "created": "2026-10-10T22:23:00Z",
+      "last_seen": "2026-10-10T22:23:00Z"
     }
   ]
 }

@@ -36,6 +36,12 @@
  * NOT automatable here (hand-verify from the screenshots): both themes read
  * well; the middle ellipsis looks right; the sync popover sits above the bar.
  *
+ * The pull request chip (F6) is driven from stubbed provider answers: the
+ * renderer's `api` module gets its `invoke` wrapped for the `ado-pr:*` and
+ * `github-pr:*` find, get and open channels only, so no provider is asked and
+ * no browser page opens; the wrap is removed in a `finally`. SMOKE_ONLY=pr
+ * seeds the fixture and runs that section alone.
+ *
  * The changed-file counter's click is not driven here: since FXPL-31 it opens
  * the Files direction in uncommitted mode instead of a popover (STBR-30 and
  * STBR-32 are superseded), and scripts/smoke-files.mjs covers it in step 15,
@@ -60,6 +66,12 @@ import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 
 const PORT = Number(process.env.SMOKE_PORT) || 9222
+/** `pr` runs the pull request chip section alone (F6); unset runs everything. */
+const ONLY = process.env.SMOKE_ONLY ?? null
+if (ONLY !== null && ONLY !== 'pr') {
+  console.error('SMOKE_ONLY must be pr.')
+  process.exit(2)
+}
 const TMP = realpathSync.native(tmpdir())
 const SHOTS = join(TMP, 'status-bar-smoke')
 
@@ -625,6 +637,11 @@ async function main() {
       .join(' | ')
   )
 
+  if (ONLY === 'pr') {
+    await prChipSection(ws, pathOf, detachedLabel)
+    return
+  }
+
   // --- The long branch in every non-Agents direction (STBR-01, 02, 06) ---
   await selectWorktree(ws, LONG_BRANCH)
   for (const dir of ['Tree', 'Board', 'Workflows']) {
@@ -1125,6 +1142,8 @@ async function main() {
     `${b.repo} · ${b.sync} <${b.syncTag} class="${b.syncClass}">; popover open ${pop.open}`
   )
 
+  await prChipSection(ws, pathOf, detachedLabel)
+
   // --- Screenshots, light and dark ---
   for (const theme of ['light', 'dark']) {
     await setTheme(ws, theme)
@@ -1139,6 +1158,512 @@ async function main() {
     if (t) await shot(ws, `toast-above-bar-${theme}.png`, { quick: true })
     else console.log(`      no toast appeared for the ${theme} screenshot`)
     await sleep(2400)
+  }
+}
+
+// ---------------------------------------------------------------- pull request chip (F6)
+
+/*
+ * The PR chip (SPRL-01..19) is driven from stubbed answers: the renderer's own
+ * `api` module (the one Vite serves the app) gets its `invoke` wrapped for the
+ * six channels below, and only those. No answer is forwarded to main, so no
+ * provider is ever asked and no browser page opens; every other channel goes
+ * through untouched. The wrap is removed in a `finally`.
+ */
+const PR_CHANNELS = [
+  'ado-pr:find',
+  'ado-pr:get',
+  'ado-pr:open',
+  'github-pr:find',
+  'github-pr:get',
+  'github-pr:open'
+]
+
+const ADO_T = { provider: 'azure-devops', org: 'acme', project: 'platform', repo: 'widget' }
+const GH_T = { provider: 'github', owner: 'contoso', repo: 'widget' }
+const prSummary = (target, id, extra = {}) => ({
+  target,
+  id,
+  title: `Fix login redirect ${id}`,
+  targetBranch: 'main',
+  isDraft: false,
+  ...extra
+})
+const reviewer = (name, state) => ({ name, state, isGroup: false, isRequired: false })
+const prDetail = (summary, reviewers) => ({
+  ...summary,
+  status: 'active',
+  author: 'Ana',
+  description: 'Stubbed by the status bar smoke.',
+  createdAt: Date.now() - 3600_000,
+  sourceBranch: 'user/dev/4821-fix-login',
+  reviewers,
+  revision: '1',
+  files: [],
+  threads: [],
+  ...(summary.target.provider === 'github'
+    ? {
+        github: {
+          headSha: 'a'.repeat(40),
+          baseSha: 'b'.repeat(40),
+          headRepo: { owner: 'contoso', repo: 'widget' },
+          filesIncomplete: false
+        },
+        timeline: []
+      }
+    : { ado: { iteration: 1 } })
+})
+const found = (...prs) => ({ kind: 'found', prs })
+const NO_PR = { kind: 'none', createUrlAvailable: false }
+
+const STUB_INSTALL = `(async () => {
+  if (window.__prStub) return 'already'
+  const m = await import('/src/lib/api.ts')
+  const channels = ${J(PR_CHANNELS)}
+  const orig = m.api.invoke
+  const stub = { module: m, orig, calls: [], answers: {}, gates: {} }
+  m.api.invoke = async function (channel, ...args) {
+    if (!channels.includes(channel)) return orig.call(this, channel, ...args)
+    const req = args[0] ?? {}
+    stub.calls.push({ channel, worktreePath: req.worktreePath ?? null, id: req.pr?.id ?? null, create: req.create === true })
+    if (channel.endsWith(':open')) return { ok: true }
+    const gate = stub.gates[req.worktreePath]
+    if (gate) await gate.promise
+    const key = req.pr ? channel + '|' + req.worktreePath + '|' + req.pr.id : channel + '|' + req.worktreePath
+    const answer = stub.answers[key] ?? (channel.endsWith(':find') ? { kind: 'no-remote' } : { kind: 'error', message: 'no stubbed answer' })
+    return JSON.parse(JSON.stringify(answer))
+  }
+  window.__prStub = stub
+  return 'installed'
+})()`
+
+const STUB_REMOVE = `(() => {
+  const stub = window.__prStub
+  if (!stub) return 'absent'
+  for (const gate of Object.values(stub.gates)) gate.release()
+  stub.module.api.invoke = stub.orig
+  delete window.__prStub
+  return 'removed'
+})()`
+
+/** Answers for one worktree: each provider's search, and each found PR's detail (or a failure). */
+async function stubAnswers(ws, worktreePath, { ado = NO_PR, github = NO_PR, gets = [] }) {
+  const answers = {
+    [`ado-pr:find|${worktreePath}`]: ado,
+    [`github-pr:find|${worktreePath}`]: github
+  }
+  for (const [summary, result] of gets) {
+    const channel = summary.target.provider === 'github' ? 'github-pr:get' : 'ado-pr:get'
+    answers[`${channel}|${worktreePath}|${summary.id}`] = result
+  }
+  await evaluate(ws, `(Object.assign(window.__prStub.answers, ${J(answers)}), true)`)
+}
+
+const ok = (summary, reviewers) => ({ kind: 'ok', detail: prDetail(summary, reviewers) })
+
+/** Hold every stubbed answer for a worktree until `releaseGate`. */
+const holdGate = (ws, wt) =>
+  evaluate(
+    ws,
+    `(() => { let release; const promise = new Promise((r) => { release = r }); window.__prStub.gates[${J(wt)}] = { promise, release }; return true })()`
+  )
+const releaseGate = (ws, wt) =>
+  evaluate(
+    ws,
+    `(() => { const g = window.__prStub.gates[${J(wt)}]; delete window.__prStub.gates[${J(wt)}]; g?.release(); return true })()`
+  )
+
+const stubCalls = async (ws) =>
+  JSON.parse(await evaluate(ws, `JSON.stringify(window.__prStub.calls)`))
+const clearCalls = (ws) => evaluate(ws, `(window.__prStub.calls.length = 0, true)`)
+const count = (calls, channel) => calls.filter((c) => c.channel === channel).length
+
+/** Everything the checks read off the PR chip, as JSON. */
+const CHIP = `(() => {
+  const bar = document.querySelector('footer.status-bar[role="status"]')
+  const el = bar?.querySelector('.status-bar-pr')
+  const mark = el?.querySelector('.status-bar-pr-mark')
+  const menu = bar?.querySelector('.status-bar-pr-menu')
+  const text = (n, s) => n?.querySelector(s)?.textContent ?? null
+  return JSON.stringify({
+    present: Boolean(el),
+    tag: el?.tagName ?? null,
+    text: el?.textContent ?? null,
+    title: el?.getAttribute('title') ?? null,
+    muted: el ? el.classList.contains('muted') : null,
+    mark: mark?.textContent ?? null,
+    markLabel: mark?.getAttribute('aria-label') ?? null,
+    browse: Boolean(bar?.querySelector('.status-bar-pr-group .status-bar-pr-browse')),
+    menu: menu
+      ? {
+          items: [...menu.querySelectorAll('.status-bar-pr-item')].map((i) => ({
+            number: text(i, '.status-bar-pr-number'),
+            title: text(i, '.status-bar-pr-title'),
+            target: text(i, '.status-bar-pr-target'),
+            provider: text(i, '.status-bar-pr-provider'),
+            mark: text(i, '.status-bar-pr-mark'),
+            markLabel: i.querySelector('.status-bar-pr-mark')?.getAttribute('aria-label') ?? null
+          })),
+          notes: [...menu.querySelectorAll('.status-bar-pr-note')].map((n) => n.textContent)
+        }
+      : null,
+    branch: bar?.querySelector('.status-bar-branch')?.getAttribute('title') ?? null,
+    barHeight: bar ? bar.getBoundingClientRect().height : null,
+    barOverflow: bar ? bar.scrollWidth - bar.clientWidth : null,
+    chipRight: el ? el.getBoundingClientRect().right : null,
+    barRight: bar ? bar.getBoundingClientRect().right : null,
+    chipTop: el ? el.getBoundingClientRect().top : null,
+    barTop: bar ? bar.getBoundingClientRect().top : null
+  })
+})()`
+
+const chip = async (ws) => JSON.parse(await evaluate(ws, CHIP))
+const waitChip = (ws, ok, timeoutMs = 5000) => waitFor(ws, CHIP, ok, timeoutMs)
+
+/** What the Files direction shows after an in-app open (SPRL-10, 13). */
+const FILES_PR = `(() => JSON.stringify({
+  direction: document.querySelector('.topbar-segment.active')?.textContent?.trim() ?? null,
+  mode: document.querySelector('.file-tree-mode.active')?.textContent ?? null,
+  title: document.querySelector('.pr-overview-title')?.textContent ?? null
+}))()`
+
+const clickIn = (ws, selector, index = 0) =>
+  evaluate(
+    ws,
+    `(() => { const el = document.querySelectorAll(${J(selector)})[${index}]; el?.click(); return Boolean(el) })()`
+  )
+
+async function prChipSection(ws, pathOf, detachedLabel) {
+  const one = pathOf(SYNC_BRANCH)
+  const many = pathOf(LONG_BRANCH)
+  const create = pathOf(PUBLISH_BRANCH)
+  const none = pathOf(MANY_BRANCH)
+  const plain = pathOf('main')
+
+  const installed = await evaluate(ws, STUB_INSTALL)
+  try {
+    // The stub must be live before any check means anything.
+    const ado7 = prSummary(ADO_T, 7, { isDraft: true })
+    await stubAnswers(ws, one, {
+      ado: found(ado7),
+      gets: [[ado7, ok(ado7, [reviewer('Ana', 'approved'), reviewer('Bruno', 'rejected')])]]
+    })
+    await selectWorktree(ws, SYNC_BRANCH)
+    let c = await waitChip(ws, (v) => v.mark !== null)
+    const calls = await stubCalls(ws)
+    check(
+      'the stub answers the bar: a stubbed find reaches the chip, and main is never asked',
+      installed === 'installed' && c.present && calls.some((x) => x.channel === 'ado-pr:find'),
+      `${installed}; ${calls.length} stubbed calls; chip "${c.text}"`
+    )
+
+    // --- One PR: number, draft, the worst mark, every reviewer (SPRL-01, 03, 04, 08) ---
+    check(
+      'selecting a worktree searches both providers and reads the PR it found (SPRL-01)',
+      count(calls, 'ado-pr:find') >= 1 &&
+        count(calls, 'github-pr:find') >= 1 &&
+        calls.some((x) => x.channel === 'ado-pr:get' && x.id === 7),
+      calls.map((x) => `${x.channel}${x.id ? ` ${x.id}` : ''}`).join(', ')
+    )
+    check(
+      'one PR reads "PR #7 · Draft" and a rejection marks it ✕, labelled for screen readers (SPRL-03, 04)',
+      c.text?.startsWith('PR #7 · Draft') &&
+        c.mark === '✕' &&
+        c.markLabel === 'Rejected' &&
+        c.browse,
+      `"${c.text}" mark ${c.mark} "${c.markLabel}"`
+    )
+    check(
+      'the tooltip lists every reviewer with their state (SPRL-08)',
+      c.title?.includes('Ana: Approved') && c.title?.includes('Bruno: Rejected'),
+      J(c.title)
+    )
+
+    // --- Refresh repeats the lookup, and each mark follows the reviews (SPRL-02, 05, 06, 07) ---
+    const marks = [
+      [[reviewer('Ana', 'approved'), reviewer('Bruno', 'waiting-for-author')], '⏸', 'SPRL-05'],
+      [
+        [reviewer('Ana', 'approved-with-suggestions'), reviewer('Bruno', 'no-vote')],
+        '✓',
+        'SPRL-06'
+      ],
+      [[reviewer('Ana', 'no-vote'), reviewer('Platform Team', 'no-vote')], null, 'SPRL-07']
+    ]
+    for (const [reviewers, expected, req] of marks) {
+      await stubAnswers(ws, one, { ado: found(ado7), gets: [[ado7, ok(ado7, reviewers)]] })
+      await clearCalls(ws)
+      await refresh(ws)
+      c = await waitChip(ws, (v) => v.mark === expected)
+      const after = await stubCalls(ws)
+      check(
+        `Refresh searches again and the chip marks ${expected ?? 'nothing'} for ${reviewers.map((r) => r.state).join(' + ')} (SPRL-02, ${req})`,
+        c.mark === expected &&
+          count(after, 'ado-pr:find') === 1 &&
+          count(after, 'github-pr:find') === 1,
+        `mark ${c.mark}; finds ${count(after, 'ado-pr:find')}+${count(after, 'github-pr:find')}`
+      )
+    }
+
+    // --- Focus: a second focus inside 5 s asks nothing (SPRL-02) ---
+    await sleep(5200)
+    await clearCalls(ws)
+    await fireFocus(ws)
+    await sleep(600)
+    await fireFocus(ws)
+    await sleep(600)
+    const focused = await stubCalls(ws)
+    check(
+      'a focus searches again; another focus inside 5 s does not (SPRL-02)',
+      count(focused, 'ado-pr:find') === 1 && count(focused, 'github-pr:find') === 1,
+      `finds ${count(focused, 'ado-pr:find')}+${count(focused, 'github-pr:find')}`
+    )
+
+    // --- A PR whose reviewers could not be read (edge case) ---
+    await stubAnswers(ws, one, {
+      ado: found(ado7),
+      gets: [[ado7, { kind: 'error', message: 'HTTP 500' }]]
+    })
+    await refresh(ws)
+    c = await waitChip(ws, (v) => v.title?.includes('could not be read'))
+    check(
+      'a PR whose reviewers could not be read shows number and draft, no mark, and says why (edge case)',
+      c.text?.startsWith('PR #7 · Draft') &&
+        c.mark === null &&
+        c.title?.includes('The reviewers could not be read: HTTP 500'),
+      `"${c.text}" — ${J(c.title)}`
+    )
+
+    // --- ↗ opens the browser through main; the chip opens the Pull request mode (SPRL-10, 11) ---
+    await stubAnswers(ws, one, {
+      ado: found(ado7),
+      gets: [[ado7, ok(ado7, [reviewer('Ana', 'approved')])]]
+    })
+    await refresh(ws)
+    await waitChip(ws, (v) => v.mark === '✓')
+    await clearCalls(ws)
+    await clickIn(ws, '.status-bar-pr-group .status-bar-pr-browse')
+    await sleep(300)
+    let opened = await stubCalls(ws)
+    check(
+      "↗ asks main to open that PR's page, naming the PR and nothing else (SPRL-11)",
+      opened.length === 1 &&
+        opened[0].channel === 'ado-pr:open' &&
+        opened[0].id === 7 &&
+        !opened[0].create,
+      J(opened)
+    )
+    await clearCalls(ws)
+    await clickIn(ws, '.status-bar-pr-group .status-bar-pr')
+    let files = await waitFor(ws, FILES_PR, (v) => v.title?.includes('Fix login redirect 7'))
+    const entering = await stubCalls(ws)
+    check(
+      'the chip opens the Files direction in Pull request mode on that PR (SPRL-10)',
+      files.direction === 'Files' &&
+        files.mode === 'Pull request' &&
+        files.title?.includes('Fix login redirect 7'),
+      J(files)
+    )
+    check(
+      'entering the mode from the chip searches once per provider (one lookup serves both)',
+      count(entering, 'ado-pr:find') === 1 && count(entering, 'github-pr:find') === 1,
+      `finds ${count(entering, 'ado-pr:find')}+${count(entering, 'github-pr:find')}`
+    )
+    c = await chip(ws)
+    check(
+      'the bar keeps the chip in the Files direction (SPRL-01)',
+      c.text?.startsWith('PR #7'),
+      c.text
+    )
+
+    // --- Several PRs: a menu, a provider note, Escape and outside click (SPRL-12..14, 19) ---
+    const gh12 = prSummary(GH_T, 12)
+    const gh13 = prSummary(GH_T, 13, { targetBranch: 'release/2.0', isDraft: true })
+    await stubAnswers(ws, many, {
+      ado: { kind: 'auth' },
+      github: found(gh12, gh13),
+      gets: [
+        [gh12, ok(gh12, [reviewer('octo-a', 'changes-requested')])],
+        [gh13, ok(gh13, [reviewer('octo-b', 'approved')])]
+      ]
+    })
+    await selectWorktree(ws, LONG_BRANCH)
+    c = await waitChip(ws, (v) => v.text === '2 PRs')
+    check('two PRs read "2 PRs" (SPRL-12)', c.text === '2 PRs' && !c.muted, c.text)
+    await send(ws, 'Emulation.setDeviceMetricsOverride', {
+      width: 1100,
+      height: 800,
+      deviceScaleFactor: 1,
+      mobile: false
+    })
+    await sleep(300)
+    const narrow = await chip(ws)
+    await send(ws, 'Emulation.clearDeviceMetricsOverride')
+    await sleep(300)
+    check(
+      'at 1100 px the bar holds the long branch and the "2 PRs" chip on one line, chip inside the bar (T7)',
+      narrow.barOverflow <= 1 &&
+        narrow.chipRight <= narrow.barRight + 0.5 &&
+        narrow.chipTop >= narrow.barTop &&
+        Math.round(narrow.barHeight) === 26,
+      `overflow ${narrow.barOverflow}px, chip right ${narrow.chipRight?.toFixed(1)} of ${narrow.barRight?.toFixed(1)}, bar ${narrow.barHeight}px`
+    )
+    await clickIn(ws, 'footer.status-bar button.status-bar-pr')
+    c = await waitChip(ws, (v) => v.menu !== null && v.menu.items.every((i) => i.mark !== null))
+    check(
+      'the menu lists each PR: number, title, target branch, provider, mark (SPRL-12)',
+      J(c.menu?.items.map((i) => [i.number, i.title, i.target, i.provider, i.mark])) ===
+        J([
+          ['#12', 'Fix login redirect 12', '→ main', 'GitHub', '⏸'],
+          ['#13', 'Fix login redirect 13', '→ release/2.0', 'GitHub', '✓']
+        ]),
+      J(c.menu?.items)
+    )
+    check(
+      "the other provider's failure is only a note at the foot of the menu (SPRL-19)",
+      J(c.menu?.notes) === J(['Azure DevOps sign-in failed — run az login']),
+      J(c.menu?.notes)
+    )
+    await evaluate(
+      ws,
+      `(document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })), window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })), true)`
+    )
+    c = await waitChip(ws, (v) => v.menu === null, 2000)
+    check('Escape closes the menu (SPRL-14)', c.menu === null)
+    await clickIn(ws, 'footer.status-bar button.status-bar-pr')
+    await waitChip(ws, (v) => v.menu !== null)
+    await clickIn(ws, '.status-bar-repo')
+    c = await waitChip(ws, (v) => v.menu === null, 2000)
+    check('a click outside closes the menu (SPRL-14)', c.menu === null)
+    await clickIn(ws, 'footer.status-bar button.status-bar-pr')
+    await waitChip(ws, (v) => v.menu !== null)
+    await clearCalls(ws)
+    await clickIn(ws, '.status-bar-pr-item .status-bar-pr-browse', 1)
+    await sleep(300)
+    opened = await stubCalls(ws)
+    check(
+      "a menu item's ↗ opens that PR's page through main (SPRL-13)",
+      opened.length === 1 && opened[0].channel === 'github-pr:open' && opened[0].id === 13,
+      J(opened)
+    )
+    await waitChip(ws, (v) => v.menu !== null)
+    await clickIn(ws, '.status-bar-pr-item .status-bar-pr-open', 1)
+    files = await waitFor(ws, FILES_PR, (v) => v.title?.includes('Fix login redirect 13'))
+    check(
+      'a menu item opens that PR in the Pull request mode (SPRL-13)',
+      files.direction === 'Files' &&
+        files.mode === 'Pull request' &&
+        files.title?.includes('Fix login redirect 13'),
+      J(files)
+    )
+
+    // --- No PR: Create PR when a provider offers it, else nothing (SPRL-15, 16) ---
+    await stubAnswers(ws, create, { github: { kind: 'none', createUrlAvailable: true } })
+    await selectWorktree(ws, PUBLISH_BRANCH)
+    c = await waitChip(ws, (v) => v.text === 'Create PR')
+    check(
+      'no PR with creation available shows a muted "Create PR" (SPRL-15)',
+      c.text === 'Create PR' && c.muted && c.tag === 'BUTTON',
+      `${c.text} muted ${c.muted}`
+    )
+    await clearCalls(ws)
+    await clickIn(ws, 'footer.status-bar button.status-bar-pr')
+    await sleep(300)
+    opened = await stubCalls(ws)
+    check(
+      'Create PR asks main to open the creation page on that provider (SPRL-15)',
+      opened.length === 1 && opened[0].channel === 'github-pr:open' && opened[0].create,
+      J(opened)
+    )
+    await stubAnswers(ws, none, {})
+    await selectWorktree(ws, MANY_BRANCH)
+    c = await waitChip(ws, (v) => !v.present, 3000)
+    await sleep(800)
+    c = await chip(ws)
+    check('no PR and no creation available shows no chip (SPRL-16)', !c.present, c.text ?? 'none')
+
+    // --- No recognised remote, detached HEAD: nothing (SPRL-18) ---
+    // `main` has no stubbed answer yet: both providers say no remote.
+    await selectWorktree(ws, 'main')
+    await sleep(800)
+    c = await chip(ws)
+    check(
+      'no recognised remote shows no chip (SPRL-18)',
+      !c.present && plain !== undefined,
+      c.text ?? 'none'
+    )
+    // --- No answer: PR ? with the reason (SPRL-17) ---
+    // On `main`, not the gone worktree: another section deletes that folder,
+    // and the chip rightly shows nothing for a missing folder.
+    await stubAnswers(ws, plain, { github: { kind: 'error', message: 'socket hang up' } })
+    await refresh(ws)
+    c = await waitChip(ws, (v) => v.text === 'PR ?')
+    check(
+      'a failed provider with no PR found shows a muted "PR ?" whose tooltip is the reason (SPRL-17)',
+      c.text === 'PR ?' && c.muted && c.title === 'GitHub: socket hang up',
+      `${c.text} — ${J(c.title)}`
+    )
+    await stubAnswers(ws, plain, {
+      github: { kind: 'rate-limited', resetAt: Date.now() + 600_000 }
+    })
+    await refresh(ws)
+    c = await waitChip(ws, (v) => v.title?.includes('refuses requests until'))
+    check(
+      'a rate-limited provider shows "PR ?" saying until when (SPRL-17)',
+      c.text === 'PR ?' && c.title?.startsWith('GitHub refuses requests until'),
+      J(c.title)
+    )
+
+    const detached = pathOf(detachedLabel)
+    await stubAnswers(ws, detached, { ado: { kind: 'detached' }, github: { kind: 'detached' } })
+    await selectWorktree(ws, detachedLabel)
+    await sleep(800)
+    c = await chip(ws)
+    check('a detached HEAD shows no chip (SPRL-18)', !c.present, c.text ?? 'none')
+
+    // --- A late answer for another worktree is cached for it, never painted (edge case, SPRL-09) ---
+    const gh99 = prSummary(GH_T, 99)
+    await stubAnswers(ws, none, {
+      github: found(gh99),
+      gets: [[gh99, ok(gh99, [reviewer('octo-a', 'approved')])]]
+    })
+    await holdGate(ws, none)
+    await selectWorktree(ws, MANY_BRANCH)
+    await selectWorktree(ws, PUBLISH_BRANCH)
+    await waitChip(ws, (v) => v.text === 'Create PR')
+    await releaseGate(ws, none)
+    await sleep(1000)
+    c = await chip(ws)
+    check(
+      "a late answer for a worktree no longer selected does not paint the new one's chip (edge case)",
+      c.text === 'Create PR' && c.branch === PUBLISH_BRANCH,
+      `${c.branch?.slice(-20)}: ${c.text}`
+    )
+    await holdGate(ws, none)
+    await selectWorktree(ws, MANY_BRANCH)
+    c = await waitChip(ws, (v) => v.text?.startsWith('PR #99'), 2000)
+    check(
+      'that answer was cached for its worktree: selecting it shows the PR while the next lookup runs (SPRL-09)',
+      c.text?.startsWith('PR #99') && c.mark === '✓',
+      c.text ?? 'none'
+    )
+    await releaseGate(ws, none)
+
+    // --- Screenshots of the chip and the menu, light and dark ---
+    for (const theme of ['light', 'dark']) {
+      await setTheme(ws, theme)
+      await selectWorktree(ws, SYNC_BRANCH)
+      await waitChip(ws, (v) => v.mark !== null)
+      await shot(ws, `pr-chip-one-${theme}.png`)
+      await selectWorktree(ws, LONG_BRANCH)
+      await waitChip(ws, (v) => v.text === '2 PRs')
+      await clickIn(ws, 'footer.status-bar button.status-bar-pr')
+      await waitChip(ws, (v) => v.menu !== null)
+      await shot(ws, `pr-chip-menu-${theme}.png`)
+      await clickIn(ws, '.status-bar-repo')
+    }
+  } finally {
+    const removed = await evaluate(ws, STUB_REMOVE).catch((err) => String(err))
+    check('the PR stub is removed', removed === 'removed', removed)
   }
 }
 

@@ -143,3 +143,156 @@ button.status-bar-sync.open,
 button.status-bar-changes.open {
   background: var(--panel-2);
 }
+
+/* Pull request chip (F6): one PR with its mark and ↗, a menu of several, a
+   muted Create PR or PR ?. Never shrinks below its text: the branch, which
+   truncates in the middle, gives way first. */
+.status-bar-pr {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: calc(var(--status-bar-height) - 6px);
+  padding: 0 7px;
+  border-radius: 6px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.status-bar-pr.muted {
+  color: var(--text-faint);
+}
+
+/* `PR ?` is a span: it says why on hover and offers nothing to click. */
+span.status-bar-pr {
+  cursor: default;
+}
+
+button.status-bar-pr:hover,
+button.status-bar-pr.open,
+.status-bar-pr-browse:hover {
+  background: var(--panel-2);
+}
+
+.status-bar-pr-group {
+  flex: 0 0 auto;
+  gap: 1px;
+}
+
+.status-bar-pr-draft {
+  color: var(--text-faint);
+}
+
+/* The glyph carries the meaning; its colour only repeats it (SPRL-04..06). */
+.status-bar-pr-mark {
+  font-weight: 700;
+}
+
+.status-bar-pr-mark.rejected {
+  color: var(--red);
+}
+
+.status-bar-pr-mark.changes {
+  color: var(--amber);
+}
+
+.status-bar-pr-mark.approved {
+  color: var(--green);
+}
+
+.status-bar-pr-browse {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--status-bar-height) - 6px);
+  height: calc(var(--status-bar-height) - 6px);
+  border-radius: 6px;
+  color: var(--text-faint);
+}
+
+.status-bar-pr-browse:hover {
+  color: var(--text);
+}
+
+/* The menu floats above the chip, styled like the sync popover's surface. */
+.status-bar-pr-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 70;
+  width: 440px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 12px 36px var(--shadow);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: default;
+  animation: popIn 0.16s ease;
+}
+
+.status-bar-pr-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.status-bar-pr-open {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  color: var(--text);
+  text-align: left;
+}
+
+.status-bar-pr-open:hover {
+  background: var(--panel-2);
+}
+
+.status-bar-pr-number {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.status-bar-pr-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-bar-pr-target {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 30%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.status-bar-pr-provider {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+}
+
+.status-bar-pr-note {
+  padding: 6px 8px 2px;
+  border-top: 1px solid var(--border);
+  color: var(--text-faint);
+  white-space: normal;
+}

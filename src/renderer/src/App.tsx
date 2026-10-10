@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentProps, JSX } from 'react'
 import type { AgentDef } from '../../shared/agents'
 import type { ActivityState, AppConfig } from '../../shared/config'
+import type { PrRef } from '../../shared/files'
 import { DEFAULT_CONFIG } from '../../shared/config'
 import type { PinnedTaskView, TasksSnapshot } from '../../shared/tasks'
 import { taskIdFromBranch } from '../../shared/tasks'
@@ -38,6 +39,8 @@ import { dropCollapsedId, isCollapsed, toggleCollapsedId } from './lib/workspace
 import { filesStateFor } from './lib/files-view'
 import { useFiles } from './lib/use-files'
 import { useGitHubStatus } from './lib/use-github-status'
+import { usePrLookup } from './lib/use-pr-lookup'
+import { barTargetFor } from './lib/status-bar'
 import { useSessions } from './lib/use-sessions'
 import { useTime } from './lib/use-time'
 import { useLatestCallback } from './lib/use-latest-callback'
@@ -212,6 +215,19 @@ function App(): JSX.Element {
   }, [selectedId])
 
   const selected = findWorktree(tree, selectedId)
+  // F6: the pull request lookup the status bar and the Pull request mode
+  // share, mounted above the direction switch and following the worktree the
+  // bar describes (SPRL-01, 02).
+  const barTarget = barTargetFor({
+    direction: ui?.direction ?? DEFAULT_CONFIG.ui.direction,
+    tree,
+    selectedId,
+    sessions,
+    selectedSessionId
+  })
+  const prLookup = usePrLookup({
+    target: barTarget.kind === 'worktree' ? barTarget.selected.worktree.path : null
+  })
   const files = useFiles({
     worktreePath: selected?.worktree.path ?? null,
     active: ui?.direction === 'files',
@@ -222,7 +238,8 @@ function App(): JSX.Element {
     // result, which bumps `treeRevision`. The Commits list follows that
     // revision to recompute its not-pushed markers (FCMT-32), and not the
     // tree's identity, so a recount patch never reloads it (RCNT-26).
-    treeRevision
+    treeRevision,
+    prLookup
   })
 
   /**
@@ -245,6 +262,27 @@ function App(): JSX.Element {
         [worktreeId]: { ...filesStateFor(current, worktreeId), mode: 'uncommitted' }
       }
     })
+  }
+
+  /**
+   * The status bar's PR chip lands in the Files direction on that worktree, in
+   * Pull request mode, showing that pull request (SPRL-10, 13). Direction and
+   * mode go in one config patch, as in `openChangedFiles`; the pick goes to
+   * the shared lookup, which reads that pull request.
+   */
+  const openPullRequest = (worktreeId: string, pr: PrRef): void => {
+    const current = ui ?? DEFAULT_CONFIG.ui
+    const worktree = findWorktree(tree, worktreeId)
+    if (!worktree) return
+    setSelectedId(worktreeId)
+    update({
+      direction: 'files',
+      files: {
+        ...current.files,
+        [worktreeId]: { ...filesStateFor(current, worktreeId), mode: 'pull-request' }
+      }
+    })
+    prLookup.choose(worktree.worktree.path, pr)
   }
 
   const refreshTasks = useCallback((): void => {
@@ -449,6 +487,7 @@ function App(): JSX.Element {
   const refreshAll = useLatestCallback((): void => {
     refreshTree()
     refreshTasks()
+    prLookup.refresh()
   })
   const openSettings = useLatestCallback((): void => setSettingsOpen(true))
   const spawnAgentIn = useLatestCallback((cwd: string): void => openNewSession({ cwd }))
@@ -622,6 +661,10 @@ function App(): JSX.Element {
           direction={ui.direction}
           onToast={setToast}
           onOpenChanges={openChangedFiles}
+          onOpenPullRequest={openPullRequest}
+          prEntry={prLookup.entryFor(
+            barTarget.kind === 'worktree' ? barTarget.selected.worktree.path : null
+          )}
           onRefreshTree={refreshTree}
         />
       </PerfProfiler>
