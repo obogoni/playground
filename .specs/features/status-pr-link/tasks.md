@@ -185,7 +185,7 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] The Pull request mode's own behaviour unchanged: the read-only sections of `smoke-files-pr-ado.mjs` and `smoke-files-pr-github.mjs` pass against the PRs the owner names — **checked at T9**
+- [x] The Pull request mode's own behaviour unchanged: the read-only sections of `smoke-files-pr-ado.mjs` and `smoke-files-pr-github.mjs` pass against the PRs the owner names — **checked at T9**: Azure DevOps 21/21 (1 SKIP, as in F4), GitHub 10/10 (4 SKIP: the PR has no reviewers, threads or comments)
 - [x] With the Files direction in Pull request mode on the bar's worktree, one selection runs one `find` per provider, not two — **checked at T8**: the decision is `joinsRunning` (`pr-lookup.ts`), unit-tested; the smoke counts one `find` per provider on entering the mode from the chip. Selection and entering coincide only at app start in the UI (the Tree sidebar is the only selector), which a page reload would hide from the stub
 - [x] Gate check passes: `npm run typecheck && npm run lint && npm test` and `npx electron-vite build`
 
@@ -322,8 +322,18 @@ T7 → T8 → T9
 
 **Done when**:
 
-- [ ] Each step's outcome recorded without PR numbers, titles, org or repository names (public repository)
-- [ ] Nothing written to any provider (the chip only reads and opens)
+- [x] Each step's outcome recorded without PR numbers, titles, org or repository names (public repository)
+- [x] Nothing written to any provider (the chip only reads and opens)
+
+**Done** 2026-10-10, driven over CDP on a dev app with a throwaway profile; the owner confirmed the browser tabs. Results, without numbers, titles, organization or repository names:
+
+| Worktree | Chip | Tooltip | Chip click | Browser |
+| -------- | ---- | ------- | ---------- | ------- |
+| Branch of this feature's own draft PR (GitHub, fork to upstream) | `PR #<n> · Draft`, no mark | title, `Into main · GitHub`, `No reviewers` | Files, Pull request mode, that PR | ↗ opened the PR page |
+| The F4 sandbox branch (Azure DevOps draft, no reviewers) | `PR #<n> · Draft`, no mark | title, `Into main · Azure DevOps`, `No reviewers` | Files, Pull request mode, that PR | ↗ opened the PR page |
+| A fork branch whose PR was merged | muted `Create PR` | `Create a pull request on GitHub` | — | the compare page, upstream `main` from the fork branch |
+
+Right after selection the tooltip has no reviewer line until the detail arrives (the review is `pending`); it reads `No reviewers` a moment later, as designed. The F4/F5 read-only smokes passed against the same PRs (T4's regression check). Nothing was written to any provider.
 
 **Tests**: none
 **Gate**: manual

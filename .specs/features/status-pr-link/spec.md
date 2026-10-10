@@ -113,7 +113,7 @@ repository, branch, changes and sync state; the PR is the missing piece of that 
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| SPRL-01 | P1: see — AC 1 | T3, T4, T8 | Implemented |
+| SPRL-01 | P1: see — AC 1 | T3, T4, T8, T9 | Implemented |
 | SPRL-02 | P1: see — AC 2 | T4, T8 | Implemented |
 | SPRL-03 | P1: see — AC 3 | T2, T6, T8 | Implemented |
 | SPRL-04 | P1: see — AC 4 | T1, T8 | Implemented |
@@ -122,12 +122,12 @@ repository, branch, changes and sync state; the PR is the missing piece of that 
 | SPRL-07 | P1: see — AC 7 | T1, T8 | Implemented |
 | SPRL-08 | P1: see — AC 8 | T1, T6, T8 | Implemented |
 | SPRL-09 | P1: see — AC 9 | T3, T4, T8 | Implemented |
-| SPRL-10 | P1: reach — AC 10 | T5, T6, T8 | Implemented |
-| SPRL-11 | P1: reach — AC 11 | T6, T8 | Implemented |
+| SPRL-10 | P1: reach — AC 10 | T5, T6, T8, T9 | Implemented |
+| SPRL-11 | P1: reach — AC 11 | T6, T8, T9 | Implemented |
 | SPRL-12 | P1: reach — AC 12 | T2, T6, T8 | Implemented |
 | SPRL-13 | P1: reach — AC 13 | T5, T6, T8 | Implemented |
 | SPRL-14 | P1: reach — AC 14 | T6, T8 | Implemented |
-| SPRL-15 | P1: no PR — AC 15 | T2, T6, T8 | Implemented |
+| SPRL-15 | P1: no PR — AC 15 | T2, T6, T8, T9 | Implemented |
 | SPRL-16 | P1: no PR — AC 16 | T2, T6, T8 | Implemented |
 | SPRL-17 | P1: no PR — AC 17 | T2, T6, T8 | Implemented |
 | SPRL-18 | P1: no PR — AC 18 | T2, T6, T8 | Implemented |
