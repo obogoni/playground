@@ -213,44 +213,44 @@ so that I never answer a thread that has already moved on.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FPRA-01 | P1: Find the branch's PR | Execute | Implemented |
-| FPRA-02 | P1: Find the branch's PR | Execute | Implementing |
-| FPRA-03 | P1: Find the branch's PR | Execute | Implemented |
-| FPRA-04 | P1: Find the branch's PR | Execute | Implemented |
-| FPRA-05 | P1: Find the branch's PR | Execute | Implemented |
-| FPRA-06 | P1: Find the branch's PR | Execute | Implemented |
-| FPRA-07 | P1: Find the branch's PR | Execute | Implemented |
-| FPRA-08 | P1: Find the branch's PR | Execute | Implemented |
-| FPRA-09 | P1: Read the PR | Execute | Implemented |
-| FPRA-10 | P1: Read the PR | Execute | Implemented |
-| FPRA-11 | P1: Read the PR | Execute | Implemented |
-| FPRA-12 | P1: Read the PR | Execute | Implemented |
-| FPRA-13 | P1: Read the PR | Execute | Implemented |
-| FPRA-14 | P1: Read the PR | Execute | Implemented |
-| FPRA-15 | P1: Read the PR | Execute | Implemented |
-| FPRA-16 | P1: Read the PR | Execute | Implemented |
-| FPRA-17 | P1: Read the PR | Execute | Implemented |
-| FPRA-18 | P1: Read the PR | Execute | Implemented |
-| FPRA-19 | P1: Read the PR | Execute | Implemented |
-| FPRA-20 | P1: Read the PR | Execute | Implemented |
-| FPRA-21 | P1: Read the PR | Execute | Implemented |
-| FPRA-22 | P1: Nothing third-party is trusted | Execute | Implemented |
-| FPRA-23 | P1: Nothing third-party is trusted | Execute | Implemented |
-| FPRA-24 | P1: Nothing third-party is trusted | Execute | Implemented |
-| FPRA-25 | P2: Answer the review | Execute | Implemented |
-| FPRA-26 | P2: Answer the review | Execute | Implemented |
-| FPRA-27 | P2: Answer the review | Execute | Implemented |
-| FPRA-28 | P2: Answer the review | Execute | Implemented |
-| FPRA-29 | P2: Answer the review | Execute | Implemented |
-| FPRA-30 | P2: Answer the review | Execute | Implemented |
-| FPRA-31 | P2: Answer the review | Execute | Implemented |
-| FPRA-32 | P2: Answer the review | Execute | Implemented |
-| FPRA-33 | P2: Stay current | Execute | Implemented |
-| FPRA-34 | P2: Stay current | Execute | Implemented |
-| FPRA-35 | P2: Stay current | Execute | Implemented |
+| FPRA-01 | P1: Find the branch's PR | Verify | Verified |
+| FPRA-02 | P1: Find the branch's PR | Verify | Verified |
+| FPRA-03 | P1: Find the branch's PR | Verify | Verified |
+| FPRA-04 | P1: Find the branch's PR | Verify | Verified |
+| FPRA-05 | P1: Find the branch's PR | Verify | Verified |
+| FPRA-06 | P1: Find the branch's PR | Verify | Verified |
+| FPRA-07 | P1: Find the branch's PR | Verify | Verified |
+| FPRA-08 | P1: Find the branch's PR | Verify | Verified |
+| FPRA-09 | P1: Read the PR | Verify | Verified |
+| FPRA-10 | P1: Read the PR | Verify | Verified |
+| FPRA-11 | P1: Read the PR | Verify | Verified |
+| FPRA-12 | P1: Read the PR | Verify | Verified |
+| FPRA-13 | P1: Read the PR | Verify | Verified |
+| FPRA-14 | P1: Read the PR | Verify | Verified |
+| FPRA-15 | P1: Read the PR | Verify | Verified |
+| FPRA-16 | P1: Read the PR | Verify | Verified |
+| FPRA-17 | P1: Read the PR | Verify | Verified |
+| FPRA-18 | P1: Read the PR | Verify | Verified |
+| FPRA-19 | P1: Read the PR | Verify | Verified |
+| FPRA-20 | P1: Read the PR | Verify | Verified |
+| FPRA-21 | P1: Read the PR | Verify | Verified |
+| FPRA-22 | P1: Nothing third-party is trusted | Verify | Verified |
+| FPRA-23 | P1: Nothing third-party is trusted | Verify | Verified |
+| FPRA-24 | P1: Nothing third-party is trusted | Verify | Verified |
+| FPRA-25 | P2: Answer the review | Verify | Verified |
+| FPRA-26 | P2: Answer the review | Verify | Verified |
+| FPRA-27 | P2: Answer the review | Verify | Verified |
+| FPRA-28 | P2: Answer the review | Verify | Verified |
+| FPRA-29 | P2: Answer the review | Verify | Verified |
+| FPRA-30 | P2: Answer the review | Verify | Verified |
+| FPRA-31 | P2: Answer the review | Verify | Verified |
+| FPRA-32 | P2: Answer the review | Verify | Verified |
+| FPRA-33 | P2: Stay current | Verify | Verified |
+| FPRA-34 | P2: Stay current | Verify | Verified |
+| FPRA-35 | P2: Stay current | Verify | Verified |
 | FPRA-36 | P3: Keep the gateway searchable | Done by #122 | Verified |
 
-**Coverage:** 36 total, 0 mapped to tasks yet (Design not run), 0 unmapped
+**Coverage:** 36 total, 36 mapped to tasks, 0 unmapped; all verified (`validation.md`, 2026-10-10)
 
 ---
 

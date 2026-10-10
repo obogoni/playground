@@ -270,6 +270,21 @@ describe('classifyThread', () => {
       )
     ).toEqual({ kind: 'deleted' })
   })
+
+  // Only every comment deleted drops the thread: one deleted reply leaves it in place.
+  it('keeps a thread with one deleted reply among live comments', () => {
+    expect(
+      classifyThread(
+        thread({
+          threadContext: onRight([3, 1], [3, 5]),
+          comments: [
+            comment({ id: 1 }),
+            comment({ id: 2, parentCommentId: 1, isDeleted: true, content: undefined })
+          ]
+        })
+      )
+    ).toEqual({ kind: 'placed', path: 'src/app.ts', side: 'right', startLine: 3, endLine: 3 })
+  })
 })
 
 describe('visibleComments (FPRA-21)', () => {

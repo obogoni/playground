@@ -222,6 +222,8 @@ sandbox's coordinates from the environment and prints counts and line numbers on
 - **F6 — FPRA-30/31 composer.** Preview and a failed post keeping the text are code-read only.
 - **F7 — U1 survived.** Add a `classifyThread` case with one deleted reply among live comments, expecting
   `placed` (or `general`), so `every` → `some` fails.
+  **Closed after validation (2026-10-10):** `ado-pr-model.test.ts` "keeps a thread with one deleted reply
+  among live comments" expects `placed`; it passes on the code and fails with `every` → `some` applied.
 - **F8 — Edge cases.** Threads in a file the latest iteration deleted, a reload failing after a write, and
   a PR completed elsewhere are code-read only.
 - **F9 — FPRA-14 button.** The smoke never clicks Open in browser; the URL is unit-tested.
@@ -232,7 +234,7 @@ sandbox's coordinates from the environment and prints counts and line numbers on
 
 ## Requirement Traceability Update
 
-Recommended for `spec.md` (not edited by the Verifier): FPRA-01..35 → **Verified**; FPRA-02 still reads
+**Applied after validation (2026-10-10).** Recommended for `spec.md` (not edited by the Verifier): FPRA-01..35 → **Verified**; FPRA-02 still reads
 "Implementing" and is implemented and verified; FPRA-36 stays Verified (#122). The Coverage line
 ("0 mapped to tasks yet") is stale: all 36 are mapped in `tasks.md`.
 
