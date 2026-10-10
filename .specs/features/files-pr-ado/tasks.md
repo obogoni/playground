@@ -186,11 +186,11 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] True for `https://example.com/x`
-- [ ] False for `javascript:alert(1)`, `JaVaScRiPt:…`, `data:text/html,…`, `file:///C:/x`, `http://…`, a relative path and a malformed URL
-- [ ] `url-policy.ts` itself unchanged unless a case fails; a failing case is a production fix in this task
-- [ ] Gate passes: `npm test`
-- [ ] Test count: 2977 + 7 = **2984**
+- [x] True for `https://example.com/x`
+- [x] False for `javascript:alert(1)`, `JaVaScRiPt:…`, `data:text/html,…`, `file:///C:/x`, `http://…`, a relative path and a malformed URL
+- [x] `url-policy.ts` itself unchanged unless a case fails; a failing case is a production fix in this task
+- [x] Gate passes: `npm test`
+- [x] Test count: 2977 + 7 = **2984** — **actual 2985**: the https case is a test of its own beside the seven refusals
 
 **Tests**: unit
 **Gate**: quick

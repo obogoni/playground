@@ -234,7 +234,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-20 | P1: Read the PR | Design | Pending |
 | FPRA-21 | P1: Read the PR | Design | Pending |
 | FPRA-22 | P1: Nothing third-party is trusted | Design | Pending |
-| FPRA-23 | P1: Nothing third-party is trusted | Design | Pending |
+| FPRA-23 | P1: Nothing third-party is trusted | Execute | Implementing |
 | FPRA-24 | P1: Nothing third-party is trusted | Design | Pending |
 | FPRA-25 | P2: Answer the review | Execute | Implementing |
 | FPRA-26 | P2: Answer the review | Design | Pending |
