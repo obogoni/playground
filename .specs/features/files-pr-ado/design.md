@@ -2,7 +2,7 @@
 
 **Spec**: `.specs/features/files-pr-ado/spec.md`
 **Status**: Draft
-**Stacked on**: `feature/files-commits` (F3) — reuses F3's `parseRemote` and main-built opener, F2's `DiffViewer`, F1's mode selector and tree
+**Base**: `main` (**[reconciled 2026-10-10]** F1–F3 merged) — reuses F3's `parseRemote` and `openCommit`, AD-044's `isHttpsUrl`, F2's `DiffViewer`, F1's mode selector and tree
 
 **Sources**: Azure DevOps REST 7.1 reference on learn.microsoft.com — *Pull Requests – Get Pull Requests*, *Pull Request Threads – List / Create*, *Pull Request Iteration Changes – Get* — read while writing this design. Anything below marked **[spike]** is not settled by those pages and is measured in T1.
 
@@ -40,7 +40,7 @@ graph TD
 | Axis | Choice | Rejected / why |
 | ---- | ------ | -------------- |
 | D1 Markdown (owner) | `markdown-it` with `html: false`: raw HTML is never parsed, so there is nothing to sanitize; a `link_open` rule strips `href` into `data-href`, an `image` rule renders a link instead | `marked` + DOMPurify — parses HTML then cleans it, so safety rests on the whitelist being right, and it needs a DOM to test |
-| Client placement | A new `AdoPrClient` in `ado-pr.ts`, constructed with `{ getToken, fetchFn }` — the gateway exports its token acquisition | Growing `AdoGateway` (already ~280 lines of work-item logic); the DI shape mirrors `TaskBoard` and makes every request unit-testable against a fake `fetch` |
+| Client placement | A new `AdoPrClient` in `ado-pr.ts`, constructed with `{ getToken, fetchFn }` — **[reconciled 2026-10-10]** `getToken` is the gateway's own cached method, made public, so both share one cache | Growing `AdoGateway` (already ~280 lines of work-item logic); the DI shape mirrors `TaskBoard` and makes every request unit-testable against a fake `fetch` |
 | Diff content | Both sides fetched from Azure DevOps by commit (`commonRefCommit` / `sourceRefCommit` of the latest iteration), never from the local repository | Spec + epic Q9 |
 | Threads in the diff | F2's `DiffViewer` gains two **optional** props — `zones` (DOM per line, per side) and `onSelectModified` — with no change when absent | Amending F2's plan again. Optional props are additive and F2's behaviour and tests stay untouched |
 | Where writes happen | Main only; the renderer sends intent (`threadId`, `status`, `content`, anchor), never a URL or a token | Same posture as F3's FCMT-28 |
@@ -51,16 +51,19 @@ graph TD
 
 | Component | Location | How to use |
 | --------- | -------- | ---------- |
-| `az account get-access-token` path | `ado-gateway.ts:235` | Exported as `getAdoToken()`, injected into `AdoPrClient` — **same task fixes the raw NUL at `:280`** (FPRA-36) |
+| `az account get-access-token` path | `AdoGateway.getToken()` (`ado-gateway.ts:225`) | Made public and injected into `AdoPrClient` as `() => gateway.getToken()`. **[reconciled 2026-10-10]** The raw NUL is gone since #122 (FPRA-36) |
 | `fetchWithTimeout` | `ado-gateway.ts:259` | Every PR request; already a pure, injectable seam |
 | `parseRemote`, `commitUrl` shape | F3 `remote-url.ts` | ADO remotes → `{ org, project, repo }`; add `prUrl` and `createPrUrl` beside `commitUrl` |
-| Main-built https opener | F3 `openCommit` pattern | PR page, Create PR, markdown links |
+| Main-built https opener | F3 `openCommit` (`commit-log.ts`) + AD-044 `isHttpsUrl` (`url-policy.ts`) | PR page, Create PR, markdown links |
 | `DiffViewer` | F2 | PR diff tabs, plus the two optional props |
 | `FilePlaceholder`, `DiffSide` | F1 / F2 | Binary / too-large PR files |
 | F1 mode selector, `FileTree`, `buildTree` | F1 | Fifth mode; the PR file tree |
-| `relativeTime` | status-bar | Comment dates |
-| "run `az login`" state, `az` chip | `TasksPane.tsx:122`, `TopBar.tsx:32` | FPRA-07 |
-| 5 s focus debounce | `App.tsx:165` | FPRA-33 |
+| `relativeTime` | `lib/relative-time.ts` | Comment dates |
+| "run `az login`" state, `az` chip | `TasksPane.tsx:138`, `TopBar.tsx` | FPRA-07 |
+| 5 s focus debounce | `App.tsx:273` | FPRA-33 |
+| Per-worktree lens | `use-files.ts`, `FilesState` in `shared/config.ts` | The PR lens skips local listing and watching; the mode is remembered |
+| Fixed tab, pins, bulk close | `FileTabs.tsx` (#125) | The Overview is a fixed tab |
+| Change glyphs | `StatusGlyph`, `change-status.ts` (#131) | The PR file tree |
 
 ---
 
@@ -105,9 +108,9 @@ Every method returns a result union and never throws.
 - `prUrl(ref, id)` → `https://dev.azure.com/{org}/{project}/_git/{repo}/pullrequest/{id}`
 - `createPrUrl(ref, branch)` → the repository's PR-creation page with the source branch filled **[spike: exact query parameters]**; if the parameter cannot be confirmed, the repository's pull-request list page — never a guessed URL
 
-#### `src/main/link-guard.ts` (new — pure, unit-tested)
+#### `src/main/url-policy.ts` (AD-044, reused)
 
-- `isOpenableLink(href)` — true only for an absolute `https:` URL; `javascript:`, `data:`, `file:`, `http:`, relative and malformed all false (FPRA-23)
+**[reconciled 2026-10-10]** No `link-guard.ts`: `isHttpsUrl(url)` is already the app's one https-only rule. F4 adds the FPRA-23 cases to its tests — `javascript:` in any case, `data:`, `file:`, `http:`, relative and malformed all false. Below, `isOpenableLink` reads as `isHttpsUrl`.
 
 #### IPC
 
@@ -118,7 +121,7 @@ Every method returns a result union and never throws.
 | `ado-pr:file-sides` | `{ worktreePath, target, id, path, originalPath? }` | `DiffSides` (F2 shape) |
 | `ado-pr:reply` / `:status` / `:thread` / `:comment` | intent only | `WriteResult` |
 | `ado-pr:open` | `{ worktreePath, target, id }` or `{ create: true }` | `LaunchResult` |
-| `ado-pr:open-link` | `{ href }` | `LaunchResult` — main re-checks `isOpenableLink` |
+| `ado-pr:open-link` | `{ href }` | `LaunchResult` — main re-checks `isHttpsUrl` |
 
 ### Renderer
 
@@ -152,11 +155,12 @@ A click on a rendered link calls `ado-pr:open-link` with the `data-href`; nothin
 | File | Change |
 | ---- | ------ |
 | `shared/files.ts` | `FilesMode` gains `'pull-request'`; PR types |
-| `components/DiffViewer.tsx` (F2) | Optional `zones` and `onSelectModified`; absent = today's behaviour |
+| `components/DiffViewer.tsx` (F2) | Optional `zones` and `onSelectModified`; absent = today's behaviour. Zones must coexist with `fitContent` and Hide / Show unchanged (#130) |
+| `lib/use-files.ts` | `'pull-request'` lens: no local listing, watch or diff read |
 | `components/FileTree.tsx` | Fifth option; the PR file tree in that mode |
 | `components/FileTabs.tsx` | Fixed Overview tab and PR diff tabs in that mode |
 | `lib/diff-view.ts` (F2) | `tabKeyOf` knows `pr-overview` and `pr:<id>:<path>` |
-| `main/ado-gateway.ts` | Exports `getAdoToken`; raw NUL → `\u0000` |
+| `main/ado-gateway.ts` | `getToken()` becomes public (the NUL was fixed by #122) |
 | `package.json` | `markdown-it` (+ types) |
 
 ---
@@ -240,8 +244,7 @@ props widen.
 | Outdated-thread signal inferred, not documented | `classifyThread` | A thread drawn on the wrong line | T1 observes a thread across a new push; the rule is one pure function with tests |
 | `iterationContext` for the whole-PR view inferred from one sentence | `iterationContextFor` | A new thread anchored to the wrong diff | T1 creates a thread in ADO's own UI on the whole-PR view and reads its context back |
 | Unbounded third-party content | Overview, threads | Huge descriptions or many threads slow the tab | Rendered on demand per collapsed section; nothing mounts in a closed section |
-| The template's `setWindowOpenHandler` forwards any URL (F3 finding) | `index.ts:194` | A rendered anchor with a live `href` would reach the OS | `markdown.ts` never emits a live `href`; all opening goes through `ado-pr:open-link` |
-| Raw NUL in the gateway hides it from code search | `ado-gateway.ts:280` | Searches for ADO code silently skip the file | FPRA-36, in T2 |
+| A rendered anchor with a live `href` | renderer | It would reach `setWindowOpenHandler` — https-only since #115, but still not the path for third-party links | `markdown.ts` never emits a live `href`; all opening goes through `ado-pr:open-link` |
 | Company data leaking into a public repository | fixtures, findings, smoke | Privacy guardrail breach | Fictitious names everywhere (`acme`, `platform`, `widget`); the spike records shapes and conventions, never content |
 
 ---
@@ -252,7 +255,7 @@ props widen.
 | ----- | --------- | -------------- |
 | `ado-pr-model.ts` | unit (pure, doc-shaped fixtures) | Thread classification incl. system, deleted and outdated; anchors under both offset conventions; change mapping; votes |
 | `AdoPrClient` with a fake `fetch` | unit (DI) | The exact URLs and bodies of every read and write; paging of changes to the end; description from `getPr`, not the list; no write request on any read path |
-| `remote-url.ts` additions, `link-guard.ts` | unit (pure) | PR and create URLs always https; link allowlist |
+| `remote-url.ts` additions, `url-policy.ts` cases | unit (pure) | PR and create URLs always https; link allowlist |
 | `markdown.ts` | unit (Node) | Every injection vector listed above renders inert |
 | `pr-view.ts` | unit (pure) | Overview groups, zones per file and side, banner |
 | Components, hook, `DiffViewer` props | none — hand-verified + CDP smoke | Per `TESTING.md` |
@@ -266,10 +269,10 @@ props widen.
 | --------- | --- |
 | `ado-pr.ts` | 02–06, 09, 15, 16, 25, 26, 27, 29, 32 |
 | `ado-pr-model.ts` | 11, 13, 15, 18, 19, 20, 27 |
-| `remote-url.ts`, `link-guard.ts` | 05, 14, 23 |
+| `remote-url.ts`, `url-policy.ts` | 05, 14, 23 |
 | `markdown.ts` | 10, 21, 22, 24 |
 | `pr-view.ts` | 11, 13, 18, 19, 20, 34 |
-| `ado-gateway.ts` | 07, 36 |
+| `ado-gateway.ts` | 07 (36 met by #122) |
 | `PrPicker`, `PrOverview` | 04–14, 29 |
 | `PrThread`, `CommentComposer` | 20, 21, 25, 26, 30, 31 |
 | `PrDiffTab`, `DiffViewer` props | 16, 17, 18, 27, 28 |

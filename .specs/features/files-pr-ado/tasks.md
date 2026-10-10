@@ -11,15 +11,15 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 **Design**: `.specs/features/files-pr-ado/design.md`
 **Status**: Draft
 
-**Branch**: `feature/files-pr-ado`, stacked on `feature/files-commits`. Once F3 merges, `git rebase --onto origin/main feature/files-commits feature/files-pr-ado`.
+**Branch**: `feature/files-pr-ado`, off `main`. F2 and F3 merged upstream, so the plan commits were rebased with `git rebase --onto origin/main eec156e` on 2026-10-10 (onto `2e3307d`); the pre-rebase tip is kept as `backup/files-pr-ado-prerebase`.
 
-**Prerequisites**: F3 executed (`parseRemote`, the main-built opener); F2 executed (`DiffViewer`).
+**Prerequisites**: F3 executed (`parseRemote`, `openCommit`); F2 executed (`DiffViewer`). Both are on `main`.
 
-**Test baseline**: **945** — F3's projected end, resting on a chain of projections back to `origin/main`'s recorded 748. **Re-measure with `npm test` as the first act of Execute.**
+**Test baseline**: **2977 tests / 132 files**, all passing, measured 2026-10-10 with `npx vitest run` on the rebased branch. Every count below rests on it.
 
-**Baseline measured 2026-09-19** with `npx vitest run` on `origin/main` `6ecd19c`, after the upstream merged #88: **917 tests / 52 files**, all passing. The 748 the plans started from was recorded before #88 and is stale by **+169**. Its baseline becomes **1114**; every count below shifts by **+169** and this feature ends at **1184** (**1188** if T25 is kept), not 1015 / 1019. Still re-measure as the first act of Execute.
+**Reconciled with `main` on 2026-10-10** (see § Reconciliation at the end): the NUL byte and its test shipped with #122, the https-only helper is AD-044's `isHttpsUrl`, the Files mode is persisted per worktree, and the tab strip has pins and a fixed tab.
 
-**Outward writes**: T1 writes to Azure DevOps. It runs **only on a sandbox PR the owner names, with the owner's explicit go-ahead given at that moment** — approving these tasks does not authorize it. No other task sends a write request to a real Azure DevOps organization; every client test uses a fake `fetch`.
+**Outward writes**: T1 writes to Azure DevOps. It runs **only on a sandbox PR the owner names, with the owner's explicit go-ahead given at that moment** — approving these tasks does not authorize it. The owner chose (2026-10-10) a PR in the Azure DevOps organization they work in; it should be a draft with no reviewers, on a throwaway branch, so the probes notify nobody else. No other task sends a write request to a real Azure DevOps organization; every client test uses a fake `fetch`.
 
 **Privacy guardrail**: fixtures, tests, findings and the smoke use fictitious names only (`acme`, `platform`, `widget`). The spike records conventions and field shapes, never real content, identities or ids.
 
@@ -32,10 +32,10 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
 | ---------- | ------------------ | -------------------- | ---------------- | ----------- |
 | Main-process DI client (`ado-pr.ts`) | unit (fake `fetch`) | The exact URL and body of every read and write; paging to the end; **no write request on any read path** | `src/main/ado-pr.test.ts` | `npm test` |
-| Pure main modules (`ado-pr-model.ts`, `link-guard.ts`, `remote-url.ts` additions) | unit | 1:1 to the ACs each decides; doc-shaped fixtures; every rejection case | co-located `*.test.ts` | `npm test` |
+| Pure main modules (`ado-pr-model.ts`, `url-policy.ts` cases, `remote-url.ts` additions) | unit | 1:1 to the ACs each decides; doc-shaped fixtures; every rejection case | co-located `*.test.ts` | `npm test` |
 | Security-critical renderer helper (`markdown.ts`) | unit (Node) | Every injection vector in the design renders inert | `src/renderer/src/lib/markdown.test.ts` | `npm test` |
 | Pure renderer helpers (`pr-view.ts`, `diff-view.ts` extension) | unit | Input→output per AC | co-located `*.test.ts` | `npm test` |
-| Gateway source hygiene (`ado-gateway.ts`) | unit | No control byte other than tab, LF, CR in the file | `src/main/ado-gateway.test.ts` | `npm test` |
+| Gateway token sharing (`ado-gateway.ts`) | none (existing tests) | Visibility change only; the control-byte test shipped with #122 | `src/main/ado-gateway.test.ts` | `npm test` |
 | Shared types, IPC contract | none | build gate only | — | `npm run typecheck` |
 | Thin Electron shell (`index.ts`) | none (hand-verified) | — | `src/main/index.ts` | `npm run typecheck` |
 | Renderer components and hook | none (CDP smoke + visual) | — | — | `node scripts/smoke-files-pr-ado.mjs` |
@@ -108,7 +108,7 @@ T24 → T25 → T26 → T27
 **Reuses**: The gateway's token path; plain `fetch` in a scratch script outside the repository.
 **Requirement**: FPRA-16, 18, 19, 27
 
-**Tools**: MCP: NONE · Skill: NONE — the Azure DevOps MCP servers connected to this session are **not** used: they reach the company organization, and this repository is public
+**Tools**: MCP: NONE · Skill: NONE — the probes use plain `fetch` with the `az` token, the same calls the client will make, not the Azure DevOps MCP servers. The sandbox PR lives in the owner's employer organization (owner, 2026-10-10), and this repository is public: its coordinates come from environment variables and the scratch script lives outside the repository
 
 **Done when**:
 
@@ -117,7 +117,7 @@ T24 → T25 → T26 → T27
 - [ ] **Outdated signal**: after one more push to the sandbox branch, recorded what `threads?$iteration=<latest>&$baseIteration=0` returns for a thread whose line changed versus one whose line did not
 - [ ] **`<…>` in comments**: a probe comment containing `` `List<string>` `` and `a <b> c`, read back — recorded whether ADO kept, escaped or deleted it
 - [ ] **Reading a file**: the item / blob calls that give size before content, and the field names; the create-PR URL parameters
-- [ ] Every probe comment and thread created on the sandbox is deleted afterwards
+- [ ] Every probe comment created on the sandbox is deleted afterwards (Azure DevOps keeps a thread whose comments are all deleted, shown as deleted; that is the floor)
 - [ ] No real org, project, repository, identity or content appears in the findings
 - [ ] If any finding contradicts the design, the design is amended in this commit; **if `<…>` is altered**, `spec.md` gains FPRA-37 (the composer warns before posting content ADO would alter) and T25 is kept — otherwise T25 is removed with a note
 
@@ -127,28 +127,27 @@ T24 → T25 → T26 → T27
 
 ---
 
-### T2: Share the ADO token and make the gateway searchable
+### T2: Share the ADO token
 
-**What**: Export the gateway's token acquisition as `getAdoToken()` and replace the raw NUL composite-key separator at `ado-gateway.ts:280` with the `\u0000` escape.
+**What**: Make `AdoGateway`'s cached token acquisition public, so `index.ts` can hand `() => gateway.getToken()` to the PR client — one cache and one `az` process for both. **[reconciled 2026-10-10]** The raw NUL byte was replaced by `\x00` in #122 (#117), which also added the control-byte test, so FPRA-36 is already met; the plan's free `getAdoToken()` is dropped because it would have started a second token cache.
 **Where**: `src/main/ado-gateway.ts`
 **Depends on**: T1
 **Reuses**: The existing token code and its tests, which must pass unedited.
-**Requirement**: FPRA-07, 36
+**Requirement**: FPRA-07 (FPRA-36 met by #122)
 
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
 
-- [ ] A new test reads the source file's bytes and asserts no control byte other than tab, LF and CR
-- [ ] `refKey` produces the same keys as before (existing tests unedited)
-- [ ] `grep -c refKey src/main/ado-gateway.ts` prints a count, not "Binary file matches"
+- [ ] `getToken()` is public, with its result union unchanged; no second cache exists
+- [ ] Existing gateway tests pass unedited, the #122 control-byte test included
 - [ ] Lint warning baseline recorded in the commit body
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: 945 + 1 = **946**
+- [ ] Test count: **2977** (unchanged — the control-byte test already exists, from #122)
 
-**Tests**: unit
+**Tests**: none (visibility change only; covered by existing tests)
 **Gate**: full
-**Commit**: `refactor(main): share the ado token and drop the raw nul byte`
+**Commit**: `refactor(main): share the azure devops token`
 
 ---
 
@@ -167,7 +166,7 @@ T24 → T25 → T26 → T27
 - [ ] Write channels carry intent only — no URL, token or raw ADO body crosses IPC
 - [ ] **[amended at F5 Spec]** The model is provider-neutral as the design's amendment describes: `provider` on `PrSummary`, `resolution` + `providerStatus` on threads, neutral reviewer `state` — so F5 adds a provider, not a second model
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **946** (unchanged)
+- [ ] Test count: **2977** (unchanged)
 
 **Tests**: none
 **Gate**: full
@@ -175,12 +174,12 @@ T24 → T25 → T26 → T27
 
 ---
 
-### T4: Allow only https links
+### T4: Pin the https-only rule for third-party links
 
-**What**: Create `src/main/link-guard.ts` with the pure `isOpenableLink(href)`.
-**Where**: `src/main/link-guard.ts`
+**What**: **[reconciled 2026-10-10]** AD-044 made `isHttpsUrl` in `src/main/url-policy.ts` the app's one https-only helper, so there is no `link-guard.ts`. This task adds the rejection cases FPRA-23 depends on to its tests; every later mention of `isOpenableLink` means `isHttpsUrl`.
+**Where**: `src/main/url-policy.test.ts`
 **Depends on**: T3
-**Reuses**: Nothing — new pure logic.
+**Reuses**: `isHttpsUrl` (AD-044).
 **Requirement**: FPRA-23
 
 **Tools**: MCP: NONE · Skill: NONE
@@ -189,13 +188,13 @@ T24 → T25 → T26 → T27
 
 - [ ] True for `https://example.com/x`
 - [ ] False for `javascript:alert(1)`, `JaVaScRiPt:…`, `data:text/html,…`, `file:///C:/x`, `http://…`, a relative path and a malformed URL
-- [ ] `link-guard.test.ts` created
+- [ ] `url-policy.ts` itself unchanged unless a case fails; a failing case is a production fix in this task
 - [ ] Gate passes: `npm test`
-- [ ] Test count: 946 + 7 = **953**
+- [ ] Test count: 2977 + 7 = **2984**
 
 **Tests**: unit
 **Gate**: quick
-**Commit**: `feat(main): allow only https links to leave the app`
+**Commit**: `test(main): pin the https-only rule for third-party links`
 
 ---
 
@@ -214,9 +213,9 @@ T24 → T25 → T26 → T27
 - [ ] `prUrl` → `https://dev.azure.com/acme/platform/_git/widget/pullrequest/42`
 - [ ] `createPrUrl` encodes a branch with `/` correctly
 - [ ] A project with a space round-trips
-- [ ] Every output passes `isOpenableLink`
+- [ ] Every output passes `isHttpsUrl`
 - [ ] Gate passes: `npm test`
-- [ ] Test count: 953 + 4 = **957**
+- [ ] Test count: 2984 + 4 = **2988**
 
 **Tests**: unit
 **Gate**: quick
@@ -241,7 +240,7 @@ T24 → T25 → T26 → T27
 - [ ] A repository with a GitHub `origin` and an ADO `fork` yields one ADO target; no ADO remote yields none (FPRA-06)
 - [ ] `ado-pr-model.test.ts` created
 - [ ] Gate passes: `npm test`
-- [ ] Test count: 957 + 7 = **964**
+- [ ] Test count: 2988 + 7 = **2995**
 
 **Tests**: unit
 **Gate**: quick
@@ -268,7 +267,7 @@ T24 → T25 → T26 → T27
 - [ ] A deleted thread, and a thread whose every comment is deleted, are `deleted`
 - [ ] `visibleComments` drops deleted comments; `isMarkdown` reads the `SupportsMarkdown` property
 - [ ] Gate passes: `npm test`
-- [ ] Test count: 964 + 9 = **973**
+- [ ] Test count: 2995 + 9 = **3004**
 
 **Tests**: unit
 **Gate**: quick
@@ -293,7 +292,7 @@ T24 → T25 → T26 → T27
 - [ ] A selection made bottom-up is normalized to start ≤ end
 - [ ] `iterationContextFor(4)` returns what T1 recorded
 - [ ] Gate passes: `npm test`
-- [ ] Test count: 973 + 5 = **978**
+- [ ] Test count: 3004 + 5 = **3009**
 - [ ] Phase gate passes: `npx electron-vite build`
 
 **Tests**: unit
@@ -323,7 +322,7 @@ T24 → T25 → T26 → T27
 - [ ] **No read method issues a POST, PATCH, PUT or DELETE** — asserted over every read test
 - [ ] `ado-pr.test.ts` created
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: 978 + 10 = **988**
+- [ ] Test count: 3009 + 10 = **3019**
 
 **Tests**: unit
 **Gate**: full
@@ -348,7 +347,7 @@ T24 → T25 → T26 → T27
 - [ ] A 401 / 403 returns `{ ok: false, message }` with ADO's message
 - [ ] Each write method issues exactly one request, and only when called
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: 988 + 6 = **994**
+- [ ] Test count: 3019 + 6 = **3025**
 
 **Tests**: unit
 **Gate**: full
@@ -358,7 +357,7 @@ T24 → T25 → T26 → T27
 
 ### T11: Serve the pull request channels
 
-**What**: Register the `ado-pr:*` handlers in `index.ts`; `ado-pr:open` and `ado-pr:open-link` re-check `isOpenableLink` before `shell.openExternal`.
+**What**: Register the `ado-pr:*` handlers in `index.ts`; `ado-pr:open` and `ado-pr:open-link` re-check `isHttpsUrl` before `shell.openExternal`, as `openCommit` does. Every git read (remotes, the branch's upstream) goes through the paced `git()`.
 **Where**: `src/main/index.ts`
 **Depends on**: T10
 **Reuses**: `handle()`; F3's opener pattern.
@@ -368,11 +367,11 @@ T24 → T25 → T26 → T27
 
 **Done when**:
 
-- [ ] Every handler is a delegation; `shell.openExternal` is reached only after `isOpenableLink`
-- [ ] Nothing new goes through the template's `setWindowOpenHandler`
+- [ ] Every handler is a delegation; `shell.openExternal` is reached only after `isHttpsUrl`
+- [ ] Nothing new goes through `setWindowOpenHandler` (https-only since #115, but links still go through `ado-pr:open-link`)
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
 - [ ] Phase gate passes: `npx electron-vite build`
-- [ ] Test count: **994** (unchanged)
+- [ ] Test count: **3025** (unchanged)
 
 **Tests**: none
 **Gate**: build
@@ -402,7 +401,7 @@ T24 → T25 → T26 → T27
 - [ ] No output anywhere contains ` on` event attributes or an `href` attribute
 - [ ] `markdown-it` added to `dependencies`, version pinned
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: 994 + 9 = **1003**
+- [ ] Test count: 3025 + 9 = **3034**
 
 **Tests**: unit
 **Gate**: full
@@ -426,7 +425,7 @@ T24 → T25 → T26 → T27
 - [ ] Every ADO status has a label; the statuses offered for a change exclude `unknown`
 - [ ] `pr-view.test.ts` created
 - [ ] Gate passes: `npm test`
-- [ ] Test count: 1003 + 5 = **1008**
+- [ ] Test count: 3034 + 5 = **3039**
 
 **Tests**: unit
 **Gate**: quick
@@ -450,7 +449,7 @@ T24 → T25 → T26 → T27
 - [ ] Two threads on the same line produce two zones in publication order
 - [ ] The banner shows only when the latest iteration is newer than the one on screen
 - [ ] Gate passes: `npm test`
-- [ ] Test count: 1008 + 5 = **1013**
+- [ ] Test count: 3039 + 5 = **3044**
 
 **Tests**: unit
 **Gate**: quick
@@ -474,7 +473,7 @@ T24 → T25 → T26 → T27
 - [ ] Pre-existing tab tests pass unedited
 - [ ] Gate passes: `npm test`
 - [ ] Phase gate passes: `npx electron-vite build`
-- [ ] Test count: 1013 + 2 = **1015**
+- [ ] Test count: 3044 + 2 = **3046**
 
 **Tests**: unit
 **Gate**: quick
@@ -497,8 +496,9 @@ T24 → T25 → T26 → T27
 - [ ] Without the props, F2 and F3 behave exactly as before (checked in their tabs)
 - [ ] `onSelectModified` never fires for a selection on the original side
 - [ ] Zones resize with their content and are removed on unmount
+- [ ] **[reconciled 2026-10-10]** Zones coexist with `fitContent`, `onHandle` and Hide / Show unchanged (#130): a thread on a line inside a hidden region shows once the region is revealed, and the editor's fitted height counts the zones
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **1015** (unchanged)
+- [ ] Test count: **3046** (unchanged)
 
 **Tests**: none
 **Gate**: full
@@ -511,7 +511,7 @@ T24 → T25 → T26 → T27
 **What**: Create `src/renderer/src/lib/use-pull-request.ts` — search, the chosen PR per worktree in memory, detail, reload on entry, on focus (5 s debounce), after each write and on a refresh button, and the new-iteration banner.
 **Where**: `src/renderer/src/lib/use-pull-request.ts`
 **Depends on**: T16
-**Reuses**: F1 hook shape; `App.tsx:165` debounce pattern; `newIterationBanner`.
+**Reuses**: `use-files.ts` (the lens it already owns); `App.tsx:273` debounce pattern; `newIterationBanner`.
 **Requirement**: FPRA-04, 33, 34, 35
 
 **Tools**: MCP: NONE · Skill: NONE
@@ -520,8 +520,9 @@ T24 → T25 → T26 → T27
 
 - [ ] No timer triggers a request (FPRA-35)
 - [ ] A write that succeeded followed by a failed reload keeps the written content with a notice (edge case)
+- [ ] **[reconciled 2026-10-10]** `use-files.ts` treats `'pull-request'` as a lens with no local listing, watch or diff read; the mode is remembered per worktree like the other four (FXPL-13, owner 2026-10-10), so reopening the app on a worktree left in it searches Azure DevOps on entry — a read only
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **1015** (unchanged)
+- [ ] Test count: **3046** (unchanged)
 
 **Tests**: none
 **Gate**: full
@@ -544,7 +545,7 @@ T24 → T25 → T26 → T27
 - [ ] Nothing posts without Ctrl+Enter or the Post button
 - [ ] A failed post leaves the text exactly as typed
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **1015** (unchanged)
+- [ ] Test count: **3046** (unchanged)
 
 **Tests**: none
 **Gate**: full
@@ -568,7 +569,7 @@ T24 → T25 → T26 → T27
 - [ ] A link click sends only the `data-href`; the component never navigates
 - [ ] **[amended at F5 Spec]** The status control is chosen by the thread's provider — ADO's selector here — so F5 plugs in its Resolve / Reopen toggle without editing this component's structure
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **1015** (unchanged)
+- [ ] Test count: **3046** (unchanged)
 
 **Tests**: none
 **Gate**: full
@@ -591,7 +592,7 @@ T24 → T25 → T26 → T27
 - [ ] Activating an anchored thread opens its file's PR diff at the line
 - [ ] Activity is collapsed by default
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **1015** (unchanged)
+- [ ] Test count: **3046** (unchanged)
 
 **Tests**: none
 **Gate**: full
@@ -614,7 +615,7 @@ T24 → T25 → T26 → T27
 - [ ] Shown only when more than one PR is found
 - [ ] The choice survives switching worktrees and back while the app runs
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **1015** (unchanged)
+- [ ] Test count: **3046** (unchanged)
 
 **Tests**: none
 **Gate**: full
@@ -637,7 +638,7 @@ T24 → T25 → T26 → T27
 - [ ] F2's layout, whitespace, folding, navigation and EOL behaviour all apply
 - [ ] No Comment action on the original side
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **1015** (unchanged)
+- [ ] Test count: **3046** (unchanged)
 
 **Tests**: none
 **Gate**: full
@@ -658,9 +659,9 @@ T24 → T25 → T26 → T27
 **Done when**:
 
 - [ ] Five options fit the left column at its minimum width
-- [ ] The PR tree shows each file's status
+- [ ] The PR tree shows each file's status with #131's `StatusGlyph` / `changeStatusView`, as the other modes do
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: **1015** (unchanged)
+- [ ] Test count: **3046** (unchanged)
 
 **Tests**: none
 **Gate**: full
@@ -681,9 +682,10 @@ T24 → T25 → T26 → T27
 **Done when**:
 
 - [ ] Overview cannot be closed; PR diff tabs can
+- [ ] **[reconciled 2026-10-10]** The Overview uses the strip's existing fixed-tab treatment (as All changes does, #125); PR diff tabs pin and close like file tabs, and Close all / Close unpinned never close the Overview
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
 - [ ] Phase gate passes: `npx electron-vite build`
-- [ ] Test count: **1015** (unchanged)
+- [ ] Test count: **3046** (unchanged)
 
 **Tests**: none
 **Gate**: build
@@ -706,7 +708,7 @@ T24 → T25 → T26 → T27
 - [ ] `wouldBeAltered` flags exactly the patterns T1 saw altered — accented letters included, per the owner's notes on work-item fields — and nothing else
 - [ ] The composer shows the warning and still lets the user post
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: 1015 + 4 = **1019** (or 1015 if removed)
+- [ ] Test count: 3046 + 4 = **3050** (or 3046 if removed)
 
 **Tests**: unit
 **Gate**: full
@@ -728,6 +730,7 @@ T24 → T25 → T26 → T27
 
 - [ ] README no longer claims view-only, and names exactly the four writes
 - [ ] `.specs/STATE.md` gains **no new AD**; AD-027 is left as recorded, and still matches what shipped — if it does not, AD-027 is amended in place, never duplicated
+- [ ] The STATE handoff no longer says F4 is stacked on F3 (stale since the Files epic merged)
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
 - [ ] Test count: unchanged from T25
 
@@ -840,7 +843,7 @@ Strictly sequential. **T1 runs inline with the owner**, before any batch. **Pack
 | Task | Code Layer | Matrix Requires | Task Says | Status |
 | ---- | ---------- | --------------- | --------- | ------ |
 | T1 | Spike findings | manual | manual | ✅ |
-| T2 | Gateway source hygiene | unit | unit | ✅ |
+| T2 | Gateway token sharing | none (existing tests) | none | ✅ |
 | T3 | Shared types + contract | none | none | ✅ |
 | T4–T8 | Pure main modules | unit | unit | ✅ |
 | T9, T10 | DI client | unit | unit | ✅ |
@@ -893,6 +896,29 @@ Strictly sequential. **T1 runs inline with the owner**, before any batch. **Pack
 | FPRA-33 | T17, T27 |
 | FPRA-34 | T14, T17, T27 |
 | FPRA-35 | T17 |
-| FPRA-36 | T2 |
+| FPRA-36 | met by #122 (`\x00` + control-byte test); T2 keeps it green |
 
 All 36 mapped; none unmapped. FPRA-37 exists only if T1 confirms it, and is then mapped to T25.
+
+---
+
+## Reconciliation (2026-10-10)
+
+The plan was written on 2026-09-19, stacked on F3, before the Files epic and about 900 commits reached `main`. Rebased onto `origin/main` `2e3307d` and checked against the code:
+
+| Plan said | `main` has | Change |
+| --------- | ---------- | ------ |
+| T2 fixes the raw NUL in `ado-gateway.ts` and adds a byte test | Fixed by #122 (#117) as `\x00`, with the test | FPRA-36 met; T2 only makes `getToken()` public |
+| T2 exports a free `getAdoToken()` | Token acquisition is a private, cached method of `AdoGateway` | Share the gateway's method: one cache, one `az` process |
+| T4 creates `link-guard.ts` / `isOpenableLink` | AD-044's `isHttpsUrl` in `url-policy.ts`, used by `openCommit` | T4 adds the FPRA-23 cases to `url-policy.test.ts`; no new module |
+| `setWindowOpenHandler` forwards any URL | https-only since #115 | Risk gone; links still go only through `ado-pr:open-link` |
+| Mode added in `FileTree` / `FileTabs` only | `FilesState.mode` is persisted per worktree; `use-files.ts` branches per lens | T17 makes the PR lens skip local listing and watching; the mode is remembered like the others (owner, 2026-10-10) |
+| Overview "cannot be closed" | Pins, Close all / Close unpinned, and a fixed All changes tab (#125) | T24 reuses the fixed-tab treatment and spares the Overview from bulk closes |
+| `DiffViewer` gains `zones` | It now also has `fitContent`, `onHandle` and Hide / Show unchanged (#130) | T16 checks zones inside hidden regions and in the fitted height |
+| Tree shows change status | `StatusGlyph` / `changeStatusView` (#131) | T23 reuses them |
+| Git reads in main | Every git call is paced since #154 | T11 reads remotes through `git()` |
+| Debounce at `App.tsx:165`, `relativeTime` in status-bar | `App.tsx:273`, `lib/relative-time.ts` | References updated |
+| Baseline 945 (projected) | **2977** measured | Counts shifted; feature ends at **3050** (3046 without T25) |
+| T1 sandbox in an org of the owner's choosing | Owner chose their employer's organization | Draft PR with no reviewers on a throwaway branch; coordinates by env var; findings fictitious |
+
+Execution (owner, 2026-10-10): T1 inline with the owner, then four batch workers — Phase 2, Phases 3 + 4, Phase 5, Phase 6 — followed by the Verifier.

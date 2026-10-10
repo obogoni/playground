@@ -65,8 +65,10 @@ ability to reply, resolve, and start threads from a selection.
 | Selection anchor | Start and end line **and** character offset of the selection on the modified side, against the latest iteration | ADO anchors threads to line + offset; a line-only anchor would highlight the wrong span | y |
 | Auth | The existing `az account get-access-token` path; failure shows the Tasks pane's "run `az login`" message and the TopBar `az` chip state | No new auth surface, no stored secret | y |
 | **ADO sanitizing comment content** | **To verify at Design, against a PR in the owner's own sandbox, with no real data entering this repository.** The owner's global notes record that ADO deletes anything between `<` and `>` in work-item multiline fields — inside backticks too — and escapes `"` and `>`. If PR comments behave the same, `List<string>` in a review comment reaches reviewers mutilated. If verified, Design adds an AC: the composer warns before posting content that would be altered | Unknown for PR comments; guessing either way would ship a defect or a pointless warning | n — verify at Design |
-| Gateway housekeeping | The raw NUL byte at `ado-gateway.ts:280` (a composite-key separator inside a template string) is replaced by the `\u0000` escape — same runtime value — in the task that extends the gateway | Owner decision (F4-Q8). The byte makes grep and ripgrep treat the file as binary, so code searches silently skip the ADO gateway. Git is unaffected: the byte sits past the 8000 bytes git inspects | y |
-| Branch base | `feature/files-pr-ado` stacked on `feature/files-commits` | Reuses F3's `parseRemote` and safe opener, and F2's viewer | y |
+| Gateway housekeeping | The raw NUL byte at `ado-gateway.ts:280` (a composite-key separator inside a template string) is replaced by an escape — same runtime value. **[reconciled 2026-10-10]** Done by #122 (#117) as `\x00`, with a control-byte test; F4 only keeps it green | Owner decision (F4-Q8). The byte made grep and ripgrep treat the file as binary, so code searches silently skipped the ADO gateway | y |
+| Branch base | `feature/files-pr-ado` off `main` (**[reconciled 2026-10-10]** F2 and F3 merged; rebased onto `2e3307d`) | Reuses F3's `parseRemote` and `openCommit`, and F2's viewer | y |
+| Mode memory | **[reconciled 2026-10-10]** Pull request is remembered per worktree like the other four modes (FXPL-13), so reopening the app on a worktree left in it searches Azure DevOps on entry | Owner decision (2026-10-10): the search is a read, and every other mode is remembered | y |
+| Sandbox for the spike and smoke | **[reconciled 2026-10-10]** A draft PR with no reviewers, on a throwaway branch, in the Azure DevOps organization the owner works in; coordinates by environment variable, findings under fictitious names | Owner decision (2026-10-10). The public-repository guardrail limits what is recorded, not where the probes run | y |
 
 **Project decision — recorded as AD-027 in `.specs/STATE.md` (2026-09-19), covering GitHub as well (F5):**
 > *The app writes to Azure DevOps and GitHub for pull-request comments only — reply, thread state, a new
@@ -245,7 +247,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-33 | P2: Stay current | Design | Pending |
 | FPRA-34 | P2: Stay current | Design | Pending |
 | FPRA-35 | P2: Stay current | Design | Pending |
-| FPRA-36 | P3: Keep the gateway searchable | Design | Pending |
+| FPRA-36 | P3: Keep the gateway searchable | Done by #122 | Verified |
 
 **Coverage:** 36 total, 0 mapped to tasks yet (Design not run), 0 unmapped
 
@@ -258,5 +260,5 @@ so that I never answer a thread that has already moved on.
 - [ ] A comment started from a two-line selection lands on those two lines in Azure DevOps
 - [ ] Script, event handlers and non-https links in third-party content are inert
 - [ ] No request that writes to Azure DevOps is ever sent without a click
-- [ ] `ado-gateway.ts` shows up in `grep` and ripgrep results again
+- [x] `ado-gateway.ts` shows up in `grep` and ripgrep results again (#122)
 - [ ] The gate is green: `npm run typecheck && npm run lint && npm test`
