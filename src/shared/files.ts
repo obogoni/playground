@@ -1,11 +1,12 @@
 import type { ChangeStatus } from './worktrees'
 
 /**
- * The lenses the Files direction puts over one worktree (FXPL-07, FCMT-01):
- * the whole folder, what the branch changed since its base, what is not
- * committed yet, and the branch's own commits since that same base.
+ * The lenses the Files direction puts over one worktree (FXPL-07, FCMT-01,
+ * FPRA-01): the whole folder, what the branch changed since its base, what is
+ * not committed yet, the branch's own commits since that same base, and the
+ * branch's pull request as its provider holds it.
  */
-export type FilesMode = 'full' | 'since-base' | 'uncommitted' | 'commits'
+export type FilesMode = 'full' | 'since-base' | 'uncommitted' | 'commits' | 'pull-request'
 
 /** One row of a folder listing — a direct child, never a descendant. */
 export interface FileEntry {
@@ -217,3 +218,174 @@ export interface CommitDetail {
 export type RemoteRef =
   | { provider: 'github'; owner: string; repo: string }
   | { provider: 'azure-devops'; org: string; project: string; repo: string }
+
+/** The provider a pull request lives on. F4 ships Azure DevOps; F5 adds GitHub to this same model. */
+export type PrProvider = 'azure-devops' | 'github'
+
+/** The repository a pull request targets, as `parseRemote` reduced its remote (FPRA-02). */
+export interface PrTarget {
+  org: string
+  project: string
+  repo: string
+}
+
+/**
+ * Names one pull request. The renderer only ever sends this back as intent:
+ * main builds every URL from it, so nothing the renderer holds reaches the
+ * network or the OS shell as a URL (FPRA-32, as FCMT-28).
+ */
+export interface PrRef {
+  target: PrTarget
+  id: number
+}
+
+/** One pull request the search found: what the picker names (FPRA-04). */
+export interface PrSummary extends PrRef {
+  provider: PrProvider
+  title: string
+  /** Without `refs/heads/`. */
+  targetBranch: string
+  isDraft: boolean
+}
+
+/** What searching for the branch's pull requests found, or why there is nothing to show (FPRA-02..08). */
+export type PrSearch =
+  | { kind: 'found'; prs: PrSummary[] }
+  /** No active pull request; `createUrlAvailable` says whether Create PR can be offered (FPRA-05). */
+  | { kind: 'none'; createUrlAvailable: boolean }
+  | { kind: 'no-ado-remote' }
+  | { kind: 'auth' }
+  | { kind: 'detached' }
+  | { kind: 'error'; message: string }
+
+/**
+ * A reviewer's verdict in provider-neutral terms. Azure DevOps' five votes map
+ * onto it one to one (10, 5, 0, -5, -10), and GitHub's review states map onto
+ * the same union, so the Overview draws one shape for both.
+ */
+export type ReviewerState =
+  | 'approved'
+  | 'approved-with-suggestions'
+  | 'no-vote'
+  | 'waiting-for-author'
+  | 'rejected'
+
+/** One reviewer and their vote; a group is listed like a person (FPRA-09, edge case). */
+export interface Reviewer {
+  name: string
+  state: ReviewerState
+  isGroup: boolean
+  isRequired: boolean
+}
+
+/** Azure DevOps' own thread statuses (FPRA-26); `unknown` is read, never offered. */
+export type AdoThreadStatus =
+  | 'active'
+  | 'fixed'
+  | 'wontFix'
+  | 'closed'
+  | 'byDesign'
+  | 'pending'
+  | 'unknown'
+
+/** One visible comment of a thread; deleted comments never get this far (FPRA-21). */
+export interface PrComment {
+  id: number
+  author: string
+  /** Markdown, rendered inertly in the renderer (FPRA-21/22). */
+  content: string
+  /** Publication date, epoch milliseconds. */
+  at: number
+}
+
+/**
+ * Where a thread goes (FPRA-11/13/18/19). Lines are 1-based on the side named;
+ * `outdated` threads are listed in the Overview and never drawn in a diff. A
+ * `general` thread with a `path` is about a file as a whole: it has no line
+ * to be drawn under, so it is listed as general, named by its file, and opens
+ * that file's PR diff at the top ([owner 2026-10-10]).
+ */
+export type PrThreadPlace =
+  | { kind: 'general'; path?: string }
+  | { kind: 'placed'; path: string; side: 'left' | 'right'; startLine: number; endLine: number }
+  | { kind: 'outdated'; path: string; line: number }
+  | { kind: 'system' }
+  | { kind: 'deleted' }
+
+/**
+ * One thread as the renderer shows it. `resolution` is the provider-neutral
+ * open-or-done every view groups and collapses by (FPRA-20); `providerStatus`
+ * is Azure DevOps' own status for its selector (FPRA-26), absent for a
+ * provider that has none.
+ */
+export interface PrThreadView {
+  id: number
+  /**
+   * The comment a reply answers (FPRA-25): the thread's first comment, read
+   * before deleted comments are dropped, so it holds even when that comment
+   * was deleted and `comments[0]` is a reply ([owner 2026-10-10]).
+   */
+  rootCommentId: number
+  resolution: 'active' | 'resolved'
+  providerStatus?: AdoThreadStatus
+  comments: PrComment[]
+  place: PrThreadPlace
+}
+
+/** One changed file of a pull request, with the id a new thread on it must carry (FPRA-15/27). */
+export interface PrFile extends ChangedPath {
+  changeTrackingId: number
+}
+
+/** A pull request's lifecycle; anything but `active` is no longer the branch's PR (edge case). */
+export type PrStatus = 'active' | 'completed' | 'abandoned'
+
+/** Everything the Overview and the PR file tree draw (FPRA-09..15). */
+export interface PrDetail extends PrSummary {
+  status: PrStatus
+  author: string
+  /** Read from the single-PR call, because the list truncates it (FPRA-10). */
+  description: string
+  /** Epoch milliseconds. */
+  createdAt: number
+  /** Without `refs/heads/`. */
+  sourceBranch: string
+  reviewers: Reviewer[]
+  /** The latest iteration, which every thread position and new anchor refers to (FPRA-16/18). */
+  iteration: number
+  files: PrFile[]
+  threads: PrThreadView[]
+}
+
+/** One pull request read in full, or why it could not be (FPRA-07). Never thrown. */
+export type PrDetailResult =
+  | { kind: 'ok'; detail: PrDetail }
+  | { kind: 'auth' }
+  | { kind: 'error'; message: string }
+
+/**
+ * A selection on the modified side of a PR diff, as Monaco reports it: 1-based
+ * lines and columns. It may run bottom-up; main normalizes it (FPRA-27).
+ */
+export interface PrSelection {
+  path: string
+  startLine: number
+  startColumn: number
+  endLine: number
+  endColumn: number
+}
+
+/**
+ * Where a new thread is anchored, in Azure DevOps' convention: 1-based lines,
+ * 1-based UTF-16 character offsets, end exclusive, start before end (T1, S1).
+ */
+export interface Anchor {
+  path: string
+  startLine: number
+  startOffset: number
+  endLine: number
+  endOffset: number
+}
+
+/** The outcome of one write; a failure carries the provider's message for the composer (FPRA-31). */
+export type WriteResult = { ok: true } | { ok: false; message: string }

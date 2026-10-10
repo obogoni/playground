@@ -14,6 +14,8 @@ import { DiffViewer, type DiffHandle } from './DiffViewer'
 import { FileIcon } from './FileIcon'
 import { FilePlaceholder } from './FilePlaceholder'
 import { Icon, type IconName } from './Icon'
+import { PrDiffTab } from './PrDiffTab'
+import { PrOverview } from './PrOverview'
 import './FileTabs.css'
 
 interface FileTabsProps {
@@ -191,37 +193,46 @@ export function FileTabs({ worktreePath, files, onToast, onDiscard }: FileTabsPr
       .catch((err) => onToast(err instanceof Error ? err.message : String(err)))
   }
 
-  const onDiffSurface = active !== null && active.kind !== 'file'
+  // The Overview is not a diff: it gets none of the diff controls.
+  const onDiffSurface = active !== null && active.kind !== 'file' && active.kind !== 'pr-overview'
   const diffTab = active?.kind === 'diff' ? active : null
+  // A PR diff folds like any one-file diff (FPRA-17).
+  const foldTab = active?.kind === 'diff' || active?.kind === 'pr-diff' ? active : null
 
   return (
     <div className="file-tabs">
       <div className="file-tabs-strip" role="tablist" aria-label="Open files">
         {files.strip.map((tab) => {
           const key = tabKeyOf(tab)
-          const fixed = tab.kind === 'all-changes'
-          const pinned = tab.kind !== 'all-changes' && tab.pinned === true
+          // FDIF-17, FPRA-09: All changes and the Overview are the strip's
+          // fixed tabs — no pin, no close, no menu (#125).
+          const fixed = tab.kind === 'all-changes' || tab.kind === 'pr-overview'
+          const pinned = 'pinned' in tab && tab.pinned === true
           // FCMT-04: a commit tab is named by its sha and subject, and carries
           // its whole message as the tooltip.
           const label =
             tab.kind === 'all-changes'
               ? 'All changes'
-              : tab.kind === 'commit'
-                ? commitTabTitle(tab.row)
-                : (tab.path.split('/').pop() ?? tab.path)
+              : tab.kind === 'pr-overview'
+                ? 'Overview'
+                : tab.kind === 'commit'
+                  ? commitTabTitle(tab.row)
+                  : (tab.path.split('/').pop() ?? tab.path)
           const title =
             tab.kind === 'all-changes'
               ? 'Every change in this mode'
-              : tab.kind === 'commit'
-                ? tab.row.message
-                : tab.path
+              : tab.kind === 'pr-overview'
+                ? 'The pull request: its description, reviewers and threads'
+                : tab.kind === 'commit'
+                  ? tab.row.message
+                  : tab.path
           return (
             <div
               key={key}
               className={`file-tab${key === files.activeTab ? ' active' : ''}${fixed ? ' fixed' : ''}${pinned ? ' pinned' : ''}`}
               onContextMenu={(event) => {
                 event.preventDefault()
-                // FPOL-05: All changes offers neither Pin nor a close.
+                // FPOL-05: a fixed tab offers neither Pin nor a close.
                 if (fixed) return
                 setMenu({ x: event.clientX, y: event.clientY, anchor: key, pinned })
               }}
@@ -234,10 +245,11 @@ export function FileTabs({ worktreePath, files, onToast, onDiscard }: FileTabsPr
                 title={title}
                 onClick={() => files.focusTab(key)}
               >
-                {(tab.kind === 'file' || tab.kind === 'diff') && (
+                {(tab.kind === 'file' || tab.kind === 'diff' || tab.kind === 'pr-diff') && (
                   <FileIcon name={label} kind="file" />
                 )}
-                {tab.kind === 'diff' && (
+                {/* A PR diff reads apart from the file tab of its path, as a diff does. */}
+                {(tab.kind === 'diff' || tab.kind === 'pr-diff') && (
                   <span className="file-tab-glyph" aria-hidden="true">
                     &plusmn;
                   </span>
@@ -402,13 +414,13 @@ export function FileTabs({ worktreePath, files, onToast, onDiscard }: FileTabsPr
           </button>
           {/* FOLD-18: one file's diff folds or reveals like All changes, whose
               own buttons sit in its header. */}
-          {diffTab && (
+          {foldTab && (
             <>
               <button
                 type="button"
                 className="file-tabs-toggle"
                 title="Fold the unchanged lines of this file"
-                onClick={() => files.pressUnchanged(tabKeyOf(diffTab), 'hide')}
+                onClick={() => files.pressUnchanged(tabKeyOf(foldTab), 'hide')}
               >
                 Hide unchanged
               </button>
@@ -416,7 +428,7 @@ export function FileTabs({ worktreePath, files, onToast, onDiscard }: FileTabsPr
                 type="button"
                 className="file-tabs-toggle"
                 title="Show the unchanged lines of this file"
-                onClick={() => files.pressUnchanged(tabKeyOf(diffTab), 'show')}
+                onClick={() => files.pressUnchanged(tabKeyOf(foldTab), 'show')}
               >
                 Show unchanged
               </button>
@@ -479,6 +491,16 @@ export function FileTabs({ worktreePath, files, onToast, onDiscard }: FileTabsPr
           />
         ) : active.kind === 'diff' ? (
           <DiffBody key={tabKeyOf(active)} files={files} tab={active} onHandle={onHandle} />
+        ) : active.kind === 'pr-overview' ? (
+          <PrOverview pr={files.pr} onOpenDiff={files.openPrDiff} onToast={onToast} />
+        ) : active.kind === 'pr-diff' ? (
+          <PrDiffTab
+            key={tabKeyOf(active)}
+            files={files}
+            tab={active}
+            onHandle={onHandle}
+            onToast={onToast}
+          />
         ) : active.kind === 'commit' ? (
           <CommitTab
             key={tabKeyOf(active)}

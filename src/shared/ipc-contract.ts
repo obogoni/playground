@@ -7,6 +7,7 @@ import type {
   WorkspaceTemplates
 } from './config'
 import type {
+  AdoThreadStatus,
   BaseOptions,
   ChangedListing,
   ChangedPath,
@@ -19,7 +20,12 @@ import type {
   FileContent,
   FileStat,
   FilesChanged,
-  FilesMode
+  FilesMode,
+  PrDetailResult,
+  PrRef,
+  PrSearch,
+  PrSelection,
+  WriteResult
 } from './files'
 import type { CommitLists, GitOp, GitOpResult, SyncState } from './git'
 import type { ProbeResult } from './links'
@@ -254,6 +260,48 @@ export interface IpcContract {
    * URL, so no URL the renderer holds can ever reach the OS shell (FCMT-28).
    */
   'commits:open': { req: { worktreePath: string; sha: string }; res: LaunchResult }
+  /** Active pull requests whose source is the worktree's branch, across every Azure DevOps remote (FPRA-02..08). */
+  'ado-pr:find': { req: { worktreePath: string }; res: PrSearch }
+  /** One pull request in full: header, reviewers, latest iteration, files and threads (FPRA-09..15, 18, 19). */
+  'ado-pr:get': { req: { worktreePath: string; pr: PrRef }; res: PrDetailResult }
+  /** Both sides of one PR file at the latest iteration, read from Azure DevOps, never from disk (FPRA-16/17). */
+  'ado-pr:file-sides': {
+    req: { worktreePath: string; pr: PrRef; path: string; oldPath?: string }
+    res: DiffSides
+  }
+  /**
+   * The four writes (FPRA-25/26/27/29), each sent only on a user's click
+   * (FPRA-32). Requests carry intent only — ids, a status, a selection, the
+   * text — and main builds the URL and the body, so no URL, token or raw
+   * Azure DevOps body crosses IPC.
+   */
+  'ado-pr:reply': {
+    req: { pr: PrRef; threadId: number; rootCommentId: number; content: string }
+    res: WriteResult
+  }
+  'ado-pr:status': {
+    req: { pr: PrRef; threadId: number; status: Exclude<AdoThreadStatus, 'unknown'> }
+    res: WriteResult
+  }
+  'ado-pr:thread': {
+    req: {
+      pr: PrRef
+      /** The iteration on screen, which the selection was made against. */
+      iteration: number
+      changeTrackingId: number
+      selection: PrSelection
+      content: string
+    }
+    res: WriteResult
+  }
+  'ado-pr:comment': { req: { pr: PrRef; content: string }; res: WriteResult }
+  /** Open the pull request's page, or the create page for the branch, in the browser; main builds the URL (FPRA-05/14). */
+  'ado-pr:open': {
+    req: { worktreePath: string; pr: PrRef } | { worktreePath: string; create: true }
+    res: LaunchResult
+  }
+  /** Open a link from rendered markdown; main re-checks it is https and refuses anything else (FPRA-23). */
+  'ado-pr:open-link': { req: { href: string }; res: LaunchResult }
 }
 
 export type IpcChannel = keyof IpcContract

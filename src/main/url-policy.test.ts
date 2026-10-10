@@ -19,6 +19,24 @@ describe('isHttpsUrl', () => {
   })
 })
 
+describe('isHttpsUrl on links from third-party markdown (FPRA-23)', () => {
+  it('opens an https link', () => {
+    expect(isHttpsUrl('https://example.com/x')).toBe(true)
+  })
+
+  it.each([
+    ['a javascript: link', 'javascript:alert(1)'],
+    ['a javascript: link in mixed case', 'JaVaScRiPt:alert(1)'],
+    ['a data: link', 'data:text/html,<script>alert(1)</script>'],
+    ['a file: link', 'file:///C:/x'],
+    ['an http: link', 'http://example.com/x'],
+    ['a relative path', 'docs/readme.md'],
+    ['a malformed URL', 'https://exa mple.com/x']
+  ])('does nothing for %s', (_case, url) => {
+    expect(isHttpsUrl(url)).toBe(false)
+  })
+})
+
 describe('windowOpenDecision (#115)', () => {
   it('opens an https address', () => {
     expect(windowOpenDecision('https://github.com/acme/widget')).toEqual({ open: true })

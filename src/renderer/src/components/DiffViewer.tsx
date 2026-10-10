@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { JSX } from 'react'
+import type { JSX, ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import type { DiffSide, DiffSides } from '../../../shared/files'
 import {
   choicePlan,
@@ -23,13 +24,71 @@ export interface DiffHandle {
   goToDiff: (direction: 'next' | 'previous') => void
   /** The modified-side lines the diff reports as changed, ascending (FDIF-26). */
   changes: () => number[]
-  /** Put the cursor on a modified-side line and scroll the editor to it. */
-  reveal: (line: number) => void
+  /**
+   * Put the cursor on a line and scroll the editor to it: a modified-side line
+   * unless `side` names the original, where a thread on a removed line sits.
+   */
+  reveal: (line: number, side?: 'original' | 'modified') => void
   /** Which modified-side line the cursor is on. */
   line: () => number
   /** Where a modified-side line sits, in pixels from the top of this editor. */
   top: (line: number) => number
 }
+
+/**
+ * Content drawn between two lines of one side, in a Monaco view zone — a pull
+ * request's thread under the line it is about (FPRA-18). The viewer knows
+ * nothing of threads: it places whatever node it is given and sizes the gap to
+ * it.
+ */
+export interface DiffZone {
+  /** Identity across renders: a zone with the same key is kept, not rebuilt. */
+  key: string
+  side: 'original' | 'modified'
+  /** 1-based line the zone sits under; 0 puts it above the first line. */
+  afterLine: number
+  content: ReactNode
+}
+
+/** A selection on the modified side, as Monaco reports it: 1-based lines and columns. */
+export interface ModifiedSelection {
+  startLine: number
+  startColumn: number
+  endLine: number
+  endColumn: number
+}
+
+/**
+ * One zone the editor holds: an empty view zone that opens the gap between two
+ * lines, and an overlay widget drawn over that gap that holds the content.
+ *
+ * The content cannot live in the view zone itself. Monaco stacks its text layer
+ * (`.view-lines`) above the view zones, so the text layer takes every click and
+ * key meant for a thread drawn there. Overlay widgets sit above the text layer.
+ * VS Code's own comment threads are built the same way (`ZoneWidget`).
+ */
+interface MountedZone {
+  /** Monaco's id; '' while the zone is between a removal and its re-add. */
+  id: string
+  side: DiffZone['side']
+  afterLine: number
+  /** Monaco re-reads `heightInPx` from this object on every `layoutZone`. */
+  zone: monaco.editor.IViewZone
+  /** The overlay widget; it sits on the editor of `side`. */
+  widget: monaco.editor.IOverlayWidget
+  /** The portal target inside the overlay; its height is the zone's. */
+  inner: HTMLElement
+  observer: ResizeObserver
+}
+
+let nextOverlayId = 0
+
+/**
+ * A zone's height before its content has been measured: the gap Monaco opens
+ * when the zone is added, until the overlay's content has laid out and the
+ * measurement replaces it.
+ */
+const ZONE_GUESS_PX = 32
 
 interface DiffViewerProps {
   /** Path relative to the worktree root. Picks the language for both sides. */
@@ -59,6 +118,18 @@ interface DiffViewerProps {
    * diff, and to the regions a refresh creates (FOLD-12..15, FOLD-23).
    */
   unchanged?: UnchangedChoice | null
+  /**
+   * Content to draw between lines, per side (FPRA-18). Each zone takes its
+   * content's height, counts in a fitted editor's height, and in a folded
+   * region shows once the region is revealed. Absent = no zones at all.
+   */
+  zones?: DiffZone[]
+  /**
+   * The modified side's selection each time it changes, or null when it is
+   * empty (FPRA-27). The original side's selection is never reported: a new
+   * thread starts on the modified side only (FPRA-28).
+   */
+  onSelectModified?: (selection: ModifiedSelection | null) => void
 }
 
 /** Why a side cannot be rendered, or null when it is text the editor can hold. */
@@ -141,11 +212,17 @@ export function DiffViewer({
   fitContent,
   onHeight,
   onHandle,
-  unchanged = null
+  unchanged = null,
+  zones,
+  onSelectModified
 }: DiffViewerProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<monaco.editor.IStandaloneDiffEditor | null>(null)
   const markersRef = useRef<monaco.editor.IEditorDecorationsCollection | null>(null)
+  // The view zones the editor holds, by `DiffZone.key`, and the nodes their
+  // content is portaled into — state, so a new zone renders its content.
+  const zonesRef = useRef(new Map<string, MountedZone>())
+  const [zoneHosts, setZoneHosts] = useState<ReadonlyMap<string, HTMLElement>>(() => new Map())
   // The fold states read just before new text went in, until Monaco has
   // recomputed the diff for it (FOLD-02..08, `FoldReading`).
   const pendingRef = useRef<FoldReading | null>(null)
@@ -165,9 +242,25 @@ export function DiffViewer({
 
   // Read through a ref by the mount effect, which runs once: the editor must
   // survive a preference change rather than be rebuilt by it.
-  const live = useRef({ layout, ignoreWhitespace, fitContent, onHeight, onHandle, unchanged })
+  const live = useRef({
+    layout,
+    ignoreWhitespace,
+    fitContent,
+    onHeight,
+    onHandle,
+    unchanged,
+    onSelectModified
+  })
   useEffect(() => {
-    live.current = { layout, ignoreWhitespace, fitContent, onHeight, onHandle, unchanged }
+    live.current = {
+      layout,
+      ignoreWhitespace,
+      fitContent,
+      onHeight,
+      onHandle,
+      unchanged,
+      onSelectModified
+    }
   })
 
   useEffect(() => {
@@ -204,8 +297,8 @@ export function DiffViewer({
     const handle: DiffHandle = {
       goToDiff: (direction) => editor.goToDiff(direction),
       changes: () => changedLines(editor),
-      reveal: (line) => {
-        const inner = editor.getModifiedEditor()
+      reveal: (line, side = 'modified') => {
+        const inner = side === 'original' ? editor.getOriginalEditor() : editor.getModifiedEditor()
         inner.setPosition({ lineNumber: line, column: 1 })
         inner.revealLineInCenter(line)
       },
@@ -252,6 +345,37 @@ export function DiffViewer({
         }
       })
     )
+    // FPRA-27/28: only the modified editor is listened to, so a selection on
+    // the original side never reaches the caller.
+    disposables.push(
+      editor.getModifiedEditor().onDidChangeCursorSelection(({ selection }) => {
+        live.current.onSelectModified?.(
+          selection.isEmpty()
+            ? null
+            : {
+                startLine: selection.startLineNumber,
+                startColumn: selection.startColumn,
+                endLine: selection.endLineNumber,
+                endColumn: selection.endColumn
+              }
+        )
+      })
+    )
+    // An overlay spans the text area of its side, which moves with the gutter
+    // and the editor's width.
+    const mountedZones = zonesRef.current
+    for (const [side, inner] of [
+      ['original', editor.getOriginalEditor()],
+      ['modified', editor.getModifiedEditor()]
+    ] as const) {
+      disposables.push(
+        inner.onDidLayoutChange(() => {
+          for (const held of mountedZones.values()) {
+            if (held.side === side) placeOverlay(held, inner)
+          }
+        })
+      )
+    }
     if (live.current.fitContent) {
       const measure = (): void => {
         // The two inner editors report different counts (spike finding 4), and
@@ -275,6 +399,10 @@ export function DiffViewer({
       pendingRef.current = null
       pendingScrollRef.current = null
       for (const disposable of disposables) disposable.dispose()
+      // The zones go with the editor; their observers and portals go with them.
+      for (const zone of mountedZones.values()) zone.observer.disconnect()
+      mountedZones.clear()
+      setZoneHosts(new Map())
       editor.dispose()
       // Disposing the editor leaves its models behind, and a stack remounts
       // sections all session long (D1).
@@ -285,6 +413,20 @@ export function DiffViewer({
     // effects below so the editor survives both.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [renderable])
+
+  // The zones the caller asks for, kept in step with the editor (FPRA-18). A
+  // zone whose side or line moved is removed and added again with the same
+  // overlay, so its content stays mounted; a zone no longer asked for goes.
+  // Monaco folds a zone with the line it sits under and draws it again when
+  // that region is revealed, the overlay hiding and showing with it, and a
+  // zone's height is content height, which is what a fitted editor measures
+  // (#130).
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor) return
+    const hosts = syncZones(editor, zonesRef.current, zones ?? [])
+    if (hosts) setZoneHosts(hosts)
+  }, [zones, renderable])
 
   useEffect(() => {
     const models = editorRef.current?.getModel()
@@ -385,6 +527,138 @@ export function DiffViewer({
         ref={containerRef}
         style={fitContent && height !== null ? { height } : undefined}
       />
+      {zones?.map((zone) => {
+        const host = zoneHosts.get(zone.key)
+        return host ? createPortal(zone.content, host, zone.key) : null
+      })}
     </div>
   )
+}
+
+/**
+ * Brings the editor's zones in line with `zones`, in place. Returns the new
+ * portal targets by key when a zone came or went, and null when only positions
+ * moved, so the caller re-renders only for a new set of nodes.
+ */
+function syncZones(
+  editor: monaco.editor.IStandaloneDiffEditor,
+  mounted: Map<string, MountedZone>,
+  zones: DiffZone[]
+): ReadonlyMap<string, HTMLElement> | null {
+  const sideEditor = (side: DiffZone['side']): monaco.editor.ICodeEditor =>
+    side === 'original' ? editor.getOriginalEditor() : editor.getModifiedEditor()
+  const wanted = new Map(zones.map((zone) => [zone.key, zone]))
+  let hostsChanged = false
+
+  for (const [key, held] of mounted) {
+    const want = wanted.get(key)
+    if (want && want.side === held.side && want.afterLine === held.afterLine) continue
+    sideEditor(held.side).changeViewZones((accessor) => accessor.removeZone(held.id))
+    held.id = ''
+    // The overlay stays where it is while only the line moves, so a composer
+    // being typed into keeps its focus.
+    if (!want || want.side !== held.side) sideEditor(held.side).removeOverlayWidget(held.widget)
+    if (!want) {
+      held.observer.disconnect()
+      mounted.delete(key)
+      hostsChanged = true
+    }
+  }
+
+  for (const [key, want] of wanted) {
+    const known = mounted.get(key)
+    if (known && known.id !== '') continue
+    const held = known ?? createZone(want, sideEditor)
+    if (!known) {
+      mounted.set(key, held)
+      hostsChanged = true
+    }
+    const target = sideEditor(want.side)
+    if (!known || known.side !== want.side) {
+      target.addOverlayWidget(held.widget)
+      placeOverlay(held, target)
+    }
+    held.side = want.side
+    held.afterLine = want.afterLine
+    held.zone.afterLineNumber = want.afterLine
+    target.changeViewZones((accessor) => {
+      held.id = accessor.addZone(held.zone)
+    })
+  }
+
+  return hostsChanged ? new Map([...mounted].map(([key, held]) => [key, held.inner])) : null
+}
+
+/** Spans an overlay over the text area of its side: right of the gutter, left of the scrollbar. */
+function placeOverlay(held: MountedZone, editor: monaco.editor.ICodeEditor): void {
+  const layout = editor.getLayoutInfo()
+  const node = held.widget.getDomNode()
+  node.style.left = `${layout.contentLeft}px`
+  node.style.width = `${layout.contentWidth}px`
+}
+
+/**
+ * A zone: an empty view zone that opens the gap, and the overlay drawn over it
+ * that the content is portaled into (`MountedZone`).
+ *
+ * The overlay follows the gap: Monaco reports the gap's top on every render,
+ * scrolling included, and whether it draws the gap at all. A gap it does not
+ * draw (scrolled far off, or inside a folded region) hides the overlay, which
+ * shows again when the gap does (#130).
+ *
+ * The gap's height follows the content's: a thread that expands, or a composer
+ * that grows, pushes the lines below it down. A hidden overlay keeps its
+ * layout, so its content is measured even while Monaco draws no gap.
+ */
+function createZone(
+  want: DiffZone,
+  sideEditor: (side: DiffZone['side']) => monaco.editor.ICodeEditor
+): MountedZone {
+  const space = document.createElement('div')
+  space.className = 'diff-viewer-zone-space'
+  const node = document.createElement('div')
+  node.className = 'diff-viewer-zone'
+  const inner = document.createElement('div')
+  inner.className = 'diff-viewer-zone-content'
+  node.appendChild(inner)
+  const id = `diff-viewer-zone-${nextOverlayId++}`
+  const held: MountedZone = {
+    id: '',
+    side: want.side,
+    afterLine: want.afterLine,
+    zone: {
+      afterLineNumber: want.afterLine,
+      heightInPx: ZONE_GUESS_PX,
+      domNode: space,
+      onDomNodeTop: (top) => {
+        node.style.top = `${top}px`
+        // Monaco marks the gaps it draws before it reports their tops.
+        node.style.visibility = space.hasAttribute('monaco-visible-view-zone') ? '' : 'hidden'
+      }
+    },
+    widget: { getId: () => id, getDomNode: () => node, getPosition: () => null },
+    inner,
+    observer: new ResizeObserver(() => {
+      const height = inner.offsetHeight
+      if (height === 0 || height === held.zone.heightInPx) return
+      held.zone.heightInPx = height
+      if (held.id === '') return
+      sideEditor(held.side).changeViewZones((accessor) => accessor.layoutZone(held.id))
+    })
+  }
+  // The overlay sits beside the editor's scrolling layer, not inside it, so a
+  // wheel over a thread would scroll nothing; it scrolls the editor, as it
+  // did over the lines around it.
+  node.addEventListener(
+    'wheel',
+    (event) => {
+      const editor = sideEditor(held.side)
+      const before = editor.getScrollTop()
+      editor.setScrollTop(before + event.deltaY)
+      if (editor.getScrollTop() !== before) event.preventDefault()
+    },
+    { passive: false }
+  )
+  held.observer.observe(inner)
+  return held
 }

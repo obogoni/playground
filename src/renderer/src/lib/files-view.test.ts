@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AppConfig } from '../../../shared/config'
 import type { ChangedPath } from '../../../shared/files'
-import { ALL_CHANGES_KEY, tabKeyOf, type TabRef } from './diff-view'
+import { ALL_CHANGES_KEY, PR_OVERVIEW_KEY, tabKeyOf, type TabRef } from './diff-view'
 import {
   buildTree,
   bumpRevisions,
@@ -112,6 +112,19 @@ describe('tabsAfterClose', () => {
     expect(tabsAfterClose([ALL_CHANGES_KEY, 'file:a.ts'], 1, 'file:a.ts')).toEqual({
       tabs: [ALL_CHANGES_KEY],
       active: ALL_CHANGES_KEY
+    })
+  })
+
+  it('refuses to close the Overview, and falls back to it (FPRA-09)', () => {
+    const strip = [PR_OVERVIEW_KEY, 'pr:42:src/app.ts']
+
+    expect(tabsAfterClose(strip, 0, PR_OVERVIEW_KEY)).toEqual({
+      tabs: strip,
+      active: PR_OVERVIEW_KEY
+    })
+    expect(tabsAfterClose(strip, 1, 'pr:42:src/app.ts')).toEqual({
+      tabs: [PR_OVERVIEW_KEY],
+      active: PR_OVERVIEW_KEY
     })
   })
 })
@@ -369,6 +382,23 @@ describe('tabsAfterBulkClose (FPOL-06..11)', () => {
       keys: [ALL_CHANGES_KEY, 'p1', 'p2', 'a'],
       active: 'a'
     })
+  })
+
+  it('never closes the Overview, by Close all, Close unpinned or its own Close (FPRA-09)', () => {
+    const overview = { key: PR_OVERVIEW_KEY, pinned: false }
+    const prStrip = [overview, t('pr:42:a.ts', true), t('pr:42:b.ts')]
+
+    expect(tabsAfterBulkClose(prStrip, 'pr:42:b.ts', { kind: 'all' })).toEqual({
+      keys: [PR_OVERVIEW_KEY],
+      active: PR_OVERVIEW_KEY
+    })
+    expect(tabsAfterBulkClose(prStrip, 'pr:42:b.ts', { kind: 'unpinned' })).toEqual({
+      keys: [PR_OVERVIEW_KEY, 'pr:42:a.ts'],
+      active: 'pr:42:a.ts'
+    })
+    expect(
+      tabsAfterBulkClose(prStrip, PR_OVERVIEW_KEY, { kind: 'close', anchor: PR_OVERVIEW_KEY })
+    ).toEqual({ keys: prStrip.map((x) => x.key), active: PR_OVERVIEW_KEY })
   })
 
   it('falls back to All changes when nothing else survives in a diff mode (FPOL-11)', () => {

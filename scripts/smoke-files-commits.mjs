@@ -354,14 +354,15 @@ async function drive() {
   await evaluate(ws, clickByText('.file-tree-mode', 'Folder'))
   await sleep(1200)
 
-  // 1. FCMT-01: the fourth mode is offered beside the three F1 shipped.
+  // 1. FCMT-01: Commits is offered beside the three F1 shipped, and F4's Pull
+  //    request after it (FPRA-01).
   const modes = await evaluate(
     ws,
     `[...document.querySelectorAll('.file-tree-mode')].map((e) => e.textContent.trim())`
   )
   check(
-    'The mode selector offers a fourth mode, Commits (FCMT-01)',
-    modes.length === 4 && modes.includes('Commits'),
+    'The mode selector offers Commits as the fourth of five modes (FCMT-01, FPRA-01)',
+    modes.length === 5 && modes[3] === 'Commits',
     JSON.stringify(modes)
   )
 

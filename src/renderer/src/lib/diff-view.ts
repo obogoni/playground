@@ -12,9 +12,10 @@ import type {
  * them: it lists files that nothing changed, so there is no second side to
  * compare against. Neither is Commits mode: its left column lists commits
  * rather than paths, and a commit's diffs are built from a sha (FCMT-17), not
- * from the mode.
+ * from the mode. Nor is Pull request mode: its sides are read from the
+ * provider, never from the local repository (FPRA-16).
  */
-export type DiffMode = Exclude<FilesMode, 'full' | 'commits'>
+export type DiffMode = Exclude<FilesMode, 'full' | 'commits' | 'pull-request'>
 
 /**
  * Which revision or working copy each side of a diff comes from (FDIF-01..05),
@@ -79,29 +80,41 @@ function sideKey(side: DiffRef | null): string {
   return 'disk' in side ? `disk:${side.path}` : `rev:${side.rev}:${side.path}`
 }
 
-/** What the tab strip can hold, as far as identity goes (FDIF-08, FDIF-17, FCMT-20). */
+/** What the tab strip can hold, as far as identity goes (FDIF-08, FDIF-17, FCMT-20, FPRA-09/16). */
 export type TabRef =
   | { kind: 'file'; path: string }
   | { kind: 'diff'; mode: DiffMode; path: string }
   | { kind: 'all-changes' }
   | { kind: 'commit'; sha: string }
+  | { kind: 'pr-overview' }
+  | { kind: 'pr-diff'; id: number; path: string }
 
 /** The key of the fixed first tab of both diff modes (FDIF-17). */
 export const ALL_CHANGES_KEY = 'all-changes'
 
+/** The key of Pull request mode's fixed Overview tab (FPRA-09). */
+export const PR_OVERVIEW_KEY = 'pr-overview'
+
 /** One instance, so re-deriving the strip does not remount the stack. */
 const ALL_CHANGES_TAB: TabRef = { kind: 'all-changes' }
+
+/** One instance, for the same reason. */
+const PR_OVERVIEW_TAB: TabRef = { kind: 'pr-overview' }
 
 /**
  * What identifies a tab (FDIF-08, FCMT-20). A diff of one path is a different
  * tab in each mode, and both are different from a file tab for that same path:
  * the kind and, for a diff, the mode are part of the key, not just the path. A
  * commit tab is keyed by its sha, so the same commit opens once however many
- * times it is clicked, and an amend — a new sha — is a different tab.
+ * times it is clicked, and an amend — a new sha — is a different tab. A PR
+ * diff is keyed by its pull request and path (FPRA-16): it reads both sides
+ * from the provider, so it is never the local diff of that same path.
  */
 export function tabKeyOf(tab: TabRef): string {
   if (tab.kind === 'all-changes') return ALL_CHANGES_KEY
   if (tab.kind === 'commit') return `commit:${tab.sha}`
+  if (tab.kind === 'pr-overview') return PR_OVERVIEW_KEY
+  if (tab.kind === 'pr-diff') return `pr:${tab.id}:${tab.path}`
   return tab.kind === 'file' ? `file:${tab.path}` : `diff:${tab.mode}:${tab.path}`
 }
 
@@ -115,13 +128,16 @@ export function isSameTab(a: TabRef, b: TabRef): boolean {
  * modes (FDIF-17), absent in full-folder mode (FDIF-18), and never twice. The
  * All changes tab is derived from the mode rather than stored, which is what
  * lets it follow a mode switch while every diff tab beside it keeps comparing
- * what it was opened on (FDIF-09).
+ * what it was opened on (FDIF-09). Pull request mode opens with its fixed
+ * Overview instead, derived the same way (FPRA-09): the pull request has no
+ * local "every change" stack (spec, Out of Scope).
  */
 export function tabsWithAllChanges<T extends TabRef>(
   tabs: readonly T[],
   mode: FilesMode
 ): (T | TabRef)[] {
-  const rest = tabs.filter((tab) => tab.kind !== 'all-changes')
+  const rest = tabs.filter((tab) => tab.kind !== 'all-changes' && tab.kind !== 'pr-overview')
+  if (mode === 'pull-request') return [PR_OVERVIEW_TAB, ...rest]
   // Commits mode has no "every change of this mode" to offer: its list is of
   // commits, and each commit's own stack is its tab (FCMT-16).
   const stacked = mode !== 'full' && mode !== 'commits'

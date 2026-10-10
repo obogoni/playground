@@ -14,7 +14,9 @@ import type {
   FileContent,
   FileStat,
   FilesChanged,
-  FilesMode
+  FilesMode,
+  PrFile,
+  PrRef
 } from '../../../shared/files'
 import type { LaunchResult } from '../../../shared/shortcuts'
 import { api } from './api'
@@ -44,6 +46,7 @@ import {
 } from './files-view'
 import { createRefreshGate, mergeBatches } from './refresh-gate'
 import { useLatestCallback } from './use-latest-callback'
+import { usePullRequest, type UsePullRequest } from './use-pull-request'
 
 /** One open file (FXPL-18): what was read for it, and when it was last picked. */
 export interface FileTab {
@@ -87,12 +90,36 @@ export interface CommitTab {
   at: number
 }
 
+/** A line of one side of a diff, where opening it lands (FPRA-12). */
+export interface DiffSpot {
+  line: number
+  side: 'original' | 'modified'
+}
+
+/**
+ * One open PR diff (FPRA-16), keyed by its pull request's number and its path.
+ * Its sides are read from the provider and held by `files.pr`, not here.
+ */
+export interface PrDiffTab {
+  kind: 'pr-diff'
+  /** The pull request it was opened from; picking another one later leaves it on this one. */
+  pr: PrRef
+  /** The pull request's number, which the tab key carries. */
+  id: number
+  path: string
+  /** The PR's entry for the file: its status, a rename's old path, its change tracking id. */
+  file: PrFile
+  /** Where to land once the diff is on screen; set when a thread opened it, then cleared. */
+  reveal: DiffSpot | null
+  at: number
+}
+
 /**
  * Everything the tab strip can hold: the open tabs, plus the fixed one. Any
  * open tab can be pinned (FPOL-01); absent means unpinned.
  */
-export type ViewTab = (FileTab | DiffTab | CommitTab) & { pinned?: boolean }
-export type StripTab = ViewTab | { kind: 'all-changes' }
+export type ViewTab = (FileTab | DiffTab | CommitTab | PrDiffTab) & { pinned?: boolean }
+export type StripTab = ViewTab | { kind: 'all-changes' } | { kind: 'pr-overview' }
 
 /**
  * Everything one worktree shows, kept in memory for as long as the app runs
@@ -180,7 +207,7 @@ export interface UseFiles {
   changedFiles: ChangedPath[]
   stats: FileStat[]
   tabs: ViewTab[]
-  /** What the strip renders: All changes first in the diff modes (FDIF-17/18). */
+  /** What the strip renders: All changes first in the diff modes, the Overview in Pull request mode (FDIF-17/18, FPRA-09). */
   strip: StripTab[]
   /** The focused tab's key (`tabKeyOf`); null when nothing is open. */
   activeTab: string | null
@@ -233,6 +260,15 @@ export interface UseFiles {
   unchangedFor: (key: string) => UnchangedChoice | null
   /** Records a press of Hide unchanged or Show unchanged in one tab (FOLD-12, FOLD-13). */
   pressUnchanged: (key: string, mode: UnchangedMode) => void
+  /** The Pull request mode's state for this worktree (F4). */
+  pr: UsePullRequest
+  /**
+   * Opens, or focuses, the PR diff of one file of the pull request shown
+   * (FPRA-16), landing at `at` when a thread asked for it (FPRA-12).
+   */
+  openPrDiff: (file: PrFile, at: DiffSpot | null) => void
+  /** Forgets where a PR diff tab was to land, once it has landed there. */
+  clearReveal: (key: string) => void
 }
 
 /**
@@ -320,8 +356,14 @@ export function useFiles({
   const loadStats = useCallback(
     (wt: string, lens: FilesMode, from: string | undefined): Promise<void> => {
       // Commits mode has no list of its own to count: each commit's tab brings
-      // its own counts back with `commits:files`.
-      if (lens === 'full' || lens === 'commits' || (lens === 'since-base' && !from)) {
+      // its own counts back with `commits:files`. Pull request mode counts
+      // nothing locally: its files are the provider's (FPRA-15).
+      if (
+        lens === 'full' ||
+        lens === 'commits' ||
+        lens === 'pull-request' ||
+        (lens === 'since-base' && !from)
+      ) {
         patchFiles(wt, () => ({ stats: [] }))
         return Promise.resolve()
       }
@@ -428,6 +470,9 @@ export function useFiles({
         // snapshot only moves when the app re-reads the tree, so a file saved
         // while the list is open would leave the row's number stale.
         reads.push(loadUncommitted(wt))
+      } else if (lens === 'pull-request') {
+        // The pull request's files come from its provider, through
+        // `usePullRequest`; nothing is listed from the local repository.
       } else if (from) {
         reads.push(loadChanged(wt, from))
       } else {
@@ -508,9 +553,14 @@ export function useFiles({
   }, [loadCommits])
 
   // FXPL-23: one worktree is watched, and only while the direction is Files.
+  // Pull request mode shows the provider's copy, so the disk is not watched.
+  const watching = active && mode !== 'pull-request'
   useEffect(() => {
-    api.invoke('files:watch', { worktreePath: active ? worktreePath : null }).catch(console.error)
-  }, [active, worktreePath])
+    api.invoke('files:watch', { worktreePath: watching ? worktreePath : null }).catch(console.error)
+  }, [watching, worktreePath])
+
+  // F4: the Pull request lens reads Azure DevOps, only while it is shown.
+  const pr = usePullRequest({ worktreePath, active: active && mode === 'pull-request' })
 
   /**
    * One batch refresh, run by the gate (FWIG-18..21). It reads the view as it
@@ -721,6 +771,51 @@ export function useFiles({
     [worktreePath, patchFiles, readCommit]
   )
 
+  const openPrDiff = useCallback(
+    (file: PrFile, at: DiffSpot | null): void => {
+      const detail = pr.detail
+      if (!worktreePath || !detail) return
+      const ref: PrRef = { target: detail.target, id: detail.id }
+      const now = Date.now()
+      const key = tabKeyOf({ kind: 'pr-diff', id: ref.id, path: file.path })
+      patchFiles(worktreePath, (s) => {
+        // As for every other tab, an open PR diff focuses rather than
+        // duplicating; a thread's activation still moves it to its line.
+        if (s.tabs.some((open) => tabKeyOf(open) === key)) {
+          return {
+            tabs: s.tabs.map((open) =>
+              tabKeyOf(open) === key ? { ...open, at: now, ...(at ? { reveal: at } : {}) } : open
+            ),
+            activeTab: key
+          }
+        }
+        const tab: PrDiffTab = {
+          kind: 'pr-diff',
+          pr: ref,
+          id: ref.id,
+          path: file.path,
+          file,
+          reveal: at,
+          at: now
+        }
+        return { tabs: [...s.tabs, tab], activeTab: key }
+      })
+    },
+    [worktreePath, patchFiles, pr.detail]
+  )
+
+  const clearReveal = useCallback(
+    (key: string): void => {
+      if (!worktreePath) return
+      patchFiles(worktreePath, (s) => ({
+        tabs: s.tabs.map((tab) =>
+          tab.kind === 'pr-diff' && tabKeyOf(tab) === key ? { ...tab, reveal: null } : tab
+        )
+      }))
+    },
+    [worktreePath, patchFiles]
+  )
+
   const loadMoreCommits = useCallback((): void => {
     const wt = worktreePath
     const page = live.current.here.commits
@@ -750,9 +845,12 @@ export function useFiles({
   const requestFor = useCallback(
     // Only the two diff modes compare a path against something. Full-folder
     // mode has no second side, and Commits mode builds its sides from a sha
-    // rather than from the mode (FCMT-17).
+    // rather than from the mode (FCMT-17). Pull request mode reads both sides
+    // from its provider (FPRA-16).
     (changed: ChangedPath): DiffRequest | null =>
-      mode === 'full' || mode === 'commits' ? null : diffRequestFor(mode, changed, mergeBase),
+      mode === 'full' || mode === 'commits' || mode === 'pull-request'
+        ? null
+        : diffRequestFor(mode, changed, mergeBase),
     [mode, mergeBase]
   )
 
@@ -884,8 +982,9 @@ export function useFiles({
   const strip = tabsWithAllChanges(here.tabs, mode) as StripTab[]
   const keys = strip.map(tabKeyOf)
   // A focus naming a tab that is gone falls to the first of the strip, which in
-  // both diff modes is All changes — the reason closing the tab beside it never
-  // leaves the column empty (FDIF-17).
+  // both diff modes is All changes and in Pull request mode the Overview — the
+  // reason closing the tab beside it never leaves the column empty (FDIF-17,
+  // FPRA-09).
   const stillOpen = here.activeTab !== null && keys.includes(here.activeTab)
   const activeTab = stillOpen ? here.activeTab : (keys[0] ?? null)
   const focused = here.tabs.find((tab) => tabKeyOf(tab) === activeTab) ?? null
@@ -935,7 +1034,10 @@ export function useFiles({
     togglePin,
     closeTabs,
     unchangedFor: (key) => here.unchanged[key] ?? null,
-    pressUnchanged
+    pressUnchanged,
+    pr,
+    openPrDiff,
+    clearReveal
   }
 }
 

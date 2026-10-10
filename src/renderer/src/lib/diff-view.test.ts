@@ -11,6 +11,7 @@ import {
   isSameTab,
   mountPlan,
   nextChangeTarget,
+  PR_OVERVIEW_KEY,
   readingBeforeUpdate,
   regionStates,
   requestKey,
@@ -455,6 +456,62 @@ describe('tabKeyOf for commit tabs', () => {
 
     expect(isSameTab({ kind: 'commit', sha: SHA }, { kind: 'commit', sha: SHA })).toBe(true)
     expect(isSameTab({ kind: 'commit', sha: SHA }, { kind: 'commit', sha: other })).toBe(false)
+  })
+})
+
+describe('tabKeyOf for pull request tabs', () => {
+  const SHA = '0f2b9c1d4e6a8b3c5d7e9f0a1b2c3d4e5f6a7b8c'
+
+  it('gives the Overview and a PR diff keys no file, diff, commit or All changes tab can produce (FPRA-09/16)', () => {
+    const pr = [
+      tabKeyOf({ kind: 'pr-overview' }),
+      tabKeyOf({ kind: 'pr-diff', id: 42, path: 'src/app.ts' })
+    ]
+
+    const others = [
+      tabKeyOf(fileTab('src/app.ts')),
+      tabKeyOf(fileTab('pr-overview')),
+      tabKeyOf(diffTab('since-base', 'src/app.ts')),
+      tabKeyOf(diffTab('uncommitted', 'src/app.ts')),
+      tabKeyOf({ kind: 'commit', sha: SHA }),
+      tabKeyOf({ kind: 'all-changes' })
+    ]
+
+    expect(new Set([...pr, ...others]).size).toBe(pr.length + others.length)
+  })
+
+  it('is one Overview, and one PR diff tab per pull request and path (FPRA-16)', () => {
+    const app = { kind: 'pr-diff', id: 42, path: 'src/app.ts' } as const
+
+    expect(isSameTab({ kind: 'pr-overview' }, { kind: 'pr-overview' })).toBe(true)
+    expect(isSameTab(app, { kind: 'pr-diff', id: 42, path: 'src/app.ts' })).toBe(true)
+    expect(isSameTab(app, { kind: 'pr-diff', id: 7, path: 'src/app.ts' })).toBe(false)
+    expect(isSameTab(app, { kind: 'pr-diff', id: 42, path: 'src/other.ts' })).toBe(false)
+  })
+})
+
+describe('tabsWithAllChanges in Pull request mode', () => {
+  it('puts the Overview first, once, and no All changes (FPRA-09)', () => {
+    const open = [fileTab('src/app.ts'), { kind: 'pr-diff', id: 42, path: 'src/app.ts' } as const]
+
+    const strip = tabsWithAllChanges(
+      [{ kind: 'pr-overview' }, { kind: 'all-changes' }, ...open],
+      'pull-request'
+    )
+
+    expect(strip.map((tab) => tabKeyOf(tab))).toEqual([
+      PR_OVERVIEW_KEY,
+      tabKeyOf(fileTab('src/app.ts')),
+      'pr:42:src/app.ts'
+    ])
+  })
+
+  it('offers no Overview outside Pull request mode (FPRA-09)', () => {
+    for (const mode of ['full', 'since-base', 'uncommitted', 'commits'] as const) {
+      const strip = tabsWithAllChanges([{ kind: 'pr-overview' }, fileTab('src/app.ts')], mode)
+
+      expect(strip.some((tab) => tab.kind === 'pr-overview')).toBe(false)
+    }
   })
 })
 

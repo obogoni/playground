@@ -1,4 +1,4 @@
-import type { RemoteRef } from '../shared/files'
+import type { PrTarget, RemoteRef } from '../shared/files'
 
 /**
  * What a git remote URL points at, when the app recognizes the host
@@ -71,6 +71,26 @@ export function commitUrl(ref: RemoteRef, sha: string): string {
     `https://dev.azure.com/${part(ref.org)}/${part(ref.project)}` +
     `/_git/${part(ref.repo)}/commit/${part(sha)}`
   )
+}
+
+/** A pull request's page on Azure DevOps (FPRA-14), built like `commitUrl`. */
+export function prUrl(target: PrTarget, id: number): string {
+  return `${repoPage(target)}/pullrequest/${id}`
+}
+
+/**
+ * Azure DevOps' creation page with the source branch filled (FPRA-05; T1, S8).
+ * The branch goes without `refs/heads/`, and is encoded whole, so the `/` of
+ * `feature/x` stays part of the name.
+ */
+export function createPrUrl(target: PrTarget, branch: string): string {
+  return `${repoPage(target)}/pullrequestcreate?sourceRef=${encodeURIComponent(branch)}`
+}
+
+/** An Azure DevOps repository's web address, every segment re-encoded. */
+function repoPage(target: PrTarget): string {
+  const part = (value: string): string => encodeURIComponent(value)
+  return `https://dev.azure.com/${part(target.org)}/${part(target.project)}/_git/${part(target.repo)}`
 }
 
 /** The host and the decoded path segments, from either URL shape; null if neither fits. */

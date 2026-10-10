@@ -1,0 +1,52 @@
+/*
+ * One PR diff (FPRA-16..18, 27): the new-iteration banner and the Comment bar
+ * above F2's viewer, which takes the rest of the height.
+ */
+
+.pr-diff-tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.pr-diff-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.pr-diff-banner,
+.pr-diff-comment-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pr-diff-banner {
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+
+.pr-diff-banner span {
+  flex: 1;
+}
+
+.pr-diff-comment {
+  padding: 3px 11px;
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pr-diff-comment:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

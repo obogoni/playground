@@ -223,7 +223,11 @@ export class AdoGateway {
     return { ok: true, parent: detail ? { id: first.id, title: detail.title } : null }
   }
 
-  private async getToken(): Promise<{ ok: true; token: string } | { ok: false; error: string }> {
+  /**
+   * The cached `az` bearer token. Public so the pull-request client shares this
+   * one cache and one `az` process instead of starting its own.
+   */
+  async getToken(): Promise<{ ok: true; token: string } | { ok: false; error: string }> {
     if (this.cached && Date.now() < this.cached.expiresAt - EXPIRY_MARGIN_MS) {
       return { ok: true, token: this.cached.token }
     }

@@ -82,3 +82,19 @@
   border-left: 2px solid var(--amber);
   border-bottom: 2px solid var(--amber);
 }
+
+/*
+ * A thread between two lines (FPRA-18). A view zone opens the gap; this node is
+ * the overlay widget drawn over it, which the viewer places at the gap's top
+ * across the text area. The content keeps a readable width however wide the
+ * editor is.
+ */
+.diff-viewer-zone {
+  overflow: hidden;
+}
+
+.diff-viewer-zone-content {
+  max-width: 760px;
+  padding: 4px 12px 6px;
+  font-family: var(--font-ui);
+}

@@ -1,0 +1,268 @@
+/*
+ * The Pull request mode's Overview tab (FPRA-05..14, 29, 34): one scrolling
+ * column of header, reviewers, description, thread groups, the general
+ * comment and the collapsed Activity.
+ */
+
+.pr-overview {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  min-height: 0;
+  padding: 12px 16px 24px;
+  overflow-y: auto;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.pr-overview-toolbar {
+  display: flex;
+  gap: 6px;
+}
+
+.pr-overview-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text-muted);
+  font-size: 11.5px;
+}
+
+.pr-overview-button:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.pr-overview-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pr-overview-button.primary {
+  border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.pr-overview-state {
+  max-width: 560px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.pr-overview-state p {
+  margin: 0 0 10px;
+}
+
+.pr-overview-error {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--red);
+  overflow-wrap: anywhere;
+}
+
+/* The Tasks pane's sign-in prompt, in the same dress (FPRA-07). */
+.pr-overview-auth {
+  padding: 12px 13px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--bg);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.pr-overview-auth-title {
+  margin-bottom: 3px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pr-overview-auth code {
+  color: var(--accent-text);
+}
+
+.pr-overview-notice,
+.pr-overview-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in oklab, var(--amber) 45%, transparent);
+  border-radius: 9px;
+  background: color-mix(in oklab, var(--amber) 10%, transparent);
+  font-size: 12px;
+}
+
+.pr-overview-banner {
+  border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+
+.pr-overview-banner span {
+  flex: 1;
+}
+
+.pr-overview-header {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.pr-overview-title,
+.pr-overview-title-line {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.pr-overview-id {
+  color: var(--text-faint);
+}
+
+.pr-overview-badge {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  vertical-align: middle;
+}
+
+.pr-overview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pr-overview-branches code {
+  font-size: 11.5px;
+  color: var(--text);
+}
+
+.pr-overview-section {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.pr-overview-section h3 {
+  margin: 0;
+}
+
+.pr-overview-empty {
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.pr-overview-reviewers {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pr-overview-reviewer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  max-width: 560px;
+}
+
+.pr-overview-reviewer-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pr-overview-tag {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.pr-overview-vote {
+  color: var(--text-muted);
+}
+
+.pr-overview-reviewer.approved .pr-overview-vote,
+.pr-overview-reviewer.approved-with-suggestions .pr-overview-vote {
+  color: var(--green);
+}
+
+.pr-overview-reviewer.waiting-for-author .pr-overview-vote {
+  color: var(--amber);
+}
+
+.pr-overview-reviewer.rejected .pr-overview-vote {
+  color: var(--red);
+}
+
+.pr-overview-description {
+  max-width: 760px;
+}
+
+.pr-overview-threads {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 760px;
+}
+
+.pr-overview-activity-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+}
+
+.pr-overview-chevron {
+  display: flex;
+  color: var(--text-faint);
+  transform: rotate(-90deg);
+  transition: transform 0.12s;
+}
+
+.pr-overview-chevron.open {
+  transform: none;
+}
+
+.pr-overview-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 760px;
+  margin: 0;
+  padding: 0 0 0 19px;
+  list-style: none;
+  color: var(--text-muted);
+}
+
+.pr-overview-activity-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pr-overview-activity-date {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--text-faint);
+}

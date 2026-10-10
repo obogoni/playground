@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 125,
+  "next_id": 129,
   "lessons": [
     {
       "id": "L-001",
@@ -2155,6 +2155,78 @@
       ],
       "created": "2026-10-03T17:19:43Z",
       "last_seen": "2026-10-03T17:19:43Z"
+    },
+    {
+      "id": "L-125",
+      "key": "surviving_mutant::when a rule quantifies over a collection every all test the mixed case where only some items match or an every to some mutant survives",
+      "text": "When a rule quantifies over a collection (every/all), test the mixed case where only some items match, or an every-to-some mutant survives.",
+      "signal": "surviving_mutant",
+      "scope": "unit-tests",
+      "status": "candidate",
+      "features": [
+        "files-pr-ado"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "U1 src/main/ado-pr-model.ts:158 (unit-tests)"
+      ],
+      "created": "2026-10-10T14:46:19Z",
+      "last_seen": "2026-10-10T14:46:19Z"
+    },
+    {
+      "id": "L-126",
+      "key": "spec_precision_gap::an ac that compares against what is on screen must say what counts as on screen when the view shows none of the things it compares",
+      "text": "An AC that compares against what is on screen must say what counts as on screen when the view shows none of the things it compares.",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "files-pr-ado"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "FPRA-34 (spec)"
+      ],
+      "created": "2026-10-10T14:46:19Z",
+      "last_seen": "2026-10-10T14:46:19Z"
+    },
+    {
+      "id": "L-127",
+      "key": "spec_precision_gap::a lookup ac that depends on local configuration a tracked remote a setting must state the outcome when that configuration is absent",
+      "text": "A lookup AC that depends on local configuration (a tracked remote, a setting) must state the outcome when that configuration is absent.",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "files-pr-ado"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "FPRA-02 (spec)"
+      ],
+      "created": "2026-10-10T14:46:19Z",
+      "last_seen": "2026-10-10T14:46:19Z"
+    },
+    {
+      "id": "L-128",
+      "key": "spec_precision_gap::before writing a paging edge case for a provider call check the reference says the call pages record the finding either way",
+      "text": "Before writing a paging edge case for a provider call, check the reference says the call pages; record the finding either way.",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "files-pr-ado"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "spec Edge Cases: threads paging (spec)"
+      ],
+      "created": "2026-10-10T14:46:20Z",
+      "last_seen": "2026-10-10T14:46:20Z"
     }
   ]
 }

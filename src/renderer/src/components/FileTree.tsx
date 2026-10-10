@@ -23,12 +23,13 @@ interface FileTreeProps {
   onDiscard: (entries: ChangedPath[]) => void
 }
 
-/** The three lenses of FXPL-07, in the order the spec lists them. */
+/** The lenses of FXPL-07, FCMT-01 and FPRA-01, in the order the specs list them. */
 const MODES: { mode: FilesMode; label: string }[] = [
   { mode: 'full', label: 'Folder' },
   { mode: 'since-base', label: 'Diff to origin' },
   { mode: 'uncommitted', label: 'Uncommitted' },
-  { mode: 'commits', label: 'Commits' }
+  { mode: 'commits', label: 'Commits' },
+  { mode: 'pull-request', label: 'Pull request' }
 ]
 
 /** Rows nest by padding, not by nested boxes: a deep tree stays one flat list. */
@@ -334,6 +335,13 @@ export function FileTree({ worktreePath, files, onToast, onDiscard }: FileTreePr
       files.openFile(path)
       return
     }
+    // A pull request's files open as PR diffs read from its provider (FPRA-16),
+    // never through the local diff modes.
+    if (lens === 'pull-request') {
+      const file = files.pr.detail?.files.find((listed) => listed.path === path)
+      if (file) files.openPrDiff(file, null)
+      return
+    }
     const listed = files.changedFiles.find((file) => file.path === path)
     files.openDiff(listed ?? { path, status: status ?? 'modified' }, lens)
   }
@@ -403,6 +411,8 @@ export function FileTree({ worktreePath, files, onToast, onDiscard }: FileTreePr
           <FolderRows dir="" depth={0} files={files} onFile={openFile} />
         ) : files.mode === 'commits' ? (
           <CommitList files={files} onToast={onToast} />
+        ) : files.mode === 'pull-request' ? (
+          <PullRequestFiles files={files} onFile={openInTab} />
         ) : files.mode === 'uncommitted' ? (
           files.uncommitted.length === 0 ? (
             <div className="file-tree-note">No uncommitted changes.</div>
@@ -435,6 +445,39 @@ export function FileTree({ worktreePath, files, onToast, onDiscard }: FileTreePr
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * The pull request's changed files, as its provider lists them, with their
+ * change status (FPRA-15). Why there is no list is the Overview's to say in
+ * full; the column only points there.
+ */
+function PullRequestFiles({
+  files,
+  onFile
+}: {
+  files: UseFiles
+  onFile: (path: string, status: ChangeStatus) => void
+}): JSX.Element {
+  const { detail, search } = files.pr
+  if (!detail) {
+    if (search === null) return <div className="file-tree-note">Looking for the pull request…</div>
+    return <div className="file-tree-note">No pull request to list. The Overview says why.</div>
+  }
+  if (detail.status !== 'active') {
+    return <div className="file-tree-note">This pull request was completed or abandoned.</div>
+  }
+  if (detail.files.length === 0) {
+    return <div className="file-tree-note">This pull request changes no files.</div>
+  }
+  return (
+    <ChangedRows
+      nodes={buildTree(detail.files)}
+      depth={0}
+      onFile={onFile}
+      onFolder={files.selectFolder}
+    />
   )
 }
 
