@@ -1,7 +1,13 @@
 import type { AppConfig, FilesState } from '../../../shared/config'
 import type { ChangedPath } from '../../../shared/files'
 import type { ChangeStatus } from '../../../shared/worktrees'
-import { ALL_CHANGES_KEY, tabKeyOf, type TabRef, type UnchangedMode } from './diff-view'
+import {
+  ALL_CHANGES_KEY,
+  PR_OVERVIEW_KEY,
+  tabKeyOf,
+  type TabRef,
+  type UnchangedMode
+} from './diff-view'
 
 /** A changed file as the tree renders it, carrying the status it was listed with. */
 export interface FileNode {
@@ -69,16 +75,17 @@ export function isSolution(path: string): boolean {
  * identified by their key (`tabKeyOf`), which for a file tab is built from the
  * path, as opening an already-open file does (FXPL-16).
  *
- * The All changes tab is the one exception: it cannot be closed (FDIF-17), so a
- * close request naming it changes nothing. It stays in the list either way,
- * which is also why closing the tab beside it never leaves the view empty.
+ * The fixed tabs are the exception: All changes (FDIF-17) and the pull
+ * request's Overview (FPRA-09) cannot be closed, so a close request naming one
+ * changes nothing. It stays in the list either way, which is also why closing
+ * the tab beside it never leaves the view empty.
  */
 export function tabsAfterClose(
   tabs: string[],
   closedIndex: number,
   activePath: string | null
 ): { tabs: string[]; active: string | null } {
-  if (tabs[closedIndex] === ALL_CHANGES_KEY) return { tabs, active: activePath }
+  if (isFixedTab(tabs[closedIndex])) return { tabs, active: activePath }
   const left = tabs.filter((_, index) => index !== closedIndex)
   if (tabs[closedIndex] !== activePath) return { tabs: left, active: activePath }
   const adjacent = left[closedIndex] ?? left[closedIndex - 1] ?? null
@@ -128,7 +135,7 @@ export type BulkClose =
  * Which tabs a bulk close leaves, and which is focused (FPOL-06..11). Close
  * all closes pinned tabs too; Close unpinned, Close others and Close to the
  * right never close a pinned one; Close closes its anchor, pinned or not. All
- * changes is never closed (FDIF-17). An active tab that survives stays active;
+ * changes and the Overview are never closed (FDIF-17, FPRA-09). An active tab that survives stays active;
  * a closed one hands the focus to the nearest survivor on its right, else on
  * its left — which in a diff mode is at worst All changes, the first tab —
  * and to nothing when no tab survives, as in Explore.
@@ -143,7 +150,7 @@ export function tabsAfterBulkClose(
       ? strip.findIndex((tab) => tab.key === action.anchor)
       : -1
   const closes = (tab: { key: string; pinned: boolean }, at: number): boolean => {
-    if (tab.key === ALL_CHANGES_KEY) return false
+    if (isFixedTab(tab.key)) return false
     switch (action.kind) {
       case 'all':
         return true
@@ -285,6 +292,11 @@ export function keepUnchanged(
 ): UnchangedChoices {
   const live = new Set([...liveKeys, ALL_CHANGES_KEY])
   return Object.fromEntries(Object.entries(choices).filter(([key]) => live.has(key)))
+}
+
+/** A tab no close removes: All changes (FDIF-17) or the Overview (FPRA-09). */
+function isFixedTab(key: string | undefined): boolean {
+  return key === ALL_CHANGES_KEY || key === PR_OVERVIEW_KEY
 }
 
 function comparablePath(path: string): string {

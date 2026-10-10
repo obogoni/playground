@@ -221,14 +221,14 @@ so that I never answer a thread that has already moved on.
 | FPRA-06 | P1: Find the branch's PR | Execute | Implemented |
 | FPRA-07 | P1: Find the branch's PR | Execute | Implemented |
 | FPRA-08 | P1: Find the branch's PR | Execute | Implemented |
-| FPRA-09 | P1: Read the PR | Execute | Implementing |
+| FPRA-09 | P1: Read the PR | Execute | Implemented |
 | FPRA-10 | P1: Read the PR | Execute | Implemented |
 | FPRA-11 | P1: Read the PR | Execute | Implemented |
-| FPRA-12 | P1: Read the PR | Execute | Implementing |
+| FPRA-12 | P1: Read the PR | Execute | Implemented |
 | FPRA-13 | P1: Read the PR | Execute | Implemented |
 | FPRA-14 | P1: Read the PR | Execute | Implemented |
 | FPRA-15 | P1: Read the PR | Execute | Implemented |
-| FPRA-16 | P1: Read the PR | Execute | Implementing |
+| FPRA-16 | P1: Read the PR | Execute | Implemented |
 | FPRA-17 | P1: Read the PR | Execute | Implemented |
 | FPRA-18 | P1: Read the PR | Execute | Implemented |
 | FPRA-19 | P1: Read the PR | Execute | Implemented |

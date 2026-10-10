@@ -98,6 +98,9 @@ export const PR_OVERVIEW_KEY = 'pr-overview'
 /** One instance, so re-deriving the strip does not remount the stack. */
 const ALL_CHANGES_TAB: TabRef = { kind: 'all-changes' }
 
+/** One instance, for the same reason. */
+const PR_OVERVIEW_TAB: TabRef = { kind: 'pr-overview' }
+
 /**
  * What identifies a tab (FDIF-08, FCMT-20). A diff of one path is a different
  * tab in each mode, and both are different from a file tab for that same path:
@@ -125,13 +128,16 @@ export function isSameTab(a: TabRef, b: TabRef): boolean {
  * modes (FDIF-17), absent in full-folder mode (FDIF-18), and never twice. The
  * All changes tab is derived from the mode rather than stored, which is what
  * lets it follow a mode switch while every diff tab beside it keeps comparing
- * what it was opened on (FDIF-09).
+ * what it was opened on (FDIF-09). Pull request mode opens with its fixed
+ * Overview instead, derived the same way (FPRA-09): the pull request has no
+ * local "every change" stack (spec, Out of Scope).
  */
 export function tabsWithAllChanges<T extends TabRef>(
   tabs: readonly T[],
   mode: FilesMode
 ): (T | TabRef)[] {
-  const rest = tabs.filter((tab) => tab.kind !== 'all-changes')
+  const rest = tabs.filter((tab) => tab.kind !== 'all-changes' && tab.kind !== 'pr-overview')
+  if (mode === 'pull-request') return [PR_OVERVIEW_TAB, ...rest]
   // Commits mode has no "every change of this mode" to offer: its list is of
   // commits, and each commit's own stack is its tab (FCMT-16).
   const stacked = mode !== 'full' && mode !== 'commits'

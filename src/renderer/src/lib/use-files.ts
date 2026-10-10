@@ -119,7 +119,7 @@ export interface PrDiffTab {
  * open tab can be pinned (FPOL-01); absent means unpinned.
  */
 export type ViewTab = (FileTab | DiffTab | CommitTab | PrDiffTab) & { pinned?: boolean }
-export type StripTab = ViewTab | { kind: 'all-changes' }
+export type StripTab = ViewTab | { kind: 'all-changes' } | { kind: 'pr-overview' }
 
 /**
  * Everything one worktree shows, kept in memory for as long as the app runs
@@ -207,7 +207,7 @@ export interface UseFiles {
   changedFiles: ChangedPath[]
   stats: FileStat[]
   tabs: ViewTab[]
-  /** What the strip renders: All changes first in the diff modes (FDIF-17/18). */
+  /** What the strip renders: All changes first in the diff modes, the Overview in Pull request mode (FDIF-17/18, FPRA-09). */
   strip: StripTab[]
   /** The focused tab's key (`tabKeyOf`); null when nothing is open. */
   activeTab: string | null
@@ -982,8 +982,9 @@ export function useFiles({
   const strip = tabsWithAllChanges(here.tabs, mode) as StripTab[]
   const keys = strip.map(tabKeyOf)
   // A focus naming a tab that is gone falls to the first of the strip, which in
-  // both diff modes is All changes — the reason closing the tab beside it never
-  // leaves the column empty (FDIF-17).
+  // both diff modes is All changes and in Pull request mode the Overview — the
+  // reason closing the tab beside it never leaves the column empty (FDIF-17,
+  // FPRA-09).
   const stillOpen = here.activeTab !== null && keys.includes(here.activeTab)
   const activeTab = stillOpen ? here.activeTab : (keys[0] ?? null)
   const focused = here.tabs.find((tab) => tabKeyOf(tab) === activeTab) ?? null

@@ -710,11 +710,20 @@ Note: a click on a PR file opens its PR diff directly; the solution double-click
 
 **Done when**:
 
-- [ ] Overview cannot be closed; PR diff tabs can
-- [ ] **[reconciled 2026-10-10]** The Overview uses the strip's existing fixed-tab treatment (as All changes does, #125); PR diff tabs pin and close like file tabs, and Close all / Close unpinned never close the Overview
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Phase gate passes: `npx electron-vite build`
-- [ ] Test count: **3046** (unchanged)
+- [x] Overview cannot be closed; PR diff tabs can
+- [x] **[reconciled 2026-10-10]** The Overview uses the strip's existing fixed-tab treatment (as All changes does, #125); PR diff tabs pin and close like file tabs, and Close all / Close unpinned never close the Overview
+- [x] Gate passes: `npm run typecheck && npm run lint && npm test`
+- [x] Phase gate passes: `npx electron-vite build`
+- [x] Test count: **3046** (unchanged) — **actual 3057** (3053 + 4: the close rules live in the pure strip helpers, which carry these two criteria, so each gets a test); lint warnings 18
+
+Beyond `FileTabs.tsx`: `tabsWithAllChanges` (`diff-view.ts`) puts the Overview first in Pull request mode instead of All changes, and offers it in no other mode; `tabsAfterClose` / `tabsAfterBulkClose` (`files-view.ts`) treat `PR_OVERVIEW_KEY` as a fixed tab like `ALL_CHANGES_KEY`; `use-files.ts`'s `StripTab` holds it, so a focus on a closed tab falls back to it. `keepUnchanged` needed no change: the strip's keys it is given include the Overview, which never has a fold choice. PR diff tabs stay open across modes, as the other modes' diff tabs do (FDIF-09). The Overview shows none of the diff controls.
+
+| Criterion | `file:line` + assertion | Outcome | Covered? |
+| --------- | ----------------------- | ------- | -------- |
+| Overview is first in PR mode, once, no All changes | `src/renderer/src/lib/diff-view.test.ts:502` - `expect(strip.map(...)).toEqual([PR_OVERVIEW_KEY, ...])` | Overview, then the open tabs | ✅ |
+| No Overview outside PR mode | `src/renderer/src/lib/diff-view.test.ts:513` - `expect(strip.some(... 'pr-overview')).toBe(false)` | absent | ✅ |
+| Overview cannot be closed; focus falls back to it | `src/renderer/src/lib/files-view.test.ts:123`, `:126-127` - `toEqual({ tabs: strip, active: PR_OVERVIEW_KEY })`, `toEqual({ tabs: [PR_OVERVIEW_KEY], active: PR_OVERVIEW_KEY })` | kept, focused | ✅ |
+| Close all / Close unpinned / its own Close never close it; PR diffs close and pin | `src/renderer/src/lib/files-view.test.ts:392`, `:396`, `:401` - `keys: [PR_OVERVIEW_KEY]`, `keys: [PR_OVERVIEW_KEY, 'pr:42:a.ts']`, `keys: prStrip.map(...)` | Overview kept; pinned PR diff kept by Close unpinned | ✅ |
 
 **Tests**: none
 **Gate**: build
