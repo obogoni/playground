@@ -93,7 +93,7 @@ T15 → T16 → T17 → T18 → T19 → T20 → T21 → T22 → T23 → T24
 ### Phase 6: Close the loop
 
 ```
-T24 → T25 → T26 → T27
+T24 → T26 → T27
 ```
 
 ---
@@ -112,14 +112,14 @@ T24 → T25 → T26 → T27
 
 **Done when**:
 
-- [ ] **Offset convention**: a thread created in ADO's own UI on a known span, read back — recorded whether a line start is `offset` 0 or 1
-- [ ] **Iteration context**: the same thread's `iterationContext` in the whole-PR view — recorded whether it is `{ first: n, second: n }`
-- [ ] **Outdated signal**: after one more push to the sandbox branch, recorded what `threads?$iteration=<latest>&$baseIteration=0` returns for a thread whose line changed versus one whose line did not
-- [ ] **`<…>` in comments**: a probe comment containing `` `List<string>` `` and `a <b> c`, read back — recorded whether ADO kept, escaped or deleted it
-- [ ] **Reading a file**: the item / blob calls that give size before content, and the field names; the create-PR URL parameters
-- [ ] Every probe comment created on the sandbox is deleted afterwards (Azure DevOps keeps a thread whose comments are all deleted, shown as deleted; that is the floor)
-- [ ] No real org, project, repository, identity or content appears in the findings
-- [ ] If any finding contradicts the design, the design is amended in this commit; **if `<…>` is altered**, `spec.md` gains FPRA-37 (the composer warns before posting content ADO would alter) and T25 is kept — otherwise T25 is removed with a note
+- [x] **Offset convention**: a thread created in ADO's own UI on a known span, read back — 1-based UTF-16 columns, end exclusive (S1)
+- [x] **Iteration context**: the same thread's `iterationContext` in the whole-PR view — `{ first: n, second: n }` (S2)
+- [x] **Outdated signal**: after one more push to the sandbox branch, recorded what `threads?$iteration=<latest>&$baseIteration=0` returns for a thread whose line changed versus one whose line did not — plus a second push deleting a commented line (S3)
+- [x] **`<…>` in comments**: a probe comment containing `` `List<string>` `` and `a <b> c`, read back — kept byte-identical (S4)
+- [x] **Reading a file**: the item / blob calls that give size before content, and the field names; the create-PR URL parameters (S6, S8)
+- [x] Every probe comment created on the sandbox is deleted afterwards (Azure DevOps keeps a thread whose comments are all deleted, shown as deleted; that is the floor)
+- [x] No real org, project, repository, identity or content appears in the findings
+- [x] If any finding contradicts the design, the design is amended in this commit; **if `<…>` is altered**, `spec.md` gains FPRA-37 (the composer warns before posting content ADO would alter) and T25 is kept — otherwise T25 is removed with a note. **Amended**: the outdated rule (S3), markdown always (S5), file reads (S6), paging (S7); `<…>` not altered, so T25 is removed
 
 **Tests**: manual
 **Gate**: manual
@@ -200,7 +200,7 @@ T24 → T25 → T26 → T27
 
 ### T5: Build PR page URLs
 
-**What**: Add `prUrl(ref, id)` and `createPrUrl(ref, branch)` to F3's `remote-url.ts`, using the create-PR parameters T1 confirmed, or the repository's PR list page if T1 could not confirm them.
+**What**: Add `prUrl(ref, id)` and `createPrUrl(ref, branch)` to F3's `remote-url.ts`; the create URL is `…/_git/{repo}/pullrequestcreate?sourceRef={branch}` (T1, S8).
 **Where**: `src/main/remote-url.ts`
 **Depends on**: T4
 **Reuses**: F3's `RemoteRef` and encoding helpers.
@@ -250,7 +250,7 @@ T24 → T25 → T26 → T27
 
 ### T7: Decide where each thread goes
 
-**What**: Add `classifyThread`, `visibleComments` and `isMarkdown` to `ado-pr-model.ts`, with the outdated rule T1 confirmed.
+**What**: Add `classifyThread` and `visibleComments` to `ado-pr-model.ts`, with the outdated rule T1 measured (S3). `isMarkdown` is dropped (S5).
 **Where**: `src/main/ado-pr-model.ts`
 **Depends on**: T6
 **Reuses**: The thread shapes from the reference's List example (fictitious names).
@@ -263,9 +263,9 @@ T24 → T25 → T26 → T27
 - [ ] `commentType: system` and a `CodeReviewThreadType` property each classify as `system`
 - [ ] A thread with no `threadContext` is `general`
 - [ ] Right-anchored → placed right; left-only → placed left
-- [ ] A thread not tracked to the latest iteration (per T1) is `outdated`
+- [ ] A tracked thread whose current range is empty while its original was not is `outdated`; an untracked thread is placed at its own position; a tracked one at its current position (S3)
 - [ ] A deleted thread, and a thread whose every comment is deleted, are `deleted`
-- [ ] `visibleComments` drops deleted comments; `isMarkdown` reads the `SupportsMarkdown` property
+- [ ] `visibleComments` drops deleted comments, which arrive without `content` (S9)
 - [ ] Gate passes: `npm test`
 - [ ] Test count: 2995 + 9 = **3004**
 
@@ -277,7 +277,7 @@ T24 → T25 → T26 → T27
 
 ### T8: Turn a selection into an ADO anchor
 
-**What**: Add `anchorFromSelection(selection, convention)` and `iterationContextFor(latest)` to `ado-pr-model.ts`, with the offset convention and iteration context T1 recorded.
+**What**: Add `anchorFromSelection(selection)` and `iterationContextFor(latest)` to `ado-pr-model.ts`: Monaco's columns copied across (S1), `{ n, n }` (S2).
 **Where**: `src/main/ado-pr-model.ts`
 **Depends on**: T7
 **Reuses**: Monaco's 1-based selection shape.
@@ -287,10 +287,10 @@ T24 → T25 → T26 → T27
 
 **Done when**:
 
-- [ ] A selection from line 5 column 1 to line 6 column 13 converts under both conventions, each asserted
-- [ ] The convention constant is the one T1 recorded, with the finding cited in a comment
+- [ ] A selection from line 5 column 1 to line 6 column 13 becomes `{ 5, 1 }` → `{ 6, 13 }`
+- [ ] A selection after a two-byte character keeps character columns (S1's case: columns 34 → 39, never 35 → 40)
 - [ ] A selection made bottom-up is normalized to start ≤ end
-- [ ] `iterationContextFor(4)` returns what T1 recorded
+- [ ] `iterationContextFor(4)` returns `{ firstComparingIteration: 4, secondComparingIteration: 4 }`
 - [ ] Gate passes: `npm test`
 - [ ] Test count: 3004 + 5 = **3009**
 - [ ] Phase gate passes: `npx electron-vite build`
@@ -306,7 +306,7 @@ T24 → T25 → T26 → T27
 **What**: Create `src/main/ado-pr.ts` with `AdoPrClient({ getToken, fetchFn })` and its read methods — `findPrs`, `getPr`, `latestIteration`, `changedFiles`, `threads`, `fileSide`.
 **Where**: `src/main/ado-pr.ts`
 **Depends on**: T8
-**Reuses**: `getAdoToken`, `fetchWithTimeout`; the model from T6–T8; the `TaskBoard` DI test style.
+**Reuses**: `AdoGateway.getToken`, `fetchWithTimeout`; the model from T6–T8; the `TaskBoard` DI test style.
 **Requirement**: FPRA-02, 03, 04, 05, 06, 07, 09, 15, 16
 
 **Tools**: MCP: NONE · Skill: NONE
@@ -315,9 +315,9 @@ T24 → T25 → T26 → T27
 
 - [ ] `findPrs` sends `sourceRefName=refs/heads/<branch>`, `sourceRepositoryId=<source id>` and `status=active` to **each** ADO target
 - [ ] `getPr` is used for the Overview, so a 1000-character description arrives whole (the list truncates to 400)
-- [ ] `changedFiles` follows `nextSkip` / `nextTop` until both are 0 — a 250-file fixture yields 250 files
+- [ ] `changedFiles` follows `nextSkip` / `nextTop` until both are 0 or absent (S7) — a 250-file fixture yields 250 files
 - [ ] `threads` sends `$iteration=<latest>&$baseIteration=0`
-- [ ] `fileSide` never requests content above 1 MB or for a binary
+- [ ] `fileSide` reads the blob size before content and never requests content above 1 MB or for a binary; a 404 for the original side of an added file is an empty side (S6)
 - [ ] A missing token yields the auth result; a timeout yields an error result; nothing throws
 - [ ] **No read method issues a POST, PATCH, PUT or DELETE** — asserted over every read test
 - [ ] `ado-pr.test.ts` created
@@ -342,7 +342,7 @@ T24 → T25 → T26 → T27
 
 **Done when**:
 
-- [ ] Each write sends exactly the URL and body in the design (reply `parentCommentId` = the thread's root comment)
+- [ ] Each write sends exactly the URL and body in the design (reply `parentCommentId` = the thread's root comment); new threads and the general comment carry `SupportsMarkdown` = `{ type: 'System.Int32', value: 1 }` (S5)
 - [ ] `createThread` carries `filePath` with a leading `/`, the anchor, `changeTrackingId` and the iteration context
 - [ ] A 401 / 403 returns `{ ok: false, message }` with ADO's message
 - [ ] Each write method issues exactly one request, and only when called
@@ -381,7 +381,7 @@ T24 → T25 → T26 → T27
 
 ### T12: Render third-party markdown inertly
 
-**What**: Add `markdown-it` (+ types) and create `src/renderer/src/lib/markdown.ts` with `renderMarkdown(source, { markdown })` — `html: false`, links as `data-href` with no `href`, images as links, plain escaped text when `markdown` is false.
+**What**: Add `markdown-it` (+ types) and create `src/renderer/src/lib/markdown.ts` with `renderMarkdown(source)` — `html: false`, links as `data-href` with no `href`, images as links; every comment is markdown (T1, S5).
 **Where**: `src/renderer/src/lib/markdown.ts`
 **Depends on**: T11
 **Reuses**: Nothing — new, security-critical, fully unit-tested.
@@ -397,7 +397,7 @@ T24 → T25 → T26 → T27
 - [ ] `[x](https://example.com)` renders with `data-href` and no `href`
 - [ ] `![alt](https://example.com/a.png)` renders as a link, never an `<img>`
 - [ ] An HTML comment and a `<details>` block render as escaped text
-- [ ] `markdown: false` escapes the whole source
+- [ ] `[x](data:text/html,…)` renders with no `href` and no `data-href`
 - [ ] No output anywhere contains ` on` event attributes or an `href` attribute
 - [ ] `markdown-it` added to `dependencies`, version pinned
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
@@ -693,26 +693,7 @@ T24 → T25 → T26 → T27
 
 ---
 
-### T25: Warn before posting content ADO would alter — conditional on T1
-
-**What**: **Only if T1 found that Azure DevOps alters `<…>` in comments**: add `wouldBeAltered(content)` to `pr-view.ts` reproducing what T1 measured, and a warning in `CommentComposer` before posting. **If T1 found no alteration, this task is removed** with a one-line note here.
-**Where**: `src/renderer/src/lib/pr-view.ts`
-**Depends on**: T24
-**Reuses**: T1's finding; `CommentComposer`.
-**Requirement**: FPRA-37 (exists only if T1 confirms)
-
-**Tools**: MCP: NONE · Skill: NONE
-
-**Done when**:
-
-- [ ] `wouldBeAltered` flags exactly the patterns T1 saw altered — accented letters included, per the owner's notes on work-item fields — and nothing else
-- [ ] The composer shows the warning and still lets the user post
-- [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: 3046 + 4 = **3050** (or 3046 if removed)
-
-**Tests**: unit
-**Gate**: full
-**Commit**: `feat(renderer): warn before posting content azure devops would alter`
+**T25 removed (T1, S4).** Azure DevOps stored `` `List<string>` ``, `a <b> c`, quotes, `>`, `&` and accented letters byte-identical in a pull-request comment, so there is nothing to warn about and FPRA-37 was never added.
 
 ---
 
@@ -720,7 +701,7 @@ T24 → T25 → T26 → T27
 
 **What**: Amend the README's "ADO integration is view-only" to state that the app writes PR comments on explicit user action only. **The decision itself is already recorded as AD-027** (2026-09-19, at planning) — this task does not add an AD.
 **Where**: `README.md`
-**Depends on**: T25
+**Depends on**: T24
 **Reuses**: AD-027's wording in `.specs/STATE.md`.
 **Requirement**: FPRA-32
 
@@ -732,7 +713,7 @@ T24 → T25 → T26 → T27
 - [ ] `.specs/STATE.md` gains **no new AD**; AD-027 is left as recorded, and still matches what shipped — if it does not, AD-027 is amended in place, never duplicated
 - [ ] The STATE handoff no longer says F4 is stacked on F3 (stale since the Files epic merged)
 - [ ] Gate passes: `npm run typecheck && npm run lint && npm test`
-- [ ] Test count: unchanged from T25
+- [ ] Test count: **3046** (unchanged)
 
 **Tests**: none
 **Gate**: full
@@ -773,10 +754,10 @@ Phase 2:  T2 → T3 → T4 → T5 → T6 → T7 → T8
 Phase 3:  T9 → T10 → T11
 Phase 4:  T12 → T13 → T14 → T15
 Phase 5:  T16 → T17 → T18 → T19 → T20 → T21 → T22 → T23 → T24
-Phase 6:  T25 → T26 → T27
+Phase 6:  T26 → T27
 ```
 
-Strictly sequential. **T1 runs inline with the owner**, before any batch. **Packing** (~7 per batch, whole phases): Phase 2 (7) = batch 1; Phases 3 + 4 (3 + 4) = batch 2; Phase 5 (9) = batch 3 — one tight chain of components, left whole; Phase 6 (3) = batch 4. 27 tasks > 8, so the sub-agent offer applies — offer-then-confirm.
+Strictly sequential. **T1 runs inline with the owner**, before any batch. **Packing** (~7 per batch, whole phases): Phase 2 (7) = batch 1; Phases 3 + 4 (3 + 4) = batch 2; Phase 5 (9) = batch 3 — one tight chain of components, left whole; Phase 6 (2) = batch 4. 26 tasks > 8, so the sub-agent offer applies — offer-then-confirm.
 
 ---
 
@@ -798,7 +779,6 @@ Strictly sequential. **T1 runs inline with the owner**, before any batch. **Pack
 | T13, T14 | 2 pure functions each | ✅ |
 | T15 | 1 extension | ✅ |
 | T16–T24 | 1 component / hook each | ✅ |
-| T25 | 1 function + 1 wiring (conditional) | ✅ |
 | T26 | 1 doc + 1 decision row | ✅ |
 | T27 | 1 script | ✅ |
 
@@ -832,8 +812,7 @@ Strictly sequential. **T1 runs inline with the owner**, before any batch. **Pack
 | T22 | T21 | T21 → T22 | ✅ |
 | T23 | T22 | T22 → T23 | ✅ |
 | T24 | T23 | T23 → T24 | ✅ |
-| T25 | T24 | T24 → T25 (boundary) | ✅ |
-| T26 | T25 | T25 → T26 | ✅ |
+| T26 | T24 | T24 → T26 (boundary) | ✅ |
 | T27 | T26 | T26 → T27 | ✅ |
 
 ---
@@ -851,7 +830,6 @@ Strictly sequential. **T1 runs inline with the owner**, before any batch. **Pack
 | T12 | Security-critical renderer helper | unit | unit | ✅ |
 | T13–T15 | Pure renderer helpers | unit | unit | ✅ |
 | T16–T24 | Renderer components / hook | none | none | ✅ |
-| T25 | Pure renderer helper | unit | unit | ✅ |
 | T26 | Docs | none | none | ✅ |
 | T27 | Smoke | manual only | manual | ✅ |
 
@@ -898,7 +876,7 @@ Strictly sequential. **T1 runs inline with the owner**, before any batch. **Pack
 | FPRA-35 | T17 |
 | FPRA-36 | met by #122 (`\x00` + control-byte test); T2 keeps it green |
 
-All 36 mapped; none unmapped. FPRA-37 exists only if T1 confirms it, and is then mapped to T25.
+All 36 mapped; none unmapped. FPRA-37 was not added: T1 found comments unaltered (S4), and T25 was removed.
 
 ---
 
@@ -918,7 +896,7 @@ The plan was written on 2026-09-19, stacked on F3, before the Files epic and abo
 | Tree shows change status | `StatusGlyph` / `changeStatusView` (#131) | T23 reuses them |
 | Git reads in main | Every git call is paced since #154 | T11 reads remotes through `git()` |
 | Debounce at `App.tsx:165`, `relativeTime` in status-bar | `App.tsx:273`, `lib/relative-time.ts` | References updated |
-| Baseline 945 (projected) | **2977** measured | Counts shifted; feature ends at **3050** (3046 without T25) |
+| Baseline 945 (projected) | **2977** measured | Counts shifted; feature ends at **3046** (T25 removed after T1) |
 | T1 sandbox in an org of the owner's choosing | Owner chose their employer's organization | Draft PR with no reviewers on a throwaway branch; coordinates by env var; findings fictitious |
 
 Execution (owner, 2026-10-10): T1 inline with the owner, then four batch workers — Phase 2, Phases 3 + 4, Phase 5, Phase 6 — followed by the Verifier.

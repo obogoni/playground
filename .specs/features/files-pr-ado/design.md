@@ -79,14 +79,14 @@ Every method returns a result union and never throws.
 | ------ | ---------------- | --- |
 | `findPrs(remotes, branch)` | Resolve the source repository id (the branch's upstream remote) with `GET _apis/git/repositories/{name}`; then, **for each ADO remote as target**, `GET …/repositories/{target}/pullrequests?searchCriteria.sourceRefName=refs/heads/{branch}&searchCriteria.sourceRepositoryId={sourceId}&searchCriteria.status=active` | 02–06 |
 | `getPr(target, id)` | `GET …/pullrequests/{id}` — **needed because the list endpoint truncates `description` to 400 characters** | 09, 10 |
-| `latestIteration(target, id)` | `GET …/pullRequests/{id}/iterations` → last id, `sourceRefCommit`, `commonRefCommit` **[spike: field names]** | 16, 34 |
-| `changedFiles(target, id, iteration)` | `GET …/iterations/{n}/changes?$compareTo=0&$top=2000`, **following `nextSkip` / `nextTop` until both are 0** — the endpoint defaults to 100 entries | 15, 16, 27 |
+| `latestIteration(target, id)` | `GET …/pullRequests/{id}/iterations` → last id, `sourceRefCommit.commitId`, `commonRefCommit.commitId` (S2) | 16, 34 |
+| `changedFiles(target, id, iteration)` | `GET …/iterations/{n}/changes?$compareTo=0&$top=2000`, **following `nextSkip` / `nextTop` until both are 0 or absent** (S7) — the endpoint defaults to 100 entries | 15, 16, 27 |
 | `threads(target, id, iteration)` | `GET …/pullRequests/{id}/threads?$iteration={n}&$baseIteration=0` — positions tracked to the latest iteration against the common commit | 11, 13, 18, 19 |
-| `fileSide(target, path, commit)` | Item metadata first, content only when ≤ 1 MB and not binary **[spike: exact item / blob calls and the size field]** | 16, 17 |
+| `fileSide(target, path, commit)` | Item metadata (`includeContentMetadata=true`), then `blobs/{objectId}?$format=json` for `size`, content only when ≤ 1 MB and not binary; a 404 at the common commit is an empty side (S6) | 16, 17 |
 | `reply(target, id, threadId, rootCommentId, content)` | `POST …/threads/{threadId}/comments` `{ content, parentCommentId, commentType: 1 }` | 25 |
 | `setStatus(target, id, threadId, status)` | `PATCH …/threads/{threadId}` `{ status }` | 26 |
-| `createThread(target, id, anchor, content)` | `POST …/threads` with `threadContext` (`filePath`, `rightFileStart`, `rightFileEnd`) and `pullRequestThreadContext` (`changeTrackingId` from `changedFiles`, `iterationContext`) | 27 |
-| `generalComment(target, id, content)` | `POST …/threads` with `comments` and `status: 1`, no `threadContext` | 29 |
+| `createThread(target, id, anchor, content)` | `POST …/threads` with `threadContext` (`filePath`, `rightFileStart`, `rightFileEnd`), `pullRequestThreadContext` (`changeTrackingId` from `changedFiles`, `iterationContext`) and `properties` `SupportsMarkdown` = `{ type: 'System.Int32', value: 1 }` (S1, S5) | 27 |
+| `generalComment(target, id, content)` | `POST …/threads` with `comments`, `status: 1` and the same `SupportsMarkdown` property, no `threadContext` | 29 |
 
 #### `src/main/ado-pr-model.ts` (new — pure, unit-tested)
 
@@ -95,18 +95,18 @@ Every method returns a result union and never throws.
   - `system` when the first comment's `commentType` is `system` or `properties.CodeReviewThreadType` is present
   - `deleted` when `isDeleted` or every comment is deleted
   - `placed` on the right when `rightFileStart` exists, on the left when only `leftFileStart` does
-  - **`outdated` rule [spike]**: placed only when the thread was created on, or tracked to (`trackingCriteria.secondComparingIteration`), the latest iteration
+  - **`outdated` rule (S3)**: tracked (`trackingCriteria` present) **and** its current range is empty (start = end) **and** its original range (`origRightFileStart/End`) is not. Untracked threads are placed at their position, which is still right; `offset` `2147483647` means the end of the line
 - `visibleComments(thread)` — drops `isDeleted` comments, which ADO returns without content
-- `isMarkdown(thread)` — `properties["Microsoft.TeamFoundation.Discussion.SupportsMarkdown"] === 1`
-- `anchorFromSelection(selection, convention)` — Monaco's 1-based line and column → ADO `CommentPosition`. **The offset convention is a constant set by the spike**: the reference text says `offset` "starts at 0", but its own example sends `offset: 1` for a line start
-- `iterationContextFor(latest)` — **[spike]** the reference states that equal first and second iterations mean the left side is the common commit, which suggests `{ first: n, second: n }` for the whole-PR view
+- ~~`isMarkdown(thread)`~~ — **dropped (S5)**: Azure DevOps renders every comment as markdown, with or without the property
+- `anchorFromSelection(selection)` — Monaco's 1-based line and column → ADO `CommentPosition`, **copied across unchanged** (S1: 1-based UTF-16 columns, end exclusive — the reference's "starts at 0" is wrong); normalized so start ≤ end
+- `iterationContextFor(latest)` — `{ firstComparingIteration: n, secondComparingIteration: n }` for the whole-PR view (S2)
 - `voteLabel(vote)` — `10` approved · `5` approved with suggestions · `0` no vote · `-5` waiting for author · `-10` rejected (reference `IdentityRefWithVote`)
 - `pickRemoteRepos(remotes)` and `sourceRemote(branchConfig)` — which remotes are ADO targets, which one is the source
 
 #### `src/main/remote-url.ts` (F3, extended)
 
 - `prUrl(ref, id)` → `https://dev.azure.com/{org}/{project}/_git/{repo}/pullrequest/{id}`
-- `createPrUrl(ref, branch)` → the repository's PR-creation page with the source branch filled **[spike: exact query parameters]**; if the parameter cannot be confirmed, the repository's pull-request list page — never a guessed URL
+- `createPrUrl(ref, branch)` → `https://dev.azure.com/{org}/{project}/_git/{repo}/pullrequestcreate?sourceRef={branch}` (S8; `targetRef` optional, branch names without `refs/heads/`)
 
 #### `src/main/url-policy.ts` (AD-044, reused)
 
@@ -127,7 +127,7 @@ Every method returns a result union and never throws.
 
 #### `src/renderer/src/lib/markdown.ts` (new — pure, unit-tested in Node)
 
-- `renderMarkdown(source, { markdown: boolean }): string` — `markdown-it` with `html: false`, `linkify: false`; `link_open` moves `href` to `data-href` and drops it; images render as a link to their source; non-markdown threads are escaped text (FPRA-10, 21, 22, 24)
+- `renderMarkdown(source): string` — `markdown-it` with `html: false`, `linkify: false`; `link_open` moves `href` to `data-href` and drops it; images render as a link to their source (FPRA-10, 21, 22, 24). Every comment is markdown (S5)
 - Tested against: `<script>`, `<img onerror>`, `[x](javascript:alert(1))`, a `data:` link, an `https:` link, an image, an HTML comment, a `<details>` block
 
 #### `src/renderer/src/lib/pr-view.ts` (new — pure, unit-tested)
@@ -187,7 +187,6 @@ export interface PrComment { id: number; author: string; content: string; at: nu
 export interface PrThreadView {
   id: number
   status: ThreadStatus
-  markdown: boolean
   comments: PrComment[]
   place:
     | { kind: 'general' }
@@ -259,7 +258,7 @@ props widen.
 | `markdown.ts` | unit (Node) | Every injection vector listed above renders inert |
 | `pr-view.ts` | unit (pure) | Overview groups, zones per file and side, banner |
 | Components, hook, `DiffViewer` props | none — hand-verified + CDP smoke | Per `TESTING.md` |
-| Spike | manual, sandbox | The five **[spike]** items |
+| Spike | manual, sandbox | Done — § Spike Findings S1–S9 |
 
 ---
 
@@ -281,3 +280,21 @@ props widen.
 | Every write path | 32 |
 
 Every one of FPRA-01..36 appears at least once.
+
+---
+
+## Spike Findings (T1, 2026-10-10)
+
+Measured over REST 7.1 with the `az` token, plain `fetch`-equivalent calls, on a draft pull request with no reviewers in an organization the owner named. Names below are fictitious (`acme` / `platform` / `widget`, branch `feature/probe`, file `probe.txt`); no content, identity or id from that organization is recorded. Every probe comment was deleted afterwards; the pull request stayed a draft.
+
+| # | Question | Finding | Consequence |
+| - | -------- | ------- | ----------- |
+| S1 | Offset convention | A thread created in the web UI on one word read back as `{ line: 3, offset: 34 }` → `{ line: 3, offset: 39 }`. The word starts at character 34 (1-based) and ends before 39, **after** a two-byte `á` on the same line: a byte count would give 35 → 40. So `offset` is a **1-based UTF-16 character column, end exclusive** — Monaco's own column model. A thread created through the API with that convention was stored unchanged | `anchorFromSelection` copies Monaco's line and column across; no constant, no conversion |
+| S2 | Iteration context | Web-created threads on the whole-PR view carry `{ firstComparingIteration: n, secondComparingIteration: n }` for the iteration on screen | `iterationContextFor(n)` = `{ n, n }`, as inferred |
+| S3 | Outdated signal | Read with `$iteration=<latest>&$baseIteration=0` (the plain list returns creation positions only). A thread whose lines did not move comes back **without** `trackingCriteria`, at its creation position, and is correct there. A thread whose line changed or moved comes back **with** `trackingCriteria` (`secondComparingIteration` = latest, `origRightFileStart/End`) and its current position in `rightFileStart/End`; a changed line widens to the whole line (`offset` 1 → `2147483647`). A thread whose **line was deleted** is not dropped: it comes back tracked with an **empty** position, start = end (`{ 2, 1 }` → `{ 2, 1 }`) | `outdated` = tracked **and** current range empty **and** original range not empty; everything else is `placed` at `rightFileStart` / `rightFileEnd`. `2147483647` means "to the end of the line" |
+| S4 | `<…>` in comments | A thread and a reply containing `` `List<string>` ``, `a <b> c`, `"quotes"`, `>`, `&` and accented letters were stored and read back **byte-identical** (77 of 77 characters) | Pull-request comments are not sanitized the way work-item fields are. **FPRA-37 is not added and T25 is removed** |
+| S5 | Markdown flag | The web UI sets `Microsoft.TeamFoundation.Discussion.SupportsMarkdown` as `{ "$type": "System.Int32", "$value": 1 }`; a thread created through the API without it has no such property — and the web UI **still renders its comment as markdown** (inline code shown as code). Properties are written as `{ type, value }` and read back as `{ $type, $value }` | Render every comment as markdown (HTML disabled); `isMarkdown` and the `markdown` flag are dropped. Writes still send `SupportsMarkdown` = 1, as the web UI does |
+| S6 | Reading a file | Item metadata (`items?path=…&versionDescriptor.versionType=commit&includeContentMetadata=true`) gives `objectId` and `contentMetadata` (`encoding`, `contentType`, `fileName`, `extension`) but **no size**; `blobs/{objectId}?$format=json` gives `size` in bytes. A side the iteration added is a **404** at the common commit (`GitItemNotFoundException`). Change entries carry `objectId` upper-cased | `fileSide`: item metadata → blob size → content only when ≤ 1 MB and not binary (`contentMetadata.isBinary`, absent for text); a 404 on the original side of an add is an empty side |
+| S7 | Paging of changes | A single-page response carries **no** `nextSkip` / `nextTop` at all, not zeros | Stop when both are absent or 0 |
+| S8 | Create-PR URL | `https://dev.azure.com/{org}/{project}/_git/{repo}/pullrequestcreate?sourceRef={branch}&targetRef={branch}` opens the creation form with both branches filled (checked in the browser by the owner); branch names without `refs/heads/` | `createPrUrl(ref, branch, target?)` builds that URL |
+| S9 | Deleting | Deleting every comment of a thread marks the thread `isDeleted: true`; deleted comments come back `isDeleted: true` **without** `content` | Confirms `deleted` and `visibleComments` as designed |
