@@ -469,11 +469,11 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] PR tabs never collide with file, diff, commit or All changes tabs
-- [ ] Pre-existing tab tests pass unedited
-- [ ] Gate passes: `npm test`
-- [ ] Phase gate passes: `npx electron-vite build`
-- [ ] Test count: 3044 + 2 = **3046**
+- [x] PR tabs never collide with file, diff, commit or All changes tabs
+- [x] Pre-existing tab tests pass unedited
+- [x] Gate passes: `npm test`
+- [x] Phase gate passes: `npx electron-vite build`
+- [x] Test count: 3044 + 2 = **3046** — **actual 3050** (3048 after T14, +2)
 
 **Tests**: unit
 **Gate**: quick

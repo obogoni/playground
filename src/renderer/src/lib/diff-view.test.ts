@@ -458,6 +458,37 @@ describe('tabKeyOf for commit tabs', () => {
   })
 })
 
+describe('tabKeyOf for pull request tabs', () => {
+  const SHA = '0f2b9c1d4e6a8b3c5d7e9f0a1b2c3d4e5f6a7b8c'
+
+  it('gives the Overview and a PR diff keys no file, diff, commit or All changes tab can produce (FPRA-09/16)', () => {
+    const pr = [
+      tabKeyOf({ kind: 'pr-overview' }),
+      tabKeyOf({ kind: 'pr-diff', id: 42, path: 'src/app.ts' })
+    ]
+
+    const others = [
+      tabKeyOf(fileTab('src/app.ts')),
+      tabKeyOf(fileTab('pr-overview')),
+      tabKeyOf(diffTab('since-base', 'src/app.ts')),
+      tabKeyOf(diffTab('uncommitted', 'src/app.ts')),
+      tabKeyOf({ kind: 'commit', sha: SHA }),
+      tabKeyOf({ kind: 'all-changes' })
+    ]
+
+    expect(new Set([...pr, ...others]).size).toBe(pr.length + others.length)
+  })
+
+  it('is one Overview, and one PR diff tab per pull request and path (FPRA-16)', () => {
+    const app = { kind: 'pr-diff', id: 42, path: 'src/app.ts' } as const
+
+    expect(isSameTab({ kind: 'pr-overview' }, { kind: 'pr-overview' })).toBe(true)
+    expect(isSameTab(app, { kind: 'pr-diff', id: 42, path: 'src/app.ts' })).toBe(true)
+    expect(isSameTab(app, { kind: 'pr-diff', id: 7, path: 'src/app.ts' })).toBe(false)
+    expect(isSameTab(app, { kind: 'pr-diff', id: 42, path: 'src/other.ts' })).toBe(false)
+  })
+})
+
 describe('tabsWithAllChanges in commits mode', () => {
   it('offers no All changes tab, because the mode lists commits (FCMT-16)', () => {
     const open = [fileTab('src/app.ts')]
