@@ -1,8 +1,43 @@
 import { describe, expect, it } from 'vitest'
-import { pickRemoteRepos, sourceRemote, toChangedPaths, voteLabel } from './ado-pr-model'
+import {
+  classifyThread,
+  pickRemoteRepos,
+  sourceRemote,
+  toChangedPaths,
+  visibleComments,
+  voteLabel,
+  type AdoComment,
+  type AdoThread
+} from './ado-pr-model'
 
 // Every name here is fictitious: this repository is public and the spec's
 // privacy guardrail forbids a real organisation, project or repository name.
+
+const END_OF_LINE = 2147483647
+
+function comment(overrides: Partial<AdoComment> = {}): AdoComment {
+  return {
+    id: 1,
+    author: { displayName: 'Alex Contoso' },
+    content: 'Could this be a constant?',
+    publishedDate: '2026-10-01T12:00:00Z',
+    commentType: 'text',
+    ...overrides
+  }
+}
+
+function thread(overrides: Partial<AdoThread> = {}): AdoThread {
+  return { id: 100, status: 'active', comments: [comment()], ...overrides }
+}
+
+/** A thread context on the right side, as ADO returns it for the latest iteration. */
+function onRight(start: [number, number], end: [number, number]): AdoThread['threadContext'] {
+  return {
+    filePath: '/src/app.ts',
+    rightFileStart: { line: start[0], offset: start[1] },
+    rightFileEnd: { line: end[0], offset: end[1] }
+  }
+}
 
 describe('toChangedPaths', () => {
   // The shapes follow the reference's Iteration Changes example: ADO roots
@@ -103,5 +138,159 @@ describe('sourceRemote (FPRA-02)', () => {
   it('is none when the branch tracks nothing, or a remote not on azure devops', () => {
     expect(sourceRemote(null, repos)).toBeNull()
     expect(sourceRemote('github', repos)).toBeNull()
+  })
+})
+
+describe('classifyThread', () => {
+  it('sends a thread whose first comment is a system comment to Activity (FPRA-13)', () => {
+    expect(
+      classifyThread(thread({ comments: [comment({ commentType: 'system', content: 'Pushed' })] }))
+    ).toEqual({ kind: 'system' })
+  })
+
+  it('sends a thread carrying a CodeReviewThreadType property to Activity (FPRA-13)', () => {
+    expect(
+      classifyThread(
+        thread({
+          properties: { CodeReviewThreadType: { $type: 'System.String', $value: 'VoteUpdate' } }
+        })
+      )
+    ).toEqual({ kind: 'system' })
+  })
+
+  it('lists a thread with no file context as general (FPRA-11)', () => {
+    expect(classifyThread(thread())).toEqual({ kind: 'general' })
+  })
+
+  it('places a right-anchored thread on the right, a left-only one on the left (FPRA-18)', () => {
+    expect(classifyThread(thread({ threadContext: onRight([3, 34], [4, 39]) }))).toEqual({
+      kind: 'placed',
+      path: 'src/app.ts',
+      side: 'right',
+      startLine: 3,
+      endLine: 4
+    })
+    expect(
+      classifyThread(
+        thread({
+          threadContext: {
+            filePath: '/src/app.ts',
+            leftFileStart: { line: 8, offset: 1 },
+            leftFileEnd: { line: 8, offset: 12 }
+          }
+        })
+      )
+    ).toEqual({ kind: 'placed', path: 'src/app.ts', side: 'left', startLine: 8, endLine: 8 })
+  })
+
+  // S3: a thread whose line was deleted comes back tracked, at an empty range.
+  it('lists a tracked thread whose lines were deleted as outdated (FPRA-19)', () => {
+    expect(
+      classifyThread(
+        thread({
+          threadContext: onRight([2, 1], [2, 1]),
+          pullRequestThreadContext: {
+            trackingCriteria: {
+              origRightFileStart: { line: 2, offset: 5 },
+              origRightFileEnd: { line: 2, offset: 18 }
+            }
+          }
+        })
+      )
+    ).toEqual({ kind: 'outdated', path: 'src/app.ts', line: 2 })
+  })
+
+  it('does not call a tracked thread outdated when its original range was empty too', () => {
+    expect(
+      classifyThread(
+        thread({
+          threadContext: onRight([6, 1], [6, 1]),
+          pullRequestThreadContext: {
+            trackingCriteria: {
+              origRightFileStart: { line: 6, offset: 1 },
+              origRightFileEnd: { line: 6, offset: 1 }
+            }
+          }
+        })
+      )
+    ).toEqual({ kind: 'placed', path: 'src/app.ts', side: 'right', startLine: 6, endLine: 6 })
+  })
+
+  // S3: an untracked thread is where it was created; a tracked one comes back
+  // at its current position, widened to the whole line when the line changed.
+  it('places an untracked thread at its own position and a tracked one at its current position', () => {
+    expect(classifyThread(thread({ threadContext: onRight([3, 10], [3, 20]) }))).toEqual({
+      kind: 'placed',
+      path: 'src/app.ts',
+      side: 'right',
+      startLine: 3,
+      endLine: 3
+    })
+    expect(
+      classifyThread(
+        thread({
+          threadContext: onRight([5, 1], [5, END_OF_LINE]),
+          pullRequestThreadContext: {
+            trackingCriteria: {
+              origRightFileStart: { line: 3, offset: 10 },
+              origRightFileEnd: { line: 3, offset: 20 }
+            }
+          }
+        })
+      )
+    ).toEqual({ kind: 'placed', path: 'src/app.ts', side: 'right', startLine: 5, endLine: 5 })
+  })
+
+  // S9: deleting every comment marks the thread deleted; either signal is enough.
+  it('drops a deleted thread, and a thread whose every comment is deleted', () => {
+    expect(
+      classifyThread(thread({ isDeleted: true, threadContext: onRight([3, 1], [3, 5]) }))
+    ).toEqual({ kind: 'deleted' })
+    expect(
+      classifyThread(
+        thread({
+          threadContext: onRight([3, 1], [3, 5]),
+          comments: [
+            comment({ id: 1, isDeleted: true, content: undefined }),
+            comment({ id: 2, isDeleted: true, content: undefined })
+          ]
+        })
+      )
+    ).toEqual({ kind: 'deleted' })
+  })
+})
+
+describe('visibleComments (FPRA-21)', () => {
+  // S9: a deleted comment comes back flagged and without content.
+  it('drops deleted comments and keeps the others with author, text and date', () => {
+    expect(
+      visibleComments(
+        thread({
+          comments: [
+            comment({ id: 1, content: 'Why `List<string>` here?' }),
+            comment({ id: 2, isDeleted: true, content: undefined }),
+            comment({
+              id: 3,
+              author: { displayName: 'Sam Widget' },
+              content: 'Fixed in the next push.',
+              publishedDate: '2026-10-02T08:30:00Z'
+            })
+          ]
+        })
+      )
+    ).toEqual([
+      {
+        id: 1,
+        author: 'Alex Contoso',
+        content: 'Why `List<string>` here?',
+        at: Date.parse('2026-10-01T12:00:00Z')
+      },
+      {
+        id: 3,
+        author: 'Sam Widget',
+        content: 'Fixed in the next push.',
+        at: Date.parse('2026-10-02T08:30:00Z')
+      }
+    ])
   })
 })

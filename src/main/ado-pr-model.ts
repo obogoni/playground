@@ -1,4 +1,4 @@
-import type { PrFile, PrTarget, ReviewerState } from '../shared/files'
+import type { PrComment, PrFile, PrTarget, PrThreadPlace, ReviewerState } from '../shared/files'
 import type { ChangeStatus } from '../shared/worktrees'
 import { parseRemote } from './remote-url'
 
@@ -22,6 +22,50 @@ export interface AdoChange {
 export interface AdoRemote {
   name: string
   target: PrTarget
+}
+
+/** A position in a file: 1-based line, 1-based UTF-16 column, as ADO writes it (T1, S1). */
+export interface AdoPosition {
+  line: number
+  offset: number
+}
+
+/** One comment of a thread. A deleted comment arrives flagged and without content (T1, S9). */
+export interface AdoComment {
+  id: number
+  author: { displayName: string }
+  content?: string
+  publishedDate: string
+  /** `text`, `system` or `codeChange`. */
+  commentType: string
+  isDeleted?: boolean
+}
+
+/**
+ * One thread read with `$iteration=<latest>&$baseIteration=0`, so its right
+ * positions are the latest iteration's (T1, S3). Properties read back as
+ * `{ $type, $value }` (S5).
+ */
+export interface AdoThread {
+  id: number
+  status: string
+  comments: AdoComment[]
+  threadContext?: {
+    filePath: string
+    leftFileStart?: AdoPosition
+    leftFileEnd?: AdoPosition
+    rightFileStart?: AdoPosition
+    rightFileEnd?: AdoPosition
+  } | null
+  pullRequestThreadContext?: {
+    /** Present only when ADO moved the thread since it was created (S3). */
+    trackingCriteria?: {
+      origRightFileStart?: AdoPosition
+      origRightFileEnd?: AdoPosition
+    }
+  } | null
+  properties?: Record<string, { $type: string; $value: unknown }>
+  isDeleted?: boolean
 }
 
 /**
@@ -86,6 +130,64 @@ export function pickRemoteRepos(remotes: { name: string; url: string }[]): AdoRe
 export function sourceRemote(upstreamRemote: string | null, repos: AdoRemote[]): AdoRemote | null {
   if (upstreamRemote === null) return null
   return repos.find((repo) => repo.name === upstreamRemote) ?? null
+}
+
+/**
+ * Where one thread goes (FPRA-11/13/18/19), by the rules T1 measured:
+ * - `deleted` when ADO says so, or every comment is deleted (S9) — shown nowhere
+ * - `system` when its first comment is a system one or it carries a
+ *   `CodeReviewThreadType` property — Activity only
+ * - `general` when it has no line to sit on
+ * - `outdated` when ADO tracked it to an empty range although it started on a
+ *   real one: its lines were deleted (S3)
+ * - otherwise `placed` where ADO puts it for the latest iteration, on the right
+ *   when it has a right position, on the left when it has only a left one.
+ */
+export function classifyThread(thread: AdoThread): PrThreadPlace {
+  if (thread.isDeleted || thread.comments.every((c) => c.isDeleted)) return { kind: 'deleted' }
+  if (thread.comments[0]?.commentType === 'system') return { kind: 'system' }
+  if (thread.properties?.CodeReviewThreadType !== undefined) return { kind: 'system' }
+
+  const context = thread.threadContext
+  if (!context) return { kind: 'general' }
+  const path = relative(context.filePath)
+
+  if (context.rightFileStart) {
+    const start = context.rightFileStart
+    const end = context.rightFileEnd ?? start
+    const tracking = thread.pullRequestThreadContext?.trackingCriteria
+    if (tracking && isEmpty(start, end)) {
+      const origStart = tracking.origRightFileStart
+      const origEnd = tracking.origRightFileEnd ?? origStart
+      if (origStart && origEnd && !isEmpty(origStart, origEnd)) {
+        return { kind: 'outdated', path, line: origStart.line }
+      }
+    }
+    return { kind: 'placed', path, side: 'right', startLine: start.line, endLine: end.line }
+  }
+  if (context.leftFileStart) {
+    const start = context.leftFileStart
+    const end = context.leftFileEnd ?? start
+    return { kind: 'placed', path, side: 'left', startLine: start.line, endLine: end.line }
+  }
+  // A file-level thread has no line to be drawn under; the Overview lists it.
+  return { kind: 'general' }
+}
+
+/** A thread's comments minus the deleted ones, which carry no content (FPRA-21; T1, S9). */
+export function visibleComments(thread: AdoThread): PrComment[] {
+  return thread.comments
+    .filter((c) => !c.isDeleted)
+    .map((c) => ({
+      id: c.id,
+      author: c.author.displayName,
+      content: c.content ?? '',
+      at: Date.parse(c.publishedDate)
+    }))
+}
+
+function isEmpty(start: AdoPosition, end: AdoPosition): boolean {
+  return start.line === end.line && start.offset === end.offset
 }
 
 function relative(path: string): string {

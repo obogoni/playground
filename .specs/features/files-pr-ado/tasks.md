@@ -260,14 +260,14 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] `commentType: system` and a `CodeReviewThreadType` property each classify as `system`
-- [ ] A thread with no `threadContext` is `general`
-- [ ] Right-anchored → placed right; left-only → placed left
-- [ ] A tracked thread whose current range is empty while its original was not is `outdated`; an untracked thread is placed at its own position; a tracked one at its current position (S3)
-- [ ] A deleted thread, and a thread whose every comment is deleted, are `deleted`
-- [ ] `visibleComments` drops deleted comments, which arrive without `content` (S9)
-- [ ] Gate passes: `npm test`
-- [ ] Test count: 2995 + 9 = **3004**
+- [x] `commentType: system` and a `CodeReviewThreadType` property each classify as `system`
+- [x] A thread with no `threadContext` is `general`
+- [x] Right-anchored → placed right; left-only → placed left
+- [x] A tracked thread whose current range is empty while its original was not is `outdated`; an untracked thread is placed at its own position; a tracked one at its current position (S3)
+- [x] A deleted thread, and a thread whose every comment is deleted, are `deleted`
+- [x] `visibleComments` drops deleted comments, which arrive without `content` (S9)
+- [x] Gate passes: `npm test`
+- [x] Test count: 2995 + 9 = **3004** — **actual 3006** (2997 after T6, +9)
 
 **Tests**: unit
 **Gate**: quick
