@@ -287,13 +287,13 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] A selection from line 5 column 1 to line 6 column 13 becomes `{ 5, 1 }` → `{ 6, 13 }`
-- [ ] A selection after a two-byte character keeps character columns (S1's case: columns 34 → 39, never 35 → 40)
-- [ ] A selection made bottom-up is normalized to start ≤ end
-- [ ] `iterationContextFor(4)` returns `{ firstComparingIteration: 4, secondComparingIteration: 4 }`
-- [ ] Gate passes: `npm test`
-- [ ] Test count: 3004 + 5 = **3009**
-- [ ] Phase gate passes: `npx electron-vite build`
+- [x] A selection from line 5 column 1 to line 6 column 13 becomes `{ 5, 1 }` → `{ 6, 13 }`
+- [x] A selection after a two-byte character keeps character columns (S1's case: columns 34 → 39, never 35 → 40)
+- [x] A selection made bottom-up is normalized to start ≤ end
+- [x] `iterationContextFor(4)` returns `{ firstComparingIteration: 4, secondComparingIteration: 4 }`
+- [x] Gate passes: `npm test`
+- [x] Test count: 3004 + 5 = **3009** — **actual 3011** (3006 after T7, +5)
+- [x] Phase gate passes: `npx electron-vite build`
 
 **Tests**: unit
 **Gate**: quick

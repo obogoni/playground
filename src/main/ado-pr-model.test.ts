@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  anchorFromSelection,
   classifyThread,
+  iterationContextFor,
   pickRemoteRepos,
   sourceRemote,
   toChangedPaths,
@@ -292,5 +294,72 @@ describe('visibleComments (FPRA-21)', () => {
         at: Date.parse('2026-10-02T08:30:00Z')
       }
     ])
+  })
+})
+
+describe('anchorFromSelection (FPRA-27)', () => {
+  it("copies the selection's lines and columns across as the anchor", () => {
+    expect(
+      anchorFromSelection({
+        path: 'src/app.ts',
+        startLine: 5,
+        startColumn: 1,
+        endLine: 6,
+        endColumn: 13
+      })
+    ).toEqual({ path: 'src/app.ts', startLine: 5, startOffset: 1, endLine: 6, endOffset: 13 })
+  })
+
+  // S1: ADO counts characters, not bytes. After a two-byte `á` a word at
+  // characters 34..38 stays 34 → 39; a byte count would shift it to 35 → 40.
+  it('keeps character columns after a two-byte character', () => {
+    const line = 'Olá! ' + 'x'.repeat(28) + 'probe ok'
+    const startColumn = line.indexOf('probe') + 1
+    const endColumn = startColumn + 'probe'.length
+    expect([startColumn, endColumn]).toEqual([34, 39])
+
+    const anchor = anchorFromSelection({
+      path: 'probe.txt',
+      startLine: 3,
+      startColumn,
+      endLine: 3,
+      endColumn
+    })
+
+    expect([anchor.startOffset, anchor.endOffset]).toEqual([34, 39])
+  })
+
+  it('normalizes a selection made bottom-up across lines', () => {
+    expect(
+      anchorFromSelection({
+        path: 'src/app.ts',
+        startLine: 6,
+        startColumn: 13,
+        endLine: 5,
+        endColumn: 1
+      })
+    ).toEqual({ path: 'src/app.ts', startLine: 5, startOffset: 1, endLine: 6, endOffset: 13 })
+  })
+
+  it('normalizes a selection made right to left on one line', () => {
+    expect(
+      anchorFromSelection({
+        path: 'src/app.ts',
+        startLine: 4,
+        startColumn: 20,
+        endLine: 4,
+        endColumn: 3
+      })
+    ).toEqual({ path: 'src/app.ts', startLine: 4, startOffset: 3, endLine: 4, endOffset: 20 })
+  })
+})
+
+describe('iterationContextFor (FPRA-27)', () => {
+  // S2: threads made in ADO's whole-PR view compare the iteration on screen with itself.
+  it('compares the latest iteration with itself', () => {
+    expect(iterationContextFor(4)).toEqual({
+      firstComparingIteration: 4,
+      secondComparingIteration: 4
+    })
   })
 })

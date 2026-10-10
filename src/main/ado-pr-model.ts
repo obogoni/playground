@@ -1,4 +1,12 @@
-import type { PrComment, PrFile, PrTarget, PrThreadPlace, ReviewerState } from '../shared/files'
+import type {
+  Anchor,
+  PrComment,
+  PrFile,
+  PrSelection,
+  PrTarget,
+  PrThreadPlace,
+  ReviewerState
+} from '../shared/files'
 import type { ChangeStatus } from '../shared/worktrees'
 import { parseRemote } from './remote-url'
 
@@ -184,6 +192,41 @@ export function visibleComments(thread: AdoThread): PrComment[] {
       content: c.content ?? '',
       at: Date.parse(c.publishedDate)
     }))
+}
+
+/**
+ * A modified-side selection as the anchor of a new thread (FPRA-27). Monaco's
+ * columns are already ADO's offsets — 1-based UTF-16 characters, end
+ * exclusive (T1, S1) — so they are copied across unchanged; only a selection
+ * made bottom-up or right to left is turned around.
+ */
+export function anchorFromSelection(selection: PrSelection): Anchor {
+  const forward =
+    selection.startLine < selection.endLine ||
+    (selection.startLine === selection.endLine && selection.startColumn <= selection.endColumn)
+  return forward
+    ? {
+        path: selection.path,
+        startLine: selection.startLine,
+        startOffset: selection.startColumn,
+        endLine: selection.endLine,
+        endOffset: selection.endColumn
+      }
+    : {
+        path: selection.path,
+        startLine: selection.endLine,
+        startOffset: selection.endColumn,
+        endLine: selection.startLine,
+        endOffset: selection.startColumn
+      }
+}
+
+/** The iteration context of a thread started on the whole-PR view: the iteration with itself (T1, S2). */
+export function iterationContextFor(latest: number): {
+  firstComparingIteration: number
+  secondComparingIteration: number
+} {
+  return { firstComparingIteration: latest, secondComparingIteration: latest }
 }
 
 function isEmpty(start: AdoPosition, end: AdoPosition): boolean {
