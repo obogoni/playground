@@ -445,11 +445,11 @@ T24 → T26 → T27
 
 **Done when**:
 
-- [ ] Threads for other files are excluded; left and right placements go to their sides; zones sit after the thread's end line
-- [ ] Two threads on the same line produce two zones in publication order
-- [ ] The banner shows only when the latest iteration is newer than the one on screen
-- [ ] Gate passes: `npm test`
-- [ ] Test count: 3039 + 5 = **3044**
+- [x] Threads for other files are excluded; left and right placements go to their sides; zones sit after the thread's end line
+- [x] Two threads on the same line produce two zones in publication order
+- [x] The banner shows only when the latest iteration is newer than the one on screen
+- [x] Gate passes: `npm test`
+- [x] Test count: 3039 + 5 = **3044** — **actual 3048** (3043 after T13, +5)
 
 **Tests**: unit
 **Gate**: quick

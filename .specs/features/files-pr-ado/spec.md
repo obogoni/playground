@@ -245,7 +245,7 @@ so that I never answer a thread that has already moved on.
 | FPRA-31 | P2: Answer the review | Execute | Implementing |
 | FPRA-32 | P2: Answer the review | Execute | Implementing |
 | FPRA-33 | P2: Stay current | Design | Pending |
-| FPRA-34 | P2: Stay current | Design | Pending |
+| FPRA-34 | P2: Stay current | Execute | Implementing |
 | FPRA-35 | P2: Stay current | Design | Pending |
 | FPRA-36 | P3: Keep the gateway searchable | Done by #122 | Verified |
 

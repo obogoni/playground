@@ -2,7 +2,8 @@ import type { AdoThreadStatus, PrThreadView } from '../../../shared/files'
 
 /**
  * Pure decisions behind the Pull request mode's views (F4): which Overview
- * group a thread is listed in, and how a thread status reads.
+ * group a thread is listed in, how a thread status reads, where a thread is
+ * drawn in a diff, and when a newer iteration deserves a banner.
  */
 
 /** The Overview's thread groups (FPRA-11, 13, 19, 20). */
@@ -81,3 +82,37 @@ export const OFFERED_STATUSES: readonly Exclude<AdoThreadStatus, 'unknown'>[] = 
   'closed',
   'byDesign'
 ]
+
+/** One thread drawn in a PR diff: a view zone after `afterLine` on its side (FPRA-18). */
+export interface ThreadZone {
+  /** 1-based line the zone sits under: the thread's last line. */
+  afterLine: number
+  thread: PrThreadView
+}
+
+/**
+ * The threads one PR diff draws, per side (FPRA-18). Only threads placed in
+ * this file; each sits under its own last line, one zone per thread, so two
+ * threads on a line read in the order they were published. Resolved threads
+ * are drawn too, collapsed by the thread itself (FPRA-20).
+ */
+export function zonesForFile(
+  threads: PrThreadView[],
+  path: string
+): { left: ThreadZone[]; right: ThreadZone[] } {
+  const zones: { left: ThreadZone[]; right: ThreadZone[] } = { left: [], right: [] }
+  for (const thread of threads) {
+    if (thread.place.kind !== 'placed' || thread.place.path !== path) continue
+    zones[thread.place.side].push({ afterLine: thread.place.endLine, thread })
+  }
+  return zones
+}
+
+/**
+ * Whether a reload found an iteration newer than the one the open diffs show,
+ * so the view offers to reload them (FPRA-34). Nothing on screen yet is no
+ * reason for a banner.
+ */
+export function newIterationBanner(onScreen: number | null, latest: number): boolean {
+  return onScreen !== null && latest > onScreen
+}
