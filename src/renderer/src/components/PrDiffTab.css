@@ -45,3 +45,8 @@
   font-size: 12px;
   font-weight: 600;
 }
+
+.pr-diff-comment:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

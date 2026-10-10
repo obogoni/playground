@@ -138,12 +138,21 @@ export function PrDiffTab({
           </button>
         </div>
       )}
-      {ours && selection !== null && draft === null && (
+      {/* Always mounted: a bar that appeared with the selection pushed the
+          editor down mid-drag, so the drag ended on another line (T27). */}
+      {ours && (
         <div className="pr-diff-comment-bar">
-          <button type="button" className="pr-diff-comment" onClick={comment}>
+          <button
+            type="button"
+            className="pr-diff-comment"
+            onClick={comment}
+            disabled={selection === null || draft !== null}
+          >
             Comment
           </button>
-          <span>on {lines}</span>
+          <span>
+            {selection === null ? 'Select lines on the right side to comment' : `on ${lines}`}
+          </span>
         </div>
       )}
       <div className="pr-diff-body">
