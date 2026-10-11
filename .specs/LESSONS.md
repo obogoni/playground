@@ -810,6 +810,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: SPRL-02 and FPRG-26 (G4) (spec)
 - last seen: 2026-10-10T22:23:00Z
 
+### L-139 - When a fix holds a value until an event and then releases it, test the release in a state where held and released values differ - a check whose held and final values coincide cannot see a lost release path.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/renderer/src/components` · harmful: 0
+- features: files-stack-steady-neighbours
+- evidence: B2 src/renderer/src/components/DiffViewer.tsx:354 (measure() after applyFolds removed; smoke 18a/18b still 2/2) (src/renderer/src/components)
+- last seen: 2026-10-11T14:12:43Z
+
+### L-140 - When a target is read from a bench that aggregates over rows, word the AC and Success Criteria the same way (aggregate vs every row) - per-row ratios jitter across time buckets.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `.specs/features` · harmful: 0
+- features: files-stack-steady-neighbours
+- evidence: FSTD-06 vs Success Criteria 'every steady row' (row 3 = 119/59 = 2.017; bench aggregate 2.00) (.specs/features)
+- last seen: 2026-10-11T14:12:43Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

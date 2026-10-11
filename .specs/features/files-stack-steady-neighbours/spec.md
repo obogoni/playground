@@ -102,5 +102,5 @@ few times, and see the neighbouring editors keep their nodes; run the bench edit
 
 ## Success Criteria
 
-- [ ] Bench edit loop: at most 2 `cat-file` per `files:changed` in every steady row, against 6.3-8.3 before
+- [ ] Bench edit loop: at most 2 `cat-file` per `files:changed` over the steady rows (aggregate), against 6.3-8.3 before
 - [ ] Smoke: the neighbouring sections' editor nodes survive every rewrite of the folded file

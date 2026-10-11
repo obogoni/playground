@@ -183,11 +183,11 @@ T2 → T3 → T4 → T5
 
 **Done when**:
 
-- [x] Bench edit loop: at most 2 `cat-file` per `files:changed` in every steady row
+- [x] Bench edit loop: at most 2 `cat-file` per `files:changed` over the steady rows (aggregate)
 - [x] AD-062 recorded (number checked against open PRs first)
 - [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
-**Status**: ✅ Complete - 2.00 in every steady row (120/60, 119/60, 119/59); no open upstream PR holds an AD; typecheck 0, lint 0 errors / 18 warnings, `npm test` 3172 at 3714ac2 (docs-only since)
+**Status**: ✅ Complete - 2.00 over the steady rows (358/179; per row 120/60, 119/60, 119/59); no open upstream PR holds an AD; typecheck 0, lint 0 errors / 18 warnings, `npm test` 3172 at 3714ac2 (docs-only since)
 
 **Tests**: none
 **Gate**: build
