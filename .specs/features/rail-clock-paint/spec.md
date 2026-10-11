@@ -85,9 +85,9 @@ change at a fractional device pixel ratio, next to the loader's composited layer
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| RCLK-01 | P1: Measure | Execute | Pending |
-| RCLK-02 | P1: Measure | Execute | Pending |
-| RCLK-03 | P1: Measure | Execute | Pending |
+| RCLK-01 | P1: Measure | Execute | Implementing |
+| RCLK-02 | P1: Measure | Execute | Implementing |
+| RCLK-03 | P1: Measure | Execute | Implementing |
 | RCLK-04 | P1: Measure | Execute | Pending |
 | RCLK-05 | P1: Repaint | Execute | Pending |
 | RCLK-06 | P1: Repaint | Execute | Pending |
