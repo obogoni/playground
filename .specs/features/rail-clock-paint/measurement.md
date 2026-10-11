@@ -60,3 +60,31 @@ RCLK-01 asked for 3 minutes at scales 1, 1.25 and 1.5 with Paint flashing and La
 and the screen was captured only at 1.25, for 22 minutes. Reason: the defect lives on the presented screen,
 which CDP cannot see, and the only screen available is the owner's single 1.25 monitor. A forced scale on
 that monitor would not be the presentation the report came from.
+
+## 3. Controlled probe: the raster is clean (`scripts/probe-rail-clock-glyphs.mjs`)
+
+A throwaway app at 1.25, a real `working` row, the live clock hidden and a static copy in its place (same
+class, same box). For each value, a CDP screenshot of the band between 4 px above the box and the ink top
+(63x9 device px) is decoded in the page, and the pixels straying from their row's median are counted.
+
+| Run | Values | With a stray pixel |
+| --- | ------ | ------------------ |
+| No change | 378: `01:27:00`-`01:27:59`, `01:31:00`-`01:31:59`, and 00-99 at each digit pair | **0** |
+| Control: a 3x1 px black block drawn as the copy's background at (30, 1) | 378 | **378**, found at band row 6 |
+
+The detector finds a 3x1 block every time, and finds nothing on any real value. Chromium rasterises every
+value cleanly, including the two that showed the dash on screen.
+
+## Cause and decision
+
+- **Cause:** the dash is a defect of the **presented** screen, not of what the app or Chromium draws. It
+  shows only on screen, in alternate frames. That is the signature of a two-buffer swap chain with partial
+  presents keeping a stale pixel in one buffer. Inferred from the pattern, not proven.
+- **GPU** (`SystemInfo.getInfo`): Intel Arc 130T, driver 32.0.101.8132, DirectComposition on, overlays
+  supported (BGRA8 overlay: scaling).
+- **Overturned:** stale invalidation (section 1); ink outside the box (section 1); glyph rasterisation at
+  13.125 px (this section).
+- **Decision (owner, 2026-10-11):** document and stop. No CSS change has a proven target, since the raster is
+  already clean. A Chromium switch such as `--disable-direct-composition` would change the GPU path for the
+  whole app, with no certainty it is the right one. RCLK-05..10 (repaint the clock cleanly) are not
+  implemented. #173 stays open as a presentation defect outside the app's code.

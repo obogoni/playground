@@ -88,13 +88,13 @@ change at a fractional device pixel ratio, next to the loader's composited layer
 | RCLK-01 | P1: Measure | Execute | Implementing |
 | RCLK-02 | P1: Measure | Execute | Implementing |
 | RCLK-03 | P1: Measure | Execute | Implementing |
-| RCLK-04 | P1: Measure | Execute | Pending |
-| RCLK-05 | P1: Repaint | Execute | Pending |
-| RCLK-06 | P1: Repaint | Execute | Pending |
-| RCLK-07 | P1: Repaint | Execute | Pending |
-| RCLK-08 | P1: Repaint | Execute | Pending |
-| RCLK-09 | Edge cases | Execute | Pending |
-| RCLK-10 | Edge cases | Execute | Pending |
+| RCLK-04 | P1: Measure | Execute | Implementing |
+| RCLK-05 | P1: Repaint | - | Not implemented: raster clean, presentation defect (measurement.md) |
+| RCLK-06 | P1: Repaint | - | Not implemented: raster clean, presentation defect (measurement.md) |
+| RCLK-07 | P1: Repaint | - | Not implemented: raster clean, presentation defect (measurement.md) |
+| RCLK-08 | P1: Repaint | - | Not implemented: raster clean, presentation defect (measurement.md) |
+| RCLK-09 | Edge cases | - | Not implemented: raster clean, presentation defect (measurement.md) |
+| RCLK-10 | Edge cases | - | Not implemented: raster clean, presentation defect (measurement.md) |
 
 **Coverage:** 10 total, 10 mapped to the inline steps, 0 unmapped.
 
