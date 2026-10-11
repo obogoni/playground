@@ -23,6 +23,9 @@
  * SMOKE_ONLY=watch on step 2 runs the watch section alone (checks 15a..15c,
  * FWIG-14, 43..45, issue #150), from a fresh seed and launch like any drive.
  *
+ * SMOKE_ONLY=folders on step 2 runs section 17 alone (checks 17a..17i, FDCL,
+ * issue #172), from a fresh seed and launch like any drive.
+ *
  * Point SMOKE_CONFIG at the config.json of the userData dir in use, and
  * SMOKE_BASE at the folder to seed into. Run the app with --user-data-dir so
  * the owner's real workspaces, sessions and pinned tasks are never in scope.
@@ -551,6 +554,15 @@ async function drive() {
     return failed.length
   }
 
+  // SMOKE_ONLY=folders runs section 17 alone; it builds its own fixture.
+  if (process.env.SMOKE_ONLY === 'folders') {
+    await folderFoldSection(ws)
+    const failed = checks.filter((c) => !c.ok)
+    console.log(`\n${checks.length - failed.length}/${checks.length} checks passed (folders only)`)
+    ws.close()
+    return failed.length
+  }
+
   // SMOKE_ONLY=fold runs section 14 alone, for iterating on it; the full drive
   // still runs before a PR.
   if (process.env.SMOKE_ONLY === 'fold') {
@@ -1018,6 +1030,9 @@ async function drive() {
   // After the discard section and before the icon checks: its fixture is
   // ignored, its control file is removed, and the exclude file is restored.
   await watchSection(ws)
+
+  // Before the icon checks, which reload the window and with it the folds.
+  await folderFoldSection(ws)
 
   await iconChecks(ws)
 
@@ -3887,6 +3902,205 @@ async function watchSection(ws) {
     rmSync(controlPath, { force: true })
     if (excludeBefore === null) rmSync(exclude, { force: true })
     else writeFileSync(exclude, excludeBefore)
+  }
+}
+
+/* ---------------------------------------------------------- folder folds -- */
+
+/** The staged tree section 17 folds: a file and a subfolder of two files. */
+const FDCL_DIR = 'fdcl-fold'
+const FDCL_INNER = `${FDCL_DIR}/inner`
+/** A folder staged after the folds, to see that a new folder starts open. */
+const FDCL_NEW = 'fdcl-new'
+/** `rotate(-90deg)` as computed: the Folder mode's closed chevron, pointing right. */
+const CHEVRON_RIGHT = 'matrix(0, -1, 1, 0, 0, 0)'
+
+const changedRowPaths = `[...document.querySelectorAll('.file-tree-body .file-tree-row')].map((r) => r.getAttribute('title'))`
+const launcherTitle = `document.querySelector('.file-tabs-launcher')?.getAttribute('title') ?? null`
+
+/** The chevron button of the changed row whose path is `path`. */
+const chevronOf = (path) => `
+  [...document.querySelectorAll('.file-tree-body .file-tree-row')]
+    .find((r) => r.getAttribute('title') === ${J(path)})
+    ?.querySelector('button.file-tree-chevron')`
+
+/** What a folder row's chevron says: its aria-expanded, its open class and its drawn transform. */
+const chevronState = (path) => `
+  (() => {
+    const c = ${chevronOf(path)}
+    if (!c) return null
+    return { expanded: c.getAttribute('aria-expanded'), open: c.classList.contains('open'), transform: getComputedStyle(c).transform }
+  })()`
+
+const clickChevron = (path) => `(() => { const c = ${chevronOf(path)}; c?.click(); return !!c })()`
+
+/** The rows under `dir`, in the order drawn. */
+const under = (rows, dir) => rows.filter((p) => (p ?? '').startsWith(`${dir}/`))
+
+/**
+ * 17. Folding a diff mode's folders from the chevron (FDCL, issue #172).
+ * Builds its own staged fixture, which git lists file by file, unlike an
+ * untracked folder, and leaves the index and the disk as it found them. The
+ * Pull request mode draws the same rows from its provider's list; it has no
+ * fixture here, so it is a hand check.
+ */
+async function folderFoldSection(ws) {
+  const dir = join(REPO, FDCL_DIR)
+  const fresh = join(REPO, FDCL_NEW)
+  try {
+    mkdirSync(join(dir, 'inner'), { recursive: true })
+    writeFileSync(join(dir, 'top.txt'), `top${LF}`)
+    writeFileSync(join(dir, 'inner', 'a.txt'), `a${LF}`)
+    writeFileSync(join(dir, 'inner', 'b.txt'), `b${LF}`)
+    git(['add', '--', FDCL_DIR])
+
+    await evaluate(ws, clickByText('.file-tree-mode', 'Uncommitted'))
+    await sleep(1200)
+    const start = await readWhen(ws, changedRowPaths, (rows) =>
+      rows.includes(`${FDCL_INNER}/b.txt`)
+    )
+    const startState = await evaluate(ws, chevronState(FDCL_DIR))
+    check(
+      '17a. Every folder starts open, its chevron a button with aria-expanded="true" (FDCL-06, 07)',
+      J(under(start, FDCL_DIR)) ===
+        J([FDCL_INNER, `${FDCL_INNER}/a.txt`, `${FDCL_INNER}/b.txt`, `${FDCL_DIR}/top.txt`]) &&
+        startState?.expanded === 'true' &&
+        startState.open &&
+        startState.transform === 'none',
+      `${J(under(start, FDCL_DIR))}; ${J(startState)}`
+    )
+
+    // A known launcher target first, so the chevron's click can be seen to leave it.
+    await evaluate(ws, clickByText('.file-tree-name', 'top.txt'))
+    await sleep(600)
+    const targetBefore = await evaluate(ws, launcherTitle)
+
+    await evaluate(ws, clickChevron(FDCL_INNER))
+    const innerFolded = await readWhen(
+      ws,
+      changedRowPaths,
+      (rows) => !rows.includes(`${FDCL_INNER}/a.txt`)
+    )
+    const targetAfter = await evaluate(ws, launcherTitle)
+    check(
+      '17b. The chevron folds its folder and leaves the launcher target as it was (FDCL-01, 03)',
+      J(under(innerFolded, FDCL_DIR)) === J([FDCL_INNER, `${FDCL_DIR}/top.txt`]) &&
+        targetBefore !== null &&
+        targetBefore === targetAfter,
+      `${J(under(innerFolded, FDCL_DIR))}; target ${targetBefore} -> ${targetAfter}`
+    )
+
+    await evaluate(ws, clickChevron(FDCL_DIR))
+    const parentFolded = await readWhen(
+      ws,
+      changedRowPaths,
+      (rows) => under(rows, FDCL_DIR).length === 0
+    )
+    // Past the chevron's 0.12 s turn, so the drawn transform is where it lands.
+    await sleep(400)
+    const foldedState = await evaluate(ws, chevronState(FDCL_DIR))
+    check(
+      '17c. A folded folder keeps its row, its chevron turned to point right and aria-expanded="false" (FDCL-01, 05, 06)',
+      parentFolded.includes(FDCL_DIR) &&
+        under(parentFolded, FDCL_DIR).length === 0 &&
+        foldedState?.expanded === 'false' &&
+        !foldedState.open &&
+        foldedState.transform === CHEVRON_RIGHT,
+      `${J(under(parentFolded, FDCL_DIR))}; ${J(foldedState)}`
+    )
+
+    // A name click picks the folder for the launchers and does not unfold it.
+    await evaluate(ws, clickByText('.file-tree-name', FDCL_DIR))
+    await sleep(600)
+    const picked = await evaluate(ws, launcherTitle)
+    const stillFolded = await evaluate(ws, changedRowPaths)
+    check(
+      '17d. A name click picks the folder for the launchers and leaves it folded (FDCL-04)',
+      (picked ?? '').replaceAll('\\', '/').endsWith(`/${FDCL_DIR}`) &&
+        under(stillFolded, FDCL_DIR).length === 0,
+      `target ${picked}; ${J(under(stillFolded, FDCL_DIR))}`
+    )
+
+    // The hover undo of a folded folder still offers every file under it.
+    await evaluate(
+      ws,
+      `(() => {
+        const row = [...document.querySelectorAll('.file-tree-body .file-tree-row')]
+          .find((r) => r.getAttribute('title') === ${J(FDCL_DIR)})
+        row?.querySelector('.file-tree-discard')?.click()
+        return !!row
+      })()`
+    )
+    const dialog = await readWhen(ws, discardDialog, (d) => d !== null)
+    check(
+      '17e. A folded folder keeps its discard, acting on every file under it (FDCL-14)',
+      J([...(dialog?.rows ?? [])].sort()) ===
+        J([`${FDCL_INNER}/a.txt`, `${FDCL_INNER}/b.txt`, `${FDCL_DIR}/top.txt`]),
+      J(dialog?.rows ?? null)
+    )
+    if (dialog) await cancelDiscard(ws)
+
+    // A re-list: staging a new folder changes the index, and the list follows.
+    mkdirSync(fresh, { recursive: true })
+    writeFileSync(join(fresh, 'n.txt'), `n${LF}`)
+    git(['add', '--', FDCL_NEW])
+    const relisted = await readWhen(ws, changedRowPaths, (rows) =>
+      rows.includes(`${FDCL_NEW}/n.txt`)
+    )
+    const freshState = await evaluate(ws, chevronState(FDCL_NEW))
+    check(
+      '17f. A re-list keeps the folds, and a folder new to the list starts open (FDCL-08, 10)',
+      relisted.includes(`${FDCL_NEW}/n.txt`) &&
+        under(relisted, FDCL_DIR).length === 0 &&
+        freshState?.expanded === 'true',
+      `${J(under(relisted, FDCL_DIR))}; ${FDCL_NEW} ${J(freshState)}`
+    )
+
+    // Away to another mode and back.
+    await evaluate(ws, clickByText('.file-tree-mode', 'Diff to origin'))
+    await sleep(1600)
+    await evaluate(ws, clickByText('.file-tree-mode', 'Uncommitted'))
+    await sleep(1200)
+    const back = await readWhen(ws, changedRowPaths, (rows) => rows.includes(FDCL_DIR))
+    check(
+      '17g. A fold survives a switch to another mode and back (FDCL-09)',
+      back.includes(FDCL_DIR) && under(back, FDCL_DIR).length === 0,
+      J(under(back, FDCL_DIR))
+    )
+
+    // Unfolding the parent restores the subfolder as it was left: still folded.
+    await evaluate(ws, clickChevron(FDCL_DIR))
+    const reopened = await readWhen(ws, changedRowPaths, (rows) =>
+      rows.includes(`${FDCL_DIR}/top.txt`)
+    )
+    check(
+      '17h. Unfolding a parent keeps the subfolder folded before it folded (FDCL-02, 11)',
+      J(under(reopened, FDCL_DIR)) === J([FDCL_INNER, `${FDCL_DIR}/top.txt`]),
+      J(under(reopened, FDCL_DIR))
+    )
+
+    // One set for the three diff modes: src folded in Diff to origin is folded here too.
+    await evaluate(ws, clickByText('.file-tree-mode', 'Diff to origin'))
+    await sleep(1600)
+    await readWhen(ws, changedRowPaths, (rows) => rows.includes('src'))
+    await evaluate(ws, clickChevron('src'))
+    await sleep(400)
+    await evaluate(ws, clickByText('.file-tree-mode', 'Uncommitted'))
+    await sleep(1200)
+    const shared = await readWhen(ws, changedRowPaths, (rows) => rows.includes('src'))
+    const srcState = await evaluate(ws, chevronState('src'))
+    check(
+      '17i. A folder folded in one diff mode is folded in the others (FDCL-12)',
+      shared.includes('src') && under(shared, 'src').length === 0 && srcState?.expanded === 'false',
+      `${J(under(shared, 'src'))}; ${J(srcState)}`
+    )
+    await evaluate(ws, clickChevron('src'))
+    await evaluate(ws, clickChevron(FDCL_INNER))
+    await sleep(400)
+  } finally {
+    git(['reset', '-q', '--', FDCL_DIR, FDCL_NEW])
+    rmTree(dir)
+    rmTree(fresh)
   }
 }
 

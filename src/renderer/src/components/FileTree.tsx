@@ -6,7 +6,7 @@ import { api } from '../lib/api'
 import { CommitList } from './CommitList'
 import { changeStatusView } from '../lib/change-status'
 import { entriesUnder, entryForRow } from '../lib/discard-view'
-import { buildTree, isSolution, type TreeNode } from '../lib/files-view'
+import { buildTree, foldTree, isSolution, type TreeNode } from '../lib/files-view'
 import { absoluteIn, type UseFiles } from '../lib/use-files'
 import { FileIcon } from './FileIcon'
 import { Icon } from './Icon'
@@ -137,13 +137,18 @@ interface ChangedRowsProps {
   depth: number
   onFile: (path: string, status: ChangeStatus) => void
   onFolder: (path: string) => void
+  /** Folders the user folded; `nodes` already comes through `foldTree` (FDCL-01). */
+  collapsed: string[]
+  onToggle: (path: string) => void
   discard?: RowDiscard
 }
 
 /**
  * The nesting `buildTree` derives from a diff mode's flat list (FXPL-08/12).
- * The folders are invented by the nesting rather than listed, so they are drawn
- * open: there is nothing further to fetch for them.
+ * The folders are invented by the nesting rather than listed, so there is
+ * nothing to fetch when one opens: folding only hides rows already in memory.
+ * The chevron is its own button, so folding leaves the launcher target alone;
+ * the rest of the row still picks the folder for the launchers (FDCL-03/04).
  *
  * A row is a container, so the discard control can sit beside the part that
  * opens it: a button inside a button is invalid HTML. The container takes the
@@ -155,7 +160,15 @@ interface ChangedRowsProps {
  * which is the structure #131's column checks measure (three children, the
  * name's space read from its parent's box).
  */
-function ChangedRows({ nodes, depth, onFile, onFolder, discard }: ChangedRowsProps): JSX.Element {
+function ChangedRows({
+  nodes,
+  depth,
+  onFile,
+  onFolder,
+  collapsed,
+  onToggle,
+  discard
+}: ChangedRowsProps): JSX.Element {
   return (
     <>
       {nodes.map((node) =>
@@ -189,10 +202,19 @@ function ChangedRows({ nodes, depth, onFile, onFolder, discard }: ChangedRowsPro
               onClick={() => onFolder(node.path)}
               onContextMenu={discard ? (event) => discard.menu(event, node) : undefined}
             >
-              <span className="file-tree-chevron open">
+              <button
+                type="button"
+                className={`file-tree-chevron${collapsed.includes(node.path) ? '' : ' open'}`}
+                aria-expanded={!collapsed.includes(node.path)}
+                aria-label={`${collapsed.includes(node.path) ? 'Expand' : 'Collapse'} ${node.name}`}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onToggle(node.path)
+                }}
+              >
                 <Icon name="chevron-down" size={13} />
-              </span>
-              <FileIcon name={node.name} kind="folder" open />
+              </button>
+              <FileIcon name={node.name} kind="folder" open={!collapsed.includes(node.path)} />
               <button type="button" className="file-tree-name file-tree-open">
                 {node.name}
               </button>
@@ -207,6 +229,8 @@ function ChangedRows({ nodes, depth, onFile, onFolder, discard }: ChangedRowsPro
               depth={depth + 1}
               onFile={onFile}
               onFolder={onFolder}
+              collapsed={collapsed}
+              onToggle={onToggle}
               discard={discard}
             />
           </div>
@@ -418,10 +442,12 @@ export function FileTree({ worktreePath, files, onToast, onDiscard }: FileTreePr
             <div className="file-tree-note">No uncommitted changes.</div>
           ) : (
             <ChangedRows
-              nodes={buildTree(files.uncommitted)}
+              nodes={foldTree(buildTree(files.uncommitted), files.collapsed)}
               depth={0}
               onFile={openFile}
               onFolder={files.selectFolder}
+              collapsed={files.collapsed}
+              onToggle={files.toggleCollapsed}
               discard={rowDiscard}
             />
           )
@@ -475,10 +501,12 @@ function PullRequestFiles({
   }
   const rows = (
     <ChangedRows
-      nodes={buildTree(detail.files)}
+      nodes={foldTree(buildTree(detail.files), files.collapsed)}
       depth={0}
       onFile={onFile}
       onFolder={files.selectFolder}
+      collapsed={files.collapsed}
+      onToggle={files.toggleCollapsed}
     />
   )
   // GitHub lists at most 3000 files of a pull request (edge case).
@@ -531,10 +559,12 @@ function SinceBase({
   }
   return (
     <ChangedRows
-      nodes={buildTree(changed.files)}
+      nodes={foldTree(buildTree(changed.files), files.collapsed)}
       depth={0}
       onFile={onFile}
       onFolder={files.selectFolder}
+      collapsed={files.collapsed}
+      onToggle={files.toggleCollapsed}
     />
   )
 }

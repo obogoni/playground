@@ -7,6 +7,7 @@ import {
   bumpRevisions,
   fileType,
   filesStateFor,
+  foldTree,
   formatSize,
   isSolution,
   keepUnchanged,
@@ -16,7 +17,8 @@ import {
   tabsAffected,
   tabsAfterBulkClose,
   tabsAfterClose,
-  unpinTab
+  unpinTab,
+  type TreeNode
 } from './files-view'
 
 function ui(files?: AppConfig['ui']['files']): AppConfig['ui'] {
@@ -59,6 +61,81 @@ describe('buildTree', () => {
     const tree = buildTree([changed('Beta.ts'), changed('alpha.ts'), changed('Charlie.ts')])
 
     expect(tree.map((node) => node.name)).toEqual(['alpha.ts', 'Beta.ts', 'Charlie.ts'])
+  })
+})
+
+/** Every row the tree draws, depth first, as the changed rows render it. */
+function rows(nodes: TreeNode[]): string[] {
+  return nodes.flatMap((node) => [node.path, ...(node.kind === 'dir' ? rows(node.children) : [])])
+}
+
+describe('foldTree', () => {
+  const tree = buildTree([
+    changed('src/app/main.ts'),
+    changed('src/app/views/list.tsx'),
+    changed('src/lib/util.ts'),
+    changed('readme.md')
+  ])
+  const all = [
+    'src',
+    'src/app',
+    'src/app/views',
+    'src/app/views/list.tsx',
+    'src/app/main.ts',
+    'src/lib',
+    'src/lib/util.ts',
+    'readme.md'
+  ]
+
+  it('draws every folder open when nothing is folded (FDCL-07)', () => {
+    expect(rows(foldTree(tree, []))).toEqual(all)
+  })
+
+  it('hides every row under a folded folder and keeps the folder row (FDCL-01)', () => {
+    expect(rows(foldTree(tree, ['src/app']))).toEqual([
+      'src',
+      'src/app',
+      'src/lib',
+      'src/lib/util.ts',
+      'readme.md'
+    ])
+  })
+
+  it('shows the children again once the folder leaves the folded set (FDCL-02)', () => {
+    const folded = ['src/app']
+
+    expect(rows(foldTree(tree, folded))).not.toContain('src/app/main.ts')
+    expect(
+      rows(
+        foldTree(
+          tree,
+          folded.filter((dir) => dir !== 'src/app')
+        )
+      )
+    ).toEqual(all)
+  })
+
+  it('keeps a subfolder folded when its parent opens again (FDCL-11)', () => {
+    expect(rows(foldTree(tree, ['src', 'src/app/views']))).toEqual(['src', 'readme.md'])
+    expect(rows(foldTree(tree, ['src/app/views']))).toEqual([
+      'src',
+      'src/app',
+      'src/app/views',
+      'src/app/main.ts',
+      'src/lib',
+      'src/lib/util.ts',
+      'readme.md'
+    ])
+  })
+
+  it('ignores a folded path that is not in the tree (FDCL-13)', () => {
+    expect(rows(foldTree(tree, ['gone', 'src/app/missing']))).toEqual(all)
+  })
+
+  it('draws only the folder row when a folded folder holds every change (FDCL-15)', () => {
+    expect(rows(foldTree(buildTree([changed('a/b.ts'), changed('a/c/d.ts')]), ['a']))).toEqual([
+      'a'
+    ])
   })
 })
 
