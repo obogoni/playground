@@ -91,12 +91,12 @@ few times, and see the neighbouring editors keep their nodes; run the bench edit
 | FSTD-03 | P1: AC 3 (release after folds) | Execute | Implementing (T4) |
 | FSTD-04 | P1: AC 4 (no hold otherwise) | Execute | Implementing (T2 rule, T4 wired) |
 | FSTD-05 | P1: AC 5 (neighbour keeps node) | Execute | Implementing (T3 smoke, T4) |
-| FSTD-06 | P1: AC 6 (bench target) | Tasks | Pending |
+| FSTD-06 | P1: AC 6 (bench target) | Execute | Implementing (T5: 2.00) |
 | FSTD-07 | Edge: no computed diff | Execute | Implementing (T2 rule, T4 wired) |
 | FSTD-08 | Edge: text unchanged | Execute | Implementing (T4: no reading, no hold) |
 | FSTD-09 | Edge: second re-read while pending | Execute | Implementing (T2 rule, T4 wired) |
 
-**Coverage:** 9 total, 9 mapped to tasks, 0 unmapped
+**Coverage:** 9 total, 9 mapped to tasks, 0 unmapped (awaiting Verifier)
 
 ---
 

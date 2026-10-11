@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/files-stack-steady-neighbours/spec.md`
 **Design**: inline (no `design.md`): one pure rule in `diff-view.ts`, applied in `DiffViewer`'s `measure`
-**Status**: In Progress
+**Status**: Done
 
 ---
 
@@ -183,9 +183,11 @@ T2 → T3 → T4 → T5
 
 **Done when**:
 
-- [ ] Bench edit loop: at most 2 `cat-file` per `files:changed` in every steady row
-- [ ] AD-062 recorded (number checked against open PRs first)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Bench edit loop: at most 2 `cat-file` per `files:changed` in every steady row
+- [x] AD-062 recorded (number checked against open PRs first)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Status**: ✅ Complete - 2.00 in every steady row (120/60, 119/60, 119/59); no open upstream PR holds an AD; typecheck 0, lint 0 errors / 18 warnings, `npm test` 3172 at 3714ac2 (docs-only since)
 
 **Tests**: none
 **Gate**: build

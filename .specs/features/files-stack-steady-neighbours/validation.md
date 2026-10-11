@@ -79,3 +79,32 @@ Same procedure on a build that includes T4, fresh seed and launch each time.
   151 px, final 151 px.
 - Full drive: **125/125 PASS**, 18a and 18b among them (182 px folded, max 182, final 182 in that state
   of the stack); `--after-restart`: 1/1 PASS.
+
+### After (T5), commit 3714ac2
+
+Same bench and probe as T1, on a build of `3714ac2` (clean tree). Window 1306 x 823, same stack layout
+at attach.
+
+**Verdict: target met.** The written section never left 180 px, no editor was added or removed in the
+stack, and the bench reads 2.00 `cat-file` per `files:changed`.
+
+| Measure | Before (337ae6e) | After (3714ac2) |
+| ------- | ---------------- | --------------- |
+| Written section heights in 150 s | 180 and 503, 150 rises | 180 only, 0 rises |
+| Neighbour editors removed / added in 150 s | `f0002` 150 / 149, `f0003` 161 / 160 | 0 / 0 |
+| Steady `files:changed` per minute | 59-60 | 59-60 |
+| Steady git processes per minute | 540-542 | 297-300 |
+| Steady `cat-file` per minute | 360-364 | 119-120 |
+| `cat-file` per `files:changed` (target <= 2) | 6.07 FAIL | **2.00 PASS** |
+
+**Bench, files block (after).**
+
+| Phase | `files:changed` | git n | `cat-file` | `wt:status` |
+| ----- | --------------- | ----- | ---------- | ----------- |
+| steady 1 | 60 | 300 | 120 | 0 |
+| steady 2 | 60 | 298 | 119 | 0 |
+| steady 3 | 59 | 297 | 119 | 0 |
+
+The re-reads still happen: 120 `cat-file` over 60 batches is the written file's two reads per batch
+(FWIG-25), which is what the target allows. "No overlapping git on one worktree" still reads 3, FAIL,
+as before; it is #147's and out of scope here.
