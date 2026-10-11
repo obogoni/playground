@@ -69,3 +69,13 @@ before T4: **0/2, both seen failing.**
   (the long untracked name) was removed 3 times, once per rewrite, and its node replaced.
 - 18b FAIL: the written section measured 151 px folded and reached 3875 px during a re-read (the
   200-line file with every region revealed), then settled back at 151 px.
+
+### Smoke after the fix (T4)
+
+Same procedure on a build that includes T4, fresh seed and launch each time.
+
+- `SMOKE_ONLY=steady`: **2/2 PASS**. 18a: re-read landed, 3/3 editors below `fold/long.ts` kept their
+  node (the long untracked name, `crlf.txt`, `untracked.txt`), 0 removals. 18b: 151 px folded, max
+  151 px, final 151 px.
+- Full drive: **125/125 PASS**, 18a and 18b among them (182 px folded, max 182, final 182 in that state
+  of the stack); `--after-restart`: 1/1 PASS.

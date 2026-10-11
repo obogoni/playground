@@ -7,6 +7,7 @@ import {
   eolStripText,
   foldPlan,
   readingBeforeUpdate,
+  reportedHeight,
   UNCHANGED_REGIONS,
   unchangedRegions,
   type LineSpan,
@@ -312,6 +313,20 @@ export function DiffViewer({
     }
     let announced = false
 
+    let reported: number | null = null
+    const measure = (): void => {
+      if (!live.current.fitContent) return
+      // The two inner editors report different counts (spike finding 4), and
+      // a section has to hold whichever side is taller.
+      const tallest = Math.max(
+        editor.getOriginalEditor().getContentHeight(),
+        editor.getModifiedEditor().getContentHeight()
+      )
+      reported = reportedHeight(tallest, reported, pendingRef.current)
+      setHeight(reported)
+      live.current.onHeight?.(reported)
+    }
+
     const disposables: monaco.IDisposable[] = []
     disposables.push(
       editor.onDidUpdateDiff(() => {
@@ -334,6 +349,9 @@ export function DiffViewer({
             editor.getModifiedEditor().setScrollTop(pendingScrollRef.current)
           }
           pendingScrollRef.current = null
+          // The folds may leave the content as tall as the height held while
+          // they were pending, and then no size change reports the release.
+          measure()
         } else if (!announced && choice) {
           // An editor mounted after a press opens in that choice: a section
           // scrolled into view, expanded, or remounted (FOLD-14, FOLD-23).
@@ -387,16 +405,6 @@ export function DiffViewer({
       )
     }
     if (live.current.fitContent) {
-      const measure = (): void => {
-        // The two inner editors report different counts (spike finding 4), and
-        // a section has to hold whichever side is taller.
-        const tallest = Math.max(
-          editor.getOriginalEditor().getContentHeight(),
-          editor.getModifiedEditor().getContentHeight()
-        )
-        setHeight(tallest)
-        live.current.onHeight?.(tallest)
-      }
       disposables.push(editor.getOriginalEditor().onDidContentSizeChange(measure))
       disposables.push(editor.getModifiedEditor().onDidContentSizeChange(measure))
       measure()

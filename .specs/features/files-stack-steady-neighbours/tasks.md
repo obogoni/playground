@@ -155,9 +155,11 @@ T2 → T3 → T4 → T5
 
 **Done when**:
 
-- [ ] T3's smoke checks pass on a fresh build, and the full Files diff smoke still passes
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: same as after T2
+- [x] T3's smoke checks pass on a fresh build, and the full Files diff smoke still passes
+- [x] Gate check passes: `npm test`
+- [x] Test count: same as after T2
+
+**Status**: ✅ Complete - steady 2/2, full drive 125/125, after-restart 1/1; `npm test` 3172 passed
 
 **Tests**: e2e
 **Gate**: full
