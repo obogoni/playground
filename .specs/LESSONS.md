@@ -822,6 +822,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: FSTD-06 vs Success Criteria 'every steady row' (row 3 = 119/59 = 2.017; bench aggregate 2.00) (.specs/features)
 - last seen: 2026-10-11T14:12:43Z
 
+### L-141 - When a rule holds a prior value, test it with the new value both above and below the held one - a min or max mutant passes tests that only move one way.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/renderer/src/lib` · harmful: 0
+- features: files-stack-steady-neighbours
+- evidence: U4 src/renderer/src/lib/diff-view.ts:587 (Math.min(last, measured) while pending; diff-view.test.ts 95/95) (src/renderer/src/lib)
+- last seen: 2026-10-11T14:39:21Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

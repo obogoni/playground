@@ -241,3 +241,22 @@ Phase 2:  T2 ------→ T3 ------→ T4 ------→ T5
 **Gate**: build
 
 **Status**: ✅ Complete
+
+## Fix Tasks (Verifier round 2)
+
+### F3: Pin the held height against a smaller measurement
+
+**What**: The FSTD-02 test also asserts a pending measurement below the held height reports the held one (`reportedHeight(57, 180, pending)` is 180)
+**Where**: `src/renderer/src/lib/diff-view.test.ts`
+**Depends on**: T2
+**Requirement**: FSTD-02
+
+**Done when**:
+
+- [x] The mutant `Math.min(last, measured)` while pending is killed (scratch worktree: 1 failed, 94 passed)
+- [x] `diff-view.test.ts` 95/95 and `npm test` 3172 passed
+
+**Tests**: unit
+**Gate**: quick
+
+**Status**: ✅ Complete

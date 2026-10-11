@@ -963,6 +963,7 @@ describe('reportedHeight', () => {
 
   it('holds the last reported height while a fold reading is pending (FSTD-02)', () => {
     expect(reportedHeight(503, 180, pending)).toBe(180)
+    expect(reportedHeight(57, 180, pending)).toBe(180)
   })
 
   it('reports the measured height once no reading is pending (FSTD-03, FSTD-04)', () => {

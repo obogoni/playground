@@ -2,13 +2,21 @@
 
 **Date**: 2026-10-11
 **Spec**: `.specs/features/files-stack-steady-neighbours/spec.md` (FSTD-01..09)
-**Diff range**: `main..feature/files-stack-steady-neighbours` (82cf484..b9b75a9, 5 commits)
-**Verifier**: independent sub-agent (author ≠ verifier)
+**Diff range**: `main..feature/files-stack-steady-neighbours` (82cf484..f2073c6, 7 commits); round-1 fixes `e5ccdea` (F1) and `f2073c6` (F2)
+**Verifier**: independent sub-agent (author ≠ verifier), fix round 2 of max 3
 
-**Verdict: FAIL ❌**, for a test gap only. The behaviour is correct everywhere the Verifier exercised it,
-the probe below included. But one requirement path, FSTD-03's release when re-applying the folds
-changes no size, has no discriminating test: mutant B2 removes it and survives the whole suite and the
-smoke. One test-only fix task follows; no production change is needed.
+**Verdict: FAIL ❌**, for one minor test gap. Both round-1 gaps are closed: check 18c kills B2, and the
+bench target now reads as the aggregate the bench computes. But a new mutant on the pure rule, U4
+(`Math.min(last, measured)` while pending), survives the unit suite and the smoke. FSTD-02 says the
+viewer reports *the last height it reported*, and no test pins that when the pending measurement is
+smaller than the held one. The fix is one unit assertion; no production change is needed.
+
+### Round 1 (what failed, and how it was fixed)
+
+| Round-1 gap | Fix | Round-2 evidence |
+| ----------- | --- | ---------------- |
+| Mutant B2 (no `measure()` after `applyFolds`, `DiffViewer.tsx:354`) survived: FSTD-03's release had no discriminating test | F1, `e5ccdea`: check 18c in `scripts/smoke-files-diff.mjs:4055-4075` | Re-run independently: unmutated 18c PASS (3851 → 4611 px); B2 18c **FAIL** (3851 → 3851 px). Closed ✅ |
+| FSTD-06 spec-precision gap: Success Criteria and T5 said "every steady row", the bench judges the aggregate | F2, `f2073c6`: both now say "over the steady rows (aggregate)" | Matches `scripts/bench-summary.mjs:171-173` (sums over the steady rows) and `:213` (`inclusive(catFiles / emits, ...)`); no "every steady row" left in the spec or T5. Closed ✅ |
 
 ---
 
@@ -16,11 +24,13 @@ smoke. One test-only fix task follows; no production change is needed.
 
 | Task | Status | Notes |
 | ---- | ------ | ----- |
-| T1 | ✅ Done | 82cf484 touches only `.specs/` (spec, tasks, validation.md): the measurement came before any production change |
-| T2 | ✅ Done | 2d6ae62: `reportedHeight` plus 4 tests (`diff-view.test.ts:961-984`) |
-| T3 | ✅ Done | 4c653b2: section 18, smoke-only commit before the wiring, with its failing run recorded in Measurements |
+| T1 | ✅ Done | 82cf484 touches only `.specs/`: the measurement came before any production change |
+| T2 | ✅ Done | 2d6ae62: `reportedHeight` (`src/renderer/src/lib/diff-view.ts:582-588`) plus 4 tests (`diff-view.test.ts:961-984`) |
+| T3 | ✅ Done | 4c653b2: section 18, committed before the wiring, failing run recorded in Measurements |
 | T4 | ✅ Done | 3714ac2: `DiffViewer.tsx` only (plus `.specs/`) |
-| T5 | ✅ Done | b9b75a9: after bench, AD-062 in `STATE.md` |
+| T5 | ✅ Done | b9b75a9: after bench, AD-062 |
+| F1 | ✅ Done | e5ccdea: 18c, with Hide unchanged pressed back in `finally` |
+| F2 | ✅ Done | f2073c6: wording only |
 
 ---
 
@@ -28,151 +38,94 @@ smoke. One test-only fix task follows; no production change is needed.
 
 | Criterion | Spec-defined outcome | `file:line` + assertion | Result |
 | --------- | -------------------- | ----------------------- | ------ |
-| FSTD-01: measure before any production change | The written section's heights over at least one re-read, and whether they leave the pre-read height, recorded before the fix | `validation.md` § Measurements › Before (T1), committed in 82cf484, whose stat holds only `.specs/` files: heights {180, 503}, 150 rises, episodes of 189/216/232 ms, "the cause in #167 holds" | ✅ PASS (measurement evidence, see note 1) |
-| FSTD-02: while pending, report the last height to the container and to `onHeight` | The pre-reading height | Rule: `src/renderer/src/lib/diff-view.test.ts:965`, `expect(reportedHeight(503, 180, pending)).toBe(180)`. Wiring: `scripts/smoke-files-diff.mjs:4040`, `after.max <= after.base && after.final === after.base` (section box under a `ResizeObserver`). One value feeds both outputs: `src/renderer/src/components/DiffViewer.tsx:325-327` (`setHeight(reported)`, `onHeight?.(reported)`) | ✅ PASS (mutants U3 and B1 killed) |
-| FSTD-03: after the recomputed diff's folds are re-applied, report the measured height again | The measured content height | Rule: `src/renderer/src/lib/diff-view.test.ts:970`, `expect(reportedHeight(503, 180, null)).toBe(503)`. Wiring: `DiffViewer.tsx:340` clears the reading before `applyFolds` and `DiffViewer.tsx:354` calls `measure()` again. **No committed test observes the release**: 18b's `final === base` holds just as well when the height never releases | ❌ GAP: B2 survived (Fix 1) |
-| FSTD-04: with no reading pending, report the measured height, first mount included | The measured height | `src/renderer/src/lib/diff-view.test.ts:969-970` (no reading pending, 180 and 503 measured) and `:974-975` (`reportedHeight(180, null, null)` → 180; `reportedHeight(503, null, pending)` → 503, first mount). Wiring: `DiffViewer.tsx:410` measures at mount with `reported = null` (`:316`) | ✅ PASS (U1 and U2 killed) |
-| FSTD-05: on a batch re-reading one section, every other expanded, unchanged section keeps the same editor node | The same `.monaco-diff-editor` node (spec, Assumptions) | `scripts/smoke-files-diff.mjs:4029-4035`: nodes tagged with `__fstd`, then `after.kept.length === neighbours.length && after.removed.length === 0 && neighbours.length > 0`, plus a `MutationObserver` counting removed editor nodes | ✅ PASS (B1 killed: 0/1 kept, 3 removals) |
-| FSTD-06: bench edit loop, at most 2 `cat-file` per `files:changed` over the steady rows | ≤ 2 | § After (T5) below: steady rows 120/60, 119/60 and 119/59, which is 358/179 = 2.00. That is how `scripts/bench-summary.mjs:171-213` computes the verdict (sums over the steady rows, `inclusive(catFiles / emits, 2)`): PASS | ✅ PASS (measurement evidence, see note 2) |
+| FSTD-01: measure before any production change | Heights over at least one re-read, and whether they leave the pre-read height, recorded before the fix | § Measurements › Before (T1), committed in 82cf484 (only `.specs/`): heights {180, 503}, 150 rises, "the cause in #167 holds" | ✅ PASS (measurement evidence) |
+| FSTD-02: while pending, report the last height to the container and to `onHeight` | The height reported before the reading, whatever the pending measurement | Rule: `src/renderer/src/lib/diff-view.test.ts:965`, `expect(reportedHeight(503, 180, pending)).toBe(180)`, and `:979-983` (503, 620, 503 keep 180). Wiring: `scripts/smoke-files-diff.mjs:4049-4053`, `after.max <= after.base && after.final === after.base`. One value feeds both outputs: `src/renderer/src/components/DiffViewer.tsx:325-327` | ❌ GAP, partial: PASS for a pending height above the held one, but every pending case has `measured > last`, so U4 (`Math.min`) survives (Fix 1) |
+| FSTD-03: after the folds are re-applied, report the measured height again | The measured content height | Rule: `diff-view.test.ts:970`, `expect(reportedHeight(503, 180, null)).toBe(503)`. Wiring: `scripts/smoke-files-diff.mjs:4071-4075`, `grown.height - before.height === STEADY_EXTRA * before.line` (+760 = 40 x 19 px), under Show unchanged, where only the `measure()` at `DiffViewer.tsx:354` releases the hold | ✅ PASS (B2 killed) |
+| FSTD-04: with no reading pending, report the measured height, first mount included | The measured height | `diff-view.test.ts:969-970` and `:974-975` (`reportedHeight(503, null, pending)` → 503 on first mount). Wiring: `DiffViewer.tsx:410` measures at mount with `reported = null` (`:316`) | ✅ PASS (round-1 U1, U2 killed) |
+| FSTD-05: every other expanded, unchanged section keeps the same editor node | Same `.monaco-diff-editor` node | `scripts/smoke-files-diff.mjs:4039-4047`: `after.kept.length === neighbours.length && after.removed.length === 0 && neighbours.length > 0` (tagged nodes plus a `MutationObserver`) | ✅ PASS (round-1 B1 killed; this round 1/1 kept steady-only, 3/3 kept in the full drive) |
+| FSTD-06: bench edit loop, at most 2 `cat-file` per `files:changed` over the steady rows | ≤ 2, aggregate | § Measurements › After (T5): 358/179 = 2.00, the ratio `scripts/bench-summary.mjs:171-173, 213` judges. Spec Success Criteria and T5 now say "(aggregate)" | ✅ PASS (round-1 precision gap closed) |
 
-**Note 1 (FSTD-01).** The evidence fits the requirement. It came before the fix: commit order, plus
-82cf484 touching only `.specs/`. It is quantitative and gives the series' semantics: a `ResizeObserver`
-on every `.diff-section`, and a `MutationObserver` on editor nodes. It also states the verdict the spec
-asked for. The window size differs from the spec's assumption (1306 x 823 against 1266 x 715), but
-Measurements says so openly, and before and after used the same window, so the comparison holds.
-
-**Note 2 (FSTD-06), spec-precision gap ⚠️ (minor).** AC 6 says "the steady rows SHALL read at most 2",
-and the bench reads it as one ratio summed over the rows: 2.00, PASS. The spec's Success Criteria and
-T5's Done when say "in every steady row", and per row the third reads 119/59 = 2.017 > 2. The gap comes
-from the minute buckets: the second row reads 1.98, so one batch's reads fell into the next bucket. The
-mechanism figure stays exactly 2 per batch over the run. T5's status line "2.00 in every steady row" is
-therefore true only in aggregate. No fix to the code. The wording should say "over the steady rows (the
-bench's aggregate)".
-
-**Status**: ❌ 1 AC has a test gap (FSTD-03 release wiring); ⚠️ 1 spec-precision gap flagged (FSTD-06 wording)
+**Status**: ❌ 1 test gap (FSTD-02, pending height below the held one: Fix 1); 0 spec-precision gaps open
 
 ---
 
 ## Edge Cases
 
-- [x] **FSTD-07, a recomputed diff never reports computed changes.** The height stays held until one
-  does. `src/renderer/src/components/DiffViewer.tsx:337` (`if (!changes) return`) returns before
-  `pendingRef.current = null` at `:340`, so the reading stays pending, and every `measure` in between
-  returns `last` (`src/renderer/src/lib/diff-view.ts:587`). Rule test:
-  `src/renderer/src/lib/diff-view.test.ts:979-983`, where three pending measurements (503, 620, 503)
-  keep 180. Wiring by inspection.
-- [x] **FSTD-08, a re-read whose text equals the current text.** Nothing is held. A reading is taken
-  only when `originalMoves || modifiedMoves` (`DiffViewer.tsx:458-459, 464`); otherwise `pendingRef`
-  stays null and `reportedHeight` returns `measured` (`diff-view.test.ts:969-970`). By inspection: no
-  smoke rewrites with identical bytes and checks the height. The path is unchanged code from FOLD.
-- [x] **FSTD-09, a second re-read while one is pending.** The height from before the first stays held.
-  `readingBeforeUpdate` keeps the pending reading (`src/renderer/src/lib/diff-view.ts:570`, `if
-  (pending !== null) return pending`), and `reported` is threaded through each `measure`
-  (`DiffViewer.tsx:325`), so the first held value persists (`diff-view.test.ts:979-983`). A Hide or
-  Show press while pending keeps the reading non-null, `states: null` (`DiffViewer.tsx:488-490`), so the
-  hold persists there too.
-- [x] **Not in the spec, checked anyway.** An unfitted viewer (`DiffTab`) is untouched: `measure`
-  returns early on `!fitContent` (`DiffViewer.tsx:318`), and the listeners are registered only when
-  fitted (`:407-411`). This matches the Out of Scope row for `DiffTab`.
+- [x] **FSTD-07, no computed diff.** `DiffViewer.tsx:337` (`if (!changes) return`) returns before
+  `pendingRef.current = null` (`:340`), so the reading stays pending and `measure` keeps returning the held
+  value (`diff-view.ts:587`). Rule test `diff-view.test.ts:979-983`. Wiring by inspection.
+- [x] **FSTD-08, text unchanged.** A reading is taken only when `originalMoves || modifiedMoves`
+  (`DiffViewer.tsx:458-466`); otherwise `pendingRef` stays null and the measured height is reported
+  (`diff-view.test.ts:969-970`). By inspection.
+- [x] **FSTD-09, second re-read while pending.** `readingBeforeUpdate` keeps the first reading
+  (`diff-view.ts:570`), and `reported` threads through each `measure` (`DiffViewer.tsx:325`), so the first
+  held value persists (`diff-view.test.ts:979-983`).
 
 ---
 
 ## Discrimination Sensor
 
-Run in a scratch `git worktree` at HEAD b9b75a9 (with `node_modules` linked by a junction), never in the
-real tree. The unit mutants ran the Quick gate. The behaviour mutants used a fresh `npx electron-vite
-build`, a fresh seed and user-data dir, an Electron launch on port 9223 and `SMOKE_ONLY=steady`, then a
-CDP `window.close()` and `--clean`. Control: the unmutated scratch build passed section 18, **2/2** (18a
-1/1 kept, 0 removals; 18b base 151, max 151, final 151 px), so every kill below comes from its mutation.
+Scratch `git worktree` at f2073c6 (`node_modules` by junction), never the real tree. Smoke runs: fresh
+`npx electron-vite build`, fresh seed and user-data dir, Electron on port 9223, `SMOKE_ONLY=steady`, CDP
+`window.close()`, `--clean`. Control (unmutated): **3/3** steady (18a 1/1 kept, 0 removals; 18b 151/151/151
+px; 18c 3851 → 4611 px) and full drive **126/126** (18c 3882 → 4642 px).
 
 | # | File:line | Mutation | Run | Killed? |
 | - | --------- | -------- | --- | ------- |
-| U1 | `src/renderer/src/lib/diff-view.ts:587` | Ignore `pending`: `last !== null ? last : measured` | vitest `diff-view.test.ts` | ✅ Killed (1 failed: "reports the measured height once no reading is pending") |
-| U2 | `src/renderer/src/lib/diff-view.ts:587` | Drop the first-mount guard: `pending !== null ? (last as number) : measured` | vitest | ✅ Killed (1 failed: "reports the measured height on first mount") |
-| U3 | `src/renderer/src/lib/diff-view.ts:587` | Never hold: `return measured` | vitest | ✅ Killed (2 failed: FSTD-02, FSTD-07/09 tests) |
-| B1 | `src/renderer/src/components/DiffViewer.tsx:325` | Pass `null` instead of `pendingRef.current` | e2e section 18 | ✅ Killed (0/2: 18a 0/1 kept, 3 removals; 18b max 3875 px against base 151) |
-| B2 | `src/renderer/src/components/DiffViewer.tsx:354` | Remove the `measure()` after the folds are re-applied | e2e section 18 | ❌ **Survived** (2/2 PASS) |
+| B2 | `src/renderer/src/components/DiffViewer.tsx:352-354` | Remove the `measure()` after the folds are re-applied | steady smoke | ✅ **Killed** (2/3: 18c FAIL, 3851 → 3851 px, expected +760) |
+| M5 | `src/renderer/src/components/DiffViewer.tsx:345-354` | Move that `measure()` to just before `applyFolds` (reading already cleared, folds not back yet) | steady smoke | ⚪ Survived, equivalent by observation (3/3; 18b max 151 px): the revealed height it reports and the folded height the folds' size change reports land in the same task, so React renders only the last one; under Show unchanged (18c) both are the same number. No fix task |
+| U4 | `src/renderer/src/lib/diff-view.ts:587` | Hold the smaller value: `pending !== null && last !== null ? Math.min(last, measured) : measured` | vitest `diff-view.test.ts` | ❌ **Survived** (95/95). Not equivalent: a section whose new text is much shorter (held 180, pending 57) reports 57 at once, against the spec's 180. The smoke cannot see it either: its pending height is always the larger one (3875 against 151) |
 
-**B2 is not an equivalent mutant.** A scratch-only probe, added to the scratch copy of the smoke and
-never committed, checked it. With the stack open and **Show unchanged** pressed, so the folds reveal
-everything, it appended 40 lines to `fold/long.ts`:
+**Sensor depth**: lightweight (3 mutations: 1 unit, 2 e2e), plus the round-1 set (U1-U3 and B1 killed), still valid on unchanged production code
+**Result**: 1 killed, 1 equivalent, 1 survived. **FAIL ❌** (U4 becomes Fix 1)
 
-| Build | Written section before | After the append (+40 lines x 19 px = +760 expected) |
-| ----- | ---------------------- | ---------------------------------------------------- |
-| Unmutated b9b75a9 | 3851 px | **4611 px** (+760, correct) |
-| B2 | 3851 px | **3851 px** (held forever; the new lines are clipped) |
-
-When re-applying the folds changes no size, no `onDidContentSizeChange` fires after the reading is
-cleared, and only the `measure()` at `DiffViewer.tsx:354` releases the hold. The shipped code is right
-and its comment at `:352-353` names exactly this case, but nothing in the suite would catch losing it.
-
-**Sensor depth**: lightweight plus (5 mutations: 3 unit, 2 e2e)
-**Result**: 4/5 killed. **FAIL ❌** (1 surviving mutant becomes Fix 1)
-
-Isolation: the real tree's `git status --porcelain` was empty before and is empty after (only this
-report changed). The scratch worktree was removed (junction first), and `git worktree list` shows only
-`D:/playground-main`.
+Isolation: the real tree's `git status --porcelain` was empty before and after the sensor. The junction was
+deleted first and the worktree removed; `git worktree list` shows only `D:/playground-main`,
+`node_modules\electron` is intact, and no Electron process remains.
 
 ---
 
-## Code Quality
+## Code Quality (round-1 diff: e5ccdea, f2073c6)
 
 | Principle | Status |
 | --------- | ------ |
-| Minimum code: one pure 3-line rule, `measure` moved up in the mount effect, one extra call | ✅ |
-| Surgical changes: production diff is `diff-view.ts` (+14) and `DiffViewer.tsx` (+18/−10); no unrelated edits | ✅ |
-| No scope creep: `mountPlan`, `NEAR_VIEWPORT`, the observer, `foldPlan` and `readingBeforeUpdate` untouched, as Out of Scope requires | ✅ |
-| Matches patterns: pure rule in `lib/diff-view.ts` with JSDoc, the way `readingBeforeUpdate` is; unit test in the same `describe` style; smoke section with its own `SMOKE_ONLY` gate and `try/finally` restore, like sections 15 and 17 | ✅ |
-| Comments explain why, not history: `diff-view.ts:576-581` (why hold), `DiffViewer.tsx:352-353` (why measure again), the moved spike-finding comment kept verbatim; no "before/after" or work-item narration in code | ✅ |
-| Spec-anchored outcome check (asserted values match spec) | ✅ for FSTD-02/04/05/07/09, with literal heights and node identity; ❌ FSTD-03 wiring (Fix 1) |
-| Per-layer Coverage Expectation (Test Coverage Matrix): pure rule, every branch, 1:1 | ✅ (U1-U3 killed). Component e2e covers FSTD-05 ✅ but not FSTD-03's no-size-change release ❌ |
-| Every test maps to a spec requirement (no unclaimed tests): 4 unit tests tagged FSTD-02/03/04/07/09; 18a FSTD-05, 18b FSTD-02 | ✅ |
-| Documented guidelines followed: none in the repo (tasks.md says so); strong defaults plus the existing test and smoke conventions applied | ✅ |
-| Privacy guardrail (public repo): diff and commit messages scanned for org, customer, person and work-item data. Only fictitious fixtures (`fold/long.ts`, `stack/f*.ts`), upstream issue numbers and the noreply author address | ✅ |
+| Minimum code: 18c is one check plus an optional `extra` on `steadyText`; the default `extra = 0` keeps 18a/18b's text identical | ✅ |
+| Surgical: e5ccdea touches only `scripts/smoke-files-diff.mjs` (section 18 and its header) and `tasks.md`; f2073c6 only `.specs/` | ✅ |
+| No scope creep: no production file in either commit | ✅ |
+| Matches patterns: `check(...)` with a measured detail string, `try/finally` restore like sections 15 and 17, `STEADY_*` constants with JSDoc | ✅ |
+| Comments explain why: `smoke-files-diff.mjs:4055-4057` says why Show unchanged (no size change follows the folds), `:3944` why an exact count of lines; no history or work-item narration | ✅ |
+| 18c restores state: `shown` is set before the press, and Hide unchanged is pressed back in `finally` (`:4079-4082`) after the file is restored; every later section of the full drive passes (126/126) | ✅ |
+| Spec-anchored outcome check | ✅ FSTD-01/03/04/05/06; ❌ FSTD-02's below-held case (Fix 1) |
+| Per-layer Coverage Expectation: pure rule 1:1 (branches covered, but the held value is not pinned for a smaller measurement); e2e covers FSTD-02/03/05 | ⚠️ (Fix 1) |
+| Every test maps to a requirement: 18a FSTD-05, 18b FSTD-02, 18c FSTD-03; the 4 unit tests are tagged | ✅ |
+| Documented guidelines: none in the repo; strong defaults and the existing smoke conventions applied | ✅ |
+| Privacy guardrail (public repo): diff and commit metadata scanned; only fictitious fixtures, upstream issue numbers and the noreply author address | ✅ |
 
 ---
 
 ## Gate Check
 
-- **Gate command**: `npm run typecheck && npm run lint && npm test` (real tree at b9b75a9, exit 0)
+- **Gate command**: `npm run typecheck && npm run lint && npm test` (real tree at f2073c6, exit 0)
 - **typecheck**: node and web, 0 errors
 - **lint**: ✖ 18 problems (0 errors, 18 warnings), equal to the baseline
 - **Result**: 3172 passed, 0 failed, 0 skipped (143 files)
-- **Test count before feature**: 3168
-- **Test count after feature**: 3172
-- **Delta**: +4 new tests (the `reportedHeight` block); none removed, no assertion weakened (the diff only adds to `diff-view.test.ts`)
-- **Quick gate** (scratch, unmutated): `diff-view.test.ts` 95/95
-- **Smoke** (scratch, unmutated build): `SMOKE_ONLY=steady` 2/2
+- **Test count before feature**: 3168; **after**: 3172; **delta**: +4, none removed or weakened (the round-1 fixes add no unit test)
+- **Smoke** (scratch, unmutated): steady 3/3; full drive 126/126
 
 ---
 
 ## Fix Plans
 
-### Fix 1: FSTD-03 release has no discriminating test (surviving mutant B2)
+### Fix 1: FSTD-02's held value is not pinned when the pending height is smaller (surviving mutant U4)
 
-- **Root cause**: 18b compares the max and the final height with the folded base. In the folded case the
-  held height and the released height are the same number, and re-applying the folds fires its own size
-  change anyway. So neither the release nor the `measure()` at `DiffViewer.tsx:354` is observed.
-- **Fix task** (test-only):
-  - *What*: add check **18c** to `steadySection` in `scripts/smoke-files-diff.mjs`. With `fold/long.ts`
-    in the stack, press All changes' **Show unchanged** and let it settle, then read the written
-    section's height `H0`. Rewrite the file with N extra lines (e.g. `steadyText(...) + foldText('x',
-    40)`), wait one write gap, and assert the section grew by about N x line height (`final >= H0 + N *
-    19 - tolerance`), or that the section box equals the fitted editor's content height. Restore the
-    file and the hidden state in `finally`, so the full drive's later sections start as today.
-  - *Where*: `scripts/smoke-files-diff.mjs` (section 18; header comment "checks 18a..18c")
-  - *Verify*: passes on b9b75a9; fails with the `measure()` at `DiffViewer.tsx:354` removed (Verifier
-    probe: 3851 → 3851 px instead of 4611)
-  - *Done when*: 18c seen failing on the B2 mutant and passing on HEAD; `SMOKE_ONLY=steady` 3/3; full
-    drive still all PASS
-- **Priority**: Major. A future refactor of the diff listener could drop the call, and a section would
-  then stay clipped after any re-read under Show unchanged, or of a file with nothing to fold.
-
-### Note: FSTD-06 wording (spec-precision, no code change)
-
-Reword the Success Criteria and T5's Done when from "in every steady row" to "over the steady rows (the
-bench's aggregate ratio)", or record that per-row ratios move around 2 with the minute buckets
-(1.98-2.02).
+- **Root cause**: every pending case in `diff-view.test.ts:961-984` has `measured > last` (503 or 620
+  against 180), so `last`, `Math.min(last, measured)` and the spec's outcome all agree there.
+- **Fix task** (test-only): in `src/renderer/src/lib/diff-view.test.ts`, FSTD-02's test (`:964-966`), add a
+  pending case below the held height, e.g. `expect(reportedHeight(57, 180, pending)).toBe(180)`.
+- **Verify**: passes on HEAD; fails with `diff-view.ts:587` mutated to `Math.min(last, measured)`.
+- **Done when**: U4 seen killed in a scratch worktree; `diff-view.test.ts` 95/95; `npm test` 3172.
+- **Priority**: Minor. The production rule is right, and losing it would only shrink a section about 200 ms
+  early; but the spec states the held value precisely and nothing guards it.
 
 ---
 
@@ -181,34 +134,33 @@ bench's aggregate ratio)", or record that per-row ratios move around 2 with the 
 | Requirement | Previous Status | New Status |
 | ----------- | --------------- | ---------- |
 | FSTD-01 | Implementing (T1 done) | ✅ Verified |
-| FSTD-02 | Implementing | ✅ Verified |
-| FSTD-03 | Implementing (T4) | ❌ Needs Fix (test only: Fix 1) |
+| FSTD-02 | Implementing | ❌ Needs Fix (test only: Fix 1) |
+| FSTD-03 | Implementing (T4) | ✅ Verified (18c, B2 killed) |
 | FSTD-04 | Implementing | ✅ Verified |
 | FSTD-05 | Implementing | ✅ Verified |
-| FSTD-06 | Implementing (T5: 2.00) | ✅ Verified (⚠️ wording, aggregate) |
+| FSTD-06 | Implementing (T5: 2.00) | ✅ Verified (aggregate wording) |
 | FSTD-07 | Implementing | ✅ Verified (rule unit plus inspection) |
 | FSTD-08 | Implementing | ✅ Verified (inspection) |
 | FSTD-09 | Implementing | ✅ Verified (rule unit plus inspection) |
+
+`spec.md` stays as it is until the feature passes.
 
 ---
 
 ## Summary
 
-**Overall**: ❌ Not Ready. One test-only fix; the production change is correct.
+**Overall**: ❌ Not Ready. One minor test-only fix; the production code is correct.
 
-**Spec-anchored check**: 5/6 ACs matched the spec outcome with discriminating evidence; FSTD-03's wiring
-has a gap; 1 spec-precision gap (FSTD-06 wording)
-**Sensor**: 4/5 mutations killed (B2 survived; shown non-equivalent by probe)
+**Spec-anchored check**: 5/6 ACs fully matched; FSTD-02 has one unpinned case; 0 spec-precision gaps open
+**Sensor**: 1 killed (B2), 1 equivalent (M5), 1 survived (U4)
 **Gate**: 3172 passed, 0 failed; typecheck 0; lint 0 errors / 18 warnings
 
-**What works**: the hold rule and its wiring stop the height excursion and the neighbours' remounts
-(B1 shows 18a and 18b discriminate). The bench target is met at 2.00, down from 6.07. The release
-after the folds works, including the no-size-change case (probe: 3851 → 4611 px on HEAD).
+**What works**: 18c closes round 1's B2 gap and restores Hide unchanged; the bench wording matches
+`bench-summary.mjs`; the full smoke drive reads 126/126.
 
-**Issues found**: FSTD-03's release path through `DiffViewer.tsx:354` is unguarded by any test. Add
-smoke check 18c (Fix 1).
+**Issues found**: U4. Add one pending assertion below the held height (Fix 1).
 
-**Next steps**: route Fix 1 to an implementer, then re-dispatch the Verifier (iteration 1 of 3).
+**Next steps**: route Fix 1 to an implementer, then re-dispatch the Verifier (round 3 of 3).
 
 ---
 
