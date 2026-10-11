@@ -1288,28 +1288,37 @@ async function drive() {
   // 13. Expand all and Collapse all on the All changes stack (FPOL-14..17).
   await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
   await sleep(2200)
-  const stackState = `({
-    sections: document.querySelectorAll('.diff-section').length,
-    expanded: [...document.querySelectorAll('.diff-section-header')]
-      .filter((e) => e.getAttribute('aria-expanded') === 'true').length,
-    diffEditors: ${liveDiffEditors},
-    monacoEditors: document.querySelectorAll('.all-changes .monaco-editor').length
-  })`
+  // `toggles` guards the counts: a selector that stops matching reads 0 open,
+  // which a collapse check would take for a pass. `expanded` is read from the
+  // same toggles, and FPOL-14, 15, 16 and 18 need one toggle per section.
+  const stackState = `(() => {
+    const toggles = [...document.querySelectorAll('.diff-section .diff-section-toggle[aria-expanded]')]
+    return {
+      sections: document.querySelectorAll('.diff-section').length,
+      toggles: toggles.length,
+      expanded: toggles.filter((e) => e.getAttribute('aria-expanded') === 'true').length,
+      diffEditors: ${liveDiffEditors},
+      monacoEditors: document.querySelectorAll('.all-changes .monaco-editor').length
+    }
+  })()`
   const beforeExpandAll = await evaluate(ws, stackState)
   await evaluate(ws, clickByText('.all-changes-toggle', 'Expand all'))
   await sleep(2600)
   const afterExpandAll = await evaluate(ws, stackState)
   check(
     'Expand all opens every listed section (FPOL-14)',
-    beforeExpandAll.expanded < beforeExpandAll.sections &&
+    beforeExpandAll.toggles === beforeExpandAll.sections &&
+      afterExpandAll.toggles === afterExpandAll.sections &&
+      beforeExpandAll.expanded < beforeExpandAll.sections &&
       afterExpandAll.sections >= 40 &&
       afterExpandAll.expanded === afterExpandAll.sections,
-    `${beforeExpandAll.expanded} -> ${afterExpandAll.expanded} of ${afterExpandAll.sections}`
+    `${beforeExpandAll.expanded} -> ${afterExpandAll.expanded} of ${afterExpandAll.sections} (${afterExpandAll.toggles} toggles)`
   )
   check(
     'With every section open, only the ones near the viewport hold an editor (FPOL-16)',
     // Every section must really be open, or the bound is met for free.
-    afterExpandAll.expanded === afterExpandAll.sections &&
+    afterExpandAll.toggles === afterExpandAll.sections &&
+      afterExpandAll.expanded === afterExpandAll.sections &&
       afterExpandAll.diffEditors > 0 &&
       afterExpandAll.diffEditors <= 12,
     `${afterExpandAll.diffEditors} diff editors (${afterExpandAll.monacoEditors} Monaco editors) for ${afterExpandAll.expanded} open sections`
@@ -1321,6 +1330,7 @@ async function drive() {
   check(
     'Collapse all folds every listed section (FPOL-15)',
     afterCollapseAll.sections === afterExpandAll.sections &&
+      afterCollapseAll.toggles === afterCollapseAll.sections &&
       afterCollapseAll.expanded === 0 &&
       afterCollapseAll.diffEditors === 0,
     J(afterCollapseAll)
@@ -1350,11 +1360,12 @@ async function drive() {
   check(
     "A commit tab's Expand all and Collapse all open and fold every file of the commit (FPOL-18)",
     openedCommit &&
+      [commitBefore, commitExpanded, commitCollapsed].every((s) => s.toggles === s.sections) &&
       commitBefore.sections >= 40 &&
       commitBefore.expanded < commitBefore.sections &&
       commitExpanded.expanded === commitExpanded.sections &&
       commitCollapsed.expanded === 0,
-    `opened ${openedCommit}: ${commitBefore.expanded} -> ${commitExpanded.expanded} -> ${commitCollapsed.expanded} of ${commitExpanded.sections}`
+    `opened ${openedCommit}: ${commitBefore.expanded} -> ${commitExpanded.expanded} -> ${commitCollapsed.expanded} of ${commitExpanded.sections} (${commitExpanded.toggles} toggles)`
   )
 
   // A mode with nothing listed: commit everything left, then look at Uncommitted.
