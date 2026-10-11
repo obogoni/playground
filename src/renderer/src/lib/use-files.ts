@@ -130,6 +130,12 @@ interface WorktreeFiles {
   activeTab: string | null
   /** Folder paths opened in the full-folder tree (FXPL-05). */
   expanded: string[]
+  /**
+   * Folder paths folded in the diff modes' trees, one set for the three of
+   * them (FDCL-12). It names what is closed, so a folder not in it is open.
+   * Kept apart from the listings, so a re-list never reopens one (FDCL-08).
+   */
+  collapsed: string[]
   /** The folder last clicked in the tree, and when (FXPL-26). */
   lastFolder: { path: string; at: number } | null
   /** Full-folder listings by folder path; `''` is the worktree root. */
@@ -159,6 +165,7 @@ const EMPTY: WorktreeFiles = {
   tabs: [],
   activeTab: null,
   expanded: [],
+  collapsed: [],
   lastFolder: null,
   entries: {},
   changed: null,
@@ -202,6 +209,8 @@ export interface UseFiles {
   bases: BaseOptions | null
   entries: Record<string, DirListing>
   expanded: string[]
+  /** Folders folded in the diff modes' trees (FDCL-01). */
+  collapsed: string[]
   changed: ChangedListing | null
   uncommitted: ChangedPath[]
   /** The current mode's changed files, whichever diff mode it is in. */
@@ -232,6 +241,8 @@ export interface UseFiles {
   setDiffIgnoreWhitespace: (ignore: boolean) => void
   /** Opens or folds a folder; opening it lists its children once (FXPL-05). */
   toggleFolder: (path: string) => void
+  /** Folds or unfolds a folder of a diff mode's tree (FDCL-01/02). */
+  toggleCollapsed: (path: string) => void
   /** Records the folder the user just clicked, for the launchers (FXPL-26). */
   selectFolder: (path: string) => void
   openFile: (path: string) => void
@@ -676,6 +687,18 @@ export function useFiles({
     [worktreePath, patchFiles, loadDir, here]
   )
 
+  const toggleCollapsed = useCallback(
+    (path: string): void => {
+      if (!worktreePath) return
+      patchFiles(worktreePath, (s) => ({
+        collapsed: s.collapsed.includes(path)
+          ? s.collapsed.filter((dir) => dir !== path)
+          : [...s.collapsed, path]
+      }))
+    },
+    [worktreePath, patchFiles]
+  )
+
   const selectFolder = useCallback(
     (path: string): void => {
       if (!worktreePath) return
@@ -1007,6 +1030,7 @@ export function useFiles({
     bases: here.bases,
     entries: here.entries,
     expanded: here.expanded,
+    collapsed: here.collapsed,
     changed: here.changed,
     uncommitted: here.uncommitted,
     changedFiles: mode === 'uncommitted' ? here.uncommitted : (here.changed?.files ?? []),
@@ -1026,6 +1050,7 @@ export function useFiles({
     setDiffLayout,
     setDiffIgnoreWhitespace,
     toggleFolder,
+    toggleCollapsed,
     selectFolder,
     openFile,
     openDiff,

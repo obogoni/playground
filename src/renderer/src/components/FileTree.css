@@ -179,6 +179,8 @@ div.file-tree-row {
 .file-tree-chevron {
   display: flex;
   flex: none;
+  /* In the diff modes the chevron is a button (FDCL-06); drawn like the span. */
+  padding: 0;
   transform: rotate(-90deg);
   transition: transform 0.12s;
 }

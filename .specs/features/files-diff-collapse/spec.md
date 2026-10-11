@@ -10,7 +10,7 @@ folders they are not looking at. The Folder mode already folds; the diff modes d
 ## Goals
 
 - [ ] A folder in any of the three diff modes folds and unfolds from its chevron
-- [ ] The name click keeps opening the folder's All changes stack
+- [ ] The rest of the folder row keeps picking the folder for the launchers (FXPL-26)
 - [ ] A fold survives list refreshes and mode/worktree switches for as long as the app runs
 
 ## Out of Scope
@@ -29,7 +29,7 @@ folders they are not looking at. The Folder mode already folds; the diff modes d
 
 | Assumption / decision | Chosen default | Rationale | Confirmed? |
 | --------------------- | -------------- | --------- | ---------- |
-| Gesture | The chevron folds; the name and icon open the All changes stack, as today | Owner decision in the grilling of 2026-10-11 | y |
+| Gesture | The chevron folds and nothing else; the rest of the row picks the folder for the launchers, as today (FXPL-26) | Owner decision in the grilling of 2026-10-11. The grilling and the issue first said the row opened the folder's All changes stack; it never did, it only sets `lastFolder` | y |
 | Modes covered | Diff to origin, Uncommitted and Pull request | Owner decision; all three draw the same `ChangedRows` | y |
 | What is stored | A per-worktree `collapsed: string[]` of folder paths, in the in-memory `WorktreeFiles` | Open is the default, so a folder never seen is open with no bookkeeping, and a new folder can never be born hidden | y |
 | One set or one per mode | One set shared by the three diff modes | A path names the same folder in all three; folding it once is what the user meant | y |
@@ -54,13 +54,13 @@ folders they are not looking at. The Folder mode already folds; the diff modes d
 
 1. WHEN the user clicks an open folder's chevron in Diff to origin, Uncommitted or Pull request THEN the tree SHALL hide every row under that folder and keep the folder row itself
 2. WHEN the user clicks a folded folder's chevron THEN the tree SHALL show the folder's children again
-3. WHEN the user clicks a folder's chevron THEN the view SHALL NOT open or select the folder's All changes stack
-4. WHEN the user clicks a folder's name or icon THEN the view SHALL open the folder's All changes stack, as it does today
+3. WHEN the user clicks a folder's chevron THEN the view SHALL leave the launcher target as it was
+4. WHEN the user clicks a folder's name or icon THEN the view SHALL make that folder the launcher target, as it does today (FXPL-26)
 5. The chevron SHALL point down on an open folder and right on a folded one, with the same glyph and rotation as the Folder mode
 6. The chevron SHALL be a focusable button whose `aria-expanded` is `true` on an open folder and `false` on a folded one
 7. WHEN a mode is shown and the user has folded nothing THEN every folder SHALL be drawn open
 
-**Independent Test**: In a worktree with changes in nested folders, open Uncommitted, click a folder's chevron and see its files disappear with no All changes stack opening; click again and they return.
+**Independent Test**: In a worktree with changes in nested folders, open Uncommitted, click a folder's chevron and see its files disappear with the launcher target unchanged; click again and they return.
 
 ---
 
@@ -96,18 +96,18 @@ folders they are not looking at. The Folder mode already folds; the diff modes d
 | -------------- | ----- | ----- | ------ |
 | FDCL-01 | P1: Fold a folder | Execute | Implementing |
 | FDCL-02 | P1: Fold a folder | Execute | Implementing |
-| FDCL-03 | P1: Fold a folder | Execute | Pending |
-| FDCL-04 | P1: Fold a folder | Execute | Pending |
-| FDCL-05 | P1: Fold a folder | Execute | Pending |
-| FDCL-06 | P1: Fold a folder | Execute | Pending |
+| FDCL-03 | P1: Fold a folder | Execute | Implementing |
+| FDCL-04 | P1: Fold a folder | Execute | Implementing |
+| FDCL-05 | P1: Fold a folder | Execute | Implementing |
+| FDCL-06 | P1: Fold a folder | Execute | Implementing |
 | FDCL-07 | P1: Fold a folder | Execute | Implementing |
-| FDCL-08 | P1: Folds survive | Execute | Pending |
-| FDCL-09 | P1: Folds survive | Execute | Pending |
-| FDCL-10 | P1: Folds survive | Execute | Pending |
+| FDCL-08 | P1: Folds survive | Execute | Implementing |
+| FDCL-09 | P1: Folds survive | Execute | Implementing |
+| FDCL-10 | P1: Folds survive | Execute | Implementing |
 | FDCL-11 | P1: Folds survive | Execute | Implementing |
-| FDCL-12 | P1: Folds survive | Execute | Pending |
+| FDCL-12 | P1: Folds survive | Execute | Implementing |
 | FDCL-13 | Edge cases | Execute | Implementing |
-| FDCL-14 | Edge cases | Execute | Pending |
+| FDCL-14 | Edge cases | Execute | Implementing |
 | FDCL-15 | Edge cases | Execute | Implementing |
 
 **Coverage:** 15 total, 15 mapped to the inline steps, 0 unmapped.
@@ -116,5 +116,5 @@ folders they are not looking at. The Folder mode already folds; the diff modes d
 
 ## Success Criteria
 
-- [ ] Folding works in the three diff modes from the chevron, and the name still opens All changes
+- [ ] Folding works in the three diff modes from the chevron, and the name still picks the folder for the launchers
 - [ ] The files-diff smoke folds a folder, writes a file, and finds the fold intact
