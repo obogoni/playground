@@ -100,9 +100,11 @@ T2 → T3 → T4 → T5
 
 **Done when**:
 
-- [ ] Tests in `diff-view.test.ts` first, with literal heights: pending + held → held; pending + no held (first mount) → measured; not pending → measured; consecutive pending measurements keep the first held value
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
-- [ ] Test count: previous count + new tests, none removed
+- [x] Tests in `diff-view.test.ts` first, with literal heights: pending + held → held; pending + no held (first mount) → measured; not pending → measured; consecutive pending measurements keep the first held value
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
+- [x] Test count: previous count + new tests, none removed
+
+**Status**: ✅ Complete - 4 tests seen failing (`reportedHeight is not a function`), then 95/95 in `diff-view.test.ts` (91 + 4)
 
 **Tests**: unit
 **Gate**: quick

@@ -87,14 +87,14 @@ few times, and see the neighbouring editors keep their nodes; run the bench edit
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | FSTD-01 | P1: AC 1 (measure first) | Execute | Implementing (T1 done) |
-| FSTD-02 | P1: AC 2 (hold while pending) | Tasks | Pending |
+| FSTD-02 | P1: AC 2 (hold while pending) | Execute | Implementing (T2 rule) |
 | FSTD-03 | P1: AC 3 (release after folds) | Tasks | Pending |
-| FSTD-04 | P1: AC 4 (no hold otherwise) | Tasks | Pending |
+| FSTD-04 | P1: AC 4 (no hold otherwise) | Execute | Implementing (T2 rule) |
 | FSTD-05 | P1: AC 5 (neighbour keeps node) | Tasks | Pending |
 | FSTD-06 | P1: AC 6 (bench target) | Tasks | Pending |
-| FSTD-07 | Edge: no computed diff | Tasks | Pending |
+| FSTD-07 | Edge: no computed diff | Execute | Implementing (T2 rule) |
 | FSTD-08 | Edge: text unchanged | Tasks | Pending |
-| FSTD-09 | Edge: second re-read while pending | Tasks | Pending |
+| FSTD-09 | Edge: second re-read while pending | Execute | Implementing (T2 rule) |
 
 **Coverage:** 9 total, 9 mapped to tasks, 0 unmapped
 
