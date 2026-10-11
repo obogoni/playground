@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 142,
+  "next_id": 143,
   "lessons": [
     {
       "id": "L-001",
@@ -2461,6 +2461,24 @@
       ],
       "created": "2026-10-11T14:39:21Z",
       "last_seen": "2026-10-11T14:39:21Z"
+    },
+    {
+      "id": "L-142",
+      "key": "surviving_mutant::when a spec sends one value to several outputs test each output on the path that reads it a check on the visible box cannot see a callback read only after unmount",
+      "text": "When a spec sends one value to several outputs, test each output on the path that reads it - a check on the visible box cannot see a callback read only after unmount.",
+      "signal": "surviving_mutant",
+      "scope": "src/renderer/src/components",
+      "status": "candidate",
+      "features": [
+        "files-stack-steady-neighbours"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "N1 src/renderer/src/components/DiffViewer.tsx:327 (onHeight fed the raw height; steady 3/3, full drive 126/126; probe placeholder 3843 px vs 119 px) (src/renderer/src/components)"
+      ],
+      "created": "2026-10-11T15:35:54Z",
+      "last_seen": "2026-10-11T15:35:54Z"
     }
   ]
 }

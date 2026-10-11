@@ -828,6 +828,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: U4 src/renderer/src/lib/diff-view.ts:587 (Math.min(last, measured) while pending; diff-view.test.ts 95/95) (src/renderer/src/lib)
 - last seen: 2026-10-11T14:39:21Z
 
+### L-142 - When a spec sends one value to several outputs, test each output on the path that reads it - a check on the visible box cannot see a callback read only after unmount.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/renderer/src/components` · harmful: 0
+- features: files-stack-steady-neighbours
+- evidence: N1 src/renderer/src/components/DiffViewer.tsx:327 (onHeight fed the raw height; steady 3/3, full drive 126/126; probe placeholder 3843 px vs 119 px) (src/renderer/src/components)
+- last seen: 2026-10-11T15:35:54Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
