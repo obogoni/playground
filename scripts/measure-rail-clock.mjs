@@ -212,7 +212,10 @@ try {
   await send('LayerTree.disable')
   const g = await evaluate(geometry)
   report.ticks = { from: startText, to: g?.text }
-  const box = g.box
+  // Layer clips are in device px; the box is in CSS px. Compare in device px.
+  // Clips are in their layer's space: this assumes that layer starts at the
+  // page's origin.
+  const box = Object.fromEntries(Object.entries(g.box).map(([k, v]) => [k, v * g.dpr]))
   const touches = (c) =>
     c.x < box.right &&
     c.x + c.width > box.left &&
@@ -226,8 +229,8 @@ try {
     total: painted.length,
     nearClock: near.length,
     distinctNearClock: counts,
-    clockBoxTop: box.top,
-    inkTop: g.inkTop
+    clockBoxTopDevicePx: box.top,
+    inkTopDevicePx: g.inkTop * g.dpr
   }
 } finally {
   if (sessionId) {

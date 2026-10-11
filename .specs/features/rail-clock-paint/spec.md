@@ -85,22 +85,22 @@ change at a fractional device pixel ratio, next to the loader's composited layer
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| RCLK-01 | P1: Measure | Execute | Implementing |
-| RCLK-02 | P1: Measure | Execute | Implementing |
-| RCLK-03 | P1: Measure | Execute | Implementing |
-| RCLK-04 | P1: Measure | Execute | Implementing |
-| RCLK-05 | P1: Repaint | - | Not implemented: raster clean, presentation defect (measurement.md) |
-| RCLK-06 | P1: Repaint | - | Not implemented: raster clean, presentation defect (measurement.md) |
-| RCLK-07 | P1: Repaint | - | Not implemented: raster clean, presentation defect (measurement.md) |
-| RCLK-08 | P1: Repaint | - | Not implemented: raster clean, presentation defect (measurement.md) |
-| RCLK-09 | Edge cases | - | Not implemented: raster clean, presentation defect (measurement.md) |
-| RCLK-10 | Edge cases | - | Not implemented: raster clean, presentation defect (measurement.md) |
+| RCLK-01 | P1: Measure | Execute | Verified, with the deviation in measurement.md |
+| RCLK-02 | P1: Measure | Execute | Partial: scales and invalidation recorded; the loader question unanswered (measurement.md) |
+| RCLK-03 | P1: Measure | Execute | Verified: posted on #173 and written to measurement.md before any code change |
+| RCLK-04 | P1: Measure | Execute | N/A: it reproduced; stopped by the owner's decision instead (measurement.md) |
+| RCLK-05 | P1: Repaint | - | Not implemented: cause unknown, no proven target (measurement.md) |
+| RCLK-06 | P1: Repaint | - | Not implemented: cause unknown, no proven target (measurement.md) |
+| RCLK-07 | P1: Repaint | - | Not implemented: cause unknown, no proven target (measurement.md) |
+| RCLK-08 | P1: Repaint | - | Not implemented: cause unknown, no proven target (measurement.md) |
+| RCLK-09 | Edge cases | - | Not implemented: cause unknown, no proven target (measurement.md) |
+| RCLK-10 | Edge cases | - | Not implemented: cause unknown, no proven target (measurement.md) |
 
-**Coverage:** 10 total, 10 mapped to the inline steps, 0 unmapped.
+**Coverage:** 10 total; RCLK-01..04 measured, RCLK-05..10 not implemented by the owner's decision.
 
 ---
 
 ## Success Criteria
 
-- [ ] #173 carries the measured cause
-- [ ] No specks over 3 minutes at any scale that reproduced them before
+- [x] #173 carries the measurement (the cause is still unknown)
+- [ ] No specks over 3 minutes at any scale that reproduced them before (not attempted: no fix)
