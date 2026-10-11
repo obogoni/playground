@@ -1,0 +1,198 @@
+# Files Stack Steady Neighbours Tasks
+
+## Execution Protocol (MANDATORY -- do not skip)
+
+Implement these tasks with the `tlc-spec-driven` skill: **activate it by name and follow its Execute flow and Critical Rules.** Do not search for skill files by filesystem path. The skill is the source of truth for the full flow (per-task cycle, sub-agent delegation, adequacy review, Verifier, discrimination sensor).
+
+**If the skill cannot be activated, STOP and tell the user - do not proceed without it.**
+
+---
+
+**Spec**: `.specs/features/files-stack-steady-neighbours/spec.md`
+**Design**: inline (no `design.md`): one pure rule in `diff-view.ts`, applied in `DiffViewer`'s `measure`
+**Status**: In Progress
+
+---
+
+## Test Coverage Matrix
+
+> Generated from codebase, project guidelines, and spec - confirm before Execute. Guidelines found: none in the repo (no `AGENTS.md` / `CONTRIBUTING.md`); the floor comes from `src/renderer/src/lib/diff-view.test.ts` and `scripts/smoke-files-diff.mjs` (a new smoke check first seen failing on the current build, as #150 did).
+
+| Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
+| ---------- | ------------------ | -------------------- | ---------------- | ----------- |
+| Renderer pure rule (`lib/diff-view.ts`) | unit | Every branch; 1:1 to FSTD-02, 03, 04, 07, 08, 09 | `src/renderer/src/lib/*.test.ts` | `npx vitest run src/renderer/src/lib/diff-view.test.ts` |
+| Renderer component (`DiffViewer`) | e2e (CDP smoke) | FSTD-05 on a built app; check seen failing before the wiring | `scripts/smoke-files-*.mjs` | `SMOKE_ONLY=steady node scripts/smoke-files-diff.mjs` (seed, launch, drive, clean) |
+| Measurements (`validation.md`) | none | Bench rows with their commit | `.specs/features/*/validation.md` | `node scripts/bench-sessions.mjs --sessions 0 --files-view --edit-interval 1000` |
+
+## Gate Check Commands
+
+> Generated from codebase - confirm before Execute.
+
+| Gate Level | When to Use | Command |
+| ---------- | ----------- | ------- |
+| Quick | After tasks with unit tests only | `npx vitest run src/renderer/src/lib/diff-view.test.ts` |
+| Full | After tasks with the smoke | `npm test` + `SMOKE_ONLY=steady node scripts/smoke-files-diff.mjs` on a fresh build |
+| Build | After the last task, before the PR | `npm run typecheck && npm run lint && npm test` |
+
+---
+
+## Execution Plan
+
+### Phase 1: Measure
+
+Confirms or overturns the cause before any production change. If it overturns it, stop and go back to
+the owner (spec, Assumptions).
+
+```
+T1
+```
+
+### Phase 2: Fix and validate
+
+```
+T2 → T3 → T4 → T5
+```
+
+---
+
+## Task Breakdown
+
+### T1: Measure the written section's height over a re-read
+
+**What**: Record the "before" measurement in `validation.md`: the written section's reported heights over re-reads, the neighbours' editor-node survival, and the bench edit loop's `cat-file` per `files:changed`
+**Where**: `.specs/features/files-stack-steady-neighbours/validation.md`
+**Depends on**: None
+**Reuses**: `scripts/bench-sessions.mjs` (`--files-view --edit-interval`), the CDP helpers of `scripts/smoke-files-diff.mjs`
+**Requirement**: FSTD-01
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] `## Measurements` holds a "before" block with the commit, the window size, the written section's height series around at least 3 re-reads, how many neighbour editors were remounted, and the bench steady rows
+- [x] The block states whether the hypothesis held (height leaves the pre-read value) - if not, STOP and report
+- [x] No production file changed (`git status` shows only `.specs/`)
+
+**Status**: ✅ Complete - hypothesis held (180 → 503 px for a median 216 ms on every re-read); bench 6.07 `cat-file` per `files:changed`; gate 3168 tests, lint 0 errors / 18 warnings
+
+**Tests**: none
+**Gate**: build
+
+**Commit**: `docs(specs): measure the stack's height jump on a re-read`
+
+---
+
+### T2: Add the held-height rule
+
+**What**: A pure `reportedHeight(measured, held, pending)` in `diff-view.ts`: the held height while a fold reading is pending and one exists, the measured height otherwise
+**Where**: `src/renderer/src/lib/diff-view.ts`
+**Depends on**: None
+**Reuses**: `readingBeforeUpdate` / `FoldReading` semantics (pending = a reading exists)
+**Requirement**: FSTD-02, FSTD-04, FSTD-07, FSTD-08, FSTD-09
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tdd`
+
+**Done when**:
+
+- [ ] Tests in `diff-view.test.ts` first, with literal heights: pending + held → held; pending + no held (first mount) → measured; not pending → measured; consecutive pending measurements keep the first held value
+- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/diff-view.test.ts`
+- [ ] Test count: previous count + new tests, none removed
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(files): hold a fitted diff's height while its folds are pending`
+
+---
+
+### T3: Add the steady-neighbours smoke check
+
+**What**: A `SMOKE_ONLY=steady` section in the Files diff smoke: with the stack open and `fold/long.ts` folded, rewrite it in place 3 times and check that every other expanded section keeps the same `.monaco-diff-editor` node and that the written section never reports a height above its pre-read value
+**Where**: `scripts/smoke-files-diff.mjs`
+**Depends on**: T2
+**Reuses**: `selectWorktree`, `check`, `liveDiffEditors`, the `fold/` seed
+**Requirement**: FSTD-05
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] The new checks run and are seen FAILING on the current build (recorded in `validation.md`)
+- [ ] The other `SMOKE_ONLY` sections are untouched
+
+**Tests**: e2e
+**Gate**: full
+
+**Commit**: `test(files): check that a rewrite leaves the stack's other editors`
+
+---
+
+### T4: Apply the rule in DiffViewer's measure
+
+**What**: `measure` reports `reportedHeight(...)` to both `setHeight` and `onHeight`, with pending read from `pendingRef`; `onDidUpdateDiff` measures again right after re-applying the folds
+**Where**: `src/renderer/src/components/DiffViewer.tsx`
+**Depends on**: T3
+**Reuses**: `reportedHeight` (T2), `pendingRef`
+**Requirement**: FSTD-02, FSTD-03, FSTD-04
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] T3's smoke checks pass on a fresh build, and the full Files diff smoke still passes
+- [ ] Gate check passes: `npm test`
+- [ ] Test count: same as after T2
+
+**Tests**: e2e
+**Gate**: full
+
+**Commit**: `fix(files): keep the stack's neighbours mounted across a rewrite`
+
+---
+
+### T5: Measure after and record the decision
+
+**What**: The "after" bench and smoke results in `validation.md`, and AD-062 in `STATE.md`
+**Where**: `.specs/features/files-stack-steady-neighbours/validation.md`
+**Depends on**: T4
+**Reuses**: T1's measurement procedure
+**Requirement**: FSTD-06
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] Bench edit loop: at most 2 `cat-file` per `files:changed` in every steady row
+- [ ] AD-062 recorded (number checked against open PRs first)
+- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+
+**Tests**: none
+**Gate**: build
+
+**Commit**: `docs(specs): record the steady stack's validation`
+
+---
+
+## Phase Execution Map
+
+```
+Phase 1 → Phase 2
+
+Phase 1:  T1
+Phase 2:  T2 ------→ T3 ------→ T4 ------→ T5
+```
