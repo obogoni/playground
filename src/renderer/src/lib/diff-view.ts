@@ -572,3 +572,17 @@ export function readingBeforeUpdate(
   if (regions === null || hidden === null) return null
   return { states: regionStates(regions, hidden), left }
 }
+
+/**
+ * The height a fitted diff reports. While a reading is pending, `setValue` has
+ * revealed every region and the content measures the whole file, so the last
+ * reported height holds until the folds are re-applied: a section that grew for
+ * that moment would push its neighbours out of the stack's margin (FSTD-02..04).
+ */
+export function reportedHeight(
+  measured: number,
+  last: number | null,
+  pending: FoldReading | null
+): number {
+  return pending !== null && last !== null ? last : measured
+}

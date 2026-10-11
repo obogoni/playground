@@ -810,6 +810,30 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: SPRL-02 and FPRG-26 (G4) (spec)
 - last seen: 2026-10-10T22:23:00Z
 
+### L-139 - When a fix holds a value until an event and then releases it, test the release in a state where held and released values differ - a check whose held and final values coincide cannot see a lost release path.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/renderer/src/components` · harmful: 0
+- features: files-stack-steady-neighbours
+- evidence: B2 src/renderer/src/components/DiffViewer.tsx:354 (measure() after applyFolds removed; smoke 18a/18b still 2/2) (src/renderer/src/components)
+- last seen: 2026-10-11T14:12:43Z
+
+### L-140 - When a target is read from a bench that aggregates over rows, word the AC and Success Criteria the same way (aggregate vs every row) - per-row ratios jitter across time buckets.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `.specs/features` · harmful: 0
+- features: files-stack-steady-neighbours
+- evidence: FSTD-06 vs Success Criteria 'every steady row' (row 3 = 119/59 = 2.017; bench aggregate 2.00) (.specs/features)
+- last seen: 2026-10-11T14:12:43Z
+
+### L-141 - When a rule holds a prior value, test it with the new value both above and below the held one - a min or max mutant passes tests that only move one way.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/renderer/src/lib` · harmful: 0
+- features: files-stack-steady-neighbours
+- evidence: U4 src/renderer/src/lib/diff-view.ts:587 (Math.min(last, measured) while pending; diff-view.test.ts 95/95) (src/renderer/src/lib)
+- last seen: 2026-10-11T14:39:21Z
+
+### L-142 - When a spec sends one value to several outputs, test each output on the path that reads it - a check on the visible box cannot see a callback read only after unmount.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/renderer/src/components` · harmful: 0
+- features: files-stack-steady-neighbours
+- evidence: N1 src/renderer/src/components/DiffViewer.tsx:327 (onHeight fed the raw height; steady 3/3, full drive 126/126; probe placeholder 3843 px vs 119 px) (src/renderer/src/components)
+- last seen: 2026-10-11T15:35:54Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

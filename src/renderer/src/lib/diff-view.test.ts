@@ -14,6 +14,7 @@ import {
   PR_OVERVIEW_KEY,
   readingBeforeUpdate,
   regionStates,
+  reportedHeight,
   requestKey,
   tabKeyOf,
   tabsWithAllChanges,
@@ -954,5 +955,32 @@ describe('readingBeforeUpdate', () => {
       ],
       left: 'left text'
     })
+  })
+})
+
+describe('reportedHeight', () => {
+  const pending: FoldReading = { states: [], left: 'before' }
+
+  it('holds the last reported height while a fold reading is pending (FSTD-02)', () => {
+    expect(reportedHeight(503, 180, pending)).toBe(180)
+    expect(reportedHeight(57, 180, pending)).toBe(180)
+  })
+
+  it('reports the measured height once no reading is pending (FSTD-03, FSTD-04)', () => {
+    expect(reportedHeight(180, 180, null)).toBe(180)
+    expect(reportedHeight(503, 180, null)).toBe(503)
+  })
+
+  it('reports the measured height on first mount, with nothing reported yet (FSTD-04)', () => {
+    expect(reportedHeight(180, null, null)).toBe(180)
+    expect(reportedHeight(503, null, pending)).toBe(503)
+  })
+
+  it('keeps holding for as long as the reading stays pending (FSTD-07, FSTD-09)', () => {
+    let last = reportedHeight(503, 180, pending)
+    last = reportedHeight(620, last, pending)
+    last = reportedHeight(503, last, pending)
+
+    expect(last).toBe(180)
   })
 })
