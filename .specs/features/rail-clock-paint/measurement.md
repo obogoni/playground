@@ -3,7 +3,8 @@
 **Verdict:** reproduced on the presented screen at the owner's real scale (1.25). The dash follows the value
 the clock shows, appearing on even seconds within some minutes. It does not show in DevTools' paint
 tracking, nor in CDP screenshots of a static copy of the clock, even with the values that showed it on
-screen. Invalidation, ink outside the box and the rasterised glyphs are overturned. The cause is **unknown**.
+screen. Invalidation and ink outside the box are overturned; the rasterised glyphs are too, as far as a CDP
+screenshot of a static copy can show it. The cause is **unknown**.
 
 ## Setup
 
@@ -33,11 +34,12 @@ The owner's running app, the selected row in `working` with the loader spinning,
 once a second. The region is 230x52, and the digits' ink spans rows 21-30.
 
 - **2 min (120 frames):** no pixel above row 19 ever strays from its usual colour. The stray pixels in rows
-  19-20 are the loader's edge (x 155-166), and the others are the digits.
+  19-20 are the loader's edge (x 155-166); in rows 21-31 they are the digits and the loader's body
+  (x 155-170).
 - **20 min (1200 frames):** two episodes.
   - Frames 701-741, during minute `01:27`, 21 frames: a 1 px dark dash at rows 16-17, x 144-147, above the
     **ones** digit of the seconds, with two light pixels.
-  - Frames 962-975, during `01:31:4x`, 8 frames: the same dash at rows 15-16, x 128-130, above the **tens**
+  - Frames 962-975, during `01:31:44`-`01:31:58`, 8 frames: the same dash at rows 15-16, x 128-130, above the **tens**
     digit of the seconds.
 - **The dash follows the displayed second, not the frame order.** It is on even seconds. Where the 1 Hz
   capture skipped a second, the parity still held: frame 708 (`:23`) and 709 (`:25`) are both clean, frame
@@ -63,7 +65,9 @@ median.
 The 378 values are `01:27:00`-`01:27:59` and `01:31:00`-`01:31:59`, plus 00-99 in the seconds, 00-59 in the
 minutes and 00-99 in the hours, each with the other fields at zero.
 
-The detector finds a block at the dash's own contrast every time. It finds nothing on any real value,
+The detector finds a block in the dash's own colour every time. Its contrast in the probe equals the
+screen's only if the probe's background matches the screen's `50,44,54`; the probe does not record that
+background. It finds nothing on any real value,
 including `01:27:16` and `01:31:44`, which showed the dash on screen. What this shows: a CDP screenshot of a
 static copy in a throwaway instance is clean. It does not show what the owner's instance presented at the
 moment of a dash.
