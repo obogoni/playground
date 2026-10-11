@@ -94,21 +94,21 @@ folders they are not looking at. The Folder mode already folds; the diff modes d
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FDCL-01 | P1: Fold a folder | Execute | Pending |
-| FDCL-02 | P1: Fold a folder | Execute | Pending |
+| FDCL-01 | P1: Fold a folder | Execute | Implementing |
+| FDCL-02 | P1: Fold a folder | Execute | Implementing |
 | FDCL-03 | P1: Fold a folder | Execute | Pending |
 | FDCL-04 | P1: Fold a folder | Execute | Pending |
 | FDCL-05 | P1: Fold a folder | Execute | Pending |
 | FDCL-06 | P1: Fold a folder | Execute | Pending |
-| FDCL-07 | P1: Fold a folder | Execute | Pending |
+| FDCL-07 | P1: Fold a folder | Execute | Implementing |
 | FDCL-08 | P1: Folds survive | Execute | Pending |
 | FDCL-09 | P1: Folds survive | Execute | Pending |
 | FDCL-10 | P1: Folds survive | Execute | Pending |
-| FDCL-11 | P1: Folds survive | Execute | Pending |
+| FDCL-11 | P1: Folds survive | Execute | Implementing |
 | FDCL-12 | P1: Folds survive | Execute | Pending |
-| FDCL-13 | Edge cases | Execute | Pending |
+| FDCL-13 | Edge cases | Execute | Implementing |
 | FDCL-14 | Edge cases | Execute | Pending |
-| FDCL-15 | Edge cases | Execute | Pending |
+| FDCL-15 | Edge cases | Execute | Implementing |
 
 **Coverage:** 15 total, 15 mapped to the inline steps, 0 unmapped.
 

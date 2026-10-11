@@ -62,6 +62,24 @@ export function buildTree(paths: ChangedPath[]): TreeNode[] {
   return root.children
 }
 
+/**
+ * The tree a diff mode draws once the user's folds apply (FDCL-01/02): a
+ * folded folder keeps its row and loses its descendants. The set names what
+ * is closed, so a folder never seen is open (FDCL-07/10), a subfolder folded
+ * under a folded parent is still folded when the parent opens (FDCL-11), and
+ * a path the tree no longer holds does nothing (FDCL-13).
+ */
+export function foldTree(nodes: TreeNode[], collapsed: string[]): TreeNode[] {
+  return nodes.map((node) =>
+    node.kind === 'file'
+      ? node
+      : {
+          ...node,
+          children: collapsed.includes(node.path) ? [] : foldTree(node.children, collapsed)
+        }
+  )
+}
+
 /** A solution opens in VS 2026 instead of a tab (FXPL-28). */
 export function isSolution(path: string): boolean {
   return /\.slnx?$/i.test(path)
