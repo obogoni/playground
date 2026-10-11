@@ -204,3 +204,40 @@ Phase 1 → Phase 2
 Phase 1:  T1
 Phase 2:  T2 ------→ T3 ------→ T4 ------→ T5
 ```
+
+---
+
+## Fix Tasks (Verifier round 1)
+
+### F1: Cover the release after the folds (18c)
+
+**What**: Check 18c in `steadySection`: with All changes' Show unchanged pressed, a rewrite with 40 added lines grows the written section by exactly 40 Monaco lines; Hide unchanged is pressed back in `finally`
+**Where**: `scripts/smoke-files-diff.mjs`
+**Depends on**: T4
+**Requirement**: FSTD-03
+
+**Done when**:
+
+- [x] 18c fails with the `measure()` after `applyFolds` removed (scratch worktree: 3851 → 3851 px) and passes on HEAD (3851 → 4611 px, +760 = 40 x 19)
+- [x] `SMOKE_ONLY=steady` reads 3/3 and the full drive 126/126
+
+**Tests**: e2e
+**Gate**: full
+
+**Status**: ✅ Complete
+
+### F2: Word the bench target as the aggregate it is
+
+**What**: "every steady row" becomes "over the steady rows (aggregate)" where the spec's Success Criteria and T5 say it, matching FSTD-06 and `bench-summary.mjs`
+**Where**: `.specs/features/files-stack-steady-neighbours/spec.md`
+**Depends on**: T5
+**Requirement**: FSTD-06
+
+**Done when**:
+
+- [x] No "every steady row" left for the `cat-file` target in this feature's spec or tasks
+
+**Tests**: none
+**Gate**: build
+
+**Status**: ✅ Complete

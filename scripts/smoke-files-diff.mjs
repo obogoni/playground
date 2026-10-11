@@ -26,7 +26,7 @@
  * SMOKE_ONLY=folders on step 2 runs section 17 alone (checks 17a..17i, FDCL,
  * issue #172), from a fresh seed and launch like any drive.
  *
- * SMOKE_ONLY=steady on step 2 runs section 18 alone (checks 18a..18b, FSTD,
+ * SMOKE_ONLY=steady on step 2 runs section 18 alone (checks 18a..18c, FSTD,
  * issue #167), from a fresh seed and launch like any drive.
  *
  * Point SMOKE_CONFIG at the config.json of the userData dir in use, and
@@ -3941,19 +3941,30 @@ const STEADY_FILE = 'fold/long.ts'
 const STEADY_WRITES = 3
 /** Past the watcher's 250 ms batch, the section's re-read and Monaco's diff. */
 const STEADY_WRITE_GAP_MS = 1500
-
-/** `fold/long.ts` with its last line changed to a value the run can find on screen. */
-const steadyText = (value) => foldText('l', 199) + `export const l200 = ${value}${LF}`
+/** Lines 18c appends, so the shown section must grow by exactly that many. */
+const STEADY_EXTRA = 40
 
 /**
- * 18a..18b. A rewrite leaves the stack's other editors where they are (FSTD-02,
- * 05, issue #167). The written section holds its height while its new diff
- * computes, so the sections below it never leave the margin and never remount.
- * Leaves `fold/long.ts` as committed.
+ * `fold/long.ts` with its last line changed to a value the run can find on
+ * screen, then `extra` added lines: line 200 stays a change either way, so both
+ * layouts grow by exactly `extra` lines.
+ */
+const steadyText = (value, extra = 0) =>
+  foldText('l', 199) +
+  `export const l200 = ${value}${LF}` +
+  Array.from({ length: extra }, (_, i) => `export const x${i} = ${i}${LF}`).join('')
+
+/**
+ * 18a..18c. A rewrite leaves the stack's other editors where they are (FSTD-02,
+ * 03, 05, issue #167). The written section holds its height while its new diff
+ * computes, so the sections below it never leave the margin and never remount,
+ * and it reports the new height once the folds are back. Leaves `fold/long.ts`
+ * as committed and the stack's regions hidden.
  */
 async function steadySection(ws) {
   const file = join(REPO, STEADY_FILE)
   const committed = readFileSync(file)
+  let shown = false
   try {
     writeFileSync(file, steadyText(-1000))
     await evaluate(ws, clickByText('.file-tree-mode', 'Uncommitted'))
@@ -4040,9 +4051,35 @@ async function steadySection(ws) {
       after.reread && after.max <= after.base && after.final === after.base,
       `base ${after.base} px, max ${after.max} px, final ${after.final} px`
     )
+
+    // 18c (FSTD-03): with every region shown, the re-applied folds leave the
+    // content as tall as it measured while they were pending, so no size change
+    // follows them: only the measure after the folds releases the held height.
+    shown = true
+    await evaluate(ws, clickByText('.all-changes-toggle', 'Show unchanged'))
+    await sleep(STEADY_WRITE_GAP_MS)
+    const box = `document.querySelector('.diff-section[data-path=${J(STEADY_FILE)}]')`
+    const sized = `(() => ({
+      height: Math.round(${box}.getBoundingClientRect().height),
+      line: parseFloat(getComputedStyle(${box}.querySelector('.view-line')).height)
+    }))()`
+    const before = await evaluate(ws, sized)
+    writeFileSync(file, steadyText(-1000 - STEADY_WRITES - 1, STEADY_EXTRA))
+    await sleep(STEADY_WRITE_GAP_MS)
+    const grown = await evaluate(ws, sized)
+    const expected = STEADY_EXTRA * before.line
+    check(
+      `18c. With unchanged lines shown, ${STEADY_EXTRA} added lines grow the written section by ${STEADY_EXTRA} lines (FSTD-03)`,
+      before.line > 0 && grown.height - before.height === expected,
+      `${before.height} px -> ${grown.height} px, expected +${expected} (${STEADY_EXTRA} x ${before.line} px)`
+    )
   } finally {
     await evaluate(ws, `(() => { delete window.__fstd; return true })()`)
     writeFileSync(file, committed)
+    if (shown) {
+      await evaluate(ws, clickByText('.all-changes-toggle', 'Hide unchanged'))
+      await sleep(800)
+    }
   }
 }
 
