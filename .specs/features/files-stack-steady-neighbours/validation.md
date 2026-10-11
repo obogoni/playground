@@ -59,3 +59,13 @@ two neighbours' remount re-reads.
 
 The same run also reads "no overlapping git on one worktree: 3, FAIL". That target is #147's and is not
 in this feature's scope; it is recorded here only so the after run compares against it.
+
+### Smoke before the fix (T3), build of 337ae6e
+
+`SMOKE_ONLY=steady node scripts/smoke-files-diff.mjs` on a fresh seed and launch, with the app built
+before T4: **0/2, both seen failing.**
+
+- 18a FAIL: the re-read landed (the section shows `-1003`), and the one editor below `fold/long.ts`
+  (the long untracked name) was removed 3 times, once per rewrite, and its node replaced.
+- 18b FAIL: the written section measured 151 px folded and reached 3875 px during a re-read (the
+  200-line file with every region revealed), then settled back at 151 px.

@@ -26,6 +26,9 @@
  * SMOKE_ONLY=folders on step 2 runs section 17 alone (checks 17a..17i, FDCL,
  * issue #172), from a fresh seed and launch like any drive.
  *
+ * SMOKE_ONLY=steady on step 2 runs section 18 alone (checks 18a..18b, FSTD,
+ * issue #167), from a fresh seed and launch like any drive.
+ *
  * Point SMOKE_CONFIG at the config.json of the userData dir in use, and
  * SMOKE_BASE at the folder to seed into. Run the app with --user-data-dir so
  * the owner's real workspaces, sessions and pinned tasks are never in scope.
@@ -52,7 +55,8 @@
  *     big.txt              2 MB, past the 1 MB view cap
  *     stack/f00..f39.ts    40 changed files, for the All changes stack
  *     fold/long.ts         200 lines, committed on main and never changed on
- *     fold/other.ts        120 lines, the branch; section 14 writes to them
+ *     fold/other.ts        120 lines, the branch; section 14 writes to them,
+ *                          and section 18 rewrites long.ts and restores it
  *     untracked.txt        untracked, so the uncommitted mode has one
  *     src/a-rather-long-untracked-file-name-that-has-to-be-cut-short-before-its-status-glyph.txt
  *                          untracked, 12 lines, a name the tree and the
@@ -161,7 +165,8 @@ function seed() {
     const name = `f${String(i).padStart(2, '0')}.ts`
     writeFileSync(join(REPO, 'stack', name), `export const n${i} = ${i}\nexport const tail = 0\n`)
   }
-  // Long enough to fold; section 14 is the only one that changes them.
+  // Long enough to fold; section 14 changes them, and section 18 rewrites
+  // long.ts and puts it back as committed.
   writeFileSync(join(REPO, 'fold', 'long.ts'), foldText('l', 200))
   writeFileSync(join(REPO, 'fold', 'other.ts'), foldText('o', 120))
 
@@ -550,6 +555,15 @@ async function drive() {
     await watchSection(ws)
     const failed = checks.filter((c) => !c.ok)
     console.log(`\n${checks.length - failed.length}/${checks.length} checks passed (watch only)`)
+    ws.close()
+    return failed.length
+  }
+
+  // SMOKE_ONLY=steady runs section 18 alone; it builds its own fixture.
+  if (process.env.SMOKE_ONLY === 'steady') {
+    await steadySection(ws)
+    const failed = checks.filter((c) => !c.ok)
+    console.log(`\n${checks.length - failed.length}/${checks.length} checks passed (steady only)`)
     ws.close()
     return failed.length
   }
@@ -1030,6 +1044,10 @@ async function drive() {
   // After the discard section and before the icon checks: its fixture is
   // ignored, its control file is removed, and the exclude file is restored.
   await watchSection(ws)
+
+  // Before section 14, which commits the fold files: it rewrites fold/long.ts
+  // and puts it back as committed.
+  await steadySection(ws)
 
   // Before the icon checks, which reload the window and with it the folds.
   await folderFoldSection(ws)
@@ -3913,6 +3931,118 @@ async function watchSection(ws) {
     rmSync(controlPath, { force: true })
     if (excludeBefore === null) rmSync(exclude, { force: true })
     else writeFileSync(exclude, excludeBefore)
+  }
+}
+
+/* ---------------------------------------------------------------- steady -- */
+
+/** The committed fold file the steady section rewrites; folded, its section is a few lines high. */
+const STEADY_FILE = 'fold/long.ts'
+const STEADY_WRITES = 3
+/** Past the watcher's 250 ms batch, the section's re-read and Monaco's diff. */
+const STEADY_WRITE_GAP_MS = 1500
+
+/** `fold/long.ts` with its last line changed to a value the run can find on screen. */
+const steadyText = (value) => foldText('l', 199) + `export const l200 = ${value}${LF}`
+
+/**
+ * 18a..18b. A rewrite leaves the stack's other editors where they are (FSTD-02,
+ * 05, issue #167). The written section holds its height while its new diff
+ * computes, so the sections below it never leave the margin and never remount.
+ * Leaves `fold/long.ts` as committed.
+ */
+async function steadySection(ws) {
+  const file = join(REPO, STEADY_FILE)
+  const committed = readFileSync(file)
+  try {
+    writeFileSync(file, steadyText(-1000))
+    await evaluate(ws, clickByText('.file-tree-mode', 'Uncommitted'))
+    await sleep(1600)
+    await evaluate(ws, clickByText('.file-tab-label', 'All changes'))
+    const ready = await readWhen(
+      ws,
+      `(() => {
+        const s = document.querySelector('.diff-section[data-path=${J(STEADY_FILE)}]')
+        if (!s) return null
+        s.parentElement.scrollTop = 0
+        return (s.textContent || '').includes('1000') && !!s.querySelector('.monaco-diff-editor')
+      })()`,
+      (v) => v === true
+    )
+    await sleep(1500)
+
+    // Tag every editor below the written section, and watch the written box.
+    const neighbours = await evaluate(
+      ws,
+      `(() => {
+        const sections = [...document.querySelectorAll('.diff-section')]
+        const at = sections.findIndex((s) => s.dataset.path === ${J(STEADY_FILE)})
+        const written = sections[at]
+        const probe = { base: Math.round(written.getBoundingClientRect().height), max: 0, removed: [] }
+        window.__fstd = probe
+        probe.ro = new ResizeObserver(() => {
+          probe.max = Math.max(probe.max, Math.round(written.getBoundingClientRect().height))
+        })
+        probe.ro.observe(written)
+        probe.mo = new MutationObserver((records) => {
+          for (const r of records)
+            for (const n of r.removedNodes)
+              if (n.nodeType === 1 && (n.matches('.monaco-diff-editor') || n.querySelector('.monaco-diff-editor')))
+                probe.removed.push(r.target.closest('.diff-section')?.dataset.path ?? null)
+        })
+        probe.mo.observe(written.parentElement, { childList: true, subtree: true })
+        return sections.slice(at + 1).flatMap((s) => {
+          const editor = s.querySelector('.monaco-diff-editor')
+          if (!editor) return []
+          editor.__fstd = true
+          return [s.dataset.path]
+        })
+      })()`
+    )
+
+    for (let i = 1; i <= STEADY_WRITES; i++) {
+      writeFileSync(file, steadyText(-1000 - i))
+      await sleep(STEADY_WRITE_GAP_MS)
+    }
+
+    const after = await evaluate(
+      ws,
+      `(() => {
+        const probe = window.__fstd
+        probe.ro.disconnect()
+        probe.mo.disconnect()
+        const written = document.querySelector('.diff-section[data-path=${J(STEADY_FILE)}]')
+        const kept = ${J(neighbours)}.filter((path) =>
+          document.querySelector('.diff-section[data-path="' + path + '"] .monaco-diff-editor')?.__fstd === true)
+        return {
+          base: probe.base,
+          max: probe.max,
+          final: Math.round(written.getBoundingClientRect().height),
+          reread: (written.textContent || '').includes(${J(String(1000 + STEADY_WRITES))}),
+          removed: probe.removed,
+          kept
+        }
+      })()`
+    )
+
+    check(
+      `18a. ${STEADY_WRITES} rewrites of ${STEADY_FILE} leave every editor below it the same node (FSTD-05)`,
+      ready === true &&
+        after.reread &&
+        neighbours.length > 0 &&
+        after.kept.length === neighbours.length &&
+        after.removed.length === 0,
+      `re-read ${after.reread}, ${after.kept.length}/${neighbours.length} kept ${J(neighbours)}, ` +
+        `${after.removed.length} removals ${J(after.removed.slice(0, 6))}`
+    )
+    check(
+      `18b. The written section never grows past its folded height while it re-reads (FSTD-02)`,
+      after.reread && after.max <= after.base && after.final === after.base,
+      `base ${after.base} px, max ${after.max} px, final ${after.final} px`
+    )
+  } finally {
+    await evaluate(ws, `(() => { delete window.__fstd; return true })()`)
+    writeFileSync(file, committed)
   }
 }
 

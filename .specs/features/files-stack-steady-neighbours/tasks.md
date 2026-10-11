@@ -128,8 +128,10 @@ T2 → T3 → T4 → T5
 
 **Done when**:
 
-- [ ] The new checks run and are seen FAILING on the current build (recorded in `validation.md`)
-- [ ] The other `SMOKE_ONLY` sections are untouched
+- [x] The new checks run and are seen FAILING on the current build (recorded in `validation.md`)
+- [x] The other `SMOKE_ONLY` sections are untouched
+
+**Status**: ✅ Complete - 18a and 18b seen failing on the pre-fix build (3 removals; 151 → 3875 px); the full drive calls the section after the watch section and before section 14
 
 **Tests**: e2e
 **Gate**: full
