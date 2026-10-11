@@ -94,21 +94,21 @@ folders they are not looking at. The Folder mode already folds; the diff modes d
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FDCL-01 | P1: Fold a folder | Execute | Implementing |
-| FDCL-02 | P1: Fold a folder | Execute | Implementing |
-| FDCL-03 | P1: Fold a folder | Execute | Implementing |
-| FDCL-04 | P1: Fold a folder | Execute | Implementing |
-| FDCL-05 | P1: Fold a folder | Execute | Implementing |
-| FDCL-06 | P1: Fold a folder | Execute | Implementing |
-| FDCL-07 | P1: Fold a folder | Execute | Implementing |
-| FDCL-08 | P1: Folds survive | Execute | Implementing |
-| FDCL-09 | P1: Folds survive | Execute | Implementing |
-| FDCL-10 | P1: Folds survive | Execute | Implementing |
-| FDCL-11 | P1: Folds survive | Execute | Implementing |
-| FDCL-12 | P1: Folds survive | Execute | Implementing |
-| FDCL-13 | Edge cases | Execute | Implementing |
-| FDCL-14 | Edge cases | Execute | Implementing |
-| FDCL-15 | Edge cases | Execute | Implementing |
+| FDCL-01 | P1: Fold a folder | Execute | Verified |
+| FDCL-02 | P1: Fold a folder | Execute | Verified |
+| FDCL-03 | P1: Fold a folder | Execute | Verified |
+| FDCL-04 | P1: Fold a folder | Execute | Verified |
+| FDCL-05 | P1: Fold a folder | Execute | Verified |
+| FDCL-06 | P1: Fold a folder | Execute | Verified |
+| FDCL-07 | P1: Fold a folder | Execute | Verified |
+| FDCL-08 | P1: Folds survive | Execute | Verified |
+| FDCL-09 | P1: Folds survive | Execute | Verified |
+| FDCL-10 | P1: Folds survive | Execute | Verified |
+| FDCL-11 | P1: Folds survive | Execute | Verified |
+| FDCL-12 | P1: Folds survive | Execute | Verified |
+| FDCL-13 | Edge cases | Execute | Verified |
+| FDCL-14 | Edge cases | Execute | Verified |
+| FDCL-15 | Edge cases | Execute | Verified |
 
 **Coverage:** 15 total, 15 mapped to the inline steps, 0 unmapped.
 
