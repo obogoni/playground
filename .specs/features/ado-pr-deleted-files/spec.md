@@ -72,8 +72,8 @@ in Pull request mode so that I can review it like any other.
 | -------------- | ----- | ------- | ------- |
 | APDF-01        | P1    | Execute | Implementing |
 | APDF-02        | P1    | Execute | Implementing |
-| APDF-03        | P1    | Execute | Pending |
-| APDF-04        | P1    | Execute | Pending |
+| APDF-03        | P1    | Execute | Implementing |
+| APDF-04        | P1    | Execute | Implementing |
 | APDF-05        | Edge  | Execute | Implementing |
 | APDF-06        | Edge  | Execute | Implementing |
 

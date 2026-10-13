@@ -303,6 +303,38 @@ describe('AdoPrClient.getPr (FPRA-09/10)', () => {
       }
     })
   })
+
+  // #179: a deleted file arrives with `item.path: null`; it failed the whole read.
+  it('opens a pull request that deletes a file, listing it as deleted (APDF-03)', async () => {
+    const ado = client((url) => {
+      const path = url.pathname
+      if (path.endsWith('/pullrequests/42')) return json(pullRequest())
+      if (path.endsWith('/iterations')) return json(iterations)
+      if (path.endsWith('/changes')) {
+        return json({
+          changeEntries: [
+            { changeTrackingId: 1, changeType: 'edit', item: { path: '/src/app.ts' } },
+            {
+              changeTrackingId: 2,
+              changeType: 'delete',
+              originalPath: '/src/old.ts',
+              item: { originalObjectId: 'blob-old', path: null }
+            }
+          ]
+        })
+      }
+      if (path.endsWith('/threads')) return json({ value: [] })
+      return json({}, 500)
+    })
+
+    const result = await ado.getPr(PR)
+
+    expect(result.kind).toBe('ok')
+    expect(result.kind === 'ok' && result.detail.files).toStrictEqual([
+      { path: 'src/app.ts', status: 'modified', changeTrackingId: 1 },
+      { path: 'src/old.ts', status: 'deleted', changeTrackingId: 2 }
+    ])
+  })
 })
 
 describe('AdoPrClient.changedFiles (FPRA-15; T1, S7)', () => {
@@ -510,6 +542,30 @@ describe('AdoPrClient.fileSide / fileSides (FPRA-16/17; T1, S6)', () => {
     expect(items.map((r) => r.url.searchParams.get('versionDescriptor.version'))).toEqual([
       'bbb3',
       'aaa3'
+    ])
+  })
+
+  // #179: a deleted file is listed under its original path with no `oldPath`.
+  it('reads a deleted file original at the merge base and its modified side as absent (APDF-04)', async () => {
+    const ado = client((url) => {
+      if (url.pathname.endsWith('/iterations')) return json(iterations)
+      return files({ bbb3: { size: 4, text: 'old\n' } })(url)
+    })
+
+    expect(await ado.fileSides(PR, 'src/old.ts')).toEqual({
+      original: { kind: 'text', text: 'old\n', size: 4 },
+      modified: { kind: 'absent' },
+      eolChanged: []
+    })
+    const items = readRequests.filter((r) => r.url.pathname.endsWith('/items'))
+    expect(
+      items.map((r) => [
+        r.url.searchParams.get('path'),
+        r.url.searchParams.get('versionDescriptor.version')
+      ])
+    ).toEqual([
+      ['/src/old.ts', 'bbb3'],
+      ['/src/old.ts', 'aaa3']
     ])
   })
 })
