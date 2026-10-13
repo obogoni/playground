@@ -50,7 +50,12 @@ describe('toChangedPaths', () => {
       toChangedPaths([
         { changeTrackingId: 1, changeType: 'add', item: { path: '/src/new.ts' } },
         { changeTrackingId: 2, changeType: 'edit', item: { path: '/src/app.ts' } },
-        { changeTrackingId: 3, changeType: 'delete', item: { path: '/src/old.ts' } },
+        {
+          changeTrackingId: 3,
+          changeType: 'delete',
+          item: { path: null },
+          originalPath: '/src/old.ts'
+        },
         {
           changeTrackingId: 4,
           changeType: 'rename',
@@ -87,6 +92,52 @@ describe('toChangedPaths', () => {
     ).toEqual([
       { path: 'docs/guide.md', status: 'renamed', oldPath: 'docs/readme.md', changeTrackingId: 7 },
       { path: 'package.json', status: 'modified', changeTrackingId: 8 }
+    ])
+  })
+
+  // #179: ADO sends a deleted file with `item.path: null` and its path in
+  // `originalPath`. It lists like an Uncommitted deletion, so no `oldPath`.
+  it('lists a deleted file under its original path, without an old path (APDF-01)', () => {
+    expect(
+      toChangedPaths([
+        {
+          changeTrackingId: 1,
+          changeType: 'delete',
+          item: { path: null },
+          originalPath: '/src/old.ts'
+        }
+      ])
+    ).toStrictEqual([{ path: 'src/old.ts', status: 'deleted', changeTrackingId: 1 }])
+  })
+
+  it('lists a combined delete with no item path as deleted under its original path (APDF-06)', () => {
+    expect(
+      toChangedPaths([
+        {
+          changeTrackingId: 2,
+          changeType: 'delete, sourceRename',
+          item: { path: null },
+          originalPath: '/src/gone.ts'
+        }
+      ])
+    ).toStrictEqual([{ path: 'src/gone.ts', status: 'deleted', changeTrackingId: 2 }])
+  })
+
+  it('leaves out an entry that names no path and keeps the others (APDF-05)', () => {
+    expect(
+      toChangedPaths([
+        { changeTrackingId: 1, changeType: 'edit', item: { path: '/src/app.ts' } },
+        { changeTrackingId: 2, changeType: 'delete', item: { path: null } },
+        {
+          changeTrackingId: 3,
+          changeType: 'delete',
+          item: { path: null },
+          originalPath: '/src/old.ts'
+        }
+      ])
+    ).toStrictEqual([
+      { path: 'src/app.ts', status: 'modified', changeTrackingId: 1 },
+      { path: 'src/old.ts', status: 'deleted', changeTrackingId: 3 }
     ])
   })
 })
