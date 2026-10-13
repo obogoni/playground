@@ -70,12 +70,12 @@ in Pull request mode so that I can review it like any other.
 
 | Requirement ID | Story | Phase   | Status  |
 | -------------- | ----- | ------- | ------- |
-| APDF-01        | P1    | Execute | Implementing |
-| APDF-02        | P1    | Execute | Implementing |
-| APDF-03        | P1    | Execute | Implementing |
-| APDF-04        | P1    | Execute | Implementing |
-| APDF-05        | Edge  | Execute | Implementing |
-| APDF-06        | Edge  | Execute | Implementing |
+| APDF-01        | P1    | Execute | Verified     |
+| APDF-02        | P1    | Execute | Verified     |
+| APDF-03        | P1    | Execute | Verified     |
+| APDF-04        | P1    | Execute | Verified     |
+| APDF-05        | Edge  | Execute | Verified     |
+| APDF-06        | Edge  | Execute | Verified     |
 
 APDF-01..04 are the P1 criteria in order; APDF-05 and APDF-06 are the two edge cases.
 
