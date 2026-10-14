@@ -486,10 +486,10 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] Every listed AC has at least one named check; the script exits 0
-- [ ] The real `~/.playground/presets.json` is untouched (mtime and bytes compared before/after)
-- [ ] Each check seen failing once against a deliberate break before being trusted
-- [ ] Gate check passes: `npm test` and `node scripts/smoke-agent-presets.mjs`
+- [x] Every listed AC has at least one named check; the script exits 0
+- [x] The real `~/.playground/presets.json` is untouched (mtime and bytes compared before/after)
+- [x] Each check seen failing once against a deliberate break before being trusted
+- [x] Gate check passes: `npm test` and `node scripts/smoke-agent-presets.mjs`
 
 **Tests**: e2e
 **Gate**: full
