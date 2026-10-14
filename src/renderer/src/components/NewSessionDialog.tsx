@@ -36,6 +36,10 @@ export interface NewSessionSource {
   taskId?: number
   /** Worktree paths to highlight (a task's worktrees, many-resolution). */
   highlightWorktrees?: string[]
+  /** Registry agent to pre-select; one missing from the registry falls back to the first (PRST-26, PRST-33). */
+  agentName?: string
+  /** Prompt file to pre-select; an unknown or broken one reads as None (PRST-26, PRST-33). */
+  promptName?: string
 }
 
 interface NewSessionDialogProps {
@@ -105,7 +109,9 @@ export function NewSessionDialog({
   onSpawn,
   onClose
 }: NewSessionDialogProps): JSX.Element {
-  const [agentName, setAgentName] = useState(agents[0]?.name ?? ADHOC)
+  const [agentName, setAgentName] = useState(
+    () => (agents.find((a) => a.name === source.agentName) ?? agents[0])?.name ?? ADHOC
+  )
   const [level, setLevel] = useState<IsolationLevel>(() => initialLevel(tree, source.cwd))
   const [cwd, setCwd] = useState<string | null>(source.cwd ?? null)
   const options = levelOptions(tree, level)
@@ -122,7 +128,8 @@ export function NewSessionDialog({
   )
   const [pickerOpen, setPickerOpen] = useState(false)
   const [prompts, setPrompts] = useState<PromptEntry[]>([])
-  const [promptName, setPromptName] = useState<string | null>(null)
+  // Kept by name: the listing arrives after mount, and `chosen` resolves it.
+  const [promptName, setPromptName] = useState<string | null>(source.promptName ?? null)
   const [step, setStep] = useState<1 | 2>(1)
   // Only what the developer typed; untouched context fields follow the current
   // selection (APR-19..22), typed ones survive Back (APR-27).

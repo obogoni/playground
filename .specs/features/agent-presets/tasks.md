@@ -287,8 +287,8 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] Opening without the new fields behaves as before
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Opening without the new fields behaves as before
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: build

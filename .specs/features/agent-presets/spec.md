@@ -245,7 +245,7 @@ the menu stays the way I use it.
 | PRST-23 | P1: Launch | Execute | Implementing |
 | PRST-24 | P1: Launch | Design | In Design |
 | PRST-25 | P1: Launch | Design | In Design |
-| PRST-26 | P1: Launch | Design | In Design |
+| PRST-26 | P1: Launch | Execute | Implementing |
 | PRST-27 | P1: Launch | Design | In Design |
 | PRST-28 | P1: Launch | Design | In Design |
 | PRST-29 | P1: Launch | Execute | Implementing |
