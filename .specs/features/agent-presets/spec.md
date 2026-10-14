@@ -234,7 +234,7 @@ the menu stays the way I use it.
 | PRST-12 | P1: Save | Design | In Design |
 | PRST-13 | P1: Save | Design | In Design |
 | PRST-14 | P1: Save | Design | In Design |
-| PRST-15 | P1: Save | Design | In Design |
+| PRST-15 | P1: Save | Execute | Implementing |
 | PRST-16 | P1: Save | Design | In Design |
 | PRST-17 | P1: Save | Design | In Design |
 | PRST-18 | P1: Launch | Design | In Design |

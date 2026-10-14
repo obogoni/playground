@@ -87,9 +87,9 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] `presetNameProblem` returns `'1–40 characters, one line'` for `''`, `'   '`, a 41-character name, and names containing `\n` or `\r`; `null` for 1 and 40 characters (trimmed length; literals, L-009)
-- [ ] `sameName` is true for `' Reviewer '` vs `'reviewer'`, false for `'Reviewer'` vs `'Reviewer 2'`
-- [ ] Gate check passes: `npx vitest run src/shared/agent-presets.test.ts`
+- [x] `presetNameProblem` returns `'1–40 characters, one line'` for `''`, `'   '`, a 41-character name, and names containing `\n` or `\r`; `null` for 1 and 40 characters (trimmed length; literals, L-009)
+- [x] `sameName` is true for `' Reviewer '` vs `'reviewer'`, false for `'Reviewer'` vs `'Reviewer 2'`
+- [x] Gate check passes: `npx vitest run src/shared/agent-presets.test.ts`
 
 **Tests**: unit
 **Gate**: quick
