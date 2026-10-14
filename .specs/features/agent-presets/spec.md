@@ -243,8 +243,8 @@ the menu stays the way I use it.
 | PRST-21 | P1: Launch | Execute | Implementing |
 | PRST-22 | P1: Launch | Execute | Implementing |
 | PRST-23 | P1: Launch | Execute | Implementing |
-| PRST-24 | P1: Launch | Design | In Design |
-| PRST-25 | P1: Launch | Design | In Design |
+| PRST-24 | P1: Launch | Execute | Implementing |
+| PRST-25 | P1: Launch | Execute | Implementing |
 | PRST-26 | P1: Launch | Execute | Implementing |
 | PRST-27 | P1: Launch | Design | In Design |
 | PRST-28 | P1: Launch | Design | In Design |

@@ -362,8 +362,8 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] First empty field focused; Enter spawns only while Spawn is enabled
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] First empty field focused; Enter spawns only while Spawn is enabled
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: build
