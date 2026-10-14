@@ -387,8 +387,8 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] Main part still calls `onNew`; arrow has `aria-haspopup="menu"`, `aria-expanded`, `aria-label="Agent presets"`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Main part still calls `onNew`; arrow has `aria-haspopup="menu"`, `aria-expanded`, `aria-label="Agent presets"`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: build

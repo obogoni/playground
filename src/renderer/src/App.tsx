@@ -594,6 +594,10 @@ function App(): JSX.Element {
             onDuplicate={duplicateSession}
             onOpenWorktree={openWorktreeForSession}
             onNew={() => openNewSession()}
+            // T13 launches the picked preset.
+            onPickPreset={() => {}}
+            // T14 opens the Presets tab.
+            onManagePresets={openSettings}
             onPauseTime={time.pause}
             onResumeTime={time.resume}
             onToast={setToast}

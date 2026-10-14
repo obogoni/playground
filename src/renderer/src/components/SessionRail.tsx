@@ -2,6 +2,7 @@ import type { JSX, KeyboardEvent, MouseEvent } from 'react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import type { AgentDef } from '../../../shared/agents'
 import type { SessionView } from '../../../shared/config'
+import type { PromptEntry } from '../../../shared/prompt-template'
 import type { PinnedTaskView, SessionTask } from '../../../shared/tasks'
 import type { PeriodTaskChoice, TimeSnapshot } from '../../../shared/time'
 import type { WorkspaceNode } from '../../../shared/tree'
@@ -23,6 +24,7 @@ import { timeIndex } from '../lib/time-index'
 import { useLatestCallback } from '../lib/use-latest-callback'
 import { Icon } from './Icon'
 import { PerfProfiler } from './PerfProfiler'
+import { PresetMenu, type PickablePreset } from './PresetMenu'
 import { TaskPicker } from './TaskPicker'
 import { SessionClock, TotalClock } from './TimeCounter'
 import './SessionRail.css'
@@ -43,6 +45,10 @@ interface SessionRailProps {
   onRespawn: (id: string) => void
   onRemove: (id: string) => void
   onNew: () => void
+  /** A preset picked from the split button's menu (PRST-18). */
+  onPickPreset: (entry: PickablePreset, prompts: PromptEntry[]) => void
+  /** The menu's Manage presets… (PRST-37). */
+  onManagePresets: () => void
   /** Links a session to a task, or back to its branch with null (HTSK-19). */
   onSetTask: (id: string, task: SessionTask | null) => void
 }
@@ -69,6 +75,8 @@ export function SessionRail({
   onRespawn: onRespawnProp,
   onRemove: onRemoveProp,
   onNew,
+  onPickPreset,
+  onManagePresets,
   onSetTask
 }: SessionRailProps): JSX.Element {
   const { running: runningCount, working, needYou } = headerCounts(sessions)
@@ -78,6 +86,8 @@ export function SessionRail({
   const rowRefs = useRef(new Map<string, HTMLDivElement>())
   const [menu, setMenu] = useState<RowMenu | null>(null)
   const [picker, setPicker] = useState<RowMenu | null>(null)
+  const [presetsOpen, setPresetsOpen] = useState(false)
+  const closePresets = useLatestCallback((): void => setPresetsOpen(false))
   // Every function a row receives keeps one identity across renders, so the
   // memoized row can ignore function props in its comparator (PERF-09).
   const onSelect = useLatestCallback(onSelectProp)
@@ -159,9 +169,36 @@ export function SessionRail({
               {needYou > 0 && <span className="need-you"> · {needYou} need you</span>}
             </span>
           </div>
-          <button type="button" className="session-rail-new" onClick={onNew}>
-            <Icon name="plus" size={14} strokeWidth={2.2} /> New session
-          </button>
+          {/* Split button (PRST-18): the main part opens New Session as before,
+              the arrow opens the preset menu anchored under it. */}
+          <div className="session-rail-new-split">
+            <button type="button" className="session-rail-new" onClick={onNew}>
+              <Icon name="plus" size={14} strokeWidth={2.2} /> New session
+            </button>
+            <button
+              type="button"
+              className="session-rail-new-arrow"
+              aria-haspopup="menu"
+              aria-expanded={presetsOpen}
+              aria-label="Agent presets"
+              onClick={(event) => {
+                // The menu's outside-click listener is attached while this very
+                // click is still bubbling; stopping it keeps the menu open.
+                event.stopPropagation()
+                setPresetsOpen((open) => !open)
+              }}
+            >
+              <Icon name="chevron-down" size={14} strokeWidth={2.2} />
+            </button>
+            {presetsOpen && (
+              <PresetMenu
+                agents={agents}
+                onPick={onPickPreset}
+                onManage={onManagePresets}
+                onClose={closePresets}
+              />
+            )}
+          </div>
         </header>
         {runningCount >= CONCURRENCY_WARN_AT && (
           <div className="session-rail-warning" role="status">

@@ -237,7 +237,7 @@ the menu stays the way I use it.
 | PRST-15 | P1: Save | Execute | Implementing |
 | PRST-16 | P1: Save | Execute | Implementing |
 | PRST-17 | P1: Save | Execute | Implementing |
-| PRST-18 | P1: Launch | Design | In Design |
+| PRST-18 | P1: Launch | Execute | Implementing |
 | PRST-19 | P1: Launch | Execute | Implementing |
 | PRST-20 | P1: Launch | Execute | Implementing |
 | PRST-21 | P1: Launch | Execute | Implementing |

@@ -3,6 +3,7 @@ import type { JSX, KeyboardEvent } from 'react'
 import type { AgentDef } from '../../../shared/agents'
 import { undoByteFor } from '../lib/terminal-keys'
 import type { SessionView } from '../../../shared/config'
+import type { PromptEntry } from '../../../shared/prompt-template'
 import type { PinnedTaskView, SessionTask } from '../../../shared/tasks'
 import type { PeriodTaskChoice, TimeSnapshot } from '../../../shared/time'
 import type { WorkspaceNode } from '../../../shared/tree'
@@ -13,6 +14,7 @@ import { detailPillClass, detailPillText, detailPillTitle } from '../lib/session
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
 import { Icon } from './Icon'
 import { PerfProfiler } from './PerfProfiler'
+import type { PickablePreset } from './PresetMenu'
 import { SessionRail } from './SessionRail'
 import { TaskPicker } from './TaskPicker'
 import { SessionClock } from './TimeCounter'
@@ -34,6 +36,9 @@ interface AgentsViewProps {
   onDuplicate: (id: string) => void
   onOpenWorktree: (worktreeId: string) => void
   onNew: () => void
+  /** Forwarded to the rail's preset menu (PRST-18, PRST-37). */
+  onPickPreset: (entry: PickablePreset, prompts: PromptEntry[]) => void
+  onManagePresets: () => void
   onPauseTime: (id: string) => void
   onResumeTime: (id: string) => void
   onToast: (message: string) => void
@@ -62,6 +67,8 @@ export function AgentsView({
   onDuplicate,
   onOpenWorktree,
   onNew,
+  onPickPreset,
+  onManagePresets,
   onPauseTime,
   onResumeTime,
   onToast,
@@ -83,6 +90,8 @@ export function AgentsView({
         onRespawn={onRespawn}
         onRemove={onRemove}
         onNew={onNew}
+        onPickPreset={onPickPreset}
+        onManagePresets={onManagePresets}
         onSetTask={onSetTask}
       />
       {active ? (
