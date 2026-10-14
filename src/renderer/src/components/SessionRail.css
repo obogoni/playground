@@ -67,6 +67,44 @@
   background: color-mix(in oklab, var(--accent) 10%, transparent);
 }
 
+/* Split button (PRST-18): the main part keeps its look minus a 34px arrow
+   segment on the right; the main part's right border is the 1px separator.
+   The wrapper anchors the preset menu. */
+.session-rail-new-split {
+  position: relative;
+  display: flex;
+}
+
+.session-rail-new-split .session-rail-new {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.session-rail-new-arrow {
+  flex: none;
+  width: 34px;
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: 0 10px 10px 0;
+  background: transparent;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.session-rail-new-arrow:hover,
+.session-rail-new-arrow[aria-expanded='true'] {
+  color: var(--text);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+
 .session-rail-warning {
   margin: 11px 12px 0;
   display: flex;

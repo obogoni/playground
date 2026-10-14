@@ -3,6 +3,7 @@ import type { ComponentProps, JSX } from 'react'
 import type { AgentDef } from '../../shared/agents'
 import type { ActivityState, AppConfig } from '../../shared/config'
 import type { PrRef } from '../../shared/files'
+import type { PromptEntry } from '../../shared/prompt-template'
 import { DEFAULT_CONFIG } from '../../shared/config'
 import type { PinnedTaskView, TasksSnapshot } from '../../shared/tasks'
 import { taskIdFromBranch } from '../../shared/tasks'
@@ -14,8 +15,10 @@ import { HoursView } from './components/HoursView'
 import { NewSessionDialog, type NewSessionSource } from './components/NewSessionDialog'
 import { NewWorktreeDialog } from './components/NewWorktreeDialog'
 import { PerfProfiler } from './components/PerfProfiler'
+import type { PickablePreset } from './components/PresetMenu'
+import { RunPresetDialog, type PresetFormPlan } from './components/RunPresetDialog'
 import { SessionNotices } from './components/SessionNotices'
-import { SettingsDialog } from './components/SettingsDialog'
+import { SettingsDialog, type SettingsTab } from './components/SettingsDialog'
 import { Sidebar } from './components/Sidebar'
 import { StartWorkDialog } from './components/StartWorkDialog'
 import { StatusBar } from './components/StatusBar'
@@ -33,6 +36,7 @@ import {
   resolvePaneWidth
 } from './lib/pane-layout'
 import { dropNotice, upsertNotice, type Notice } from './lib/session-notices'
+import { planPresetLaunch } from './lib/preset-launch'
 import { findWorktree, worktreeIdForPath } from './lib/tree-selection'
 import { worktreeForTurnEnd } from './lib/tree-status'
 import { dropCollapsedId, isCollapsed, toggleCollapsedId } from './lib/workspace-collapse'
@@ -123,11 +127,14 @@ function App(): JSX.Element {
   const [branchTemplate, setBranchTemplate] = useState('')
   const [worktreeTemplate, setWorktreeTemplate] = useState('')
   const [devAlias, setDevAlias] = useState('')
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  /** The tab Settings is open on; null = closed. */
+  const [settingsTab, setSettingsTab] = useState<SettingsTab | null>(null)
   /** Editable agent registry from config (AGCF-01); threaded to the agent UIs. */
   const [agents, setAgents] = useState<AgentDef[]>([])
   /** New-session dialog pre-fill; null = closed. */
   const [nsSource, setNsSource] = useState<NewSessionSource | null>(null)
+  /** Run preset dialog: the picked preset's name and its form plan; null = closed. */
+  const [runPreset, setRunPreset] = useState<{ name: string; plan: PresetFormPlan } | null>(null)
 
   const update = (patch: Partial<UiState>): void => {
     setUi((prev) => (prev ? { ...prev, ...patch } : prev))
@@ -432,6 +439,31 @@ function App(): JSX.Element {
   }
 
   /**
+   * A preset picked from the rail's menu does exactly one thing (design
+   * §SessionRail + App wiring): spawn at once through the New Session spawn
+   * path, which selects the session (PRST-21, PRST-27, PRST-28, PRST-29), ask
+   * for its missing values (PRST-22), or open New Session with what is still
+   * valid (PRST-33).
+   */
+  const pickPreset = (entry: PickablePreset, prompts: PromptEntry[]): void => {
+    const plan = planPresetLaunch({
+      preset: entry.preset,
+      cwdExists: entry.cwdExists,
+      agents,
+      prompts,
+      tree,
+      tasks: tasks.tasks
+    })
+    if (plan.kind === 'spawn') {
+      spawnSession(plan.agentName, plan.cwd, undefined, plan.task, plan.prompt)
+    } else if (plan.kind === 'form') {
+      setRunPreset({ name: entry.preset.name, plan })
+    } else {
+      openNewSession(plan.source)
+    }
+  }
+
+  /**
    * Picking a session also picks the worktree it runs in.
    *
    * The app has one current worktree, and every direction reads it — the
@@ -489,7 +521,8 @@ function App(): JSX.Element {
     refreshTasks()
     prLookup.refresh()
   })
-  const openSettings = useLatestCallback((): void => setSettingsOpen(true))
+  const openSettings = useLatestCallback((): void => setSettingsTab('general'))
+  const managePresets = useLatestCallback((): void => setSettingsTab('presets'))
   const spawnAgentIn = useLatestCallback((cwd: string): void => openNewSession({ cwd }))
   const setSidebarWidth = useLatestCallback((w: number): void => update({ sidebarWidth: w }))
   const toggleSidebar = useLatestCallback((): void =>
@@ -594,6 +627,8 @@ function App(): JSX.Element {
             onDuplicate={duplicateSession}
             onOpenWorktree={openWorktreeForSession}
             onNew={() => openNewSession()}
+            onPickPreset={pickPreset}
+            onManagePresets={managePresets}
             onPauseTime={time.pause}
             onResumeTime={time.resume}
             onToast={setToast}
@@ -688,16 +723,17 @@ function App(): JSX.Element {
           onCreated={worktreeCreated}
         />
       )}
-      {settingsOpen && (
+      {settingsTab && (
         <SettingsDialog
-          onClose={() => setSettingsOpen(false)}
+          initialTab={settingsTab}
+          onClose={() => setSettingsTab(null)}
           onSaved={(config) => {
             setAdoOrg(config.ado.defaultOrg)
             setBranchTemplate(config.ado.branchTemplate)
             setWorktreeTemplate(config.ado.worktreeTemplate)
             setDevAlias(config.ado.devAlias)
             setAgents(config.agents)
-            setSettingsOpen(false)
+            setSettingsTab(null)
           }}
           onAgentsChanged={(config) => setAgents(config.agents)}
         />
@@ -713,6 +749,27 @@ function App(): JSX.Element {
             spawnSession(agentName, cwd, adhocCommand, task, prompt)
           }}
           onClose={() => setNsSource(null)}
+        />
+      )}
+      {runPreset && (
+        <RunPresetDialog
+          name={runPreset.name}
+          plan={runPreset.plan}
+          agents={agents}
+          tasks={tasks.tasks}
+          onSpawn={(prompt, task) => {
+            const { agentName, cwd } = runPreset.plan
+            setRunPreset(null)
+            spawnSession(agentName, cwd, undefined, task, prompt)
+          }}
+          // The full dialog on the preset's agent, cwd (whose level it opens)
+          // and prompt (PRST-26).
+          onMoreOptions={() => {
+            const { agentName, cwd, promptName } = runPreset.plan
+            setRunPreset(null)
+            openNewSession({ agentName, cwd, promptName })
+          }}
+          onClose={() => setRunPreset(null)}
         />
       )}
       {toast && <Toast message={toast} onDismiss={dismissToast} />}

@@ -44,6 +44,7 @@ import { createMcpResultServer } from './mcp-result-server'
 import { purgePasteDir } from './paste-temp'
 import { checkCreatePaths } from './path-limits'
 import { ensurePromptsFolder, listPrompts } from './prompt-library'
+import { NODE_PRESET_FS, createPresetStore } from './agent-preset-store'
 import { findOnPath } from './path-lookup'
 import { startLoopDelayLog } from './perf-monitor'
 import { withPostCreateHook } from './post-create-hook'
@@ -938,6 +939,24 @@ app.whenReady().then(() => {
     await ensurePromptsFolder(promptsRoot)
     await shell.openPath(promptsRoot)
   })
+
+  // Agent presets: one hand-editable file, re-read on every list and change
+  // (PRST-01, PRST-09). PLAYGROUND_PRESETS_FILE keeps the smoke off the real one.
+  const presets = createPresetStore(
+    process.env.PLAYGROUND_PRESETS_FILE ?? join(homedir(), '.playground', 'presets.json'),
+    NODE_PRESET_FS,
+    (path) => shell.openPath(path)
+  )
+  handle('agentPresets:list', () => presets.list())
+  handle('agentPresets:save', ({ preset, replace }) =>
+    presets.change({ kind: 'save', preset, replace })
+  )
+  handle('agentPresets:rename', ({ from, to }) => presets.change({ kind: 'rename', from, to }))
+  handle('agentPresets:move', ({ name, direction }) =>
+    presets.change({ kind: 'move', name, direction })
+  )
+  handle('agentPresets:delete', ({ name }) => presets.change({ kind: 'delete', name }))
+  handle('agentPresets:openFile', async () => ({ error: await presets.openFile() }))
 
   // Free the shared MCP result server's loopback port when the app quits (WF3-10).
   // Nothing awaits a quit handler, so a failed stop is logged, not left unhandled (RSTP-07).

@@ -31,6 +31,7 @@ import type {
 import type { CommitLists, GitOp, GitOpResult, SyncState } from './git'
 import type { ProbeResult } from './links'
 import type { PromptEntry } from './prompt-template'
+import type { AgentPreset, AgentPresetChangeResult, AgentPresetListing } from './agent-presets'
 import type { ClipboardPaste } from './paste'
 import type { LaunchResult, ShortcutTool } from './shortcuts'
 import type {
@@ -218,6 +219,24 @@ export interface IpcContract {
   'prompts:list': { req: void; res: PromptEntry[] }
   /** Create `~/.playground/prompts` when missing and open it in the OS file manager (APR-08). */
   'prompts:openFolder': { req: void; res: void }
+  /** `~/.playground/presets.json` in file order, or why the file is invalid (PRST-01..05). */
+  'agentPresets:list': { req: void; res: AgentPresetListing }
+  /** Append a preset, or replace the one with its name in place when `replace` (PRST-13/16). */
+  'agentPresets:save': {
+    req: { preset: AgentPreset; replace: boolean }
+    res: AgentPresetChangeResult
+  }
+  /** Change one preset's `name` only (PRST-38/39). */
+  'agentPresets:rename': { req: { from: string; to: string }; res: AgentPresetChangeResult }
+  /** Swap a preset with its neighbour in the file (PRST-40). */
+  'agentPresets:move': {
+    req: { name: string; direction: 'up' | 'down' }
+    res: AgentPresetChangeResult
+  }
+  /** Remove one preset (PRST-41). */
+  'agentPresets:delete': { req: { name: string }; res: AgentPresetChangeResult }
+  /** Create the file as `[]` when missing and open it with the OS default app (PRST-42). */
+  'agentPresets:openFile': { req: void; res: { error: string | null } }
   /** Scaffold a new workflow folder from a template + reveal it; an existing id is rejected, never overwritten (WF5-22/24/25). */
   'workflows:scaffold': { req: { name: string }; res: ScaffoldResult }
   /** One folder's direct children, tracked plus untracked-not-ignored; a git failure lands in `error` (FXPL-02/04/05). */

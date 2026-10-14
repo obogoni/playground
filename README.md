@@ -79,6 +79,37 @@ blocks Spawn, and a file over 16 KiB is listed as broken. The text arrives verba
 included, when the agent command is an executable (as `claude.exe` is); an agent launched
 through a `.cmd`/`.bat` shim may receive it cut at the first line break or with `"` removed.
 
+- Launch a routine agent from an **agent preset**: a named agent + folder + prompt. In the New
+  Session dialog, with a registry agent and a folder picked, **Save as preset** stores those three
+  (never the task, the typed values or the level); saving under an existing name asks
+  `Replace preset "<name>"?` and replaces it in place. The rail's **+ New session** is a split
+  button: its arrow opens the preset menu. Picking a preset spawns at once when nothing is left to
+  ask (no prompt, no placeholders, or every placeholder pre-filled from the folder, such as
+  `{{branch}}`); otherwise a small **Run preset** dialog asks only the empty placeholders, and
+  Enter spawns. **More options** opens the full dialog on the preset. When the prompt has a
+  `{{taskId}}` whose value is a plain positive number, the session is linked to that task (with
+  the pinned task's title when it is pinned)
+
+```jsonc
+// ~/.playground/presets.json — an array; its order is the menu order. Edit it by hand freely:
+// the app re-reads it every time the menu or Settings opens, and before every write.
+[
+  { "name": "Bug fixer", "agent": "Claude", "cwd": "M:\\work\\acme", "prompt": "fix-bug" },
+  // "prompt" is a prompt file name without .md; leave it out for None
+  { "name": "Reviewer", "agent": "Claude", "cwd": "M:\\work\\acme-review" }
+]
+```
+
+A preset whose agent, folder or prompt is gone stays in the menu with a warning and its reason
+(`agent not found`, `folder not found`, `prompt not found`, `prompt broken`); picking it opens the
+New Session dialog with whatever is still valid. An entry that is not a valid preset (a missing
+field, or a name already used, compared case-insensitively) is listed with its reason and cannot be
+picked. If the file is not valid JSON or not an array, the menu shows `presets.json: <reason>` and
+the app refuses to write it until you fix it by hand. **Settings › Presets** (also **Manage
+presets…** in the menu) renames, reorders and deletes presets, each written straight to the file,
+and **Open presets file** opens it (creating it as `[]` if missing). To change a preset's agent,
+folder or prompt, save over it from the New Session dialog or edit the file.
+
 ![Agents view — embedded agent terminals attributed to their worktree and task](docs/screenshots/agents.png)
 
 **Throughout**

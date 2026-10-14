@@ -30,12 +30,6 @@ Corroborated across multiple features. Safe to apply as guidance.
 
 Seen once or not yet corroborated. Tracked, not trusted.
 
-### L-008 - When a hard-coded value becomes a lookup table keyed by an existing enum, test the wiring from key to entry, not just the table: asserting the table's contents leaves the new key free to silently resolve to the old entry, and a guard that returns before any side effect (a missing-path check) usually makes that routing assertable without touching the real subsystem.
-- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/main/**` · harmful: 0
-- features: vs2026-admin-shortcut
-- evidence: M4/M5: launch() -> VS_EDITIONS[tool]; openVisualStudio(edition) (src/main/**)
-- last seen: 2026-08-28T19:48:01Z
-
 ### L-010 - When a spec edge case says 'empty/whitespace', guard with trim().length > 0, not length > 0, or whitespace-only selections slip past the empty check.
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `src/renderer/src/components` · harmful: 0
 - features: terminal-input-fixes
@@ -833,6 +827,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: files-stack-steady-neighbours
 - evidence: N1 src/renderer/src/components/DiffViewer.tsx:327 (onHeight fed the raw height; steady 3/3, full drive 126/126; probe placeholder 3843 px vs 119 px) (src/renderer/src/components)
 - last seen: 2026-10-11T15:35:54Z
+
+### L-143 - When an AC lists fields for every item and broken ones with their reason, state whether the reason replaces the fields or sits beside them, so design and tests cannot silently narrow the AC
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `specify` · harmful: 0
+- features: agent-presets
+- evidence: PRST-36 (PresetsSettings.tsx:198) (specify)
+- last seen: 2026-10-14T15:47:06Z
+
+### L-144 - Check a focus-the-first-empty-field rule with at least two fields, one filled before the empty one, because a single-field case passes even when the focus logic is wrong
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `smoke` · harmful: 0
+- features: agent-presets
+- evidence: PRST-22 (RunPresetDialog.tsx:47) (smoke)
+- last seen: 2026-10-14T15:47:06Z
+
+### L-145 - Test an AC that says something is not saved by setting that thing first, since an absence observed without it proves nothing
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: agent-presets
+- evidence: PRST-14 (NewSessionDialog.tsx:251) (testing)
+- last seen: 2026-10-14T15:47:07Z
 
 ## Quarantined (failed when applied - ignore)
 

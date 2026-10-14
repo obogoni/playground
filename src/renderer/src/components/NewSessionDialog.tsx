@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { JSX } from 'react'
+import { presetNameProblem, type AgentPreset } from '../../../shared/agent-presets'
 import type { AgentDef } from '../../../shared/agents'
 import {
   PROMPT_MAX_CHARS,
@@ -36,6 +37,10 @@ export interface NewSessionSource {
   taskId?: number
   /** Worktree paths to highlight (a task's worktrees, many-resolution). */
   highlightWorktrees?: string[]
+  /** Registry agent to pre-select; one missing from the registry falls back to the first (PRST-26, PRST-33). */
+  agentName?: string
+  /** Prompt file to pre-select; an unknown or broken one reads as None (PRST-26, PRST-33). */
+  promptName?: string
 }
 
 interface NewSessionDialogProps {
@@ -105,7 +110,9 @@ export function NewSessionDialog({
   onSpawn,
   onClose
 }: NewSessionDialogProps): JSX.Element {
-  const [agentName, setAgentName] = useState(agents[0]?.name ?? ADHOC)
+  const [agentName, setAgentName] = useState(
+    () => (agents.find((a) => a.name === source.agentName) ?? agents[0])?.name ?? ADHOC
+  )
   const [level, setLevel] = useState<IsolationLevel>(() => initialLevel(tree, source.cwd))
   const [cwd, setCwd] = useState<string | null>(source.cwd ?? null)
   const options = levelOptions(tree, level)
@@ -122,12 +129,20 @@ export function NewSessionDialog({
   )
   const [pickerOpen, setPickerOpen] = useState(false)
   const [prompts, setPrompts] = useState<PromptEntry[]>([])
-  const [promptName, setPromptName] = useState<string | null>(null)
+  // Kept by name: the listing arrives after mount, and `chosen` resolves it.
+  const [promptName, setPromptName] = useState<string | null>(source.promptName ?? null)
   const [step, setStep] = useState<1 | 2>(1)
   // Only what the developer typed; untouched context fields follow the current
   // selection (APR-19..22), typed ones survive Back (APR-27).
   const [typed, setTyped] = useState<Record<string, string>>({})
   const [reloadOnFocus, setReloadOnFocus] = useState(false)
+  // Save as preset (PRST-12..17): the inline name row (null = closed), the
+  // existing name an `exists` answer asks to replace, and the last outcome.
+  const [presetName, setPresetName] = useState<string | null>(null)
+  const [replaceName, setReplaceName] = useState<string | null>(null)
+  const [presetError, setPresetError] = useState<string | null>(null)
+  const [presetSaved, setPresetSaved] = useState<string | null>(null)
+  const [presetBusy, setPresetBusy] = useState(false)
 
   // Read the folder each time the dialog opens, like workflows (APR-01).
   useEffect(() => {
@@ -173,6 +188,8 @@ export function NewSessionDialog({
   const blockers = formBlockers(values, names, resolved)
   const promptReady = blockers.emptyFields.length === 0 && blockers.tooLong === null
   const showStep2 = step === 2 && needsStep2
+  // A preset names a registry agent and a folder (PRST-10, PRST-11).
+  const canSavePreset = !isAdhoc && agent !== undefined && cwd !== null
 
   // A new prompt keeps the typed values of the names it shares (APR-28).
   const choosePrompt = (name: string | null): void => {
@@ -215,6 +232,50 @@ export function NewSessionDialog({
     setPickerOpen(false)
     if (choice.kind === 'task') setTask({ id: choice.id, title: choice.title })
     else setTask(null)
+  }
+
+  const openPresetRow = (): void => {
+    setPresetName('')
+    setReplaceName(null)
+    setPresetError(null)
+    setPresetSaved(null)
+  }
+
+  const closePresetRow = (): void => {
+    setPresetName(null)
+    setReplaceName(null)
+    setPresetError(null)
+  }
+
+  // Agent, cwd and prompt only: never the task, the values or the level (PRST-14).
+  const savePreset = (replace: boolean): void => {
+    if (presetName === null || presetNameProblem(presetName) !== null) return
+    if (!agent || cwd === null) return
+    const name = presetName.trim()
+    const preset: AgentPreset = chosen
+      ? { name, agent: agent.name, cwd, prompt: chosen.name }
+      : { name, agent: agent.name, cwd }
+    setPresetBusy(true)
+    setPresetError(null)
+    api
+      .invoke('agentPresets:save', { preset, replace })
+      .then((result) => {
+        if (result.ok) {
+          closePresetRow()
+          setPresetSaved(`Saved preset "${name}"`)
+        } else if (result.error.kind === 'exists') {
+          setReplaceName(result.error.name)
+        } else {
+          // The row stays open with the typed name (PRST-17).
+          setReplaceName(null)
+          setPresetError(result.error.message)
+        }
+      })
+      .catch((err) => {
+        setReplaceName(null)
+        setPresetError(err instanceof Error ? err.message : String(err))
+      })
+      .finally(() => setPresetBusy(false))
   }
 
   const spawn = (): void => {
@@ -466,31 +527,102 @@ export function NewSessionDialog({
           {willRunCard}
           {!needsStep2 && tooLongNotice}
         </div>
-        <footer className="dialog-footer">
-          <button type="button" className="dialog-btn-ghost" onClick={onClose}>
-            Cancel
-          </button>
-          {needsStep2 ? (
-            <button
-              type="button"
-              className="dialog-btn-primary"
-              disabled={!canSpawn}
-              onClick={() => setStep(2)}
-            >
-              Next
-            </button>
+        {presetName !== null && canSavePreset ? (
+          replaceName !== null ? (
+            <footer className="dialog-footer ns-preset-row">
+              <span className="ns-preset-confirm">{`Replace preset "${replaceName}"?`}</span>
+              <button
+                type="button"
+                className="dialog-btn-ghost"
+                onClick={() => setReplaceName(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="dialog-btn-primary"
+                disabled={presetBusy}
+                onClick={() => savePreset(true)}
+              >
+                Replace
+              </button>
+            </footer>
           ) : (
-            <button
-              type="button"
-              className="dialog-btn-primary"
-              disabled={!canSpawn || (chosen !== undefined && !promptReady)}
-              onClick={spawn}
-            >
-              <Icon name="terminal" size={15} strokeWidth={2.2} />
-              Spawn
+            <footer className="dialog-footer ns-preset-row">
+              <div className="ns-preset-field">
+                <input
+                  className="dialog-input"
+                  placeholder="Preset name"
+                  aria-label="Preset name"
+                  value={presetName}
+                  autoFocus
+                  spellCheck={false}
+                  onChange={(event) => {
+                    setPresetName(event.target.value)
+                    setPresetError(null)
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') savePreset(false)
+                  }}
+                />
+                {presetError !== null ? (
+                  <div className="dialog-error">{presetError}</div>
+                ) : (
+                  presetNameProblem(presetName) !== null && (
+                    <div className="ns-preset-hint">{presetNameProblem(presetName)}</div>
+                  )
+                )}
+              </div>
+              <button type="button" className="dialog-btn-ghost" onClick={closePresetRow}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="dialog-btn-primary"
+                disabled={presetBusy || presetNameProblem(presetName) !== null}
+                onClick={() => savePreset(false)}
+              >
+                Save
+              </button>
+            </footer>
+          )
+        ) : (
+          <footer className="dialog-footer">
+            {canSavePreset && (
+              <button
+                type="button"
+                className="dialog-btn-ghost ns-save-preset"
+                onClick={openPresetRow}
+              >
+                Save as preset
+              </button>
+            )}
+            {presetSaved !== null && <span className="ns-preset-saved">{presetSaved}</span>}
+            <button type="button" className="dialog-btn-ghost" onClick={onClose}>
+              Cancel
             </button>
-          )}
-        </footer>
+            {needsStep2 ? (
+              <button
+                type="button"
+                className="dialog-btn-primary"
+                disabled={!canSpawn}
+                onClick={() => setStep(2)}
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="dialog-btn-primary"
+                disabled={!canSpawn || (chosen !== undefined && !promptReady)}
+                onClick={spawn}
+              >
+                <Icon name="terminal" size={15} strokeWidth={2.2} />
+                Spawn
+              </button>
+            )}
+          </footer>
+        )}
       </div>
     </div>
   )
