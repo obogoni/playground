@@ -257,13 +257,13 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] No prompt → `spawn` without `prompt`; prompt without placeholders → `spawn` with the template text (PRST-21)
-- [ ] Worktree cwd + prompt using only `{{branch}}`/`{{taskId}}` → `spawn`, resolved text contains the branch, `task` linked from the branch's id (PRST-21, PRST-23, PRST-29)
-- [ ] Workspace cwd + `{{taskId}}` → `form` with `taskId: ''`, names in parse order (PRST-22, PRST-23)
-- [ ] All values filled but resolved text of 8001 characters → `form` (PRST-22)
-- [ ] A problem → `dialog` whose source keeps only the still-valid agent, cwd and prompt (PRST-33)
-- [ ] A cwd spelled `M:/X/` for tree path `M:\x` comes back as `M:\x` in every plan kind
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/preset-launch.test.ts`
+- [x] No prompt → `spawn` without `prompt`; prompt without placeholders → `spawn` with the template text (PRST-21)
+- [x] Worktree cwd + prompt using only `{{branch}}`/`{{taskId}}` → `spawn`, resolved text contains the branch, `task` linked from the branch's id (PRST-21, PRST-23, PRST-29)
+- [x] Workspace cwd + `{{taskId}}` → `form` with `taskId: ''`, names in parse order (PRST-22, PRST-23)
+- [x] All values filled but resolved text of 8001 characters → `form` (PRST-22)
+- [x] A problem → `dialog` whose source keeps only the still-valid agent, cwd and prompt (PRST-33)
+- [x] A cwd spelled `M:/X/` for tree path `M:\x` comes back as `M:\x` in every plan kind
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/preset-launch.test.ts`
 
 **Tests**: unit
 **Gate**: quick
