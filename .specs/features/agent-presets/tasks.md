@@ -312,8 +312,8 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] Button hidden for Ad-hoc or with no cwd; the saved preset never carries task, values or level
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Button hidden for Ad-hoc or with no cwd; the saved preset never carries task, values or level
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: build

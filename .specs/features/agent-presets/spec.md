@@ -229,14 +229,14 @@ the menu stays the way I use it.
 | PRST-07 | P1: Store | Execute | Implementing |
 | PRST-08 | P1: Store | Execute | Implementing |
 | PRST-09 | P1: Store | Execute | Implementing |
-| PRST-10 | P1: Save | Design | In Design |
-| PRST-11 | P1: Save | Design | In Design |
-| PRST-12 | P1: Save | Design | In Design |
+| PRST-10 | P1: Save | Execute | Implementing |
+| PRST-11 | P1: Save | Execute | Implementing |
+| PRST-12 | P1: Save | Execute | Implementing |
 | PRST-13 | P1: Save | Execute | Implementing |
-| PRST-14 | P1: Save | Design | In Design |
+| PRST-14 | P1: Save | Execute | Implementing |
 | PRST-15 | P1: Save | Execute | Implementing |
 | PRST-16 | P1: Save | Execute | Implementing |
-| PRST-17 | P1: Save | Design | In Design |
+| PRST-17 | P1: Save | Execute | Implementing |
 | PRST-18 | P1: Launch | Design | In Design |
 | PRST-19 | P1: Launch | Design | In Design |
 | PRST-20 | P1: Launch | Design | In Design |
