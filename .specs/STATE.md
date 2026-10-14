@@ -75,17 +75,27 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current, 2026-10-14): `agent-presets` is in TASKS.** The owner approved the design on
-2026-10-14. `tasks.md` holds 17 tasks in 4 phases and passes `validate_tasks.py` with 0 errors
-(the warnings are co-located test files and the `Tests: none` layers the matrix allows). It awaits
-owner approval; Execute offers 3 batch sub-agents. Earlier in the day:
-`agent-presets` was in DESIGN. The owner approved the spec
-(PRST-01..44) on 2026-10-14, including the `n` assumptions and the amended "spawn directly when
-nothing is left to ask" rule (PRST-21..23). The owner chose the architecture: main owns the file,
-and the renderer plans the launch. `design.md` is drafted and awaits approval. **AD-063** is
-recorded (hand-edited `~/.playground` files: never rewritten while invalid, re-read before every
-write). The files are untracked on `main`'s working tree. Next: design approval, then Tasks. Branch
-`feature/agent-presets` before the first commit.
+**Status (current, 2026-10-14): `agent-presets` is DONE locally. The Verifier passed it on round 1,
+and it is not pushed.**
+
+- **Branch:** `feature/agent-presets`. Commits: the plan `27f09c8`, then T1–T17, then the
+  validation commit. There is no PR yet; push and PR wait for the owner's go-ahead.
+- **Verification** (`.specs/features/agent-presets/validation.md`):
+  - All 44 ACs and the 4 edge cases have evidence.
+  - Sensor: 12 mutations, all 12 killed.
+  - Gates: typecheck 0, lint 0 errors, tests 3225 passed / 7 failed (the 7 failures are the
+    local git/longpaths baseline, which predates this branch).
+  - Smoke `scripts/smoke-agent-presets.mjs`: 52/52.
+- **Minor gaps, none blocking:**
+  - PRST-36: for a broken preset, Settings shows the reason instead of agent, cwd and prompt.
+  - PRST-22: focusing the first empty field is proven with one field only.
+  - PRST-14: no test excludes a picked task from the saved preset.
+  - Lessons L-143..145 were recorded as candidates.
+- **Environment note:** the local `node_modules` was missing `markdown-it` after today's pull. It
+  was installed with `npm install --ignore-scripts`, and the `package-lock.json` drift from the
+  local npm was reverted.
+- **Next:** owner hand-check (save a Reviewer / Bug fixer preset and launch both), then push and
+  open a PR with `Closes #<issue>` if an issue exists.
 
 **Parked by the owner on 2026-10-14: `ado-triggers`** (snapshot below). When it resumes, its AD
 numbers must move past whatever `agent-presets` takes (main holds up to AD-062).

@@ -2,7 +2,7 @@
 
 **Spec**: `.specs/features/agent-presets/spec.md`
 **Context**: `.specs/features/agent-presets/context.md`
-**Status**: Draft
+**Status**: Done
 
 ---
 

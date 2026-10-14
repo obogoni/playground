@@ -220,52 +220,52 @@ the menu stays the way I use it.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| PRST-01 | P1: Store | Execute | Implementing |
-| PRST-02 | P1: Store | Execute | Implementing |
-| PRST-03 | P1: Store | Execute | Implementing |
-| PRST-04 | P1: Store | Execute | Implementing |
-| PRST-05 | P1: Store | Execute | Implementing |
-| PRST-06 | P1: Store | Execute | Implementing |
-| PRST-07 | P1: Store | Execute | Implementing |
-| PRST-08 | P1: Store | Execute | Implementing |
-| PRST-09 | P1: Store | Execute | Implementing |
-| PRST-10 | P1: Save | Execute | Implementing |
-| PRST-11 | P1: Save | Execute | Implementing |
-| PRST-12 | P1: Save | Execute | Implementing |
-| PRST-13 | P1: Save | Execute | Implementing |
-| PRST-14 | P1: Save | Execute | Implementing |
-| PRST-15 | P1: Save | Execute | Implementing |
-| PRST-16 | P1: Save | Execute | Implementing |
-| PRST-17 | P1: Save | Execute | Implementing |
-| PRST-18 | P1: Launch | Execute | Implementing |
-| PRST-19 | P1: Launch | Execute | Implementing |
-| PRST-20 | P1: Launch | Execute | Implementing |
-| PRST-21 | P1: Launch | Execute | Implementing |
-| PRST-22 | P1: Launch | Execute | Implementing |
-| PRST-23 | P1: Launch | Execute | Implementing |
-| PRST-24 | P1: Launch | Execute | Implementing |
-| PRST-25 | P1: Launch | Execute | Implementing |
-| PRST-26 | P1: Launch | Execute | Implementing |
-| PRST-27 | P1: Launch | Execute | Implementing |
-| PRST-28 | P1: Launch | Execute | Implementing |
-| PRST-29 | P1: Launch | Execute | Implementing |
-| PRST-30 | P1: Launch | Execute | Implementing |
-| PRST-31 | P1: Broken | Execute | Implementing |
-| PRST-32 | P1: Broken | Execute | Implementing |
-| PRST-33 | P1: Broken | Execute | Implementing |
-| PRST-34 | P1: Broken | Execute | Implementing |
-| PRST-35 | P1: Broken | Execute | Implementing |
-| PRST-36 | P1: Manage | Execute | Implementing |
-| PRST-37 | P1: Manage | Execute | Implementing |
-| PRST-38 | P1: Manage | Execute | Implementing |
-| PRST-39 | P1: Manage | Execute | Implementing |
-| PRST-40 | P1: Manage | Execute | Implementing |
-| PRST-41 | P1: Manage | Execute | Implementing |
-| PRST-42 | P1: Manage | Execute | Implementing |
-| PRST-43 | P1: Manage | Execute | Implementing |
-| PRST-44 | P1: Manage | Execute | Implementing |
+| PRST-01 | P1: Store | Execute | Verified |
+| PRST-02 | P1: Store | Execute | Verified |
+| PRST-03 | P1: Store | Execute | Verified |
+| PRST-04 | P1: Store | Execute | Verified |
+| PRST-05 | P1: Store | Execute | Verified |
+| PRST-06 | P1: Store | Execute | Verified |
+| PRST-07 | P1: Store | Execute | Verified |
+| PRST-08 | P1: Store | Execute | Verified |
+| PRST-09 | P1: Store | Execute | Verified |
+| PRST-10 | P1: Save | Execute | Verified |
+| PRST-11 | P1: Save | Execute | Verified |
+| PRST-12 | P1: Save | Execute | Verified |
+| PRST-13 | P1: Save | Execute | Verified |
+| PRST-14 | P1: Save | Execute | Verified |
+| PRST-15 | P1: Save | Execute | Verified |
+| PRST-16 | P1: Save | Execute | Verified |
+| PRST-17 | P1: Save | Execute | Verified |
+| PRST-18 | P1: Launch | Execute | Verified |
+| PRST-19 | P1: Launch | Execute | Verified |
+| PRST-20 | P1: Launch | Execute | Verified |
+| PRST-21 | P1: Launch | Execute | Verified |
+| PRST-22 | P1: Launch | Execute | Verified |
+| PRST-23 | P1: Launch | Execute | Verified |
+| PRST-24 | P1: Launch | Execute | Verified |
+| PRST-25 | P1: Launch | Execute | Verified |
+| PRST-26 | P1: Launch | Execute | Verified |
+| PRST-27 | P1: Launch | Execute | Verified |
+| PRST-28 | P1: Launch | Execute | Verified |
+| PRST-29 | P1: Launch | Execute | Verified |
+| PRST-30 | P1: Launch | Execute | Verified |
+| PRST-31 | P1: Broken | Execute | Verified |
+| PRST-32 | P1: Broken | Execute | Verified |
+| PRST-33 | P1: Broken | Execute | Verified |
+| PRST-34 | P1: Broken | Execute | Verified |
+| PRST-35 | P1: Broken | Execute | Verified |
+| PRST-36 | P1: Manage | Execute | Verified |
+| PRST-37 | P1: Manage | Execute | Verified |
+| PRST-38 | P1: Manage | Execute | Verified |
+| PRST-39 | P1: Manage | Execute | Verified |
+| PRST-40 | P1: Manage | Execute | Verified |
+| PRST-41 | P1: Manage | Execute | Verified |
+| PRST-42 | P1: Manage | Execute | Verified |
+| PRST-43 | P1: Manage | Execute | Verified |
+| PRST-44 | P1: Manage | Execute | Verified |
 
-**Coverage:** 44 total, 0 mapped to tasks, 44 unmapped ⚠️ (Tasks not written yet).
+**Coverage:** 44 total, 44 mapped to tasks, all verified (`validation.md`, PASS 2026-10-14).
 
 ---
 

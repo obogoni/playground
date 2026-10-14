@@ -10,7 +10,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/agent-presets/spec.md`
 **Design**: `.specs/features/agent-presets/design.md`
-**Status**: Draft
+**Status**: Done
 
 ---
 
