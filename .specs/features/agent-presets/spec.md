@@ -225,17 +225,17 @@ the menu stays the way I use it.
 | PRST-03 | P1: Store | Execute | Implementing |
 | PRST-04 | P1: Store | Execute | Implementing |
 | PRST-05 | P1: Store | Execute | Implementing |
-| PRST-06 | P1: Store | Design | In Design |
-| PRST-07 | P1: Store | Design | In Design |
+| PRST-06 | P1: Store | Execute | Implementing |
+| PRST-07 | P1: Store | Execute | Implementing |
 | PRST-08 | P1: Store | Design | In Design |
 | PRST-09 | P1: Store | Design | In Design |
 | PRST-10 | P1: Save | Design | In Design |
 | PRST-11 | P1: Save | Design | In Design |
 | PRST-12 | P1: Save | Design | In Design |
-| PRST-13 | P1: Save | Design | In Design |
+| PRST-13 | P1: Save | Execute | Implementing |
 | PRST-14 | P1: Save | Design | In Design |
 | PRST-15 | P1: Save | Execute | Implementing |
-| PRST-16 | P1: Save | Design | In Design |
+| PRST-16 | P1: Save | Execute | Implementing |
 | PRST-17 | P1: Save | Design | In Design |
 | PRST-18 | P1: Launch | Design | In Design |
 | PRST-19 | P1: Launch | Design | In Design |
@@ -257,10 +257,10 @@ the menu stays the way I use it.
 | PRST-35 | P1: Broken | Design | In Design |
 | PRST-36 | P1: Manage | Design | In Design |
 | PRST-37 | P1: Manage | Design | In Design |
-| PRST-38 | P1: Manage | Design | In Design |
-| PRST-39 | P1: Manage | Design | In Design |
-| PRST-40 | P1: Manage | Design | In Design |
-| PRST-41 | P1: Manage | Design | In Design |
+| PRST-38 | P1: Manage | Execute | Implementing |
+| PRST-39 | P1: Manage | Execute | Implementing |
+| PRST-40 | P1: Manage | Execute | Implementing |
+| PRST-41 | P1: Manage | Execute | Implementing |
 | PRST-42 | P1: Manage | Design | In Design |
 | PRST-43 | P1: Manage | Design | In Design |
 | PRST-44 | P1: Manage | Design | In Design |

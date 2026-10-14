@@ -141,14 +141,14 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] `save` appends `{name, agent, cwd, prompt}`, omitting `prompt` when absent (PRST-13)
-- [ ] `save` on an existing name without `replace` → `exists` with the stored name; with `replace` → same index, `name/agent/cwd/prompt` replaced, unknown fields kept, `prompt` deleted when the new preset has none (PRST-16, PRST-07)
-- [ ] `rename` changes `name` only and keeps unknown fields; a name used by another entry → `exists` (PRST-38, PRST-39, PRST-07)
-- [ ] `move` swaps with the raw neighbour; up on the first / down on the last → error (PRST-40)
-- [ ] `delete` removes only the named entry (PRST-41)
-- [ ] A target name not found → `failed: preset "<name>" not found`; an invalid new name → `failed` with the T1 text
-- [ ] `serializePresets` output equals `JSON.stringify(raw, null, 2) + '\n'` checked against a literal string (PRST-06)
-- [ ] Gate check passes: `npx vitest run src/main/agent-preset-store.test.ts`
+- [x] `save` appends `{name, agent, cwd, prompt}`, omitting `prompt` when absent (PRST-13)
+- [x] `save` on an existing name without `replace` → `exists` with the stored name; with `replace` → same index, `name/agent/cwd/prompt` replaced, unknown fields kept, `prompt` deleted when the new preset has none (PRST-16, PRST-07)
+- [x] `rename` changes `name` only and keeps unknown fields; a name used by another entry → `exists` (PRST-38, PRST-39, PRST-07)
+- [x] `move` swaps with the raw neighbour; up on the first / down on the last → error (PRST-40)
+- [x] `delete` removes only the named entry (PRST-41)
+- [x] A target name not found → `failed: preset "<name>" not found`; an invalid new name → `failed` with the T1 text
+- [x] `serializePresets` output equals `JSON.stringify(raw, null, 2) + '\n'` checked against a literal string (PRST-06)
+- [x] Gate check passes: `npx vitest run src/main/agent-preset-store.test.ts`
 
 **Tests**: unit
 **Gate**: quick
