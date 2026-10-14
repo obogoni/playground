@@ -113,11 +113,11 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] `'{'` → `{ ok: false, reason }` with `reason` starting `invalid JSON: `; `'{}'` and `'"x"'` → `not an array`
-- [ ] Entries come back in array order (PRST-01)
-- [ ] Not-an-object, missing/empty/non-string `name`, `agent` or `cwd`, and a present non-string `prompt` each give `invalid entry: <field>`, with the valid neighbours still `ok` (PRST-04)
-- [ ] `[{name:'A'…},{name:' a '…}]` → first `ok`, second `invalid` / `duplicate name` (PRST-05)
-- [ ] Gate check passes: `npx vitest run src/main/agent-preset-store.test.ts`
+- [x] `'{'` → `{ ok: false, reason }` with `reason` starting `invalid JSON: `; `'{}'` and `'"x"'` → `not an array`
+- [x] Entries come back in array order (PRST-01)
+- [x] Not-an-object, missing/empty/non-string `name`, `agent` or `cwd`, and a present non-string `prompt` each give `invalid entry: <field>`, with the valid neighbours still `ok` (PRST-04)
+- [x] `[{name:'A'…},{name:' a '…}]` → first `ok`, second `invalid` / `duplicate name` (PRST-05)
+- [x] Gate check passes: `npx vitest run src/main/agent-preset-store.test.ts`
 
 **Tests**: unit
 **Gate**: quick

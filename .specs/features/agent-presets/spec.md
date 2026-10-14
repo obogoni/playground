@@ -220,11 +220,11 @@ the menu stays the way I use it.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| PRST-01 | P1: Store | Design | In Design |
+| PRST-01 | P1: Store | Execute | Implementing |
 | PRST-02 | P1: Store | Design | In Design |
-| PRST-03 | P1: Store | Design | In Design |
-| PRST-04 | P1: Store | Design | In Design |
-| PRST-05 | P1: Store | Design | In Design |
+| PRST-03 | P1: Store | Execute | Implementing |
+| PRST-04 | P1: Store | Execute | Implementing |
+| PRST-05 | P1: Store | Execute | Implementing |
 | PRST-06 | P1: Store | Design | In Design |
 | PRST-07 | P1: Store | Design | In Design |
 | PRST-08 | P1: Store | Design | In Design |
