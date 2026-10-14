@@ -255,15 +255,15 @@ the menu stays the way I use it.
 | PRST-33 | P1: Broken | Execute | Implementing |
 | PRST-34 | P1: Broken | Execute | Implementing |
 | PRST-35 | P1: Broken | Execute | Implementing |
-| PRST-36 | P1: Manage | Design | In Design |
+| PRST-36 | P1: Manage | Execute | Implementing |
 | PRST-37 | P1: Manage | Execute | Implementing |
 | PRST-38 | P1: Manage | Execute | Implementing |
 | PRST-39 | P1: Manage | Execute | Implementing |
 | PRST-40 | P1: Manage | Execute | Implementing |
 | PRST-41 | P1: Manage | Execute | Implementing |
 | PRST-42 | P1: Manage | Execute | Implementing |
-| PRST-43 | P1: Manage | Design | In Design |
-| PRST-44 | P1: Manage | Design | In Design |
+| PRST-43 | P1: Manage | Execute | Implementing |
+| PRST-44 | P1: Manage | Execute | Implementing |
 
 **Coverage:** 44 total, 0 mapped to tasks, 44 unmapped ⚠️ (Tasks not written yet).
 

@@ -461,8 +461,8 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] Each action re-renders from the listing its channel returns; no Save step
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Each action re-renders from the listing its channel returns; no Save step
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: build

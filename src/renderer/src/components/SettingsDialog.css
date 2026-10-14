@@ -209,3 +209,98 @@
 .set-notify-states .dialog-check.disabled .dialog-check-text {
   color: var(--text-faint);
 }
+
+/* Presets tab (PRST-36..44): the agent-row look with a mono sub line. */
+
+.set-preset-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.set-preset-head .dialog-field-label {
+  margin-bottom: 0;
+}
+
+.set-preset-open {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+
+.set-preset-row {
+  min-height: 44px;
+}
+
+.set-preset-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.set-preset-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.set-preset-broken {
+  color: var(--amber);
+}
+
+.set-preset-confirm {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Move up is the chevron turned over. */
+.set-preset-up svg {
+  transform: rotate(180deg);
+}
+
+.set-preset-row .set-agent-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.set-preset-row .dialog-btn-ghost,
+.set-preset-row .dialog-btn-primary {
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+
+.set-preset-delete {
+  background: var(--red);
+}
+
+.set-preset-rename {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.set-preset-rename .dialog-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.set-preset-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.set-preset-file-error {
+  margin-bottom: 9px;
+}

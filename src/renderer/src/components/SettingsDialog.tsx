@@ -14,6 +14,7 @@ import { DEFAULT_WORKTREE_TEMPLATE } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { applyAgentEdit } from '../lib/agent-registry'
 import { Icon } from './Icon'
+import { PresetsSettings } from './PresetsSettings'
 import './NewWorktreeDialog.css'
 import './SettingsDialog.css'
 
@@ -248,7 +249,11 @@ export function SettingsDialog({
             </div>
           </div>
         )}
-        {tab === 'presets' && <div className="dialog-body" role="tabpanel" aria-label="Presets" />}
+        {loaded && tab === 'presets' && (
+          <div className="dialog-body" role="tabpanel" aria-label="Presets">
+            <PresetsSettings agents={agents} />
+          </div>
+        )}
         {loaded && tab === 'general' && (
           <div className="dialog-body" role="tabpanel" aria-label="General">
             <div className="dialog-branch-row">
