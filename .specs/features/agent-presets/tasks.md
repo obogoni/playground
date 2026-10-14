@@ -204,9 +204,9 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] Channels typed as in design §`agentPresets:*` channels
-- [ ] `openFile` handler passes `shell.openPath` as the opener
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Channels typed as in design §`agentPresets:*` channels
+- [x] `openFile` handler passes `shell.openPath` as the opener
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: build
