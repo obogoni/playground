@@ -22,6 +22,8 @@ interface SettingsDialogProps {
   onSaved: (config: AppConfig) => void
   /** Fired whenever the agent registry is mutated, so App can re-thread it live. */
   onAgentsChanged: (config: AppConfig) => void
+  /** The tab to open on; only Manage presets… passes one (PRST-37). Defaults to General. */
+  initialTab?: SettingsTab
 }
 
 /** Tile-colour tokens an agent can be tinted with (handoff agent→colour set). */
@@ -40,7 +42,7 @@ interface AgentForm {
   color: string
 }
 
-type SettingsTab = 'general' | 'notifications'
+export type SettingsTab = 'general' | 'notifications' | 'presets'
 
 /** One switch per notifiable state, worded like the notifications they gate (NOTF-18). */
 const STATE_SWITCHES: Record<NotifiableState, { label: string; note: string }> = {
@@ -55,7 +57,8 @@ const STATE_SWITCHES: Record<NotifiableState, { label: string; note: string }> =
 
 const TABS: { id: SettingsTab; label: string; title: string }[] = [
   { id: 'general', label: 'General', title: 'Azure DevOps, agents & shell' },
-  { id: 'notifications', label: 'Notifications', title: 'Agent notifications' }
+  { id: 'notifications', label: 'Notifications', title: 'Agent notifications' },
+  { id: 'presets', label: 'Presets', title: 'Agent presets' }
 ]
 
 const EMPTY_FORM: Omit<AgentForm, 'editKey'> = {
@@ -75,7 +78,8 @@ const EMPTY_FORM: Omit<AgentForm, 'editKey'> = {
 export function SettingsDialog({
   onClose,
   onSaved,
-  onAgentsChanged
+  onAgentsChanged,
+  initialTab = 'general'
 }: SettingsDialogProps): JSX.Element {
   const [org, setOrg] = useState<string | null>(null)
   const [project, setProject] = useState('')
@@ -86,9 +90,10 @@ export function SettingsDialog({
   const [defaultShell, setDefaultShell] = useState<Shell>('pwsh')
   const [form, setForm] = useState<AgentForm | null>(null)
   const [busy, setBusy] = useState(false)
-  // Not persisted: the dialog always opens on General (NOTF-28). Every field's
-  // state lives here, above the tabs, so switching tabs loses no edit (NOTF-29).
-  const [tab, setTab] = useState<SettingsTab>('general')
+  // Not persisted: the dialog opens on General (NOTF-28) unless the opener asks
+  // for a tab (PRST-37). Every field's state lives here, above the tabs, so
+  // switching tabs loses no edit (NOTF-29).
+  const [tab, setTab] = useState<SettingsTab>(initialTab)
   const [notify, setNotify] = useState<NotificationPrefs | null>(null)
 
   useEffect(() => {
@@ -243,6 +248,7 @@ export function SettingsDialog({
             </div>
           </div>
         )}
+        {tab === 'presets' && <div className="dialog-body" role="tabpanel" aria-label="Presets" />}
         {loaded && tab === 'general' && (
           <div className="dialog-body" role="tabpanel" aria-label="General">
             <div className="dialog-branch-row">

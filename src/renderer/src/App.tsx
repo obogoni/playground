@@ -18,7 +18,7 @@ import { PerfProfiler } from './components/PerfProfiler'
 import type { PickablePreset } from './components/PresetMenu'
 import { RunPresetDialog, type PresetFormPlan } from './components/RunPresetDialog'
 import { SessionNotices } from './components/SessionNotices'
-import { SettingsDialog } from './components/SettingsDialog'
+import { SettingsDialog, type SettingsTab } from './components/SettingsDialog'
 import { Sidebar } from './components/Sidebar'
 import { StartWorkDialog } from './components/StartWorkDialog'
 import { StatusBar } from './components/StatusBar'
@@ -127,7 +127,8 @@ function App(): JSX.Element {
   const [branchTemplate, setBranchTemplate] = useState('')
   const [worktreeTemplate, setWorktreeTemplate] = useState('')
   const [devAlias, setDevAlias] = useState('')
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  /** The tab Settings is open on; null = closed. */
+  const [settingsTab, setSettingsTab] = useState<SettingsTab | null>(null)
   /** Editable agent registry from config (AGCF-01); threaded to the agent UIs. */
   const [agents, setAgents] = useState<AgentDef[]>([])
   /** New-session dialog pre-fill; null = closed. */
@@ -520,7 +521,8 @@ function App(): JSX.Element {
     refreshTasks()
     prLookup.refresh()
   })
-  const openSettings = useLatestCallback((): void => setSettingsOpen(true))
+  const openSettings = useLatestCallback((): void => setSettingsTab('general'))
+  const managePresets = useLatestCallback((): void => setSettingsTab('presets'))
   const spawnAgentIn = useLatestCallback((cwd: string): void => openNewSession({ cwd }))
   const setSidebarWidth = useLatestCallback((w: number): void => update({ sidebarWidth: w }))
   const toggleSidebar = useLatestCallback((): void =>
@@ -626,8 +628,7 @@ function App(): JSX.Element {
             onOpenWorktree={openWorktreeForSession}
             onNew={() => openNewSession()}
             onPickPreset={pickPreset}
-            // T14 opens the Presets tab.
-            onManagePresets={openSettings}
+            onManagePresets={managePresets}
             onPauseTime={time.pause}
             onResumeTime={time.resume}
             onToast={setToast}
@@ -722,16 +723,17 @@ function App(): JSX.Element {
           onCreated={worktreeCreated}
         />
       )}
-      {settingsOpen && (
+      {settingsTab && (
         <SettingsDialog
-          onClose={() => setSettingsOpen(false)}
+          initialTab={settingsTab}
+          onClose={() => setSettingsTab(null)}
           onSaved={(config) => {
             setAdoOrg(config.ado.defaultOrg)
             setBranchTemplate(config.ado.branchTemplate)
             setWorktreeTemplate(config.ado.worktreeTemplate)
             setDevAlias(config.ado.devAlias)
             setAgents(config.agents)
-            setSettingsOpen(false)
+            setSettingsTab(null)
           }}
           onAgentsChanged={(config) => setAgents(config.agents)}
         />

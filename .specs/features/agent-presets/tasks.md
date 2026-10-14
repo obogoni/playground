@@ -436,8 +436,8 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] Every other opener still lands on General (NOTF-28)
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Every other opener still lands on General (NOTF-28)
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: build
