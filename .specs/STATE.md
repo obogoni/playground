@@ -70,467 +70,54 @@ Handoff snapshot.
 | AD-060 | 2026-10-03 | **The session-name listing backs off for a session it does not name; named sessions keep the 30 s cadence.** `SessionNamePoller` keeps, per watched session, its Claude id, whether the last successful listing named it, a miss count and a due time. A successful listing without the session's Claude id is a miss, and so is a failed listing while the session is not named; after the k-th miss the session is due `min(5 s × 2^(k−1), 300 s)` after that listing (`NAME_BACKOFF_BASE_MS`, `NAME_BACKOFF_FACTOR`, `NAME_BACKOFF_MAX_MS`). A watch, a nudge or the 30 s tick starts a call only when a session that asked for it, or for a tick any watched session, has 0 misses or is due (due time included); otherwise the ask is dropped, not deferred, and the next hook event or tick asks again. A coalesced rerun follows the same rule at the end of the call. A new Claude id, a name or an unwatch resets the session. **Amends AD-040** ("on later events for a still-unnamed session": those events now list only when the session is due) and SNAME-09, SNAME-10, SNAME-12. Spec / design / tasks: `.specs/features/main-async-git/` (MAGIT-17..28, MAGIT-43..46). **Numbered 060 because PR #164 holds AD-058 and PR #165 holds AD-059**, and no other branch on `origin` or the fork uses a higher number. | Issue #151: a session the listing never names got a listing after every hook event, one 2 s Claude process back to back (`validation.md`, The listing half). With the backoff a never-named session nudged every second for 10 minutes is listed 7 times, at 1, 6, 16, 36, 76, 156 and 316 s (unit test, fake clock). A 5 s first step keeps a name that appears a few seconds late inside SNAME's 30 s; the 300 s ceiling bounds a never-named session to one listing in 5 minutes. The issue's other half, the period's git read, shipped with #154 (PERF-21); its stall target was already met on #147's baseline (31.7 ms against 50 ms). |
 | AD-061 | 2026-10-03 | **The Files view's git reads never write the index, and its watcher drops what git ignores.** Every git read the Files view runs to list, count, diff or classify passes `READ_ONLY_FLAGS` (`--no-optional-locks -c diff.autoRefreshIndex=false`, `src/main/git.ts`). The Files watcher asks `git check-ignore --stdin -z` about the paths and parent folders it has no answer for, at most once per batch and one check at a time; it caches the answers per watch (an ignored folder covers everything under it), forgets them on a new selection, a batch naming a `.gitignore`, or an index/`HEAD` change, and emits only what git does not ignore; a failed or timed-out check lets that batch through unfiltered. Refreshes the watcher's batches start run one at a time through a `RefreshGate` with one merged trailing run; an All changes section re-reads only when its request key, its disk revision or the git-state token changes. Spec: `.specs/features/files-watch-ignored/` (FWIG-01..48). **Numbered 061 because PR #164 holds AD-058, PR #165 AD-059 and PR #166 AD-060.** | Issue #150: with the view open, writes git ignores cost about 1,680 git processes and 185 `files:changed` a minute, and same-bytes rewrites about 1,720 git processes and 60 `worktree:status`; after the change, 0 / 0 and about 178 / 0 (bench, `validation.md`). `--no-optional-locks` alone does not stop `git diff` from refreshing the index (measured with git 2.55.0.windows.4 in fresh repositories); the config does. `check-ignore` per batch sees ignored folders created after the view opened, which a list taken at selection misses; it measured 87 ms for 9 paths and 330 ms for 2,000 on 20,000 tracked files. |
 | AD-062 | 2026-10-11 | **A fitted diff holds its height while its folds are pending.** While `DiffViewer` has a fold reading pending (new text set, diff not yet recomputed), its `measure` reports the height it last reported, to its own container and to `onHeight` (`reportedHeight`, `src/renderer/src/lib/diff-view.ts`); it measures again right after the folds are re-applied. `mountPlan` stays stateless and derived (FDIF-22): no hysteresis or grace delay in the stack. Spec: `.specs/features/files-stack-steady-neighbours/` (FSTD-01..09). | Issue #167, measured before the fix: `setValue` reveals every region until the diff is recomputed, so the written section reported 503 px instead of 180 for a median 216 ms on every re-read, and the sections near the 600 px margin dropped their editor on the rise and remounted on the fall. The bench edit loop read 6.07 `cat-file` per `files:changed`; after, 2.00 (the written file's own re-read), and git processes fell from about 540 to 300 a minute. Holding at the source also stops the written section's own flicker, which a margin delay would not. |
+| AD-063 | 2026-10-14 | **A file in `~/.playground` that the developer edits by hand and the app also writes is never renamed, backed up or rewritten by the app while it is unparseable; every app write re-reads the file, applies its one change to what it read, and replaces the file atomically (temp file + rename).** Changes target an entry by its name, never by an index taken from an earlier read, and keep every field of that entry the app does not manage. First applied by `agent-presets` (`~/.playground/presets.json`, `src/main/agent-preset-store.ts`, PRST-07..09). `config.json` keeps its own `.bak-<ts>` recovery (`config-store.ts:33-50`): it is app-owned, not a hand-edited file. | The owner edits presets by hand as well as in the app (2026-10-14). `config-store`'s recovery would move a half-edited file away, and a write built from an old read would drop an edit saved in between. Name targeting stays correct when the developer reorders the array by hand. |
 
 
 ## Handoff
 
-**Status (current, 2026-09-26): `hours-task-focus` (issue #110) is COMPLETE, Verifier PASS on round 3
-of 3, and shipped as PR #129 (closes #110, depends on #99).**
+**Status (current, 2026-10-14): `agent-presets` is in TASKS.** The owner approved the design on
+2026-10-14. `tasks.md` holds 17 tasks in 4 phases and passes `validate_tasks.py` with 0 errors
+(the warnings are co-located test files and the `Tests: none` layers the matrix allows). It awaits
+owner approval; Execute offers 3 batch sub-agents. Earlier in the day:
+`agent-presets` was in DESIGN. The owner approved the spec
+(PRST-01..44) on 2026-10-14, including the `n` assumptions and the amended "spawn directly when
+nothing is left to ask" rule (PRST-21..23). The owner chose the architecture: main owns the file,
+and the renderer plans the launch. `design.md` is drafted and awaits approval. **AD-063** is
+recorded (hand-edited `~/.playground` files: never rewritten while invalid, re-read before every
+write). The files are untracked on `main`'s working tree. Next: design approval, then Tasks. Branch
+`feature/agent-presets` before the first commit.
 
-- **Branch:** `feature/hours-task-focus`, rebased on 2026-09-26 from the pre-rebase
-  `feature/hours-calendar` onto `7d85337` (PR #99 plus the drawer growth fix). The rebase rewrote
-  the plan commit; force-pushed to `fork` with the owner's go-ahead. PR #129 stacks on #99.
-- **What shipped:** eight task colours per week, never repeated on a day (AD-045, superseding AD-030
-  for the Hours calendar only); hovering or focusing a legend chip, a drawer group header or a bar
-  fades the other groups to 30%; clicking a chip shows only that group's days, kept across weeks,
-  with a × to clear it.
-- **Verification:**
-  - Gates: suite 1691 -> 1704 (91 files); typecheck clean; lint 0 errors / 18 warnings (the
-    baseline). The seeded CDP smoke `scripts/smoke-hours-calendar.mjs` passes 52/52; every new
-    check was seen failing on a named mutant.
-  - Round 1 failed on test evidence: the smoke never checked leaving a header or a bar, focus on a
-    bar, or the exact palette. Round 2 failed on the picked chip kept in a week without its task.
-    Both were fixed (T14 to T16). Report: `.specs/features/hours-task-focus/validation.md`.
-  - Lessons L-051 to L-055 of this branch were renumbered **L-060 to L-064** at merge time
-    (`origin/main` already held L-051 to L-059).
-- **Judgement calls, both accepted by the Verifier:** the legend keeps coloured tasks in the order
-  they were coloured, so live time never reorders them; the picked chip stays in the legend with
-  `0h00`, the neutral swatch and its × in a week without its group (spec edge case 4).
-- **Next:** once #99 merges, run `git rebase --onto origin/main feature/hours-calendar feature/hours-task-focus`.
-  Merge into local `develop` after that, replaying lessons by key and appending AD-045 after AD-044.
+**Parked by the owner on 2026-10-14: `ado-triggers`** (snapshot below). When it resumes, its AD
+numbers must move past whatever `agent-presets` takes (main holds up to AD-062).
 
-| Slice | Branch | Verifier | PR |
-| ----- | ------ | -------- | -- |
-| F1 `files-explore` | `feature/files-explore` `72d6e98` | PASS, round 3 of 3 | **#100** (depends on #97) |
-| F2 `files-diff` | `feature/files-diff` `1802d35` | PASS, round 1 | **#101** (depends on #100) |
-| F3 `files-commits` | `feature/files-commits` `cd44640` | PASS, round 2 of 3 | **#102** (depends on #101) |
+**Status (2026-10-06): `ado-triggers` is in SPECIFY. Spec and context are drafted and
+validated (`validate_spec.py` 0 errors). The owner has NOT approved the spec yet. Nothing is
+committed, and no branch exists.**
 
-The three are stacked in that order on `feature/status-bar` (PR #97), which is still open upstream.
-Nothing has been merged into `obogoni/playground`; the local `develop` merge is the only integration.
-
-- **F3 verification:** suite **1168 -> 1177** (64 files); typecheck, lint (0 errors / 18 warnings,
-  the standing baseline) and `electron-vite build` exit 0. CDP smoke
-  `scripts/smoke-files-commits.mjs` **27/27** against a live dev app on a seeded repository of 104
-  commits, with an isolated `--user-data-dir`. Report: `.specs/features/files-commits/validation.md`.
-  Round 1 returned FAIL on test strength only — no shipped code was wrong — and named two surviving
-  mutants plus one AC with no evidence at all; all three are closed. Round 2 returned PASS with three
-  survivors, two of which were closed afterwards (recorded as an addendum in the report, marked
-  plainly as author self-check rather than a third round).
-- **Defect found and fixed during F3, in shipped code:** `commitFiles` used `Promise.all`, which
-  returns on the first rejection and leaves its sibling git process running. On Windows that child
-  held the worktree as its cwd and blocked the directory's removal — an intermittent EPERM roughly
-  one full-suite run in six. Now `allSettled`. It cost four wrong diagnoses before the error text was
-  finally captured; the lesson is L-029.
-- **Merge into `develop`:** six files conflicted, all additively (config keys, contract imports, two
-  helpers in `main/index.ts`, two top-bar directions, and two blocks of decision rows). Every
-  conflict kept both sides. Merged tree: **1504 tests / 82 files**, lint 0 errors / 17 warnings,
-  build green.
-- **Carried, non-blocking:** FCMT-07's *rendered* base prompt is unasserted on both sides (the pure
-  decision behind it is unit-tested); FCMT-32's window-focus path, FCMT-16's focus-when-already-open
-  and FCMT-11's restore-on-return are each argued rather than driven. `inTreeOrder` in
-  `AllChangesTab.tsx` is pure and untested. `files-diff/design.md` § Data Models still declares the
-  removed `FileStat { binary: boolean }`. Candidate lessons L-019..L-029 await promotion.
-- **Owner hand checks NOT yet done on F3** (a CDP smoke counts DOM nodes; it cannot see that a screen
-  is unreadable, mis-themed or drawn in tofu — in F2 the smoke found one defect and the owner found
-  three): click **Open in browser** on one real pushed commit of a real repository, since the smoke
-  never clicks an enabled one; hover a row and read the full message tooltip; and judge the
-  four-mode selector at the left column's narrowest width, where it now wraps to two lines.
-
-**Next:** F4 `files-pr-ado` is executing off `main` on `feature/files-pr-ado`; F1–F3 merged
-upstream, so nothing is stacked. Its README states the write posture of AD-027.
-
-### `session-name` (PR #96, merged with the Files epic on 2026-09-25)
-
-Decision renumbered AD-022 → **AD-040** at merge time: `origin/main` had already claimed AD-022..039 for the Files epic.
-
-**Status (2026-09-19): `session-name` EXECUTED + independent Verifier **PASS** on branch
-`feature/session-name`, cut from `main` `6ecd19c` (= `origin/main`; PR #88 activity already in).
-12 commits (`3e69ce9..579819a`), tree clean. PR not opened — push to `fork` (mrpaiva) and the draft
-PR to `obogoni/playground` (`Closes #92`) need an explicit go-ahead.**
-
-A running Claude Code session's row in the Agents rail now shows the name Claude gives that session
-(`/rename`, an accepted plan, or the default `<folder>-xx`), read from the documented listing
-`claude agents --json` and matched by the `session_id` the session's hooks already report (AD-040).
-Main owns a `SessionNamePoller` (`src/main/session-name-poller.ts`: debounced 1 s on the first hook
-event, every 30 s while a session holds an id, 20 s timeout, one call in flight with a coalesced
-rerun, one log line per failure streak); `SessionManager` records the id, watches/nudges/unwatches,
-applies each listing and pushes `session:name` only on change; the renderer applies it in place
-(`applyName`) and `resolveRows` labels, numbers (RAIL-13) and describes rows by `rowLabel` — tooltip
-`<agent> · <name> · <branch>`. Nothing is persisted (`PersistedSession` untouched); a stopped session
-falls back to the agent name through the existing `session:status` refetch. Suite 917 → **987**
-(+70 in three new test files and two extended ones), typecheck + lint clean, `electron-vite build`
-green. Verifier: 15/15 ACs evidenced, 13/14 mutants killed (the survivor is equivalent by
-construction: a field reset on an object dropped two lines later). Owner smoke run by the author over
-CDP against the dev app on Claude Code 2.1.278: `scripts/smoke-session-name.mjs` **14/14**.
-
-**Scope addition approved at task time:** `AgentChild.onError?` on the spawn seam
-(`agent-step-runner.ts`) and `child.on('error')` in `spawnAgent` — Node emits `error` (not a throw)
-for `ENOENT`/`EACCES`, and an unlistened `error` on a `ChildProcess` is an uncaught exception in main.
-
-**Environment gotcha found by the smoke, not a product defect:** a second dev instance of the app on
-the same `userData` rewrites `agent-hooks/claude-settings.json` with *its* hook port at launch, so the
-other instance's sessions get HTTP 401 on every hook — no `session_id`, no activity, no name. Run one
-instance at a time (`smoke-session-name.mjs` header, `TESTING.md`). Also: orphan groups (untagged
-branch) are one per session, so RAIL-13 ordinals never apply there.
-
-**Spec text aligned with what shipped (Verifier gaps, closed in `579819a`):** SNAME-05 now says
-"tooltip (`title`)" — the row has no `aria-label` and gains none; the listing-binary edge case names
-`resolveClaude` (PATH first, else `agent.claudePath`) as the accepted v1 deviation.
-
-**Lessons NOT recorded with `scripts/lessons.py`** (the installed script rewrites `lessons.json` on
-any call — see the terminal-links handoff): four candidates are listed at the end of
-`.specs/features/session-name/validation.md`, three already applied in this range.
-
-**Next steps:**
-1. Owner decides: push `feature/session-name` to `fork` and open the draft PR to
-   `obogoni/playground` — title from the feature, description from `validation.md` §Summary,
-   `Closes #92`. Update the body of issue #92 first: it still proposes the transcript's `ai-title`
-   record as the source, which AD-040 rejects (documented as internal; the AI-generated title is
-   therefore **not** shown — an unnamed session reads `<folder>-xx` until `/rename` or an accepted
-   plan). Upstream PRs #93 (`time-tracking`) and #95 (`terminal-scroll-paste`) touch
-   `session-manager.ts` / `rail-groups.ts` neighbours — rebase if either lands first.
-2. Deferred ideas in `context.md`: the terminal title (OSC 0) as a second source (would add the
-   AI-generated title and cover any agent; needs an AD-019 exception), naming the Claude session
-   from the app (`claude -n <title>`), hiding the default display name.
-3. `feature/terminal-links` (main worktree, `cb18b7a`) is still at its own verified gate, unpushed.
-
-**Uncommitted files:** none. **Branch:** `feature/session-name` @ `579819a`.
-
-### `terminal-links` (PR #104, merged on 2026-09-25)
-
-Decisions renumbered AD-021/022/023 → **AD-041/042/043** at merge time: AD-021 belongs to `time-tracking` (#93) and AD-022..039 to the Files epic.
-
-**Status (2026-09-24): `terminal-links` complete on `feature/terminal-links` — amendment T12–T15 and fix F3
-committed, independent Verifier PASS (pass 4, `dd83777..77d4e34`; pass 3 over `3563b91..a83e62b` found one
-Minor LINK-21 gap, closed by F3). All 33 LINK requirements Verified. Gate: typecheck 0, lint 0 errors (18
-pre-existing prettier warnings), `npm test` 1036/1036 (917 before T1). Pushed to `fork` and opened as
-[PR #104](https://github.com/obogoni/playground/pull/104) on 2026-09-24 — a regular PR; playground PRs are
-not drafts.**
-
-**What landed since the 2026-09-19 handoff:**
-
-- **T15 `a83e62b`** — live smoke in Claude Code 2.1.281, `validation.md` rows 22–30: a plain URL in the
-  alternate buffer hovers and opens through text detection (LINK-32); the `Write(hello.txt)` header is an
-  OSC 8 `file://` link and opens Notepad through `links:openFileUrl` (LINK-21, LINK-33); a markdown link opens
-  the browser (LINK-20); an OSC 8 `mailto:` is provided but never opened (LINK-22). The owner cross-checked
-  by hand in the smoke window. Also pointed `design.md`/T14 at `terminal-link-provider.ts`.
-- **Pass 3 `dd83777`**, **F3 `7da1cc1`** — `openFileUrl` let `fileURLToPath` throw across IPC for file URLs
-  with no local drive path (`file:////server/share/…`, `file:///tmp/…`); it now answers
-  `Only local file links open here — <url>`, and a test pins the `localhost` form. **Docs `77d4e34`** — T14's
-  Done-when said a `null` OSC 8 target falls through to text detection (it does not, and must not, for
-  LINK-22); a `C:\dir\a.txt` example had lost its `\a` to a BEL byte; the never-hovered OSC 8 Ctrl+click is a
-  deferred idea in `context.md`. **Pass 4 `3635409`**, then traceability with this handoff.
-
-**Findings worth keeping:**
-
-- **`WT_SESSION` also turns Claude Code's hyperlinks on.** A dev app launched from a Windows Terminal tab
-  passes it to every session through `buildPtyEnv`, so links show up on `main` without this branch; the
-  installed build (Start menu) gets none. Any smoke of link work must run with `WT_SESSION` and
-  `WT_PROFILE_ID` removed, or it passes for the wrong reason.
-- Claude Code 2.1.281 emits no OSC 8 for `mailto:` — it prints `text (address)`.
-- **A second dev instance without breaking the first:** `--user-data-dir=<scratch>` after the `--` isolates
-  the config and `agent-hooks/claude-settings.json`, so the owner's instance keeps its hooks. On Windows the
-  Bash tool's `TaskStop` leaves the Electron tree running — `taskkill /T /F` on the smoke's `npx` root, never
-  on the owner's PIDs.
-- **`window.api` is frozen** (AD-020 already says so; the 2026-09-19 note calling it patchable was wrong).
-  The IPC channel was read from CDP logpoints instead: `Debugger.setBreakpointByUrl` on the served
-  `TerminalPane.tsx` with a condition that logs and returns `false`; `Runtime.enable` replays old console
-  messages.
-- `npx` in a shell that descends from the running dev app resolves binaries through that app's
-  `node_modules/.bin` on `PATH`; run gates with `npm test` / `npm run …` inside the worktree.
-
-**Next steps:**
-
-1. Follow the PR. Rebase onto `origin/main` if #95 (`terminal-scroll-paste`, also edits `TerminalPane.tsx`)
-   lands first. Today the branch is 3 commits behind `main` (PR #90) and `git merge-tree` reports no conflict.
-2. Deferred ideas in `context.md`, notably the Ctrl+click on a never-hovered OSC 8 link.
-3. Lessons are still unrecorded with `scripts/lessons.py` (the installed script rewrites `lessons.json`):
-   candidates under `### Lesson candidates` in `validation.md` passes 3 and 4, plus the 2026-09-18 ones
-   (`cb18b7a`).
-
-**Traps still valid from 2026-09-19:** editing main while the dev app runs restarts Electron, and the restart
-dies on an unhandled `ERR_SERVER_NOT_RUNNING` (#91) — relaunch instead; ConPTY drops DECSET mouse requests
-from a process without `ENABLE_VIRTUAL_TERMINAL_INPUT`; Bash-tool heredocs halve backslashes (write TS/JS and
-spec prose with Edit/Write — the BEL byte above came from this); 18 pre-existing prettier warnings.
-
-**Uncommitted files:** none. **Branch:** `feature/terminal-links`, this handoff's commit.
-
-### `terminal-scroll-paste` (PR #95, merged on 2026-09-25)
-
-**Status (2026-09-17): `terminal-scroll-paste` COMPLETE -- T1-T14 executed and
-independent Verifier **PASS** (round 2 of 3) on branch `feature/terminal-scroll-paste`, cut from
-`origin/main` `fa78f78`. Phases 6 and 7 SKIPPED (Q2 verdict: cause 3 only; TSP-29..34 `Withdrawn`).
-Nothing uncommitted. **Pushed to `fork` and PR #95 open upstream**
-(`viniciussaide:feature/terminal-scroll-paste` -> `obogoni:main`, opened 2026-09-17 with owner
-go-ahead; CI `gate` **pass** in 4m56s, `mergeStateStatus` CLEAN, 24 files / +3247 -117). Report:
-`.specs/features/terminal-scroll-paste/validation.md`; `validate_state.py` exit 0.**
-
-- **Verification:** suite **748 -> 820** (46 -> 51 files); typecheck/lint/test and
-  `npx electron-vite build` all exit 0. Round 1 **FAIL on evidence, no code defect** (18/18 mutants
-  killed); round 2 **PASS** with **23/23 mutants killed** -- the 18 re-run verbatim plus 6 new ones
-  on the changed test. 26/34 non-withdrawn ACs fully matched, 4 spec-precision, **7 owner-accepted
-  hand-verification items enumerated, 0 silent passes.**
-- **The Verifier ran a counterfactual on the one code change rather than trusting the claim:** the
-  memoised-`rand` mutant and a constant-suffix mutant both **survived** the old TSP-38 assertion
-  (exit 0, 20 passed) and both **die** against the new one. The second mutant keeps `randCalls === 2`
-  honest and would defeat a call-counter-only assertion; the path assertions catch it.
-- **Lint baseline moved and exit code hid it.** The fix round added a 19th prettier warning in its
-  own file against a baseline of 18, invisible at exit 0 because warnings do not fail the gate.
-  Fixed with `npx eslint --fix src/main/clipboard-reader.test.ts`; back to 18. **Record the count and
-  diff the count -- judging lint by exit code alone is correct for errors and blind to drift.**
-
-- **Commits:** `194aa4f` spec, `b3b41e3` + `1467c64` requirement-id realignment, then T1-T13 in
-  `90830f3`..`02f1413` (one per task). Suite **748 -> 819** (46 -> 51 files); `typecheck`, `lint`
-  and `npm test` exit 0, `npx electron-vite build` exit 0, verified by the orchestrator at the
-  phase boundary, not only by the workers.
-- **What shipped:** `src/shared/paste.ts` (`planPaste`, `quotePath`, `PASTE_GAP_MS`), the
-  `clipboard:read-paste` channel and the `pathForFile` bridge, `TerminalModeTracker`, a
-  `SessionRingBuffer` whose `snapshot()` prepends the modes its trimmed head carried (`tail()`
-  stays unprefixed -- cause 3, unconditional), `clipboard-reader`, `paste-temp` purge,
-  `terminal-modes.ts` (`modeName`, `formatModeLog`, `isProbeEnabled`), and in `TerminalPane.tsx`
-  the flag-gated mode probe, one serialized paste queue behind both Ctrl+V and right-click, and
-  file drop.
-
-**T14 verdict (owner UAT, 2026-09-17): cause 3 only.** The probe logged, and the scroll never died
-in any scenario the owner tried, including repeated Ctrl+C in opencode. T4 had already fixed cause 3
-unconditionally, and the original intermittent symptom matches it. **The evidence is a
-non-reproduction, not a measured difference:** the A/B against the pre-T4 1.1.1 install was offered
-and declined in favour of shipping, so this does not prove causes 1 and 2 cannot happen. The probe
-stays behind `playground.debug.terminalModes` so a returning defect is diagnosed against evidence.
-
-**To run the probe again:** `npm run build && npm start` -- **an installed/packaged build cannot run
-it**, because `optimizer.watchWindowShortcuts` (`src/main/index.ts:202`) only wires F12 to DevTools
-while unpackaged and blocks Ctrl+Shift+I when packaged. Set
-`localStorage.setItem('playground.debug.terminalModes', '1')`, enable **Verbose** in the console
-level dropdown (the probe uses `console.debug`, hidden by default), then remount the pane.
-
-**Verifier round 1 FAIL -- what it found and what was done, all resolved or accepted (owner decided:
-record honestly, do not refactor for testability):**
-
-- **7 ACs had no evidence of any kind and were missing from T14's owner-pending list**, so they read
-  as verified in Traceability: TSP-02, 03, 20, 23, 24, 26, 28, all pane-local. Now enumerated under
-  T14. The riskiest are **TSP-23/24** -- the serialized paste queue and its cancel-on-unmount, the
-  most intricate new logic here, shipping source-verified with no test by owner decision.
-- **TSP-38's assertion was tautological** (proved only that `pasteImageName` embeds the `rand` it is
-  handed; a suffix cached per module would have survived it). Replaced with a `readClipboardPaste`
-  test that pastes twice under one fixed `now` and asserts both paths and `randCalls === 2`.
-  Mutation-checked: caching `rand` now fails the test. Suite 819 -> 820.
-- **TSP-16's 5 s timeout and the exact chip text stay unasserted literals** (`src/main/index.ts:94`,
-  `TerminalPane.tsx:31`) while `PASTE_GAP_MS`/`COPIED_FEEDBACK_MS`/`PASTE_MAX_AGE_MS` were all pulled
-  into tested seams. Same convention, three exceptions -- accepted, not fixed.
-- **Third TSP-citation drift on this feature**, swept: the coverage matrix cited withdrawn ids and
-  `design.md` had no withdrawal marker. Citations inside the T15..T19 bodies are intentional.
-- Cleanup audit passed: the probe's CSI handlers `return false` unconditionally (returning `true`
-  would swallow every DECSET/DECRST and manufacture a superset of the bug, on flagged machines only,
-  with nothing in the suite to catch it), and no path writes to a disposed terminal. **One narrow
-  real defect left unfixed:** the replay `term.write(data, cb)` callback reads `term.modes` and can
-  fire after `dispose()` -- probe-only, so flag-gated. The Verifier's other note, that the cleared
-  `gapTimer` permanently retains the disposed terminal, **does not hold and was withdrawn in round
-  2**: a pending promise is not a GC root, so the closure graph is collectable once unreachable. The
-  mechanism is inverted -- **not** clearing the timer is the retaining case, since a live timer holds
-  `resolve` -> promise -> continuation -> `term` for up to `PASTE_GAP_MS`.
-
-**What the PASS does not claim, stated because it is the accepted risk:** nothing is verified about
-`TerminalPane.tsx`. **TSP-23/24** -- the serialized paste queue and its cancel-on-session-change, the
-most intricate new logic here -- ship on source review alone, and the 23/23 kill rate does not extend
-to them. The Verifier re-read the disposal path in both rounds and found no route where a disposed
-queue writes to a dead terminal.
-
-**Deliberately left as-is (cosmetic, recorded not fixed):**
-
-- `spec.md` Traceability reads `Implementing` for all 34 non-withdrawn ACs, so it does not
-  distinguish the 26 verified from the 7 accepted-pending. **This matches the project convention** --
-  `agents-rail-v2` is merged and Verifier-PASS and still reads `Implementing` throughout -- and it
-  under-claims, so nothing is falsely green. Introducing a per-AC status scheme on this branch alone
-  would diverge from every other feature.
-- The post-dispose replay callback: `term.write(data, cb)`'s callback reads `term.modes` and can fire
-  after `dispose()`. Probe-only (`replayPending = probing`), worst case a console throw on a terminal
-  that is already gone, no PTY or data consequence. A one-line `if (pasteDisposed) return` would close
-  it by reusing the existing flag.
-
-**Next:** PR #95 is open and awaiting review; `origin/main` is still `fa78f78`, so no rebase is
-needed. The feature is **not** merged into `develop` yet. After the upstream merge: `git fetch origin` -> `main`
-fast-forward -> merge `main` into `develop`. Expect a Handoff conflict and the lessons renumbering
-that `time-tracking` (#93) and `session-idle-notifications` (#94) also need.
-
-**A HOLE IN THE SKILL'S OWN CLOSING GATE -- do not trust `validate_state.py` blindly.** Reproduced
-this session with a synthetic report: a `validation.md` whose verdict reads `**Verdict: FAIL**` in
-prose **passes with exit 0**. `_verdict()` builds its haystack only from lines matching
-`^#{1,4}\s*validation\b` or an unanchored `\*{0,2}result\*{0,2}\s*:`, so the Discrimination
-Sensor's own `**Result**: ... killed ... PASS` line -- which `validate.md`'s template prescribes --
-becomes the only match and reads as a pass. This feature's report only exits 1 because its heading
-happens to be `## Validation: ... FAIL`. The owner decided 2026-09-17 not to patch the skill; verify
-a verdict by reading the report, not by the exit code.
-
-**Spec-precision gaps recorded during Execute (in `tasks.md`, not silently absorbed):**
-
-- **TSP-01** does not define the probe line's layout. The shipped shape is
-  `[term-modes] <id> CSI ?1049;1003;1006h alt-screen,any,sgr-mouse tracking=any buffer=alternate`,
-  pinned by test, and TSP-02/03 follow it. The `tracking=`/`buffer=` readouts are taken in a
-  `queueMicrotask` because xterm has no per-sequence post-apply hook: exact for a mode change that
-  arrives alone (the diagnostic case), settled-state for several changes inside one PTY chunk.
-- **TSP-16** says the failure chip sits "next to" the "Copiado" chip but also that it reuses that
-  element and timing. Implemented as reuse, so "Não foi possível colar" inherits the chip's green
-  background. A red variant is outside T12's Done-when.
-- `planPaste({kind:'text', text:''})` is undefined by the spec; returns `['']` and is unreachable
-  from `readClipboardPaste`.
-
-**Found during Execute, worth keeping:**
-
-- The edge-case requirement ids in `tasks.md`/`design.md` were **3 below** `spec.md` -- the edge
-  cases moved to TSP-35..40 when the conditional blocks took TSP-29..34. Twelve citations fixed in
-  `b3b41e3` and `1467c64`. The TSP-29..34 references in T15..T19 are the conditional ids and are
-  correct.
-- **Ctrl+Alt+V classified as `paste`** before T10, which would have swallowed the AltGr/Alt+V chord
-  Claude Code on Windows uses to read the clipboard itself (TSP-17). Fixed by excluding `altKey`,
-  mirroring the Ctrl+Z branch (`terminal-keys.ts:117` and `:122`). Latent defect, not a regression
-  of this branch.
-- **`<skill-dir>/scripts/lessons.py list` destroys data.** Run to load confirmed lessons, it
-  rewrote `.specs/lessons.json` and `.specs/LESSONS.md` and **deleted all 13 candidate lessons**,
-  keeping only the 2 confirmed ones it was asked to list. Reverted with `git checkout --`; restored
-  state is 15 lessons / 13 candidates / `next_id` 17. Do not run it; read `lessons.json` directly.
-
-**STILL TRUE from earlier handoffs (carried over):**
-
-- `agents-rail-v2` two-theme visual pass (RAIL-26/27) is code-verified only; `opencode` and
-  `Ad-hoc` both resolve to `--amber` at 22x22 -- a pre-existing collision that feature surfaced
-  but did not fix.
-- AD-017 follow-up: preserve `undoByte` in `SettingsDialog` `commitForm` (PR #83 has merged).
-- **PENDING -- bump the committed `package.json` version on the next delivery:** `v1.0.0` shipped
-  2026-09-02 from `cafb43f`, but the bump was never committed -- `main` still reads `0.1.0` and
-  nightlies publish `0.1.0-alpha.N`, semver-sorting below the shipped stable. Bump to `1.1.0`.
-
-**Note for whoever merges this branch:** this STATE.md is `origin/main`'s, so it does not carry the
-`time-tracking` (PR #93) or `session-idle-notifications` (PR #94) handoffs that live on `develop`.
-Expect a Handoff conflict on the merge into `develop`, and the same lessons renumbering those two
-features already needed.
-
-### `session-idle-notifications` (PR #94, merged on 2026-09-25)
-
-Lesson candidates L-019..L-023 of this branch were renumbered **L-030..L-034** at merge time (`origin/main` already held L-019..L-029).
-
-**Status (2026-09-16): `session-idle-notifications` EXECUTED + independent Verifier PASS
-(round 2 of 3). Owner smoke 36/36 (rev5). PR #94 open upstream (`viniciussaide:feature/session-idle-notifications` → `obogoni:main`, "depends on #88"). Not yet merged into `develop`.**
-
-- **Branch:** `feature/session-idle-notifications`, stacked on `feature/session-activity-status`
-  (`65de9fd`, PR #88 still open upstream). Spec/design/tasks `c5e2304`..`4e7e69a`, code
-  `2e6bf64`..`40ab12f` (13 tasks), fix round `b3a00b3`.
-- **What shipped:** main decides (`activity-notification.ts` pure rules + `SessionNotifier`);
-  `SessionManager` reports each activity transition; OS notification when the window is
-  unfocused, in-app notice stack when focused on another session, nothing for the attached one;
-  a first event never notifies (NOTF-27). Settings dialog split into General / Notifications
-  tabs with a master switch plus one per state, flat `ui.notify*` keys, absent = on. Shared
-  `showOs` now holds each `Notification` until click/close, which also covers workflow toasts.
-- **Verification:** suite 917 → **990**. Round 1 FAIL on evidence only (NOTF-05 direction half,
-  06, 21, 23, 29 agent form) with 20/21 mutants killed (1 equivalent); round 2 PASS after smoke
-  and spec fixes. Report: `.specs/features/session-idle-notifications/validation.md`.
-- **Owner smoke 2026-09-16: 34/34 PASS**, including a real Windows notification and its click.
-  Two earlier runs stopped on smoke defects (rail v2 row labels; xterm not rendering while the
-  window is hidden), fixed in `d641837` and `57d88fc`. Still hand-verify: a notification clicked
-  after a minute, a minimized window, and the two-theme pass of tabs and notices.
-- **rev4 increment (2026-09-16), P4 NOTF-30..36:** the notification names the session's task —
-  title `#<id> · <pinned task title>` (or `#<id>`), clipped to 60 characters until rev5 removed the cut; agent and session
-  as a second body line; branch read with `git symbolic-ref --short HEAD` (2 s), no ADO call.
-  T14–T20 `ec0d66b`..`d1d5f94`, fix round `b522d5f` (also catches async notifier failures).
-  Suite 990 → **1006**; Verifier round 3 FAIL on evidence, round 4 PASS (18/18 mutants).
-  **Owner smoke 2026-09-16: 36/36 PASS**, and the Windows toast shows the three lines separately
-  (no ` — ` fallback needed).
-- **rev5 (2026-09-16), whole titles:** owner decided the app never cuts a title — no 60-character
-  limit, no `…`; the in-app title wraps freely. T21–T23 `133794e`..`39a589c`, fix round `ffc773c`
-  (test for a long session title on the body's second line). Suite **1006**; Verifier round 5
-  FAIL (1 surviving mutant), round 6 PASS (8/8). Owner hand check: a long pinned task title shown
-  whole in the in-app notice; Windows may shorten its own toast title.
-- **Lessons collide again:** this branch added candidates **L-019..L-023** (`next_id` 24), but
-  `develop` already holds time-tracking's L-019..L-024. Renumber when merging into `develop`.
-- **Next:** merge into `develop` locally (renumber lessons L-019..L-023 past develop's L-024); when #88 merges,
-  `git rebase --onto origin/main feature/session-activity-status feature/session-idle-notifications`.
-
-**STILL TRUE from earlier handoffs (carried over):**
-
-- `session-activity-status` (PR #88): owner smoke 19/19 PASS; the two-theme visual pass of the
-  activity dots/loader and `prefers-reduced-motion` (ACTV-14/15/17/20) is still owner-pending.
-- Deferred follow-up: the three `quota_auto_resume_*` notification types are not consumed, so a
-  session paused by a usage limit stays `error` after Claude resumes (`_fired` → `working`,
-  `_stale` → `needs-input`, `_disabled` → `waiting`; Claude Code v2.1.234+).
-- `agents-rail-v2` two-theme visual pass (RAIL-26/27) is code-verified only; `opencode` and
-  `Ad-hoc` both resolve to `--amber` at 22×22.
-- The `wip(reconciler-core)` stash is gone from this clone; if it is not in another clone it is lost.
-- AD-017 follow-up: preserve `undoByte` in `SettingsDialog` `commitForm` (PR #83 has merged).
-
-**PENDING — bump the committed `package.json` version on the next delivery:** `v1.0.0`
-shipped 2026-09-02 from `cafb43f` (the PR #77 merge), but the bump is **never committed**
-— `main` still reads `0.1.0` and nightlies publish `0.1.0-alpha.N`, semver-sorting below
-the shipped stable. Bump to `1.1.0` on the next delivery (owner decided 2026-09-10 this
-branch ships without it).
-
-### `time-tracking` (PR #93, merged on 2026-09-25)
-
-Lesson candidates L-017..L-022 of this branch were renumbered **L-035..L-040** at merge time (`origin/main` already held L-017..L-034). AD-021 keeps its number.
-
-### `hours-calendar` (PR #99)
-
-Lesson candidates L-023..L-032 of this branch were renumbered **L-041..L-050** at rebase time (`origin/main` already held L-023..L-040).
-
-**Status (current, 2026-09-19): `hours-calendar` DONE — layout B + the drawer polish, independent
-Verifier PASS round 6 on branch `feature/hours-calendar`, rebased onto `origin/main` on
-2026-09-25 after #93 merged. Open upstream as PR #99.**
-
-- 19 tasks in 5 phases (`19a2504`..`200147c`). Phases 1–3 built the week calendar; Phase 4 (AD-031)
-  turned it into layout B — legend chips, a grid that fills the height, the day's detail in a drawer
-  closed by default; Phase 5 matched the drawer to the approved mockup and closed the verifier gaps.
-- Verifier ran **six rounds** (the owner approved rounds beyond the 3-iteration bound): PASS at
-  rounds 2 and 6, FAIL at 1, 3, 4 and 5. Every gap was evidence, except one real defect caught before
-  release — the drawer's summary line rendered `1 blocks` (fixed in `4e2ce9f`, pinned in `200147c`).
-  Lessons L-041..L-050. Final: 27/27 ACs evidenced, 8/8 reachable mutants killed, `validate_state.py`
-  exit 0.
-- Gate: typecheck 0, lint 0 errors / **18 warnings** (the baseline), **893 tests**.
-- Live smokes on the dev app, owner-approved, last run 2026-09-19: `smoke-hours-calendar.mjs`
-  **29/29**, `smoke-time.mjs` unedited **26/26**; cleanup verified each time.
-- **Known, recorded, non-blocking:** the summary line's `N tasks` wording never renders in the smoke
-  (its ad-hoc sessions carry no task — same cause as HCAL-11's note, now in the script header); the
-  spec's Coverage line is derived but nothing checks it, and it silently reverted once when the
-  task-closing helper rewrote it; chip truncation and the drawer's side stay CSS-only.
-- **Rebase onto `origin/main` (2026-09-25):** code diff unchanged; the conflicts were all in
-  `.specs/` — decision rows and roadmap entries kept on both sides, lessons renumbered as above.
-  Gate on the rebased tip: typecheck 0, lint 0 errors / 18 warnings, **1691 tests**.
-- **Drawer growth (issue #105), 2026-09-25:** a busy day's groups spilled out of the day card in the drawer.
-  `flex: none` on `.hours-day` (`bcc8e3f`) fixes it; `min-height: 100%` still fills the drawer on a short day. The
-  Hours smoke now brings its own data: `--seed` writes a tall past Sunday into a throwaway `--user-data-dir`, the run
-  refuses anything else (`not running on the seeded data`), and step 10 checks the card geometry. Red 32/34 before
-  the fix, 34/34 after; independent Verifier PASS, 4/4 mutants killed (`hours-drawer-growth/validation.md`). The
-  refusal against the owner's real data was not run (launching the dev app on it is not permitted to the agent); an
-  empty directory took the same branch. Commits `6a2211e..6fa96d4` pushed to `fork`; PR #99 closes #105. A
-  follow-up makes a pass fail when the clean-up leaves the seed behind (the Verifier's one minor gap).
-- **Next:** review of PR #99.
-
-### `session-strip-polish` (PR #98)
-
-Lesson candidates L-030..L-032 of this branch were renumbered **L-051..L-053** at rebase time (`origin/main` already held L-030..L-040, and #99 claims L-041..L-050).
-
-**Status (current, 2026-09-19): `session-strip-polish` COMPLETE. T1-T6 are executed, and the
-independent Verifier returned **PASS** in round 2 of 3, on branch `feature/session-strip-polish`
-(cut from `develop` at `9919139`, rebased onto `origin/main` on 2026-09-25 after #93 and #94
-merged). Open upstream as PR #98. Report: `.specs/features/session-strip-polish/validation.md`;
-`validate_state.py` exits 0.**
-
-- **Commits:** T1-T6 are `5522aa8`..`adcaaa4`. Then `19ef7bc` closed the Verifier's round-1
-  gaps, `80dbb7f` records the report and `423d055` adds lessons L-051..L-053.
-- **Verification:** the suite went from 1200 to **1216** tests (69 files). Typecheck, lint
-  (17 warnings, the baseline) and `npx electron-vite build` all exit 0. The discrimination
-  sensor killed 11 of 11 mutants. `scripts/smoke-strip.mjs` ran **24/24** against the dev
-  app, and the repaired `scripts/smoke-time.mjs` ran **26/26**.
-- **Spec correction:** the spec assumed that a session stopped while paused keeps its paused
-  flag. It does not: `TimeTracker.ended` drops the run with its mark, and a respawn starts
-  counting again. The edge cases and the assumption row are marked `[corrected at Execute]`.
-  The tracker is unchanged, because it is out of scope.
-- **Owner-pending hand checks:**
-  - the clock button in light and dark: hover border, focus ring, and a paused clock staying
-    dim on hover;
-  - a screen reader announcing the clock as a pressed / not-pressed toggle.
-- **Next:**
-  - owner hand checks;
-  - review of PR #98. The branch was rebased with `--onto origin/main 9919139`, so it now
-    carries only its own 11 commits; the code diff is unchanged and the conflicts were all in
-    `.specs/`. Gate on the rebased tip: typecheck 0, lint 0 errors / 18 warnings, **1679 tests**.
-- **Follow-up, not in scope:** `smoke-time.mjs:186` selects the first running row under
-  `C:\Windows`, not the session it spawned. It could pause an owner's session in that folder.
+- **Feature:** an agentic loop that polls Azure DevOps and runs rules: `workItem` (WIQL from filters,
+  e.g. own Task + tag `Ready For Agent`) -> an **interactive** Claude session on the rail with a
+  templated prompt; `pullRequestCompleted` -> the app itself removes the worktree (never forced) and
+  runs `git branch -D`. The agent calls `POST /done` (hook server, own Bearer token) and the app stops
+  the session. The rail marks rule-launched sessions. A new `Automações` direction holds the launch and
+  cleanup history (500 entries), plus the P2 rule UI and P3 poller status.
+- **Files (untracked, on `main`'s working tree):** `.specs/features/ado-triggers/spec.md`
+  (TRIG-01..67; 67 IDs, P1 = 01..42, 48..67) and `context.md` (owner decisions, rounds 1 and 2).
+- **Owner decisions:** generic rules in `config.json`; PR cleanup is a direct app action; `cwd` per
+  rule (`workspace` | `worktree` in a repo); local ledger dedup that re-arms when the item stops
+  matching; `/done` stops the session and keeps its row `stopped` + OS notification; `maxConcurrent`
+  default 2 with a FIFO queue; history in the new `Automações` direction with `Abrir sessão` /
+  `Abrir no ADO` only (no re-fire).
+- **Pending owner confirmation:** the spec's Assumptions table (all `Confirmed? n`). Key items:
+  AD-023 amended (the master switch is the consent), `/done` only for rule-launched sessions (409
+  otherwise), live sessions in a completed PR's worktree are stopped, P1 rules edited as JSON, prompt
+  passed as `claude` positional argv (to verify against the installed CLI in Design).
+- **Code facts gathered (for Design):** `SessionManager.spawn` (`src/main/session-manager.ts:145`) is
+  callable from main but emits no event on spawn (rail gap) and takes no initial prompt.
+  `activity-hook-server.ts` routes `/hooks` and `/task`; `/done` slots in beside them. `AdoGateway`
+  has no WIQL, PR, Tags or AssignedTo yet. Start-work branch and repo logic lives in the renderer
+  (`StartWorkDialog.tsx`); `branchNameFor` (`shared/tasks.ts:27`) is shared. `removeWorktree` does
+  not delete the branch.
+- **Next:** owner approves the spec, then Design: mockup for `Automações` and the rail marker first (no
+  handoff exists; `design/handoff/` style), then the architecture. Record **AD-054** (AD-023
+  amendment + `/done` contract) and **AD-055** (RAIL-12 amendment for the marker); check `main` for
+  number collisions first. Branch `feature/ado-triggers` before the first commit (never commit on `main`).
