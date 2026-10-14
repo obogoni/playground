@@ -230,10 +230,10 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] Reasons returned in PRST-31's order, one fixture per reason plus one with all four failing → `agent not found`
-- [ ] `taskId` = `'12345'` → `{ id: 12345, title }` with the pinned title, `null` title when not pinned (PRST-29)
-- [ ] `'012'`, `'+12'`, `'0'`, `'12a'`, `''`, and names without `taskId` → `undefined` (PRST-30)
-- [ ] Gate check passes: `npx vitest run src/renderer/src/lib/preset-launch.test.ts`
+- [x] Reasons returned in PRST-31's order, one fixture per reason plus one with all four failing → `agent not found`
+- [x] `taskId` = `'12345'` → `{ id: 12345, title }` with the pinned title, `null` title when not pinned (PRST-29)
+- [x] `'012'`, `'+12'`, `'0'`, `'12a'`, `''`, and names without `taskId` → `undefined` (PRST-30)
+- [x] Gate check passes: `npx vitest run src/renderer/src/lib/preset-launch.test.ts`
 
 **Tests**: unit
 **Gate**: quick
