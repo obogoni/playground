@@ -337,8 +337,8 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] Closes on outside click and Escape; Escape does not reach the rail
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Closes on outside click and Escape; Escape does not reach the rail
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: build
