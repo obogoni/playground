@@ -221,14 +221,14 @@ the menu stays the way I use it.
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | PRST-01 | P1: Store | Execute | Implementing |
-| PRST-02 | P1: Store | Design | In Design |
+| PRST-02 | P1: Store | Execute | Implementing |
 | PRST-03 | P1: Store | Execute | Implementing |
 | PRST-04 | P1: Store | Execute | Implementing |
 | PRST-05 | P1: Store | Execute | Implementing |
 | PRST-06 | P1: Store | Execute | Implementing |
 | PRST-07 | P1: Store | Execute | Implementing |
-| PRST-08 | P1: Store | Design | In Design |
-| PRST-09 | P1: Store | Design | In Design |
+| PRST-08 | P1: Store | Execute | Implementing |
+| PRST-09 | P1: Store | Execute | Implementing |
 | PRST-10 | P1: Save | Design | In Design |
 | PRST-11 | P1: Save | Design | In Design |
 | PRST-12 | P1: Save | Design | In Design |
@@ -261,7 +261,7 @@ the menu stays the way I use it.
 | PRST-39 | P1: Manage | Execute | Implementing |
 | PRST-40 | P1: Manage | Execute | Implementing |
 | PRST-41 | P1: Manage | Execute | Implementing |
-| PRST-42 | P1: Manage | Design | In Design |
+| PRST-42 | P1: Manage | Execute | Implementing |
 | PRST-43 | P1: Manage | Design | In Design |
 | PRST-44 | P1: Manage | Design | In Design |
 

@@ -172,15 +172,15 @@ T14 → T15 → T16 → T17
 
 **Done when**:
 
-- [ ] Missing file → `{ ok: true, entries: [] }` (PRST-02)
-- [ ] `cwdExists` is true for an existing folder, false for a missing path and for a path that is a file
-- [ ] `change` on a missing file in a missing folder creates both (PRST-06)
-- [ ] `change` while the file holds invalid JSON → `failed: presets.json is invalid; fix it by hand first`, and the file bytes are unchanged (PRST-08)
-- [ ] A hand edit written to disk after `list()` and before `change()` survives the change (PRST-09)
-- [ ] Two `change` calls started together both land (serialized chain)
-- [ ] An injected write failure leaves the original file intact and returns `failed: <message>`
-- [ ] `openFile` creates `[]\n` when missing, calls the opener with the file path, and returns the opener's error string or `null` (PRST-42)
-- [ ] Gate check passes: `npx vitest run src/main/agent-preset-store.test.ts`
+- [x] Missing file → `{ ok: true, entries: [] }` (PRST-02)
+- [x] `cwdExists` is true for an existing folder, false for a missing path and for a path that is a file
+- [x] `change` on a missing file in a missing folder creates both (PRST-06)
+- [x] `change` while the file holds invalid JSON → `failed: presets.json is invalid; fix it by hand first`, and the file bytes are unchanged (PRST-08)
+- [x] A hand edit written to disk after `list()` and before `change()` survives the change (PRST-09)
+- [x] Two `change` calls started together both land (serialized chain)
+- [x] An injected write failure leaves the original file intact and returns `failed: <message>`
+- [x] `openFile` creates `[]\n` when missing, calls the opener with the file path, and returns the opener's error string or `null` (PRST-42)
+- [x] Gate check passes: `npx vitest run src/main/agent-preset-store.test.ts`
 
 **Tests**: unit
 **Gate**: quick

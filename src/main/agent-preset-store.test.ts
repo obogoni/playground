@@ -1,9 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  NODE_PRESET_FS,
   applyPresetOp,
   classifyEntries,
+  createPresetStore,
   parsePresetsText,
-  serializePresets
+  serializePresets,
+  type PresetFs,
+  type PresetStore
 } from './agent-preset-store'
 
 const reviewer = { name: 'Reviewer', agent: 'Claude', cwd: 'M:\\ws', prompt: 'review-pr' }
@@ -231,5 +238,191 @@ describe('serializePresets', () => {
     expect(serializePresets([{ name: 'A', agent: 'Claude', cwd: 'M:\\a', note: 1 }, 7])).toBe(
       '[\n  {\n    "name": "A",\n    "agent": "Claude",\n    "cwd": "M:\\\\a",\n    "note": 1\n  },\n  7\n]\n'
     )
+  })
+})
+
+describe('createPresetStore', () => {
+  // Async `rm`: `rmSync` silently no-ops on the non-ASCII profile path here.
+  let dir: string
+  let file: string
+  const opened: string[] = []
+  const opener = async (path: string): Promise<string> => {
+    opened.push(path)
+    return ''
+  }
+  const store = (fs: PresetFs = NODE_PRESET_FS, open = opener): PresetStore =>
+    createPresetStore(file, fs, open)
+  const reviewer = { name: 'Reviewer', agent: 'Claude', cwd: 'M:/ws', prompt: 'review-pr' }
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'aps-'))
+    file = join(dir, '.playground', 'presets.json')
+    opened.length = 0
+  })
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  const seed = async (text: string): Promise<void> => {
+    await mkdir(join(dir, '.playground'), { recursive: true })
+    await writeFile(file, text, 'utf8')
+  }
+
+  it('lists no presets and no error when the file is missing (PRST-02)', async () => {
+    expect(await store().list()).toEqual({ ok: true, entries: [] })
+  })
+
+  it('reports an invalid file with its reason (PRST-03)', async () => {
+    await seed('{"name": "A"}')
+    expect(await store().list()).toEqual({ ok: false, reason: 'not an array' })
+  })
+
+  it('lists entries in file order with cwdExists true only for an existing folder (PRST-01)', async () => {
+    const folder = join(dir, 'ws')
+    const plainFile = join(dir, 'file.txt')
+    await mkdir(folder)
+    await writeFile(plainFile, 'x')
+    const missing = join(dir, 'gone')
+    await seed(
+      JSON.stringify([
+        { name: 'Folder', agent: 'Claude', cwd: folder },
+        { name: 'Missing', agent: 'Claude', cwd: missing },
+        { name: 'Broken' },
+        { name: 'File', agent: 'Claude', cwd: plainFile }
+      ])
+    )
+    expect(await store().list()).toEqual({
+      ok: true,
+      entries: [
+        { kind: 'ok', preset: { name: 'Folder', agent: 'Claude', cwd: folder }, cwdExists: true },
+        {
+          kind: 'ok',
+          preset: { name: 'Missing', agent: 'Claude', cwd: missing },
+          cwdExists: false
+        },
+        { kind: 'invalid', name: 'Broken', reason: 'invalid entry: agent' },
+        { kind: 'ok', preset: { name: 'File', agent: 'Claude', cwd: plainFile }, cwdExists: false }
+      ]
+    })
+  })
+
+  it('creates the missing folder and file on the first change and returns the new listing (PRST-06)', async () => {
+    const result = await store().change({ kind: 'save', preset: reviewer, replace: false })
+    expect(await readFile(file, 'utf8')).toBe(
+      '[\n  {\n    "name": "Reviewer",\n    "agent": "Claude",\n    "cwd": "M:/ws",\n    "prompt": "review-pr"\n  }\n]\n'
+    )
+    expect(result).toEqual({
+      ok: true,
+      listing: { ok: true, entries: [{ kind: 'ok', preset: reviewer, cwdExists: false }] }
+    })
+  })
+
+  it('passes an exists answer through without writing (PRST-16)', async () => {
+    const text = JSON.stringify([reviewer])
+    await seed(text)
+    expect(
+      await store().change({
+        kind: 'save',
+        preset: { ...reviewer, name: 'reviewer' },
+        replace: false
+      })
+    ).toEqual({ ok: false, error: { kind: 'exists', name: 'Reviewer' } })
+    expect(await readFile(file, 'utf8')).toBe(text)
+  })
+
+  it('refuses every change while the file is invalid and leaves its bytes alone (PRST-08)', async () => {
+    const refused = {
+      ok: false,
+      error: { kind: 'failed', message: 'presets.json is invalid; fix it by hand first' }
+    }
+    for (const text of ['[{"name": "A",', '{"presets": []}']) {
+      await seed(text)
+      expect(await store().change({ kind: 'save', preset: reviewer, replace: false })).toEqual(
+        refused
+      )
+      expect(await store().change({ kind: 'delete', name: 'A' })).toEqual(refused)
+      expect(await readFile(file, 'utf8')).toBe(text)
+    }
+  })
+
+  it('re-reads the file before a change so a hand edit since the listing survives (PRST-09)', async () => {
+    const s = store()
+    await s.change({ kind: 'save', preset: reviewer, replace: false })
+    await s.list()
+    const handEdit = { name: 'Hand', agent: 'Codex', cwd: 'M:/hand', note: 'mine' }
+    await writeFile(file, JSON.stringify([reviewer, handEdit]), 'utf8')
+
+    await s.change({ kind: 'rename', from: 'Reviewer', to: 'Checker' })
+
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual([
+      { ...reviewer, name: 'Checker' },
+      handEdit
+    ])
+  })
+
+  it('applies two changes started together one after the other, so both land', async () => {
+    const s = store()
+    const second = { name: 'Second', agent: 'Codex', cwd: 'M:/two' }
+    await Promise.all([
+      s.change({ kind: 'save', preset: reviewer, replace: false }),
+      s.change({ kind: 'save', preset: second, replace: false })
+    ])
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual([reviewer, second])
+  })
+
+  it('keeps the original file and reports the message when the write fails', async () => {
+    const text = JSON.stringify([reviewer])
+    await seed(text)
+    const failingWrite: PresetFs = {
+      ...NODE_PRESET_FS,
+      writeFile: async () => {
+        throw new Error('EACCES: permission denied')
+      }
+    }
+    const failingRename: PresetFs = {
+      ...NODE_PRESET_FS,
+      rename: async () => {
+        throw new Error('EBUSY: resource busy')
+      }
+    }
+    expect(await store(failingWrite).change({ kind: 'delete', name: 'Reviewer' })).toEqual({
+      ok: false,
+      error: { kind: 'failed', message: 'EACCES: permission denied' }
+    })
+    expect(await store(failingRename).change({ kind: 'delete', name: 'Reviewer' })).toEqual({
+      ok: false,
+      error: { kind: 'failed', message: 'EBUSY: resource busy' }
+    })
+    expect(await readFile(file, 'utf8')).toBe(text)
+  })
+
+  it('openFile creates a missing file as an empty array and opens it (PRST-42)', async () => {
+    expect(await store().openFile()).toBeNull()
+    expect(await readFile(file, 'utf8')).toBe('[]\n')
+    expect(opened).toEqual([file])
+  })
+
+  it('openFile leaves an existing file as it is and returns the opener error (PRST-42)', async () => {
+    await seed('not json')
+    const failingOpen = async (path: string): Promise<string> => {
+      opened.push(path)
+      return 'No application is associated with the specified file'
+    }
+    expect(await store(NODE_PRESET_FS, failingOpen).openFile()).toBe(
+      'No application is associated with the specified file'
+    )
+    expect(await readFile(file, 'utf8')).toBe('not json')
+    expect(opened).toEqual([file])
+  })
+
+  it('openFile reports a failed create and opens nothing (PRST-42)', async () => {
+    const failingMkdir: PresetFs = {
+      ...NODE_PRESET_FS,
+      mkdir: async () => {
+        throw new Error('EPERM: operation not permitted')
+      }
+    }
+    expect(await store(failingMkdir).openFile()).toBe('EPERM: operation not permitted')
+    expect(opened).toEqual([])
   })
 })

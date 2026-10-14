@@ -4,10 +4,15 @@
  * reason without hiding the others; an invalid file is reported, never moved
  * aside or overwritten (AD-063).
  */
+import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import {
   presetNameProblem,
   sameName,
   type AgentPreset,
+  type AgentPresetChangeResult,
+  type AgentPresetEntry,
+  type AgentPresetListing,
   type PresetOp
 } from '../shared/agent-presets'
 
@@ -151,4 +156,116 @@ export function applyPresetOp(
 /** The whole array as UTF-8 JSON, 2-space indented, `\n` line ends (PRST-06). */
 export function serializePresets(raw: unknown[]): string {
   return JSON.stringify(raw, null, 2) + '\n'
+}
+
+/** The filesystem calls the store makes; injectable so a failed write is testable. */
+export interface PresetFs {
+  readFile: (path: string, encoding: 'utf8') => Promise<string>
+  writeFile: (path: string, data: string, encoding: 'utf8') => Promise<void>
+  rename: (from: string, to: string) => Promise<void>
+  mkdir: (path: string, options: { recursive: true }) => Promise<unknown>
+  stat: (path: string) => Promise<{ isDirectory(): boolean }>
+}
+
+export const NODE_PRESET_FS: PresetFs = { readFile, writeFile, rename, mkdir, stat }
+
+/** Opens a file with the OS default app; `''` on success, else the error (`shell.openPath`). */
+export type PresetOpener = (path: string) => Promise<string>
+
+export interface PresetStore {
+  list(): Promise<AgentPresetListing>
+  change(op: PresetOp): Promise<AgentPresetChangeResult>
+  openFile(): Promise<string | null>
+}
+
+/** PRST-08: the app never writes over a file the developer got wrong. */
+const INVALID_FILE = 'presets.json is invalid; fix it by hand first'
+
+function isMissing(err: unknown): boolean {
+  return (err as NodeJS.ErrnoException).code === 'ENOENT'
+}
+
+/** The presets file at `file`; every change re-reads it first and is applied one at a time. */
+export function createPresetStore(file: string, fs: PresetFs, opener: PresetOpener): PresetStore {
+  let chain: Promise<unknown> = Promise.resolve()
+  /** Runs `task` after every earlier one, whether or not they failed. */
+  const queue = <T>(task: () => Promise<T>): Promise<T> => {
+    const run = chain.then(task, task)
+    chain = run.catch(() => undefined)
+    return run
+  }
+
+  /** The file as parsed now; a missing file is an empty array (PRST-02). */
+  async function read(): Promise<ParsedPresets> {
+    let text: string
+    try {
+      text = await fs.readFile(file, 'utf8')
+    } catch (err) {
+      if (isMissing(err)) return { ok: true, raw: [] }
+      return { ok: false, reason: `unreadable: ${(err as Error).message}` }
+    }
+    return parsePresetsText(text)
+  }
+
+  async function isFolder(path: string): Promise<boolean> {
+    try {
+      return (await fs.stat(path)).isDirectory()
+    } catch {
+      return false
+    }
+  }
+
+  async function toListing(parsed: ParsedPresets): Promise<AgentPresetListing> {
+    if (!parsed.ok) return parsed
+    const entries = await Promise.all(
+      classifyEntries(parsed.raw).map(
+        async (entry): Promise<AgentPresetEntry> =>
+          entry.kind === 'ok'
+            ? { kind: 'ok', preset: entry.preset, cwdExists: await isFolder(entry.preset.cwd) }
+            : entry
+      )
+    )
+    return { ok: true, entries }
+  }
+
+  /** Temp file + rename, so a failed write leaves the old file whole (PRST-06). */
+  async function write(raw: unknown[]): Promise<void> {
+    await fs.mkdir(dirname(file), { recursive: true })
+    const tmp = `${file}.tmp`
+    await fs.writeFile(tmp, serializePresets(raw), 'utf8')
+    await fs.rename(tmp, file)
+  }
+
+  return {
+    list: async () => toListing(await read()),
+
+    change: (op) =>
+      queue(async (): Promise<AgentPresetChangeResult> => {
+        try {
+          // Re-read so a hand edit made since the last listing survives (PRST-09).
+          const parsed = await read()
+          if (!parsed.ok) return { ok: false, error: { kind: 'failed', message: INVALID_FILE } }
+          const result = applyPresetOp(parsed.raw, op)
+          if ('error' in result) return { ok: false, error: result.error }
+          await write(result.raw)
+          return { ok: true, listing: await toListing({ ok: true, raw: result.raw }) }
+        } catch (err) {
+          return { ok: false, error: { kind: 'failed', message: (err as Error).message } }
+        }
+      }),
+
+    openFile: () =>
+      queue(async () => {
+        try {
+          await fs.readFile(file, 'utf8').catch(async (err) => {
+            if (!isMissing(err)) throw err
+            await write([]) // PRST-42: `[]\n`
+          })
+        } catch (err) {
+          return (err as Error).message
+        }
+        const error = await opener(file)
+        return error === '' ? null : error
+      })
+  }
 }
