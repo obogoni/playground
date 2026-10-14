@@ -21,8 +21,9 @@ export interface AdoChange {
   changeTrackingId: number
   /** Words, possibly combined: `add`, `edit`, `delete`, `rename`, `edit, rename`. */
   changeType: string
-  item: { path: string }
-  /** The source path of a rename. */
+  /** `null` for a deleted file, whose path is in `originalPath` (#179). */
+  item: { path: string | null }
+  /** The source path of a rename, or the path of a deleted file. */
   originalPath?: string
 }
 
@@ -80,18 +81,26 @@ export interface AdoThread {
 
 /**
  * The PR's changed files in the vocabulary the other modes use (FPRA-15).
- * ADO roots every path at `/`; the tree wants worktree-relative paths.
+ * ADO roots every path at `/`; the tree wants worktree-relative paths. A
+ * deleted file comes with no `item.path` and lists under its `originalPath`,
+ * like an Uncommitted deletion; an entry naming no path at all is left out.
  */
 export function toChangedPaths(entries: AdoChange[]): PrFile[] {
-  return entries.map((entry) => {
+  const files: PrFile[] = []
+  for (const entry of entries) {
+    const path = entry.item.path ?? entry.originalPath
+    if (typeof path !== 'string') continue
     const file: PrFile = {
-      path: relative(entry.item.path),
+      path: relative(path),
       status: statusOf(entry.changeType),
       changeTrackingId: entry.changeTrackingId
     }
-    if (entry.originalPath !== undefined) file.oldPath = relative(entry.originalPath)
-    return file
-  })
+    if (entry.item.path !== null && entry.originalPath !== undefined) {
+      file.oldPath = relative(entry.originalPath)
+    }
+    files.push(file)
+  }
+  return files
 }
 
 /**
