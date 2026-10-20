@@ -87,8 +87,10 @@ through a `.cmd`/`.bat` shim may receive it cut at the first line break or with 
   ask (no prompt, no placeholders, or every placeholder pre-filled from the folder, such as
   `{{branch}}`); otherwise a small **Run preset** dialog asks only the empty placeholders, and
   Enter spawns. **More options** opens the full dialog on the preset. When the prompt has a
-  `{{taskId}}` whose value is a plain positive number, the session is linked to that task (with
-  the pinned task's title when it is pinned)
+  `{{taskId}}` whose value is a plain positive number, the session is linked to that task.
+  Any link by id — a preset, New Session, the rail's task picker or the agent's own `/task` call —
+  also pins the task in the background (under the ADO default org and project), so the rail shows
+  its title, type and state; a Task shows its parent's type, e.g. Fault.
 
 ```jsonc
 // ~/.playground/presets.json — an array; its order is the menu order. Edit it by hand freely:
