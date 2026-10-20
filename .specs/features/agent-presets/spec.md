@@ -32,7 +32,6 @@ for the prompt's placeholders. A preset with nothing to ask spawns on one click.
 | Editing a preset's agent, cwd or prompt in a Settings form | Owner call: change them by saving over the preset from the New Session dialog, or by editing the file. |
 | Launching presets from task cards, the worktree detail, the board or a keyboard shortcut | Owner call: the rail's **+ New session** menu is the one entry point. |
 | Creating a worktree as part of a preset launch | The cwd is a fixed folder that already exists. |
-| Fetching a task's title from ADO for the task link | The link uses the pinned task's cached title or none, like the dialog's task picker. |
 | Repo-scoped presets (`<repo>/.playground/presets.json`) | Global file only, like prompts and workflows (APR, AD-013 trust trade-off). |
 | Watching `presets.json` for live changes | The file is read each time the menu or Settings opens; that already picks up hand edits. |
 
@@ -60,7 +59,8 @@ for the prompt's placeholders. A preset with nothing to ask spawns on one click.
 | Missing file | No presets; the first save creates `~/.playground` and the file | Mirrors APR-05 / APR-08. | y (approved with the spec, 2026-10-14) |
 | Launch form | A small **Run preset** dialog: header with the preset name, one field per placeholder (context placeholders pre-filled as APR-19..22), the Will run card, **Cancel**, **More options** and **Spawn**; Enter spawns when Spawn is enabled | Reuses the variables step's rules so behaviour matches the full dialog. | y (approved with the spec, 2026-10-14) |
 | Context placeholders at launch | `branch` and `worktree` are pre-filled from the preset's cwd as the full dialog does for the same cwd; `taskId`/`taskTitle` come from the cwd's branch task when "From branch" would derive one | Same values the full dialog would show for that cwd. | y (approved with the spec, 2026-10-14) |
-| Task title of a `{{taskId}}` link | The pinned task's cached title when that id is pinned, else no title (`#<id>` only) | Matches the dialog's task picker; no ADO call. | y (approved with the spec, 2026-10-14) |
+| Task title of a `{{taskId}}` link | The pinned task's cached title when that id is pinned, else no title (`#<id>` only); the task is then pinned (PRST-45), which gives the rail its title, type and state | **Amended 2026-10-20** (owner, after hand-testing the nightly): a link with no title or type read as no link at all. | y |
+| What gets pinned on a link | Every link by id — New Session, a preset, the rail's task picker and an agent's `POST /task` — pins the task under `ado.defaultOrg` / `ado.defaultProject`, independent of `ado.autoPinFromWorktrees` | Owner call (2026-10-20): the rail shows type and state only for pinned tasks, and every link should carry that context. | y |
 | Non-numeric `{{taskId}}` | The value goes into the prompt; no task link is set | The prompt decides what it accepts; a link needs an id. | y (approved with the spec, 2026-10-14) |
 | Hand-edited `cwd` matching | A preset's cwd is compared to the tree's paths case-insensitively with `\` = `/` and one trailing separator ignored (AD-050's rule) | One path-equality rule across the app. | y (approved with the spec, 2026-10-14) |
 
@@ -191,6 +191,29 @@ the menu stays the way I use it.
 
 ---
 
+### P1: A linked task is pinned ⭐ MVP (amendment, 2026-10-20)
+
+**User Story**: As a developer, I want the task I link a session to — from a preset, New Session, the
+rail's picker or the agent itself — to show its title, type and state on the rail, so that I see what
+each session is working on without linking it again by hand.
+
+**Why P1**: Hand-testing the nightly showed a preset session linked to `#26266` that read as unlinked:
+the rail draws title, type and state only from a pinned task's details (`rail-groups.ts:212`).
+
+**Acceptance Criteria**:
+
+1. WHEN a session is spawned with a task link, or its link is set to a task, through any path (New Session, a preset, the rail's task picker, an agent's `POST /task`) THEN main SHALL pin that task id under `ado.defaultOrg` / `ado.defaultProject` when no pin with that id, org and project exists, validating it in ADO like a manual pin. <!-- PRST-45 -->
+2. The spawn and the link SHALL NOT wait for the pin: the session starts and the link is saved before the ADO call settles. <!-- PRST-46 -->
+3. WHEN the pin is added THEN main SHALL push `tasks:changed` with the new snapshot, so the rail group shows the task's title, type badge (a Task's first non-Task ancestor's type) and state. <!-- PRST-47 -->
+4. IF either ADO default is unset, ADO cannot be reached, or the work item does not exist THEN the session SHALL keep its link, no pin SHALL be added and no error SHALL be shown; an id ADO did not find SHALL NOT be fetched again until the app restarts. <!-- PRST-48 -->
+5. IF the task is already pinned, or a pin of it is already being fetched, THEN no ADO call SHALL be made for that link. <!-- PRST-49 -->
+6. Pinning a linked task SHALL apply whatever the value of `ado.autoPinFromWorktrees`. <!-- PRST-50 -->
+
+**Independent Test**: Unit tests over the board's linked pin and the detached runner; then launch the
+bug-fixer preset with an unpinned id and see the rail group show its type, state and title.
+
+---
+
 ## Edge Cases
 
 - IF a preset's cwd exists but is not a folder the tree knows THEN the launch SHALL still use it, as a browsed folder is used today (AGSN-09); only a missing directory makes it broken (PRST-31).
@@ -264,8 +287,14 @@ the menu stays the way I use it.
 | PRST-42 | P1: Manage | Execute | Verified |
 | PRST-43 | P1: Manage | Execute | Verified |
 | PRST-44 | P1: Manage | Execute | Verified |
+| PRST-45 | P1: Linked task pinned | Execute | Pending |
+| PRST-46 | P1: Linked task pinned | Execute | Pending |
+| PRST-47 | P1: Linked task pinned | Execute | Pending |
+| PRST-48 | P1: Linked task pinned | Execute | Pending |
+| PRST-49 | P1: Linked task pinned | Execute | Pending |
+| PRST-50 | P1: Linked task pinned | Execute | Pending |
 
-**Coverage:** 44 total, 44 mapped to tasks, all verified (`validation.md`, PASS 2026-10-14).
+**Coverage:** 50 total; PRST-01..44 verified (`validation.md`, PASS 2026-10-14); PRST-45..50 added by the 2026-10-20 amendment.
 
 ---
 
