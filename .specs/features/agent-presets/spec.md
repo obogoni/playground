@@ -287,14 +287,14 @@ bug-fixer preset with an unpinned id and see the rail group show its type, state
 | PRST-42 | P1: Manage | Execute | Verified |
 | PRST-43 | P1: Manage | Execute | Verified |
 | PRST-44 | P1: Manage | Execute | Verified |
-| PRST-45 | P1: Linked task pinned | Execute | Pending |
-| PRST-46 | P1: Linked task pinned | Execute | Pending |
-| PRST-47 | P1: Linked task pinned | Execute | Pending |
-| PRST-48 | P1: Linked task pinned | Execute | Pending |
-| PRST-49 | P1: Linked task pinned | Execute | Pending |
-| PRST-50 | P1: Linked task pinned | Execute | Pending |
+| PRST-45 | P1: Linked task pinned | Execute | Verified |
+| PRST-46 | P1: Linked task pinned | Execute | Verified |
+| PRST-47 | P1: Linked task pinned | Execute | Verified |
+| PRST-48 | P1: Linked task pinned | Execute | Verified |
+| PRST-49 | P1: Linked task pinned | Execute | Verified |
+| PRST-50 | P1: Linked task pinned | Execute | Verified |
 
-**Coverage:** 50 total; PRST-01..44 verified (`validation.md`, PASS 2026-10-14); PRST-45..50 added by the 2026-10-20 amendment.
+**Coverage:** 50 total; PRST-01..44 verified (`validation.md`, PASS 2026-10-14); PRST-45..50 verified (amendment section of `validation.md`, PASS 2026-10-20).
 
 ---
 

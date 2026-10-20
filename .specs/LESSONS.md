@@ -30,12 +30,6 @@ Corroborated across multiple features. Safe to apply as guidance.
 
 Seen once or not yet corroborated. Tracked, not trusted.
 
-### L-010 - When a spec edge case says 'empty/whitespace', guard with trim().length > 0, not length > 0, or whitespace-only selections slip past the empty check.
-- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `src/renderer/src/components` · harmful: 0
-- features: terminal-input-fixes
-- evidence: src/renderer/src/components/TerminalPane.tsx:95 (src/renderer/src/components)
-- last seen: 2026-09-01T00:11:37Z
-
 ### L-011 - When an AC names a literal byte or string the app must emit, export that literal as a const from the tested lib seam and assert it (plus assert it is NOT the wrong value) - a literal inlined in an untested component leaves a NOT-SHALL-send AC unguarded and a byte flip passes the whole suite.
 - signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `src/renderer/src/lib,src/renderer/src/components` · harmful: 0
 - features: terminal-copy-undo-fixes
@@ -845,6 +839,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: agent-presets
 - evidence: PRST-14 (NewSessionDialog.tsx:251) (testing)
 - last seen: 2026-10-14T15:47:07Z
+
+### L-146 - When a guard on a nullable input sits inside a try that swallows errors, also assert that nothing was logged in the does-nothing-for-null test, or a loosened guard survives as an equivalent mutant
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: agent-presets
+- evidence: M6a (src/main/linked-task-pin.ts:19) (testing)
+- last seen: 2026-10-20T14:41:47Z
 
 ## Quarantined (failed when applied - ignore)
 

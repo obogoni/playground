@@ -50,6 +50,7 @@ describe('runLinkedPin', () => {
 
     expect(deps.pinned).toEqual([])
     expect(deps.emitted).toEqual([])
+    expect(deps.errors).toEqual([])
   })
 
   it('never rejects and shows no error to the session when pinning throws (PRST-46, PRST-48)', async () => {

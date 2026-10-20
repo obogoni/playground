@@ -204,3 +204,79 @@ Structural-only edge cases: the prompt changing between open and Spawn, and spaw
 **What works**: the store (classification, refusal on an invalid file, re-read before write, field preservation, atomic write); the launch planner (spawn / form / dialog, task link, cwd canonicalisation); the Save as preset flow; the split button and menu; the Run preset dialog; Settings › Presets.
 
 **Next steps**: optionally address gaps 1-3 (spec clarification or small smoke/UI additions). None of them blocks merge.
+
+---
+
+## Amendment 2026-10-20: linked task pinned (PRST-45..50)
+
+**Verdict for the amendment**: PASS ✅. All 6 ACs have `file:line` evidence that matches the spec outcome. 11 mutants were run: 10 were killed, and 1 survived. The survivor is equivalent for every spec outcome (see below). The gates are at the known baseline.
+
+- **Spec**: `.specs/features/agent-presets/spec.md`, story "P1: A linked task is pinned" (PRST-45..50). Decision: `.specs/STATE.md` AD-064.
+- **Diff range**: `b1ab2dd..72d3405` (branch `fix/preset-task-link`, 4 commits: `8a682b0` spec amendment, `b7e5ce1` `TaskBoard.pinLinked`, `71ec828` `runLinkedPin` and the `index.ts` wiring, `72d3405` README)
+- **Verifier**: independent sub-agent (author ≠ verifier), evidence-or-zero. Read-only on the real tree.
+
+### Spec-anchored acceptance criteria (amendment)
+
+| AC | Spec-defined outcome | `file:line` + assertion | Result |
+| -- | -------------------- | ----------------------- | ------ |
+| PRST-45 | Every link by id pins that id under `ado.defaultOrg`/`defaultProject` when no such pin exists, validated in ADO like a manual pin | `src/main/task-board.test.ts:614` - `expect(source.calls).toEqual([[ref(26266)]])`; `:616` - `expect(result.snapshot.tasks).toEqual([{ ...ref(26266), details: FIX_LOGIN }])`; `:617` - `expect(persisted()).toEqual([ref(26266)])`. Runner: `src/main/linked-task-pin.test.ts:32` - `expect(deps.pinned).toEqual([26266])`. All four paths are wired (by reading): `src/main/index.ts:828` (agent `POST /task` via `hookServer.onTaskLink`), `:834` (`sessions:spawn`: New Session and presets), `:847` (`sessions:set-task`: the rail's picker) | ✅ PASS |
+| PRST-46 | The spawn and the link do not wait for the pin. The session starts and the link is saved before the ADO call settles | By reading `src/main/index.ts`: `:833-834` awaits `sessions.spawn(...)`, then calls `void runLinkedPin(task, linkedPin)` and returns the view without awaiting. A failed spawn rejects at `:833` before the pin starts, so it stays unpinned (`src/main/session-manager.ts:191` rejects before persist). `:827-828` and `:846-847` run `sessions.setTask` (synchronous persist and emit) first, then `void runLinkedPin`. In `src/main/activity-hook-server.ts:158-159` the listener returns before `answer(res, 204)`. The runner never rejects: `src/main/linked-task-pin.test.ts:61` - `await expect(runLinkedPin(...)).resolves.toBeUndefined()` | ✅ PASS (wiring judged by reading; no automated test of `index.ts`, the project norm for main wiring) |
+| PRST-47 | When a pin is added, main pushes `tasks:changed` with the new snapshot. The rail shows the title, the type badge (a Task's first non-Task ancestor) and the state | `src/main/linked-task-pin.test.ts:33` - `expect(deps.emitted).toEqual([SNAPSHOT])` (added 1); `:42` - `expect(deps.emitted).toEqual([])` (added 0); `src/main/task-board.test.ts:637` - `expect(result.snapshot.tasks[0].details).toEqual({ ...task, parentType: 'Fault' })`. The emit is wired at `src/main/index.ts:822` (`emitToWindow('tasks:changed', { snapshot })`). The renderer applies it at `src/renderer/src/App.tsx:404` (`setTasks(snapshot)`). The rail reads it at `src/renderer/src/lib/rail-groups.ts:212` via `linkedPinFor` (`src/renderer/src/lib/session-attribution.ts:56-62`) | ✅ PASS |
+| PRST-48 | Default unset, ADO unreachable or item missing: link kept, no pin, no error shown; a not-found id is not fetched again this app session | `src/main/task-board.test.ts:647-649` - `added 0`, `source.calls` `[]`, `persisted()` `[]` (default unset); `:659-662` - `added 0`, `auth 'failed'`, nothing persisted, `toHaveLength(2)` (an unreachable ADO is retried); `:672-675` - both `added 0`, nothing persisted, `source.calls` `toHaveLength(1)` (not found is memoised). No error shown: `src/main/linked-task-pin.test.ts:61-63` (resolves, error goes only to `logError`, which is `console.error` at `src/main/index.ts:823`). The link is kept because `setTask` and `spawn` persist before the pin starts and the pin never touches the session | ✅ PASS |
+| PRST-49 | Already pinned, or a pin already in flight: no ADO call | `src/main/task-board.test.ts:685-687` - `added 0`, `expect(source.calls).toEqual([])`, pins unchanged; `:696-698` - `a.added + b.added` `toBe(1)`, `source.calls` `toHaveLength(1)` | ✅ PASS |
+| PRST-50 | The pin applies whatever the value of `ado.autoPinFromWorktrees` | `src/main/task-board.test.ts:708-709` - with `autoPinFromWorktrees: false`: `expect(result.added).toBe(1)`, `expect(persisted()).toEqual([ref(26266)])` | ✅ PASS |
+
+**Status**: 6/6 ACs have evidence that matches the spec outcome. Spec-precision notes (Minor, none blocking):
+
+1. PRST-46 rests on reading `index.ts`, because the IPC handlers have no unit seam. The runner's half (it never rejects) is tested.
+2. PRST-48 says "no error SHALL be shown". The implementation logs to the main-process console (`src/main/index.ts:823`) and shows nothing in the UI. This reading is consistent with the spec.
+
+### Review (amendment)
+
+| Point | Finding |
+| ----- | ------- |
+| `autoPin` unchanged (APIN-05..09) | `src/main/task-board.ts:222-225`. The flag check runs first and returns `{ added: 0, snapshot }`, as before. `pinNew` reads `pinnedTasks` synchronously at the same moment the old code did, before any await. All existing `TaskBoard.autoPin` tests pass, including APIN-09 at `src/main/task-board.test.ts:573`. Mutants M3, M7, M8 and M9 also kill APIN tests. |
+| `notFound` and `inflight` shared | One instance of each per board (`src/main/task-board.ts:146`, `:148`). Both paths use them through `pinNew` (`:246-247`, `:251`, `:264`, `:273`). An auto-pin and a linked pin of the same ref therefore dedupe against each other, and an id that one path did not find is skipped by the other. `inflight` is cleared in `finally`. |
+| `null` link (back to branch) | `src/main/linked-task-pin.ts:19` (`if (!task) return`). Asserted at `src/main/linked-task-pin.test.ts:51-52` (`pinned` and `emitted` are both `[]` for `null` and `undefined`). |
+| Renderer needs no change | `linkedPinFor` (`src/renderer/src/lib/session-attribution.ts:56-62`) matches a pin by **id only** (`tasks.find((t) => t.id === taskId)`). A pin under the default org and project therefore matches. The match is broader than "under the defaults": a same-id pin from another org would also match. That behaviour predates this diff and is harmless. `src/renderer/src/App.tsx:404` applies `tasks:changed` by replacing the snapshot. |
+| Paths outside the spec | `sessions:duplicate` and `respawn` copy an existing link and do not pin. The spec does not list them, and the source link has already been through a pin attempt. Not a gap. |
+
+### Discrimination sensor (amendment)
+
+The scratch was `git worktree add M:/obogoni/pgv-prst HEAD` with `node_modules` as a directory junction. The junction was removed with `rmdir` **before** `git worktree remove --force`, and the main `node_modules` was intact (510 entries before and after). Each mutant ran `npx vitest run src/main/task-board.test.ts src/main/linked-task-pin.test.ts`. The unmutated scratch baseline was 73/73 passed.
+
+| # | File | Mutation | Killed? (failing test) |
+| - | ---- | -------- | ---------------------- |
+| M1 | `src/main/task-board.ts:236` | Defaults check dropped (`if (false) return`) | ✅ pins nothing and fetches nothing when an ADO default is unset (PRST-48) |
+| M2 | `src/main/task-board.ts:235` | `autoPinFromWorktrees` gate re-added to `pinLinked` | ✅ pins a linked task even when autoPinFromWorktrees is false (PRST-50) |
+| M3 | `src/main/task-board.ts:245` | Already-pinned filter skipped | ✅ 2 tests (PRST-49 already pinned; APIN-05) |
+| M4 | `src/main/linked-task-pin.ts:22` | Emits when `added` is 0 (`>= 0`) | ✅ pushes nothing when no pin was added (PRST-47, PRST-48) |
+| M5 | `src/main/linked-task-pin.ts:24` | Rethrows after `logError` | ✅ never rejects ... when pinning throws (PRST-46, PRST-48) |
+| M6a | `src/main/linked-task-pin.ts:19` | Guard narrowed to `task === undefined` (a `null` link passes) | ⚠️ Survived. Equivalent for every spec outcome: `task.id` then throws inside the `try`, so nothing is pinned or emitted and the error only reaches `logError`. The only observable difference is a spurious console line |
+| M6b | `src/main/linked-task-pin.ts:19-21` | Guard removed and `pinLinked(task?.id)` called: a `null` link really reaches the pin | ✅ pins nothing for a link back to the branch or no link |
+| M7 | `src/main/task-board.ts:264` | `notFound` not recorded | ✅ 2 tests (PRST-48 not found; APIN-07) |
+| M8 | `src/main/task-board.ts:251` | `inflight` not recorded | ✅ 2 tests (PRST-49 overlap; APIN-08) |
+| M9 | `src/main/task-board.ts:223` | `autoPin` flag check dropped | ✅ pins nothing and fetches nothing when autoPinFromWorktrees is false (APIN-09) |
+| M10 | `src/main/task-board.ts:237` | `pinLinked` pins `id + 1` | ✅ 5 tests (PRST-45, 47, 49 x2, 50) |
+
+**Sensor depth**: expanded (11 behaviour-level manual mutations over `pinLinked`, `pinNew`, `autoPin` and `runLinkedPin`)
+**Sensor tally**: 10 killed, 1 survived (M6a, equivalent for the spec)
+**Isolation**: the real tree's `git status --porcelain` was `?? .specs/features/ado-triggers/` before and after. `git worktree list` shows only the main tree. `git stash` was not used.
+
+### Gate check (amendment, real tree at `72d3405`)
+
+- **typecheck**: exit 0
+- **lint**: exit 0. 0 errors and 18 warnings, all in files outside the diff (the same 4 files as the 2026-10-14 run).
+- **npm test**: 3242 passed, 7 failed, 0 skipped (3249) across 147 files. The 7 failures are exactly the known local baseline: FDSC-05, FWIG-47, BSLG-39, "AC 17", BSLG-21, BSLG-38, and "force-removes a worktree with mixed dirt". There was no git-sync flake.
+- **Test delta from this diff**: +12 (8 in `TaskBoard.pinLinked (PRST-45..50)`, 4 in the new `src/main/linked-task-pin.test.ts`). No test was removed or weakened. The `TaskBoard.autoPin` tests are unchanged.
+
+### Ranked gaps (amendment; all Minor, none blocking)
+
+1. **Hardening for M6a**: `src/main/linked-task-pin.test.ts:45-53` (null link) does not assert `deps.errors` is `[]`. Adding `expect(deps.errors).toEqual([])` would kill M6a. Optional.
+2. **PRST-46 is code-review only** for the three `index.ts` call sites (`src/main/index.ts:828`, `:834`, `:847`). This follows the project's norm for main IPC wiring. The hand test in the story's Independent Test is the backstop.
+
+### Requirement traceability update (amendment)
+
+| Requirement | Previous Status | New Status |
+| ----------- | --------------- | ---------- |
+| PRST-45..50 | Pending | ✅ Verified |
