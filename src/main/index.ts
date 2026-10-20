@@ -11,6 +11,7 @@ import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
 import { readNotificationPrefs } from '../shared/notifications'
 import type { PeriodSnapshotFields } from '../shared/time'
+import type { TasksSnapshot } from '../shared/tasks'
 import { AdoGateway } from './ado-gateway'
 import { AdoPrClient, openPrLink } from './ado-pr'
 import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-runner'
@@ -81,6 +82,7 @@ import { scaffoldWorkflow } from './workflow-scaffold'
 import { changedFilesOf, createWorktree, removeWorktree, worktreeStatus } from './worktree-manager'
 import { workspaceTemplates } from './workspace-config'
 import { runAutoPin } from './worktree-tasks'
+import { runLinkedPin } from './linked-task-pin'
 import { WorkspaceRegistry } from './workspace-registry'
 
 const execFileAsync = promisify(execFile)
@@ -813,13 +815,25 @@ app.whenReady().then(() => {
   })
   const sessions = sessionManager
   hookServer.onEvent((sessionId, payload) => sessions.handleHookEvent(sessionId, payload))
+  // A link by id pins its task in the background, so the rail shows its title,
+  // type and state; the spawn and the link never wait for ADO (PRST-45..47, AD-064).
+  const linkedPin = {
+    pinLinked: (id: number) => taskBoard.pinLinked(id),
+    emit: (snapshot: TasksSnapshot) => emitToWindow('tasks:changed', { snapshot }),
+    logError: (err: unknown) => console.error('Pinning a linked task failed:', err)
+  }
   // The same path as the picker: persist, then the tracker closes and opens (ATSK-02, HTSK-12).
-  hookServer.onTaskLink((sessionId, task) => sessions.setTask(sessionId, task))
+  hookServer.onTaskLink((sessionId, task) => {
+    sessions.setTask(sessionId, task)
+    void runLinkedPin(task, linkedPin)
+  })
   namePoller.onListing((names) => sessions.applyNames(names))
   handle('sessions:list', () => sessions.list())
-  handle('sessions:spawn', ({ agentName, cwd, adhocCommand, task, prompt }) =>
-    sessions.spawn(agentName, cwd, adhocCommand, task, prompt)
-  )
+  handle('sessions:spawn', async ({ agentName, cwd, adhocCommand, task, prompt }) => {
+    const view = await sessions.spawn(agentName, cwd, adhocCommand, task, prompt)
+    void runLinkedPin(task, linkedPin)
+    return view
+  })
   // Returning the promise is load-bearing: ipcMain.handle awaits it, so the
   // renderer's `sessions:stop` only resolves once the PTY has really exited
   // (WRFT-05) — which is what lets a worktree removal start without racing
@@ -828,7 +842,11 @@ app.whenReady().then(() => {
   handle('sessions:respawn', ({ id }) => sessions.respawn(id))
   handle('sessions:rename', ({ id, title }) => sessions.rename(id, title))
   // Persist first, then the tracker closes and opens through the lifecycle (HTSK-12).
-  handle('sessions:set-task', ({ id, task }) => sessions.setTask(id, task))
+  handle('sessions:set-task', ({ id, task }) => {
+    const view = sessions.setTask(id, task)
+    void runLinkedPin(task, linkedPin)
+    return view
+  })
   handle('sessions:duplicate', ({ id }) => sessions.duplicate(id))
   handle('sessions:remove', ({ id }) => sessions.remove(id))
   handle('sessions:attach', ({ id }) => sessions.attach(id))
