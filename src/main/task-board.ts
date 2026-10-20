@@ -220,8 +220,26 @@ export class TaskBoard {
    * pass are skipped without a fetch, so a steady tree costs no ADO call.
    */
   async autoPin(refs: PinnedTask[]): Promise<{ added: number; snapshot: TasksSnapshot }> {
-    const { ado, pinnedTasks } = this.config.get()
-    if (!ado.autoPinFromWorktrees) return { added: 0, snapshot: this.list() }
+    if (!this.config.get().ado.autoPinFromWorktrees) return { added: 0, snapshot: this.list() }
+    return this.pinNew(refs)
+  }
+
+  /**
+   * Pins the task a session was just linked to, under the ADO defaults
+   * (PRST-45, AD-064): the auto-pin's fetch and validation, whatever
+   * `autoPinFromWorktrees` says (PRST-50). No pin and no error when a default
+   * is unset, ADO is unreachable or the item is missing (PRST-48); an id
+   * already pinned or in flight costs no ADO call (PRST-49).
+   */
+  async pinLinked(id: number): Promise<{ added: number; snapshot: TasksSnapshot }> {
+    const { defaultOrg, defaultProject } = this.config.get().ado
+    if (!defaultOrg || !defaultProject) return { added: 0, snapshot: this.list() }
+    return this.pinNew([makeRef(defaultOrg, defaultProject, id)])
+  }
+
+  /** Fetches and pins the refs not pinned, not found earlier, nor in flight. */
+  private async pinNew(refs: PinnedTask[]): Promise<{ added: number; snapshot: TasksSnapshot }> {
+    const { pinnedTasks } = this.config.get()
     const candidates = refs.filter(
       (ref) =>
         !pinnedTasks.some((task) => sameRef(task, ref)) &&
