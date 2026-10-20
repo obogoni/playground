@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 146,
+  "next_id": 147,
   "lessons": [
     {
       "id": "L-001",
@@ -64,24 +64,6 @@
       ],
       "created": "2026-08-31T22:35:36Z",
       "last_seen": "2026-09-28T22:09:36Z"
-    },
-    {
-      "id": "L-010",
-      "key": "spec_precision_gap::when a spec edge case says empty whitespace guard with trim length 0 not length 0 or whitespace only selections slip past the empty check",
-      "text": "When a spec edge case says 'empty/whitespace', guard with trim().length > 0, not length > 0, or whitespace-only selections slip past the empty check.",
-      "signal": "spec_precision_gap",
-      "scope": "src/renderer/src/components",
-      "status": "candidate",
-      "features": [
-        "terminal-input-fixes"
-      ],
-      "recurrence": 1,
-      "harmful": 0,
-      "evidence": [
-        "src/renderer/src/components/TerminalPane.tsx:95 (src/renderer/src/components)"
-      ],
-      "created": "2026-09-01T00:11:37Z",
-      "last_seen": "2026-09-01T00:11:37Z"
     },
     {
       "id": "L-011",
@@ -2515,6 +2497,24 @@
       ],
       "created": "2026-10-14T15:47:07Z",
       "last_seen": "2026-10-14T15:47:07Z"
+    },
+    {
+      "id": "L-146",
+      "key": "surviving_mutant::when a guard on a nullable input sits inside a try that swallows errors also assert that nothing was logged in the does nothing for null test or a loosened guard survives as an equivalent mutant",
+      "text": "When a guard on a nullable input sits inside a try that swallows errors, also assert that nothing was logged in the does-nothing-for-null test, or a loosened guard survives as an equivalent mutant",
+      "signal": "surviving_mutant",
+      "scope": "testing",
+      "status": "candidate",
+      "features": [
+        "agent-presets"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M6a (src/main/linked-task-pin.ts:19) (testing)"
+      ],
+      "created": "2026-10-20T14:41:47Z",
+      "last_seen": "2026-10-20T14:41:47Z"
     }
   ]
 }

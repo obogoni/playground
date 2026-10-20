@@ -22,7 +22,7 @@ manual step that is easy to forget, and every minute before it lands under No ta
 | ------- | ------ |
 | Removing a link from the agent (back to From branch) | No caller needs it; the picker keeps `From branch` (HTSK-13). A new link replaces the old one |
 | Pinning the linked work item | Owner decision in `hours-task-assign`: the pinned list stays the one the owner curates |
-| Fetching the item's title, type or state on the agent's behalf | AD-023: no surface reaches the network unless the user asks. The caller sends the title it already has |
+| Fetching the item's title, type or state on the agent's behalf | AD-023: no surface reaches the network unless the user asks. The caller sends the title it already has. **Superseded by AD-064 (2026-10-20):** a link now pins the task, which fetches its details in the background; the link's own title is still the caller's. |
 | Linking a session to a worktree, or changing the folder its attribution reads | Issue #133 keeps "working out the task from what the agent edits" as a later idea; this feature links the task only |
 | Changing the rail row label | SNAME-01/03 unchanged; the session shows under its task's group header (HTSK-11, HTSK-20) |
 | Counting the time before the link to the task | HTSK-12 unchanged: the link counts from its instant; the drawer's `Change task` / `Split at` fix the past |

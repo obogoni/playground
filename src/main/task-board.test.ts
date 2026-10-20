@@ -583,6 +583,133 @@ describe('TaskBoard.autoPin', () => {
   })
 })
 
+describe('TaskBoard.pinLinked (PRST-45..50)', () => {
+  let dir: string
+  let store: ConfigStore
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'wtm-tasks-linked-'))
+    store = new ConfigStore(dir)
+    store.patch({ ado: acme })
+  })
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  const ref = (id: number): WorkItemRef & { url: string } => ({
+    id,
+    org: 'acme',
+    project: 'platform',
+    url: `https://dev.azure.com/acme/platform/_workitems/edit/${id}`
+  })
+  const persisted = (): PinnedTask[] => new ConfigStore(dir).get().pinnedTasks
+
+  it('pins the linked id under the ADO defaults with its details (PRST-45)', async () => {
+    const source = stubSource({ [refKey(ref(26266))]: FIX_LOGIN })
+    const board = new TaskBoard(store, source)
+
+    const result = await board.pinLinked(26266)
+
+    expect(source.calls).toEqual([[ref(26266)]])
+    expect(result.added).toBe(1)
+    expect(result.snapshot.tasks).toEqual([{ ...ref(26266), details: FIX_LOGIN }])
+    expect(persisted()).toEqual([ref(26266)])
+  })
+
+  it("gives a linked Task its parent's type for the badge (PRST-47)", async () => {
+    const faultRef: WorkItemRef = { id: 7, org: 'acme', project: 'platform' }
+    const task: WorkItemDetails = { title: 'Fix the statement', type: 'Task', state: 'Active' }
+    const fault: WorkItemDetails = { title: 'Statement incomplete', type: 'Fault', state: 'Active' }
+    const source = stubSource(
+      { [refKey(ref(26266))]: task, [refKey(faultRef)]: fault },
+      {
+        relations: {
+          [refKey(ref(26266))]: { item: task, childRefs: [], parentRefs: [faultRef] },
+          [refKey(faultRef)]: { item: fault, childRefs: [], parentRefs: [] }
+        }
+      }
+    )
+    const board = new TaskBoard(store, source)
+
+    const result = await board.pinLinked(26266)
+
+    expect(result.snapshot.tasks[0].details).toEqual({ ...task, parentType: 'Fault' })
+  })
+
+  it('pins nothing and fetches nothing when an ADO default is unset (PRST-48)', async () => {
+    store.patch({ ado: { defaultProject: null } })
+    const source = stubSource({ [refKey(ref(26266))]: FIX_LOGIN })
+    const board = new TaskBoard(store, source)
+
+    const result = await board.pinLinked(26266)
+
+    expect(result.added).toBe(0)
+    expect(source.calls).toEqual([])
+    expect(persisted()).toEqual([])
+  })
+
+  it('pins nothing when ADO cannot be reached, and tries again on the next link (PRST-48)', async () => {
+    const source = stubSource({ [refKey(ref(26266))]: FIX_LOGIN }, { failAuth: true })
+    const board = new TaskBoard(store, source)
+
+    const result = await board.pinLinked(26266)
+    await board.pinLinked(26266)
+
+    expect(result.added).toBe(0)
+    expect(result.snapshot.auth).toBe('failed')
+    expect(persisted()).toEqual([])
+    expect(source.calls).toHaveLength(2)
+  })
+
+  it('does not pin an id ADO cannot find, nor fetch it again this app session (PRST-48)', async () => {
+    const source = stubSource({})
+    const board = new TaskBoard(store, source)
+
+    const first = await board.pinLinked(26266)
+    const second = await board.pinLinked(26266)
+
+    expect(first.added).toBe(0)
+    expect(second.added).toBe(0)
+    expect(persisted()).toEqual([])
+    expect(source.calls).toHaveLength(1)
+  })
+
+  it('makes no ADO call for an id already pinned (PRST-49)', async () => {
+    store.patch({ pinnedTasks: [ref(26266)] })
+    const source = stubSource({ [refKey(ref(26266))]: FIX_LOGIN })
+    const board = new TaskBoard(store, source)
+
+    const result = await board.pinLinked(26266)
+
+    expect(result.added).toBe(0)
+    expect(source.calls).toEqual([])
+    expect(persisted()).toEqual([ref(26266)])
+  })
+
+  it('makes one ADO call when two links of the same id overlap (PRST-49)', async () => {
+    const source = stubSource({ [refKey(ref(26266))]: FIX_LOGIN })
+    const board = new TaskBoard(store, source)
+
+    const [a, b] = await Promise.all([board.pinLinked(26266), board.pinLinked(26266)])
+
+    expect(a.added + b.added).toBe(1)
+    expect(source.calls).toHaveLength(1)
+    expect(persisted()).toEqual([ref(26266)])
+  })
+
+  it('pins a linked task even when autoPinFromWorktrees is false (PRST-50)', async () => {
+    store.patch({ ado: { autoPinFromWorktrees: false } })
+    const source = stubSource({ [refKey(ref(26266))]: FIX_LOGIN })
+    const board = new TaskBoard(store, source)
+
+    const result = await board.pinLinked(26266)
+
+    expect(result.added).toBe(1)
+    expect(persisted()).toEqual([ref(26266)])
+  })
+})
+
 describe('TaskBoard.lookup', () => {
   let dir: string
   let store: ConfigStore
