@@ -25,14 +25,8 @@ Going from "task in ADO" to "worktree on disk with tools open on it" is normally
 
 - Pin tasks by ID or URL; title / type / state fetched live (refresh on focus + manual)
 - **Start work**: task → worktree with a branch from a configurable template (`{type}/{id}-{slug}`), editable in the dialog with a live path preview
-- The task↔worktree link is **derived from the branch name** (the first standalone multi-digit number) — no shadow state. Task tags appear on worktree rows, cards, and the detail pane
+- The task↔worktree link is **derived from the branch name** (the first standalone multi-digit number) — no shadow state. Task tags appear on worktree rows and the detail pane
 - Auth is strictly via `az account get-access-token` — **no stored secrets**; a graceful "run `az login`" prompt on failure
-
-**Board view**
-
-- A task-centric layout: pinned-task chip strip + a workspace/repo-grouped worktree card grid; clicking a chip highlights its linked worktree cards
-
-![Board view — pinned-task chips highlight their linked worktree cards](docs/screenshots/board.png)
 
 **Embedded agent sessions**
 

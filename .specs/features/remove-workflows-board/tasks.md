@@ -83,8 +83,8 @@ T6
 
 **Done when**:
 
-- [ ] No `BoardView`/`'board'` reference left in `src/`
-- [ ] Build gate passes
+- [x] No `BoardView`/`'board'` reference left in `src/`
+- [x] Build gate passes
 
 **Tests**: none
 **Gate**: build

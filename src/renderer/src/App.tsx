@@ -9,7 +9,6 @@ import type { PinnedTaskView, TasksSnapshot } from '../../shared/tasks'
 import { taskIdFromBranch } from '../../shared/tasks'
 import type { WorkspaceNode } from '../../shared/tree'
 import { AgentsView } from './components/AgentsView'
-import { BoardView } from './components/BoardView'
 import { FilesView } from './components/FilesView'
 import { HoursView } from './components/HoursView'
 import { NewSessionDialog, type NewSessionSource } from './components/NewSessionDialog'
@@ -432,7 +431,7 @@ function App(): JSX.Element {
     refreshAndSelect(worktreePath)
   }
 
-  // Entry points (rail, worktree detail, board, tasks, sidebar) all funnel here
+  // Entry points (rail, worktree detail, tasks, sidebar) all funnel here
   // to open the New Session dialog with whatever pre-fill they carry.
   const openNewSession = (source: NewSessionSource = {}): void => {
     setNsSource(source)
@@ -658,7 +657,7 @@ function App(): JSX.Element {
             tasks={tasks.tasks}
             onReassign={time.reassignPeriod}
           />
-        ) : ui.direction === 'files' ? (
+        ) : (
           <FilesView
             worktreePath={selected?.worktree.path ?? null}
             // A selection the tree no longer resolves is a worktree whose folder
@@ -673,15 +672,6 @@ function App(): JSX.Element {
             )}
             // The status bar's own refresh after a git operation (FDSC-31).
             onDiscarded={refreshTree}
-          />
-        ) : (
-          <BoardView
-            tree={tree}
-            snapshot={tasks}
-            worktreeCounts={worktreeCounts}
-            onSnapshot={setTasks}
-            onToast={setToast}
-            onSpawnAgent={(cwd) => openNewSession({ cwd })}
           />
         )}
       </main>

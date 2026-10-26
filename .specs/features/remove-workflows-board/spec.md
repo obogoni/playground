@@ -118,8 +118,8 @@ entregar nada. A remoção deixa o app com Tree, Agents, Files e Hours.
 | -------------- | ----- | ----- | ------ |
 | RMV-01 | P1: Board removida | Tasks | Pending |
 | RMV-02 | P1: Board removida | Tasks | Pending |
-| RMV-03 | P1: Board removida | Tasks | Pending |
-| RMV-04 | P1: Board removida | Tasks | Pending |
+| RMV-03 | P1: Board removida | T2 | Implemented |
+| RMV-04 | P1: Board removida | T2 | Implemented |
 | RMV-05 | P1: Board removida | T1 | Implemented |
 | RMV-06 | P1: Board removida | T1 | Implemented |
 | RMV-07 | P1: Board removida | T1 | Implemented |
