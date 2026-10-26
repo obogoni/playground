@@ -1,8 +1,7 @@
 /* Quit smoke (RSTP-06, issue #91). Launches the BUILT app, closes its only
  * window through CDP, and reads what the main process printed on the way out:
  * a normal quit must exit 0 with no `ERR_SERVER_NOT_RUNNING` and no unhandled
- * rejection. No workflow runs, so the MCP result server is never started —
- * the quit that used to reject.
+ * rejection.
  *
  * The app owns this run: the script spawns it, so it can also watch it exit.
  * User data goes to a fresh temp dir, never the owner's %APPDATA%\playground,

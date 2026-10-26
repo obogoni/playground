@@ -137,8 +137,8 @@ T6
 
 **Done when**:
 
-- [ ] `npm run build` passes
-- [ ] Build gate passes
+- [x] `npm run build` passes
+- [x] Build gate passes
 
 **Tests**: none
 **Gate**: build

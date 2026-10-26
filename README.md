@@ -112,9 +112,8 @@ folder or prompt, save over it from the New Session dialog or edit the file.
 
 - Light / dark theme, persisted last-session UI state (direction, selection, theme)
 - Per-workspace overrides via `.app/config.json` (branch + worktree-folder templates); global defaults in Settings
-- Worktree initialization: a repo's init command runs in every new worktree — from the dialogs
-  and from workflows alike. A failing command never costs you the worktree; the exit code and
-  output are reported inline. The command can be declared **in the repo** or, to keep a shared
+- Worktree initialization: a repo's init command runs in every new worktree. A failing command
+  never costs you the worktree; the exit code and output are reported inline. The command can be declared **in the repo** or, to keep a shared
   team repo clean, **in the workspace beside it**
 
 ```jsonc

@@ -82,7 +82,7 @@ entregar nada. A remoção deixa o app com Tree, Agents, Files e Hours.
 6. The main process SHALL not create, read or write `~/.playground/workflows` or `<userData>/workflow-runs`. <!-- RMV-15 -->
 7. The repository SHALL contain no `scripts/smoke-workflow.mjs`, `scripts/smoke-agent-workflow.mjs`, `scripts/smoke-blocker-resume.mjs`, `scripts/fixtures/*/workflow.ts` or `scripts/wf1-spike/`. <!-- RMV-16 -->
 8. The repository SHALL contain no `design/handoff/DESIGN_HANDOFF_WORKFLOWS.md`. <!-- RMV-17 -->
-9. A case-insensitive search for `workflow` in `src/`, `README.md` and `package.json` SHALL return zero matches. <!-- RMV-18 -->
+9. A case-insensitive search for `workflow` in `src/`, `README.md` and `package.json` SHALL return zero matches outside `src/main/config-store.ts` and `src/main/config-store.test.ts`, which name the removed direction for the RMV-05/06 fallback. <!-- RMV-18 -->
 
 **Independent Test**: `npm run typecheck && npm run lint && npm test` green; `rg -i workflow src README.md package.json` empty.
 
@@ -127,15 +127,15 @@ entregar nada. A remoção deixa o app com Tree, Agents, Files e Hours.
 | RMV-11 | P1: Workflows removidos | T4 | Implemented |
 | RMV-12 | P1: Workflows removidos | T4 | Implemented |
 | RMV-13 | P1: Workflows removidos | T4 | Implemented |
-| RMV-14 | P1: Workflows removidos | Tasks | Pending |
+| RMV-14 | P1: Workflows removidos | T5 | Implemented |
 | RMV-15 | P1: Workflows removidos | T4 | Implemented |
-| RMV-16 | P1: Workflows removidos | Tasks | Pending |
-| RMV-17 | P1: Workflows removidos | Tasks | Pending |
-| RMV-18 | P1: Workflows removidos | Tasks | Pending |
+| RMV-16 | P1: Workflows removidos | T5 | Implemented |
+| RMV-17 | P1: Workflows removidos | T5 | Implemented |
+| RMV-18 | P1: Workflows removidos | T5 | Implemented |
 | RMV-20 | P1: Recursos que ficam | T4 | Implemented |
 | RMV-21 | P1: Recursos que ficam | T4 | Implemented |
-| RMV-22 | P1: Recursos que ficam | Tasks | Pending |
-| RMV-23 | P1: Recursos que ficam | Tasks | Pending |
+| RMV-22 | P1: Recursos que ficam | T5 | Implemented |
+| RMV-23 | P1: Recursos que ficam | T5 | Implemented |
 
 **Coverage:** 20 total, 0 mapped to tasks, 20 unmapped ⚠️ (tasks next)
 
