@@ -96,4 +96,24 @@ describe('ConfigStore', () => {
     expect(result.ui).toEqual({ theme: 'light', direction: 'tree', defaultShell: 'pwsh' })
     expect(store.get()).toBe(result)
   })
+
+  it.each(['board', 'workflows', 'kanban'])(
+    'loads a removed or unknown direction %s as tree (RMV-05, RMV-06)',
+    (direction) => {
+      writeFileSync(join(dir, 'config.json'), JSON.stringify({ ui: { theme: 'light', direction } }))
+
+      const ui = new ConfigStore(dir).get().ui
+      expect(ui.direction).toBe('tree')
+      expect(ui.theme).toBe('light')
+    }
+  )
+
+  it.each(['tree', 'agents', 'files', 'hours'])(
+    'loads the direction %s unchanged (RMV-07)',
+    (direction) => {
+      writeFileSync(join(dir, 'config.json'), JSON.stringify({ ui: { direction } }))
+
+      expect(new ConfigStore(dir).get().ui.direction).toBe(direction)
+    }
+  )
 })
