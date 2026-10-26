@@ -155,7 +155,7 @@ T6
 
 **Done when**:
 
-- [ ] AD-065 present
+- [x] AD-065 present
 
 **Tests**: none
 **Gate**: build
