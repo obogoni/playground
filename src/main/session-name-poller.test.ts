@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AgentChild, AgentSpawn } from './agent-step-runner'
+import type { AgentChild, AgentSpawn } from './agent-spawn'
 import { installDiagnostics, NOOP_DIAGNOSTICS } from './diagnostics'
 import {
   NAME_BACKOFF_BASE_MS,

@@ -2,8 +2,7 @@
  * The loopback endpoint Claude Code's http hooks POST to (AD-019, ACTV-04).
  *
  * One listener serves every session: the bearer token both authenticates the
- * request and says which session it belongs to, the same trick the workflows
- * result server uses per step (AD-008). A token is registered when its session
+ * request and says which session it belongs to (AD-008). A token is registered when its session
  * spawns and revoked when it stops, so a late POST from a dying agent is
  * rejected rather than resurrecting state (ACTV-32).
  *

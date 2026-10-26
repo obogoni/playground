@@ -124,16 +124,16 @@ entregar nada. A remoção deixa o app com Tree, Agents, Files e Hours.
 | RMV-06 | P1: Board removida | T1 | Implemented |
 | RMV-07 | P1: Board removida | T1 | Implemented |
 | RMV-10 | P1: Workflows removidos | T3 | Implemented |
-| RMV-11 | P1: Workflows removidos | Tasks | Pending |
-| RMV-12 | P1: Workflows removidos | Tasks | Pending |
-| RMV-13 | P1: Workflows removidos | Tasks | Pending |
+| RMV-11 | P1: Workflows removidos | T4 | Implemented |
+| RMV-12 | P1: Workflows removidos | T4 | Implemented |
+| RMV-13 | P1: Workflows removidos | T4 | Implemented |
 | RMV-14 | P1: Workflows removidos | Tasks | Pending |
-| RMV-15 | P1: Workflows removidos | Tasks | Pending |
+| RMV-15 | P1: Workflows removidos | T4 | Implemented |
 | RMV-16 | P1: Workflows removidos | Tasks | Pending |
 | RMV-17 | P1: Workflows removidos | Tasks | Pending |
 | RMV-18 | P1: Workflows removidos | Tasks | Pending |
-| RMV-20 | P1: Recursos que ficam | Tasks | Pending |
-| RMV-21 | P1: Recursos que ficam | Tasks | Pending |
+| RMV-20 | P1: Recursos que ficam | T4 | Implemented |
+| RMV-21 | P1: Recursos que ficam | T4 | Implemented |
 | RMV-22 | P1: Recursos que ficam | Tasks | Pending |
 | RMV-23 | P1: Recursos que ficam | Tasks | Pending |
 

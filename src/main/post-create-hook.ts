@@ -101,8 +101,8 @@ export interface PostCreateHookDeps {
 /**
  * Wraps a create with the repo's post-create hook, returning a function with the
  * **identical signature** so it is a drop-in for every caller (WPC-10). Wiring
- * this once in `index.ts` and handing it to both the IPC handler and the workflow
- * ctx is what makes the hook non-optional — no call site can bypass it.
+ * this once in `index.ts` and handing it to every create path is what makes the
+ * hook non-optional — no call site can bypass it.
  *
  * The hook runs **iff the create actually produced a worktree**: `ok` with a
  * `path`. That single test covers every no-worktree outcome without enumerating

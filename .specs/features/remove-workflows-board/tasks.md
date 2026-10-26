@@ -119,8 +119,8 @@ T6
 
 **Done when**:
 
-- [ ] `rg -i workflow src` returns nothing
-- [ ] Build gate passes
+- [x] `rg -i workflow src` returns nothing
+- [x] Build gate passes
 
 **Tests**: none
 **Gate**: build

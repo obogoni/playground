@@ -44,14 +44,6 @@ import type {
 import type { PeriodTaskChoice, TimeEditResult, TimeSnapshot } from './time'
 import type { WorkspaceEntry, WorkspaceNode } from './tree'
 import type {
-  BlockerQuestion,
-  RespondDecision,
-  RunStatus,
-  ScaffoldResult,
-  StepEvent,
-  WorkflowDef
-} from './workflows'
-import type {
   ChangedFile,
   CreateStep,
   CreateWorktreeResult,
@@ -205,16 +197,6 @@ export interface IpcContract {
    * read answers `{ kind: 'error' }` and never throws (TSP-16).
    */
   'clipboard:read-paste': { req: void; res: ClipboardPaste }
-  /** Every discovered workflow, valid (`{id,meta}`) or broken (`{id,error}`) (WF2-01). */
-  'workflows:list': { req: void; res: WorkflowDef[] }
-  /** Start a serial run of workflow `id` in the main process; returns its runId (WF2-13/17). */
-  'workflows:run': { req: { id: string; input?: Record<string, string> }; res: { runId: string } }
-  /** Request cancellation of a run; read at the next `ctx.*` checkpoint (WF2-14). */
-  'workflows:cancel': { req: { runId: string }; res: void }
-  /** Answer a blocked run: `abort` → cancelled, `guidance` → resume (WF4-07). */
-  'workflows:respond': { req: { runId: string; decision: RespondDecision }; res: void }
-  /** Drop any discovery cache (v1 no-op — discovery is on-demand) (WF2-01). */
-  'workflows:reload': { req: void; res: void }
   /** Every `*.md` in `~/.playground/prompts`, valid (`{name,template}`) or broken (`{name,error}`) (APR-01/06). */
   'prompts:list': { req: void; res: PromptEntry[] }
   /** Create `~/.playground/prompts` when missing and open it in the OS file manager (APR-08). */
@@ -237,8 +219,6 @@ export interface IpcContract {
   'agentPresets:delete': { req: { name: string }; res: AgentPresetChangeResult }
   /** Create the file as `[]` when missing and open it with the OS default app (PRST-42). */
   'agentPresets:openFile': { req: void; res: { error: string | null } }
-  /** Scaffold a new workflow folder from a template + reveal it; an existing id is rejected, never overwritten (WF5-22/24/25). */
-  'workflows:scaffold': { req: { name: string }; res: ScaffoldResult }
   /** One folder's direct children, tracked plus untracked-not-ignored; a git failure lands in `error` (FXPL-02/04/05). */
   'files:list-dir': { req: { worktreePath: string; dir: string }; res: DirListing }
   /** The files the branch committed since `merge-base(HEAD, base)` (FXPL-08). */
@@ -405,23 +385,6 @@ export interface IpcEvents {
   'session:name': { id: string; name: string | null }
   /** A session's task link changed in main, e.g. set by its agent; `null` = From branch (ATSK-06). */
   'session:task': { id: string; task: SessionTask | null }
-  /** A run's folded lifecycle status changed (WF2-12). */
-  'workflow:status': { runId: string; status: RunStatus }
-  /** A `step-started` event — an executed `ctx.*` primitive / `ctx.step` group (WF2-10). */
-  'workflow:step': { runId: string; step: StepEvent }
-  /** A `step-logged` log/notify line, optionally nested under a `ctx.step` group (WF2-10). */
-  'workflow:log': { runId: string; message: string; group?: string }
-  /** A run started — seeds the RunView with its identity + input + start time (WHF-08). */
-  'workflow:run-started': {
-    runId: string
-    workflowId: string
-    input: Record<string, string>
-    startedAt: string
-  }
-  /** A run paused awaiting a human answer; `sessionId` scopes the agent resume note (WF4-01/15, WHF-07). */
-  'workflow:blocked': { runId: string; question: BlockerQuestion; sessionId?: string }
-  /** A lifecycle-toast click asked the renderer to surface this run (WF4-15). */
-  'workflow:focus-run': { runId: string }
   /** One batch of disk changes in the watched worktree (FXPL-21/22). */
   'files:changed': FilesChanged
   /** A worktree's git state moved and its changes were recounted; patch them into the tree (SCRF-01/03). */

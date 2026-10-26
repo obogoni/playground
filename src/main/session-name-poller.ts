@@ -1,4 +1,4 @@
-import type { AgentChild, AgentSpawn } from './agent-step-runner'
+import type { AgentChild, AgentSpawn } from './agent-spawn'
 import { parseAgentsListing } from './agents-listing'
 import { diagnostics } from './diagnostics'
 
