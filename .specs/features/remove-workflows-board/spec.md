@@ -116,14 +116,14 @@ entregar nada. A remoção deixa o app com Tree, Agents, Files e Hours.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| RMV-01 | P1: Board removida | Tasks | Pending |
-| RMV-02 | P1: Board removida | Tasks | Pending |
+| RMV-01 | P1: Board removida | T2, T3 | Implemented |
+| RMV-02 | P1: Board removida | T2, T3 | Implemented |
 | RMV-03 | P1: Board removida | T2 | Implemented |
 | RMV-04 | P1: Board removida | T2 | Implemented |
 | RMV-05 | P1: Board removida | T1 | Implemented |
 | RMV-06 | P1: Board removida | T1 | Implemented |
 | RMV-07 | P1: Board removida | T1 | Implemented |
-| RMV-10 | P1: Workflows removidos | Tasks | Pending |
+| RMV-10 | P1: Workflows removidos | T3 | Implemented |
 | RMV-11 | P1: Workflows removidos | Tasks | Pending |
 | RMV-12 | P1: Workflows removidos | Tasks | Pending |
 | RMV-13 | P1: Workflows removidos | Tasks | Pending |

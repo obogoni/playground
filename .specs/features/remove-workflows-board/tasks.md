@@ -101,8 +101,8 @@ T6
 
 **Done when**:
 
-- [ ] Top bar renders Tree, Agents, Files, Hours
-- [ ] Build gate passes
+- [x] Top bar renders Tree, Agents, Files, Hours
+- [x] Build gate passes
 
 **Tests**: none
 **Gate**: build

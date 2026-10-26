@@ -78,7 +78,7 @@ export interface FilesState {
 export interface AppConfig {
   ui: {
     theme: 'dark' | 'light'
-    direction: 'tree' | 'agents' | 'workflows' | 'files' | 'hours'
+    direction: 'tree' | 'agents' | 'files' | 'hours'
     /** Hosting shell for new agent PTYs; running sessions keep their own (AGCF-02). */
     defaultShell: Shell
     /** Persisted sidebar width; absent = 230px default (PANE-01). */

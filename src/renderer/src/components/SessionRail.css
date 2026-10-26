@@ -144,8 +144,7 @@
 
 /* Rail v2 — group card + compact row (handoff §4). */
 
-/* Component-scoped copy of the running-dot pulse, matching the existing
-   RunDetail.css / WorkflowsView.css definitions rather than widening this
+/* Component-scoped running-dot pulse, kept local rather than widening this
    feature into a global-CSS refactor (design §Risks). */
 @keyframes pulse {
   0%,
