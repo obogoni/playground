@@ -22,7 +22,6 @@ const OUTDIR = join(root, 'docs', 'screenshots')
 // label = the segmented-control button text; file = output name.
 const SHOTS = [
   { label: 'Tree', file: 'tree.png' },
-  { label: 'Board', file: 'board.png' },
   { label: 'Agents', file: 'agents.png' }
 ]
 

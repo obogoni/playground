@@ -160,16 +160,6 @@ export function TopBar({
         <button
           type="button"
           role="tab"
-          aria-selected={direction === 'board'}
-          className={`topbar-segment${direction === 'board' ? ' active' : ''}`}
-          onClick={() => onDirectionChange('board')}
-        >
-          <Icon name="board-grid" size={14} />
-          Board
-        </button>
-        <button
-          type="button"
-          role="tab"
           aria-selected={direction === 'agents'}
           className={`topbar-segment${direction === 'agents' ? ' active' : ''}`}
           onClick={() => onDirectionChange('agents')}
@@ -186,16 +176,6 @@ export function TopBar({
         >
           <Icon name="file" size={14} />
           Files
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={direction === 'workflows'}
-          className={`topbar-segment${direction === 'workflows' ? ' active' : ''}`}
-          onClick={() => onDirectionChange('workflows')}
-        >
-          <Icon name="workflow-nodes" size={14} />
-          Workflows
         </button>
         <button
           type="button"

@@ -14,7 +14,7 @@ import type { PeriodSnapshotFields } from '../shared/time'
 import type { TasksSnapshot } from '../shared/tasks'
 import { AdoGateway } from './ado-gateway'
 import { AdoPrClient, openPrLink } from './ado-pr'
-import { AgentStepRunner, type AgentChild, type AgentSpawn } from './agent-step-runner'
+import type { AgentChild, AgentSpawn } from './agent-spawn'
 import { BinaryResolver } from './binary-resolver'
 import { createActivityHookServer } from './activity-hook-server'
 import { linkTask } from './activity-notification'
@@ -41,7 +41,6 @@ import { readCommits, readSyncState, runGitOp } from './git-sync'
 import { runHookShell } from './hook-shell'
 import { checkIgnored } from './ignore-check'
 import { emit, handle, onSend } from './ipc'
-import { createMcpResultServer } from './mcp-result-server'
 import { purgePasteDir } from './paste-temp'
 import { checkCreatePaths } from './path-limits'
 import { ensurePromptsFolder, listPrompts } from './prompt-library'
@@ -69,16 +68,6 @@ import { buildTree } from './tree'
 import { UpdateService } from './update-service'
 import { windowOpenDecision } from './url-policy'
 import { watchPort } from './watch-port'
-import type { CtxDeps, GitFetchOptions, ShellResult } from './workflow-ctx'
-import {
-  discoverWorkflows,
-  esbuildBinaryPath,
-  esbuildBinarySubpath,
-  loadWorkflow
-} from './workflow-loader'
-import { WorkflowManager } from './workflow-manager'
-import { WorkflowRunStore } from './workflow-run-store'
-import { scaffoldWorkflow } from './workflow-scaffold'
 import { changedFilesOf, createWorktree, removeWorktree, worktreeStatus } from './worktree-manager'
 import { workspaceTemplates } from './workspace-config'
 import { runAutoPin } from './worktree-tasks'
@@ -86,28 +75,6 @@ import { runLinkedPin } from './linked-task-pin'
 import { WorkspaceRegistry } from './workspace-registry'
 
 const execFileAsync = promisify(execFile)
-
-// The workflow-loader bundles workflow.ts by spawning esbuild's native binary.
-// Resolve it once here (main knows whether we're packaged): in a packaged app the
-// binary lives in app.asar.unpacked (the in-asar copy is not spawnable); in dev
-// it sits in node_modules. Passed into the loader — NOT set as ESBUILD_BINARY_PATH,
-// which would leak into every child process the app spawns.
-const esbuildBin = app.isPackaged
-  ? esbuildBinaryPath(process.resourcesPath, process.platform, process.arch)
-  : require.resolve(
-      `@esbuild/${process.platform}-${process.arch}/${esbuildBinarySubpath(process.platform)}`
-    )
-
-/**
- * WF2 real `ctx.git.fetch` (WF2-07): a no-shell `git fetch` through the git
- * runner (PDIAG-14). `GIT_TERMINAL_PROMPT=0` fails fast instead of hanging the
- * main process on an un-answerable credential prompt; a non-zero exit rejects,
- * which `ctx.git.fetch` propagates.
- */
-async function gitFetch({ cwd, remote, branch }: GitFetchOptions): Promise<void> {
-  const args = ['fetch', ...(remote ? [remote] : []), ...(branch ? [branch] : [])]
-  await git(cwd, args)
-}
 
 /**
  * The branch a session's cwd has checked out, which names its task in a
@@ -206,27 +173,10 @@ async function recountWorktree(
 }
 
 /**
- * WF2 real `ctx.sh` runner (WF2-06, WF2-D6): spawn the command **through a
- * shell** and capture `{code, stdout, stderr}`. It never throws — the `ctx.sh`
- * gate in `workflow-ctx` decides throw-vs-`allowFail` from the exit code.
- */
-function runShell(cmd: string, opts: { cwd: string }): Promise<ShellResult> {
-  return new Promise<ShellResult>((resolve) => {
-    const child = spawn(cmd, { cwd: opts.cwd, shell: true, windowsHide: true })
-    let stdout = ''
-    let stderr = ''
-    child.stdout?.on('data', (chunk) => (stdout += chunk.toString()))
-    child.stderr?.on('data', (chunk) => (stderr += chunk.toString()))
-    child.on('error', (err) => resolve({ code: -1, stdout, stderr: stderr + String(err) }))
-    child.on('close', (code) => resolve({ code: code ?? -1, stdout, stderr }))
-  })
-}
-
-/**
- * WF3 real `AgentSpawn` seam (WF3-01): spawn the resolved `claude` binary **directly**
+ * The real `AgentSpawn` seam: spawn the resolved `claude` binary **directly**
  * (`shell:false`, argv verbatim) with **stdin closed** (`stdio:['ignore','pipe','pipe']`),
- * adapting `child_process.spawn` to the runner's `AgentChild` interface. The DI'd runner
- * owns the retry/validate/cancel logic; this seam is the one hand-verified I/O boundary.
+ * adapting `child_process.spawn` to the `AgentChild` interface the name poller reads.
+ * This seam is the one hand-verified I/O boundary.
  */
 const spawnAgent: AgentSpawn = (bin, argv, { cwd, env }): AgentChild => {
   const child = spawn(bin, argv, {
@@ -435,9 +385,9 @@ app.whenReady().then(() => {
     })
     return tree
   })
-  // WPC-10: ONE hook-wrapped create, shared by the IPC handler below and the
-  // workflow ctx further down. Because both consumers get this same wrapper —
-  // never bare `createWorktree` — no call path can skip a repo's init command.
+  // WPC-10: ONE hook-wrapped create for every create path. Because each gets
+  // this same wrapper — never bare `createWorktree` — no call path can skip a
+  // repo's init command.
   const createWorktreeWithHook = withPostCreateHook(createWorktree, {
     // HWC-01: repo-first, then the workspace's `postCreateCommands[<repoName>]`,
     // so a repo needs no committed `.app/config.json` to be initialized.
@@ -651,27 +601,6 @@ app.whenReady().then(() => {
     notification.show()
   }
 
-  /**
-   * WF2 author `ctx.notify({ toast })` sink (WF2-09) AND WF4 manager lifecycle toast
-   * (WF4-13): a native OS toast. A lifecycle toast (`opts.runId`) attaches a `click`
-   * handler that surfaces the window and asks the renderer to reveal the run
-   * (`workflow:focus-run`, WF4-15); an author toast (no `runId`) is a plain
-   * notification, behaviour unchanged.
-   */
-  const notifier = (title: string, body: string, opts?: { runId?: string }): void => {
-    const runId = opts?.runId
-    showOs(
-      title,
-      body,
-      runId
-        ? () => {
-            revealWindow()
-            emitToWindow('workflow:focus-run', { runId })
-          }
-        : undefined
-    )
-  }
-
   // Time tracking (AD-021). The tracker must recover the periods a crash left
   // open before SessionManager exists, so no new run can mix with them.
   // Pinned task id → cached title, first pin with details of an id (TIME-03, HTSK-06).
@@ -787,7 +716,7 @@ app.whenReady().then(() => {
   const resolveClaude = (): string => claudeResolver.get()
 
   // Session names (AD-040): the poller reads `claude agents --json` through the
-  // same spawn seam and env posture as the headless runner; `cwd` is only there
+  // direct spawn seam with a scrubbed env; `cwd` is only there
   // because spawn needs one — the listing is machine-wide. This wiring is the
   // hand-verified boundary (TESTING.md); the CDP smoke in T8 exercises it.
   namePoller = new SessionNamePoller({
@@ -893,63 +822,7 @@ app.whenReady().then(() => {
     console.error('[paste] purging old pasted images failed', err)
   }
 
-  // WF3 agent step: one shared MCP result server (started lazily by the runner on the
-  // first agent step, reused across steps/runs — WF3-10) forces structured output; the
-  // DI'd runner drives a headless `claude` child through it (real spawn seam,
-  // `resolveClaude`, `randomUUID` tokens) and is injected as the ctx `agent` capability.
-  const resultServer = createMcpResultServer()
-  const agentRunner = new AgentStepRunner({
-    server: resultServer,
-    spawn: spawnAgent,
-    resolveClaude,
-    genToken: randomUUID
-  })
-
-  // Workflows engine (WF2). The manager runs one workflow at a time in the main
-  // process; ctxDeps assembles the real deterministic capability seams (worktree
-  // fns, a no-shell git fetch, a shell-hosted `ctx.sh`, ADO, native toasts, and the
-  // WF3 headless agent step).
-  const workflowsAdo = new AdoGateway()
-  const ctxDeps: CtxDeps = {
-    worktree: {
-      // The hook-wrapped create (WPC-10) — a workflow-created worktree for an
-      // agent is the case that most needs the repo's init command to have run.
-      create: createWorktreeWithHook,
-      remove: removeWorktree,
-      changedFiles: changedFilesOf
-    },
-    gitFetch,
-    runShell,
-    ado: {
-      getWorkItemWithRelations: workflowsAdo.getWorkItemWithRelations.bind(workflowsAdo),
-      getWorkItems: workflowsAdo.getWorkItems.bind(workflowsAdo)
-    },
-    notifier,
-    agent: agentRunner
-  }
-  const workflowsRoot = join(homedir(), '.playground', 'workflows')
-  const workflows = new WorkflowManager({
-    workflowsRoot,
-    loader: { discoverWorkflows, loadWorkflow: (folder) => loadWorkflow(folder, esbuildBin) },
-    ctxDeps,
-    store: new WorkflowRunStore(join(app.getPath('userData'), 'workflow-runs')),
-    emit: emitToWindow,
-    notifier
-  })
-  handle('workflows:list', () => workflows.list())
-  handle('workflows:run', ({ id, input }) => workflows.run({ id, input }))
-  handle('workflows:cancel', ({ runId }) => workflows.cancel(runId))
-  handle('workflows:respond', ({ runId, decision }) => workflows.respond(runId, decision))
-  handle('workflows:reload', () => workflows.reload())
-  // Scaffold a new workflow folder from a template, then reveal it in the OS file
-  // manager (WF5-25); the create logic is the unit-tested workflow-scaffold module.
-  handle('workflows:scaffold', async ({ name }) => {
-    const result = await scaffoldWorkflow(workflowsRoot, name)
-    if (result.ok) shell.showItemInFolder(result.path)
-    return result
-  })
-
-  // Prompt files are discovered on demand like workflows (APR-01); the folder is
+  // Prompt files are discovered on demand (APR-01); the folder is
   // created on request so "Open prompts folder" always has something to open (APR-08).
   const promptsRoot = join(homedir(), '.playground', 'prompts')
   handle('prompts:list', () => listPrompts(promptsRoot))
@@ -975,12 +848,6 @@ app.whenReady().then(() => {
   )
   handle('agentPresets:delete', ({ name }) => presets.change({ kind: 'delete', name }))
   handle('agentPresets:openFile', async () => ({ error: await presets.openFile() }))
-
-  // Free the shared MCP result server's loopback port when the app quits (WF3-10).
-  // Nothing awaits a quit handler, so a failed stop is logged, not left unhandled (RSTP-07).
-  onWillQuit(() => {
-    resultServer.stop().catch((err) => console.error('[mcp-result-server] stop failed', err))
-  })
 
   // Silent auto-update. Inert under `electron-vite dev` unless PLAYGROUND_FORCE_UPDATE=1
   // opts into the real GitHub feed via dev-app-update.yml (local update-flow testing).

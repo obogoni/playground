@@ -11,7 +11,7 @@ export interface BinaryResolverDeps {
 
 /**
  * A binary path answered from a cache (PERF-20). `get()` is synchronous, like
- * the callers that need it (the name poller, the workflow step runner), and
+ * the caller that needs it (the name poller), and
  * never runs the lookup on their stack: it only starts one in the background
  * when the last one began `RELOOKUP_MS` ago or more, and never two at a time.
  *

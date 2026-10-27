@@ -1,6 +1,6 @@
 /**
  * Prompt files live flat in `~/.playground/prompts`, one `<name>.md` per
- * prompt, discovered on demand like workflows: a missing folder is an empty
+ * prompt, discovered on demand: a missing folder is an empty
  * list, and a broken file is listed with its reason without hiding the others.
  */
 import { mkdir, readdir, readFile, stat } from 'node:fs/promises'

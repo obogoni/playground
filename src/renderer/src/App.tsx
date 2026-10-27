@@ -9,7 +9,6 @@ import type { PinnedTaskView, TasksSnapshot } from '../../shared/tasks'
 import { taskIdFromBranch } from '../../shared/tasks'
 import type { WorkspaceNode } from '../../shared/tree'
 import { AgentsView } from './components/AgentsView'
-import { BoardView } from './components/BoardView'
 import { FilesView } from './components/FilesView'
 import { HoursView } from './components/HoursView'
 import { NewSessionDialog, type NewSessionSource } from './components/NewSessionDialog'
@@ -25,7 +24,6 @@ import { StatusBar } from './components/StatusBar'
 import { TasksPane } from './components/TasksPane'
 import { Toast } from './components/Toast'
 import { TopBar } from './components/TopBar'
-import { WorkflowsView } from './components/WorkflowsView'
 import { WorktreeDetail, WorktreeDetailEmpty } from './components/WorktreeDetail'
 import { api } from './lib/api'
 import {
@@ -49,7 +47,6 @@ import { useSessions } from './lib/use-sessions'
 import { useTime } from './lib/use-time'
 import { useLatestCallback } from './lib/use-latest-callback'
 import { useTree } from './lib/use-tree'
-import { useWorkflowRuns } from './lib/use-workflow-runs'
 import './App.css'
 
 type UiState = AppConfig['ui']
@@ -167,9 +164,6 @@ function App(): JSX.Element {
     respawnSession,
     removeSession
   } = useSessions({ onToast: setToast, onSwitchToAgents: () => update({ direction: 'agents' }) })
-  // Always mounted (above the direction switch) so runs accumulate from the
-  // workflow:* stream even while another direction is active (WF5-04, AD-011).
-  const workflows = useWorkflowRuns()
   // Time snapshot (AD-021): refetched on time:changed; counters tick in their own
   // components, so App does not re-render every second.
   const time = useTime()
@@ -388,18 +382,6 @@ function App(): JSX.Element {
     }
   }, [openNotifiedSession])
 
-  // A WF4 lifecycle-toast click asks the renderer to surface a run: switch to the
-  // Workflows direction and open that run (WF5-17).
-  const selectRun = workflows.selectRun
-  useEffect(() => {
-    const off = api.on('workflow:focus-run', ({ runId }) => {
-      setUi((prev) => (prev ? { ...prev, direction: 'workflows' } : prev))
-      api.invoke('config:patch', { ui: { direction: 'workflows' } }).catch(console.error)
-      selectRun(runId)
-    })
-    return off
-  }, [selectRun])
-
   // A tree refresh auto-pinned tasks its worktree branches carry (APIN-06).
   useEffect(() => api.on('tasks:changed', ({ snapshot }) => setTasks(snapshot)), [])
 
@@ -432,7 +414,7 @@ function App(): JSX.Element {
     refreshAndSelect(worktreePath)
   }
 
-  // Entry points (rail, worktree detail, board, tasks, sidebar) all funnel here
+  // Entry points (rail, worktree detail, tasks, sidebar) all funnel here
   // to open the New Session dialog with whatever pre-fill they carry.
   const openNewSession = (source: NewSessionSource = {}): void => {
     setNsSource(source)
@@ -634,20 +616,6 @@ function App(): JSX.Element {
             onToast={setToast}
             onSetTask={setSessionTask}
           />
-        ) : ui.direction === 'workflows' ? (
-          <WorkflowsView
-            defs={workflows.defs}
-            runs={workflows.runs}
-            selectedRunId={workflows.selectedRunId}
-            activeRunId={workflows.activeRunId}
-            error={workflows.error}
-            onRun={workflows.start}
-            onCancel={workflows.cancel}
-            onRespond={workflows.respond}
-            onReload={workflows.refresh}
-            onScaffold={workflows.scaffold}
-            onSelectRun={workflows.selectRun}
-          />
         ) : ui.direction === 'hours' ? (
           <HoursView
             snapshot={time.snapshot}
@@ -658,7 +626,7 @@ function App(): JSX.Element {
             tasks={tasks.tasks}
             onReassign={time.reassignPeriod}
           />
-        ) : ui.direction === 'files' ? (
+        ) : (
           <FilesView
             worktreePath={selected?.worktree.path ?? null}
             // A selection the tree no longer resolves is a worktree whose folder
@@ -673,15 +641,6 @@ function App(): JSX.Element {
             )}
             // The status bar's own refresh after a git operation (FDSC-31).
             onDiscarded={refreshTree}
-          />
-        ) : (
-          <BoardView
-            tree={tree}
-            snapshot={tasks}
-            worktreeCounts={worktreeCounts}
-            onSnapshot={setTasks}
-            onToast={setToast}
-            onSpawnAgent={(cwd) => openNewSession({ cwd })}
           />
         )}
       </main>

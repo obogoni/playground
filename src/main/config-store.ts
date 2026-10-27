@@ -3,6 +3,8 @@ import { join } from 'node:path'
 import type { AppConfig, ConfigPatch } from '../shared/config'
 import { DEFAULT_CONFIG } from '../shared/config'
 
+const DIRECTIONS: readonly string[] = ['tree', 'agents', 'files', 'hours']
+
 /**
  * Owns the global config file (<dir>/config.json). All file I/O is hidden
  * behind get/patch; writes are atomic (tmp file + rename); a corrupt file is
@@ -36,7 +38,10 @@ export class ConfigStore {
     }
     try {
       const parsed = JSON.parse(readFileSync(this.filePath, 'utf8'))
-      return this.merge(structuredClone(DEFAULT_CONFIG), parsed)
+      const config = this.merge(structuredClone(DEFAULT_CONFIG), parsed)
+      // A direction the app no longer has (Board, Workflows) opens on the Tree (RMV-05).
+      if (!DIRECTIONS.includes(config.ui.direction)) config.ui.direction = 'tree'
+      return config
     } catch (err) {
       const backupPath = `${this.filePath}.bak-${Date.now()}`
       console.error(`Config file unreadable, backing up to ${backupPath}:`, err)

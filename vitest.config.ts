@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts', 'scripts/**/*.test.ts'],
     // Real-git and real-process suites (worktree-manager, tree, post-create-hook,
-    // hook-shell, workflow-loader) routinely take 5-15s per test under parallel
+    // hook-shell) routinely take 5-15s per test under parallel
     // load — measured 14 failures in one full run, all duration overruns, on an
     // otherwise untouched tree. A timeout is a ceiling, not a delay: passing
     // tests are unaffected, and this only stops the runner killing work that is

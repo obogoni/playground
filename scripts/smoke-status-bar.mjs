@@ -644,7 +644,7 @@ async function main() {
 
   // --- The long branch in every non-Agents direction (STBR-01, 02, 06) ---
   await selectWorktree(ws, LONG_BRANCH)
-  for (const dir of ['Tree', 'Board', 'Workflows']) {
+  for (const dir of ['Tree']) {
     await direction(ws, dir)
     const b = await waitBar(ws, (v) => v.branchTitle === LONG_BRANCH)
     check(
@@ -1918,7 +1918,7 @@ try {
     // Holds only when the owner had no tree selection; the Agents session
     // selection was dropped when this script's selected session was removed.
     if (ownerTreeSelection === null) {
-      for (const dir of ['Tree', 'Board', 'Agents', 'Workflows']) {
+      for (const dir of ['Tree', 'Agents']) {
         await direction(ws, dir)
         const b = await waitBar(ws, (v) => v.empty !== null, 3000)
         check(

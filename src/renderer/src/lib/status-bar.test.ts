@@ -111,7 +111,7 @@ describe('barTargetFor', () => {
   })
 
   it('returns the tree-selected worktree in every other direction, ignoring the session (STBR-02)', () => {
-    for (const direction of ['tree', 'board', 'workflows'] as const) {
+    for (const direction of ['tree', 'files', 'hours'] as const) {
       const target = barTargetFor({
         direction,
         tree,
@@ -127,7 +127,7 @@ describe('barTargetFor', () => {
   })
 
   it('returns the none target when nothing is selected anywhere (STBR-05)', () => {
-    for (const direction of ['tree', 'board', 'agents', 'workflows'] as const) {
+    for (const direction of ['tree', 'files', 'hours', 'agents'] as const) {
       const target = barTargetFor({
         direction,
         tree,

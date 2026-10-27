@@ -144,7 +144,7 @@ export function NewSessionDialog({
   const [presetSaved, setPresetSaved] = useState<string | null>(null)
   const [presetBusy, setPresetBusy] = useState(false)
 
-  // Read the folder each time the dialog opens, like workflows (APR-01).
+  // Read the folder each time the dialog opens (APR-01).
   useEffect(() => {
     loadPrompts().then(setPrompts)
   }, [])

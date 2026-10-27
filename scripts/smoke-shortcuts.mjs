@@ -181,37 +181,6 @@ check(
   String(toast)
 )
 
-// VSAD-03: each board card footer gains a VS 2022 (admin) button. Last, since
-// it leaves the app in the board direction. The button is never clicked here —
-// elevation/UAC is hand-verified (see spec Testing Notes).
-const boardVs = await evaluate(
-  ws,
-  `(async () => {
-     ;[...document.querySelectorAll('.topbar-segment')]
-       .find((b) => /board/i.test(b.textContent || ''))?.click()
-     await new Promise((r) => setTimeout(r, 600))
-     const cards = [...document.querySelectorAll('.board-card')]
-     const every = (sel) => cards.every((card) => Boolean(card.querySelector(sel)))
-     return {
-       count: cards.length,
-       allHaveVs2022: every(
-         '.board-launch-btn.amber[title="Visual Studio 2022 (admin)"]'
-       ),
-       allHaveVs2026: every('.board-launch-btn.pink[title="Visual Studio 2026 (admin)"]')
-     }
-   })()`
-)
-check(
-  'board cards expose VS 2022 (admin) button (VSAD-03)',
-  boardVs.count > 0 && boardVs.allHaveVs2022 === true,
-  JSON.stringify(boardVs)
-)
-check(
-  'board cards expose VS 2026 (admin) button in its own tint (VS26-04)',
-  boardVs.count > 0 && boardVs.allHaveVs2026 === true,
-  JSON.stringify(boardVs)
-)
-
 ws.close()
 const failed = checks.filter((c) => !c.ok).length
 console.log(`\n${checks.length - failed}/${checks.length} checks passed`)

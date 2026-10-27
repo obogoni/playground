@@ -43,13 +43,13 @@ describe('ConfigStore', () => {
   })
 
   it('writes atomically, leaving no tmp file and a parseable config', () => {
-    new ConfigStore(dir).patch({ ui: { direction: 'board' } })
+    new ConfigStore(dir).patch({ ui: { direction: 'agents' } })
 
     const files = readdirSync(dir)
     expect(files).toContain('config.json')
     expect(files.filter((f) => f.endsWith('.tmp'))).toHaveLength(0)
     const onDisk = JSON.parse(readFileSync(join(dir, 'config.json'), 'utf8'))
-    expect(onDisk.ui.direction).toBe('board')
+    expect(onDisk.ui.direction).toBe('agents')
   })
 
   it('preserves unknown keys from newer app versions across a patch', () => {
@@ -59,12 +59,12 @@ describe('ConfigStore', () => {
       'utf8'
     )
 
-    new ConfigStore(dir).patch({ ui: { direction: 'board' } })
+    new ConfigStore(dir).patch({ ui: { direction: 'agents' } })
 
     const onDisk = JSON.parse(readFileSync(join(dir, 'config.json'), 'utf8'))
     expect(onDisk.ui).toEqual({
       theme: 'light',
-      direction: 'board',
+      direction: 'agents',
       defaultShell: 'pwsh',
       futureFlag: true
     })
@@ -96,4 +96,24 @@ describe('ConfigStore', () => {
     expect(result.ui).toEqual({ theme: 'light', direction: 'tree', defaultShell: 'pwsh' })
     expect(store.get()).toBe(result)
   })
+
+  it.each(['board', 'workflows', 'kanban'])(
+    'loads a removed or unknown direction %s as tree (RMV-05, RMV-06)',
+    (direction) => {
+      writeFileSync(join(dir, 'config.json'), JSON.stringify({ ui: { theme: 'light', direction } }))
+
+      const ui = new ConfigStore(dir).get().ui
+      expect(ui.direction).toBe('tree')
+      expect(ui.theme).toBe('light')
+    }
+  )
+
+  it.each(['tree', 'agents', 'files', 'hours'])(
+    'loads the direction %s unchanged (RMV-07)',
+    (direction) => {
+      writeFileSync(join(dir, 'config.json'), JSON.stringify({ ui: { direction } }))
+
+      expect(new ConfigStore(dir).get().ui.direction).toBe(direction)
+    }
+  )
 })
