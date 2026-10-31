@@ -157,7 +157,7 @@ task-link spec put "changing the folder its attribution reads" out of scope
 | -------------- | ----- | ----- | ------ |
 | SFWT-01 | P1 move (AC 1) | Tasks | In Tasks |
 | SFWT-02 | P1 move (AC 2) | Tasks | In Tasks |
-| SFWT-03 | P1 move (AC 3, edge cases 1-2) | Tasks | In Tasks |
+| SFWT-03 | P1 move (AC 3, edge cases 1-2) | Tasks | Implementing |
 | SFWT-04 | P1 move (AC 4) | Tasks | In Tasks |
 | SFWT-05 | P1 move (AC 5) | Tasks | In Tasks |
 | SFWT-06 | P1 move (AC 6) | Tasks | In Tasks |
@@ -165,7 +165,7 @@ task-link spec put "changing the folder its attribution reads" out of scope
 | SFWT-08 | P1 hours (AC 1, AC 3) | Tasks | In Tasks |
 | SFWT-09 | P1 hours (AC 2) | Tasks | In Tasks |
 | SFWT-10 | P1 hours (AC 4) | Tasks | In Tasks |
-| SFWT-11 | P1 renderer (AC 1-4) | Tasks | In Tasks |
+| SFWT-11 | P1 renderer (AC 1-4) | Tasks | Implementing |
 | SFWT-12 | Edge case 3 | Tasks | In Tasks |
 | SFWT-13 | Edge case 4 | Tasks | In Tasks |
 | SFWT-14 | Edge case 5 | Tasks | In Tasks |

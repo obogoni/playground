@@ -86,8 +86,8 @@ T16 → T17
 
 **Done when**:
 
-- [ ] Tests: subfolder match, case difference, mixed separators, `.wt-a` vs `.wt-ab`, nested worktrees (deepest wins), no match → null, empty list → null; `workCwdOf` with and without `followedPath`
-- [ ] Gate check passes: `npm test`
+- [x] Tests: subfolder match, case difference, mixed separators, `.wt-a` vs `.wt-ab`, nested worktrees (deepest wins), no match → null, empty list → null; `workCwdOf` with and without `followedPath`
+- [x] Gate check passes: `npm test`
 
 **Tests**: unit
 **Gate**: quick
