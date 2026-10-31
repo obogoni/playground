@@ -1,6 +1,7 @@
 import type { ActivityState, SessionView } from '../../../shared/config'
 import type { PinnedTaskView, WorkItemDetails } from '../../../shared/tasks'
 import type { WorkspaceNode } from '../../../shared/tree'
+import { workCwdOf } from '../../../shared/worktree-match'
 import { isolationLevelOf, normalizePath } from './isolation-level'
 import { deriveAttribution, linkedPinFor } from './session-attribution'
 import { rowLabel } from './session-name'
@@ -191,13 +192,15 @@ export function buildRailGroups(
   const byKey = new Map<string, PendingGroup>()
 
   for (const session of sessions) {
+    // Placed by the worktree it follows, else its launch folder (SFWT-11).
+    const workCwd = workCwdOf(session)
     const { branch, taskId, detached, linked, linkTitle } = deriveAttribution(
       tree,
-      session.cwd,
+      workCwd,
       session.task
     )
     // Precedence task → path missing → level → orphan (ISO-08, ISO-09).
-    const level = taskId === null && !session.pathMissing ? levelGroup(tree, session.cwd) : null
+    const level = taskId === null && !session.pathMissing ? levelGroup(tree, workCwd) : null
     const key = taskId !== null ? `task:${taskId}` : level ? level.key : `session:${session.id}`
     let group = byKey.get(key)
     if (!group) {
@@ -208,7 +211,7 @@ export function buildRailGroups(
               kind: 'task',
               level: null,
               taskId,
-              branch: branch ?? session.cwd,
+              branch: branch ?? workCwd,
               details: linkedPinFor(tasks, taskId)?.details ?? null,
               title: undefined,
               reason: null,
@@ -255,7 +258,7 @@ function orphanGroup(
   branch: string | null,
   detached: boolean
 ): PendingGroup {
-  const folder = folderLeaf(session.cwd)
+  const folder = folderLeaf(workCwdOf(session))
   const label = branch ?? folder
   const reason: OrphanReason = session.pathMissing ? 'missing' : detached ? 'detached' : 'untagged'
   const note =
@@ -342,7 +345,7 @@ function resolveRows(group: PendingGroup): RailRow[] {
       session,
       label: ambiguous ? `${label} ${ordinal}` : label,
       status,
-      tooltip: `${who} · ${detached || branch === null ? session.cwd : branch}${activityDetail(session)}`,
+      tooltip: `${who} · ${detached || branch === null ? workCwdOf(session) : branch}${activityDetail(session)}`,
       actions: rowActions(status)
     }
   })

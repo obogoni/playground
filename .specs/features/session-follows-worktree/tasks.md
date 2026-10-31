@@ -302,8 +302,8 @@ T16 → T17
 
 **Done when**:
 
-- [ ] Tests: a session launched at the workspace folder with a followed worktree groups under that worktree's branch; without a followed path, unchanged
-- [ ] Gate check passes: `npm test`
+- [x] Tests: a session launched at the workspace folder with a followed worktree groups under that worktree's branch; without a followed path, unchanged
+- [x] Gate check passes: `npm test`
 
 **Tests**: unit
 **Gate**: quick
