@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SEEDED_AGENTS } from '../shared/agents'
 import type { PersistedSession } from '../shared/config'
 import type { SessionTask } from '../shared/tasks'
+import { deepestContaining } from '../shared/worktree-match'
 import type { ActivityChange } from './activity-notification'
 import { ConfigStore } from './config-store'
 import { installDiagnostics, NOOP_DIAGNOSTICS } from './diagnostics'
@@ -699,7 +700,8 @@ describe('SessionManager lifecycle observer', () => {
       lifecycle: {
         started: (meta) => calls.push(`started:${meta.id}:${meta.agent}:${meta.cwd}`),
         ended: (id) => calls.push(`ended:${id}`),
-        taskChanged: (id, task) => calls.push(`taskChanged:${id}:${task?.id ?? null}`)
+        taskChanged: (id, task) => calls.push(`taskChanged:${id}:${task?.id ?? null}`),
+        followedChanged: (id, path) => calls.push(`followedChanged:${id}:${path}`)
       }
     })
     return { manager, calls, port }
@@ -784,7 +786,8 @@ describe('SessionManager task link', () => {
       lifecycle: {
         started: (meta) => started.push(meta),
         ended: () => {},
-        taskChanged: (id, task) => changed.push([id, task])
+        taskChanged: (id, task) => changed.push([id, task]),
+        followedChanged: () => {}
       }
     })
     return { manager, config, port, started, changed, emit, dir: root }
@@ -1578,5 +1581,345 @@ describe('SessionManager spawn with a prompt', () => {
       { id: view.id, agent: 'Claude', cwd: CWD, title: 'Claude · repo-feature', status: 'running' }
     ])
     expect(JSON.stringify(config.get())).not.toContain('line 2 ação')
+  })
+})
+
+describe('SessionManager follows the worktree the agent edits (SFWT)', () => {
+  const ROOT = 'D:\\work\\acme'
+  const FIX = 'D:\\work\\acme\\.wt-app-4821-fix-login'
+  const FIX_FILE = 'D:\\work\\acme\\.wt-app-4821-fix-login\\src\\login.ts'
+  const API = 'D:\\work\\acme\\.wt-api-4822-rate-limit'
+  const API_FILE = 'D:\\work\\acme\\.wt-api-4822-rate-limit\\src\\limit.ts'
+  const LINK: SessionTask = { id: 4821, title: 'Fix login' }
+
+  /** `match`/`resolve` over a fixed list; a worktree in `slow` answers once its promise settles. */
+  interface FakeWorktrees {
+    paths: string[]
+    slow: Map<string, Promise<void>>
+    match(path: string): string | null
+    resolve(path: string): Promise<string | null>
+  }
+
+  function fakeWorktrees(paths: string[]): FakeWorktrees {
+    const fake: FakeWorktrees = {
+      paths,
+      slow: new Map(),
+      match: (path) => deepestContaining(fake.paths, path),
+      resolve: async (path) => {
+        const hit = deepestContaining(fake.paths, path)
+        const gate = hit === null ? undefined : fake.slow.get(hit)
+        if (gate) await gate
+        return hit
+      }
+    }
+    return fake
+  }
+
+  function following(
+    opts: {
+      seed?: PersistedSession[]
+      fsExists?: (path: string) => boolean
+      /** `null` builds a manager without the worktrees dep (feature off). */
+      worktrees?: FakeWorktrees | null
+      onActivityChange?: (change: ActivityChange) => void
+    } = {}
+  ): {
+    manager: SessionManager
+    config: ConfigStore
+    port: ReturnType<typeof fakePort>
+    emit: EmitFnRecorder
+    started: PersistedSession[]
+    followed: Array<[string, string | null]>
+    taskChanges: Array<[string, SessionTask | null]>
+  } {
+    const dir = mkdtempSync(join(tmpdir(), 'sm-follow-'))
+    dirs.push(dir)
+    const config = new ConfigStore(dir)
+    if (opts.seed) config.patch({ sessions: opts.seed })
+    const port = fakePort()
+    const emit = recordingEmit()
+    const started: PersistedSession[] = []
+    const followed: Array<[string, string | null]> = []
+    const taskChanges: Array<[string, SessionTask | null]> = []
+    const worktrees =
+      opts.worktrees === undefined ? fakeWorktrees([ROOT, FIX, API]) : opts.worktrees
+    const manager = new SessionManager({
+      port,
+      config,
+      emit: emit as unknown as EmitFn,
+      fsExists: opts.fsExists ?? (() => true),
+      hooks: fakeHooks(),
+      onActivityChange: opts.onActivityChange,
+      lifecycle: {
+        started: (meta) => started.push(meta),
+        ended: () => {},
+        taskChanged: (id, task) => taskChanges.push([id, task]),
+        followedChanged: (id, path) => followed.push([id, path])
+      },
+      ...(worktrees === null ? {} : { worktrees })
+    })
+    return { manager, config, port, emit, started, followed, taskChanges }
+  }
+
+  const edit = (tool: string, filePath: string): Record<string, unknown> =>
+    hookEvent('PostToolUse', { tool_name: tool, tool_input: { file_path: filePath } })
+
+  /** Lets every pending follow decision settle. */
+  const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
+
+  const followedEvents = (emit: EmitFnRecorder): unknown[] =>
+    emit.events.filter((e) => e.channel === 'session:followed').map((e) => e.payload)
+
+  const persisted = (config: ConfigStore, id: string): PersistedSession | undefined =>
+    config.get().sessions.find((s) => s.id === id)
+
+  it('moves a session to the worktree its agent edits: persisted, announced and timed (SFWT-01, SFWT-07)', async () => {
+    const h = following()
+    const view = await h.manager.spawn('Claude', ROOT)
+
+    h.manager.handleHookEvent(view.id, edit('Write', FIX_FILE))
+    await settle()
+
+    expect(persisted(h.config, view.id)?.followedPath).toBe(FIX)
+    expect(persisted(h.config, view.id)?.cwd).toBe(ROOT)
+    expect(h.manager.list().find((s) => s.id === view.id)?.followedPath).toBe(FIX)
+    expect(followedEvents(h.emit)).toEqual([{ id: view.id, followedPath: FIX }])
+    expect(h.followed).toEqual([[view.id, FIX]])
+  })
+
+  it.each([
+    ['in the launch worktree (SFWT-04)', 'Edit', 'D:\\work\\acme\\README.md'],
+    ['outside every known worktree (SFWT-03)', 'Edit', 'E:\\scratch\\notes.md'],
+    ['with a tool that does not edit (SFWT-02)', 'Read', FIX_FILE]
+  ])('changes nothing for an event %s', async (_label, tool, filePath) => {
+    const h = following()
+    const view = await h.manager.spawn('Claude', ROOT)
+    const sessionsBefore = h.config.get().sessions
+
+    h.manager.handleHookEvent(view.id, edit(tool, filePath))
+    await settle()
+
+    expect(h.config.get().sessions).toEqual(sessionsBefore)
+    expect(persisted(h.config, view.id)).not.toHaveProperty('followedPath')
+    expect(followedEvents(h.emit)).toEqual([])
+    expect(h.followed).toEqual([])
+  })
+
+  it('changes nothing and emits nothing for another edit in the worktree it already follows (SFWT-05)', async () => {
+    const h = following()
+    const view = await h.manager.spawn('Claude', ROOT)
+    h.manager.handleHookEvent(view.id, edit('Write', FIX_FILE))
+    await settle()
+
+    h.manager.handleHookEvent(
+      view.id,
+      edit('Edit', 'D:\\work\\acme\\.wt-app-4821-fix-login\\README.md')
+    )
+    await settle()
+
+    expect(persisted(h.config, view.id)?.followedPath).toBe(FIX)
+    expect(followedEvents(h.emit)).toEqual([{ id: view.id, followedPath: FIX }])
+    expect(h.followed).toEqual([[view.id, FIX]])
+  })
+
+  it('never moves back on its own when the agent then edits in the launch worktree (SFWT-04)', async () => {
+    const h = following()
+    const view = await h.manager.spawn('Claude', ROOT)
+    h.manager.handleHookEvent(view.id, edit('Write', FIX_FILE))
+    await settle()
+
+    h.manager.handleHookEvent(view.id, edit('Edit', 'D:\\work\\acme\\README.md'))
+    await settle()
+
+    expect(persisted(h.config, view.id)?.followedPath).toBe(FIX)
+    expect(h.followed).toEqual([[view.id, FIX]])
+  })
+
+  it('moves again when the agent edits in a second worktree (SFWT-06)', async () => {
+    const h = following()
+    const view = await h.manager.spawn('Claude', ROOT)
+    h.manager.handleHookEvent(view.id, edit('Write', FIX_FILE))
+    await settle()
+
+    h.manager.handleHookEvent(view.id, edit('MultiEdit', API_FILE))
+    await settle()
+
+    expect(persisted(h.config, view.id)?.followedPath).toBe(API)
+    expect(followedEvents(h.emit)).toEqual([
+      { id: view.id, followedPath: FIX },
+      { id: view.id, followedPath: API }
+    ])
+    expect(h.followed).toEqual([
+      [view.id, FIX],
+      [view.id, API]
+    ])
+  })
+
+  it('applies edits in arrival order: a slow answer never undoes a later move (SFWT-13)', async () => {
+    const worktrees = fakeWorktrees([ROOT, FIX, API])
+    let release!: () => void
+    worktrees.slow.set(
+      FIX,
+      new Promise((resolve) => {
+        release = resolve
+      })
+    )
+    const h = following({ worktrees })
+    const view = await h.manager.spawn('Claude', ROOT)
+
+    h.manager.handleHookEvent(view.id, edit('Write', FIX_FILE))
+    h.manager.handleHookEvent(view.id, edit('Write', API_FILE))
+    await settle()
+    release()
+    await settle()
+
+    expect(persisted(h.config, view.id)?.followedPath).toBe(API)
+    expect(h.followed).toEqual([
+      [view.id, FIX],
+      [view.id, API]
+    ])
+  })
+
+  it('drops an answer that arrives after the session stopped', async () => {
+    const worktrees = fakeWorktrees([ROOT, FIX, API])
+    let release!: () => void
+    worktrees.slow.set(
+      FIX,
+      new Promise((resolve) => {
+        release = resolve
+      })
+    )
+    const h = following({ worktrees })
+    const view = await h.manager.spawn('Claude', ROOT)
+
+    h.manager.handleHookEvent(view.id, edit('Write', FIX_FILE))
+    const stopping = h.manager.stop(view.id)
+    h.port.handles[0].emitExit(0)
+    await stopping
+    release()
+    await settle()
+
+    expect(persisted(h.config, view.id)).not.toHaveProperty('followedPath')
+    expect(followedEvents(h.emit)).toEqual([])
+    expect(h.followed).toEqual([])
+  })
+
+  it('clearFollowed returns only the sessions following that worktree to their launch folder, without stopping them (SFWT-15)', async () => {
+    const h = following()
+    const onFix = await h.manager.spawn('Claude', ROOT)
+    const onApi = await h.manager.spawn('Claude', ROOT)
+    const unmoved = await h.manager.spawn('Claude', ROOT)
+    h.manager.handleHookEvent(onFix.id, edit('Write', FIX_FILE))
+    h.manager.handleHookEvent(onApi.id, edit('Write', API_FILE))
+    await settle()
+    h.followed.length = 0
+    h.emit.events.length = 0
+
+    h.manager.clearFollowed(FIX)
+
+    expect(persisted(h.config, onFix.id)).not.toHaveProperty('followedPath')
+    expect(persisted(h.config, onApi.id)?.followedPath).toBe(API)
+    expect(persisted(h.config, unmoved.id)).not.toHaveProperty('followedPath')
+    expect(followedEvents(h.emit)).toEqual([{ id: onFix.id, followedPath: null }])
+    expect(h.followed).toEqual([[onFix.id, null]])
+    expect(h.manager.list().map((s) => s.status)).toEqual(['running', 'running', 'running'])
+    expect(h.port.handles.map((handle) => handle.killed)).toEqual([false, false, false])
+  })
+
+  it('drops a persisted followed path that no longer exists on load (SFWT-15)', () => {
+    const gone = 'D:\\work\\acme\\.wt-app-4700-old'
+    const h = following({
+      seed: [
+        {
+          id: 'a',
+          agent: 'Claude',
+          cwd: ROOT,
+          title: 'Claude · acme',
+          status: 'stopped',
+          followedPath: gone
+        },
+        {
+          id: 'b',
+          agent: 'Claude',
+          cwd: ROOT,
+          title: 'Claude · acme',
+          status: 'stopped',
+          followedPath: FIX
+        }
+      ],
+      fsExists: (path) => path !== gone
+    })
+
+    expect(persisted(h.config, 'a')).not.toHaveProperty('followedPath')
+    expect(persisted(h.config, 'b')?.followedPath).toBe(FIX)
+  })
+
+  it('respawns in the launch folder and keeps the followed path for the tracker (SFWT-16, SFWT-10)', async () => {
+    const h = following()
+    const view = await h.manager.spawn('Claude', ROOT)
+    h.manager.handleHookEvent(view.id, edit('Write', FIX_FILE))
+    await settle()
+    const stopping = h.manager.stop(view.id)
+    h.port.handles[0].emitExit(0)
+    await stopping
+    h.started.length = 0
+
+    await h.manager.respawn(view.id)
+
+    expect(h.port.handles[1].plan.cwd).toBe(ROOT)
+    expect(persisted(h.config, view.id)?.followedPath).toBe(FIX)
+    expect(h.started.map((m) => [m.id, m.cwd, m.followedPath])).toEqual([[view.id, ROOT, FIX]])
+  })
+
+  it('duplicates into the launch folder with no followed path (SFWT-16)', async () => {
+    const h = following()
+    const src = await h.manager.spawn('Claude', ROOT)
+    h.manager.handleHookEvent(src.id, edit('Write', FIX_FILE))
+    await settle()
+    h.started.length = 0
+
+    const copy = await h.manager.duplicate(src.id)
+
+    expect(h.port.handles[1].plan.cwd).toBe(ROOT)
+    expect(persisted(h.config, copy.id)?.cwd).toBe(ROOT)
+    expect(persisted(h.config, copy.id)).not.toHaveProperty('followedPath')
+    expect(h.started).toHaveLength(1)
+    expect(h.started[0]).not.toHaveProperty('followedPath')
+  })
+
+  it('leaves the hand-set task unchanged when the session moves (SFWT-16)', async () => {
+    const h = following()
+    const view = await h.manager.spawn('Claude', ROOT, undefined, LINK)
+
+    h.manager.handleHookEvent(view.id, edit('Write', FIX_FILE))
+    await settle()
+
+    expect(persisted(h.config, view.id)?.task).toEqual(LINK)
+    expect(persisted(h.config, view.id)?.followedPath).toBe(FIX)
+    expect(h.taskChanges).toEqual([])
+  })
+
+  it('reports the followed worktree as the folder of later activity changes', async () => {
+    const changes: ActivityChange[] = []
+    const h = following({ onActivityChange: (change) => changes.push(change) })
+    const view = await h.manager.spawn('Claude', ROOT)
+    h.manager.handleHookEvent(view.id, edit('Write', FIX_FILE))
+    await settle()
+
+    h.manager.handleHookEvent(view.id, hookEvent('Stop'))
+
+    expect(changes.at(-1)?.cwd).toBe(FIX)
+  })
+
+  it('follows nothing without the worktrees dependency', async () => {
+    const h = following({ worktrees: null })
+    const view = await h.manager.spawn('Claude', ROOT)
+
+    h.manager.handleHookEvent(view.id, edit('Write', FIX_FILE))
+    await settle()
+
+    expect(persisted(h.config, view.id)).not.toHaveProperty('followedPath')
+    expect(followedEvents(h.emit)).toEqual([])
+    expect(h.followed).toEqual([])
   })
 })

@@ -8,6 +8,7 @@ import { DEFAULT_CONFIG } from '../../shared/config'
 import type { PinnedTaskView, TasksSnapshot } from '../../shared/tasks'
 import { taskIdFromBranch } from '../../shared/tasks'
 import type { WorkspaceNode } from '../../shared/tree'
+import { launchedIn, workCwdOf } from '../../shared/worktree-match'
 import { AgentsView } from './components/AgentsView'
 import { FilesView } from './components/FilesView'
 import { HoursView } from './components/HoursView'
@@ -346,7 +347,7 @@ function App(): JSX.Element {
         const after = activity?.state
         seen.set(id, after)
         if (!session) return
-        const path = worktreeForTurnEnd(current, before, after, session.cwd)
+        const path = worktreeForTurnEnd(current, before, after, workCwdOf(session))
         if (path) recount(path)
       }),
     [recount]
@@ -384,6 +385,10 @@ function App(): JSX.Element {
 
   // A tree refresh auto-pinned tasks its worktree branches carry (APIN-06).
   useEffect(() => api.on('tasks:changed', ({ snapshot }) => setTasks(snapshot)), [])
+
+  // A session moved to a worktree the agent may have just created, which the
+  // tree does not hold until it is read again (SFWT-11, SFWT-12).
+  useEffect(() => api.on('session:followed', () => refreshTree()), [refreshTree])
 
   const addWorkspace = useLatestCallback((): void => {
     api
@@ -459,7 +464,8 @@ function App(): JSX.Element {
    */
   const selectSession = (id: string | null): void => {
     setSelectedSessionId(id)
-    const cwd = sessions.find((session) => session.id === id)?.cwd ?? null
+    const session = sessions.find((s) => s.id === id)
+    const cwd = session ? workCwdOf(session) : null
     const worktreeId = worktreeIdForPath(tree, cwd)
     if (worktreeId) setSelectedId(worktreeId)
   }
@@ -569,7 +575,8 @@ function App(): JSX.Element {
                 worktree={selected.worktree}
                 linkedTaskId={linkedTaskId}
                 linkedPin={linkedPin}
-                sessions={sessions.filter((s) => s.cwd === selected.worktree.path)}
+                sessions={sessions.filter((s) => workCwdOf(s) === selected.worktree.path)}
+                removalSessions={launchedIn(sessions, selected.worktree.path)}
                 time={time.snapshot}
                 onSpawnAgent={() => openNewSession({ cwd: selected.worktree.path })}
                 onOpenSession={openSession}
@@ -634,10 +641,10 @@ function App(): JSX.Element {
             pathMissing={selectedId !== null && selected === null}
             files={files}
             onToast={setToast}
-            // The remove-worktree confirmation's rule for "a session runs in
-            // this worktree" (WorktreeDetail), so the two dialogs agree (FDSC-12).
+            // Sessions working in this worktree, launched or followed (FDSC-12,
+            // SFWT-11). Removal stops a narrower set, `launchedIn` (SFWT-15).
             runningSessions={sessions.filter(
-              (s) => s.cwd === selected?.worktree.path && s.status === 'running'
+              (s) => workCwdOf(s) === selected?.worktree.path && s.status === 'running'
             )}
             // The status bar's own refresh after a git operation (FDSC-31).
             onDiscarded={refreshTree}

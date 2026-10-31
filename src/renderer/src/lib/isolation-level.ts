@@ -1,4 +1,5 @@
 import type { RepoNode, WorkspaceNode, WorktreeNode } from '../../../shared/tree'
+import { workCwdOf } from '../../../shared/worktree-match'
 
 /**
  * Where a session runs, derived from its cwd against the tree at render time
@@ -71,11 +72,12 @@ export function repoSpawnCwd(repo: RepoNode): string | null {
  * The tree node id the session detail's "Open worktree" selects, or null to
  * hide the button: a worktree session opens its worktree, a repo session its
  * primary checkout, and a workspace session has no node to select (ISO-10).
+ * A session that follows a worktree opens that one (SFWT-11).
  */
 export function openWorktreeTarget(
   tree: WorkspaceNode[],
-  session: { cwd: string; pathMissing: boolean }
+  session: { cwd: string; followedPath?: string; pathMissing: boolean }
 ): string | null {
   if (session.pathMissing) return null
-  return isolationLevelOf(tree, session.cwd)?.worktree?.id ?? null
+  return isolationLevelOf(tree, workCwdOf(session))?.worktree?.id ?? null
 }

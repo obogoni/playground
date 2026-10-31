@@ -7,6 +7,7 @@ import type { PromptEntry } from '../../../shared/prompt-template'
 import type { PinnedTaskView, SessionTask } from '../../../shared/tasks'
 import type { PeriodTaskChoice, TimeSnapshot } from '../../../shared/time'
 import type { WorkspaceNode } from '../../../shared/tree'
+import { workCwdOf } from '../../../shared/worktree-match'
 import { agentTileStyle } from '../lib/agent-color'
 import { openWorktreeTarget } from '../lib/isolation-level'
 import { deriveAttribution, linkedPinFor } from '../lib/session-attribution'
@@ -162,9 +163,11 @@ function SessionDetail({
   onToast,
   onSetTask
 }: SessionDetailProps): JSX.Element {
+  // Attributed to the worktree it follows; the cwd label, the terminal and
+  // "Respawn in" below keep the launch folder (SFWT-11, SFWT-16).
   const { branch, taskId, detached, linked, linkTitle } = deriveAttribution(
     tree,
-    session.cwd,
+    workCwdOf(session),
     session.task
   )
   const pin = linkedPinFor(tasks, taskId)

@@ -64,6 +64,8 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
     const offExit = api.on('session:exit', refreshSessions)
     // A link set in main, e.g. by the session's agent (ATSK-06).
     const offTask = api.on('session:task', refreshSessions)
+    // The agent edited in another worktree; the session moves there (SFWT-11).
+    const offFollowed = api.on('session:followed', refreshSessions)
     const offActivity = api.on('session:activity', ({ id, activity }) => {
       setSessions((prev) => applyActivity(prev, id, activity))
     })
@@ -74,6 +76,7 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
       offStatus()
       offExit()
       offTask()
+      offFollowed()
       offActivity()
       offName()
     }

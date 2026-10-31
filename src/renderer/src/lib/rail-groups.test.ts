@@ -970,6 +970,66 @@ describe('buildRailGroups level groups (ISO-08, ISO-09)', () => {
     expect(group.reason).toBe('detached')
     expect(group.note).toBe('detached · Work')
   })
+
+  // A session launched at the workspace folder whose agent edits in a worktree
+  // (SFWT-11). Without `followedPath` it groups by `cwd`, as the tests above show.
+  it('groups a workspace session that follows a task worktree under that task (SFWT-11)', () => {
+    const groups = buildRailGroups(
+      [session({ id: 's1', cwd: 'M:/Work', followedPath: TASK_MAIN.path })],
+      levelTree,
+      pinned
+    )
+    const group = taskGroup(groups[0])
+
+    expect(groups.map((g) => g.key)).toEqual(['task:24173'])
+    expect(group.branch).toBe(TASK_MAIN.branch)
+    expect(group.rows[0].tooltip).toBe(`Claude · 24173-fix-login · ${TASK_MAIN.branch}`)
+  })
+
+  it('groups a workspace session that follows an untagged worktree by that worktree, not the workspace (SFWT-11)', () => {
+    const groups = buildRailGroups(
+      [session({ id: 's1', cwd: 'M:/Work', followedPath: LINKED.path })],
+      levelTree,
+      []
+    )
+    const group = orphanGroup(groups[0])
+
+    expect(group.key).toBe('session:s1')
+    expect(group.reason).toBe('untagged')
+    expect(group.label).toBe('spike')
+  })
+
+  it('names the followed folder when the followed worktree is not in the tree (SFWT-11)', () => {
+    const gone = 'M:/Work/.wt-gone'
+    const groups = buildRailGroups(
+      [session({ id: 's1', cwd: 'M:/Work', followedPath: gone })],
+      levelTree,
+      []
+    )
+    const group = orphanGroup(groups[0])
+
+    expect(group.reason).toBe('detached')
+    expect(group.note).toBe('detached · .wt-gone')
+    expect(group.rows[0].tooltip).toBe(`Claude · 24173-fix-login · ${gone}`)
+  })
+
+  it('heads a linked session whose followed folder has no branch with that folder (SFWT-11)', () => {
+    const gone = 'M:/Work/.wt-gone'
+    const groups = buildRailGroups(
+      [
+        session({
+          id: 's1',
+          cwd: 'M:/Work',
+          followedPath: gone,
+          task: { id: 4821, title: 'Brainstorm' }
+        })
+      ],
+      levelTree,
+      []
+    )
+
+    expect(taskGroup(groups[0]).branch).toBe(gone)
+  })
 })
 
 describe('railRowEqual (PERF-09)', () => {

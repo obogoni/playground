@@ -1,6 +1,7 @@
 import type { AppConfig, SessionView } from '../../../shared/config'
 import type { SyncState } from '../../../shared/git'
 import type { WorkspaceNode } from '../../../shared/tree'
+import { workCwdOf } from '../../../shared/worktree-match'
 import { relativeTime } from './relative-time'
 import { findWorktree, type SelectedWorktree } from './tree-selection'
 
@@ -67,8 +68,10 @@ export function barTargetFor(input: BarTargetInput): BarTarget {
   if (direction === 'agents') {
     const session = sessions.find((s) => s.id === selectedSessionId)
     if (session) {
-      const selected = worktreeContaining(tree, session.cwd)
-      return selected ? { kind: 'worktree', selected } : { kind: 'folder', path: session.cwd }
+      // The worktree the session follows, else its launch folder (SFWT-11).
+      const folder = workCwdOf(session)
+      const selected = worktreeContaining(tree, folder)
+      return selected ? { kind: 'worktree', selected } : { kind: 'folder', path: folder }
     }
   }
   const selected = findWorktree(tree, selectedId)
