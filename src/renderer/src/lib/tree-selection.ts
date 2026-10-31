@@ -1,3 +1,4 @@
+import { taskIdFromBranch } from '../../../shared/tasks'
 import type { WorkspaceNode, WorktreeNode } from '../../../shared/tree'
 
 export interface SelectedWorktree {
@@ -24,6 +25,26 @@ export function findWorktree(tree: WorkspaceNode[], id: string | null): Selected
     }
   }
   return null
+}
+
+/** Every worktree whose branch carries the given task id, in tree order (STWK-04, SBTK-01). */
+export function worktreesForTask(tree: WorkspaceNode[], taskId: number): SelectedWorktree[] {
+  const found: SelectedWorktree[] = []
+  for (const workspace of tree) {
+    for (const repo of workspace.repos) {
+      for (const worktree of repo.worktrees) {
+        if (taskIdFromBranch(worktree.branch) === taskId) {
+          found.push({
+            workspaceName: workspace.displayName,
+            repoName: repo.name,
+            repoPath: repo.path,
+            worktree
+          })
+        }
+      }
+    }
+  }
+  return found
 }
 
 /** Keep the current selection only while its worktree still exists in the tree. */

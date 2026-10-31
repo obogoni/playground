@@ -3,7 +3,7 @@ import type { SyncState } from '../../../shared/git'
 import type { WorkspaceNode } from '../../../shared/tree'
 import { workCwdOf } from '../../../shared/worktree-match'
 import { relativeTime } from './relative-time'
-import { findWorktree, type SelectedWorktree } from './tree-selection'
+import { findWorktree, worktreesForTask, type SelectedWorktree } from './tree-selection'
 
 /** What the status bar describes (STBR-02..05). */
 export type BarTarget =
@@ -68,6 +68,11 @@ export function barTargetFor(input: BarTargetInput): BarTarget {
   if (direction === 'agents') {
     const session = sessions.find((s) => s.id === selectedSessionId)
     if (session) {
+      // A session that follows nothing shows its task's only worktree (SBTK-01, 04).
+      if (!session.followedPath && session.task) {
+        const forTask = worktreesForTask(tree, session.task.id)
+        if (forTask.length === 1) return { kind: 'worktree', selected: forTask[0] }
+      }
       // The worktree the session follows, else its launch folder (SFWT-11).
       const folder = workCwdOf(session)
       const selected = worktreeContaining(tree, folder)

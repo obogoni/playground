@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { SessionView } from '../../../shared/config'
+import type { AppConfig, SessionView } from '../../../shared/config'
 import type { WorkspaceNode, WorktreeNode } from '../../../shared/tree'
 import type { SyncState } from '../../../shared/git'
 import { barTargetFor, fetchAgeLabel, splitBranch, syncSectionFor } from './status-bar'
@@ -133,6 +133,100 @@ describe('barTargetFor', () => {
       kind: 'folder',
       path: 'C:/work/acme/.wt-gone'
     })
+  })
+
+  // A session launched at the workspace root, outside every worktree, linked to a task.
+  const withTask = (task: number | null, extra: Partial<SessionView> = {}): SessionView => ({
+    ...session('s', 'C:/work/acme'),
+    ...(task === null ? {} : { task: { id: task, title: 'Fix login redirect' } }),
+    ...extra
+  })
+  const taskTree: WorkspaceNode[] = [
+    {
+      ...tree[0],
+      repos: [
+        {
+          ...tree[0].repos[0],
+          worktrees: [
+            ...tree[0].repos[0].worktrees,
+            wt('C:/work/acme/widget-777', 'user/dev/4821-fix-login/777-other')
+          ]
+        }
+      ]
+    }
+  ]
+  const taskTargetFor = (
+    s: SessionView,
+    worktrees = taskTree,
+    direction: AppConfig['ui']['direction'] = 'agents'
+  ): ReturnType<typeof barTargetFor> =>
+    barTargetFor({
+      direction,
+      tree: worktrees,
+      selectedId: direction === 'agents' ? null : 'C:/work/acme/widget',
+      sessions: [s],
+      selectedSessionId: 's'
+    })
+
+  it("shows the linked task's only worktree when the session follows none (SBTK-01)", () => {
+    const target = taskTargetFor(withTask(12345))
+    expect(target.kind).toBe('worktree')
+    if (target.kind !== 'worktree') return
+    expect(target.selected.workspaceName).toBe('Acme')
+    expect(target.selected.repoName).toBe('widget')
+    expect(target.selected.repoPath).toBe('C:/work/acme/widget')
+    expect(target.selected.worktree.path).toBe('C:/work/acme/widget-12345')
+    expect(target.selected.worktree.branch).toBe('user/dev/4821-fix-login/12345-endpoint')
+  })
+
+  it("keeps the followed worktree over the linked task's worktree (SBTK-02)", () => {
+    const target = taskTargetFor(withTask(12345, { followedPath: 'C:/work/acme/widget-777' }))
+    expect(target.kind).toBe('worktree')
+    if (target.kind !== 'worktree') return
+    expect(target.selected.worktree.path).toBe('C:/work/acme/widget-777')
+  })
+
+  it('keeps a followed folder outside every worktree over the linked task (SBTK-02)', () => {
+    expect(taskTargetFor(withTask(12345, { followedPath: 'C:/work/acme/.wt-gone' }))).toEqual({
+      kind: 'folder',
+      path: 'C:/work/acme/.wt-gone'
+    })
+  })
+
+  it('describes the launch folder when the session has no linked task (SBTK-03)', () => {
+    expect(taskTargetFor(withTask(null))).toEqual({ kind: 'folder', path: 'C:/work/acme' })
+  })
+
+  it("describes the launch folder when no worktree carries the task's id (SBTK-04)", () => {
+    expect(taskTargetFor(withTask(99999))).toEqual({ kind: 'folder', path: 'C:/work/acme' })
+  })
+
+  it("describes the launch folder when several worktrees carry the task's id (SBTK-04)", () => {
+    const twice: WorkspaceNode[] = [
+      ...taskTree,
+      {
+        id: 'c:/work/contoso',
+        path: 'C:/work/contoso',
+        displayName: 'Contoso',
+        repos: [
+          {
+            name: 'gadget',
+            path: 'C:/work/contoso/gadget',
+            worktrees: [wt('C:/work/contoso/gadget-12345', 'user/dev/4821-fix-login/12345-ui')]
+          }
+        ]
+      }
+    ]
+    expect(taskTargetFor(withTask(12345), twice)).toEqual({ kind: 'folder', path: 'C:/work/acme' })
+  })
+
+  it("ignores the session's task outside Agents and describes the tree selection (SBTK-05)", () => {
+    for (const direction of ['tree', 'files', 'hours'] as const) {
+      const target = taskTargetFor(withTask(12345), taskTree, direction)
+      expect(target.kind, direction).toBe('worktree')
+      if (target.kind !== 'worktree') return
+      expect(target.selected.worktree.path, direction).toBe('C:/work/acme/widget')
+    }
   })
 
   it('returns the tree-selected worktree in every other direction, ignoring the session (STBR-02)', () => {
