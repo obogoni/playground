@@ -254,8 +254,8 @@ T16 → T17
 
 **Done when**:
 
-- [ ] Wiring added; no new logic beyond calls
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Wiring added; no new logic beyond calls
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full

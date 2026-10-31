@@ -41,6 +41,7 @@ import { readCommits, readSyncState, runGitOp } from './git-sync'
 import { runHookShell } from './hook-shell'
 import { checkIgnored } from './ignore-check'
 import { emit, handle, onSend } from './ipc'
+import { KnownWorktrees } from './known-worktrees'
 import { purgePasteDir } from './paste-temp'
 import { checkCreatePaths } from './path-limits'
 import { ensurePromptsFolder, listPrompts } from './prompt-library'
@@ -68,7 +69,13 @@ import { buildTree } from './tree'
 import { UpdateService } from './update-service'
 import { windowOpenDecision } from './url-policy'
 import { watchPort } from './watch-port'
-import { changedFilesOf, createWorktree, removeWorktree, worktreeStatus } from './worktree-manager'
+import {
+  changedFilesOf,
+  createWorktree,
+  listWorktrees,
+  removeWorktree,
+  worktreeStatus
+} from './worktree-manager'
 import { workspaceTemplates } from './workspace-config'
 import { runAutoPin } from './worktree-tasks'
 import { runLinkedPin } from './linked-task-pin'
@@ -369,12 +376,27 @@ app.whenReady().then(() => {
     onEvent: (worktreePath) => recounts.notify(worktreePath),
     onDropped: (worktreePath) => recounts.forget(worktreePath)
   })
+  // The worktrees a session can follow (SFWT-01): fed by every tree build; a
+  // miss inside a workspace lists its repos once, paths only, no change counts
+  // (SFWT-12, SFWT-14).
+  const knownWorktrees = new KnownWorktrees({
+    reread: async (workspacePath) => {
+      const repos = await scanRepos(workspacePath)
+      const lists = await Promise.all(
+        repos.map((repo) => listWorktrees(repo.path, () => Promise.resolve(null)))
+      )
+      return lists.flat().map((wt) => wt.path)
+    },
+    logError: (err) => console.error('[sessions] re-reading worktrees failed', err)
+  })
   handle('tree:get', async () => {
     // Each worktree's count waits its turn in the scheduler (RCNT-17).
     const tree = await buildTree(registry, { countChanges: (p) => recounts.request(p) })
-    void gitStateWatcher.sync(
-      tree.flatMap((ws) => ws.repos.flatMap((repo) => repo.worktrees.map((wt) => wt.path)))
+    const worktreePaths = tree.flatMap((ws) =>
+      ws.repos.flatMap((repo) => repo.worktrees.map((wt) => wt.path))
     )
+    void gitStateWatcher.sync(worktreePaths)
+    knownWorktrees.replace({ workspaces: tree.map((ws) => ws.path), worktrees: worktreePaths })
     // APIN-05: pin tasks the worktree branches carry, without holding up the tree.
     void runAutoPin(tree, {
       ado: () => configStore.get().ado,
@@ -413,9 +435,13 @@ app.whenReady().then(() => {
   )
   // BSLG-23: the dialogs ask the create's own path check as the name changes.
   handle('worktrees:check-paths', (req) => checkCreatePaths(req).then((problem) => ({ problem })))
-  handle('worktrees:remove', ({ repoPath, worktreePath, force }) =>
-    removeWorktree(repoPath, worktreePath, { force })
-  )
+  handle('worktrees:remove', async ({ repoPath, worktreePath, force }) => {
+    const result = await removeWorktree(repoPath, worktreePath, { force })
+    // Sessions that followed it go back to their launch folder; they are not
+    // stopped, since their PTY runs there (SFWT-15).
+    if (result.ok) sessionManager?.clearFollowed(worktreePath)
+    return result
+  })
   handle('worktrees:changes', ({ worktreePath }) => changedFilesOf(worktreePath))
   // A turn end's recount skips the quiet period but keeps the single flight (RCNT-13).
   handle('worktrees:status', ({ worktreePath }) => recounts.request(worktreePath))
@@ -733,6 +759,9 @@ app.whenReady().then(() => {
     fsExists: existsSync,
     lifecycle: tracker,
     hooks: activityHooks,
+    // `session:followed` is also the renderer's hint that the tree may lack a
+    // worktree the agent just created (SFWT-12).
+    worktrees: knownWorktrees,
     // handle() is async since it looks the task up; a failure after the lookup
     // (in showOs, say) must be logged, not left as an unhandled rejection.
     onActivityChange: (change) => {
