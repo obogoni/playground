@@ -202,9 +202,10 @@ describe('barTargetFor', () => {
   })
 
   it("matches the task's id, not a number that only appears in a branch (SBTK-04)", () => {
-    // `123` is a prefix of `12345-endpoint`; `4821` is the parent segment of both branches.
+    // `123` is a prefix of `12345-endpoint`.
     expect(taskTargetFor(withTask(123))).toEqual({ kind: 'folder', path: 'C:/work/acme' })
-    expect(taskTargetFor(withTask(4821))).toEqual({ kind: 'folder', path: 'C:/work/acme' })
+    // In the base tree only `widget-12345` has the parent segment `4821-fix-login`.
+    expect(taskTargetFor(withTask(4821), tree)).toEqual({ kind: 'folder', path: 'C:/work/acme' })
   })
 
   it("shows the task's worktree over a launch worktree that is another one (SBTK-01)", () => {
