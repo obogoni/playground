@@ -76,11 +76,11 @@ them later that a session is waiting: the taskbar icon looks the same either way
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| TBDT-01 | P1 (AC 1, edge cases 1 and 3) | Execute | Pending |
-| TBDT-02 | P1 (AC 2) | Execute | Pending |
+| TBDT-01 | P1 (AC 1, edge cases 1 and 3) | Execute | Implementing |
+| TBDT-02 | P1 (AC 2) | Execute | Implementing |
 | TBDT-03 | P1 (AC 3, edge case 2) | Execute | Implementing |
 | TBDT-04 | P1 (AC 4) | Execute | Implementing |
-| TBDT-05 | P1 (AC 5) | Execute | Pending |
+| TBDT-05 | P1 (AC 5) | Execute | Implementing |
 
 **Coverage:** 5 total, 5 mapped to Execute, 0 unmapped
 

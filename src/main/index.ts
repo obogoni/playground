@@ -1,4 +1,13 @@
-import { app, shell, clipboard, dialog, BrowserWindow, Notification, powerMonitor } from 'electron'
+import {
+  app,
+  shell,
+  clipboard,
+  dialog,
+  BrowserWindow,
+  nativeImage,
+  Notification,
+  powerMonitor
+} from 'electron'
 import { execFile, spawn } from 'node:child_process'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
@@ -9,6 +18,7 @@ import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
+import unseenDot from '../../resources/unseen-dot.png?asset'
 import { readNotificationPrefs } from '../shared/notifications'
 import type { PeriodSnapshotFields } from '../shared/time'
 import type { TasksSnapshot } from '../shared/tasks'
@@ -59,6 +69,7 @@ import { SessionManager, type ActivityHooks, type EmitFn } from './session-manag
 import { LinkOpener } from './link-opener'
 import { SessionNamePoller } from './session-name-poller'
 import { SessionNotifier } from './session-notifier'
+import { UnseenBadge } from './unseen-badge'
 import { ShortcutLauncher, spawnDetached } from './shortcut-launcher'
 import { openPinnedTask, TaskBoard } from './task-board'
 import { TimeLogStore } from './time-log-store'
@@ -206,6 +217,8 @@ let stopHookServer: (() => Promise<void>) | null = null
 let namePoller: SessionNamePoller | null = null
 /** Owns every PTY, in a utility process so ConPTY creation never blocks main (PTYH-01). */
 let ptyHost: PtyHostClient | null = null
+/** The taskbar dot for notifications raised while the window was away (TBDT). */
+let unseenBadge: UnseenBadge | null = null
 
 function createWindow(): void {
   // Create the browser window.
@@ -225,6 +238,11 @@ function createWindow(): void {
 
   win.on('ready-to-show', () => {
     win.show()
+  })
+
+  // Back at the window, the user has seen what the dot announced (TBDT-03).
+  win.on('focus', () => {
+    unseenBadge?.clear()
   })
 
   // Every new window is denied; an https link one asked for opens in the
@@ -655,6 +673,18 @@ app.whenReady().then(() => {
   powerMonitor.on('resume', () => tracker.resumeFromSuspend())
   // lock-screen / unlock-screen are deliberately not subscribed (TIME-08).
 
+  // The overlay exists only on the Windows taskbar, and a gone window has none (TBDT-05).
+  const setOverlay = (on: boolean): void => {
+    if (process.platform !== 'win32' || !mainWindow || mainWindow.isDestroyed()) return
+    if (on) mainWindow.setOverlayIcon(nativeImage.createFromPath(unseenDot), 'Unseen notifications')
+    else mainWindow.setOverlayIcon(null, '')
+  }
+  const badge = new UnseenBadge({
+    show: () => setOverlay(true),
+    clear: () => setOverlay(false)
+  })
+  unseenBadge = badge
+
   const sessionNotifier = new SessionNotifier({
     prefs: () => readNotificationPrefs(configStore.get().ui),
     windowFocused,
@@ -662,6 +692,7 @@ app.whenReady().then(() => {
     linkedTask: async (cwd) => linkTask(await readBranch(cwd), taskBoard.list().tasks),
     showOs,
     reveal: revealWindow,
+    flagUnseen: () => badge.flag(),
     emit: emitToWindow
   })
 
