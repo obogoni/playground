@@ -385,7 +385,7 @@ T16 → T17
 
 ### T14: Worktree lists and turn-end recount
 
-**What**: Worktree detail and Files session lists, the running filter and `worktreeForTurnEnd` read `workCwdOf`.
+**What**: The worktree detail session list, the Files running-session filter, the worktree a picked session selects and `worktreeForTurnEnd` read `workCwdOf`. `App.tsx` also subscribes to `session:followed` and refreshes the tree (`refreshTree` from `use-tree.ts`, as on window focus): main sends no tree-refresh event, and a worktree the agent just created is not in the tree until it is read again.
 **Where**: `src/renderer/src/App.tsx`
 **Depends on**: T13
 **Reuses**: `workCwdOf`
@@ -398,8 +398,9 @@ T16 → T17
 
 **Done when**:
 
-- [ ] Four reads switched
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Four reads switched (detail list, Files running filter, session pick, turn-end recount)
+- [x] `session:followed` refreshes the tree; the subscription is released on unmount
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full
