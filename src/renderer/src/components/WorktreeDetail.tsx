@@ -8,7 +8,7 @@ import type { WorktreeNode } from '../../../shared/tree'
 import type { ChangedFile, RemovalLeftover } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { badgeTypeOf, stateClass, typeClass } from '../lib/task-pills'
-import { worktreeTotalMs } from '../lib/time-totals'
+import { worktreeClockLive, worktreeClockMs } from '../lib/time-totals'
 import { Icon } from './Icon'
 import type { IconName } from './Icon'
 import { RemoveWorktreeConfirm } from './RemoveWorktreeConfirm'
@@ -231,8 +231,8 @@ export function WorktreeDetail({
           {worktree.isDefault && <span className="detail-pill neutral">primary</span>}
           <TotalClock
             className="detail-pill neutral detail-time"
-            totalAt={(now) => worktreeTotalMs(time, worktree.path, now)}
-            live={time.open.some((p) => p.cwd.toLowerCase() === worktree.path.toLowerCase())}
+            totalAt={(now) => worktreeClockMs(time, worktree.path, linkedTaskId, now)}
+            live={worktreeClockLive(time, worktree.path, linkedTaskId)}
           />
         </div>
 

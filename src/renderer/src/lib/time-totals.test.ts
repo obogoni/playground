@@ -5,6 +5,8 @@ import {
   intervalsOf,
   sessionTotalMs,
   taskTotalMs,
+  worktreeClockLive,
+  worktreeClockMs,
   worktreeTotalMs
 } from './time-totals'
 
@@ -147,5 +149,72 @@ describe('taskTotalMs', () => {
 
   it('is zero for a task with no time (TIME-30)', () => {
     expect(taskTotalMs(snap({}), 12345, at(14))).toBe(0)
+  })
+})
+
+const ROOT = 'D:\\acme'
+
+describe('worktreeClockMs', () => {
+  it("shows the linked task's time recorded in another folder (WTCK-01, WTCK-05)", () => {
+    const s = snap({ periods: [closed({ cwd: ROOT, start: at(9), end: at(10) })] })
+    expect(worktreeClockMs(s, WT, 12345, at(12))).toBe(HOUR)
+  })
+
+  it('counts only the periods carrying its task, not the rest of its folder (WTCK-01)', () => {
+    const s = snap({
+      periods: [
+        closed({ start: at(9), end: at(10) }),
+        closed({ taskId: 777, start: at(10), end: at(11) }),
+        closed({ taskId: null, start: at(11), end: at(12) })
+      ]
+    })
+    expect(worktreeClockMs(s, WT, 12345, at(13))).toBe(HOUR)
+  })
+
+  it('counts two overlapping sessions of the task once (WTCK-01)', () => {
+    const s = snap({
+      periods: [
+        closed({ sessionId: 's1', cwd: ROOT, start: at(9), end: at(10) }),
+        closed({ sessionId: 's2', cwd: ROOT, start: at(9, 30), end: at(10) })
+      ]
+    })
+    expect(worktreeClockMs(s, WT, 12345, at(12))).toBe(HOUR)
+  })
+
+  it('is zero for a linked task with no time (WTCK-01)', () => {
+    const s = snap({ periods: [closed({ taskId: 777, start: at(9), end: at(10) })] })
+    expect(worktreeClockMs(s, WT, 12345, at(12))).toBe(0)
+  })
+
+  it('sums the folder, case-insensitively, when the branch names no task (WTCK-02)', () => {
+    const s = snap({
+      periods: [
+        closed({ cwd: 'd:\\ACME\\APP-12345', taskId: 777, start: at(9), end: at(10) }),
+        closed({ cwd: ROOT, start: at(10), end: at(11) })
+      ]
+    })
+    expect(worktreeClockMs(s, WT, null, at(12))).toBe(HOUR)
+  })
+})
+
+describe('worktreeClockLive', () => {
+  it('ticks while an open period carries the linked task in another folder (WTCK-03)', () => {
+    const s = snap({ open: [open({ cwd: ROOT, start: at(9) })] })
+    expect(worktreeClockLive(s, WT, 12345)).toBe(true)
+  })
+
+  it('does not tick for an open period in its folder on another task (WTCK-03)', () => {
+    const s = snap({ open: [open({ taskId: 777, start: at(9) })] })
+    expect(worktreeClockLive(s, WT, 12345)).toBe(false)
+  })
+
+  it('ticks for an open period in its folder when the branch names no task (WTCK-04)', () => {
+    const s = snap({ open: [open({ cwd: 'd:\\ACME\\APP-12345', start: at(9) })] })
+    expect(worktreeClockLive(s, WT, null)).toBe(true)
+  })
+
+  it('does not tick for an open period elsewhere when the branch names no task (WTCK-04)', () => {
+    const s = snap({ open: [open({ cwd: ROOT, start: at(9) })] })
+    expect(worktreeClockLive(s, WT, null)).toBe(false)
   })
 })
