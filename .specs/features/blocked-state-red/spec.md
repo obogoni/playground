@@ -67,8 +67,8 @@ easiest to miss.
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | BLKR-01 | P1: Blocked reads as red (AC 1, edge cases) | Execute | Implementing |
-| BLKR-02 | P1: Blocked reads as red (AC 2) | Execute | Pending |
-| BLKR-03 | P1: Blocked reads as red (AC 3) | Execute | Pending |
+| BLKR-02 | P1: Blocked reads as red (AC 2) | Execute | Implementing |
+| BLKR-03 | P1: Blocked reads as red (AC 3) | Execute | Implementing |
 | BLKR-04 | P1: Blocked reads as red (AC 4) | Execute | Implementing |
 
 **Coverage:** 4 total, 4 mapped to Execute, 0 unmapped
