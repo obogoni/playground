@@ -182,8 +182,8 @@ T16 → T17
 
 **Done when**:
 
-- [ ] Tests with a fake `reread`: hit without re-read; miss in a workspace re-reads once and matches; two concurrent misses share one re-read; miss outside every workspace never re-reads; failed re-read → null and `logError` called; `replace` drops stale paths
-- [ ] Gate check passes: `npm test`
+- [x] Tests with a fake `reread`: hit without re-read; miss in a workspace re-reads once and matches; two concurrent misses share one re-read; miss outside every workspace never re-reads; failed re-read → null and `logError` called; `replace` drops stale paths
+- [x] Gate check passes: `npm test`
 
 **Tests**: unit
 **Gate**: quick
