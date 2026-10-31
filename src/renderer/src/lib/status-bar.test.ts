@@ -110,6 +110,31 @@ describe('barTargetFor', () => {
     expect(target.selected.worktree.path).toBe('C:/work/acme/widget/.worktrees/12345')
   })
 
+  // Without `followedPath` the bar reads `cwd`, as every test above shows (SFWT-11).
+  const followingTargetFor = (cwd: string, followedPath: string): ReturnType<typeof barTargetFor> =>
+    barTargetFor({
+      direction: 'agents',
+      tree,
+      selectedId: null,
+      sessions: [{ ...session('s', cwd), followedPath }],
+      selectedSessionId: 's'
+    })
+
+  it("shows the followed worktree's branch, not the launch folder's (SFWT-11)", () => {
+    const target = followingTargetFor('C:/work/acme/widget', 'C:/work/acme/widget-12345')
+    expect(target.kind).toBe('worktree')
+    if (target.kind !== 'worktree') return
+    expect(target.selected.worktree.path).toBe('C:/work/acme/widget-12345')
+    expect(target.selected.worktree.branch).toBe('user/dev/4821-fix-login/12345-endpoint')
+  })
+
+  it('names the followed folder when it is inside no worktree (SFWT-11)', () => {
+    expect(followingTargetFor('C:/work/acme/widget', 'C:/work/acme/.wt-gone')).toEqual({
+      kind: 'folder',
+      path: 'C:/work/acme/.wt-gone'
+    })
+  })
+
   it('returns the tree-selected worktree in every other direction, ignoring the session (STBR-02)', () => {
     for (const direction of ['tree', 'files', 'hours'] as const) {
       const target = barTargetFor({

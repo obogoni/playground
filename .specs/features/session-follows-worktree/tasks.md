@@ -350,8 +350,8 @@ T16 → T17
 
 **Done when**:
 
-- [ ] Tests: followed path → followed worktree's branch; none → launch folder as today
-- [ ] Gate check passes: `npm test`
+- [x] Tests: followed path → followed worktree's branch; none → launch folder as today
+- [x] Gate check passes: `npm test`
 
 **Tests**: unit
 **Gate**: quick
