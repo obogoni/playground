@@ -19,6 +19,8 @@ export interface SessionNotifierDeps {
   showOs(title: string, body: string, onClick: () => void): void
   /** Bring the window forward. */
   reveal(): void
+  /** Mark the taskbar icon: an OS notification went out while the user was away (TBDT-01). */
+  flagUnseen(): void
   emit: EmitFn
 }
 
@@ -52,5 +54,6 @@ export class SessionNotifier {
       this.deps.reveal()
       this.deps.emit('session:focus', { id })
     })
+    this.deps.flagUnseen()
   }
 }

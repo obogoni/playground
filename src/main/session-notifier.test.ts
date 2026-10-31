@@ -28,6 +28,8 @@ interface Harness {
   }
   /** Every cwd the notifier looked a task up for. */
   lookups: string[]
+  /** How many times the notifier asked for the taskbar dot. */
+  flags: { count: number }
 }
 
 function harness(opts: { focused: boolean; prefs?: NotificationPrefs }): Harness {
@@ -35,6 +37,7 @@ function harness(opts: { focused: boolean; prefs?: NotificationPrefs }): Harness
   const shown: ShownOs[] = []
   const emitted: { channel: IpcEvent; payload: unknown }[] = []
   const lookups: string[] = []
+  const flags = { count: 0 }
   const state: Harness['state'] = {
     focused: opts.focused,
     prefs: opts.prefs ?? ALL_ON,
@@ -54,12 +57,15 @@ function harness(opts: { focused: boolean; prefs?: NotificationPrefs }): Harness
     reveal: () => {
       calls.push('reveal')
     },
+    flagUnseen: () => {
+      flags.count++
+    },
     emit: <E extends IpcEvent>(channel: E, payload: IpcEvents[E]) => {
       calls.push(`emit:${channel}`)
       emitted.push({ channel, payload })
     }
   })
-  return { notifier, shown, emitted, calls, state, lookups }
+  return { notifier, shown, emitted, calls, state, lookups, flags }
 }
 
 function activity(
@@ -214,5 +220,43 @@ describe('SessionNotifier for a linked session', () => {
         body: 'Needs approval to run Bash\nClaude · feature-login'
       }
     ])
+  })
+})
+
+describe('SessionNotifier taskbar dot', () => {
+  it('asks for the dot when it shows an OS notification (TBDT-01)', async () => {
+    const { notifier, shown, flags } = harness({ focused: false })
+    await notifier.handle(change())
+    expect(shown).toHaveLength(1)
+    expect(flags.count).toBe(1)
+  })
+
+  it('asks for the dot on every OS notification, the badge keeps one (TBDT-01, TBDT-04)', async () => {
+    const { notifier, flags } = harness({ focused: false })
+    await notifier.handle(change({ id: 's1' }))
+    await notifier.handle(change({ id: 's2', after: activity('waiting') }))
+    expect(flags.count).toBe(2)
+  })
+
+  it('leaves the dot alone for an in-app notice (TBDT-02)', async () => {
+    const { notifier, emitted, flags } = harness({ focused: true })
+    await notifier.handle(change())
+    expect(emitted.map((e) => e.channel)).toEqual(['session:notice'])
+    expect(flags.count).toBe(0)
+  })
+
+  it('leaves the dot alone when nothing notifies (TBDT-02)', async () => {
+    const { notifier, flags } = harness({ focused: false })
+    await notifier.handle(change({ after: activity('working') }))
+    expect(flags.count).toBe(0)
+  })
+
+  it('leaves the dot alone when the switches are off (TBDT-01 edge case)', async () => {
+    const { notifier, flags, state } = harness({ focused: false })
+    state.prefs = { ...ALL_ON, enabled: false }
+    await notifier.handle(change())
+    state.prefs = { ...ALL_ON, states: { ...ALL_ON.states, 'needs-approval': false } }
+    await notifier.handle(change())
+    expect(flags.count).toBe(0)
   })
 })
