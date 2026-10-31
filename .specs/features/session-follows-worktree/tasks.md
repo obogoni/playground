@@ -423,8 +423,8 @@ T16 → T17
 
 **Done when**:
 
-- [ ] Attribution switched; launch-folder labels unchanged
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Attribution switched; launch-folder labels unchanged
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full
