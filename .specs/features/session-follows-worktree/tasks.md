@@ -434,7 +434,7 @@ T16 → T17
 
 ### T16: Smoke a real session following a worktree
 
-**What**: CDP smoke: spawn a Claude session in a throwaway workspace folder, create a second worktree, ask the agent to write a file there, assert the rail moves the session, the time log gains a period in the worktree, respawn starts in the launch folder; falsified against a build without T8.
+**What**: CDP smoke on a throwaway userData: spawn a fake `claude.cmd` session (no real agent, no tokens; it records its hook token, `--settings` path and `%CD%`) in a throwaway workspace's primary checkout, create a second worktree after the tree was read, POST Claude-shaped `PreToolUse`/`PostToolUse` `Write` hook payloads with a `file_path` inside it, assert `followedPath`, the rail, the status bar, the worktree detail and the time log move to the worktree, a `Write` back in the launch folder moves nothing, respawn and duplicate start in the launch folder; falsified against a build without T8's `worktrees` dep and against renderer readers that read `session.cwd`.
 **Where**: `scripts/smoke-follow-worktree.mjs`
 **Depends on**: None (Phase 3 complete)
 **Reuses**: `scripts/smoke-session-name.mjs`, `scripts/smoke-time.mjs`
@@ -447,8 +447,8 @@ T16 → T17
 
 **Done when**:
 
-- [ ] Smoke passes on the feature build and fails on a build without the wiring
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test && npm run build:win`
+- [x] Smoke passes on the feature build and fails on a build without the wiring
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test && npm run build:win`
 
 **Tests**: manual
 **Gate**: build
