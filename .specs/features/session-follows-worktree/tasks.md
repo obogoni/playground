@@ -206,8 +206,8 @@ T16 → T17
 
 **Done when**:
 
-- [ ] Tests: counting run closes at the move and opens in the new folder at the same instant with the new branch and the same task; earlier period unchanged; same folder → no-op; paused run keeps the folder for its resume; `null` returns to the launch folder; `started` with `followedPath` opens there
-- [ ] Gate check passes: `npm test`
+- [x] Tests: counting run closes at the move and opens in the new folder at the same instant with the new branch and the same task; earlier period unchanged; same folder → no-op; paused run keeps the folder for its resume; `null` returns to the launch folder; `started` with `followedPath` opens there
+- [x] Gate check passes: `npm test`
 
 **Tests**: unit
 **Gate**: quick

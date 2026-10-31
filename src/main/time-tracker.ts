@@ -40,7 +40,10 @@ export interface TimeTrackerDeps {
 /** A session whose PTY is alive: from `started` to `ended`. */
 interface Run {
   agent: string
+  /** The folder the run is attributed to: the followed worktree, else `launchCwd` (SFWT-08). */
   cwd: string
+  /** The folder the PTY was launched in; the run returns here when the followed path clears. */
+  launchCwd: string
   /** The session's hand-set task; null = From branch (HTSK-10, HTSK-11). */
   task: SessionTask | null
   open: OpenPeriod | null
@@ -76,13 +79,23 @@ export class TimeTracker {
     this.deps.emit()
   }
 
-  /** `SessionLifecycle`: the session's PTY started (spawn, duplicate, respawn) (TIME-01, TIME-19). */
-  started(meta: { id: string; agent: string; cwd: string; task?: SessionTask }): void {
+  /**
+   * `SessionLifecycle`: the session's PTY started (spawn, duplicate, respawn)
+   * (TIME-01, TIME-19). A session that follows a worktree opens there (SFWT-10).
+   */
+  started(meta: {
+    id: string
+    agent: string
+    cwd: string
+    task?: SessionTask
+    followedPath?: string
+  }): void {
     const previous = this.#runs.get(meta.id)
     if (previous?.open) this.#close(previous.open, this.#nowIso())
     const run: Run = {
       agent: meta.agent,
-      cwd: meta.cwd,
+      cwd: meta.followedPath ?? meta.cwd,
+      launchCwd: meta.cwd,
       task: meta.task ?? null,
       paused: false,
       open: null
@@ -102,6 +115,27 @@ export class TimeTracker {
     const run = this.#runs.get(sessionId)
     if (!run || (run.task?.id ?? null) === (task?.id ?? null)) return
     run.task = task
+    if (run.open) {
+      const at = this.#nowIso()
+      this.#close(run.open, at)
+      run.open = this.#open(sessionId, run, at)
+    }
+    this.#changed()
+  }
+
+  /**
+   * `SessionLifecycle`: the worktree the session follows changed, `null` = back
+   * to its launch folder (SFWT-08, SFWT-09, SFWT-15). A counting run closes its
+   * open period now and opens one in the new folder at the same instant; a
+   * paused or suspended one only keeps the folder for its next open. The same
+   * folder, or a session with no run, changes nothing.
+   */
+  followedChanged(sessionId: string, path: string | null): void {
+    const run = this.#runs.get(sessionId)
+    if (!run) return
+    const cwd = path ?? run.launchCwd
+    if (cwd === run.cwd) return
+    run.cwd = cwd
     if (run.open) {
       const at = this.#nowIso()
       this.#close(run.open, at)

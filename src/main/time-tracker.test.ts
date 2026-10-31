@@ -1127,3 +1127,210 @@ describe('TimeTracker asynchronous attribution (PERF-21)', () => {
     })
   })
 })
+
+describe('TimeTracker followed worktree (SFWT-08..10)', () => {
+  const ROOT = 'D:\\work\\acme'
+  const FIX = 'D:\\work\\acme\\.wt-app-4821-fix-login'
+  const LINK = { id: 67890, title: 'Widget export' }
+  const ROOT_SNAP: PeriodSnapshotFields = {
+    workspacePath: 'D:\\work',
+    repoName: 'acme',
+    branch: 'main',
+    taskId: null,
+    taskTitle: null
+  }
+  const FIX_SNAP: PeriodSnapshotFields = {
+    workspacePath: 'D:\\work',
+    repoName: 'acme',
+    branch: 'feature/4821-fix-login',
+    taskId: 4821,
+    taskTitle: null
+  }
+  const LINKED = { taskId: 67890, taskTitle: 'Widget export', taskByHand: true }
+
+  /** A tracker whose attribution depends on the folder, as the real git read does. */
+  function followSetup(init: { periods?: TimePeriod[] } = {}): Harness {
+    const clock = { now: T0 }
+    const store = fakeStore(init)
+    const resolved: string[] = []
+    let ids = 0
+    let emits = 0
+    const tracker = new TimeTracker({
+      store,
+      now: () => clock.now,
+      newId: () => `p${++ids}`,
+      resolveSnapshot: (cwd) => {
+        resolved.push(cwd)
+        return cwd === FIX ? FIX_SNAP : ROOT_SNAP
+      },
+      pinnedTitle: (id) => PINNED.get(id) ?? null,
+      emit: () => {
+        emits++
+      }
+    })
+    return {
+      tracker,
+      store,
+      resolved,
+      advance: (ms) => {
+        clock.now += ms
+      },
+      emits: () => emits
+    }
+  }
+
+  const launched = { id: 's1', agent: 'Claude', cwd: ROOT }
+
+  it('closes the counting period at the move and opens one in the worktree at that instant, on its branch and the same task (SFWT-08)', () => {
+    const t = followSetup()
+    t.tracker.started({ ...launched, task: LINK })
+    t.advance(10 * MIN)
+    const emits = t.emits()
+
+    t.tracker.followedChanged('s1', FIX)
+
+    expect(t.store.appended).toEqual([
+      {
+        id: 'p1',
+        sessionId: 's1',
+        agent: 'Claude',
+        cwd: ROOT,
+        ...ROOT_SNAP,
+        ...LINKED,
+        start: iso(T0),
+        end: iso(T0 + 10 * MIN)
+      }
+    ])
+    const expectedOpen: OpenPeriod = {
+      id: 'p2',
+      sessionId: 's1',
+      agent: 'Claude',
+      cwd: FIX,
+      ...FIX_SNAP,
+      ...LINKED,
+      start: iso(T0 + 10 * MIN),
+      lastSeen: iso(T0 + 10 * MIN)
+    }
+    expect(t.tracker.snapshot().open).toEqual([expectedOpen])
+    expect(t.store.openWrites.at(-1)).toEqual([expectedOpen])
+    expect(t.emits()).toBe(emits + 1)
+  })
+
+  it('leaves the periods closed before the move unchanged (SFWT-08)', () => {
+    const earlier: TimePeriod = {
+      id: 'old',
+      sessionId: 's1',
+      agent: 'Claude',
+      cwd: ROOT,
+      ...ROOT_SNAP,
+      start: iso(T0 - 60 * MIN),
+      end: iso(T0 - 30 * MIN)
+    }
+    const t = followSetup({ periods: [earlier] })
+    t.tracker.started(launched)
+    t.advance(10 * MIN)
+
+    t.tracker.followedChanged('s1', FIX)
+
+    expect(t.tracker.snapshot().periods).toEqual([
+      earlier,
+      expect.objectContaining({ id: 'p1', cwd: ROOT, branch: 'main', end: iso(T0 + 10 * MIN) })
+    ])
+    expect(t.store.rewrites).toEqual([])
+  })
+
+  it('changes nothing when the folder is the one the run already counts in', () => {
+    const t = followSetup()
+    t.tracker.started(launched)
+    t.advance(MIN)
+    t.tracker.followedChanged('s1', FIX)
+    t.advance(MIN)
+    const before = t.tracker.snapshot()
+    const emits = t.emits()
+    const writes = t.store.openWrites.length
+
+    t.tracker.followedChanged('s1', FIX)
+    t.tracker.followedChanged('never-started', FIX)
+
+    expect(t.tracker.snapshot()).toEqual(before)
+    expect(t.emits()).toBe(emits)
+    expect(t.store.openWrites).toHaveLength(writes)
+  })
+
+  it('opens nothing while paused, and the resume opens in the followed worktree (SFWT-09)', () => {
+    const t = followSetup()
+    t.tracker.started(launched)
+    t.advance(MIN)
+    t.tracker.pause('s1')
+    const appended = t.store.appended.length
+
+    t.tracker.followedChanged('s1', FIX)
+
+    expect(t.tracker.snapshot().open).toEqual([])
+    expect(t.store.appended).toHaveLength(appended)
+
+    t.advance(MIN)
+    t.tracker.resume('s1')
+    expect(t.tracker.snapshot().open).toEqual([
+      expect.objectContaining({
+        id: 'p2',
+        cwd: FIX,
+        branch: 'feature/4821-fix-login',
+        start: iso(T0 + 2 * MIN)
+      })
+    ])
+  })
+
+  it('opens nothing while suspended, and the wake opens in the followed worktree (SFWT-09)', () => {
+    const t = followSetup()
+    t.tracker.started(launched)
+    t.advance(MIN)
+    t.tracker.suspend()
+    const appended = t.store.appended.length
+
+    t.tracker.followedChanged('s1', FIX)
+
+    expect(t.tracker.snapshot().open).toEqual([])
+    expect(t.store.appended).toHaveLength(appended)
+
+    t.advance(MIN)
+    t.tracker.resumeFromSuspend()
+    expect(t.tracker.snapshot().open).toEqual([
+      expect.objectContaining({ id: 'p2', cwd: FIX, branch: 'feature/4821-fix-login' })
+    ])
+  })
+
+  it('returns to the launch folder when the followed path is cleared (SFWT-15)', () => {
+    const t = followSetup()
+    t.tracker.started(launched)
+    t.advance(MIN)
+    t.tracker.followedChanged('s1', FIX)
+    t.advance(MIN)
+
+    t.tracker.followedChanged('s1', null)
+
+    expect(t.store.appended.map((p) => [p.id, p.cwd, p.branch])).toEqual([
+      ['p1', ROOT, 'main'],
+      ['p2', FIX, 'feature/4821-fix-login']
+    ])
+    expect(t.tracker.snapshot().open).toEqual([
+      expect.objectContaining({ id: 'p3', cwd: ROOT, branch: 'main', start: iso(T0 + 2 * MIN) })
+    ])
+  })
+
+  it('opens the period of a session started with a followed path in that worktree, keeping the launch folder to return to (SFWT-10)', () => {
+    const t = followSetup()
+
+    t.tracker.started({ ...launched, followedPath: FIX })
+
+    expect(t.tracker.snapshot().open).toEqual([
+      expect.objectContaining({ id: 'p1', cwd: FIX, branch: 'feature/4821-fix-login' })
+    ])
+
+    t.advance(MIN)
+    t.tracker.followedChanged('s1', null)
+    expect(t.tracker.snapshot().open).toEqual([
+      expect.objectContaining({ id: 'p2', cwd: ROOT, branch: 'main' })
+    ])
+  })
+})
