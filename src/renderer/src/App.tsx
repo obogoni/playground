@@ -36,7 +36,7 @@ import {
 } from './lib/pane-layout'
 import { dropNotice, upsertNotice, type Notice } from './lib/session-notices'
 import { planPresetLaunch } from './lib/preset-launch'
-import { findWorktree, worktreeIdForPath } from './lib/tree-selection'
+import { findWorktree, worktreeIdForPath, worktreesForTask } from './lib/tree-selection'
 import { worktreeForTurnEnd } from './lib/tree-status'
 import { dropCollapsedId, isCollapsed, toggleCollapsedId } from './lib/workspace-collapse'
 import { filesStateFor } from './lib/files-view'
@@ -92,15 +92,7 @@ function countWorktreesByTask(tree: WorkspaceNode[]): Map<number, number> {
 
 /** Worktree paths whose branch carries the given task ID (STWK-04). */
 function worktreePathsForTask(tree: WorkspaceNode[], taskId: number): string[] {
-  const paths: string[] = []
-  for (const workspace of tree) {
-    for (const repo of workspace.repos) {
-      for (const worktree of repo.worktrees) {
-        if (taskIdFromBranch(worktree.branch) === taskId) paths.push(worktree.path)
-      }
-    }
-  }
-  return paths
+  return worktreesForTask(tree, taskId).map((found) => found.worktree.path)
 }
 
 function App(): JSX.Element {
