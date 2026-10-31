@@ -155,22 +155,22 @@ task-link spec put "changing the folder its attribution reads" out of scope
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| SFWT-01 | P1 move (AC 1) | Tasks | Implementing |
-| SFWT-02 | P1 move (AC 2) | Tasks | Implementing |
-| SFWT-03 | P1 move (AC 3, edge cases 1-2) | Tasks | Implementing |
-| SFWT-04 | P1 move (AC 4) | Tasks | Implementing |
-| SFWT-05 | P1 move (AC 5) | Tasks | Implementing |
-| SFWT-06 | P1 move (AC 6) | Tasks | Implementing |
-| SFWT-07 | P1 move (AC 7) | Tasks | Implementing |
-| SFWT-08 | P1 hours (AC 1, AC 3) | Tasks | Implementing |
-| SFWT-09 | P1 hours (AC 2) | Tasks | Implementing |
-| SFWT-10 | P1 hours (AC 4) | Tasks | Implementing |
-| SFWT-11 | P1 renderer (AC 1-4) | Tasks | Implementing |
-| SFWT-12 | Edge case 3 | Tasks | Implementing |
-| SFWT-13 | Edge case 4 | Tasks | Implementing |
-| SFWT-14 | Edge case 5 | Tasks | Implementing |
-| SFWT-15 | Edge case 6 | Tasks | Implementing |
-| SFWT-16 | P2 terminal (AC 1-3) | Tasks | Implementing |
+| SFWT-01 | P1 move (AC 1) | Tasks | Verified |
+| SFWT-02 | P1 move (AC 2) | Tasks | Verified |
+| SFWT-03 | P1 move (AC 3, edge cases 1-2) | Tasks | Verified |
+| SFWT-04 | P1 move (AC 4) | Tasks | Verified |
+| SFWT-05 | P1 move (AC 5) | Tasks | Verified |
+| SFWT-06 | P1 move (AC 6) | Tasks | Verified |
+| SFWT-07 | P1 move (AC 7) | Tasks | Verified |
+| SFWT-08 | P1 hours (AC 1, AC 3) | Tasks | Verified |
+| SFWT-09 | P1 hours (AC 2) | Tasks | Verified |
+| SFWT-10 | P1 hours (AC 4) | Tasks | Verified |
+| SFWT-11 | P1 renderer (AC 1-4) | Tasks | Verified |
+| SFWT-12 | Edge case 3 | Tasks | Verified |
+| SFWT-13 | Edge case 4 | Tasks | Verified |
+| SFWT-14 | Edge case 5 | Tasks | Verified |
+| SFWT-15 | Edge case 6 | Tasks | Verified |
+| SFWT-16 | P2 terminal (AC 1-3) | Tasks | Verified |
 
 **Coverage:** 16 total, 16 mapped to tasks, 0 unmapped
 
@@ -178,4 +178,13 @@ task-link spec put "changing the folder its attribution reads" out of scope
 
 ## Success Criteria
 
-- [ ] In the owner's workflow, a session launched at the workspace root shows under the task worktree from the agent's first edit there, and the hours from then on carry the worktree's branch
+- [x] In the owner's workflow, a session launched at the workspace root shows under the task worktree from the agent's first edit there, and the hours from then on carry the worktree's branch
+
+---
+
+## Follow-ups (from validation)
+
+- F1: SFWT-15 removal wiring (`clearFollowed` on remove, removal stopping only `launchedIn` sessions) has unit evidence only; add a smoke step that removes the followed worktree.
+- F2: the Files running-session filter (part of SFWT-11 AC 3) has no test or smoke evidence.
+- F3: level-group totals, Agents view attribution, picking a session and the turn-end recount are verified by reading only.
+- F4: an edit inside a registered workspace but outside every known worktree re-reads that workspace once per hook event (up to twice per edit); a workspace registered at a drive root makes that a wide `git worktree list` sweep. Consider remembering misses until the next tree build.
