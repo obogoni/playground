@@ -201,6 +201,19 @@ describe('barTargetFor', () => {
     expect(taskTargetFor(withTask(99999))).toEqual({ kind: 'folder', path: 'C:/work/acme' })
   })
 
+  it("matches the task's id, not a number that only appears in a branch (SBTK-04)", () => {
+    // `123` is a prefix of `12345-endpoint`; `4821` is the parent segment of both branches.
+    expect(taskTargetFor(withTask(123))).toEqual({ kind: 'folder', path: 'C:/work/acme' })
+    expect(taskTargetFor(withTask(4821))).toEqual({ kind: 'folder', path: 'C:/work/acme' })
+  })
+
+  it("shows the task's worktree over a launch worktree that is another one (SBTK-01)", () => {
+    const target = taskTargetFor(withTask(12345, { cwd: 'C:/work/acme/widget-777' }))
+    expect(target.kind).toBe('worktree')
+    if (target.kind !== 'worktree') return
+    expect(target.selected.worktree.path).toBe('C:/work/acme/widget-12345')
+  })
+
   it("describes the launch folder when several worktrees carry the task's id (SBTK-04)", () => {
     const twice: WorkspaceNode[] = [
       ...taskTree,
