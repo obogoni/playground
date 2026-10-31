@@ -50,3 +50,29 @@ export function worktreeTotalMs(snapshot: TimeSnapshot, cwd: string, now: number
 export function taskTotalMs(snapshot: TimeSnapshot, taskId: number, now: number): number {
   return unionMs(intervalsOf(snapshot, now).filter(({ period }) => period.taskId === taskId))
 }
+
+/**
+ * The worktree page's clock: its linked task's total when the branch names one,
+ * so time recorded from another folder still counts (WTCK-01); otherwise the
+ * folder's own total (WTCK-02).
+ */
+export function worktreeClockMs(
+  snapshot: TimeSnapshot,
+  cwd: string,
+  taskId: number | null,
+  now: number
+): number {
+  return taskId === null ? worktreeTotalMs(snapshot, cwd, now) : taskTotalMs(snapshot, taskId, now)
+}
+
+/** Whether that clock ticks: an open period on the task, or in the folder without one (WTCK-03, WTCK-04). */
+export function worktreeClockLive(
+  snapshot: TimeSnapshot,
+  cwd: string,
+  taskId: number | null
+): boolean {
+  const key = cwd.toLowerCase()
+  return snapshot.open.some((p) =>
+    taskId === null ? p.cwd.toLowerCase() === key : p.taskId === taskId
+  )
+}
