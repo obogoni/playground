@@ -243,4 +243,17 @@ describe('openWorktreeTarget (ISO-10)', () => {
 
     expect(openWorktreeTarget(oddTree, at('m:/obogoni/odd-case'))).toBe('node-odd')
   })
+
+  // Without `followedPath` the target comes from `cwd`, as the tests above show.
+  it('selects the worktree a workspace or repo session follows (SFWT-11)', () => {
+    const following = (
+      cwd: string
+    ): { cwd: string; followedPath: string; pathMissing: boolean } => ({
+      ...at(cwd),
+      followedPath: PG_LINKED.path
+    })
+
+    expect(openWorktreeTarget(tree, following(WS_PLAIN.path))).toBe(PG_LINKED.id)
+    expect(openWorktreeTarget(tree, following(PG_MAIN.path))).toBe(PG_LINKED.id)
+  })
 })
