@@ -4,12 +4,15 @@ import { commandKey } from '../shared/command-key'
 import type { PersistedSession, SessionStatus, SessionView } from '../shared/config'
 import type { IpcEvent, IpcEvents } from '../shared/ipc-contract'
 import type { SessionTask } from '../shared/tasks'
+import { workCwdOf } from '../shared/worktree-match'
 import { applyHookEvent, applyKeystroke, sameView, type MachineState } from './activity-machine'
 import type { ActivityChange } from './activity-notification'
 import { ACTIVITY_TOKEN_ENV, TASK_URL_ENV } from './claude-hook-settings'
 import type { ConfigStore } from './config-store'
 import { diagnostics } from './diagnostics'
+import { editedPathOf } from './edited-path'
 import { isKeystroke } from './keystroke'
+import type { KnownWorktrees } from './known-worktrees'
 import type { PtyHandle, PtyPort } from './pty-port'
 import { SessionRingBuffer } from './session-ring-buffer'
 import { PROMPT_MAX_CHARS } from '../shared/prompt-template'
@@ -64,6 +67,8 @@ export interface SessionManagerDeps {
   names?: SessionNames
   /** Told when a session's PTY starts and ends (the time tracker, AD-021); absent = no observer. */
   lifecycle?: SessionLifecycle
+  /** Resolves an edited file to a known worktree (SFWT-01); absent = no session follows one. */
+  worktrees?: Pick<KnownWorktrees, 'match' | 'resolve'>
 }
 
 /** Observer of PTY runs: `started` once per spawn/duplicate/respawn, `ended` once per run. */
@@ -72,6 +77,8 @@ export interface SessionLifecycle {
   ended(id: string): void
   /** The session's hand-set task changed, `null` = From branch (HTSK-12, HTSK-13). */
   taskChanged(id: string, task: SessionTask | null): void
+  /** The worktree the session follows changed, `null` = back to its launch folder (SFWT-08, SFWT-15). */
+  followedChanged(id: string, path: string | null): void
 }
 
 /** A copy of `meta` carrying `task`, or without the `task` key for `null`. */
@@ -79,6 +86,14 @@ function withTask<T extends PersistedSession>(meta: T, task: SessionTask | null)
   const next = { ...meta }
   if (task) next.task = task
   else delete next.task
+  return next
+}
+
+/** A copy of `meta` following `path`, or without the `followedPath` key for `null`. */
+function withFollowed<T extends PersistedSession>(meta: T, path: string | null): T {
+  const next = { ...meta }
+  if (path !== null) next.followedPath = path
+  else delete next.followedPath
   return next
 }
 
@@ -117,6 +132,8 @@ interface RunningSession {
   claudeSessionId: string | null
   /** Last name the listing reported for `claudeSessionId`; `null` when none. */
   name: string | null
+  /** The follow decisions of this run, chained so edits apply in arrival order (SFWT-13). */
+  follow: Promise<void>
 }
 
 /**
@@ -148,10 +165,16 @@ export class SessionManager {
   constructor(private readonly deps: SessionManagerDeps) {
     // PTYs never survive a restart (no daemon — PRD Out of Scope); normalize any
     // session persisted as running back to stopped so cards reappear respawnable.
+    // A followed worktree deleted outside the app returns the session to its
+    // launch folder (SFWT-15).
     const sessions = deps.config.get().sessions
-    if (sessions.some((s) => s.status !== 'stopped')) {
-      deps.config.patch({ sessions: sessions.map((s) => ({ ...s, status: 'stopped' as const })) })
-    }
+    const normalized = sessions.map((s) => {
+      const stopped = s.status === 'stopped' ? s : { ...s, status: 'stopped' as const }
+      return stopped.followedPath !== undefined && !deps.fsExists(stopped.followedPath)
+        ? withFollowed(stopped, null)
+        : stopped
+    })
+    if (normalized.some((s, i) => s !== sessions[i])) deps.config.patch({ sessions: normalized })
   }
 
   /** Persisted ∪ running, reconciled: status from Map membership, pathMissing from fs. */
@@ -328,6 +351,7 @@ export class SessionManager {
     const session = this.#running.get(sessionId)
     if (!session) return
     this.#setActivity(session, applyHookEvent(session.activity, payload))
+    this.#follow(session, editedPathOf(payload))
     // The most recent id wins: `/clear` and `/resume` change it mid-session, and
     // the listing keys on it (SNAME-08). A first or changed id needs a listing;
     // a repeat id only matters while the session is still unnamed (SNAME-09).
@@ -351,6 +375,17 @@ export class SessionManager {
     for (const session of this.#running.values()) {
       if (session.claudeSessionId === null) continue
       this.#setName(session, names.get(session.claudeSessionId) ?? null)
+    }
+  }
+
+  /**
+   * Return every session following `worktreePath` to its launch folder, after
+   * that worktree was removed. The sessions keep running: their PTY lives in
+   * the launch folder (SFWT-15).
+   */
+  clearFollowed(worktreePath: string): void {
+    for (const s of this.deps.config.get().sessions) {
+      if (s.followedPath === worktreePath) this.#setFollowed(s.id, null)
     }
   }
 
@@ -445,7 +480,8 @@ export class SessionManager {
       token,
       activity: null,
       claudeSessionId: null,
-      name: null
+      name: null,
+      follow: Promise.resolve()
     })
     this.deps.lifecycle?.started(meta)
   }
@@ -499,6 +535,38 @@ export class SessionManager {
     }
   }
 
+  /**
+   * The follow rule (SFWT-01, SFWT-04..06): an edit inside a known worktree
+   * that is neither the launch folder's worktree nor the one already followed
+   * moves the session there. Never back on its own. Decisions are chained per
+   * run so a slow re-read never undoes a later move (SFWT-13), and an answer
+   * for a run that has ended is dropped.
+   */
+  #follow(session: RunningSession, editedPath: string | null): void {
+    const worktrees = this.deps.worktrees
+    if (editedPath === null || !worktrees) return
+    session.follow = session.follow
+      .then(async () => {
+        const target = await worktrees.resolve(editedPath)
+        if (target === null || this.#running.get(session.meta.id) !== session) return
+        if (target === worktrees.match(session.meta.cwd)) return
+        if (target === session.meta.followedPath) return
+        this.#setFollowed(session.meta.id, target)
+      })
+      .catch((err) => console.error('[sessions] following a worktree failed', err))
+  }
+
+  /** Persist, tell the tracker and announce a session's followed path (SFWT-07). */
+  #setFollowed(id: string, path: string | null): void {
+    const meta = this.deps.config.get().sessions.find((s) => s.id === id)
+    if (!meta) return
+    this.#persistUpsert(withFollowed(meta, path))
+    const live = this.#running.get(id)
+    if (live) live.meta = withFollowed(live.meta, path)
+    this.deps.lifecycle?.followedChanged(id, path)
+    this.deps.emit('session:followed', { id, followedPath: path })
+  }
+
   /** Adopt a name and push it only when it changed (SNAME-11). */
   #setName(session: RunningSession, next: string | null): void {
     if (session.name === next) return
@@ -512,7 +580,9 @@ export class SessionManager {
     const after = next?.view ?? null
     session.activity = next
     if (sameView(before, after)) return
-    const { id, agent, title, cwd } = session.meta
+    const { id, agent, title } = session.meta
+    // The followed worktree names the branch a notification reads (design: Notifications).
+    const cwd = workCwdOf(session.meta)
     this.deps.emit('session:activity', { id, activity: after })
     // Only transitions reach the listener: #finalize drops the activity without
     // coming through here, so a stopping PTY never notifies (NOTF-26).

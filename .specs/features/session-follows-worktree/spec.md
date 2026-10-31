@@ -155,12 +155,12 @@ task-link spec put "changing the folder its attribution reads" out of scope
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| SFWT-01 | P1 move (AC 1) | Tasks | In Tasks |
+| SFWT-01 | P1 move (AC 1) | Tasks | Implementing |
 | SFWT-02 | P1 move (AC 2) | Tasks | Implementing |
 | SFWT-03 | P1 move (AC 3, edge cases 1-2) | Tasks | Implementing |
-| SFWT-04 | P1 move (AC 4) | Tasks | In Tasks |
-| SFWT-05 | P1 move (AC 5) | Tasks | In Tasks |
-| SFWT-06 | P1 move (AC 6) | Tasks | In Tasks |
+| SFWT-04 | P1 move (AC 4) | Tasks | Implementing |
+| SFWT-05 | P1 move (AC 5) | Tasks | Implementing |
+| SFWT-06 | P1 move (AC 6) | Tasks | Implementing |
 | SFWT-07 | P1 move (AC 7) | Tasks | Implementing |
 | SFWT-08 | P1 hours (AC 1, AC 3) | Tasks | Implementing |
 | SFWT-09 | P1 hours (AC 2) | Tasks | Implementing |
@@ -169,8 +169,8 @@ task-link spec put "changing the folder its attribution reads" out of scope
 | SFWT-12 | Edge case 3 | Tasks | Implementing |
 | SFWT-13 | Edge case 4 | Tasks | Implementing |
 | SFWT-14 | Edge case 5 | Tasks | Implementing |
-| SFWT-15 | Edge case 6 | Tasks | In Tasks |
-| SFWT-16 | P2 terminal (AC 1-3) | Tasks | In Tasks |
+| SFWT-15 | Edge case 6 | Tasks | Implementing |
+| SFWT-16 | P2 terminal (AC 1-3) | Tasks | Implementing |
 
 **Coverage:** 16 total, 16 mapped to tasks, 0 unmapped
 

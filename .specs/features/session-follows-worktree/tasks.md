@@ -230,8 +230,8 @@ T16 → T17
 
 **Done when**:
 
-- [ ] Tests with fake worktrees and lifecycle: edit in another worktree moves (persist, `session:followed`, `followedChanged`); edit in the launch worktree, in the followed one, outside every worktree, non-edit tool → nothing; second worktree moves again; answer after stop dropped; `clearFollowed` clears only matching sessions; load drops a missing `followedPath`; respawn keeps it; duplicate has none; hand-set task unchanged; no `worktrees` dep → nothing
-- [ ] Gate check passes: `npm test`
+- [x] Tests with fake worktrees and lifecycle: edit in another worktree moves (persist, `session:followed`, `followedChanged`); edit in the launch worktree, in the followed one, outside every worktree, non-edit tool → nothing; second worktree moves again; answer after stop dropped; `clearFollowed` clears only matching sessions; load drops a missing `followedPath`; respawn keeps it; duplicate has none; hand-set task unchanged; no `worktrees` dep → nothing
+- [x] Gate check passes: `npm test`
 
 **Tests**: unit
 **Gate**: quick
