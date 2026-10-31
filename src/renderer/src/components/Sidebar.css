@@ -318,6 +318,10 @@
   background: var(--text-faint);
 }
 
+.sidebar-state-dot.red {
+  background: var(--red);
+}
+
 .sidebar-state-dot.muted {
   background: var(--text-muted);
 }
