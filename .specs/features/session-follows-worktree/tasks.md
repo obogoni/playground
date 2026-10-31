@@ -471,8 +471,8 @@ T16 → T17
 
 **Done when**:
 
-- [ ] AD entry added with the next free number checked against `origin/main`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] AD entry added with the next free number checked against `origin/main`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full
