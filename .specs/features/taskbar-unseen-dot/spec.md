@@ -76,11 +76,11 @@ them later that a session is waiting: the taskbar icon looks the same either way
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| TBDT-01 | P1 (AC 1, edge cases 1 and 3) | Execute | Implementing |
-| TBDT-02 | P1 (AC 2) | Execute | Implementing |
-| TBDT-03 | P1 (AC 3, edge case 2) | Execute | Implementing |
-| TBDT-04 | P1 (AC 4) | Execute | Implementing |
-| TBDT-05 | P1 (AC 5) | Execute | Implementing |
+| TBDT-01 | P1 (AC 1, edge cases 1 and 3) | Execute | Verified |
+| TBDT-02 | P1 (AC 2) | Execute | Verified |
+| TBDT-03 | P1 (AC 3, edge case 2) | Execute | Verified |
+| TBDT-04 | P1 (AC 4) | Execute | Verified |
+| TBDT-05 | P1 (AC 5) | Execute | Verified |
 
 **Coverage:** 5 total, 5 mapped to Execute, 0 unmapped
 
@@ -88,4 +88,13 @@ them later that a session is waiting: the taskbar icon looks the same either way
 
 ## Success Criteria
 
-- [ ] After a toast fires while the window is away, the dot is visible on the taskbar until the window is focused
+- [x] After a toast fires while the window is away, the dot is visible on the taskbar until the window is focused
+
+---
+
+## Follow-ups (from validation)
+
+- F1: the smoke's one-dot and notifications-off checks do not confirm the toast itself went out; count `Notification.prototype.show` calls.
+- F2: no check clicks a real toast end to end; hand-verify once.
+- F3: TBDT-05 (no overlay off Windows or on a destroyed window) is read from the code only.
+- F4: the dot's look on the taskbar and the packaged build are hand-verify items.
