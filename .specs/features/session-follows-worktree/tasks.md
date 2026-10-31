@@ -134,8 +134,8 @@ T16 → T17
 
 **Done when**:
 
-- [ ] Event declared beside `session:task`
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Event declared beside `session:task`
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full
