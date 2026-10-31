@@ -110,8 +110,8 @@ T16 → T17
 
 **Done when**:
 
-- [ ] Field added with its doc comment
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Field added with its doc comment
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full

@@ -49,6 +49,10 @@ export interface PersistedSession {
   command?: string
   /** Task chosen by hand; absent = From branch (HTSK-10, HTSK-17). */
   task?: SessionTask
+  /** The worktree the agent last edited in, when it is not the launch folder's
+   *  (SFWT-01). Attribution reads it; the PTY, respawn, duplicate and title never
+   *  do. Absent = attributed to the launch folder (`cwd`). */
+  followedPath?: string
 }
 
 /** Returned to the renderer: persisted fields plus the one fact only main can

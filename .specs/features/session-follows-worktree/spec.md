@@ -161,7 +161,7 @@ task-link spec put "changing the folder its attribution reads" out of scope
 | SFWT-04 | P1 move (AC 4) | Tasks | In Tasks |
 | SFWT-05 | P1 move (AC 5) | Tasks | In Tasks |
 | SFWT-06 | P1 move (AC 6) | Tasks | In Tasks |
-| SFWT-07 | P1 move (AC 7) | Tasks | In Tasks |
+| SFWT-07 | P1 move (AC 7) | Tasks | Implementing |
 | SFWT-08 | P1 hours (AC 1, AC 3) | Tasks | In Tasks |
 | SFWT-09 | P1 hours (AC 2) | Tasks | In Tasks |
 | SFWT-10 | P1 hours (AC 4) | Tasks | In Tasks |
