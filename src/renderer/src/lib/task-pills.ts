@@ -64,6 +64,8 @@ export function stateClass(state: string): string {
       return 'accent'
     case 'closed':
       return 'faint'
+    case 'blocked':
+      return 'red'
     default:
       return 'muted'
   }

@@ -1,5 +1,27 @@
 import { describe, expect, it } from 'vitest'
-import { badgeTypeOf, typeClass } from './task-pills'
+import { badgeTypeOf, stateClass, typeClass } from './task-pills'
+
+describe('stateClass', () => {
+  it('maps Blocked to red in any casing (BLKR-01)', () => {
+    expect(stateClass('Blocked')).toBe('red')
+    expect(stateClass('blocked')).toBe('red')
+    expect(stateClass('BLOCKED')).toBe('red')
+  })
+
+  it('does not match a state that only contains blocked (BLKR-01)', () => {
+    expect(stateClass('Unblocked')).toBe('muted')
+  })
+
+  it('keeps every other state on its current colour (BLKR-04)', () => {
+    expect(stateClass('Active')).toBe('green')
+    expect(stateClass('New')).toBe('blue')
+    expect(stateClass('In Progress')).toBe('amber')
+    expect(stateClass('Resolved')).toBe('accent')
+    expect(stateClass('Closed')).toBe('faint')
+    expect(stateClass('Removed')).toBe('muted')
+    expect(stateClass('')).toBe('muted')
+  })
+})
 
 describe('typeClass', () => {
   it('maps each ADO process type to its tp-* class (TYPE-01)', () => {
