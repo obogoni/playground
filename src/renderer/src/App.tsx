@@ -641,8 +641,8 @@ function App(): JSX.Element {
             pathMissing={selectedId !== null && selected === null}
             files={files}
             onToast={setToast}
-            // The remove-worktree confirmation's rule for "a session runs in
-            // this worktree" (WorktreeDetail), so the two dialogs agree (FDSC-12).
+            // Sessions working in this worktree, launched or followed (FDSC-12,
+            // SFWT-11). Removal stops a narrower set, `launchedIn` (SFWT-15).
             runningSessions={sessions.filter(
               (s) => workCwdOf(s) === selected?.worktree.path && s.status === 'running'
             )}
