@@ -326,8 +326,8 @@ T16 → T17
 
 **Done when**:
 
-- [ ] Both reads switched
-- [ ] Gate check passes: `npm run typecheck && npm run lint && npm test`
+- [x] Both reads switched
+- [x] Gate check passes: `npm run typecheck && npm run lint && npm test`
 
 **Tests**: none
 **Gate**: full

@@ -6,6 +6,7 @@ import type { PromptEntry } from '../../../shared/prompt-template'
 import type { PinnedTaskView, SessionTask } from '../../../shared/tasks'
 import type { PeriodTaskChoice, TimeSnapshot } from '../../../shared/time'
 import type { WorkspaceNode } from '../../../shared/tree'
+import { workCwdOf } from '../../../shared/worktree-match'
 import { agentTileStyle } from '../lib/agent-color'
 import {
   adjacentRowId,
@@ -293,7 +294,8 @@ function TaskGroupCard({
 }: TaskGroupCardProps): JSX.Element {
   const holdsSelection = group.rows.some((row) => row.id === selectedId)
   // Task groups total by task id; an orphan group is one session, and a level
-  // group holds sessions at one path, so both total by the first row's cwd.
+  // group holds sessions at one path, so both total by the first row's
+  // attributed folder: the worktree it follows, else its cwd (SFWT-11).
   // The index is cached per snapshot, so a tick never rescans the history (PERF-14).
   const index = timeIndex(time)
   const total =
@@ -303,9 +305,9 @@ function TaskGroupCard({
           live: time.open.some((p) => p.taskId === group.taskId)
         }
       : {
-          totalAt: (now: number) => index.worktreeTotalMs(group.rows[0].session.cwd, now),
+          totalAt: (now: number) => index.worktreeTotalMs(workCwdOf(group.rows[0].session), now),
           live: time.open.some(
-            (p) => p.cwd.toLowerCase() === group.rows[0].session.cwd.toLowerCase()
+            (p) => p.cwd.toLowerCase() === workCwdOf(group.rows[0].session).toLowerCase()
           )
         }
 
