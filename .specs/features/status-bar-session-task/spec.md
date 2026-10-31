@@ -14,8 +14,8 @@ the session does not show the worktree.
 
 ## Goals
 
-- [ ] A selected session that follows no worktree and has a linked task shows the task's worktree in the status bar
-- [ ] Every other session keeps the bar it shows today
+- [x] A selected session that follows no worktree and has a linked task shows the task's worktree in the status bar
+- [x] Every other session keeps the bar it shows today
 
 ## Out of Scope
 
@@ -70,11 +70,11 @@ the session does not show the worktree.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| SBTK-01 | P1 (AC 1) | Execute | Implemented |
-| SBTK-02 | P1 (AC 2) | Execute | Implemented |
-| SBTK-03 | P1 (AC 3) | Execute | Implemented |
-| SBTK-04 | Edge cases 1-2 | Execute | Implemented |
-| SBTK-05 | Edge case 3 | Execute | Implemented |
+| SBTK-01 | P1 (AC 1) | Execute | Verified |
+| SBTK-02 | P1 (AC 2) | Execute | Verified |
+| SBTK-03 | P1 (AC 3) | Execute | Verified |
+| SBTK-04 | Edge cases 1-2 | Execute | Verified |
+| SBTK-05 | Edge case 3 | Execute | Verified |
 
 **Coverage:** 5 total, 5 mapped to Execute, 0 unmapped
 
@@ -82,4 +82,4 @@ the session does not show the worktree.
 
 ## Success Criteria
 
-- [ ] Selecting a root-launched session linked to a task shows the task's worktree repo and branch in the status bar
+- [x] Selecting a root-launched session linked to a task shows the task's worktree repo and branch in the status bar
