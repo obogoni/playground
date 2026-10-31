@@ -66,10 +66,10 @@ easiest to miss.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| BLKR-01 | P1: Blocked reads as red (AC 1, edge cases) | Execute | Implementing |
-| BLKR-02 | P1: Blocked reads as red (AC 2) | Execute | Implementing |
-| BLKR-03 | P1: Blocked reads as red (AC 3) | Execute | Implementing |
-| BLKR-04 | P1: Blocked reads as red (AC 4) | Execute | Implementing |
+| BLKR-01 | P1: Blocked reads as red (AC 1, edge cases) | Execute | Verified |
+| BLKR-02 | P1: Blocked reads as red (AC 2) | Execute | Verified |
+| BLKR-03 | P1: Blocked reads as red (AC 3) | Execute | Verified |
+| BLKR-04 | P1: Blocked reads as red (AC 4) | Execute | Verified |
 
 **Coverage:** 4 total, 4 mapped to Execute, 0 unmapped
 
@@ -77,4 +77,4 @@ easiest to miss.
 
 ## Success Criteria
 
-- [ ] A `Blocked` item is red in the tasks pane, session rail, agents view, worktree detail and sidebar, in both themes
+- [x] A `Blocked` item is red in the tasks pane, session rail, agents view, worktree detail and sidebar, in both themes
