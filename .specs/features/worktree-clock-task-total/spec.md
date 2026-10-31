@@ -73,11 +73,11 @@ wrong key.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| WTCK-01 | P1 (AC 1, edge cases 1-3) | Execute | Implementing |
-| WTCK-02 | P1 (AC 2) | Execute | Implementing |
-| WTCK-03 | P1 (AC 3) | Execute | Implementing |
-| WTCK-04 | P1 (AC 4) | Execute | Implementing |
-| WTCK-05 | P1 (AC 5) | Execute | Implementing |
+| WTCK-01 | P1 (AC 1, edge cases 1-3) | Execute | Verified |
+| WTCK-02 | P1 (AC 2) | Execute | Verified |
+| WTCK-03 | P1 (AC 3) | Execute | Verified |
+| WTCK-04 | P1 (AC 4) | Execute | Verified |
+| WTCK-05 | P1 (AC 5) | Execute | Verified |
 
 **Coverage:** 5 total, 5 mapped to Execute, 0 unmapped
 
@@ -85,4 +85,4 @@ wrong key.
 
 ## Success Criteria
 
-- [ ] A worktree on a task branch shows the same time as that task's card
+- [x] A worktree on a task branch shows the same time as that task's card
