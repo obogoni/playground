@@ -156,7 +156,7 @@ task-link spec put "changing the folder its attribution reads" out of scope
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | SFWT-01 | P1 move (AC 1) | Tasks | In Tasks |
-| SFWT-02 | P1 move (AC 2) | Tasks | In Tasks |
+| SFWT-02 | P1 move (AC 2) | Tasks | Implementing |
 | SFWT-03 | P1 move (AC 3, edge cases 1-2) | Tasks | Implementing |
 | SFWT-04 | P1 move (AC 4) | Tasks | In Tasks |
 | SFWT-05 | P1 move (AC 5) | Tasks | In Tasks |

@@ -158,8 +158,8 @@ T16 → T17
 
 **Done when**:
 
-- [ ] Tests: each of the four tools in both events; `notebook_path`; `Bash`, `Read`, `Stop` → null; missing `tool_input`, non-string, empty and relative path → null
-- [ ] Gate check passes: `npm test`
+- [x] Tests: each of the four tools in both events; `notebook_path`; `Bash`, `Read`, `Stop` → null; missing `tool_input`, non-string, empty and relative path → null
+- [x] Gate check passes: `npm test`
 
 **Tests**: unit
 **Gate**: quick
