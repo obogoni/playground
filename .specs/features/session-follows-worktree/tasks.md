@@ -490,3 +490,15 @@ Phase 2:  T4 → T5 → T6 → T7 → T8
 Phase 3:  T9 → T10 → T11 → T12 → T13 → T14 → T15
 Phase 4:  T16 → T17
 ```
+
+---
+
+## Fixes
+
+### F1: Removal stops only the sessions launched in the worktree
+
+Found by the orchestrator reviewing T14: `WorktreeDetail` stopped every running session in its list, and T14 made that list include sessions that only follow the worktree, whose PTY runs in their launch folder (against SFWT-15). The detail page keeps listing attributed sessions; removal now stops `launchedIn(sessions, path)`, the sessions whose `cwd` is the worktree.
+
+- [x] `launchedIn` in `src/shared/worktree-match.ts`, unit-tested (follower excluded; launched-here-following-elsewhere included)
+- [x] `WorktreeDetail` takes `removalSessions`; `App.tsx` passes `launchedIn(...)`
+- [x] Gate: `npm run typecheck && npm run lint && npm test` (3069 passed)

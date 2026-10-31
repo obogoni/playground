@@ -31,6 +31,15 @@ export function workCwdOf(session: { cwd: string; followedPath?: string }): stri
   return session.followedPath ?? session.cwd
 }
 
+/**
+ * The sessions whose terminal runs in `path`: removing that worktree must stop
+ * them, whatever worktree they follow. A session that only follows it keeps
+ * running in its launch folder (SFWT-15).
+ */
+export function launchedIn<T extends { cwd: string }>(sessions: readonly T[], path: string): T[] {
+  return sessions.filter((s) => s.cwd === path)
+}
+
 /** One spelling of a path, for comparing two of them. */
 function comparable(path: string): string {
   return path.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()

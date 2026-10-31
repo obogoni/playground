@@ -24,8 +24,10 @@ interface WorktreeDetailProps {
   linkedTaskId: number | null
   /** The matching pinned task, when the extracted ID is pinned. */
   linkedPin: PinnedTaskView | null
-  /** Sessions already running in this worktree (cwd === worktree.path). */
+  /** Sessions attributed to this worktree, launched or followed (SFWT-11). */
   sessions: SessionView[]
+  /** Sessions whose terminal runs here: stopped before removal (AGCF-05, SFWT-15). */
+  removalSessions: SessionView[]
   /** Time snapshot for the worktree total (TIME-25). */
   time: TimeSnapshot
   /** Opens the New Session dialog pre-filled with this worktree's cwd. */
@@ -87,6 +89,7 @@ export function WorktreeDetail({
   linkedTaskId,
   linkedPin,
   sessions,
+  removalSessions,
   time,
   onSpawnAgent,
   onOpenSession,
@@ -108,7 +111,7 @@ export function WorktreeDetail({
   const [changes, setChanges] = useState<ChangedFile[]>([])
   const [loadingChanges, setLoadingChanges] = useState(false)
 
-  const runningSessions = sessions.filter((s) => s.status === 'running')
+  const runningSessions = removalSessions.filter((s) => s.status === 'running')
 
   useEffect(() => {
     if (!copied) return

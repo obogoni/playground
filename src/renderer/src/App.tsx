@@ -8,7 +8,7 @@ import { DEFAULT_CONFIG } from '../../shared/config'
 import type { PinnedTaskView, TasksSnapshot } from '../../shared/tasks'
 import { taskIdFromBranch } from '../../shared/tasks'
 import type { WorkspaceNode } from '../../shared/tree'
-import { workCwdOf } from '../../shared/worktree-match'
+import { launchedIn, workCwdOf } from '../../shared/worktree-match'
 import { AgentsView } from './components/AgentsView'
 import { FilesView } from './components/FilesView'
 import { HoursView } from './components/HoursView'
@@ -576,6 +576,7 @@ function App(): JSX.Element {
                 linkedTaskId={linkedTaskId}
                 linkedPin={linkedPin}
                 sessions={sessions.filter((s) => workCwdOf(s) === selected.worktree.path)}
+                removalSessions={launchedIn(sessions, selected.worktree.path)}
                 time={time.snapshot}
                 onSpawnAgent={() => openNewSession({ cwd: selected.worktree.path })}
                 onOpenSession={openSession}

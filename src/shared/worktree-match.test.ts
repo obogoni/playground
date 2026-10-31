@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deepestContaining, workCwdOf } from './worktree-match'
+import { deepestContaining, launchedIn, workCwdOf } from './worktree-match'
 
 const ROOT = 'D:\\work\\acme'
 const FIX = 'D:\\work\\acme\\.wt-app-4821-fix-login'
@@ -56,5 +56,22 @@ describe('workCwdOf', () => {
 
   it('is the launch folder when the session follows none (SFWT-11)', () => {
     expect(workCwdOf({ cwd: ROOT })).toBe(ROOT)
+  })
+})
+
+describe('launchedIn', () => {
+  const CART = 'D:\\work\\acme\\.wt-app-4822-cart'
+  const sessions = [
+    { id: 'follows-fix', cwd: ROOT, followedPath: FIX },
+    { id: 'in-fix', cwd: FIX },
+    { id: 'in-fix-follows-cart', cwd: FIX, followedPath: CART }
+  ]
+
+  it('keeps a session that only follows the worktree out of its removal (SFWT-15)', () => {
+    expect(launchedIn(sessions, FIX).map((s) => s.id)).not.toContain('follows-fix')
+  })
+
+  it('stops every session whose terminal runs there, whatever it follows (SFWT-15)', () => {
+    expect(launchedIn(sessions, FIX).map((s) => s.id)).toEqual(['in-fix', 'in-fix-follows-cart'])
   })
 })
