@@ -169,12 +169,12 @@ app residente na bandeja e iniciando com o Windows, em vez de um daemon de sess�
 | TRAY-15 | P1: Sair explícito | Design | Pending |
 | TRAY-16 | P1: Sair explícito | Design | Pending |
 | TRAY-20 | P1: Iniciar com o Windows | Design | Pending |
-| TRAY-21 | P1: Iniciar com o Windows | Design | Pending |
-| TRAY-22 | P1: Iniciar com o Windows | Design | Pending |
+| TRAY-21 | P1: Iniciar com o Windows | Tasks | Implementing |
+| TRAY-22 | P1: Iniciar com o Windows | Tasks | Implementing |
 | TRAY-23 | P1: Iniciar com o Windows | Design | Pending |
 | TRAY-24 | P1: Iniciar com o Windows | Design | Pending |
-| TRAY-25 | P1: Iniciar com o Windows | Design | Pending |
-| TRAY-26 | P1: Iniciar com o Windows | Design | Pending |
+| TRAY-25 | P1: Iniciar com o Windows | Tasks | Implementing |
+| TRAY-26 | P1: Iniciar com o Windows | Tasks | Implementing |
 | TRAY-30 | P1: Instância única | Design | Pending |
 | TRAY-31 | P1: Instância única | Design | Pending |
 | TRAY-32 | P1: Instância única | Design | Pending |

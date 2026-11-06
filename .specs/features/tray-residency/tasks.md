@@ -79,7 +79,7 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 
 ---
 
-### T2: LoginItemService
+### T2: ✅ LoginItemService
 
 **What**: Implement `LoginItemService.get()` / `set(enabled)` over an injected `LoginItemPort`, with `HIDDEN_ARG = '--hidden'`.
 **Where**: `src/main/login-item.ts` (new, + co-located `.test.ts`)
@@ -94,11 +94,11 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] Not packaged: `get()` → `{ available: false, enabled: false }`; `set()` → `ok: false`, error `only in the installed app`, and the fake records zero writes (TRAY-25)
-- [ ] Packaged: `get().enabled` = `executableWillLaunchAtLogin` when defined, else `openAtLogin`; both true/false combinations asserted (TRAY-21)
-- [ ] `set(true)` writes `{ openAtLogin: true, path: execPath, args: ['--hidden'] }`; `set(false)` writes `openAtLogin: false` with the same path and args (TRAY-22); `HIDDEN_ARG` asserted as the literal `'--hidden'`
-- [ ] Read-back mismatch → `ok: false`, error `Windows did not apply the change`, `state` = read-back; a throwing setter → `ok: false` with the thrown message (TRAY-26)
-- [ ] Quick gate passes; test count reported
+- [x] Not packaged: `get()` → `{ available: false, enabled: false }`; `set()` → `ok: false`, error `only in the installed app`, and the fake records zero writes (TRAY-25)
+- [x] Packaged: `get().enabled` = `executableWillLaunchAtLogin` when defined, else `openAtLogin`; both true/false combinations asserted (TRAY-21)
+- [x] `set(true)` writes `{ openAtLogin: true, path: execPath, args: ['--hidden'] }`; `set(false)` writes `openAtLogin: false` with the same path and args (TRAY-22); `HIDDEN_ARG` asserted as the literal `'--hidden'`
+- [x] Read-back mismatch → `ok: false`, error `Windows did not apply the change`, `state` = read-back; a throwing setter → `ok: false` with the thrown message (TRAY-26)
+- [x] Quick gate passes; test count reported
 
 **Tests**: unit
 **Gate**: quick
