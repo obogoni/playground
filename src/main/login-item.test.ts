@@ -77,10 +77,13 @@ describe('LoginItemService', () => {
       }
     )
 
-    it.each([true, false])('falls back to openAtLogin=%s when the OS gives no launch flag', (on) => {
-      const f = fake({ openAtLogin: on, willLaunch: undefined })
-      expect(new LoginItemService(f.port).get()).toEqual({ available: true, enabled: on })
-    })
+    it.each([true, false])(
+      'falls back to openAtLogin=%s when the OS gives no launch flag',
+      (on) => {
+        const f = fake({ openAtLogin: on, willLaunch: undefined })
+        expect(new LoginItemService(f.port).get()).toEqual({ available: true, enabled: on })
+      }
+    )
 
     it('asks about this executable with the hidden argument', () => {
       const f = fake({})
