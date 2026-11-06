@@ -138,7 +138,7 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 
 ---
 
-### T4: Wire residency into main, with the smoke
+### T4: ✅ Wire residency into main, with the smoke
 
 **What**: In `index.ts`: single-instance lock before `whenReady`, `second-instance` → reveal, `--hidden` gating `ready-to-show`, tray with tooltip and menu, `close` / `session-end` / `before-quit` to the controller, `revealWindow` lifted to module scope, tray destroyed on quit; create `scripts/smoke-tray-residency.mjs` covering the process-bound ACs.
 **Where**: `src/main/index.ts` (modify); smoke `scripts/smoke-tray-residency.mjs` (new)
@@ -153,12 +153,12 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] Smoke: closing the window (CDP `window.close()`) leaves the main process alive, `document.visibilityState` `hidden`, and a stub-agent session still `running` in `sessions:list` with its output still growing (TRAY-02, TRAY-03)
-- [ ] Smoke: a second launch on the same `--user-data-dir` exits within 10 s, and the first instance's window becomes visible (TRAY-30, TRAY-31)
-- [ ] Smoke: a launch with `--hidden` reaches `ready` with the window not visible; a launch without it shows the window (TRAY-23, TRAY-24, TRAY-32)
-- [ ] Smoke: after quit, no stub-agent process from the run is left (TRAY-12)
-- [ ] By hand, recorded in the commit body: tray icon and tooltip `Playground` visible, click reveals (TRAY-01, TRAY-04); clicking a notification while hidden reveals the session (TRAY-06)
-- [ ] Full gate passes, including `SMOKE_BREAK=1` failing every check
+- [x] Smoke: closing the window (CDP `window.close()`) leaves the main process alive with no visible window (`MainWindowHandle` 0; `visibilityState` cannot tell, see the smoke), and a stub-agent session still `running` in `sessions:list` with its output still growing (TRAY-02, TRAY-03)
+- [x] Smoke: a second launch on the same `--user-data-dir` exits within 10 s, and the first instance's window becomes visible (TRAY-30, TRAY-31)
+- [x] Smoke: a launch with `--hidden` reaches `ready` with the window not visible; a launch without it shows the window (TRAY-23, TRAY-24, TRAY-32)
+- [ ] **Pending owner UAT.** By hand (SPEC_DEVIATION: CDP cannot reach the tray menu, so the smoke cannot trigger the tray's Quit): with a running session, tray `Quit` shows the count dialog, `Quit` ends the app and no `pwsh`/agent process from it is left (TRAY-12); the policy is unit-covered in T3
+- [ ] **Pending owner UAT.** By hand, recorded in the validation: tray icon and tooltip `Playground` visible, click reveals (TRAY-01, TRAY-04); clicking a notification while hidden reveals the session (TRAY-06)
+- [x] Full gate passes, including `SMOKE_BREAK=1` failing every check
 
 **Tests**: e2e
 **Gate**: full

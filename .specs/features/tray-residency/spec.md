@@ -156,8 +156,8 @@ app residente na bandeja e iniciando com o Windows, em vez de um daemon de sess�
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | TRAY-01 | P1: Fechar mantém rodando | Design | Pending |
-| TRAY-02 | P1: Fechar mantém rodando | Design | Pending |
-| TRAY-03 | P1: Fechar mantém rodando | Design | Pending |
+| TRAY-02 | P1: Fechar mantém rodando | Tasks | Implementing |
+| TRAY-03 | P1: Fechar mantém rodando | Tasks | Implementing |
 | TRAY-04 | P1: Fechar mantém rodando | Design | Pending |
 | TRAY-05 | P1: Fechar mantém rodando | Tasks | Implementing |
 | TRAY-06 | P1: Fechar mantém rodando | Design | Pending |
@@ -171,13 +171,13 @@ app residente na bandeja e iniciando com o Windows, em vez de um daemon de sess�
 | TRAY-20 | P1: Iniciar com o Windows | Design | Pending |
 | TRAY-21 | P1: Iniciar com o Windows | Tasks | Implementing |
 | TRAY-22 | P1: Iniciar com o Windows | Tasks | Implementing |
-| TRAY-23 | P1: Iniciar com o Windows | Design | Pending |
-| TRAY-24 | P1: Iniciar com o Windows | Design | Pending |
+| TRAY-23 | P1: Iniciar com o Windows | Tasks | Implementing |
+| TRAY-24 | P1: Iniciar com o Windows | Tasks | Implementing |
 | TRAY-25 | P1: Iniciar com o Windows | Tasks | Implementing |
 | TRAY-26 | P1: Iniciar com o Windows | Tasks | Implementing |
-| TRAY-30 | P1: Instância única | Design | Pending |
-| TRAY-31 | P1: Instância única | Design | Pending |
-| TRAY-32 | P1: Instância única | Design | Pending |
+| TRAY-30 | P1: Instância única | Tasks | Implementing |
+| TRAY-31 | P1: Instância única | Tasks | Implementing |
+| TRAY-32 | P1: Instância única | Tasks | Implementing |
 
 **Coverage:** 23 total, 0 mapped to tasks, 23 unmapped ⚠️
 

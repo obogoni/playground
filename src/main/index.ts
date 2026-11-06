@@ -4,9 +4,11 @@ import {
   clipboard,
   dialog,
   BrowserWindow,
+  Menu,
   nativeImage,
   Notification,
-  powerMonitor
+  powerMonitor,
+  Tray
 } from 'electron'
 import { execFile, spawn } from 'node:child_process'
 import { randomBytes, randomUUID } from 'node:crypto'
@@ -59,11 +61,13 @@ import { NODE_PRESET_FS, createPresetStore } from './agent-preset-store'
 import { findOnPath } from './path-lookup'
 import { startLoopDelayLog } from './perf-monitor'
 import { withPostCreateHook } from './post-create-hook'
+import { HIDDEN_ARG } from './login-item'
 import { PtyHostClient } from './pty-host-client'
 import { forkPtyHost } from './pty-host-fork'
 import { RecountScheduler } from './recount-scheduler'
 import { resolvePostCreateCommand } from './repo-config'
 import { scanRepos } from './repo-scanner'
+import { quitMessage, ResidencyController } from './residency-controller'
 import { parseRemote } from './remote-url'
 import { scrubAuthEnv } from './scrub-auth-env'
 import { SessionManager, type ActivityHooks, type EmitFn } from './session-manager'
@@ -226,6 +230,50 @@ let namePoller: SessionNamePoller | null = null
 let ptyHost: PtyHostClient | null = null
 /** The taskbar dot for notifications raised while the window was away (TBDT). */
 let unseenBadge: UnseenBadge | null = null
+/** The tray icon that keeps the app reachable while the window is hidden (TRAY-01). */
+let tray: Tray | null = null
+
+/** Started by the login item: create the window but keep it in the tray (TRAY-23). */
+const startHidden = process.argv.includes(HIDDEN_ARG)
+
+/** Bring the window forward; a click on a stale notification after the window
+ *  is gone does nothing (NOTF-21). Also the tray's and a second launch's reveal. */
+function revealWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.show()
+  mainWindow.focus()
+}
+
+/** The X hides the app; only the tray's Quit or a Windows logoff quits it (AD-067). */
+const residency = new ResidencyController({
+  hideWindow: () => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide()
+  },
+  revealWindow,
+  runningCount: () => sessionManager?.list().filter((s) => s.status === 'running').length ?? 0,
+  confirmQuit: async (running) => {
+    // No parent window: a dialog parented to a hidden window would not show.
+    const { response } = await dialog.showMessageBox({
+      type: 'warning',
+      message: quitMessage(running),
+      buttons: ['Quit', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true
+    })
+    return response === 0
+  },
+  quit: () => app.quit()
+})
+
+// One main process per user-data dir (TRAY-30): a losing launch quits before
+// creating any window, PTY host or hook server, and brings the running one
+// forward instead, even when it carries --hidden (TRAY-31).
+const hasInstanceLock = app.requestSingleInstanceLock()
+if (!hasInstanceLock) app.quit()
+app.on('second-instance', () => residency.reveal())
+app.on('before-quit', () => residency.onBeforeQuit())
 
 function createWindow(): void {
   // Create the browser window.
@@ -244,8 +292,13 @@ function createWindow(): void {
   })
 
   win.on('ready-to-show', () => {
-    win.show()
+    if (!startHidden) win.show()
   })
+
+  // The X and Alt+F4 hide the window; a quit under way lets it close (TRAY-02).
+  win.on('close', (event) => residency.onWindowClose(event))
+  // Windows is logging off or shutting down: quit without asking (TRAY-15).
+  win.on('session-end', () => residency.onSessionEnd())
 
   // Back at the window, the user has seen what the dot announced (TBDT-03).
   win.on('focus', () => {
@@ -317,6 +370,7 @@ app.on('will-quit', (event) => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  if (!hasInstanceLock) return
   // The opt-in performance log (PDIAG-01, PDIAG-02), installed before any handler can run git;
   // without PLAYGROUND_DEBUG_PERF=1 it is the no-op. Quitting drops the partial minute (PDIAG-08).
   installDiagnostics(
@@ -606,15 +660,6 @@ app.whenReady().then(() => {
   // persistence, and stream routing; emit is lazily bound to the live window.
   const emitToWindow: EmitFn = (channel, payload) => {
     if (mainWindow) emit(mainWindow.webContents, channel, payload)
-  }
-
-  /** Bring the window forward; a click on a stale notification after the window
-   *  is gone does nothing (NOTF-21). */
-  const revealWindow = (): void => {
-    if (!mainWindow || mainWindow.isDestroyed()) return
-    if (mainWindow.isMinimized()) mainWindow.restore()
-    mainWindow.show()
-    mainWindow.focus()
   }
 
   /** A minimized window counts as not focused: its rail cannot be seen (NOTF-24). */
@@ -921,6 +966,13 @@ app.whenReady().then(() => {
   }).start()
 
   createWindow()
+
+  // The way back to a hidden window, and the only Quit (TRAY-01, TRAY-04, TRAY-05).
+  tray = new Tray(nativeImage.createFromPath(icon).resize({ width: 16, height: 16 }))
+  tray.setToolTip('Playground')
+  tray.on('click', () => residency.reveal())
+  tray.setContextMenu(Menu.buildFromTemplate(residency.menuTemplate()))
+  onWillQuit(() => tray?.destroy()) // TRAY-16
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
