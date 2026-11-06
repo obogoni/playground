@@ -79,30 +79,30 @@ Handoff snapshot.
 
 ## Handoff
 
-**Status (current, 2026-10-14): `agent-presets` is DONE locally. The Verifier passed it on round 1,
-and it is not pushed.**
+**Status (current, 2026-11-06): `tray-residency` is DONE locally. The Verifier passed it on
+iteration 2, and it is not pushed.**
 
-- **Branch:** `feature/agent-presets`. Commits: the plan `27f09c8`, then T1–T17, then the
-  validation commit. There is no PR yet; push and PR wait for the owner's go-ahead.
-- **Verification** (`.specs/features/agent-presets/validation.md`):
-  - All 44 ACs and the 4 edge cases have evidence.
-  - Sensor: 12 mutations, all 12 killed.
-  - Gates: typecheck 0, lint 0 errors, tests 3225 passed / 7 failed (the 7 failures are the
-    local git/longpaths baseline, which predates this branch).
-  - Smoke `scripts/smoke-agent-presets.mjs`: 52/52.
-- **Minor gaps, none blocking:**
-  - PRST-36: for a broken preset, Settings shows the reason instead of agent, cwd and prompt.
-  - PRST-22: focusing the first empty field is proven with one field only.
-  - PRST-14: no test excludes a picked task from the saved preset.
-  - Lessons L-143..145 were recorded as candidates.
-- **Environment note:** the local `node_modules` was missing `markdown-it` after today's pull. It
-  was installed with `npm install --ignore-scripts`, and the `package-lock.json` drift from the
-  local npm was reverted.
-- **Next:** owner hand-check (save a Reviewer / Bug fixer preset and launch both), then push and
-  open a PR with `Closes #<issue>` if an issue exists.
+- **Feature:** `.specs/features/tray-residency/` (TRAY-01..32, AD-067). The X hides the app to the
+  tray, the tray's Quit asks when sessions run, a single-instance lock, and an opt-in
+  start-with-Windows login item that starts hidden (`--hidden`).
+- **Branch:** `feature/tray-residency` from `origin/main` b8402ba. Commits: spec + AD-067 `be318fc`,
+  design + tasks `b98213d`, T1–T7 `f33d73d`..`068f3ff` (plus the style commit `d0f7ab1`), fix round 1
+  `42c2d85`, then the validation commit. No PR yet; push and PR wait for the owner's go-ahead.
+- **Verification** (`validation.md`): iteration 1 FAIL (mutant M1: a one-session quit skipped the
+  dialog), fixed in `42c2d85`; iteration 2 PASS, sensor 8/8 killed. Gates: typecheck 0, lint 0 errors,
+  `npm test` 12 failed / 3123 passed (the 8 deterministic failures are identical on `origin/main`,
+  git/longpaths baseline; 4 are load timeouts that pass alone). Smoke
+  `scripts/smoke-tray-residency.mjs` 13/13; `SMOKE_BREAK=1` fails every TRAY check.
+- **Next:** owner hand-UAT on the installed nightly: TRAY-01, 03 (hooks and notifications while
+  hidden), 04, 06, 12, 15, 16, 21/22/23. Then push and open a PR (`Closes #<issue>` if one exists).
+- **Note:** the skill's `lessons.py list` rewrote `.specs/LESSONS.md` and `.specs/lessons.json`,
+  dropping ~1000 lines of candidate lessons; the files were restored with `git checkout`. Lessons
+  proposed by the Verifier (N = 1 boundary, smoke-unreachable ACs need UAT lines, `**Result**:` line
+  in validation reports) are listed in `validation.md` and were not recorded.
 
 **Parked by the owner on 2026-10-14: `ado-triggers`** (snapshot below). When it resumes, its AD
-numbers must move past whatever `agent-presets` takes (main holds up to AD-062).
+numbers must move past AD-067, and it builds on `tray-residency` (AD-067: the app stays up in the
+tray; `SessionManager` lifecycle events `spawned`/`finished`/`lost` belong to `ado-triggers`).
 
 **Status (2026-10-06): `ado-triggers` is in SPECIFY. Spec and context are drafted and
 validated (`validate_spec.py` 0 errors). The owner has NOT approved the spec yet. Nothing is

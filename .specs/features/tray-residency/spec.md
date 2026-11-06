@@ -155,31 +155,31 @@ app residente na bandeja e iniciando com o Windows, em vez de um daemon de sess�
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| TRAY-01 | P1: Fechar mantém rodando | Design | Pending |
-| TRAY-02 | P1: Fechar mantém rodando | Tasks | Implementing |
-| TRAY-03 | P1: Fechar mantém rodando | Tasks | Implementing |
-| TRAY-04 | P1: Fechar mantém rodando | Design | Pending |
-| TRAY-05 | P1: Fechar mantém rodando | Tasks | Implementing |
-| TRAY-06 | P1: Fechar mantém rodando | Design | Pending |
-| TRAY-10 | P1: Sair explícito | Tasks | Implementing |
-| TRAY-11 | P1: Sair explícito | Tasks | Implementing |
-| TRAY-12 | P1: Sair explícito | Design | Pending |
-| TRAY-13 | P1: Sair explícito | Tasks | Implementing |
-| TRAY-14 | P1: Sair explícito | Design | Pending |
-| TRAY-15 | P1: Sair explícito | Tasks | Implementing |
-| TRAY-16 | P1: Sair explícito | Design | Pending |
-| TRAY-20 | P1: Iniciar com o Windows | Tasks | Implementing |
-| TRAY-21 | P1: Iniciar com o Windows | Tasks | Implementing |
-| TRAY-22 | P1: Iniciar com o Windows | Tasks | Implementing |
-| TRAY-23 | P1: Iniciar com o Windows | Tasks | Implementing |
-| TRAY-24 | P1: Iniciar com o Windows | Tasks | Implementing |
-| TRAY-25 | P1: Iniciar com o Windows | Tasks | Implementing |
-| TRAY-26 | P1: Iniciar com o Windows | Tasks | Implementing |
-| TRAY-30 | P1: Instância única | Tasks | Implementing |
-| TRAY-31 | P1: Instância única | Tasks | Implementing |
-| TRAY-32 | P1: Instância única | Tasks | Implementing |
+| TRAY-01 | P1: Fechar mantém rodando | UAT | Implementing |
+| TRAY-02 | P1: Fechar mantém rodando | Validate | Verified |
+| TRAY-03 | P1: Fechar mantém rodando | UAT | Implementing |
+| TRAY-04 | P1: Fechar mantém rodando | UAT | Implementing |
+| TRAY-05 | P1: Fechar mantém rodando | Validate | Verified |
+| TRAY-06 | P1: Fechar mantém rodando | UAT | Implementing |
+| TRAY-10 | P1: Sair explícito | Validate | Verified |
+| TRAY-11 | P1: Sair explícito | Validate | Verified |
+| TRAY-12 | P1: Sair explícito | UAT | Implementing |
+| TRAY-13 | P1: Sair explícito | Validate | Verified |
+| TRAY-14 | P1: Sair explícito | Validate | Verified |
+| TRAY-15 | P1: Sair explícito | UAT | Implementing |
+| TRAY-16 | P1: Sair explícito | UAT | Implementing |
+| TRAY-20 | P1: Iniciar com o Windows | Validate | Verified |
+| TRAY-21 | P1: Iniciar com o Windows | UAT | Implementing |
+| TRAY-22 | P1: Iniciar com o Windows | UAT | Implementing |
+| TRAY-23 | P1: Iniciar com o Windows | UAT | Implementing |
+| TRAY-24 | P1: Iniciar com o Windows | Validate | Verified |
+| TRAY-25 | P1: Iniciar com o Windows | Validate | Verified |
+| TRAY-26 | P1: Iniciar com o Windows | Validate | Verified |
+| TRAY-30 | P1: Instância única | Validate | Verified |
+| TRAY-31 | P1: Instância única | Validate | Verified |
+| TRAY-32 | P1: Instância única | Validate | Verified |
 
-**Coverage:** 23 total, 0 mapped to tasks, 23 unmapped ⚠️
+**Coverage:** 23 total, 23 mapped to tasks; 13 Verified, 10 awaiting owner UAT (see `validation.md`)
 
 ---
 
