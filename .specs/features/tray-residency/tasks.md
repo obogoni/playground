@@ -167,7 +167,7 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 
 ---
 
-### T5: Login item IPC
+### T5: ✅ Login item IPC
 
 **What**: Add `login-item:get` and `login-item:set` to the IPC contract and register handlers backed by `LoginItemService` (with `app` as the port).
 **Where**: `src/shared/ipc-contract.ts` (modify); handlers in `src/main/index.ts`
@@ -182,8 +182,8 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] Smoke (dev, unpackaged): `invoke('login-item:get')` → `{ available: false, enabled: false }`; `invoke('login-item:set', { enabled: true })` → `ok: false` with `only in the installed app`, and the HKCU Run key has no Playground/electron entry before and after (TRAY-25)
-- [ ] Full gate passes
+- [x] Smoke (dev, unpackaged): `invoke('login-item:get')` → `{ available: false, enabled: false }`; `invoke('login-item:set', { enabled: true })` → `ok: false` with `only in the installed app`, and the HKCU Run key has no Playground/electron entry before and after (TRAY-25)
+- [x] Full gate passes
 
 **Tests**: e2e
 **Gate**: full

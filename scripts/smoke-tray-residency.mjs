@@ -238,8 +238,24 @@ function seedUserData(dir, wsPath, stub) {
   )
 }
 
+/** The current user's Run key, where a login item lives; '' when it has no values. */
+function runKey() {
+  try {
+    return execFileSync(
+      'reg',
+      ['query', 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'],
+      {
+        encoding: 'utf8'
+      }
+    )
+  } catch {
+    return ''
+  }
+}
+
 let tmp = null
 let failure = null
+const runKeyBefore = runKey()
 
 try {
   if (await portAnswers()) throw new Error(`port ${PORT} already answers CDP; close what holds it`)
@@ -298,6 +314,19 @@ try {
     true
   )
 
+  /* --- outside the installed app the login item is never written (TRAY-25) */
+  console.log('· login item')
+  expectEq(
+    'TRAY-25: login-item:get reports the option unavailable and off',
+    await evaluate(`window.api.invoke('login-item:get')`),
+    { available: false, enabled: false }
+  )
+  expectEq(
+    'TRAY-25: login-item:set refuses and writes nothing',
+    await evaluate(`window.api.invoke('login-item:set', { enabled: true })`),
+    { ok: false, error: 'only in the installed app', state: { available: false, enabled: false } }
+  )
+
   await evaluate(`window.api.invoke('sessions:stop', { id: ${js(session.id)} }).then(() => true)`)
   disconnect()
   await stopApp()
@@ -322,9 +351,16 @@ try {
   if (tmp) await rm(tmp, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 })
 }
 
-const cleaned = tmp === null || !existsSync(tmp)
-checks.push({ name: 'the temp folder is removed', ok: cleaned })
-console.log(`    ${cleaned ? 'PASS' : 'FAIL'}  isolation: the temp folder is removed`)
+/* The isolation proofs run whatever happened above (never broken by SMOKE_BREAK). */
+const isolation = [
+  ['the temp folder is removed', tmp === null || !existsSync(tmp)],
+  // TRAY-25: an unpackaged app never touches the login item.
+  ['the HKCU Run key is unchanged', runKey() === runKeyBefore]
+]
+for (const [name, ok] of isolation) {
+  checks.push({ name, ok })
+  console.log(`    ${ok ? 'PASS' : 'FAIL'}  isolation: ${name}`)
+}
 
 const passed = checks.filter((c) => c.ok).length
 console.log(

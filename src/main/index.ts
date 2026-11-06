@@ -61,7 +61,7 @@ import { NODE_PRESET_FS, createPresetStore } from './agent-preset-store'
 import { findOnPath } from './path-lookup'
 import { startLoopDelayLog } from './perf-monitor'
 import { withPostCreateHook } from './post-create-hook'
-import { HIDDEN_ARG } from './login-item'
+import { HIDDEN_ARG, LoginItemService } from './login-item'
 import { PtyHostClient } from './pty-host-client'
 import { forkPtyHost } from './pty-host-fork'
 import { RecountScheduler } from './recount-scheduler'
@@ -411,6 +411,16 @@ app.whenReady().then(() => {
   })
 
   handle('app:version', () => app.getVersion())
+
+  // The start-with-Windows option (TRAY-20..26); never written outside the installed app.
+  const loginItem = new LoginItemService({
+    isPackaged: app.isPackaged,
+    execPath: process.execPath,
+    getLoginItemSettings: (o) => app.getLoginItemSettings(o),
+    setLoginItemSettings: (o) => app.setLoginItemSettings(o)
+  })
+  handle('login-item:get', () => loginItem.get())
+  handle('login-item:set', ({ enabled }) => loginItem.set(enabled))
 
   const configStore = new ConfigStore(app.getPath('userData'))
   handle('config:get', () => configStore.get())
