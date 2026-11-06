@@ -192,7 +192,7 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 
 ---
 
-### T6: Login checkbox view logic
+### T6: ✅ Login checkbox view logic
 
 **What**: Pure function mapping `LoginItemState` plus the last error to the checkbox's `checked`, `disabled`, `note` and `error` text.
 **Where**: `src/renderer/src/lib/login-item-view.ts` (new, + co-located `.test.ts`)
@@ -207,11 +207,11 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] Label constant is exactly `Start Playground when Windows starts`; available → note `opens hidden in the tray`, enabled control (TRAY-20)
-- [ ] `checked` mirrors `state.enabled` (TRAY-21)
-- [ ] Unavailable → disabled, note `only in the installed app` (TRAY-25)
-- [ ] Error `X` → error text exactly `Couldn't change the startup setting: X`; no error → none (TRAY-26)
-- [ ] Quick gate passes; test count reported
+- [x] Label constant is exactly `Start Playground when Windows starts`; available → note `opens hidden in the tray`, enabled control (TRAY-20)
+- [x] `checked` mirrors `state.enabled` (TRAY-21)
+- [x] Unavailable → disabled, note `only in the installed app` (TRAY-25)
+- [x] Error `X` → error text exactly `Couldn't change the startup setting: X`; no error → none (TRAY-26)
+- [x] Quick gate passes; test count reported
 
 **Tests**: unit
 **Gate**: quick
