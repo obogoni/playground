@@ -159,14 +159,14 @@ app residente na bandeja e iniciando com o Windows, em vez de um daemon de sess�
 | TRAY-02 | P1: Fechar mantém rodando | Design | Pending |
 | TRAY-03 | P1: Fechar mantém rodando | Design | Pending |
 | TRAY-04 | P1: Fechar mantém rodando | Design | Pending |
-| TRAY-05 | P1: Fechar mantém rodando | Design | Pending |
+| TRAY-05 | P1: Fechar mantém rodando | Tasks | Implementing |
 | TRAY-06 | P1: Fechar mantém rodando | Design | Pending |
-| TRAY-10 | P1: Sair explícito | Design | Pending |
-| TRAY-11 | P1: Sair explícito | Design | Pending |
+| TRAY-10 | P1: Sair explícito | Tasks | Implementing |
+| TRAY-11 | P1: Sair explícito | Tasks | Implementing |
 | TRAY-12 | P1: Sair explícito | Design | Pending |
-| TRAY-13 | P1: Sair explícito | Design | Pending |
+| TRAY-13 | P1: Sair explícito | Tasks | Implementing |
 | TRAY-14 | P1: Sair explícito | Design | Pending |
-| TRAY-15 | P1: Sair explícito | Design | Pending |
+| TRAY-15 | P1: Sair explícito | Tasks | Implementing |
 | TRAY-16 | P1: Sair explícito | Design | Pending |
 | TRAY-20 | P1: Iniciar com o Windows | Design | Pending |
 | TRAY-21 | P1: Iniciar com o Windows | Tasks | Implementing |

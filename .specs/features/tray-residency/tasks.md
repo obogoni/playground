@@ -107,7 +107,7 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 
 ---
 
-### T3: ResidencyController
+### T3: ✅ ResidencyController
 
 **What**: Implement `ResidencyController` over `ResidencyPorts` with `onWindowClose`, `onBeforeQuit`, `requestQuit`, `onSessionEnd`, `reveal`, `menuTemplate`, and export the dialog message builder.
 **Where**: `src/main/residency-controller.ts` (new, + co-located `.test.ts`)
@@ -122,14 +122,14 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] Close while not quitting → `preventDefault` called and `hideWindow` called once; close after `onBeforeQuit` → neither called (TRAY-02)
-- [ ] `requestQuit` with 0 running → `quit` once, `confirmQuit` never (TRAY-10)
-- [ ] `requestQuit` with 2 running → `confirmQuit(2)`; message builder returns exactly `2 running session(s) will be stopped. Quit anyway?` (TRAY-11); confirm `true` → `quit` once (TRAY-12); `false` → `quit` never (TRAY-13)
-- [ ] A second `requestQuit` while the first dialog is pending → no second `confirmQuit`
-- [ ] `onSessionEnd` → `quit` once, `confirmQuit` never, and a later close is not prevented (TRAY-15)
-- [ ] `reveal` → `revealWindow` once (TRAY-04, TRAY-31)
-- [ ] `menuTemplate()` labels are exactly `['Open Playground', 'Quit']`; their clicks call `revealWindow` and `requestQuit` (TRAY-05)
-- [ ] Quick gate passes; test count reported
+- [x] Close while not quitting → `preventDefault` called and `hideWindow` called once; close after `onBeforeQuit` → neither called (TRAY-02)
+- [x] `requestQuit` with 0 running → `quit` once, `confirmQuit` never (TRAY-10)
+- [x] `requestQuit` with 2 running → `confirmQuit(2)`; message builder returns exactly `2 running session(s) will be stopped. Quit anyway?` (TRAY-11); confirm `true` → `quit` once (TRAY-12); `false` → `quit` never (TRAY-13)
+- [x] A second `requestQuit` while the first dialog is pending → no second `confirmQuit`
+- [x] `onSessionEnd` → `quit` once, `confirmQuit` never, and a later close is not prevented (TRAY-15)
+- [x] `reveal` → `revealWindow` once (TRAY-04, TRAY-31)
+- [x] `menuTemplate()` labels are exactly `['Open Playground', 'Quit']`; their clicks call `revealWindow` and `requestQuit` (TRAY-05)
+- [x] Quick gate passes; test count reported
 
 **Tests**: unit
 **Gate**: quick
