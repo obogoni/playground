@@ -54,7 +54,7 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 
 ## Task Breakdown
 
-### T1: Shared login-item types
+### T1: ✅ Shared login-item types
 
 **What**: Add `LoginItemState` and `LoginItemResult` exactly as in the design's Data Models.
 **Where**: `src/shared/login-item.ts` (new)
@@ -69,8 +69,8 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] Both types exported, with the doc comments from the design
-- [ ] `npm run typecheck` exits 0
+- [x] Both types exported, with the doc comments from the design
+- [x] `npm run typecheck` exits 0
 
 **Tests**: none
 **Gate**: build (typecheck only)
