@@ -67,7 +67,7 @@ import { forkPtyHost } from './pty-host-fork'
 import { RecountScheduler } from './recount-scheduler'
 import { resolvePostCreateCommand } from './repo-config'
 import { scanRepos } from './repo-scanner'
-import { quitMessage, ResidencyController } from './residency-controller'
+import { quitDialog, QUIT_RESPONSE, ResidencyController } from './residency-controller'
 import { parseRemote } from './remote-url'
 import { scrubAuthEnv } from './scrub-auth-env'
 import { SessionManager, type ActivityHooks, type EmitFn } from './session-manager'
@@ -254,15 +254,8 @@ const residency = new ResidencyController({
   runningCount: () => sessionManager?.list().filter((s) => s.status === 'running').length ?? 0,
   confirmQuit: async (running) => {
     // No parent window: a dialog parented to a hidden window would not show.
-    const { response } = await dialog.showMessageBox({
-      type: 'warning',
-      message: quitMessage(running),
-      buttons: ['Quit', 'Cancel'],
-      defaultId: 1,
-      cancelId: 1,
-      noLink: true
-    })
-    return response === 0
+    const { response } = await dialog.showMessageBox(quitDialog(running))
+    return response === QUIT_RESPONSE
   },
   quit: () => app.quit()
 })

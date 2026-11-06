@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { quitMessage, ResidencyController } from './residency-controller'
+import { quitDialog, quitMessage, QUIT_RESPONSE, ResidencyController } from './residency-controller'
 
 interface Harness {
   ctrl: ResidencyController
@@ -81,9 +81,29 @@ describe('ResidencyController', () => {
       expect(h.calls).toEqual([])
     })
 
+    it('asks even when exactly one session runs (TRAY-11)', () => {
+      const h = harness(1)
+      void h.ctrl.requestQuit()
+      expect(h.confirms).toEqual([1])
+      expect(h.calls).toEqual([])
+    })
+
     it('words the dialog with the count (TRAY-11)', () => {
       expect(quitMessage(2)).toBe('2 running session(s) will be stopped. Quit anyway?')
       expect(quitMessage(1)).toBe('1 running session(s) will be stopped. Quit anyway?')
+    })
+
+    it('offers Quit and Cancel, Cancel the default (TRAY-11)', () => {
+      const options = quitDialog(3)
+      expect(options).toEqual({
+        type: 'warning',
+        message: '3 running session(s) will be stopped. Quit anyway?',
+        buttons: ['Quit', 'Cancel'],
+        defaultId: 1,
+        cancelId: 1,
+        noLink: true
+      })
+      expect(options.buttons[QUIT_RESPONSE]).toBe('Quit')
     })
 
     it('quits when the user confirms (TRAY-12)', async () => {

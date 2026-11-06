@@ -157,7 +157,8 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 - [x] Smoke: a second launch on the same `--user-data-dir` exits within 10 s, and the first instance's window becomes visible (TRAY-30, TRAY-31)
 - [x] Smoke: a launch with `--hidden` reaches `ready` with the window not visible; a launch without it shows the window (TRAY-23, TRAY-24, TRAY-32)
 - [ ] **Pending owner UAT.** By hand (SPEC_DEVIATION: CDP cannot reach the tray menu, so the smoke cannot trigger the tray's Quit): with a running session, tray `Quit` shows the count dialog, `Quit` ends the app and no `pwsh`/agent process from it is left (TRAY-12); the policy is unit-covered in T3
-- [ ] **Pending owner UAT.** By hand, recorded in the validation: tray icon and tooltip `Playground` visible, click reveals (TRAY-01, TRAY-04); clicking a notification while hidden reveals the session (TRAY-06)
+- [ ] **Pending owner UAT.** By hand, recorded in the validation: tray icon and tooltip `Playground` visible, click reveals (TRAY-01, TRAY-04); clicking a notification while hidden reveals the session (TRAY-06); while hidden, a finished turn still raises the native notification and the rail's activity updates on reveal (TRAY-03, hooks and notifications); after `Quit` the tray icon is gone (TRAY-16)
+- [x] Fix round 1 (Verifier): a quit with exactly one running session asks first (M1 survived `running === 0` → `running <= 1`; now killed), and the dialog options (`Quit`/`Cancel`, `Cancel` default) moved into `quitDialog` with a unit test (TRAY-11)
 - [x] Full gate passes, including `SMOKE_BREAK=1` failing every check
 
 **Tests**: e2e

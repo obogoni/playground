@@ -27,6 +27,28 @@ export interface TrayMenuItem {
 export const quitMessage = (running: number): string =>
   `${running} running session(s) will be stopped. Quit anyway?`
 
+/** The quit dialog's options: `Quit` and `Cancel`, `Cancel` the default (TRAY-11). */
+export const quitDialog = (
+  running: number
+): {
+  type: 'warning'
+  message: string
+  buttons: string[]
+  defaultId: number
+  cancelId: number
+  noLink: boolean
+} => ({
+  type: 'warning',
+  message: quitMessage(running),
+  buttons: ['Quit', 'Cancel'],
+  defaultId: 1,
+  cancelId: 1,
+  noLink: true
+})
+
+/** The dialog response that means quit: the `Quit` button's index. */
+export const QUIT_RESPONSE = 0
+
 export class ResidencyController {
   #quitting = false
   #confirming: Promise<void> | null = null
