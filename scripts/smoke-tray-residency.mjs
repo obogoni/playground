@@ -327,6 +327,34 @@ try {
     { ok: false, error: 'only in the installed app', state: { available: false, enabled: false } }
   )
 
+  /* --- the Settings checkbox (TRAY-20, TRAY-25) ------------------------- */
+  console.log('· settings checkbox')
+  await evaluate(`(() => {
+    document.querySelector('.topbar-icon-btn[title="Settings"]')?.click()
+    return true
+  })()`)
+  const checkbox = await waitFor(
+    `(() => {
+      const label = [...document.querySelectorAll('[role="tabpanel"][aria-label="General"] .dialog-check')]
+        .find((l) => l.textContent.startsWith('Start Playground when Windows starts'))
+      if (!label) return null
+      const input = label.querySelector('input[type="checkbox"]')
+      return {
+        label: label.querySelector('.dialog-check-text').firstChild.textContent,
+        note: label.querySelector('.dialog-check-note').textContent,
+        disabled: input.disabled,
+        checked: input.checked
+      }
+    })()`,
+    10000
+  )
+  expectEq('TRAY-20/25: General shows the start-with-Windows checkbox, disabled in dev', checkbox, {
+    label: 'Start Playground when Windows starts',
+    note: 'only in the installed app',
+    disabled: true,
+    checked: false
+  })
+
   await evaluate(`window.api.invoke('sessions:stop', { id: ${js(session.id)} }).then(() => true)`)
   disconnect()
   await stopApp()

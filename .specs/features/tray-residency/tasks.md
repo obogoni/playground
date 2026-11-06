@@ -220,7 +220,7 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 
 ---
 
-### T7: Settings checkbox
+### T7: ✅ Settings checkbox
 
 **What**: Render the checkbox in Settings' General tab after the default-shell control, load it with `login-item:get` on open, call `login-item:set` on toggle and apply the returned state and error.
 **Where**: `src/renderer/src/components/SettingsDialog.tsx` (modify); smoke extended
@@ -235,9 +235,9 @@ T3 (Phase 1) → T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] Smoke: General tab shows the label and, in dev, the control disabled with `only in the installed app` (TRAY-20, TRAY-25)
-- [ ] By hand on the installed nightly, recorded in the validation: toggle on → Task Manager Startup apps lists Playground; logoff/login → tray icon, no window; toggle off → gone (TRAY-21, TRAY-22, TRAY-23)
-- [ ] Full gate passes
+- [x] Smoke: General tab shows the label and, in dev, the control disabled with `only in the installed app` (TRAY-20, TRAY-25)
+- [ ] **Pending owner UAT.** By hand on the installed nightly, recorded in the validation: toggle on → Task Manager Startup apps lists Playground; logoff/login → tray icon, no window; toggle off → gone (TRAY-21, TRAY-22, TRAY-23)
+- [x] Full gate passes
 
 **Tests**: e2e
 **Gate**: full
