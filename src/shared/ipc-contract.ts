@@ -30,6 +30,7 @@ import type {
 } from './files'
 import type { CommitLists, GitOp, GitOpResult, SyncState } from './git'
 import type { ProbeResult } from './links'
+import type { LoginItemResult, LoginItemState } from './login-item'
 import type { PromptEntry } from './prompt-template'
 import type { AgentPreset, AgentPresetChangeResult, AgentPresetListing } from './agent-presets'
 import type { ClipboardPaste } from './paste'
@@ -59,6 +60,10 @@ import type {
 export interface IpcContract {
   /** The running app's version (electron `app.getVersion()`), shown as the TopBar version tag. */
   'app:version': { req: void; res: string }
+  /** Whether Windows starts the app hidden at login (TRAY-21, TRAY-25). */
+  'login-item:get': { req: void; res: LoginItemState }
+  /** Register or remove that login item; the state is read back (TRAY-22, TRAY-26). */
+  'login-item:set': { req: { enabled: boolean }; res: LoginItemResult }
   'config:get': { req: void; res: AppConfig }
   'config:patch': { req: ConfigPatch; res: AppConfig }
   /** Opens a native folder picker in main; null when cancelled or already registered. */

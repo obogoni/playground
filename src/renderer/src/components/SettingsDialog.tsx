@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties, JSX } from 'react'
 import type { AgentDef, Shell } from '../../../shared/agents'
 import type { AppConfig } from '../../../shared/config'
+import type { LoginItemState } from '../../../shared/login-item'
 import {
   NOTIFIABLE_STATES,
   NOTIFY_STATE_KEYS,
@@ -13,6 +14,7 @@ import { DEFAULT_BRANCH_TEMPLATE } from '../../../shared/tasks'
 import { DEFAULT_WORKTREE_TEMPLATE } from '../../../shared/worktrees'
 import { api } from '../lib/api'
 import { applyAgentEdit } from '../lib/agent-registry'
+import { LOGIN_ITEM_LABEL, loginItemView } from '../lib/login-item-view'
 import { Icon } from './Icon'
 import { PresetsSettings } from './PresetsSettings'
 import './NewWorktreeDialog.css'
@@ -96,6 +98,13 @@ export function SettingsDialog({
   // switching tabs loses no edit (NOTF-29).
   const [tab, setTab] = useState<SettingsTab>(initialTab)
   const [notify, setNotify] = useState<NotificationPrefs | null>(null)
+  // The OS login item, read when the dialog opens (TRAY-21); null until it answers.
+  const [loginItem, setLoginItem] = useState<LoginItemState | null>(null)
+  const [loginItemFailure, setLoginItemFailure] = useState<string | null>(null)
+
+  useEffect(() => {
+    api.invoke('login-item:get').then(setLoginItem).catch(console.error)
+  }, [])
 
   useEffect(() => {
     api
@@ -123,6 +132,18 @@ export function SettingsDialog({
   const persistShell = (shell: Shell): void => {
     setDefaultShell(shell)
     api.invoke('config:patch', { ui: { defaultShell: shell } }).catch(console.error)
+  }
+
+  // Applied at once, like the shell; the box then shows what Windows holds (TRAY-22, TRAY-26).
+  const persistLoginItem = (enabled: boolean): void => {
+    setLoginItemFailure(null)
+    api
+      .invoke('login-item:set', { enabled })
+      .then((result) => {
+        setLoginItem(result.state)
+        if (!result.ok) setLoginItemFailure(result.error)
+      })
+      .catch((err) => setLoginItemFailure(err instanceof Error ? err.message : String(err)))
   }
 
   // Each switch persists on its own key, so the master never rewrites a state
@@ -178,6 +199,7 @@ export function SettingsDialog({
 
   // org doubles as the loading flag: fields render once config:get resolves.
   const loaded = org !== null
+  const loginView = loginItem ? loginItemView(loginItem, loginItemFailure) : null
   const formValid = form !== null && form.name.trim() !== '' && form.command.trim() !== ''
   // The alias only matters when an effective template uses {dev}; a blank
   // template falls back to a default that does not (DEVA-09/10).
@@ -459,6 +481,24 @@ export function SettingsDialog({
                 ))}
               </div>
             </div>
+
+            {loginView && (
+              <div>
+                <label className={`dialog-check${loginView.disabled ? ' disabled' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={loginView.checked}
+                    disabled={loginView.disabled}
+                    onChange={(event) => persistLoginItem(event.target.checked)}
+                  />
+                  <span className="dialog-check-text">
+                    {LOGIN_ITEM_LABEL}
+                    <span className="dialog-check-note">{loginView.note}</span>
+                  </span>
+                </label>
+                {loginView.error && <div className="dialog-error">{loginView.error}</div>}
+              </div>
+            )}
           </div>
         )}
         <footer className="dialog-footer">

@@ -74,34 +74,35 @@ Handoff snapshot.
 | AD-064 | 2026-10-20 | **Linking a session to a task by id pins that task.** Every path that links a session — the `sessions:spawn` link (New Session, a preset), `sessions:set-task` (the rail's picker) and an agent's `POST /task` — starts a detached `TaskBoard.pinLinked(id)` under `ado.defaultOrg` / `ado.defaultProject`. It is the auto-pin's fetch and validation without the `ado.autoPinFromWorktrees` flag, and it skips ids already pinned, in flight, or not found earlier in the app session. The spawn and the link never wait for it, and `tasks:changed` is pushed only when a pin was added. **Amends AD-023** (a link is the user's or the agent's explicit naming of a work item, so it may reach ADO), **extends AD-049** beyond the template-branch path, and **reverses** `agent-task-link`'s "no fetch on `/task`" (`.specs/features/agent-task-link/spec.md:25`). Spec: `.specs/features/agent-presets/` (PRST-45..50). | Owner, 2026-10-20, after hand-testing the nightly: a preset session linked to an unpinned task read as unlinked, because the rail draws title, type and state only from a pinned task's details (`rail-groups.ts:212`). Pinning on link gives every session that context, and the type of a Task's parent (e.g. Fault), with no new data model. The session's own `task.title` is not rewritten, because `setTask` would split the Hours period (HTSK-12). |
 | AD-065 | 2026-10-26 | **The Board and Workflows directions are removed, with the whole Workflows engine.** The direction switcher keeps Tree, Agents, Files and Hours. Gone: `BoardView`, `WorkflowsView` and its dialogs, the engine in main (`workflow-*`, `run-state`, `agent-step-runner`, `mcp-result-server`, `emit-result-schema`, `agent-command-builder`, `parse-envelope`), `src/shared/workflows.ts`, every `workflows:*` channel and `workflow:*` event, the workflow smokes, fixtures, `scripts/wf1-spike/` and `DESIGN_HANDOFF_WORKFLOWS.md`, and the direct dependencies `esbuild`, `@modelcontextprotocol/sdk` and `ajv`. `ConfigStore.load` opens on `tree` when the saved `ui.direction` is not one the app has (`config-store.ts`), and keeps the rest of the config. User data on disk (`~/.playground/workflows`, `<userData>/workflow-runs`) is left untouched. `AgentSpawn`/`AgentChild`, still used by `SessionNamePoller`, move to `src/main/agent-spawn.ts`; `TaskBoard` stays, it backs pinned tasks. **Supersedes AD-006..AD-012 operationally**; they remain as history, with their specs in `.specs/features/workflows-*` and `board-direction`. Spec: `.specs/features/remove-workflows-board/` (RMV-01..23). | Owner, 2026-10-26: neither feature is used. The engine carried a loopback MCP server, a runtime bundler and three dependencies that only it needed. Falling back to `tree` keeps a config saved on a removed direction from opening on nothing. Deleting run data the user may want to keep is not the app's call. |
 | AD-066 | 2026-10-31 | **A session is attributed to the worktree it follows, else its launch folder: `workCwdOf(session) = followedPath ?? cwd` (`src/shared/worktree-match.ts`).** The rail group and level, the status bar, the worktree detail and Files session lists, the Agents view attribution, the hours (a period's `cwd` and branch) and the notification branch read `workCwdOf`. The PTY, respawn, duplicate (which starts with no `followedPath`), the title, the "Respawn in" label and the sessions a worktree removal stops (`launchedIn`) read `cwd`. `followedPath` is set only by a Claude file-edit hook (`PreToolUse` / `PostToolUse` of `Edit`, `Write`, `MultiEdit`, `NotebookEdit`) on a path inside a known worktree other than the launch folder's; it never moves back to the launch folder on its own, and is cleared only when the followed worktree is removed through the app or no longer exists at load. **Amends AD-050**: the isolation level reads `workCwdOf`, not `cwd`. Spec: `.specs/features/session-follows-worktree/` (SFWT-01..16). | Issue #185: the owner's agents start at the workspace root for its instructions, skills and guard hooks, then create a task worktree and edit there by absolute path without changing directory, so a `cwd` read at spawn put every session and its hours on the root's `main`. Keeping the PTY at `cwd` keeps those instructions and hooks; edits are the one signal the hooks already carry, and shell commands would be guesswork. Not moving back keeps a stray edit at the root from undoing the move, and earlier periods stay where they were recorded. Future readers of a session's place must use `workCwdOf`. |
+| AD-067 | 2026-11-06 | **Sessions stay owned by the Electron app; there is no session daemon. Background work (the `ado-triggers` poller, any future agent scheduler) runs in main, and running with the window closed comes from keeping the app resident in the tray and starting it at Windows login, not from a separate process.** The PTY host stays the `utilityProcess` of AD-053 and dies with the app. The window's X hides the app; it quits only through the tray's confirmed `Quit` or a Windows logoff, and a single-instance lock keeps one main process. Updates keep applying on quit (`autoInstallOnAppQuit`), so a resident app updates only when it quits. To keep a later extraction cheap, `SessionManager` emits lifecycle events (`spawned`, `finished`, `lost`), and every scheduler or trigger reaches sessions only through `SessionManager`'s API and those events, never through the PTY host or the renderer. **Revisit** when sessions lost to an app crash become a real cost, when a resident app staying on an old version does, or when a CLI or another external client needs to drive sessions. **Amends** `ado-triggers`' "Disparar com o app fechado" out-of-scope row (`.specs/features/ado-triggers/spec.md:29`): a closed window no longer means a stopped app. Spec: `.specs/features/tray-residency/` (TRAY-01..32). | Compared with herdr (`herdrdev/herdr-core`), whose `hc` daemon and holder processes own the PTYs so sessions outlive the window, crashes and updates. Here a daemon means a detached Node process with single-instance discovery over a named pipe, moving `SessionManager`, ring buffers, the hook server and `TimeTracker` out of main, a versioned protocol in place of today's typed-cast IPC (AD-004), and NSIS updates that cannot replace binaries while it runs. A Windows service, to run while logged off, would lose the user profile that holds the `az`, `gh` and `claude` credentials. Scheduling only needs a process up at the scheduled time, which a tray-resident app is. Owner, 2026-11-06: X always hides, login start is opt-in and hidden, quit confirms with the session count, updates stay apply-on-quit. Trade-off: sessions still die on an app crash, nothing runs while the user is logged off, and an app that never quits never updates. |
 
 
 ## Handoff
 
-**Status (current, 2026-10-14): `agent-presets` is DONE locally. The Verifier passed it on round 1,
-and it is not pushed.**
+**Status (current, 2026-11-06): `tray-residency` is DONE locally. The Verifier passed it on
+iteration 2, and it is not pushed.**
 
-- **Branch:** `feature/agent-presets`. Commits: the plan `27f09c8`, then T1–T17, then the
-  validation commit. There is no PR yet; push and PR wait for the owner's go-ahead.
-- **Verification** (`.specs/features/agent-presets/validation.md`):
-  - All 44 ACs and the 4 edge cases have evidence.
-  - Sensor: 12 mutations, all 12 killed.
-  - Gates: typecheck 0, lint 0 errors, tests 3225 passed / 7 failed (the 7 failures are the
-    local git/longpaths baseline, which predates this branch).
-  - Smoke `scripts/smoke-agent-presets.mjs`: 52/52.
-- **Minor gaps, none blocking:**
-  - PRST-36: for a broken preset, Settings shows the reason instead of agent, cwd and prompt.
-  - PRST-22: focusing the first empty field is proven with one field only.
-  - PRST-14: no test excludes a picked task from the saved preset.
-  - Lessons L-143..145 were recorded as candidates.
-- **Environment note:** the local `node_modules` was missing `markdown-it` after today's pull. It
-  was installed with `npm install --ignore-scripts`, and the `package-lock.json` drift from the
-  local npm was reverted.
-- **Next:** owner hand-check (save a Reviewer / Bug fixer preset and launch both), then push and
-  open a PR with `Closes #<issue>` if an issue exists.
+- **Feature:** `.specs/features/tray-residency/` (TRAY-01..32, AD-067). The X hides the app to the
+  tray, the tray's Quit asks when sessions run, a single-instance lock, and an opt-in
+  start-with-Windows login item that starts hidden (`--hidden`).
+- **Branch:** `feature/tray-residency` from `origin/main` b8402ba. Commits: spec + AD-067 `be318fc`,
+  design + tasks `b98213d`, T1–T7 `f33d73d`..`068f3ff` (plus the style commit `d0f7ab1`), fix round 1
+  `42c2d85`, then the validation commit. No PR yet; push and PR wait for the owner's go-ahead.
+- **Verification** (`validation.md`): iteration 1 FAIL (mutant M1: a one-session quit skipped the
+  dialog), fixed in `42c2d85`; iteration 2 PASS, sensor 8/8 killed. Gates: typecheck 0, lint 0 errors,
+  `npm test` 12 failed / 3123 passed (the 8 deterministic failures are identical on `origin/main`,
+  git/longpaths baseline; 4 are load timeouts that pass alone). Smoke
+  `scripts/smoke-tray-residency.mjs` 13/13; `SMOKE_BREAK=1` fails every TRAY check.
+- **Next:** owner hand-UAT on the installed nightly: TRAY-01, 03 (hooks and notifications while
+  hidden), 04, 06, 12, 15, 16, 21/22/23. Then push and open a PR (`Closes #<issue>` if one exists).
+- **Note:** the skill's `lessons.py list` rewrote `.specs/LESSONS.md` and `.specs/lessons.json`,
+  dropping ~1000 lines of candidate lessons; the files were restored with `git checkout`. Lessons
+  proposed by the Verifier (N = 1 boundary, smoke-unreachable ACs need UAT lines, `**Result**:` line
+  in validation reports) are listed in `validation.md` and were not recorded.
 
 **Parked by the owner on 2026-10-14: `ado-triggers`** (snapshot below). When it resumes, its AD
-numbers must move past whatever `agent-presets` takes (main holds up to AD-062).
+numbers must move past AD-067, and it builds on `tray-residency` (AD-067: the app stays up in the
+tray; `SessionManager` lifecycle events `spawned`/`finished`/`lost` belong to `ado-triggers`).
 
 **Status (2026-10-06): `ado-triggers` is in SPECIFY. Spec and context are drafted and
 validated (`validate_spec.py` 0 errors). The owner has NOT approved the spec yet. Nothing is
