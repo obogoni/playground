@@ -96,21 +96,21 @@ to branch a conversation into a second tab.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FORK-01 | P1: Fork into a new tab - AC1 command line | Execute | Pending |
-| FORK-02 | P1: Fork into a new tab - AC2 launch cwd | Execute | Pending |
-| FORK-03 | P1: Fork into a new tab - AC3 id, agent, task, title | Execute | Pending |
-| FORK-04 | P1: Fork into a new tab - AC4 source untouched | Execute | Pending |
-| FORK-05 | P1: Fork into a new tab - AC5 resume args not persisted | Execute | Pending |
-| FORK-06 | P1: Fork into a new tab - AC6 select fork | Execute | Pending |
-| FORK-07 | P1: Fork into a new tab - AC7 reject ineligible | Execute | Pending |
-| FORK-08 | P1: Fork into a new tab - AC8 failure toast | Execute | Pending |
-| FORK-09 | P1: Fork offered only where it works - AC1 forkable flag | Execute | Pending |
-| FORK-10 | P1: Fork offered only where it works - AC2 flag omitted | Execute | Pending |
-| FORK-11 | P1: Fork offered only where it works - AC3 push on first id | Execute | Pending |
-| FORK-12 | P1: Fork offered only where it works - AC4 Fork button shown | Execute | Pending |
-| FORK-13 | P1: Fork offered only where it works - AC5 Fork button hidden | Execute | Pending |
+| FORK-01 | P1: Fork into a new tab - AC1 command line | Execute | Implementing |
+| FORK-02 | P1: Fork into a new tab - AC2 launch cwd | Execute | Implementing |
+| FORK-03 | P1: Fork into a new tab - AC3 id, agent, task, title | Execute | Implementing |
+| FORK-04 | P1: Fork into a new tab - AC4 source untouched | Execute | Implementing |
+| FORK-05 | P1: Fork into a new tab - AC5 resume args not persisted | Execute | Implementing |
+| FORK-06 | P1: Fork into a new tab - AC6 select fork | Execute | Implementing |
+| FORK-07 | P1: Fork into a new tab - AC7 reject ineligible | Execute | Implementing |
+| FORK-08 | P1: Fork into a new tab - AC8 failure toast | Execute | Implementing |
+| FORK-09 | P1: Fork offered only where it works - AC1 forkable flag | Execute | Implementing |
+| FORK-10 | P1: Fork offered only where it works - AC2 flag omitted | Execute | Implementing |
+| FORK-11 | P1: Fork offered only where it works - AC3 push on first id | Execute | Implementing |
+| FORK-12 | P1: Fork offered only where it works - AC4 Fork button shown | Execute | Implementing |
+| FORK-13 | P1: Fork offered only where it works - AC5 Fork button hidden | Execute | Implementing |
 
-**Coverage:** 13 total, 0 mapped to tasks, 13 unmapped (Medium scope - tasks implicit in Execute)
+**Coverage:** 13 total, all implemented across the inline execution plan (Medium scope - no tasks.md)
 
 ---
 

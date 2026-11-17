@@ -32,6 +32,8 @@ export interface UseSessions {
   /** Links a session to a task, or back to its branch with null (HTSK-12, HTSK-13). */
   setSessionTask: (id: string, task: SessionTask | null) => void
   duplicateSession: (id: string) => void
+  /** Fork a running Claude session into a new one and select it (FORK-06, FORK-08). */
+  forkSession: (id: string) => void
   stopSession: (id: string) => void
   respawnSession: (id: string) => void
   removeSession: (id: string) => void
@@ -66,6 +68,8 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
     const offTask = api.on('session:task', refreshSessions)
     // The agent edited in another worktree; the session moves there (SFWT-11).
     const offFollowed = api.on('session:followed', refreshSessions)
+    // A session learned its Claude id: it can fork now (FORK-11).
+    const offForkable = api.on('session:forkable', refreshSessions)
     const offActivity = api.on('session:activity', ({ id, activity }) => {
       setSessions((prev) => applyActivity(prev, id, activity))
     })
@@ -77,6 +81,7 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
       offExit()
       offTask()
       offFollowed()
+      offForkable()
       offActivity()
       offName()
     }
@@ -132,6 +137,19 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
       })
   }
 
+  const forkSession = (id: string): void => {
+    api
+      .invoke('sessions:fork', { id })
+      .then((view) => {
+        setSelectedSessionId(view.id)
+        refreshSessions()
+      })
+      .catch((err) => {
+        console.error(err)
+        onToast(failureToast("Couldn't fork session", err))
+      })
+  }
+
   const stopSession = (id: string): void => {
     api.invoke('sessions:stop', { id }).then(refreshSessions).catch(console.error)
   }
@@ -160,6 +178,7 @@ export function useSessions({ onToast, onSwitchToAgents }: UseSessionsOptions): 
     renameSession,
     setSessionTask,
     duplicateSession,
+    forkSession,
     stopSession,
     respawnSession,
     removeSession

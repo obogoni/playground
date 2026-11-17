@@ -153,6 +153,7 @@ function App(): JSX.Element {
     renameSession,
     setSessionTask,
     duplicateSession,
+    forkSession,
     stopSession,
     respawnSession,
     removeSession
@@ -606,6 +607,7 @@ function App(): JSX.Element {
             onRemove={removeSession}
             onRename={renameSession}
             onDuplicate={duplicateSession}
+            onFork={forkSession}
             onOpenWorktree={openWorktreeForSession}
             onNew={() => openNewSession()}
             onPickPreset={pickPreset}

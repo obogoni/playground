@@ -35,6 +35,8 @@ interface AgentsViewProps {
   onRemove: (id: string) => void
   onRename: (id: string, title: string) => void
   onDuplicate: (id: string) => void
+  /** Branch the session's Claude conversation into a new session (FORK-12). */
+  onFork: (id: string) => void
   onOpenWorktree: (worktreeId: string) => void
   onNew: () => void
   /** Forwarded to the rail's preset menu (PRST-18, PRST-37). */
@@ -66,6 +68,7 @@ export function AgentsView({
   onRemove,
   onRename,
   onDuplicate,
+  onFork,
   onOpenWorktree,
   onNew,
   onPickPreset,
@@ -108,6 +111,7 @@ export function AgentsView({
             onRemove={onRemove}
             onRename={onRename}
             onDuplicate={onDuplicate}
+            onFork={onFork}
             onOpenWorktree={onOpenWorktree}
             onPauseTime={onPauseTime}
             onResumeTime={onResumeTime}
@@ -139,6 +143,8 @@ interface SessionDetailProps {
   onRemove: (id: string) => void
   onRename: (id: string, title: string) => void
   onDuplicate: (id: string) => void
+  /** Branch the session's Claude conversation into a new session (FORK-12). */
+  onFork: (id: string) => void
   onOpenWorktree: (worktreeId: string) => void
   onPauseTime: (id: string) => void
   onResumeTime: (id: string) => void
@@ -157,6 +163,7 @@ function SessionDetail({
   onRemove,
   onRename,
   onDuplicate,
+  onFork,
   onOpenWorktree,
   onPauseTime,
   onResumeTime,
@@ -281,6 +288,18 @@ function SessionDetail({
           >
             <Icon name="copy" size={13} /> Duplicate
           </button>
+          {/* Only a running Claude session whose hooks reported its id can
+              fork; the button is absent otherwise (FORK-12, FORK-13). */}
+          {session.forkable && (
+            <button
+              type="button"
+              className="agents-detail-btn"
+              title="Fork this conversation into a new session; this one keeps running"
+              onClick={() => onFork(session.id)}
+            >
+              <Icon name="git-branch" size={13} /> Fork
+            </button>
+          )}
           {running ? (
             <button type="button" className="agents-detail-btn" onClick={() => onStop(session.id)}>
               Stop
