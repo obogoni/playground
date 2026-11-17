@@ -1923,3 +1923,68 @@ describe('SessionManager follows the worktree the agent edits (SFWT)', () => {
     expect(h.followed).toEqual([])
   })
 })
+
+describe('SessionManager fork eligibility (FORK-09, FORK-10, FORK-11)', () => {
+  const forkableEvents = (emit: EmitFnRecorder): unknown[] =>
+    emit.events.filter((e) => e.channel === 'session:forkable').map((e) => e.payload)
+
+  it('a running Claude session with no session_id yet is not forkable (FORK-10)', async () => {
+    const { manager } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+
+    expect(view).not.toHaveProperty('forkable')
+    expect(manager.list()[0]).not.toHaveProperty('forkable')
+  })
+
+  it('a running session becomes forkable once a hook reports its session_id (FORK-09)', async () => {
+    const { manager } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+
+    manager.handleHookEvent(view.id, hookEvent('SessionStart'))
+
+    expect(manager.list()[0].forkable).toBe(true)
+  })
+
+  it('a stopped session is not forkable (FORK-10)', async () => {
+    const { manager } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('SessionStart'))
+
+    await manager.stop(view.id)
+
+    expect(manager.list()[0]).not.toHaveProperty('forkable')
+  })
+
+  it('an ad-hoc session is not forkable (FORK-10)', async () => {
+    const { manager } = makeManager()
+
+    const view = await manager.spawn('Ad-hoc', CWD, 'claude')
+
+    expect(view).not.toHaveProperty('forkable')
+    expect(manager.list()[0]).not.toHaveProperty('forkable')
+  })
+
+  it('pushes session:forkable once, on the first session_id only (FORK-11)', async () => {
+    const { manager, emit } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+
+    manager.handleHookEvent(view.id, hookEvent('SessionStart'))
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit', { session_id: 'claude-new' }))
+
+    expect(forkableEvents(emit)).toEqual([{ id: view.id }])
+  })
+
+  it('pushes session:forkable again for a respawned run (FORK-11)', async () => {
+    const { manager, emit } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('SessionStart'))
+    await manager.stop(view.id)
+    await manager.respawn(view.id)
+
+    manager.handleHookEvent(view.id, hookEvent('SessionStart'))
+
+    expect(forkableEvents(emit)).toEqual([{ id: view.id }, { id: view.id }])
+    expect(manager.list()[0].forkable).toBe(true)
+  })
+})

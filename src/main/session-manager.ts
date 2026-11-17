@@ -358,8 +358,11 @@ export class SessionManager {
     const claudeId = payload.session_id
     if (typeof claudeId !== 'string' || claudeId === '') return
     if (claudeId !== session.claudeSessionId) {
+      // The first id of a run is what makes the session forkable (FORK-11).
+      const first = session.claudeSessionId === null
       session.claudeSessionId = claudeId
       this.deps.names?.watch(sessionId, claudeId)
+      if (first) this.deps.emit('session:forkable', { id: sessionId })
     } else if (session.name === null) {
       this.deps.names?.nudge(sessionId)
     }
@@ -633,7 +636,8 @@ export class SessionManager {
       pathMissing: !this.deps.fsExists(meta.cwd),
       ...(preview ? { lastOutput: preview } : {}),
       ...(live?.activity ? { activity: live.activity.view } : {}),
-      ...(live?.name ? { name: live.name } : {})
+      ...(live?.name ? { name: live.name } : {}),
+      ...(live?.claudeSessionId ? { forkable: true as const } : {})
     }
   }
 }

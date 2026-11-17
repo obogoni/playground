@@ -70,6 +70,9 @@ export interface SessionView extends PersistedSession {
    *  first successful listing after the first hook event, for ad-hoc and
    *  non-Claude sessions, and for stopped sessions. Never persisted (SNAME-15). */
   name?: string
+  /** `true` while the session runs and its hooks have reported a Claude
+   *  `session_id`, so it can be forked; absent otherwise. Never persisted (FORK-09, FORK-10). */
+  forkable?: true
 }
 
 /** One worktree's remembered Files lens (FXPL-13). `base` is absent until the

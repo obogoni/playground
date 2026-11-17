@@ -392,6 +392,8 @@ export interface IpcEvents {
   'session:task': { id: string; task: SessionTask | null }
   /** The worktree a session follows changed; `null` = back to its launch folder (SFWT-07, SFWT-15). */
   'session:followed': { id: string; followedPath: string | null }
+  /** A running session learned its first Claude `session_id` and can now be forked; refetch (FORK-11). */
+  'session:forkable': { id: string }
   /** One batch of disk changes in the watched worktree (FXPL-21/22). */
   'files:changed': FilesChanged
   /** A worktree's git state moved and its changes were recounted; patch them into the tree (SCRF-01/03). */
