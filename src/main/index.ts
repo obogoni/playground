@@ -885,6 +885,7 @@ app.whenReady().then(() => {
     return view
   })
   handle('sessions:duplicate', ({ id }) => sessions.duplicate(id))
+  handle('sessions:fork', ({ id }) => sessions.fork(id))
   handle('sessions:remove', ({ id }) => sessions.remove(id))
   handle('sessions:attach', ({ id }) => sessions.attach(id))
   handle('sessions:detach', ({ id }) => sessions.detach(id))

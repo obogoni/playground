@@ -172,6 +172,8 @@ export interface IpcContract {
   'sessions:set-task': { req: { id: string; task: SessionTask | null }; res: SessionView }
   /** Clone a session (agent + cwd + ad-hoc command) into a new running session. */
   'sessions:duplicate': { req: { id: string }; res: SessionView }
+  /** Branch a running, forkable Claude session into a new running session; rejected otherwise (FORK-01, FORK-07). */
+  'sessions:fork': { req: { id: string }; res: SessionView }
   /** Drop a stopped/path-missing session from config; rejected while running. */
   'sessions:remove': { req: { id: string }; res: void }
   /** Make this the active stream target; replays scrollback then live deltas. */
