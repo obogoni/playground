@@ -2049,6 +2049,9 @@ describe('SessionManager fork (FORK)', () => {
 
     expect(h.port.handles[1].plan.cwd).toBe(CWD)
     expect(fork.cwd).toBe(CWD)
+    // The fork starts in its launch folder; it follows a worktree only once its own agent edits one (FORK-03).
+    expect(fork).not.toHaveProperty('followedPath')
+    expect(h.config.get().sessions.find((s) => s.id === fork.id)).not.toHaveProperty('followedPath')
   })
 
   it('gives the fork a new id, the source agent and task, and the "(fork)" title (FORK-03)', async () => {

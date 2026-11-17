@@ -57,7 +57,7 @@ to branch a conversation into a second tab.
 
 1. WHEN the developer forks a running Claude session whose `claudeSessionId` is `X` THEN the system SHALL start a new running session whose agent command line is the source agent's command and args followed by `--resume X --fork-session`.
 2. WHEN a session is forked THEN the system SHALL launch the fork's PTY in the source session's launch `cwd`, even when the source follows another worktree.
-3. WHEN a session is forked THEN the system SHALL give the fork a new app session id, the same agent and task link as the source, and the title `<source title> (fork)`.
+3. WHEN a session is forked THEN the system SHALL give the fork a new app session id, the same agent and task link as the source, the title `<source title> (fork)`, and no followed worktree.
 4. WHEN a session is forked THEN the system SHALL leave the source session running with the same PTY and the same `claudeSessionId`.
 5. WHEN a session is forked THEN the system SHALL persist the fork without `--resume` / `--fork-session`, so a later Respawn or Duplicate of the fork starts the agent without them.
 6. WHEN a fork succeeds THEN the system SHALL select the fork in the Agents view.
@@ -96,17 +96,17 @@ to branch a conversation into a second tab.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| FORK-01 | P1: Fork into a new tab - AC1 command line | Execute | Implementing |
-| FORK-02 | P1: Fork into a new tab - AC2 launch cwd | Execute | Implementing |
-| FORK-03 | P1: Fork into a new tab - AC3 id, agent, task, title | Execute | Implementing |
-| FORK-04 | P1: Fork into a new tab - AC4 source untouched | Execute | Implementing |
-| FORK-05 | P1: Fork into a new tab - AC5 resume args not persisted | Execute | Implementing |
+| FORK-01 | P1: Fork into a new tab - AC1 command line | Execute | Verified |
+| FORK-02 | P1: Fork into a new tab - AC2 launch cwd | Execute | Verified |
+| FORK-03 | P1: Fork into a new tab - AC3 id, agent, task, title | Execute | Verified |
+| FORK-04 | P1: Fork into a new tab - AC4 source untouched | Execute | Verified |
+| FORK-05 | P1: Fork into a new tab - AC5 resume args not persisted | Execute | Verified |
 | FORK-06 | P1: Fork into a new tab - AC6 select fork | Execute | Implementing |
-| FORK-07 | P1: Fork into a new tab - AC7 reject ineligible | Execute | Implementing |
+| FORK-07 | P1: Fork into a new tab - AC7 reject ineligible | Execute | Verified |
 | FORK-08 | P1: Fork into a new tab - AC8 failure toast | Execute | Implementing |
-| FORK-09 | P1: Fork offered only where it works - AC1 forkable flag | Execute | Implementing |
-| FORK-10 | P1: Fork offered only where it works - AC2 flag omitted | Execute | Implementing |
-| FORK-11 | P1: Fork offered only where it works - AC3 push on first id | Execute | Implementing |
+| FORK-09 | P1: Fork offered only where it works - AC1 forkable flag | Execute | Verified |
+| FORK-10 | P1: Fork offered only where it works - AC2 flag omitted | Execute | Verified |
+| FORK-11 | P1: Fork offered only where it works - AC3 push on first id | Execute | Verified |
 | FORK-12 | P1: Fork offered only where it works - AC4 Fork button shown | Execute | Implementing |
 | FORK-13 | P1: Fork offered only where it works - AC5 Fork button hidden | Execute | Implementing |
 
