@@ -266,6 +266,35 @@ export class SessionManager {
   }
 
   /**
+   * Branch a running Claude session's conversation into a new running session:
+   * the source's agent resumes the source's Claude id as a new Claude session
+   * (`--resume <id> --fork-session`), so the two tabs never share a transcript.
+   * The source keeps its PTY and its id (FORK-01..FORK-04). The fork runs in the
+   * launch `cwd`, where Claude Code keeps the transcript, never the followed
+   * worktree (FORK-02). The resume flags apply to this launch only, like a
+   * launch prompt: Respawn and Duplicate of the fork start fresh (FORK-05).
+   */
+  async fork(id: string): Promise<SessionView> {
+    const live = this.#running.get(id)
+    if (!live) throw new Error(`Only a running session can be forked: ${id}`)
+    const claudeId = live.claudeSessionId
+    if (claudeId === null)
+      throw new Error(`This session has no Claude conversation to fork yet: ${id}`)
+    const src = live.meta
+    const meta: PersistedSession = {
+      id: randomUUID(),
+      agent: src.agent,
+      cwd: src.cwd,
+      title: `${src.title} (fork)`,
+      status: 'running',
+      ...(src.task ? { task: src.task } : {})
+    }
+    await this.#start(meta, undefined, ['--resume', claudeId, '--fork-session'])
+    this.#persistUpsert(meta)
+    return this.#toView(meta)
+  }
+
+  /**
    * Kill the PTY and resolve once it has **really exited** (WRFT-05). Killing a
    * shell does not kill its children, so a caller that deletes files the moment
    * `stop` returns used to race handles that were still open — the removal then
@@ -358,8 +387,11 @@ export class SessionManager {
     const claudeId = payload.session_id
     if (typeof claudeId !== 'string' || claudeId === '') return
     if (claudeId !== session.claudeSessionId) {
+      // The first id of a run is what makes the session forkable (FORK-11).
+      const first = session.claudeSessionId === null
       session.claudeSessionId = claudeId
       this.deps.names?.watch(sessionId, claudeId)
+      if (first) this.deps.emit('session:forkable', { id: sessionId })
     } else if (session.name === null) {
       this.deps.names?.nudge(sessionId)
     }
@@ -418,14 +450,16 @@ export class SessionManager {
   }
 
   /** Spawn the PTY for a meta and wire its streams; registers the Map entry. */
-  async #start(meta: PersistedSession, prompt?: string): Promise<void> {
+  async #start(meta: PersistedSession, prompt?: string, extraArgs: string[] = []): Promise<void> {
     const shell = this.deps.config.get().ui.defaultShell
     // Resolved here, once, so a registry edit mid-session cannot change how a
     // running session was launched (ACTV-30).
     const agent = meta.command ? null : this.#resolve(meta.agent)
     const token = agent && this.#hookable(agent) ? randomUUID() : null
     if (token !== null) this.deps.hooks?.register(token, meta.id)
-    const hooked = agent && (token === null ? agent : this.#withHookSettings(agent))
+    const withHooks = agent && (token === null ? agent : this.#withHookSettings(agent))
+    // Launch-only flags (a fork's resume) go last and are never persisted (FORK-05).
+    const hooked = withHooks && { ...withHooks, args: [...withHooks.args, ...extraArgs] }
     // A prompted launch is always hosted in pwsh: cmd cannot carry a line break
     // or `"` in one argument (APR-36).
     const plan = meta.command
@@ -633,7 +667,8 @@ export class SessionManager {
       pathMissing: !this.deps.fsExists(meta.cwd),
       ...(preview ? { lastOutput: preview } : {}),
       ...(live?.activity ? { activity: live.activity.view } : {}),
-      ...(live?.name ? { name: live.name } : {})
+      ...(live?.name ? { name: live.name } : {}),
+      ...(live?.claudeSessionId ? { forkable: true as const } : {})
     }
   }
 }

@@ -1923,3 +1923,242 @@ describe('SessionManager follows the worktree the agent edits (SFWT)', () => {
     expect(h.followed).toEqual([])
   })
 })
+
+describe('SessionManager fork eligibility (FORK-09, FORK-10, FORK-11)', () => {
+  const forkableEvents = (emit: EmitFnRecorder): unknown[] =>
+    emit.events.filter((e) => e.channel === 'session:forkable').map((e) => e.payload)
+
+  it('a running Claude session with no session_id yet is not forkable (FORK-10)', async () => {
+    const { manager } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+
+    expect(view).not.toHaveProperty('forkable')
+    expect(manager.list()[0]).not.toHaveProperty('forkable')
+  })
+
+  it('a running session becomes forkable once a hook reports its session_id (FORK-09)', async () => {
+    const { manager } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+
+    manager.handleHookEvent(view.id, hookEvent('SessionStart'))
+
+    expect(manager.list()[0].forkable).toBe(true)
+  })
+
+  it('a stopped session is not forkable (FORK-10)', async () => {
+    const { manager } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('SessionStart'))
+
+    await manager.stop(view.id)
+
+    expect(manager.list()[0]).not.toHaveProperty('forkable')
+  })
+
+  it('an ad-hoc session is not forkable (FORK-10)', async () => {
+    const { manager } = makeManager()
+
+    const view = await manager.spawn('Ad-hoc', CWD, 'claude')
+
+    expect(view).not.toHaveProperty('forkable')
+    expect(manager.list()[0]).not.toHaveProperty('forkable')
+  })
+
+  it('pushes session:forkable once, on the first session_id only (FORK-11)', async () => {
+    const { manager, emit } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+
+    manager.handleHookEvent(view.id, hookEvent('SessionStart'))
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit'))
+    manager.handleHookEvent(view.id, hookEvent('UserPromptSubmit', { session_id: 'claude-new' }))
+
+    expect(forkableEvents(emit)).toEqual([{ id: view.id }])
+  })
+
+  it('pushes session:forkable again for a respawned run (FORK-11)', async () => {
+    const { manager, emit } = makeManager()
+    const view = await manager.spawn('Claude', CWD)
+    manager.handleHookEvent(view.id, hookEvent('SessionStart'))
+    await manager.stop(view.id)
+    await manager.respawn(view.id)
+
+    manager.handleHookEvent(view.id, hookEvent('SessionStart'))
+
+    expect(forkableEvents(emit)).toEqual([{ id: view.id }, { id: view.id }])
+    expect(manager.list()[0].forkable).toBe(true)
+  })
+})
+
+describe('SessionManager fork (FORK)', () => {
+  const CLAUDE_ID = 'claude-side-id'
+  const HOOKED = 'claude --settings C:\\app\\hooks.json'
+  const LINK: SessionTask = { id: 4821, title: 'Fix login' }
+  const persisted = (config: ConfigStore, id: string): PersistedSession | undefined =>
+    config.get().sessions.find((s) => s.id === id)
+
+  /** A running Claude session whose hooks already reported `CLAUDE_ID`. */
+  async function forkableSession(
+    h: ReturnType<typeof makeManager>,
+    task?: SessionTask
+  ): Promise<string> {
+    const view = await h.manager.spawn('Claude', CWD, undefined, task)
+    h.manager.handleHookEvent(view.id, hookEvent('SessionStart'))
+    return view.id
+  }
+
+  it('launches the fork with the source agent resuming its Claude id as a new session (FORK-01)', async () => {
+    const h = makeManager()
+    const src = await forkableSession(h)
+
+    await h.manager.fork(src)
+
+    expect(h.port.handles[1].plan.autoCommand).toBe(
+      `${HOOKED} --resume ${CLAUDE_ID} --fork-session`
+    )
+  })
+
+  it('keeps the agent definition args before the resume flags (FORK-01)', async () => {
+    const h = makeManager()
+    h.config.patch({
+      agents: [{ name: 'Claude', command: 'claude', args: ['--model', 'opus'] }]
+    })
+    const src = await forkableSession(h)
+
+    await h.manager.fork(src)
+
+    expect(h.port.handles[1].plan.autoCommand).toBe(
+      `claude --model opus --settings C:\\app\\hooks.json --resume ${CLAUDE_ID} --fork-session`
+    )
+  })
+
+  it('launches the fork in the launch cwd even when the source follows another worktree (FORK-02)', async () => {
+    const FOLLOWED = 'C:\\work\\repo-other'
+    const seed: PersistedSession = {
+      id: 'src',
+      agent: 'Claude',
+      cwd: CWD,
+      title: 'Claude · repo-feature',
+      status: 'stopped',
+      followedPath: FOLLOWED
+    }
+    const h = makeManager({ seed: [seed] })
+    await h.manager.respawn('src')
+    h.manager.handleHookEvent('src', hookEvent('SessionStart'))
+
+    const fork = await h.manager.fork('src')
+
+    expect(h.port.handles[1].plan.cwd).toBe(CWD)
+    expect(fork.cwd).toBe(CWD)
+    // The fork starts in its launch folder; it follows a worktree only once its own agent edits one (FORK-03).
+    expect(fork).not.toHaveProperty('followedPath')
+    expect(h.config.get().sessions.find((s) => s.id === fork.id)).not.toHaveProperty('followedPath')
+  })
+
+  it('gives the fork a new id, the source agent and task, and the "(fork)" title (FORK-03)', async () => {
+    const h = makeManager()
+    const src = await forkableSession(h, LINK)
+    h.manager.rename(src, 'Login work')
+
+    const fork = await h.manager.fork(src)
+
+    expect(fork.id).not.toBe(src)
+    expect(fork.agent).toBe('Claude')
+    expect(fork.task).toEqual(LINK)
+    expect(fork.title).toBe('Login work (fork)')
+    expect(fork.status).toBe('running')
+    expect(persisted(h.config, fork.id)).toMatchObject({
+      agent: 'Claude',
+      cwd: CWD,
+      title: 'Login work (fork)',
+      task: LINK
+    })
+  })
+
+  it('leaves the source running on its own PTY and Claude id (FORK-04)', async () => {
+    const h = makeManager()
+    const src = await forkableSession(h)
+
+    await h.manager.fork(src)
+    await h.manager.fork(src)
+
+    expect(h.port.handles[0].killed).toBe(false)
+    expect(h.manager.list().find((s) => s.id === src)).toMatchObject({
+      status: 'running',
+      forkable: true
+    })
+    // The second fork still resumes the source's own id: forking never rebinds it.
+    expect(h.port.handles[2].plan.autoCommand).toBe(
+      `${HOOKED} --resume ${CLAUDE_ID} --fork-session`
+    )
+  })
+
+  it('persists the fork without the resume flags, so Respawn and Duplicate start fresh (FORK-05)', async () => {
+    const h = makeManager()
+    const src = await forkableSession(h)
+    const fork = await h.manager.fork(src)
+    await h.manager.stop(fork.id)
+
+    await h.manager.respawn(fork.id)
+    await h.manager.duplicate(fork.id)
+
+    expect(persisted(h.config, fork.id)).not.toHaveProperty('command')
+    expect(h.port.handles[2].plan.autoCommand).toBe(HOOKED)
+    expect(h.port.handles[3].plan.autoCommand).toBe(HOOKED)
+  })
+
+  it('the fork starts unforkable until its own hooks report an id, then it can fork (edge case)', async () => {
+    const h = makeManager()
+    const src = await forkableSession(h)
+    const fork = await h.manager.fork(src)
+    expect(fork).not.toHaveProperty('forkable')
+
+    h.manager.handleHookEvent(fork.id, hookEvent('SessionStart', { session_id: 'claude-forked' }))
+    await h.manager.fork(fork.id)
+
+    expect(h.port.handles[2].plan.autoCommand).toBe(
+      `${HOOKED} --resume claude-forked --fork-session`
+    )
+  })
+
+  it.each([
+    ['unknown', async (): Promise<string> => 'nope'],
+    [
+      'stopped',
+      async (h: ReturnType<typeof makeManager>): Promise<string> => {
+        const id = await forkableSession(h)
+        await h.manager.stop(id)
+        return id
+      }
+    ],
+    [
+      'without a Claude id yet',
+      async (h: ReturnType<typeof makeManager>): Promise<string> =>
+        (await h.manager.spawn('Claude', CWD)).id
+    ],
+    [
+      'ad-hoc',
+      async (h: ReturnType<typeof makeManager>): Promise<string> =>
+        (await h.manager.spawn('Ad-hoc', CWD, 'claude')).id
+    ]
+  ])('rejects forking a session that is %s and starts no PTY (FORK-07)', async (_, setup) => {
+    const h = makeManager()
+    const id = await setup(h)
+    const spawned = h.port.handles.length
+    const sessions = h.config.get().sessions.length
+
+    await expect(h.manager.fork(id)).rejects.toThrow()
+
+    expect(h.port.handles).toHaveLength(spawned)
+    expect(h.config.get().sessions).toHaveLength(sessions)
+  })
+
+  it('a rejected fork spawn persists nothing (edge case, PTYH-14)', async () => {
+    const h = makeManager()
+    const src = await forkableSession(h)
+    h.port.spawn = () => Promise.reject(new Error('Cannot create process'))
+
+    await expect(h.manager.fork(src)).rejects.toThrow('Cannot create process')
+
+    expect(h.config.get().sessions.map((s) => s.id)).toEqual([src])
+  })
+})

@@ -172,6 +172,8 @@ export interface IpcContract {
   'sessions:set-task': { req: { id: string; task: SessionTask | null }; res: SessionView }
   /** Clone a session (agent + cwd + ad-hoc command) into a new running session. */
   'sessions:duplicate': { req: { id: string }; res: SessionView }
+  /** Branch a running, forkable Claude session into a new running session; rejected otherwise (FORK-01, FORK-07). */
+  'sessions:fork': { req: { id: string }; res: SessionView }
   /** Drop a stopped/path-missing session from config; rejected while running. */
   'sessions:remove': { req: { id: string }; res: void }
   /** Make this the active stream target; replays scrollback then live deltas. */
@@ -392,6 +394,8 @@ export interface IpcEvents {
   'session:task': { id: string; task: SessionTask | null }
   /** The worktree a session follows changed; `null` = back to its launch folder (SFWT-07, SFWT-15). */
   'session:followed': { id: string; followedPath: string | null }
+  /** A running session learned its first Claude `session_id` and can now be forked; refetch (FORK-11). */
+  'session:forkable': { id: string }
   /** One batch of disk changes in the watched worktree (FXPL-21/22). */
   'files:changed': FilesChanged
   /** A worktree's git state moved and its changes were recounted; patch them into the tree (SCRF-01/03). */
